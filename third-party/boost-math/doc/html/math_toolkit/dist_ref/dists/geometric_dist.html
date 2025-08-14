@@ -1,0 +1,844 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Geometric Distribution</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../dists.html" title="Distributions">
+<link rel="prev" href="gamma_dist.html" title="Gamma (and Erlang) Distribution">
+<link rel="next" href="hyperexponential_dist.html" title="Hyperexponential Distribution">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="gamma_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="hyperexponential_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.dist_ref.dists.geometric_dist"></a><a class="link" href="geometric_dist.html" title="Geometric Distribution">Geometric
+        Distribution</a>
+</h4></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">geometric</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">,</span>
+          <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>   <span class="special">=</span> <a class="link" href="../../pol_ref/pol_ref_ref.html" title="Policy Class Reference">policies::policy&lt;&gt;</a> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">geometric_distribution</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">geometric_distribution</span><span class="special">&lt;&gt;</span> <span class="identifier">geometric</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">geometric_distribution</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">RealType</span> <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">Policy</span>   <span class="identifier">policy_type</span><span class="special">;</span>
+   <span class="comment">// Constructor from success_fraction:</span>
+   <span class="identifier">geometric_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">);</span>
+
+   <span class="comment">// Parameter accessors:</span>
+   <span class="identifier">RealType</span> <span class="identifier">success_fraction</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+   <span class="identifier">RealType</span> <span class="identifier">successes</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+   <span class="comment">// Bounds on success fraction:</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_lower_bound_on_p</span><span class="special">(</span>
+      <span class="identifier">RealType</span> <span class="identifier">trials</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">successes</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">probability</span><span class="special">);</span> <span class="comment">// alpha</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+      <span class="identifier">RealType</span> <span class="identifier">trials</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">successes</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">probability</span><span class="special">);</span> <span class="comment">// alpha</span>
+
+   <span class="comment">// Estimate min/max number of trials:</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_minimum_number_of_trials</span><span class="special">(</span>
+      <span class="identifier">RealType</span> <span class="identifier">k</span><span class="special">,</span>     <span class="comment">// Number of failures.</span>
+      <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">,</span>     <span class="comment">// Success fraction.</span>
+      <span class="identifier">RealType</span> <span class="identifier">probability</span><span class="special">);</span> <span class="comment">// Probability threshold alpha.</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_maximum_number_of_trials</span><span class="special">(</span>
+      <span class="identifier">RealType</span> <span class="identifier">k</span><span class="special">,</span>     <span class="comment">// Number of failures.</span>
+      <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">,</span>     <span class="comment">// Success fraction.</span>
+      <span class="identifier">RealType</span> <span class="identifier">probability</span><span class="special">);</span> <span class="comment">// Probability threshold alpha.</span>
+<span class="special">};</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+          The class type <code class="computeroutput"><span class="identifier">geometric_distribution</span></code>
+          represents a <a href="http://en.wikipedia.org/wiki/geometric_distribution" target="_top">geometric
+          distribution</a>: it is used when there are exactly two mutually exclusive
+          outcomes of a <a href="http://en.wikipedia.org/wiki/Bernoulli_trial" target="_top">Bernoulli
+          trial</a>: these outcomes are labelled "success" and "failure".
+        </p>
+<p>
+          For <a href="http://en.wikipedia.org/wiki/Bernoulli_trial" target="_top">Bernoulli
+          trials</a> each with success fraction <span class="emphasis"><em>p</em></span>, the geometric
+          distribution gives the probability of observing <span class="emphasis"><em>k</em></span>
+          trials (failures, events, occurrences, or arrivals) before the first success.
+        </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            For this implementation, the set of trials <span class="bold"><strong>includes
+            zero</strong></span> (unlike another definition where the set of trials starts
+            at one, sometimes named <span class="emphasis"><em>shifted</em></span>).
+          </p></td></tr>
+</table></div>
+<p>
+          The geometric distribution assumes that success_fraction <span class="emphasis"><em>p</em></span>
+          is fixed for all <span class="emphasis"><em>k</em></span> trials.
+        </p>
+<p>
+          The probability that there are <span class="emphasis"><em>k</em></span> failures before the
+          first success
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">Pr(Y=<span class="emphasis"><em>k</em></span>) = (1-<span class="emphasis"><em>p</em></span>)<sup><span class="emphasis"><em>k</em></span></sup> <span class="emphasis"><em>p</em></span></span>
+          </p></blockquote></div>
+<p>
+          For example, when throwing a 6-face dice the success probability <span class="emphasis"><em>p</em></span>
+          = 1/6 = 0.1666 ̇. Throwing repeatedly until a <span class="emphasis"><em>three</em></span>
+          appears, the probability distribution of the number of times <span class="emphasis"><em>not-a-three</em></span>
+          is thrown is geometric.
+        </p>
+<p>
+          Geometric distribution has the Probability Density Function PDF:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">(1-<span class="emphasis"><em>p</em></span>)<sup><span class="emphasis"><em>k</em></span></sup> <span class="emphasis"><em>p</em></span></span>
+          </p></blockquote></div>
+<p>
+          The following graph illustrates how the PDF and CDF vary for three examples
+          of the success fraction <span class="emphasis"><em>p</em></span>, (when considering the geometric
+          distribution as a continuous function),
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/geometric_pdf_2.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/geometric_cdf_2.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<p>
+          and as discrete.
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/geometric_pdf_discrete.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/geometric_cdf_discrete.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h0"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.related_distributions"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.related_distributions">Related
+          Distributions</a>
+        </h5>
+<p>
+          The geometric distribution is a special case of the <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+          Binomial Distribution</a> with successes parameter <span class="emphasis"><em>r</em></span>
+          = 1, so only one first and only success is required : thus by definition
+             <code class="computeroutput"><span class="identifier">geometric</span><span class="special">(</span><span class="identifier">p</span><span class="special">)</span> <span class="special">==</span>
+          <span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">1</span><span class="special">,</span> <span class="identifier">p</span><span class="special">)</span></code>
+        </p>
+<pre class="programlisting"><span class="identifier">negative_binomial_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">r</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">success_fraction</span><span class="special">);</span>
+<span class="identifier">negative_binomial</span> <span class="identifier">nb</span><span class="special">(</span><span class="number">1</span><span class="special">,</span> <span class="identifier">success_fraction</span><span class="special">);</span>
+<span class="identifier">geometric</span> <span class="identifier">g</span><span class="special">(</span><span class="identifier">success_fraction</span><span class="special">);</span>
+<span class="identifier">ASSERT</span><span class="special">(</span><span class="identifier">pdf</span><span class="special">(</span><span class="identifier">nb</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">==</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">g</span><span class="special">,</span> <span class="number">1</span><span class="special">));</span>
+</pre>
+<p>
+          This implementation uses real numbers for the computation throughout (because
+          it uses the <span class="bold"><strong>real-valued</strong></span> power and exponential
+          functions). So to obtain a conventional strictly-discrete geometric distribution
+          you must ensure that an integer value is provided for the number of trials
+          (random variable) <span class="emphasis"><em>k</em></span>, and take integer values (floor
+          or ceil functions) from functions that return a number of successes.
+        </p>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+            The geometric distribution is a discrete distribution: internally, functions
+            like the <code class="computeroutput"><span class="identifier">cdf</span></code> and <code class="computeroutput"><span class="identifier">pdf</span></code> are treated "as if" they
+            are continuous functions, but in reality the results returned from these
+            functions only have meaning if an integer value is provided for the random
+            variate argument.
+          </p>
+<p>
+            The quantile function will by default return an integer result that has
+            been <span class="emphasis"><em>rounded outwards</em></span>. That is to say lower quantiles
+            (where the probability is less than 0.5) are rounded downward, and upper
+            quantiles (where the probability is greater than 0.5) are rounded upwards.
+            This behaviour ensures that if an X% quantile is requested, then <span class="emphasis"><em>at
+            least</em></span> the requested coverage will be present in the central
+            region, and <span class="emphasis"><em>no more than</em></span> the requested coverage
+            will be present in the tails.
+          </p>
+<p>
+            This behaviour can be changed so that the quantile functions are rounded
+            differently, or even return a real-valued result using <a class="link" href="../../pol_overview.html" title="Policy Overview">Policies</a>.
+            It is strongly recommended that you read the tutorial <a class="link" href="../../pol_tutorial/understand_dis_quant.html" title="Understanding Quantiles of Discrete Distributions">Understanding
+            Quantiles of Discrete Distributions</a> before using the quantile
+            function on the geometric distribution. The <a class="link" href="../../pol_ref/discrete_quant_ref.html" title="Discrete Quantile Policies">reference
+            docs</a> describe how to change the rounding policy for these distributions.
+          </p>
+</td></tr>
+</table></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h1"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.member_functions"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.member_functions">Member
+          Functions</a>
+        </h5>
+<h6>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h2"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.constructor"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.constructor">Constructor</a>
+        </h6>
+<pre class="programlisting"><span class="identifier">geometric_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">);</span>
+</pre>
+<p>
+          Constructor: <span class="emphasis"><em>p</em></span> or success_fraction is the probability
+          of success of a single trial.
+        </p>
+<p>
+          Requires: <code class="computeroutput"><span class="number">0</span> <span class="special">&lt;=</span>
+          <span class="identifier">p</span> <span class="special">&lt;=</span>
+          <span class="number">1</span></code>.
+        </p>
+<h6>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h3"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.accessors"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.accessors">Accessors</a>
+        </h6>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">success_fraction</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span> <span class="comment">// successes / trials (0 &lt;= p &lt;= 1)</span>
+</pre>
+<p>
+          Returns the success_fraction parameter <span class="emphasis"><em>p</em></span> from which
+          this distribution was constructed.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">successes</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span> <span class="comment">// required successes always one,</span>
+<span class="comment">// included for compatibility with negative binomial distribution</span>
+<span class="comment">// with successes r == 1.</span>
+</pre>
+<p>
+          Returns unity.
+        </p>
+<p>
+          The following functions are equivalent to those provided for the negative
+          binomial, with successes = 1, but are provided here for completeness.
+        </p>
+<p>
+          The best method of calculation for the following functions is disputed:
+          see <a class="link" href="binomial_dist.html" title="Binomial Distribution">Binomial
+          Distribution</a> and <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+          Binomial Distribution</a> for more discussion.
+        </p>
+<h6>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h4"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.lower_bound_on_success_fraction_"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.lower_bound_on_success_fraction_">Lower
+          Bound on success_fraction Parameter <span class="emphasis"><em>p</em></span></a>
+        </h6>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_lower_bound_on_p</span><span class="special">(</span>
+  <span class="identifier">RealType</span> <span class="identifier">failures</span><span class="special">,</span>
+  <span class="identifier">RealType</span> <span class="identifier">probability</span><span class="special">)</span> <span class="comment">// (0 &lt;= alpha &lt;= 1), 0.05 equivalent to 95% confidence.</span>
+</pre>
+<p>
+          Returns a <span class="bold"><strong>lower bound</strong></span> on the success fraction:
+        </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">failures</span></dt>
+<dd><p>
+                The total number of failures before the 1st success.
+              </p></dd>
+<dt><span class="term">alpha</span></dt>
+<dd><p>
+                The largest acceptable probability that the true value of the success
+                fraction is <span class="bold"><strong>less than</strong></span> the value
+                returned.
+              </p></dd>
+</dl>
+</div>
+<p>
+          For example, if you observe <span class="emphasis"><em>k</em></span> failures from <span class="emphasis"><em>n</em></span>
+          trials the best estimate for the success fraction is simply 1/<span class="emphasis"><em>n</em></span>,
+          but if you want to be 95% sure that the true value is <span class="bold"><strong>greater
+          than</strong></span> some value, <span class="emphasis"><em>p<sub>min</sub></em></span>, then:
+        </p>
+<pre class="programlisting"><span class="identifier">p</span><sub>min</sub> <span class="special">=</span> <span class="identifier">geometric_distribution</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;::</span>
+   <span class="identifier">find_lower_bound_on_p</span><span class="special">(</span><span class="identifier">failures</span><span class="special">,</span> <span class="number">0.05</span><span class="special">);</span>
+</pre>
+<p>
+          <a class="link" href="../../stat_tut/weg/neg_binom_eg/neg_binom_conf.html" title="Calculating Confidence Limits on the Frequency of Occurrence for the Negative Binomial Distribution">See
+          negative_binomial confidence interval example.</a>
+        </p>
+<p>
+          This function uses the Clopper-Pearson method of computing the lower bound
+          on the success fraction, whilst many texts refer to this method as giving
+          an "exact" result in practice it produces an interval that guarantees
+          <span class="emphasis"><em>at least</em></span> the coverage required, and may produce pessimistic
+          estimates for some combinations of <span class="emphasis"><em>failures</em></span> and <span class="emphasis"><em>successes</em></span>.
+          See:
+        </p>
+<p>
+          <a href="http://www.ucs.louisiana.edu/~kxk4695/Discrete_new.pdf" target="_top">Yong
+          Cai and K. Krishnamoorthy, A Simple Improved Inferential Method for Some
+          Discrete Distributions. Computational statistics and data analysis, 2005,
+          vol. 48, no3, 605-621</a>.
+        </p>
+<h6>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h5"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.upper_bound_on_success_fraction_"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.upper_bound_on_success_fraction_">Upper
+          Bound on success_fraction Parameter p</a>
+        </h6>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+   <span class="identifier">RealType</span> <span class="identifier">trials</span><span class="special">,</span>
+   <span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">);</span> <span class="comment">// (0 &lt;= alpha &lt;= 1), 0.05 equivalent to 95% confidence.</span>
+</pre>
+<p>
+          Returns an <span class="bold"><strong>upper bound</strong></span> on the success
+          fraction:
+        </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">trials</span></dt>
+<dd><p>
+                The total number of trials conducted.
+              </p></dd>
+<dt><span class="term">alpha</span></dt>
+<dd><p>
+                The largest acceptable probability that the true value of the success
+                fraction is <span class="bold"><strong>greater than</strong></span> the value
+                returned.
+              </p></dd>
+</dl>
+</div>
+<p>
+          For example, if you observe <span class="emphasis"><em>k</em></span> successes from <span class="emphasis"><em>n</em></span>
+          trials the best estimate for the success fraction is simply <span class="emphasis"><em>k/n</em></span>,
+          but if you want to be 95% sure that the true value is <span class="bold"><strong>less
+          than</strong></span> some value, <span class="emphasis"><em>p<sub>max</sub></em></span>, then:
+        </p>
+<pre class="programlisting"><span class="identifier">p</span><sub>max</sub> <span class="special">=</span> <span class="identifier">geometric_distribution</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+                    <span class="identifier">k</span><span class="special">,</span> <span class="number">0.05</span><span class="special">);</span>
+</pre>
+<p>
+          <a class="link" href="../../stat_tut/weg/neg_binom_eg/neg_binom_conf.html" title="Calculating Confidence Limits on the Frequency of Occurrence for the Negative Binomial Distribution">See
+          negative binomial confidence interval example.</a>
+        </p>
+<p>
+          This function uses the Clopper-Pearson method of computing the lower bound
+          on the success fraction, whilst many texts refer to this method as giving
+          an "exact" result in practice it produces an interval that guarantees
+          <span class="emphasis"><em>at least</em></span> the coverage required, and may produce pessimistic
+          estimates for some combinations of <span class="emphasis"><em>failures</em></span> and <span class="emphasis"><em>successes</em></span>.
+          See:
+        </p>
+<p>
+          <a href="http://www.ucs.louisiana.edu/~kxk4695/Discrete_new.pdf" target="_top">Yong
+          Cai and K. Krishnamoorthy, A Simple Improved Inferential Method for Some
+          Discrete Distributions. Computational statistics and data analysis, 2005,
+          vol. 48, no3, 605-621</a>.
+        </p>
+<h6>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h6"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.estimating_number_of_trials_to_e"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.estimating_number_of_trials_to_e">Estimating
+          Number of Trials to Ensure at Least a Certain Number of Failures</a>
+        </h6>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_minimum_number_of_trials</span><span class="special">(</span>
+   <span class="identifier">RealType</span> <span class="identifier">k</span><span class="special">,</span>     <span class="comment">// number of failures.</span>
+   <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">,</span>     <span class="comment">// success fraction.</span>
+   <span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">);</span> <span class="comment">// probability threshold (0.05 equivalent to 95%).</span>
+</pre>
+<p>
+          This functions estimates the number of trials required to achieve a certain
+          probability that <span class="bold"><strong>more than <span class="emphasis"><em>k</em></span>
+          failures will be observed</strong></span>.
+        </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">k</span></dt>
+<dd><p>
+                The target number of failures to be observed.
+              </p></dd>
+<dt><span class="term">p</span></dt>
+<dd><p>
+                The probability of <span class="emphasis"><em>success</em></span> for each trial.
+              </p></dd>
+<dt><span class="term">alpha</span></dt>
+<dd><p>
+                The maximum acceptable <span class="emphasis"><em>risk</em></span> that only <span class="emphasis"><em>k</em></span>
+                failures or fewer will be observed.
+              </p></dd>
+</dl>
+</div>
+<p>
+          For example:
+        </p>
+<pre class="programlisting"><span class="identifier">geometric_distribution</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;::</span><span class="identifier">find_minimum_number_of_trials</span><span class="special">(</span><span class="number">10</span><span class="special">,</span> <span class="number">0.5</span><span class="special">,</span> <span class="number">0.05</span><span class="special">);</span>
+</pre>
+<p>
+          Returns the smallest number of trials we must conduct to be 95% (1-0.05)
+          sure of seeing 10 failures that occur with frequency one half.
+        </p>
+<p>
+          <a class="link" href="../../stat_tut/weg/neg_binom_eg/neg_binom_size_eg.html" title="Estimating Sample Sizes for the Negative Binomial.">Worked
+          Example.</a>
+        </p>
+<p>
+          This function uses numeric inversion of the geometric distribution to obtain
+          the result: another interpretation of the result is that it finds the number
+          of trials (failures) that will lead to an <span class="emphasis"><em>alpha</em></span> probability
+          of observing <span class="emphasis"><em>k</em></span> failures or fewer.
+        </p>
+<h6>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h7"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.estimating_number_of_trials_to_0"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.estimating_number_of_trials_to_0">Estimating
+          Number of Trials to Ensure a Maximum Number of Failures or Less</a>
+        </h6>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_maximum_number_of_trials</span><span class="special">(</span>
+   <span class="identifier">RealType</span> <span class="identifier">k</span><span class="special">,</span>     <span class="comment">// number of failures.</span>
+   <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">,</span>     <span class="comment">// success fraction.</span>
+   <span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">);</span> <span class="comment">// probability threshold (0.05 equivalent to 95%).</span>
+</pre>
+<p>
+          This functions estimates the maximum number of trials we can conduct and
+          achieve a certain probability that <span class="bold"><strong>k failures or
+          fewer will be observed</strong></span>.
+        </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">k</span></dt>
+<dd><p>
+                The maximum number of failures to be observed.
+              </p></dd>
+<dt><span class="term">p</span></dt>
+<dd><p>
+                The probability of <span class="emphasis"><em>success</em></span> for each trial.
+              </p></dd>
+<dt><span class="term">alpha</span></dt>
+<dd><p>
+                The maximum acceptable <span class="emphasis"><em>risk</em></span> that more than
+                <span class="emphasis"><em>k</em></span> failures will be observed.
+              </p></dd>
+</dl>
+</div>
+<p>
+          For example:
+        </p>
+<pre class="programlisting"><span class="identifier">geometric_distribution</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;::</span><span class="identifier">find_maximum_number_of_trials</span><span class="special">(</span><span class="number">0</span><span class="special">,</span> <span class="number">1.0</span><span class="special">-</span><span class="number">1.0</span><span class="special">/</span><span class="number">1000000</span><span class="special">,</span> <span class="number">0.05</span><span class="special">);</span>
+</pre>
+<p>
+          Returns the largest number of trials we can conduct and still be 95% sure
+          of seeing no failures that occur with frequency one in one million.
+        </p>
+<p>
+          This function uses numeric inversion of the geometric distribution to obtain
+          the result: another interpretation of the result, is that it finds the
+          number of trials that will lead to an <span class="emphasis"><em>alpha</em></span> probability
+          of observing more than k failures.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h8"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.non_member_accessors"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.non_member_accessors">Non-member
+          Accessors</a>
+        </h5>
+<p>
+          All the <a class="link" href="../nmp.html" title="Non-Member Properties">usual non-member accessor
+          functions</a> that are generic to all distributions are supported:
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative Distribution Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability Density Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.hazard">Hazard Function</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.chf">Cumulative Hazard Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mean">mean</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.median">median</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mode">mode</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.variance">variance</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.sd">standard deviation</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.skewness">skewness</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis">kurtosis</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis_excess">kurtosis_excess</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.range">range</a> and <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.support">support</a>.
+        </p>
+<p>
+          However it's worth taking a moment to define what these actually mean in
+          the context of this distribution:
+        </p>
+<div class="table">
+<a name="math_toolkit.dist_ref.dists.geometric_dist.meaning_of_the_non_member_access"></a><p class="title"><b>Table 5.2. Meaning of the non-member accessors.</b></p>
+<div class="table-contents"><table class="table" summary="Meaning of the non-member accessors.">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                  <p>
+                    Function
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Meaning
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability Density
+                    Function</a>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The probability of obtaining <span class="bold"><strong>exactly k
+                    failures</strong></span> from <span class="emphasis"><em>k</em></span> trials with success
+                    fraction p. For example:
+                  </p>
+<pre class="programlisting"><span class="identifier">pdf</span><span class="special">(</span><span class="identifier">geometric</span><span class="special">(</span><span class="identifier">p</span><span class="special">),</span> <span class="identifier">k</span><span class="special">)</span></pre>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative Distribution
+                    Function</a>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The probability of obtaining <span class="bold"><strong>k failures
+                    or fewer</strong></span> from <span class="emphasis"><em>k</em></span> trials with success
+                    fraction p and success on the last trial. For example:
+                  </p>
+<pre class="programlisting"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">geometric</span><span class="special">(</span><span class="identifier">p</span><span class="special">),</span> <span class="identifier">k</span><span class="special">)</span></pre>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.ccdf">Complement of
+                    the Cumulative Distribution Function</a>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The probability of obtaining <span class="bold"><strong>more than
+                    k failures</strong></span> from <span class="emphasis"><em>k</em></span> trials with
+                    success fraction p and success on the last trial. For example:
+                  </p>
+<pre class="programlisting"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">geometric</span><span class="special">(</span><span class="identifier">p</span><span class="special">),</span> <span class="identifier">k</span><span class="special">))</span></pre>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The <span class="bold"><strong>greatest</strong></span> number of failures
+                    <span class="emphasis"><em>k</em></span> expected to be observed from <span class="emphasis"><em>k</em></span>
+                    trials with success fraction <span class="emphasis"><em>p</em></span>, at probability
+                    <span class="emphasis"><em>P</em></span>. Note that the value returned is a real-number,
+                    and not an integer. Depending on the use case you may want to
+                    take either the floor or ceiling of the real result. For example:
+                  </p>
+<pre class="programlisting"><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">geometric</span><span class="special">(</span><span class="identifier">p</span><span class="special">),</span> <span class="identifier">P</span><span class="special">)</span></pre>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile_c">Quantile
+                    from the complement of the probability</a>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The <span class="bold"><strong>smallest</strong></span> number of failures
+                    <span class="emphasis"><em>k</em></span> expected to be observed from <span class="emphasis"><em>k</em></span>
+                    trials with success fraction <span class="emphasis"><em>p</em></span>, at probability
+                    <span class="emphasis"><em>P</em></span>. Note that the value returned is a real-number,
+                    and not an integer. Depending on the use case you may want to
+                    take either the floor or ceiling of the real result. For example:
+                  </p>
+<pre class="programlisting"><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">geometric</span><span class="special">(</span><span class="identifier">p</span><span class="special">),</span> <span class="identifier">P</span><span class="special">))</span></pre>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><h5>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h9"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.accuracy"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.accuracy">Accuracy</a>
+        </h5>
+<p>
+          This distribution is implemented using the pow and exp functions, so most
+          results are accurate within a few epsilon for the RealType. For extreme
+          values of <code class="computeroutput"><span class="keyword">double</span></code> <span class="emphasis"><em>p</em></span>,
+          for example 0.9999999999, accuracy can fall significantly, for example
+          to 10 decimal digits (from 16).
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.geometric_dist.h10"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.geometric_dist.implementation"></a></span><a class="link" href="geometric_dist.html#math_toolkit.dist_ref.dists.geometric_dist.implementation">Implementation</a>
+        </h5>
+<p>
+          In the following table, <span class="emphasis"><em>p</em></span> is the probability that
+          any one trial will be successful (the success fraction), <span class="emphasis"><em>k</em></span>
+          is the number of failures, <span class="emphasis"><em>p</em></span> is the probability and
+          <span class="emphasis"><em>q = 1-p</em></span>, <span class="emphasis"><em>x</em></span> is the given probability
+          to estimate the expected number of failures using the quantile.
+        </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                  <p>
+                    Function
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Implementation Notes
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    pdf
+                  </p>
+                </td>
+<td>
+                  <p>
+                    pdf = p * pow(q, k)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    cdf
+                  </p>
+                </td>
+<td>
+                  <p>
+                    cdf = 1 - q<sup>k=1</sup>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    cdf complement
+                  </p>
+                </td>
+<td>
+                  <p>
+                    exp(log1p(-p) * (k+1))
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    quantile
+                  </p>
+                </td>
+<td>
+                  <p>
+                    k = log1p(-x) / log1p(-p) -1
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    quantile from the complement
+                  </p>
+                </td>
+<td>
+                  <p>
+                    k = log(x) / log1p(-p) -1
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    mean
+                  </p>
+                </td>
+<td>
+                  <p>
+                    (1-p)/p
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    variance
+                  </p>
+                </td>
+<td>
+                  <p>
+                    (1-p)/p²
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    mode
+                  </p>
+                </td>
+<td>
+                  <p>
+                    0
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    skewness
+                  </p>
+                </td>
+<td>
+                  <p>
+                    (2-p)/√q
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    kurtosis
+                  </p>
+                </td>
+<td>
+                  <p>
+                    9+p²/q
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    kurtosis excess
+                  </p>
+                </td>
+<td>
+                  <p>
+                    6 +p²/q
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    parameter estimation member functions
+                  </p>
+                </td>
+<td>
+                  <p>
+                    See <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+                    Binomial Distribution</a>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">find_lower_bound_on_p</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    See <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+                    Binomial Distribution</a>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">find_upper_bound_on_p</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    See <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+                    Binomial Distribution</a>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">find_minimum_number_of_trials</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    See <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+                    Binomial Distribution</a>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">find_maximum_number_of_trials</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    See <a class="link" href="negative_binomial_dist.html" title="Negative Binomial Distribution">Negative
+                    Binomial Distribution</a>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="gamma_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="hyperexponential_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Discrete Quantile Policies</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../pol_ref.html" title="Policy Reference">
+<link rel="prev" href="assert_undefined.html" title="Mathematically Undefined Function Policies">
+<link rel="next" href="precision_pol.html" title="Precision Policies">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="assert_undefined.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="precision_pol.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.pol_ref.discrete_quant_ref"></a><a class="link" href="discrete_quant_ref.html" title="Discrete Quantile Policies">Discrete Quantile
+      Policies</a>
+</h3></div></div></div>
+<p>
+        If a statistical distribution is <span class="emphasis"><em>discrete</em></span> then the random
+        variable can only have integer values - this leaves us with a problem when
+        calculating quantiles - we can either ignore the discreteness of the distribution
+        and return a real value, or we can round to an integer. As it happens, computing
+        integer values can be substantially faster than calculating a real value,
+        so there are definite advantages to returning an integer, but we do then
+        need to decide how best to round the result. The <code class="computeroutput"><span class="identifier">discrete_quantile</span></code>
+        policy defines how discrete quantiles work, and how integer results are rounded:
+      </p>
+<pre class="programlisting"><span class="keyword">enum</span> <span class="identifier">discrete_quantile_policy_type</span>
+<span class="special">{</span>
+   <span class="identifier">real</span><span class="special">,</span>
+   <span class="identifier">integer_round_outwards</span><span class="special">,</span> <span class="comment">// default</span>
+   <span class="identifier">integer_round_inwards</span><span class="special">,</span>
+   <span class="identifier">integer_round_down</span><span class="special">,</span>
+   <span class="identifier">integer_round_up</span><span class="special">,</span>
+   <span class="identifier">integer_round_nearest</span>
+<span class="special">};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="identifier">discrete_quantile_policy_type</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">discrete_quantile</span><span class="special">;</span>
+</pre>
+<p>
+        The values that <code class="computeroutput"><span class="identifier">discrete_quantile</span></code>
+        can take have the following meanings:
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.discrete_quant_ref.h0"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.discrete_quant_ref.real"></a></span><a class="link" href="discrete_quant_ref.html#math_toolkit.pol_ref.discrete_quant_ref.real">real</a>
+      </h6>
+<p>
+        Ignores the discreteness of the distribution, and returns a real-valued result.
+        For example:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">negative_binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">negative_binomial_distribution</span><span class="special">;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">negative_binomial_distribution</span><span class="special">&lt;</span>
+      <span class="keyword">double</span><span class="special">,</span>
+      <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">real</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+   <span class="special">&gt;</span> <span class="identifier">dist_type</span><span class="special">;</span>
+
+<span class="comment">// Lower 5% quantile:</span>
+<span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist_type</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">);</span>
+<span class="comment">// Upper 95% quantile:</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist_type</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">));</span>
+</pre>
+<p>
+        Results in <code class="computeroutput"><span class="identifier">x</span> <span class="special">=</span>
+        <span class="number">27.3898</span></code> and <code class="computeroutput"><span class="identifier">y</span>
+        <span class="special">=</span> <span class="number">68.1584</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.discrete_quant_ref.h1"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.discrete_quant_ref.integer_round_outwards"></a></span><a class="link" href="discrete_quant_ref.html#math_toolkit.pol_ref.discrete_quant_ref.integer_round_outwards">integer_round_outwards</a>
+      </h6>
+<p>
+        This is the default policy: an integer value is returned so that:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            Lower quantiles (where the probability is less than 0.5) are rounded
+            down.
+          </li>
+<li class="listitem">
+            Upper quantiles (where the probability is greater than 0.5) are rounded
+            up.
+          </li>
+</ul></div>
+<p>
+        This is normally the safest rounding policy, since it ensures that both one
+        and two sided intervals are guaranteed to have <span class="emphasis"><em>at least</em></span>
+        the requested coverage. For example:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">negative_binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">negative_binomial</span><span class="special">;</span>
+
+<span class="comment">// Use the default rounding policy integer_round_outwards.</span>
+<span class="comment">// Lower quantile rounded down:</span>
+<span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">);</span> <span class="comment">// rounded up 27 from 27.3898</span>
+<span class="comment">// Upper quantile rounded up:</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">));</span> <span class="comment">// rounded down to 69 from 68.1584</span>
+</pre>
+<p>
+        Results in <code class="computeroutput"><span class="identifier">x</span> <span class="special">=</span>
+        <span class="number">27</span></code> (rounded down from 27.3898) and
+        <code class="computeroutput"><span class="identifier">y</span> <span class="special">=</span>
+        <span class="number">69</span></code> (rounded up from 68.1584).
+      </p>
+<p>
+        The variables x and y are now defined so that:
+      </p>
+<pre class="programlisting"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">20</span><span class="special">),</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">&lt;=</span> <span class="number">0.05</span>
+<span class="identifier">cdf</span><span class="special">(</span><span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">20</span><span class="special">),</span> <span class="identifier">y</span><span class="special">)</span> <span class="special">&gt;=</span> <span class="number">0.95</span>
+</pre>
+<p>
+        In other words we guarantee <span class="emphasis"><em>at least 90% coverage in the central
+        region overall</em></span>, and also <span class="emphasis"><em>no more than 5% coverage in
+        each tail</em></span>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.discrete_quant_ref.h2"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.discrete_quant_ref.integer_round_inwards"></a></span><a class="link" href="discrete_quant_ref.html#math_toolkit.pol_ref.discrete_quant_ref.integer_round_inwards">integer_round_inwards</a>
+      </h6>
+<p>
+        This is the opposite of <span class="emphasis"><em>integer_round_outwards</em></span>: an integer
+        value is returned so that:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            Lower quantiles (where the probability is less than 0.5) are rounded
+            <span class="emphasis"><em>up</em></span>.
+          </li>
+<li class="listitem">
+            Upper quantiles (where the probability is greater than 0.5) are rounded
+            <span class="emphasis"><em>down</em></span>.
+          </li>
+</ul></div>
+<p>
+        For example:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">negative_binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">negative_binomial_distribution</span><span class="special">;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">negative_binomial_distribution</span><span class="special">&lt;</span>
+      <span class="keyword">double</span><span class="special">,</span>
+      <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_inwards</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+   <span class="special">&gt;</span> <span class="identifier">dist_type</span><span class="special">;</span>
+
+<span class="comment">// Lower quantile rounded up:</span>
+<span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist_type</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">);</span> <span class="comment">// 28 rounded up from 27.3898</span>
+<span class="comment">// Upper quantile rounded down:</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist_type</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">));</span> <span class="comment">// 68 rounded down from 68.1584</span>
+</pre>
+<p>
+        Results in <code class="computeroutput"><span class="identifier">x</span> <span class="special">=</span>
+        <span class="number">28</span></code> (rounded up from 27.3898) and <code class="computeroutput"><span class="identifier">y</span> <span class="special">=</span> <span class="number">68</span></code>
+        (rounded down from 68.1584).
+      </p>
+<p>
+        The variables x and y are now defined so that:
+      </p>
+<pre class="programlisting"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">20</span><span class="special">),</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">&gt;=</span> <span class="number">0.05</span>
+<span class="identifier">cdf</span><span class="special">(</span><span class="identifier">negative_binomial</span><span class="special">(</span><span class="number">20</span><span class="special">),</span> <span class="identifier">y</span><span class="special">)</span> <span class="special">&lt;=</span> <span class="number">0.95</span>
+</pre>
+<p>
+        In other words we guarantee <span class="emphasis"><em>at no more than 90% coverage in the
+        central region overall</em></span>, and also <span class="emphasis"><em>at least 5% coverage
+        in each tail</em></span>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.discrete_quant_ref.h3"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.discrete_quant_ref.integer_round_down"></a></span><a class="link" href="discrete_quant_ref.html#math_toolkit.pol_ref.discrete_quant_ref.integer_round_down">integer_round_down</a>
+      </h6>
+<p>
+        Always rounds down to an integer value, no matter whether it's an upper or
+        a lower quantile.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.discrete_quant_ref.h4"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.discrete_quant_ref.integer_round_up"></a></span><a class="link" href="discrete_quant_ref.html#math_toolkit.pol_ref.discrete_quant_ref.integer_round_up">integer_round_up</a>
+      </h6>
+<p>
+        Always rounds up to an integer value, no matter whether it's an upper or
+        a lower quantile.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.discrete_quant_ref.h5"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.discrete_quant_ref.integer_round_nearest"></a></span><a class="link" href="discrete_quant_ref.html#math_toolkit.pol_ref.discrete_quant_ref.integer_round_nearest">integer_round_nearest</a>
+      </h6>
+<p>
+        Always rounds to the nearest integer value, no matter whether it's an upper
+        or a lower quantile. This will produce the requested coverage <span class="emphasis"><em>in
+        the average case</em></span>, but for any specific example may results in
+        either significantly more or less coverage than the requested amount. For
+        example:
+      </p>
+<p>
+        For example:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">negative_binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">negative_binomial_distribution</span><span class="special">;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">negative_binomial_distribution</span><span class="special">&lt;</span>
+      <span class="keyword">double</span><span class="special">,</span>
+      <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_nearest</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+   <span class="special">&gt;</span> <span class="identifier">dist_type</span><span class="special">;</span>
+
+<span class="comment">// Lower quantile rounded (down) to nearest:</span>
+<span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist_type</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">);</span> <span class="comment">// 27</span>
+<span class="comment">// Upper quantile rounded (down) to nearest:</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist_type</span><span class="special">(</span><span class="number">20</span><span class="special">,</span> <span class="number">0.3</span><span class="special">),</span> <span class="number">0.05</span><span class="special">));</span> <span class="comment">// 68</span>
+</pre>
+<p>
+        Results in <code class="computeroutput"><span class="identifier">x</span> <span class="special">=</span>
+        <span class="number">27</span></code> (rounded from 27.3898) and <code class="computeroutput"><span class="identifier">y</span> <span class="special">=</span> <span class="number">68</span></code>
+        (rounded from 68.1584).
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="assert_undefined.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="precision_pol.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

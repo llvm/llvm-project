@@ -1,0 +1,79 @@
+[section:legendre_stieltjes Legendre-Stieltjes Polynomials]
+
+[h4 Synopsis]
+
+    ``
+    #include <boost/math/special_functions/legendre_stieltjes.hpp>
+    ``
+
+    namespace boost{ namespace math{
+
+    template <class T>
+    class legendre_stieltjes
+    {
+    public:
+        legendre_stieltjes(size_t m);
+
+        Real norm_sq() const;
+
+        Real operator()(Real x) const;
+
+        Real prime(Real x) const;
+
+        std::vector<Real> zeros() const;
+    }
+
+    }}
+
+[h4 Description]
+
+The Legendre-Stieltjes polynomials are a family of polynomials used to generate Gauss-Konrod quadrature formulas.
+Gauss-Konrod quadratures are algorithms which extend a Gaussian quadrature in such a way that all abscissas
+are reused when computed a higher-order estimate of the integral, allowing efficient calculation of an error estimate.
+The Legendre-Stieltjes polynomials assist with this task because their zeros /interlace/ the zeros of the Legendre polynomials,
+meaning that between any two zeros of a Legendre polynomial of degree n, there exists a zero of the Legendre-Stieltjes polynomial
+of degree n+1.
+
+The Legendre-Stieltjes polynomials ['E[sub n+1]] are defined by the property that they have /n/ vanishing moments against the oscillatory measure ['P[sub n]], i.e., 
+
+[expression [int] [sub -1][super 1] E[sub n+1](x)P[sub n](x) x[super k]dx = 0] for /k = 0, 1, ..., n/.
+
+The first few are
+
+[expression E[sub 1](x) = P[sub 1](x)]
+
+[expression E[sub 2](x) = P[sub 2](x) - 2P[sub 0](x)/5]
+
+[expression  E[sub 3](x) = P[sub 3](x) - 9P[sub 1](x)/14]
+
+[expression  E[sub 4](x) = P[sub 4](x) - 20P[sub 2](x)/27 + 14P[sub 0](x)/891]
+
+[expression  E[sub 5](x) = P[sub 5](x) - 35P[sub 3](x)/44 + 135P[sub 1](x)/12584]
+
+where ['P[sub i]] are the Legendre polynomials.
+The scaling follows [@http://www.ams.org/journals/mcom/1968-22-104/S0025-5718-68-99866-9/S0025-5718-68-99866-9.pdf Patterson],
+who expanded the Legendre-Stieltjes polynomials in a Legendre series and took the coefficient of the highest-order Legendre polynomial in the series to be unity.
+
+The Legendre-Stieltjes polynomials do not satisfy three-term recurrence relations or have a particularly simple representation.
+Hence the constructor call determines what, in fact, the polynomial is.
+Once the constructor comes back, the polynomial can be evaluated via the Legendre series.
+
+Example usage:
+
+    // Call to the constructor determines the coefficients in the Legendre expansion
+    legendre_stieltjes<double> E(12);
+    // Evaluate the polynomial at a point:
+    double x = E(0.3);
+    // Evaluate the derivative at a point:
+    double x_p = E.prime(0.3);
+    // Use the norm_sq to change between scalings, if desired:
+    double norm = std::sqrt(E.norm_sq());
+
+[endsect] [/section:legendre_stieltjes Legendre-Stieltjes Polynomials]
+
+[/
+  Copyright 2017 Nick Thompson
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

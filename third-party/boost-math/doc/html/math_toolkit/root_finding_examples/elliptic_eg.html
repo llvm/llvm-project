@@ -1,0 +1,271 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>A More complex example - Inverting the Elliptic Integrals</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../root_finding_examples.html" title="Examples of Root-Finding (with and without derivatives)">
+<link rel="prev" href="nth_root.html" title="Generalizing to Compute the nth root">
+<link rel="next" href="../bad_guess.html" title="The Effect of a Poor Initial Guess">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nth_root.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding_examples.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../bad_guess.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.root_finding_examples.elliptic_eg"></a><a class="link" href="elliptic_eg.html" title="A More complex example - Inverting the Elliptic Integrals">A More
+      complex example - Inverting the Elliptic Integrals</a>
+</h3></div></div></div>
+<p>
+        The arc length of an ellipse with radii <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span>
+        is given by:
+      </p>
+<pre class="programlisting">L(a, b) = 4aE(k)</pre>
+<p>
+        with:
+      </p>
+<pre class="programlisting">k = √(1 - b<sup>2</sup>/a<sup>2</sup>)</pre>
+<p>
+        where <span class="emphasis"><em>E(k)</em></span> is the complete elliptic integral of the
+        second kind - see <a class="link" href="../ellint/ellint_2.html" title="Elliptic Integrals of the Second Kind - Legendre Form">ellint_2</a>.
+      </p>
+<p>
+        Let's suppose we know the arc length and one radii, we can then calculate
+        the other radius by inverting the formula above. We'll begin by encoding
+        the above formula into a functor that our root-finding algorithms can call.
+      </p>
+<p>
+        Note that while not completely obvious from the formula above, the function
+        is completely symmetrical in the two radii - which can be interchanged at
+        will - in this case we need to make sure that <code class="computeroutput"><span class="identifier">a</span>
+        <span class="special">&gt;=</span> <span class="identifier">b</span></code>
+        so that we don't accidentally take the square root of a negative number:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">elliptic_root_functor_noderiv</span>
+<span class="special">{</span> <span class="comment">//  Nth root of x using only function - no derivatives.</span>
+   <span class="identifier">elliptic_root_functor_noderiv</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">arc</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">radius</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">m_arc</span><span class="special">(</span><span class="identifier">arc</span><span class="special">),</span> <span class="identifier">m_radius</span><span class="special">(</span><span class="identifier">radius</span><span class="special">)</span>
+   <span class="special">{</span> <span class="comment">// Constructor just stores value a to find root of.</span>
+   <span class="special">}</span>
+   <span class="identifier">T</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">sqrt</span><span class="special">;</span>
+      <span class="comment">// return the difference between required arc-length, and the calculated arc-length for an</span>
+      <span class="comment">// ellipse with radii m_radius and x:</span>
+      <span class="identifier">T</span> <span class="identifier">a</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">max</span><span class="special">)(</span><span class="identifier">m_radius</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">b</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">min</span><span class="special">)(</span><span class="identifier">m_radius</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">k</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="number">1</span> <span class="special">-</span> <span class="identifier">b</span> <span class="special">*</span> <span class="identifier">b</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">a</span> <span class="special">*</span> <span class="identifier">a</span><span class="special">));</span>
+      <span class="keyword">return</span> <span class="number">4</span> <span class="special">*</span> <span class="identifier">a</span> <span class="special">*</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">ellint_2</span><span class="special">(</span><span class="identifier">k</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">m_arc</span><span class="special">;</span>
+   <span class="special">}</span>
+<span class="keyword">private</span><span class="special">:</span>
+   <span class="identifier">T</span> <span class="identifier">m_arc</span><span class="special">;</span>     <span class="comment">// length of arc.</span>
+   <span class="identifier">T</span> <span class="identifier">m_radius</span><span class="special">;</span>  <span class="comment">// one of the two radii of the ellipse</span>
+<span class="special">};</span> <span class="comment">// template &lt;class T&gt; struct elliptic_root_functor_noderiv</span>
+</pre>
+<p>
+        We'll also need a decent estimate to start searching from, the approximation:
+      </p>
+<pre class="programlisting">L(a, b) ≈ 4√(a<sup>2</sup> + b<sup>2</sup>)</pre>
+<p>
+        Is easily inverted to give us what we need, which using derivative-free root
+        finding leads to the algorithm:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">elliptic_root_noderiv</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">radius</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">arc</span><span class="special">)</span>
+<span class="special">{</span> <span class="comment">// return the other radius of an ellipse, given one radii and the arc-length</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>  <span class="comment">// Help ADL of std functions.</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span> <span class="comment">// For bracket_and_solve_root.</span>
+
+   <span class="identifier">T</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">arc</span> <span class="special">*</span> <span class="identifier">arc</span> <span class="special">/</span> <span class="number">16</span> <span class="special">-</span> <span class="identifier">radius</span> <span class="special">*</span> <span class="identifier">radius</span><span class="special">);</span>
+   <span class="identifier">T</span> <span class="identifier">factor</span> <span class="special">=</span> <span class="number">1.2</span><span class="special">;</span>                     <span class="comment">// How big steps to take when searching.</span>
+
+   <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">maxit</span> <span class="special">=</span> <span class="number">50</span><span class="special">;</span>  <span class="comment">// Limit to maximum iterations.</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">it</span> <span class="special">=</span> <span class="identifier">maxit</span><span class="special">;</span>        <span class="comment">// Initially our chosen max iterations, but updated with actual.</span>
+   <span class="keyword">bool</span> <span class="identifier">is_rising</span> <span class="special">=</span> <span class="keyword">true</span><span class="special">;</span>              <span class="comment">// arc-length increases if one radii increases, so function is rising</span>
+   <span class="comment">// Define a termination condition, stop when nearly all digits are correct, but allow for</span>
+   <span class="comment">// the fact that we are returning a range, and must have some inaccuracy in the elliptic integral:</span>
+   <span class="identifier">eps_tolerance</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">tol</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span> <span class="special">-</span> <span class="number">2</span><span class="special">);</span>
+   <span class="comment">// Call bracket_and_solve_root to find the solution, note that this is a rising function:</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">bracket_and_solve_root</span><span class="special">(</span><span class="identifier">elliptic_root_functor_noderiv</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">arc</span><span class="special">,</span> <span class="identifier">radius</span><span class="special">),</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">factor</span><span class="special">,</span> <span class="identifier">is_rising</span><span class="special">,</span> <span class="identifier">tol</span><span class="special">,</span> <span class="identifier">it</span><span class="special">);</span>
+   <span class="comment">// Result is midway between the endpoints of the range:</span>
+   <span class="keyword">return</span> <span class="identifier">r</span><span class="special">.</span><span class="identifier">first</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">second</span> <span class="special">-</span> <span class="identifier">r</span><span class="special">.</span><span class="identifier">first</span><span class="special">)</span> <span class="special">/</span> <span class="number">2</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// template &lt;class T&gt; T elliptic_root_noderiv(T x)</span>
+</pre>
+<p>
+        This function generally finds the root within 8-10 iterations, so given that
+        the runtime is completely dominated by the cost of calling the elliptic integral
+        it would be nice to reduce that count somewhat. We'll try to do that by using
+        a derivative-based method; the derivatives of this function are rather hard
+        to work out by hand, but fortunately <a href="http://www.wolframalpha.com/input/?i=d%2Fda+%5b4+*+a+*+EllipticE%281+-+b%5e2%2Fa%5e2%29%5d" target="_top">Wolfram
+        Alpha</a> can do the grunt work for us to give:
+      </p>
+<pre class="programlisting">d/da L(a, b) = 4(a<sup>2</sup>E(k) - b<sup>2</sup>K(k)) / (a<sup>2</sup> - b<sup>2</sup>)</pre>
+<p>
+        Note that now we have <span class="bold"><strong>two</strong></span> elliptic integral
+        calls to get the derivative, so our functor will be at least twice as expensive
+        to call as the derivative-free one above: we'll have to reduce the iteration
+        count quite substantially to make a difference!
+      </p>
+<p>
+        Here's the revised functor:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">elliptic_root_functor_1deriv</span>
+<span class="special">{</span> <span class="comment">// Functor also returning 1st derivative.</span>
+   <span class="keyword">static_assert</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_integral</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"Only floating-point type types can be used!"</span><span class="special">);</span>
+
+   <span class="identifier">elliptic_root_functor_1deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">arc</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">radius</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">m_arc</span><span class="special">(</span><span class="identifier">arc</span><span class="special">),</span> <span class="identifier">m_radius</span><span class="special">(</span><span class="identifier">radius</span><span class="special">)</span>
+   <span class="special">{</span> <span class="comment">// Constructor just stores value a to find root of.</span>
+   <span class="special">}</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">sqrt</span><span class="special">;</span>
+      <span class="comment">// Return the difference between required arc-length, and the calculated arc-length for an</span>
+      <span class="comment">// ellipse with radii m_radius and x, plus it's derivative.</span>
+      <span class="comment">// See http://www.wolframalpha.com/input/?i=d%2Fda+[4+*+a+*+EllipticE%281+-+b^2%2Fa^2%29]</span>
+      <span class="comment">// We require two elliptic integral calls, but from these we can calculate both</span>
+      <span class="comment">// the function and it's derivative:</span>
+      <span class="identifier">T</span> <span class="identifier">a</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">max</span><span class="special">)(</span><span class="identifier">m_radius</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">b</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">min</span><span class="special">)(</span><span class="identifier">m_radius</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">a2</span> <span class="special">=</span> <span class="identifier">a</span> <span class="special">*</span> <span class="identifier">a</span><span class="special">;</span>
+      <span class="identifier">T</span> <span class="identifier">b2</span> <span class="special">=</span> <span class="identifier">b</span> <span class="special">*</span> <span class="identifier">b</span><span class="special">;</span>
+      <span class="identifier">T</span> <span class="identifier">k</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="number">1</span> <span class="special">-</span> <span class="identifier">b2</span> <span class="special">/</span> <span class="identifier">a2</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">Ek</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">ellint_2</span><span class="special">(</span><span class="identifier">k</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">Kk</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">ellint_1</span><span class="special">(</span><span class="identifier">k</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">fx</span> <span class="special">=</span> <span class="number">4</span> <span class="special">*</span> <span class="identifier">a</span> <span class="special">*</span> <span class="identifier">Ek</span> <span class="special">-</span> <span class="identifier">m_arc</span><span class="special">;</span>
+      <span class="identifier">T</span> <span class="identifier">dfx</span> <span class="special">=</span> <span class="number">4</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">a2</span> <span class="special">*</span> <span class="identifier">Ek</span> <span class="special">-</span> <span class="identifier">b2</span> <span class="special">*</span> <span class="identifier">Kk</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">a2</span> <span class="special">-</span> <span class="identifier">b2</span><span class="special">);</span>
+      <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">make_pair</span><span class="special">(</span><span class="identifier">fx</span><span class="special">,</span> <span class="identifier">dfx</span><span class="special">);</span>
+   <span class="special">}</span>
+<span class="keyword">private</span><span class="special">:</span>
+   <span class="identifier">T</span> <span class="identifier">m_arc</span><span class="special">;</span>     <span class="comment">// length of arc.</span>
+   <span class="identifier">T</span> <span class="identifier">m_radius</span><span class="special">;</span>  <span class="comment">// one of the two radii of the ellipse</span>
+<span class="special">};</span>  <span class="comment">// struct elliptic_root__functor_1deriv</span>
+</pre>
+<p>
+        The root-finding code is now almost the same as before, but we'll make use
+        of Newton-iteration to get the result:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">elliptic_root_1deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">radius</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">arc</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>  <span class="comment">// Help ADL of std functions.</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span> <span class="comment">// For newton_raphson_iterate.</span>
+
+   <span class="keyword">static_assert</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_integral</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"Only floating-point type types can be used!"</span><span class="special">);</span>
+
+   <span class="identifier">T</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">arc</span> <span class="special">*</span> <span class="identifier">arc</span> <span class="special">/</span> <span class="number">16</span> <span class="special">-</span> <span class="identifier">radius</span> <span class="special">*</span> <span class="identifier">radius</span><span class="special">);</span>
+   <span class="identifier">T</span> <span class="identifier">min</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>   <span class="comment">// Minimum possible value is zero.</span>
+   <span class="identifier">T</span> <span class="identifier">max</span> <span class="special">=</span> <span class="identifier">arc</span><span class="special">;</span> <span class="comment">// Maximum possible value is the arc length.</span>
+
+   <span class="comment">// Accuracy doubles at each step, so stop when just over half of the digits are</span>
+   <span class="comment">// correct, and rely on that step to polish off the remainder:</span>
+   <span class="keyword">int</span> <span class="identifier">get_digits</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span> <span class="special">*</span> <span class="number">0.6</span><span class="special">);</span>
+   <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">maxit</span> <span class="special">=</span> <span class="number">20</span><span class="special">;</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">it</span> <span class="special">=</span> <span class="identifier">maxit</span><span class="special">;</span>
+   <span class="identifier">T</span> <span class="identifier">result</span> <span class="special">=</span> <span class="identifier">newton_raphson_iterate</span><span class="special">(</span><span class="identifier">elliptic_root_functor_1deriv</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">arc</span><span class="special">,</span> <span class="identifier">radius</span><span class="special">),</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">max</span><span class="special">,</span> <span class="identifier">get_digits</span><span class="special">,</span> <span class="identifier">it</span><span class="special">);</span>
+   <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// T elliptic_root_1_deriv  Newton-Raphson</span>
+</pre>
+<p>
+        The number of iterations required for <code class="computeroutput"><span class="keyword">double</span></code>
+        precision is now usually around 4 - so we've slightly more than halved the
+        number of iterations, but made the functor twice as expensive to call!
+      </p>
+<p>
+        Interestingly though, the second derivative requires no more expensive elliptic
+        integral calls than the first does, in other words it comes essentially "for
+        free", in which case we might as well make use of it and use Halley-iteration.
+        This is quite a typical situation when inverting special-functions. Here's
+        the revised functor:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">elliptic_root_functor_2deriv</span>
+<span class="special">{</span> <span class="comment">// Functor returning both 1st and 2nd derivatives.</span>
+   <span class="keyword">static_assert</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_integral</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"Only floating-point type types can be used!"</span><span class="special">);</span>
+
+   <span class="identifier">elliptic_root_functor_2deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">arc</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">radius</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">m_arc</span><span class="special">(</span><span class="identifier">arc</span><span class="special">),</span> <span class="identifier">m_radius</span><span class="special">(</span><span class="identifier">radius</span><span class="special">)</span> <span class="special">{}</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">sqrt</span><span class="special">;</span>
+      <span class="comment">// Return the difference between required arc-length, and the calculated arc-length for an</span>
+      <span class="comment">// ellipse with radii m_radius and x, plus it's derivative.</span>
+      <span class="comment">// See http://www.wolframalpha.com/input/?i=d^2%2Fda^2+[4+*+a+*+EllipticE%281+-+b^2%2Fa^2%29]</span>
+      <span class="comment">// for the second derivative.</span>
+      <span class="identifier">T</span> <span class="identifier">a</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">max</span><span class="special">)(</span><span class="identifier">m_radius</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">b</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">min</span><span class="special">)(</span><span class="identifier">m_radius</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">a2</span> <span class="special">=</span> <span class="identifier">a</span> <span class="special">*</span> <span class="identifier">a</span><span class="special">;</span>
+      <span class="identifier">T</span> <span class="identifier">b2</span> <span class="special">=</span> <span class="identifier">b</span> <span class="special">*</span> <span class="identifier">b</span><span class="special">;</span>
+      <span class="identifier">T</span> <span class="identifier">k</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="number">1</span> <span class="special">-</span> <span class="identifier">b2</span> <span class="special">/</span> <span class="identifier">a2</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">Ek</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">ellint_2</span><span class="special">(</span><span class="identifier">k</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">Kk</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">ellint_1</span><span class="special">(</span><span class="identifier">k</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">fx</span> <span class="special">=</span> <span class="number">4</span> <span class="special">*</span> <span class="identifier">a</span> <span class="special">*</span> <span class="identifier">Ek</span> <span class="special">-</span> <span class="identifier">m_arc</span><span class="special">;</span>
+      <span class="identifier">T</span> <span class="identifier">dfx</span> <span class="special">=</span> <span class="number">4</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">a2</span> <span class="special">*</span> <span class="identifier">Ek</span> <span class="special">-</span> <span class="identifier">b2</span> <span class="special">*</span> <span class="identifier">Kk</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">a2</span> <span class="special">-</span> <span class="identifier">b2</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">dfx2</span> <span class="special">=</span> <span class="number">4</span> <span class="special">*</span> <span class="identifier">b2</span> <span class="special">*</span> <span class="special">((</span><span class="identifier">a2</span> <span class="special">+</span> <span class="identifier">b2</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">Kk</span> <span class="special">-</span> <span class="number">2</span> <span class="special">*</span> <span class="identifier">a2</span> <span class="special">*</span> <span class="identifier">Ek</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">a</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">a2</span> <span class="special">-</span> <span class="identifier">b2</span><span class="special">)</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">a2</span> <span class="special">-</span> <span class="identifier">b2</span><span class="special">));</span>
+      <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">fx</span><span class="special">,</span> <span class="identifier">dfx</span><span class="special">,</span> <span class="identifier">dfx2</span><span class="special">);</span>
+   <span class="special">}</span>
+<span class="keyword">private</span><span class="special">:</span>
+   <span class="identifier">T</span> <span class="identifier">m_arc</span><span class="special">;</span>     <span class="comment">// length of arc.</span>
+   <span class="identifier">T</span> <span class="identifier">m_radius</span><span class="special">;</span>  <span class="comment">// one of the two radii of the ellipse</span>
+<span class="special">};</span>
+</pre>
+<p>
+        The actual root-finding code is almost the same as before, except we can
+        use Halley, rather than Newton iteration:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">elliptic_root_2deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">radius</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">arc</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>                <span class="comment">// Help ADL of std functions.</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span> <span class="comment">// For halley_iterate.</span>
+
+   <span class="keyword">static_assert</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_integral</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"Only floating-point type types can be used!"</span><span class="special">);</span>
+
+   <span class="identifier">T</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">arc</span> <span class="special">*</span> <span class="identifier">arc</span> <span class="special">/</span> <span class="number">16</span> <span class="special">-</span> <span class="identifier">radius</span> <span class="special">*</span> <span class="identifier">radius</span><span class="special">);</span>
+   <span class="identifier">T</span> <span class="identifier">min</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>                                   <span class="comment">// Minimum possible value is zero.</span>
+   <span class="identifier">T</span> <span class="identifier">max</span> <span class="special">=</span> <span class="identifier">arc</span><span class="special">;</span>                                 <span class="comment">// radius can't be larger than the arc length.</span>
+
+   <span class="comment">// Accuracy triples at each step, so stop when just over one-third of the digits</span>
+   <span class="comment">// are correct, and the last iteration will polish off the remaining digits:</span>
+   <span class="keyword">int</span> <span class="identifier">get_digits</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span> <span class="special">*</span> <span class="number">0.4</span><span class="special">);</span>
+   <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">maxit</span> <span class="special">=</span> <span class="number">20</span><span class="special">;</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">it</span> <span class="special">=</span> <span class="identifier">maxit</span><span class="special">;</span>
+   <span class="identifier">T</span> <span class="identifier">result</span> <span class="special">=</span> <span class="identifier">halley_iterate</span><span class="special">(</span><span class="identifier">elliptic_root_functor_2deriv</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">arc</span><span class="special">,</span> <span class="identifier">radius</span><span class="special">),</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">max</span><span class="special">,</span> <span class="identifier">get_digits</span><span class="special">,</span> <span class="identifier">it</span><span class="special">);</span>
+   <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// nth_2deriv Halley</span>
+</pre>
+<p>
+        While this function uses only slightly fewer iterations (typically around
+        3) to find the root, compared to the original derivative-free method, we've
+        moved from 8-10 elliptic integral calls to 6.
+      </p>
+<p>
+        Full code of this example is at <a href="../../../../example/root_elliptic_finding.cpp" target="_top">root_elliptic_finding.cpp</a>.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nth_root.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding_examples.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../bad_guess.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

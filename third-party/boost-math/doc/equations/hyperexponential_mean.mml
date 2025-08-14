@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <munderover>
+    <mo>&#x2211;<!-- ∑ --></mo>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mi>i</mi>
+      <mo>=</mo>
+      <mn>1</mn>
+    </mrow>
+    <mi>k</mi>
+  </munderover>
+  <mfrac>
+    <msub>
+      <mi>&#x03B1;<!-- α --></mi>
+      <mi>i</mi>
+    </msub>
+    <msub>
+      <mi>&#x03BB;<!-- λ --></mi>
+      <mi>i</mi>
+    </msub>
+  </mfrac>
+</math>

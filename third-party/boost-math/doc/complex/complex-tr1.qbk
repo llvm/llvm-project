@@ -1,0 +1,149 @@
+[def __effects [*Effects: ]]
+[def __formula [*Formula: ]]
+[def __exm1 '''<code>e<superscript>x</superscript> - 1</code>''']
+[def __ex '''<code>e<superscript>x</superscript></code>''']
+[def __te '''2&#x03B5;''']
+
+[mathpart inverse_complex..Complex Number Functions]
+
+The following complex number algorithms are the inverses of trigonometric functions currently
+present in the C++ standard.  Equivalents to these functions are part of the C99 standard, and
+are part of the [tr1].
+
+[section:complex_implementation Implementation and Accuracy]
+
+Although there are deceptively simple formulae available for all of these functions, a naive
+implementation that used these formulae would fail catastrophically for some input
+values.  The Boost versions of these functions have been implemented using the methodology
+described in "Implementing the Complex Arcsine and Arccosine Functions Using Exception Handling"
+by T. E. Hull Thomas F. Fairgrieve and Ping Tak Peter Tang, ACM Transactions on Mathematical Software,
+Vol. 23, No. 3, September 1997.  This means that the functions are well defined over the entire
+complex number range, and produce accurate values even at the extremes of that range, where as a naive
+formula would cause overflow or underflow to occur during the calculation, even though the result is
+actually a representable value.  The maximum theoretical relative error for all of these functions
+is less than 9.5[epsilon] for every machine-representable point in the complex plane.  Please refer to
+comments in the header files themselves and to the above mentioned paper for more information
+on the implementation methodology.
+
+[endsect]
+
+[section:asin asin]
+
+[h4 Header:]
+
+   #include <boost/math/complex/asin.hpp>
+
+[h4 Synopsis:]
+
+   template<class T>
+   std::complex<T> asin(const std::complex<T>& z);
+
+__effects returns the inverse sine of the complex number z.
+
+__formula [$../images/asin.png]
+
+[endsect]
+
+[section:acos acos]
+
+[h4 Header:]
+
+   #include <boost/math/complex/acos.hpp>
+
+[h4 Synopsis:]
+
+   template<class T>
+   std::complex<T> acos(const std::complex<T>& z);
+
+__effects returns the inverse cosine of the complex number z.
+
+__formula [$../images/acos.png]
+
+[endsect]
+
+[section:atan atan]
+
+[h4 Header:]
+
+   #include <boost/math/complex/atan.hpp>
+
+[h4 Synopsis:]
+
+   template<class T>
+   std::complex<T> atan(const std::complex<T>& z);
+
+__effects returns the inverse tangent of the complex number z.
+
+__formula [$../images/atan.png]
+
+[endsect]
+
+[section:asinh asinh]
+
+[h4 Header:]
+
+   #include <boost/math/complex/asinh.hpp>
+
+[h4 Synopsis:]
+
+   template<class T>
+   std::complex<T> asinh(const std::complex<T>& z);
+
+__effects returns the inverse hyperbolic sine of the complex number z.
+
+__formula [$../images/asinh.png]
+
+[endsect]
+
+[section:acosh acosh]
+
+[h4 Header:]
+
+   #include <boost/math/complex/acosh.hpp>
+
+[h4 Synopsis:]
+
+   template<class T>
+   std::complex<T> acosh(const std::complex<T>& z);
+
+__effects returns the inverse hyperbolic cosine of the complex number z.
+
+__formula [$../images/acosh.png]
+
+[endsect]
+
+[section:atanh atanh]
+
+[h4 Header:]
+
+   #include <boost/math/complex/atanh.hpp>
+
+[h4 Synopsis:]
+
+   template<class T>
+   std::complex<T> atanh(const std::complex<T>& z);
+
+__effects returns the inverse hyperbolic tangent of the complex number z.
+
+__formula [$../images/atanh.png]
+
+[endsect]
+
+[section:complex_history History]
+
+* 2005/12/17: Added support for platforms with no meaningful numeric_limits<>::infinity().
+* 2005/12/01: Initial version, added as part of the TR1 library.
+
+
+[endsect]
+
+[endmathpart]
+
+[/
+  Copyright 2008, 2009 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+

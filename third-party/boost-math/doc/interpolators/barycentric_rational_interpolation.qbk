@@ -1,0 +1,107 @@
+[/
+  Copyright 2017 Nick Thompson
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:barycentric Barycentric Rational Interpolation]
+
+[heading Synopsis]
+
+``
+#include <boost/math/interpolators/barycentric_rational.hpp>
+
+namespace boost{ namespace math{ namespace interpolators{
+    template<class Real>
+    class barycentric_rational
+    {
+    public:
+        template <class InputIterator1, class InputIterator2>
+        barycentric_rational(InputIterator1 start_x, InputIterator1 end_x, InputIterator2 start_y, size_t approximation_order = 3);
+
+        barycentric_rational(std::vector<Real>&& x, std::vector<Real>&& y, size_t order = 3);
+
+        barycentric_rational(const Real* const x, const Real* const y, size_t n, size_t approximation_order = 3);
+
+        Real operator()(Real x) const;
+
+        Real prime(Real x) const;
+
+        std::vector<Real>&& return_x();
+
+        std::vector<Real>&& return_y();
+    };
+
+}}}
+``
+
+
+[heading Description]
+
+Barycentric rational interpolation is a high-accuracy interpolation method for non-uniformly spaced samples.
+It requires [bigo](/N/) time for construction, and [bigo](/N/) time for each evaluation.
+Linear time evaluation is not optimal; for instance the cubic B-spline can be evaluated in constant time.
+However, using the cubic B-spline requires uniformly-spaced samples, which are not always available.
+
+Use of the class requires a vector of independent variables `x[0]`, `x[1]`, .... `x[n-1]` where `x[i+1] > x[i]`,
+and a vector of dependent variables `y[0]`, `y[1]`, ... , `y[n-1]`.
+The call is trivial:
+
+    std::vector<double> x(500);
+    std::vector<double> y(500);
+    // populate x, y, then:
+    boost::math::interpolators::barycentric_rational<double> interpolant(std::move(x), std::move(y));
+
+This implicitly calls the constructor with approximation order 3, and hence the accuracy is [bigo](/h/[super 4]).
+In general, if you require an approximation order /d/, then the error is [bigo](/h/[super /d/+1]).
+A call to the constructor with an explicit approximation order is demonstrated below
+
+    boost::math::interpolators::barycentric_rational<double> interpolant(std::move(x), std::move(y), 5);
+
+To evaluate the interpolant, simply use
+
+    double x = 2.3;
+    double y = interpolant(x);
+
+and to evaluate its derivative use
+
+    double y = interpolant.prime(x);
+
+If you no longer require the interpolant, then you can get your data back:
+
+    std::vector<double> xs = interpolant.return_x();
+    std::vector<double> ys = interpolant.return_y();
+
+Be aware that once you return your data, the interpolant is *dead*.
+
+[heading Caveats]
+
+Although this algorithm is robust, it can surprise you.
+The main way this occurs is if the sample spacing at the endpoints is much larger than the spacing in the center.
+This is to be expected; all interpolants perform better in the opposite regime,
+where samples are clustered at the endpoints and somewhat uniformly spaced throughout the center.
+
+A desirable property of any interpolator /f/ is that for all
+/x/[sub min] [le] /x/ [le] /x/[sub max], also /y/[sub min] [le] /f/(/x/) [le] /y/[sub max].
+
+/This property does not hold for the barycentric rational interpolator./
+However, unless you deliberately try to antagonize this interpolator (by, for instance, placing the final value far from all the rest),
+you will probably not fall victim to this problem.
+
+The reference used for implementation of this algorithm is 
+[@https://web.archive.org/save/_embed/http://www.mn.uio.no/math/english/people/aca/michaelf/papers/rational.pdf Barycentric rational interpolation with no poles and a high rate of interpolation], and the evaluation of the derivative is given by [@http://www.ams.org/journals/mcom/1986-47-175/S0025-5718-1986-0842136-8/S0025-5718-1986-0842136-8.pdf Some New Aspects of Rational Interpolation].
+
+[heading Examples]
+
+[import ../../example/barycentric_interpolation_example.cpp]
+[import ../../example/barycentric_interpolation_example_2.cpp]
+
+[barycentric_rational_example]
+
+[barycentric_rational_example2]
+
+[barycentric_rational_example2_out]
+
+[endsect] [/section:barycentric Barycentric Rational Interpolation]

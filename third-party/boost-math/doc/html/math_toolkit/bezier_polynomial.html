@@ -1,0 +1,251 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Bezier Polynomials</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../interpolation.html" title="Chapter 13. Interpolation">
+<link rel="prev" href="catmull_rom.html" title="Catmull-Rom Splines">
+<link rel="next" href="cardinal_trigonometric.html" title="Cardinal Trigonometric interpolation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="catmull_rom.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cardinal_trigonometric.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.bezier_polynomial"></a><a class="link" href="bezier_polynomial.html" title="Bezier Polynomials">Bezier Polynomials</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.bezier_polynomial.h0"></a>
+      <span class="phrase"><a name="math_toolkit.bezier_polynomial.synopsis"></a></span><a class="link" href="bezier_polynomial.html#math_toolkit.bezier_polynomial.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">bezier_polynomials</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span> <span class="special">{</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">bezier_polynomial</span>
+    <span class="special">{</span>
+    <span class="keyword">public</span><span class="special">:</span>
+        <span class="keyword">using</span> <span class="identifier">Point</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">RandomAccessContainer</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">;</span>
+        <span class="keyword">using</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">Point</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">;</span>
+        <span class="keyword">using</span> <span class="identifier">Z</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">RandomAccessContainer</span><span class="special">::</span><span class="identifier">size_type</span><span class="special">;</span>
+
+        <span class="identifier">bezier_polynomial</span><span class="special">(</span><span class="identifier">RandomAccessContainer</span><span class="special">&amp;&amp;</span> <span class="identifier">control_points</span><span class="special">);</span>
+
+        <span class="keyword">inline</span> <span class="identifier">Point</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">t</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="keyword">inline</span> <span class="identifier">Point</span> <span class="identifier">prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">t</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="keyword">void</span> <span class="identifier">edit_control_point</span><span class="special">(</span><span class="identifier">Point</span> <span class="identifier">cont</span> <span class="special">&amp;</span> <span class="identifier">p</span><span class="special">,</span> <span class="identifier">Z</span> <span class="identifier">index</span><span class="special">);</span>
+
+        <span class="identifier">RandomAccessContainer</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">control_points</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="keyword">friend</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">bezier_polynomial</span><span class="special">&lt;</span><span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">bp</span><span class="special">);</span>
+    <span class="special">};</span>
+
+<span class="special">}</span>
+</pre>
+<h4>
+<a name="math_toolkit.bezier_polynomial.h1"></a>
+      <span class="phrase"><a name="math_toolkit.bezier_polynomial.description"></a></span><a class="link" href="bezier_polynomial.html#math_toolkit.bezier_polynomial.description">Description</a>
+    </h4>
+<p>
+      Bézier polynomials are curves smooth curves which approximate a set of control
+      points. They are commonly used in computer-aided geometric design. A basic
+      usage is demonstrated below:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;&gt;</span> <span class="identifier">control_points</span><span class="special">(</span><span class="number">4</span><span class="special">);</span>
+<span class="identifier">control_points</span><span class="special">[</span><span class="number">0</span><span class="special">]</span> <span class="special">=</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">};</span>
+<span class="identifier">control_points</span><span class="special">[</span><span class="number">1</span><span class="special">]</span> <span class="special">=</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">};</span>
+<span class="identifier">control_points</span><span class="special">[</span><span class="number">2</span><span class="special">]</span> <span class="special">=</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">,</span><span class="number">0</span><span class="special">};</span>
+<span class="identifier">control_points</span><span class="special">[</span><span class="number">3</span><span class="special">]</span> <span class="special">=</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="keyword">auto</span> <span class="identifier">bp</span> <span class="special">=</span> <span class="identifier">bezier_polynomial</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">control_points</span><span class="special">));</span>
+<span class="comment">// Interpolate at t = 0.1:</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">point</span> <span class="special">=</span> <span class="identifier">bp</span><span class="special">(</span><span class="number">0.1</span><span class="special">);</span>
+</pre>
+<p>
+      The support of the interpolant is [0,1], and an error message will be written
+      if attempting to evaluate the polynomial outside of these bounds. At least
+      two points must be passed; creating a polynomial of degree 1.
+    </p>
+<p>
+      Control points may be modified via <code class="computeroutput"><span class="identifier">edit_control_point</span></code>,
+      for example:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">endpoint</span><span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">bp</span><span class="special">.</span><span class="identifier">edit_control_point</span><span class="special">(</span><span class="identifier">endpoint</span><span class="special">,</span> <span class="number">3</span><span class="special">);</span>
+</pre>
+<p>
+      This replaces the last control point with <code class="computeroutput"><span class="identifier">endpoint</span></code>.
+    </p>
+<p>
+      Tangents are computed with the <code class="computeroutput"><span class="special">.</span><span class="identifier">prime</span></code> member function, and the control points
+      may be referenced with the <code class="computeroutput"><span class="special">.</span><span class="identifier">control_points</span></code>
+      member function.
+    </p>
+<p>
+      The overloaded operator <span class="emphasis"><em>&lt;&lt;</em></span> is disappointing: The
+      control points are simply printed. Rendering the Bezier and its convex hull
+      seems to be the best "print" statement for it, but this is essentially
+      impossible in modern terminals.
+    </p>
+<h4>
+<a name="math_toolkit.bezier_polynomial.h2"></a>
+      <span class="phrase"><a name="math_toolkit.bezier_polynomial.caveats"></a></span><a class="link" href="bezier_polynomial.html#math_toolkit.bezier_polynomial.caveats">Caveats</a>
+    </h4>
+<p>
+      Do not confuse the Bezier polynomial with a Bezier spline. A Bezier spline
+      has a fixed polynomial order and subdivides the curve into low-order polynomial
+      segments. <span class="emphasis"><em>This is not a spline!</em></span> Passing <span class="emphasis"><em>n</em></span>
+      control points to the <code class="computeroutput"><span class="identifier">bezier_polynomial</span></code>
+      class creates a polynomial of degree n-1, whereas a Bezier spline has a fixed
+      order independent of the number of control points.
+    </p>
+<p>
+      Requires C++17 and support for threadlocal storage.
+    </p>
+<h4>
+<a name="math_toolkit.bezier_polynomial.h3"></a>
+      <span class="phrase"><a name="math_toolkit.bezier_polynomial.performance"></a></span><a class="link" href="bezier_polynomial.html#math_toolkit.bezier_polynomial.performance">Performance</a>
+    </h4>
+<p>
+      The following performance numbers were generated for evaluating the Bezier-polynomial.
+      The evaluation of the interpolant is 𝑶(<span class="emphasis"><em>N</em></span>^2), as expected
+      from de Casteljau's algorithm.
+    </p>
+<pre class="programlisting"><span class="identifier">Run</span> <span class="identifier">on</span> <span class="special">(</span><span class="number">16</span> <span class="identifier">X</span> <span class="number">2300</span> <span class="identifier">MHz</span> <span class="identifier">CPU</span> <span class="identifier">s</span><span class="special">)</span>
+<span class="identifier">CPU</span> <span class="identifier">Caches</span><span class="special">:</span>
+<span class="identifier">L1</span> <span class="identifier">Data</span> <span class="number">32</span> <span class="identifier">KiB</span> <span class="special">(</span><span class="identifier">x8</span><span class="special">)</span>
+<span class="identifier">L1</span> <span class="identifier">Instruction</span> <span class="number">32</span> <span class="identifier">KiB</span> <span class="special">(</span><span class="identifier">x8</span><span class="special">)</span>
+<span class="identifier">L2</span> <span class="identifier">Unified</span> <span class="number">256</span> <span class="identifier">KiB</span> <span class="special">(</span><span class="identifier">x8</span><span class="special">)</span>
+<span class="identifier">L3</span> <span class="identifier">Unified</span> <span class="number">16384</span> <span class="identifier">KiB</span> <span class="special">(</span><span class="identifier">x1</span><span class="special">)</span>
+<span class="special">---------------------------------------------------------</span>
+<span class="identifier">Benchmark</span>                              <span class="identifier">Time</span>           <span class="identifier">CPU</span>
+<span class="special">---------------------------------------------------------</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2</span>        <span class="number">9.07</span> <span class="identifier">ns</span>         <span class="number">9.06</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">3</span>        <span class="number">13.2</span> <span class="identifier">ns</span>         <span class="number">13.1</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4</span>        <span class="number">17.5</span> <span class="identifier">ns</span>         <span class="number">17.5</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">5</span>        <span class="number">21.7</span> <span class="identifier">ns</span>         <span class="number">21.7</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">6</span>        <span class="number">27.4</span> <span class="identifier">ns</span>         <span class="number">27.4</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">7</span>        <span class="number">32.4</span> <span class="identifier">ns</span>         <span class="number">32.3</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8</span>        <span class="number">40.4</span> <span class="identifier">ns</span>         <span class="number">40.4</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">9</span>        <span class="number">51.9</span> <span class="identifier">ns</span>         <span class="number">51.8</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">10</span>       <span class="number">65.9</span> <span class="identifier">ns</span>         <span class="number">65.9</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">11</span>       <span class="number">79.1</span> <span class="identifier">ns</span>         <span class="number">79.1</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">12</span>       <span class="number">83.0</span> <span class="identifier">ns</span>         <span class="number">82.9</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">13</span>        <span class="number">108</span> <span class="identifier">ns</span>          <span class="number">108</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">14</span>        <span class="number">119</span> <span class="identifier">ns</span>          <span class="number">119</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">15</span>        <span class="number">140</span> <span class="identifier">ns</span>          <span class="number">140</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16</span>        <span class="number">137</span> <span class="identifier">ns</span>          <span class="number">137</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">17</span>        <span class="number">151</span> <span class="identifier">ns</span>          <span class="number">151</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">18</span>        <span class="number">171</span> <span class="identifier">ns</span>          <span class="number">171</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">19</span>        <span class="number">194</span> <span class="identifier">ns</span>          <span class="number">193</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">20</span>        <span class="number">213</span> <span class="identifier">ns</span>          <span class="number">213</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">21</span>        <span class="number">220</span> <span class="identifier">ns</span>          <span class="number">220</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">22</span>        <span class="number">260</span> <span class="identifier">ns</span>          <span class="number">260</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">23</span>        <span class="number">266</span> <span class="identifier">ns</span>          <span class="number">266</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">24</span>        <span class="number">293</span> <span class="identifier">ns</span>          <span class="number">292</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">25</span>        <span class="number">319</span> <span class="identifier">ns</span>          <span class="number">319</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">26</span>        <span class="number">336</span> <span class="identifier">ns</span>          <span class="number">335</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">27</span>        <span class="number">370</span> <span class="identifier">ns</span>          <span class="number">370</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">28</span>        <span class="number">429</span> <span class="identifier">ns</span>          <span class="number">429</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">29</span>        <span class="number">443</span> <span class="identifier">ns</span>          <span class="number">443</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">30</span>        <span class="number">421</span> <span class="identifier">ns</span>          <span class="number">421</span> <span class="identifier">ns</span>
+<span class="identifier">BezierPolynomial</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_BigO</span>       <span class="number">0.52</span> <span class="identifier">N</span><span class="special">^</span><span class="number">2</span>        <span class="number">0.51</span> <span class="identifier">N</span><span class="special">^</span><span class="number">2</span>
+</pre>
+<p>
+      The Casteljau recurrence is indeed quadratic in the number of control points,
+      and is chosen for numerical stability. See <span class="emphasis"><em>Bezier and B-spline Techniques</em></span>,
+      section 2.3 for a method to Hornerize the Berstein polynomials and perhaps
+      produce speedups.
+    </p>
+<h4>
+<a name="math_toolkit.bezier_polynomial.h4"></a>
+      <span class="phrase"><a name="math_toolkit.bezier_polynomial.point_types"></a></span><a class="link" href="bezier_polynomial.html#math_toolkit.bezier_polynomial.point_types">Point
+      types</a>
+    </h4>
+<p>
+      The <code class="computeroutput"><span class="identifier">Point</span></code> type must satisfy
+      certain conceptual requirements which are discussed in the documentation of
+      the Catmull-Rom curve. However, we reiterate them here:
+    </p>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">mypoint3d</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="comment">// Must define a value_type:</span>
+    <span class="keyword">typedef</span> <span class="identifier">Real</span> <span class="identifier">value_type</span><span class="special">;</span>
+
+    <span class="comment">// Regular constructor--need not be of this form.</span>
+    <span class="identifier">mypoint3d</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">z</span><span class="special">)</span> <span class="special">{</span><span class="identifier">m_vec</span><span class="special">[</span><span class="number">0</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">x</span><span class="special">;</span> <span class="identifier">m_vec</span><span class="special">[</span><span class="number">1</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">y</span><span class="special">;</span> <span class="identifier">m_vec</span><span class="special">[</span><span class="number">2</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">z</span><span class="special">;</span> <span class="special">}</span>
+
+    <span class="comment">// Must define a default constructor:</span>
+    <span class="identifier">mypoint3d</span><span class="special">()</span> <span class="special">{}</span>
+
+    <span class="comment">// Must define array access:</span>
+    <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">[](</span><span class="identifier">size_t</span> <span class="identifier">i</span><span class="special">)</span> <span class="keyword">const</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">m_vec</span><span class="special">[</span><span class="identifier">i</span><span class="special">];</span>
+    <span class="special">}</span>
+
+    <span class="comment">// Must define array element assignment:</span>
+    <span class="identifier">Real</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">[](</span><span class="identifier">size_t</span> <span class="identifier">i</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">m_vec</span><span class="special">[</span><span class="identifier">i</span><span class="special">];</span>
+    <span class="special">}</span>
+
+<span class="keyword">private</span><span class="special">:</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;</span> <span class="identifier">m_vec</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+      These conditions are satisfied by both <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span></code> and
+      <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span></code>.
+    </p>
+<h4>
+<a name="math_toolkit.bezier_polynomial.h5"></a>
+      <span class="phrase"><a name="math_toolkit.bezier_polynomial.references"></a></span><a class="link" href="bezier_polynomial.html#math_toolkit.bezier_polynomial.references">References</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Rainer Kress, <span class="emphasis"><em>Numerical Analysis</em></span>, Springer, 1998
+        </li>
+<li class="listitem">
+          David Salomon, <span class="emphasis"><em>Curves and Surfaces for Computer Graphics</em></span>,
+          Springer, 2005
+        </li>
+<li class="listitem">
+          Prautzsch, Hartmut, Wolfgang Boehm, and Marco Paluszny. <span class="emphasis"><em>Bézier
+          and B-spline techniques</em></span>. Springer Science &amp; Business Media,
+          2002.
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="catmull_rom.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cardinal_trigonometric.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

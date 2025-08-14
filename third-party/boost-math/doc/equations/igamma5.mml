@@ -1,0 +1,26 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>Q</mi>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>,</mo>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>+</mo>
+    <mi>P</mi>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>,</mo>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mn>1</mn>
+  </mrow>
+</math>
+

@@ -1,0 +1,386 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Boost.Math Frequently Asked Questions (FAQs)</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../overview.html" title="Chapter 1. Overview">
+<link rel="prev" href="overview_tr1.html" title="C99 and C++ TR1 C-style Functions">
+<link rel="next" href="contact.html" title="Contact Info and Support">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="overview_tr1.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../overview.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="contact.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.main_faq"></a><a class="link" href="main_faq.html" title="Boost.Math Frequently Asked Questions (FAQs)">Boost.Math Frequently Asked Questions
+    (FAQs)</a>
+</h2></div></div></div>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I'm a FORTRAN/NAG/SPSS/SAS/Cephes/MathCad/R user and I don't
+          see where the functions like dnorm(mean, sd) are in Boost.Math?</em></span>
+        </p>
+<p class="simpara">
+          Nearly all are provided, and many more like mean, skewness, quantiles,
+          complements ... but Boost.Math makes full use of C++, and it looks a bit
+          different. But do not panic! See section on construction and the many examples.
+          Briefly, the distribution is constructed with the parameters (like location
+          and scale) (things after the | in representation like P(X=k|n, p) or ;
+          in a common representation of pdf f(x; μσ<sup>2</sup>). Functions like pdf, cdf are
+          called with the name of that distribution and the random variate often
+          called x or k. For example, <code class="computeroutput"><span class="identifier">normal</span>
+          <span class="identifier">my_norm</span><span class="special">(</span><span class="number">0</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">my_norm</span><span class="special">,</span> <span class="number">2.0</span><span class="special">);</span></code>
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          I'm a user of <a href="http://support.sas.com/rnd/app/da/new/probabilityfunctions.html" target="_top">New
+          SAS Functions for Computing Probabilities</a>.
+        </p>
+<p class="simpara">
+          You will find the interface more familiar, but to be able to select a distribution
+          (perhaps using a string) see the Extras/Future Directions section, and
+          /boost/libs/math/dot_net_example/boost_math.cpp for an example that is
+          used to create a C# (C sharp) utility (that you might also find useful):
+          see <a href="http://sourceforge.net/projects/distexplorer/" target="_top">Statistical
+          Distribution Explorer</a>.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I'm allergic to reading manuals and prefer to learn from examples.</em></span>
+        </p>
+<p class="simpara">
+          Fear not - you are not alone! Many examples are available for functions
+          and distributions. Some are referenced directly from the text. Others can
+          be found at <code class="computeroutput"><span class="special">\</span><span class="identifier">boost_latest_release</span><span class="special">\</span><span class="identifier">libs</span><span class="special">\</span><span class="identifier">math</span><span class="special">\</span><span class="identifier">example</span></code>,
+          for example If you are a Visual Studio user, you should be able to create
+          projects from each of these, making sure that the Boost library is in the
+          include directories list (there are usually NO libraries that must be built).
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>How do I make sure that the Boost library is in the Visual Studio
+          include directories list?</em></span>
+        </p>
+<p class="simpara">
+          You can add an include path, for example, your Boost place /boost-latest_release,
+          for example <code class="computeroutput"><span class="identifier">X</span><span class="special">:/</span><span class="identifier">boost_1_70_0</span><span class="special">/</span></code>
+          if you have a separate partition X for Boost releases. Or you can use an
+          environment variable BOOST_ROOT set to your Boost place, and include that.
+          Visual Studio before 2010 provided Tools, Options, VC++ Directories to
+          control directories: Visual Studio 2010 instead provides property sheets
+          to assist. You may find it convenient to create a new one adding \boost-latest_release;
+          to the existing include items in $(IncludePath).
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I'm a FORTRAN/NAG/SPSS/SAS/Cephes/MathCad/R user and I don't
+          see where the properties like mean, median, mode, variance, skewness of
+          distributions are in Boost.Math?</em></span>
+        </p>
+<p class="simpara">
+          They are all available (if defined for the parameters with which you constructed
+          the distribution) via <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative
+          Distribution Function</a>, <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability
+          Density Function</a>, <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.hazard">Hazard Function</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.chf">Cumulative Hazard Function</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.mean">mean</a>, <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.median">median</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.mode">mode</a>, <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.variance">variance</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.sd">standard deviation</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.skewness">skewness</a>, <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.kurtosis">kurtosis</a>, <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.kurtosis_excess">kurtosis_excess</a>,
+          <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.range">range</a> and <a class="link" href="dist_ref/nmp.html#math_toolkit.dist_ref.nmp.support">support</a>.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I am a C programmer. Can I user Boost.Math with C?</em></span>
+        </p>
+<p class="simpara">
+          Yes you can, including all the special functions, and TR1 functions like
+          isnan. They appear as C functions, by being declared as "extern C".
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I am a C# (Basic? F# FORTRAN? Other CLI?) programmer. Can I use
+          Boost.Math with C#? (or ...)?</em></span>
+        </p>
+<p class="simpara">
+          Yes you can, including all the special functions, and TR1 functions like
+          isnan. But you <span class="bold"><strong>must build the Boost.Math as a dynamic
+          library (.dll) and compile with the /CLI option</strong></span>. See the boost/math/dot_net_example
+          folder which contains an example that builds a simple statistical distribution
+          app with a GUI. See <a href="http://sourceforge.net/projects/distexplorer/" target="_top">Statistical
+          Distribution Explorer</a>
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>What these "policies" things for?</em></span>
+        </p>
+<p class="simpara">
+          Policies are a powerful (if necessarily complex) fine-grain mechanism that
+          allow you to customise the behaviour of the Boost.Math library according
+          to your precise needs. See <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policies</a>. But
+          if, very probably, the default behaviour suits you, you don't need to know
+          more.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I am a C user and expect to see global C-style<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code> set for overflow/errors etc?</em></span>
+        </p>
+<p class="simpara">
+          You can achieve what you want - see <a class="link" href="pol_ref/error_handling_policies.html" title="Error Handling Policies">error
+          handling policies</a> and <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">user
+          error handling</a> and many examples.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I am a C user and expect to silently return a max value for overflow?</em></span>
+        </p>
+<p class="simpara">
+          You (and C++ users too) can return whatever you want on overflow - see
+          <a class="link" href="error_handling.html#math_toolkit.error_handling.overflow_error">overflow_error</a>
+          and <a class="link" href="pol_ref/error_handling_policies.html" title="Error Handling Policies">error
+          handling policies</a> and several examples.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I don't want any error message for overflow etc?</em></span>
+        </p>
+<p class="simpara">
+          You can control exactly what happens for all the abnormal conditions, including
+          the values returned. See <a class="link" href="error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>,
+          <a class="link" href="error_handling.html#math_toolkit.error_handling.overflow_error">overflow_error</a>
+          <a class="link" href="pol_ref/error_handling_policies.html" title="Error Handling Policies">error handling
+          policies</a> <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">user
+          error handling</a> etc and examples.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>My environment doesn't allow and/or I don't want exceptions.
+          Can I still user Boost.Math?</em></span>
+        </p>
+<p class="simpara">
+          Yes but you must customise the error handling: see <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">user
+          error handling</a> and <a class="link" href="pol_ref/policy_defaults.html" title="Using Macros to Change the Policy Defaults">changing
+          policies defaults</a> .
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>The docs are several hundreds of pages long! Can I read the docs
+          off-line or on paper?</em></span>
+        </p>
+<p class="simpara">
+          Yes - you can download the Boost current release of most documentation
+          as a zip of pdfs (including Boost.Math) from Sourceforge, for example
+          <a href="https://sourceforge.net/projects/boost/files/boost-docs/1.45.0/boost_pdf_1_45_0.tar.gz/download" target="_top">https://sourceforge.net/projects/boost/files/boost-docs/1.45.0/boost_pdf_1_45_0.tar.gz/download</a>.
+          And you can print any pages you need (or even print all pages - but be
+          warned that there are several hundred!). Both html and pdf versions are
+          highly hyperlinked. The entire Boost.Math pdf can be searched with Adobe
+          Reader, Edit, Find ... This can often find what you seek, a partial substitute
+          for a full index.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I want a compact version for an embedded application. Can I use
+          float precision?</em></span>
+        </p>
+<p class="simpara">
+          Yes - by selecting RealType template parameter as float: for example normal_distribution&lt;float&gt;
+          your_normal(mean, sd); (But double may still be used internally, so space
+          saving may be less that you hope for). You can also change the promotion
+          policy, but accuracy might be much reduced.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I seem to get somewhat different results compared to other programs.
+          Why?</em></span>
+        </p>
+<p class="simpara">
+          We hope Boost.Math to be more accurate: our priority is accuracy (over
+          speed). See the section on accuracy. But for evaluations that require iterations
+          there are parameters which can change the required accuracy (see <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policies</a>). You might be able to squeeze a little
+          more (or less) accuracy at the cost of runtime.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>Will my program run more slowly compared to other math functions
+          and statistical libraries?</em></span>
+        </p>
+<p class="simpara">
+          Probably, thought not always, and not by too much: our priority is accuracy.
+          For most functions, making sure you have the latest compiler version with
+          all optimisations switched on is the key to speed. For evaluations that
+          require iteration, you may be able to gain a little more speed at the expense
+          of accuracy. See detailed suggestions and results on <a class="link" href="../perf.html" title="Chapter 23. Performance">performance</a>.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>How do I handle infinity and NaNs portably?</em></span>
+        </p>
+<p class="simpara">
+          See <a class="link" href="fp_facets.html" title="Facets for Floating-Point Infinities and NaNs">nonfinite fp_facets</a> for
+          Facets for Floating-Point Infinities and NaNs.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>Where are the pre-built libraries?</em></span>
+        </p>
+<p class="simpara">
+          Good news - you probably don't need any! - just <code class="computeroutput"><span class="preprocessor">#include</span>
+          <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span></code><span class="emphasis"><em>math/distribution_you_want&gt;</em></span>.
+          But in the unlikely event that you do, see <a class="link" href="building.html" title="If and How to Build a Boost.Math Library, and its Examples and Tests">building
+          libraries</a>.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I don't see the function or distribution that I want.</em></span>
+        </p>
+<p class="simpara">
+          You could try an email to ask the authors - but no promises!
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>I need more decimal digits for values/computations.</em></span>
+        </p>
+<p class="simpara">
+          You can use Boost.Math with <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>:
+          typically <a href="../../../../../libs/multiprecision/doc/html/boost_multiprecision/tut/floats/cpp_dec_float.html" target="_top">cpp_dec_float</a>
+          is a useful user-defined type to provide a fixed number of decimal digits,
+          usually 50 or 100.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          Why can't I write something really simple like <code class="computeroutput"><span class="identifier">cpp_int</span>
+          <span class="identifier">one</span><span class="special">(</span><span class="number">1</span><span class="special">);</span> <span class="identifier">cpp_dec_float_50</span>
+          <span class="identifier">two</span><span class="special">(</span><span class="number">2</span><span class="special">);</span> <span class="identifier">one</span>
+          <span class="special">*</span> <span class="identifier">two</span><span class="special">;</span></code>
+        </p>
+<p class="simpara">
+          Because <code class="computeroutput"><span class="identifier">cpp_int</span></code> might be
+          bigger than <code class="computeroutput"><span class="identifier">cpp_dec_float</span> <span class="identifier">can</span> <span class="identifier">hold</span></code>,
+          so you must make an <span class="bold"><strong>explicit</strong></span> conversion.
+          See <a href="http://svn.boost.org/svn/boost/trunk/libs/multiprecision/doc/html/boost_multiprecision/intro.html" target="_top">mixed
+          multiprecision arithmetic</a> and <a href="http://svn.boost.org/svn/boost/trunk/libs/multiprecision/doc/html/boost_multiprecision/tut/conversions.html" target="_top">conversion</a>.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>How do I choose between Boost.Multiprecision cpp_bin_50 and cpp_dec_50?</em></span>
+        </p>
+<p class="simpara">
+          Unless you have a specific reason to choose <code class="computeroutput"><span class="identifier">cpp_dec_</span></code>,
+          then the default choice should be <code class="computeroutput"><span class="identifier">cpp_bin_</span></code>,
+          for example using the convenience <code class="computeroutput"><span class="identifier">typedefs</span></code>
+          like <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_bin_50</span></code> or <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_bin_100</span></code>.
+        </p>
+<p class="simpara">
+          In general, both work well and give the same results and at roughly the
+          same speed with <code class="computeroutput"><span class="identifier">cpp_dec_50</span></code>
+          sometimes faster.
+        </p>
+<p class="simpara">
+          cpp_dec_ was developed first paving the way for cpp_bin_. cpp_dec_ has
+          several guard digits and is not rounded at all, using 'brute force' to
+          get the promised number of decimal digits correct, but making it difficult
+          to reason about precision and computational uncertainty, for example see
+          <span class="bold"><strong>https://svn.boost.org/trac10/ticket/12133</strong></span>.
+          It also has a fast but imprecise division operator giving surprising results
+          sometimes, see <span class="bold"><strong>https://svn.boost.org/trac10/ticket/11178</strong></span>.
+        </p>
+<p class="simpara">
+          cpp_bin_ is correctly/exactly rounded making it possible to reason about
+          both the precision and rounding of the results.
+        </p>
+</li>
+<li class="listitem">
+<p class="simpara">
+          <span class="emphasis"><em>How do I see or report bugs and features, and request new functions?</em></span>
+        </p>
+<p class="simpara">
+          Currently open bug reports can be viewed <a href="https://github.com/boostorg/math/issues" target="_top">here</a>
+          on GITHUB.
+        </p>
+<p class="simpara">
+          All old bug reports including closed ones can be viewed on Trac (now read-only)
+          <a href="https://svn.boost.org/trac/boost/query?status=assigned&amp;status=closed&amp;status=new&amp;status=reopened&amp;component=math&amp;col=id&amp;col=summary&amp;col=status&amp;col=type&amp;col=milestone&amp;col=component&amp;order=priority" target="_top">here</a>
+          and more recent issues on GIThub <a href="https://github.com/boostorg/math/issues?utf8=%E2%9C%93&amp;q=is%3Aissue" target="_top">here</a>.
+        </p>
+</li>
+<li class="listitem">
+          <span class="emphasis"><em>How can I tell if my compiler will work with Boost.Math?</em></span>
+        </li>
+</ol></div>
+<p>
+      You should start by assuming that your compiler/platform <span class="bold"><strong>will</strong></span>
+      compile, even if it only supports a C++03 standard.
+    </p>
+<p>
+      Boost in general does <span class="bold"><strong>not</strong></span> 'support' a particular
+      C++ standard or compiler or platform. Each library has its own requirements,
+      and for Boost.Math, each individual function or distribution or tool may have
+      different requirements and may or may not work on any particular compiler.
+    </p>
+<p>
+      So the short answer is to try it and see what works for you.
+    </p>
+<p>
+      Some recent functions are written to require more recent standards, even perhaps
+      not-yet-standardized features. Some clues about requirements can be gleaned
+      from tests and examples (see jamfiles) and notes on requirements in documentation.
+      You can refer to the <a href="https://www.boost.org/development/tests/develop/developer/math.html" target="_top">Boost
+      Test Matrix</a> to see the current results for Boost.Math tests of many
+      compilers on many platforms. But bear in mind that the testing or demonstration
+      code may use C++11 or higher features like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;&gt;</span><span class="identifier">max_digits10</span></code>,
+      <code class="computeroutput"><span class="keyword">auto</span></code>, <code class="computeroutput"><span class="identifier">lambdas</span>
+      <span class="special">...</span></code> for convenience; these may not be
+      needed for your application.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="overview_tr1.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../overview.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="contact.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

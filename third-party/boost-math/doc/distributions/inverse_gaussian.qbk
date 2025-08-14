@@ -1,0 +1,177 @@
+[section:inverse_gaussian_dist Inverse Gaussian (or Inverse Normal) Distribution]
+
+``#include <boost/math/distributions/inverse_gaussian.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class inverse_gaussian_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      BOOST_MATH_GPU_ENABLED inverse_gaussian_distribution(RealType mean = 1, RealType scale = 1);
+
+      BOOST_MATH_GPU_ENABLED RealType mean()const; // mean default 1.
+      BOOST_MATH_GPU_ENABLED RealType scale()const; // Optional scale, default 1 (unscaled).
+      BOOST_MATH_GPU_ENABLED RealType shape()const; // Shape = scale/mean.
+   };
+   typedef inverse_gaussian_distribution<double> inverse_gaussian;
+
+   }} // namespace boost // namespace math
+   
+The Inverse Gaussian distribution distribution is a continuous probability distribution.
+
+The distribution is also called 'normal-inverse Gaussian distribution',
+and 'normal Inverse' distribution.
+
+It is also convenient to provide unity as default for both mean and scale.
+This is the Standard form for all distributions.
+The Inverse Gaussian distribution was first studied in relation to Brownian motion.
+In 1956 M.C.K. Tweedie used the name Inverse Gaussian because there is an inverse relationship
+between the time to cover a unit distance and distance covered in unit time.
+The inverse Gaussian is one of family of distributions that have been called the
+[@http://en.wikipedia.org/wiki/Tweedie_distributions Tweedie distributions].
+
+(So ['inverse] in the name may mislead: it does [*not] relate to the inverse of a distribution).
+
+The tails of the distribution decrease more slowly than the normal distribution.
+It is therefore suitable to model phenomena
+where numerically large values are more probable than is the case for the normal distribution.
+For stock market returns and prices, a key characteristic is that it models 
+that extremely large variations from typical (crashes) can occur
+even when almost all (normal) variations are small.
+
+Examples are returns from financial assets and turbulent wind speeds. 
+
+The normal-inverse Gaussian distributions form
+a subclass of the generalised hyperbolic distributions.
+
+See 
+[@http://en.wikipedia.org/wiki/Normal-inverse_Gaussian_distribution distribution].
+[@http://mathworld.wolfram.com/InverseGaussianDistribution.html 
+  Weisstein, Eric W. "Inverse Gaussian Distribution." From MathWorld--A Wolfram Web Resource.]
+  
+If you want a `double` precision inverse_gaussian distribution you can use 
+
+``boost::math::inverse_gaussian_distribution<>``
+
+or, more conveniently, you can write
+
+  using boost::math::inverse_gaussian;
+  inverse_gaussian my_ig(2, 3);
+
+For mean parameters [mu] and scale (also called precision) parameter [lambda],
+and random variate x,
+the inverse_gaussian distribution is defined by the probability density function (PDF):
+
+[expression f(x;[mu], [lambda]) = [sqrt]([lambda]/2[pi]x[super 3]) e[super -[lambda](x-[mu])[sup2]/2[mu][sup2]x] ]
+
+and Cumulative Density Function (CDF):
+
+[expression  F(x;[mu], [lambda]) = [Phi]{[sqrt]([lambda]/x) (x/[mu]-1)} + e[super 2[mu]/[lambda]] [Phi]{-[sqrt]([lambda]/[mu]) (1+x/[mu])} ]
+
+where [Phi] is the standard normal distribution CDF.
+
+The following graphs illustrate how the PDF and CDF of the inverse_gaussian distribution
+varies for a few values of parameters [mu] and [lambda]:
+
+[graph inverse_gaussian_pdf]  [/.png or .svg]
+
+[graph inverse_gaussian_cdf]
+
+Tweedie also provided 3 other parameterisations where ([mu] and [lambda])
+are replaced by their ratio [phi] = [lambda]/[mu] and by 1/[mu]:
+these forms may be more suitable for Bayesian applications. 
+These can be found on Seshadri, page 2 and are also discussed by Chhikara and Folks on page 105.
+Another related parameterisation, the __wald_distrib (where mean [mu] is unity) is also provided.
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED inverse_gaussian_distribution(RealType df = 1, RealType scale = 1); // optionally scaled.
+
+Constructs an inverse_gaussian distribution with [mu] mean,
+and scale [lambda], with both default values 1.
+
+Requires that both the mean [mu] parameter and scale [lambda] are greater than zero,
+otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType mean()const; 
+   
+Returns the mean [mu] parameter of this distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const; 
+   
+Returns the scale [lambda] parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variate is \[0,+[infin]).
+[note Unlike some definitions, this implementation supports a random variate 
+equal to zero as a special case, returning zero for both pdf and cdf.]
+
+In this distribution the implementation of `logpdf` is specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The inverse_gaussian distribution is implemented in terms of the 
+exponential function and standard normal distribution ['N]0,1 [Phi] :
+refer to the accuracy data for those functions for more information.
+But in general, gamma (and thus inverse gamma) results are often accurate to a few epsilon,
+>14 decimal digits accuracy for 64-bit double.
+
+[h4 Implementation]
+
+In the following table [mu] is the mean parameter and 
+[lambda] is the scale parameter of the inverse_gaussian distribution,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/ its complement.
+Parameters [mu] for shape and [lambda] for scale
+are used for the inverse gaussian function.
+
+[table
+[[Function] [Implementation Notes] ]
+[[pdf] [ [sqrt]([lambda]/ 2[pi]x[super 3]) e[super -[lambda](x - [mu])[sup2]/ 2[mu][sup2]x]]]
+[[logpdf] [log(pdf) = (-[lambda]*pow([mu]-x, 2)/(x*[mu][super 2]) + log([lambda]) - 3*log(x) - log(2*[pi])) / 2 ]]
+[[cdf][ [Phi]{[sqrt]([lambda]/x) (x/[mu]-1)} + e[super 2[mu]/[lambda]] [Phi]{-[sqrt]([lambda]/[mu]) (1+x/[mu])} ]]
+[[cdf complement] [using complement of [Phi] above.] ]
+[[quantile][No closed form known. Estimated using a guess refined by Newton-Raphson iteration.]]
+[[quantile from the complement][No closed form known. Estimated using a guess refined by Newton-Raphson iteration.]]
+[[mode][[mu] {[sqrt](1+9[mu][sup2]/4[lambda][sup2])[sup2] - 3[mu]/2[lambda]} ]]
+[[median][No closed form analytic equation is known, but is evaluated as quantile(0.5)]]
+[[mean][[mu]] ]
+[[variance][[mu][cubed]/[lambda]] ]
+[[skewness][3 [sqrt] ([mu]/[lambda])] ]
+[[kurtosis_excess][15[mu]/[lambda]] ]
+[[kurtosis][12[mu]/[lambda]] ]
+] [/table]
+
+[h4 References]
+
+#Wald, A. (1947). Sequential analysis. Wiley, NY.
+#The Inverse Gaussian distribution : theory, methodology, and applications, Raj S. Chhikara, J. Leroy Folks. ISBN 0824779975 (1989).
+#The Inverse Gaussian distribution : statistical theory and applications, Seshadri, V , ISBN - 0387986189 (pbk) (Dewey 519.2) (1998).
+#[@http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.wald.html Numpy and Scipy Documentation].
+#[@http://bm2.genes.nig.ac.jp/RGM2/R_current/library/statmod/man/invgauss.html  R statmod invgauss functions].
+#[@http://cran.r-project.org/web/packages/SuppDists/index.html R SuppDists invGauss functions].
+(Note that these R implementations names differ in case).
+#[@http://www.statsci.org/s/invgauss.html StatSci.org invgauss help].
+#[@http://www.statsci.org/s/invgauss.statSci.org invgauss R source].
+#[@http://www.biostat.wustl.edu/archives/html/s-news/2001-12/msg00144.html pwald, qwald].
+#[@http://www.brighton-webs.co.uk/distributions/wald.asp Brighton Webs wald].
+
+[endsect] [/section:inverse_gaussian_dist Inverse Gaussian Distribution]
+
+[/ 
+  Copyright 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

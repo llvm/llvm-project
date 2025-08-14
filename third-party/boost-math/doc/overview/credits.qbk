@@ -1,0 +1,140 @@
+[section:credits Credits and Acknowledgements]
+
+[note This section should be read with the 'What's New' section that gives much detail on changes for each release.]
+
+Hubert Holin started the Boost.Math library.  The
+Quaternions, Octonions, inverse
+hyperbolic functions, and the sinus cardinal functions are his.
+
+Daryle Walker wrote the integer gcd and lcm functions.
+
+John Maddock started the special functions, the beta, gamma, erf, polynomial,
+and factorial functions are his, as is the "Toolkit" section, and many
+of the statistical distributions.
+
+Paul A. Bristow threw down the challenge in
+[@http://www2.open-std.org/JTC1/SC22/WG21/docs/papers/2004/n1668.pdf
+A Proposal to add Mathematical Functions for Statistics to the C++
+Standard Library] to add the key math functions, especially those essential for
+statistics. After JM accepted and solved the difficult problems,
+not only numerically, but in full C++ template style, PAB
+implemented a few of the statistical distributions. PAB also tirelessly
+proof-read everything that JM threw at him (so that all
+remaining editorial mistakes are his fault).
+
+Xiaogang Zhang worked on the Bessel functions and elliptic integrals for his
+Google Summer of Code project 2006.
+
+Bruno Lalande submitted the "compile time power of a runtime base" code.
+
+Johan R'''&#xE5;'''de wrote the optimised floating-point classification
+and manipulation code, and nonfinite facets to permit C99 output of infinities and NaNs.
+(nonfinite facets were not added until Boost 1.47 but had been in use with Boost.Spirit).
+This library was based on a suggestion from Robert Ramey, author of Boost.Serialization.
+Paul A. Bristow expressed the need for better handling of
+[@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2022.pdf
+Input & Output of NaN and infinity for the C++ Standard Library]
+and suggested following the C99 format.
+
+Antony Polukhin improved lexical cast avoiding stringstream so that
+it was no longer necessary to use a globale C99 facet to handle nonfinites.
+
+H'''&#xE5;'''kan Ard'''&#xF6;''',
+Boris Gubenko, John Maddock,
+Markus Sch'''&#xF6;'''pflin
+and Olivier Verdier tested the floating-point library and
+Martin Bonner, Peter Dimov and John Maddock provided valuable advice.
+
+Gautam Sewani coded the logistic distribution as part of a Google Summer of Code project 2008.
+
+M. A. (Thijs) van den Berg coded the Laplace distribution.
+(Thijs has also threatened to implement some multivariate distributions).
+
+Thomas Mang requested the inverse gamma in chi squared distributions
+for Bayesian applications and helped in their implementation,
+and provided a nice example of their use.
+
+Professor Nico Temme for advice on the inverse incomplete beta function.
+
+[@http://www.shoup.net Victor Shoup for NTL],
+without which it would have much more difficult to
+produce high accuracy constants, and especially
+the tables of accurate values for testing.
+
+We are grateful to Joel Guzman for helping us stress-test his
+[@http://www.boost.org/tools/quickbook/index.htm Boost.Quickbook]
+program used to generate the html and pdf versions
+of this document, adding several new features en route.
+
+Plots of the functions and distributions were prepared in
+[@http://www.w3.org/ W3C] standard
+[@http://www.svg.org/ Scalable Vector Graphic (SVG)] format
+using a program created by Jacob Voytko during a
+[@http://code.google.com/soc/2007/ Google Summer of Code (2007)].
+From 2012, the latest versions of all Internet Browsers have support
+for rendering SVG (with varying quality).  Older versions, especially
+(Microsoft Internet Explorer (before IE 9) lack native SVG support
+but can be made to work with
+[@http://www.adobe.com/svg/viewer/install/ Adobe's free SVG viewer] plugin).
+The SVG files can be converted to JPEG or PNG using
+[@http://www.inkscape.org/ Inkscape].
+
+We are also indebted to Matthias Schabel for managing the formal Boost-review
+of this library, and to all the reviewers - including Guillaume Melquiond,
+Arnaldur Gylfason, John Phillips, Stephan Tolksdorf and Jeff Garland
+- for their many helpful comments.
+
+Thanks to Mark Coleman and Georgi Boshnakov for spot test values
+from __Mathematica, and of course,
+to Eric Weisstein for nurturing __Mathworld, an invaluable resource.
+
+The Skew-normal distribution and Owen's t function were written by Benjamin Sobotta.
+
+We thank Thomas Mang for persuading us to allow t distributions
+to have infinite degrees of freedom
+and contributing to some long discussions about how to improve accuracy
+for large non-centrality and/or large degrees of freedom.
+
+Christopher Kormanyos wrote the e_float multiprecision library __TOMS910
+which formed the basis for the Boost.Multiprecision library
+which now can be used to allow most functions and distributions
+to be computed up to a precision of the users' choice,
+no longer restricted to built-in floating-point types like double.
+(And thanks to Topher Cooper for bring Christopher's e_float to our attention).
+
+Christopher Kormanyos wrote some examples for using __multiprecision,
+and added methods for finding zeros of Bessel Functions.
+
+Marco Guazzone provided the hyper-geometric distribution.
+
+Rocco Romeo has found numerous small bugs and generally stress tested the
+special functions code to near destruction!
+
+Jeremy William Murphy added polynomial arithmetic tools.
+
+Thomas Luu provided improvements to the quantile of the non-central chi squared distribution quantile.
+and his thesis
+* [@http://discovery.ucl.ac.uk/1482128/ Fast and accurate parallel computation of quantile functions for random number generation, 2016].
+
+and his paper
+
+Luu, Thomas; (2015), Efficient and Accurate Parallel Inversion of the Gamma Distribution,
+SIAM Journal on Scientific Computing , 37 (1) C122 - C141,
+[@https://doi.org/10.1137/14095875X].
+
+These also promise to help improve algorithms for computation of  quantile of several distributions,
+especially for parallel computation using GPUs.
+
+Nicolas Thompson added much code to handle quadrature and interpolation and more statistical tools.
+
+Matthew Pulver provided the automatic differentiation section for inclusion in Boost.Math.
+
+[endsect] [/section:credits Credits and Acknowledgements]
+
+[/
+  Copyright 2006, 2007, 2008, 2009, 2010, 2012, 2013, 2015, 2016 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
