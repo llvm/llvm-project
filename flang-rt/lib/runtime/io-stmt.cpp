@@ -352,6 +352,17 @@ void OpenStatementState::CompleteOperation() {
     // Set default format (C.7.4 point 2).
     unit().isUnformatted = unit().access != Access::Sequential;
   }
+  if (unit().isUnformatted.value_or(false) && mustBeFormatted_) {
+    // This is an unformatted unit, but the OPEN statement contained at least
+    // one specifier that is not permitted unless the unit is formatted
+    // (e.g., BLANK=).  Programs that want to detect this error (i.e., tests)
+    // should be informed about it, but don't crash the program otherwise
+    // since most other compilers let it slide.
+    if (HasErrorRecovery()) {
+      SignalError("FORM='UNFORMATTED' is not allowed with OPEN specifiers that "
+                  "apply only to formatted units");
+    }
+  }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
     set_destroy();
