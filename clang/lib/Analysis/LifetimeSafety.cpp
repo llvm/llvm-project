@@ -396,6 +396,7 @@ public:
     // initializations and destructions are processed in the correct sequence.
     for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
       CurrentBlockFacts.clear();
+      VisitedStmts.clear();
       for (unsigned I = 0; I < Block->size(); ++I) {
         const CFGElement &Element = Block->Elements[I];
         if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>()) {
