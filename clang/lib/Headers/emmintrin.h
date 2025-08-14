@@ -2068,8 +2068,8 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_storel_pd(double *__dp,
 ///    A 128-bit vector of [16 x i8].
 /// \returns A 128-bit vector of [16 x i8] containing the sums of both
 ///    parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_add_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a + (__v16qu)__b);
 }
 
@@ -2089,8 +2089,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi8(__m128i __a,
 ///    A 128-bit vector of [8 x i16].
 /// \returns A 128-bit vector of [8 x i16] containing the sums of both
 ///    parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_add_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a + (__v8hu)__b);
 }
 
@@ -2506,8 +2506,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sad_epu8(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a - (__v16qu)__b);
 }
 
@@ -2523,8 +2523,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi8(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a - (__v8hu)__b);
 }
 
@@ -3091,8 +3091,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi64(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qi)__a == (__v16qi)__b);
 }
 
@@ -3110,8 +3110,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hi)__a == (__v8hi)__b);
 }
 
@@ -3129,8 +3129,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4si)__a == (__v4si)__b);
 }
 
@@ -3149,8 +3149,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi32(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi8(__m128i __a, __m128i __b) {
   /* This function always performs a signed comparison, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
   return (__m128i)((__v16qs)__a > (__v16qs)__b);
@@ -3171,8 +3171,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hi)__a > (__v8hi)__b);
 }
 
@@ -3191,8 +3191,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4si)__a > (__v4si)__b);
 }
 
@@ -3211,8 +3211,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi32(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi8(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi8(__b, __a);
 }
 
@@ -3231,8 +3231,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi16(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi16(__b, __a);
 }
 
@@ -3251,8 +3251,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi32(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi32(__b, __a);
 }
 
