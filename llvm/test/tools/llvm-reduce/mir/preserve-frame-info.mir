@@ -118,8 +118,10 @@ frameInfo:
   hasMustTailInVarArgFunc: true
   hasTailCall:     true
   localFrameSize:  0
-  savePoint:       '%bb.1'
-  restorePoint:    '%bb.2'
+  savePoint:
+    - point:           '%bb.1'
+  restorePoint:
+    - point:           '%bb.2'
 
 fixedStack:
   - { id: 0, offset: 0, size: 8, alignment: 4, isImmutable: true, isAliased: false }

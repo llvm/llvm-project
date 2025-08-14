@@ -212,6 +212,13 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
+  /// Get constant address of a global variable as an MLIR attribute.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return cir::GlobalViewAttr::get(type, symbol);
+  }
+
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
     assert(!cir::MissingFeatures::addressSpace());
     return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
