@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -180,6 +181,10 @@ public:
   constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
 
   bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
+
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace
