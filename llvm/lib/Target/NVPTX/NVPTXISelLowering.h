@@ -206,8 +206,7 @@ public:
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
-  bool usePrecSqrtF32(const MachineFunction &MF,
-                      const SDNode *N = nullptr) const;
+  bool usePrecSqrtF32(const SDNode *N = nullptr) const;
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
@@ -220,7 +219,6 @@ public:
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
-  bool allowUnsafeFPMath(const MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {

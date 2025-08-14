@@ -125,10 +125,6 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   if (UsePrecDivF32.getNumOccurrences() > 0)
     return UsePrecDivF32;
 
-  // Otherwise, use div.approx if fast math is enabled
-  if (allowUnsafeFPMath(MF))
-    return NVPTX::DivPrecisionLevel::Approx;
-
   const SDNodeFlags Flags = N.getFlags();
   if (Flags.hasApproximateFuncs())
     return NVPTX::DivPrecisionLevel::Approx;
@@ -136,15 +132,10 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
-bool NVPTXTargetLowering::usePrecSqrtF32(const MachineFunction &MF,
-                                         const SDNode *N) const {
+bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
   if (UsePrecSqrtF32.getNumOccurrences() > 0)
     return UsePrecSqrtF32;
-
-  // Otherwise, use sqrt.approx if fast math is enabled
-  if (allowUnsafeFPMath(MF))
-    return false;
 
   if (N) {
     const SDNodeFlags Flags = N->getFlags();
@@ -1193,8 +1184,7 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
                                              bool &UseOneConst,
                                              bool Reciprocal) const {
   if (!(Enabled == ReciprocalEstimate::Enabled ||
-        (Enabled == ReciprocalEstimate::Unspecified &&
-         !usePrecSqrtF32(DAG.getMachineFunction()))))
+        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
     return SDValue();
 
   if (ExtraSteps == ReciprocalEstimate::Unspecified)
@@ -2851,8 +2841,7 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
                      SDLoc(Op), Opcode, DAG);
 }
 
-static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
-                         bool AllowUnsafeFPMath) {
+static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
   // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
   // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
   // the semantics of LLVM's frem.
@@ -2869,7 +2858,7 @@ static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
   SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
                             Flags | SDNodeFlags::AllowContract);
 
-  if (AllowUnsafeFPMath || Flags.hasNoInfs())
+  if (Flags.hasNoInfs())
     return Sub;
 
   // If Y is infinite, return X
@@ -3014,7 +3003,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
   case ISD::FREM:
-    return lowerFREM(Op, DAG, allowUnsafeFPMath(DAG.getMachineFunction()));
+    return lowerFREM(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
@@ -4868,17 +4857,7 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   if (MF.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast)
     return true;
 
-  return allowUnsafeFPMath(MF);
-}
-
-bool NVPTXTargetLowering::allowUnsafeFPMath(const MachineFunction &MF) const {
-  // Honor TargetOptions flags that explicitly say unsafe math is okay.
-  if (MF.getTarget().Options.UnsafeFPMath)
-    return true;
-
-  // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
-  const Function &F = MF.getFunction();
-  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
+  return false;
 }
 
 static bool isConstZero(const SDValue &Operand) {

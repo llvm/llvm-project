@@ -5509,6 +5509,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -9103,6 +9104,7 @@ cc_library(
         ":X86VectorDialect",
         ":XeGPUDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
     ],
 )
 
@@ -9197,6 +9199,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorTransformOps",
         ":XeVMToLLVM",
+        ":XeVMToLLVMIRTranslation",
     ],
 )
 
@@ -13815,6 +13818,32 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMTarget",
+    srcs = ["lib/Target/LLVM/XeVM/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/XeVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ExecutionEngineUtils",
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        ":XeVMToLLVMIRTranslation",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Object",
+        "//llvm:SPIRVCodeGen",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:config",
+    ],
 )
 
 cc_library(
