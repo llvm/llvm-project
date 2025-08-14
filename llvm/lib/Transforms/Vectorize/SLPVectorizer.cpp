@@ -23901,7 +23901,7 @@ public:
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
-    SmallVector<SmallVector<Value*>> LocalReducedVals;
+    SmallVector<SmallVector<Value *>> LocalReducedVals;
     for (ArrayRef<Value *> RV : ReducedVals) {
       // Loads are not very compatible with undefs.
       if (isa<UndefValue>(RV.front()) &&
