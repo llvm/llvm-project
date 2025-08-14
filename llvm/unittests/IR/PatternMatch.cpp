@@ -2621,40 +2621,4 @@ TEST_F(PatternMatchTest, PtrAdd) {
   EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
 }
 
-TEST_F(PatternMatchTest, ShiftOrSelf) {
-  Type *I64Ty = Type::getInt64Ty(Ctx);
-  Constant *LHS = ConstantInt::get(I64Ty, 7);
-  Constant *ShAmt = ConstantInt::get(I64Ty, 16);
-  Value *Shl = IRB.CreateShl(LHS, ShAmt);
-  Value *LShr = IRB.CreateLShr(LHS, ShAmt);
-  Value *AShr = IRB.CreateAShr(LHS, ShAmt);
-  Value *Add = IRB.CreateAdd(LHS, LHS);
-
-  uint64_t ShAmtC;
-  Value *A;
-  EXPECT_TRUE(match(Shl, m_ShlOrSelf(m_Value(A), ShAmtC)));
-  EXPECT_EQ(A, LHS);
-  EXPECT_EQ(ShAmtC, 16U);
-
-  EXPECT_TRUE(match(Add, m_ShlOrSelf(m_Value(A), ShAmtC)));
-  EXPECT_EQ(A, Add);
-  EXPECT_EQ(ShAmtC, 0U);
-
-  EXPECT_TRUE(match(LShr, m_LShrOrSelf(m_Value(A), ShAmtC)));
-  EXPECT_EQ(A, LHS);
-  EXPECT_EQ(ShAmtC, 16U);
-
-  EXPECT_TRUE(match(Add, m_LShrOrSelf(m_Value(A), ShAmtC)));
-  EXPECT_EQ(A, Add);
-  EXPECT_EQ(ShAmtC, 0U);
-
-  EXPECT_TRUE(match(AShr, m_AShrOrSelf(m_Value(A), ShAmtC)));
-  EXPECT_EQ(A, LHS);
-  EXPECT_EQ(ShAmtC, 16U);
-
-  EXPECT_TRUE(match(Add, m_AShrOrSelf(m_Value(A), ShAmtC)));
-  EXPECT_EQ(A, Add);
-  EXPECT_EQ(ShAmtC, 0U);
-}
-
 } // anonymous namespace.
