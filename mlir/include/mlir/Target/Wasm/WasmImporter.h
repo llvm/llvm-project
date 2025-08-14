@@ -22,7 +22,7 @@
 namespace mlir::wasm {
 
 /// If `source` contains a valid Wasm binary file, this function returns a
-/// a ModuleOp containing the representation of trhe Wasm module encoded in
+/// a ModuleOp containing the representation of the Wasm module encoded in
 /// the source file in the `wasmssa` dialect.
 OwningOpRef<ModuleOp> importWebAssemblyToModule(llvm::SourceMgr &source,
                                                 MLIRContext *context);
