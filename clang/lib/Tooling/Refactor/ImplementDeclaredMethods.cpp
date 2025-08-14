@@ -265,7 +265,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   // Pick a good insertion location.
   SourceLocation InsertionLoc;
   const CXXMethodDecl *InsertAfterMethod = nullptr;
-  NestedNameSpecifier *NamePrefix = nullptr;
+  std::optional<NestedNameSpecifier> NamePrefix = std::nullopt;
   if (DefinedOutOfLineMethods.empty()) {
     const RecordDecl *OutermostRecord = findOutermostRecord(Class);
     InsertionLoc = SM.getExpansionRange(OutermostRecord->getEndLoc()).getEnd();
@@ -284,10 +284,12 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
           Context, Context.getTranslationUnitDecl(),
           Class->getLexicalDeclContext());
       llvm::SmallVector<const NamespaceDecl *, 4> Namespaces;
-      for (const NestedNameSpecifier *Qualifier = NamePrefix; Qualifier;
-           Qualifier = Qualifier->getPrefix()) {
-        if (const auto *ND = Qualifier->getAsNamespace())
+      std::optional<NestedNameSpecifier> Qualifier = NamePrefix;
+      while (Qualifier) {
+        auto [ND, Prefix] = Qualifier->getAsNamespaceAndPrefix();
+        if (ND)
           Namespaces.push_back(ND->getNamespace());
+        Qualifier = Prefix;
       }
       // When the class is in a namespace, add a 'using' declaration if it's
       // needed and adjust the out-of-line qualification.
@@ -351,12 +353,11 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
 
     // Add the nested name specifiers that are appropriate for an out-of-line
     // method.
-    auto *Qualifier =
+    auto Qualifier =
         InsertAfterMethod
             ? InsertAfterMethod->getQualifier()
-            : NestedNameSpecifier::Create(
-                  Context, /*Prefix=*/NamePrefix,
-                  Context.getRecordType(Class).getTypePtr());
+            : NestedNameSpecifier(
+                  Context.getCanonicalTagType(Class).getTypePtr());
     NestedNameSpecifierLoc PrevQualifierInfo = MD->getQualifierLoc();
     const_cast<CXXMethodDecl *>(MD)->setQualifierInfo(
         NestedNameSpecifierLoc(Qualifier, /*Loc=*/nullptr));

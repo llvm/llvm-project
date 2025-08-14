@@ -64,66 +64,65 @@ public:
     return false;
   }
 
-  bool TraverseTypeLoc(TypeLoc TL, bool Elaborated = false) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     if (TL.isNull())
       return true;
 
-    if (!Elaborated) {
-      switch (TL.getTypeLocClass()) {
-      case TypeLoc::Record:
-        if (visitUnqualName(
-                TL.getAs<RecordTypeLoc>().getTypePtr()->getDecl()->getName()))
-          return false;
+    switch (TL.getTypeLocClass()) {
+    case TypeLoc::InjectedClassName:
+    case TypeLoc::Record:
+    case TypeLoc::Enum: {
+      auto TTL = TL.getAs<TagTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::Enum:
-        if (visitUnqualName(
-                TL.getAs<EnumTypeLoc>().getTypePtr()->getDecl()->getName()))
-          return false;
+      if (visitUnqualName(T->getOriginalDecl()->getName()))
+        return false;
+      break;
+    }
+    case TypeLoc::TemplateSpecialization: {
+      auto TTL = TL.getAs<TemplateSpecializationTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::TemplateSpecialization:
-        if (visitUnqualName(TL.getAs<TemplateSpecializationTypeLoc>()
-                                .getTypePtr()
-                                ->getTemplateName()
-                                .getAsTemplateDecl()
-                                ->getName()))
-          return false;
+      if (visitUnqualName(T->getTemplateName().getAsTemplateDecl()->getName()))
+        return false;
+      break;
+    }
+    case TypeLoc::Typedef: {
+      auto TTL = TL.getAs<TypedefTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::Typedef:
-        if (visitUnqualName(
-                TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
-          return false;
+      if (visitUnqualName(T->getDecl()->getName()))
+        return false;
+      break;
+    }
+    case TypeLoc::Using: {
+      auto TTL = TL.getAs<UsingTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::Using:
-        if (visitUnqualName(TL.getAs<UsingTypeLoc>()
-                                .getTypePtr()
-                                ->getFoundDecl()
-                                ->getName()))
-          return false;
-        break;
-      default:
-        break;
-      }
+      if (visitUnqualName(T->getDecl()->getName()))
+        return false;
+      break;
+    }
+    default:
+      break;
     }
 
-    return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(TL);
+    return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(
+        TL, TraverseQualifier);
   }
 
   // Replace the base method in order to call our own
   // TraverseTypeLoc().
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
-    return TraverseTypeLoc(TL.getUnqualifiedLoc());
-  }
-
-  // Replace the base version to inform TraverseTypeLoc that the type is
-  // elaborated.
-  bool TraverseElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-    if (TL.getQualifierLoc() &&
-        !TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()))
-      return false;
-    const auto *T = TL.getTypePtr();
-    return TraverseTypeLoc(TL.getNamedTypeLoc(),
-                           T->getKeyword() != ElaboratedTypeKeyword::None ||
-                               T->getQualifier());
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL, bool TraverseQualifier) {
+    return TraverseTypeLoc(TL.getUnqualifiedLoc(), TraverseQualifier);
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *S) {

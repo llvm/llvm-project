@@ -22,9 +22,8 @@ s_t *f(void) {
 // CHECK-NEXT:| `-FieldDecl {{.*}} <line:10:2, col:6> col:6 dummy 'int'
 // CHECK-NEXT:|-VarDecl {{.*}} <line:13:1, col:11> col:11 used g 'struct s *__single'
 // CHECK-NEXT:|-TypedefDecl {{.*}} <line:15:1, col:18> col:18 referenced s_t 'struct s'
-// CHECK-NEXT:| `-ElaboratedType {{.*}} 'struct s' sugar
-// CHECK-NEXT:|   `-RecordType {{.*}} 'struct s'
-// CHECK-NEXT:|     `-Record {{.*}} 's'
+// CHECK-NEXT:| `-RecordType {{.*}} 'struct s'
+// CHECK-NEXT:|   `-Record {{.*}} 's'
 // CHECK-NEXT:`-FunctionDecl {{.*}} <line:16:1, line:19:1> line:16:6 f 's_t *__single(void)'
 // CHECK-NEXT:  `-CompoundStmt {{.*}} <col:14, line:19:1>
 // CHECK-NEXT:    |-DeclStmt {{.*}} <line:17:3, col:9>
