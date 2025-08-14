@@ -74,22 +74,23 @@ jobs:
 
     - name: Run ids over compilation database
       run: |
+        set -e
         cd ${{ github.workspace }}/llvm-project
         export H_OR_CPP_FILES_CHANGED_LAST_COMMIT=$(git diff --name-only HEAD~1 HEAD -- 'llvm/include/llvm/**/*.h' ':!llvm/include/llvm/Debuginfod/' ':!llvm/include/llvm/Demangle/' )
         if [ ! -z "${H_OR_CPP_FILES_CHANGED_LAST_COMMIT}" ]; then
           for file in $H_OR_CPP_FILES_CHANGED_LAST_COMMIT; do
-            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro=LLVM_ABI --include-header="llvm/Support/Compiler.h" --extra-arg="-DLLVM_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
+            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json  --apply-fixits --export-macro=LLVM_ABI --include-header="llvm/Support/Compiler.h" --extra-arg="-DLLVM_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
           done
         fi
         export H_OR_CPP_FILES_CHANGED_LAST_COMMIT=$(git diff --name-only HEAD~1 HEAD -- 'llvm/include/llvm-c/**/*.h' )
         if [ ! -z "${H_OR_CPP_FILES_CHANGED_LAST_COMMIT}" ]; then
           for file in $H_OR_CPP_FILES_CHANGED_LAST_COMMIT; do
-            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro=LLVM_C_ABI --include-header="llvm-c/Visibility.h" --extra-arg="-DLLVM_C_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
+            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json  --apply-fixits --export-macro=LLVM_C_ABI --include-header="llvm-c/Visibility.h" --extra-arg="-DLLVM_C_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
           done
         fi
         export H_OR_CPP_FILES_CHANGED_LAST_COMMIT=$(git diff --name-only HEAD~1 HEAD -- 'llvm/include/llvm/Demangle/**/*.h' )
         if [ ! -z "${H_OR_CPP_FILES_CHANGED_LAST_COMMIT}" ]; then
           for file in $H_OR_CPP_FILES_CHANGED_LAST_COMMIT; do
-            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro=DEMANGLE_ABI --include-header="llvm/Demangle/Visibility.h" --extra-arg="-DEMANGLE_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
+            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json  --apply-fixits --export-macro=DEMANGLE_ABI --include-header="llvm/Demangle/Visibility.h" --extra-arg="-DEMANGLE_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
           done
         fi
