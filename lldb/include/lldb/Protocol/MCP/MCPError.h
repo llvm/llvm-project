@@ -26,7 +26,7 @@ public:
 
   const std::string &getMessage() const { return m_message; }
 
-  lldb_protocol::mcp::Error toProtcolError() const;
+  lldb_protocol::mcp::Error toProtocolError() const;
 
   static constexpr int64_t kResourceNotFound = -32002;
   static constexpr int64_t kInternalError = -32603;
