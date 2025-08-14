@@ -14,6 +14,8 @@
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 
+#include <utility>
+
 //===----------------------------------------------------------------------===//
 // Report for which we expect NoOwnershipChangeVisitor to add a new note.
 //===----------------------------------------------------------------------===//
@@ -218,3 +220,141 @@ void caller() {
   (void)n;
 } // no-warning: No potential memory leak here, because that's been already reported.
 } // namespace symbol_reaper_lifetime
+
+
+// RUN: %clang_analyze_cc1 -std=c++20 -analyzer-checker=cplusplus.NewDeleteLeaks -verify %s
+
+
+// Minimal RAII class that properly deletes its pointer.
+class Bar {
+public:
+  explicit Bar(int *ptr) : ptr_(ptr) {}
+  ~Bar() {
+    if (ptr_) {
+      delete ptr_;
+      ptr_ = nullptr;
+    }
+  }
+
+  Bar(const Bar &) = delete;
+  Bar &operator=(const Bar &) = delete;
+
+  Bar(Bar &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  Bar &operator=(Bar &&other) noexcept {
+    if (this != &other) {
+      delete ptr_;
+      ptr_ = other.ptr_;
+      other.ptr_ = nullptr;
+    }
+    return *this;
+  }
+
+  int operator*() const { return *ptr_; }
+
+private:
+  int *ptr_;
+};
+
+// Factory returning a prvalue Bar that owns a freshly allocated int.
+static Bar make_bar(int v) { return Bar(new int(v)); }
+
+struct Foo {
+  Bar a;
+  Bar b;
+};
+
+struct FooWithConstructor {
+  Bar a;
+  Bar b;
+  FooWithConstructor(Bar &&original_a, Bar &&original_b)
+      : a(std::move(original_a)), b(std::move(original_b)) {}
+};
+
+//===----------------------------------------------------------------------===//
+// No-false-positive regression tests: these must be silent
+//===----------------------------------------------------------------------===//
+
+namespace prvalue_aggregate_transfer {
+
+void ok_aggregate_from_factory() {
+  Foo foo = {make_bar(1), make_bar(2)}; // expected-no-diagnostics
+}
+
+void ok_aggregate_from_temporary_exprs() {
+  Foo foo = {Bar(new int(1)), Bar(new int(2))}; // expected-no-diagnostics
+}
+
+void ok_ctor_from_factory_rvalues() {
+  FooWithConstructor foo = {make_bar(1), make_bar(2)}; // expected-no-diagnostics
+}
+
+} // namespace prvalue_aggregate_transfer
+
+//===----------------------------------------------------------------------===//
+// True-positive regression tests: these should still warn
+//===----------------------------------------------------------------------===//
+
+class BarNoDelete {
+public:
+  explicit BarNoDelete(int *ptr) : ptr_(ptr) {}
+  ~BarNoDelete() {} // intentionally missing delete -> leak
+
+  BarNoDelete(const BarNoDelete &) = delete;
+  BarNoDelete &operator=(const BarNoDelete &) = delete;
+
+  BarNoDelete(BarNoDelete &&other) noexcept : ptr_(other.ptr_) {
+    other.ptr_ = nullptr;
+  }
+  BarNoDelete &operator=(BarNoDelete &&other) noexcept {
+    if (this != &other) {
+      // no delete of old ptr_ on purpose
+      ptr_ = other.ptr_;
+      other.ptr_ = nullptr;
+    }
+    return *this;
+  }
+
+private:
+  int *ptr_;
+};
+
+static BarNoDelete make_bar_nd(int v) { return BarNoDelete(new int(v)); }
+
+struct FooND {
+  BarNoDelete a;
+  BarNoDelete b;
+};
+
+namespace prvalue_aggregate_positive {
+
+void leak_aggregate_from_factory() {
+  FooND f = {make_bar_nd(1), make_bar_nd(2)};
+  // expected-warning@-1 {{Potential memory leak}}
+}
+
+void leak_direct_member() {
+  BarNoDelete b(new int(3));
+  // expected-warning@-1 {{Potential memory leak}}
+}
+
+} // namespace prvalue_aggregate_positive
+
+//===----------------------------------------------------------------------===//
+// Guard tests: neighboring behaviors that must remain intact
+// These ensure we didn't weaken unrelated diagnostics (mismatch/double-delete).
+//===----------------------------------------------------------------------===//
+
+namespace guards {
+
+void mismatch_array_delete() {
+  int *p = new int[4];
+  delete p; // expected-warning {{mismatched deallocation: 'delete' should be 'delete[]'}}
+}
+
+void double_delete() {
+  int *p = new int(1);
+  delete p;
+  delete p; // expected-warning {{Attempt to free released memory}}
+}
+
+} // namespace guards
