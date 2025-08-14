@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenBuilder.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang::CIRGen;
 
@@ -72,8 +73,6 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
   if (!offset)
     return;
 
-  mlir::Type subType;
-
   auto getIndexAndNewOffset =
       [](int64_t offset, int64_t eltSize) -> std::pair<int64_t, int64_t> {
     int64_t divRet = offset / eltSize;
@@ -83,40 +82,49 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
     return {divRet, modRet};
   };
 
-  if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
-    int64_t eltSize = layout.getTypeAllocSize(arrayTy.getElementType());
-    subType = arrayTy.getElementType();
-    const auto [index, newOffset] = getIndexAndNewOffset(offset, eltSize);
-    indices.push_back(index);
-    offset = newOffset;
-  } else if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty)) {
-    auto elts = recordTy.getMembers();
-    int64_t Pos = 0;
-    for (size_t i = 0; i < elts.size(); ++i) {
-      int64_t eltSize =
-          (int64_t)layout.getTypeAllocSize(elts[i]).getFixedValue();
-      unsigned alignMask = layout.getABITypeAlign(elts[i]).value() - 1;
-      if (recordTy.getPacked())
-        alignMask = 0;
-      // Union's fields have the same offset, so no need to change Pos here,
-      // we just need to find EltSize that is greater then the required offset.
-      // The same is true for the similar union type check below
-      if (!recordTy.isUnion())
-        Pos = (Pos + alignMask) & ~alignMask;
-      assert(offset >= 0);
-      if (offset < Pos + eltSize) {
-        indices.push_back(i);
-        subType = elts[i];
-        offset -= Pos;
-        break;
-      }
-      // No need to update Pos here, see the comment above.
-      if (!recordTy.isUnion())
-        Pos += eltSize;
-    }
-  } else {
-    llvm_unreachable("unexpected type");
-  }
+  mlir::Type subType =
+      llvm::TypeSwitch<mlir::Type, mlir::Type>(ty)
+          .Case<cir::ArrayType>([&](auto arrayTy) {
+            int64_t eltSize = layout.getTypeAllocSize(arrayTy.getElementType());
+            const auto [index, newOffset] =
+                getIndexAndNewOffset(offset, eltSize);
+            indices.push_back(index);
+            offset = newOffset;
+            return arrayTy.getElementType();
+          })
+          .Case<cir::RecordType>([&](auto recordTy) {
+            ArrayRef<mlir::Type> elts = recordTy.getMembers();
+            int64_t pos = 0;
+            for (size_t i = 0; i < elts.size(); ++i) {
+              int64_t eltSize =
+                  (int64_t)layout.getTypeAllocSize(elts[i]).getFixedValue();
+              unsigned alignMask = layout.getABITypeAlign(elts[i]).value() - 1;
+              if (recordTy.getPacked())
+                alignMask = 0;
+              // Union's fields have the same offset, so no need to change pos
+              // here, we just need to find eltSize that is greater then the
+              // required offset. The same is true for the similar union type
+              // check below
+              if (!recordTy.isUnion())
+                pos = (pos + alignMask) & ~alignMask;
+              assert(offset >= 0);
+              if (offset < pos + eltSize) {
+                indices.push_back(i);
+                offset -= pos;
+                return elts[i];
+              }
+              // No need to update pos here, see the comment above.
+              if (!recordTy.isUnion())
+                pos += eltSize;
+            }
+            llvm_unreachable("offset was not found within the record");
+          })
+          .Default([](mlir::Type otherTy) {
+            llvm_unreachable("unexpected type");
+            return otherTy; // Even though this is unreachable, we need to
+                            // return a type to satisfy the return type of the
+                            // lambda.
+          });
 
   assert(subType);
   computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
