@@ -1067,9 +1067,9 @@ private:
   static void CallbackWrapper(AMDGPUSignalTy *InputSignal,
                               AMDGPUSignalTy *OutputSignal,
                               void (*Callback)(void *), void *UserData) {
+    // The wait call will not error in this context.
     if (InputSignal)
       if (auto Err = InputSignal->wait())
-        // Wait shouldn't report an error
         reportFatalInternalError(std::move(Err));
 
     Callback(UserData);
