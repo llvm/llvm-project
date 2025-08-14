@@ -641,8 +641,8 @@ function(add_mlir_library_install name)
                               COMPONENT ${name})
     endif()
     set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
-    set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
   endif()
+  set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
 endfunction()
 
 # Declare an mlir library which is part of the public C-API.

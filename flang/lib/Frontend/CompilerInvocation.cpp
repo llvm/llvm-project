@@ -1703,6 +1703,20 @@ void CompilerInvocation::setDefaultPredefinitions() {
   fortranOptions.predefinitions.emplace_back("__flang_patchlevel__",
                                              FLANG_VERSION_PATCHLEVEL_STRING);
 
+  // Add predefinitions based on the relocation model
+  if (unsigned PICLevel = getCodeGenOpts().PICLevel) {
+    fortranOptions.predefinitions.emplace_back("__PIC__",
+                                               std::to_string(PICLevel));
+    fortranOptions.predefinitions.emplace_back("__pic__",
+                                               std::to_string(PICLevel));
+    if (getCodeGenOpts().IsPIE) {
+      fortranOptions.predefinitions.emplace_back("__PIE__",
+                                                 std::to_string(PICLevel));
+      fortranOptions.predefinitions.emplace_back("__pie__",
+                                                 std::to_string(PICLevel));
+    }
+  }
+
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenACC)) {

@@ -909,11 +909,11 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
   Log *log = GetLog(LLDBLog::Script);
 
   if (IsExecutingPython()) {
-    PyThreadState *state = PyThreadState_GET();
+    PyThreadState *state = PyThreadState_Get();
     if (!state)
       state = GetThreadState();
     if (state) {
-      long tid = state->thread_id;
+      long tid = PyThread_get_thread_ident();
       PyThreadState_Swap(state);
       int num_threads = PyThreadState_SetAsyncExc(tid, PyExc_KeyboardInterrupt);
       LLDB_LOGF(log,

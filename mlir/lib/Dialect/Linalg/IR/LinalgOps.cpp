@@ -1570,40 +1570,50 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-// Retrieve the operation from the body, if it is the only one (except
-// yield) and if it gets the same amount of arguments as the body does.
-// If initFirst flag is enabled, we check that init takes the first position in
-// operands of payload.
-static Operation *findPayloadOp(Block *body, bool initFirst = false) {
-  if (body->getOperations().size() != 2)
-    return nullptr;
-  Operation &payload = body->getOperations().front();
-  assert(isa<YieldOp>(body->getOperations().back()));
+static bool canUseShortForm(Block *body, bool initFirst = false) {
+  // Check if the body can be printed in short form. The following 4 conditions
+  // must be satisfied:
 
+  // 1) The body must contain exactly 2 operations: the payload op and a yield.
+  if (body->getOperations().size() != 2)
+    return false;
+  Operation &payload = body->getOperations().front();
+
+  // 2) The payload op must have the same number of operands as the number of
+  //    block arguments.
   if (payload.getNumOperands() == 0 ||
       payload.getNumOperands() != body->getNumArguments())
-    return nullptr;
+    return false;
+
+  // 3) If `initFirst` is true (e.g., for reduction ops), the init block
+  //    must be the first operand of the payload op, otherwise, the operands
+  //    must match the block arguments in order.
   if (initFirst) {
     // check init
     if (payload.getOperands().back() != body->getArgument(0))
-      return nullptr;
+      return false;
     // check rest
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments().drop_front())) {
       if (bbArg != operand)
-        return nullptr;
+        return false;
     }
   } else {
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments())) {
       if (bbArg != operand)
-        return nullptr;
+        return false;
     }
   }
-  return &payload;
+
+  // 4) The `yield` operand must be the result of the payload op.
+  auto yieldOp = cast<YieldOp>(body->getTerminator());
+  return yieldOp.getNumOperands() == 1 &&
+         yieldOp.getOperand(0).getDefiningOp() &&
+         yieldOp.getOperand(0).getDefiningOp() == &payload;
 }
 
-void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
+static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   SmallVector<StringRef> elidedAttrs;
   std::string attrToElide;
   p << " { " << payloadOp->getName().getStringRef();
@@ -1622,15 +1632,15 @@ void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
 
 void MapOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper);
-  if (payloadOp) {
-    printShortForm(p, payloadOp);
+  bool useShortForm = canUseShortForm(mapper);
+  if (useShortForm) {
+    printShortForm(p, &mapper->getOperations().front());
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   p.printOptionalAttrDict((*this)->getAttrs());
 
-  if (!payloadOp) {
+  if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
     p.printNewline();
@@ -1829,15 +1839,15 @@ static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
 
 void ReduceOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper, /*initFirst=*/true);
-  if (payloadOp) {
-    printShortForm(p, payloadOp);
+  bool useShortForm = canUseShortForm(mapper, /*initFirst=*/true);
+  if (useShortForm) {
+    printShortForm(p, &mapper->getOperations().front());
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
-  if (!payloadOp) {
+  if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
     p.printNewline();
