@@ -3,15 +3,6 @@
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
-<<<<<<< HEAD
-
-  %CB = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 1, i32 3, i32 1, i32 0, i1 false, ptr nonnull @CB.str)
-  %Sampler = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 3, i32 1, i32 0, i1 false, ptr nonnull @Smp.str)
-  %SB = tail call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @SB.str)
-  %RWB =  tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @RWB.str)
-
-=======
->>>>>>> validation/check-descriptors-are-bound
   ret void
 }
 
