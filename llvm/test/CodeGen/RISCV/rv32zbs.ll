@@ -53,11 +53,11 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi a5, a3, -32
 ; RV32I-NEXT:    sll a2, a4, a2
 ; RV32I-NEXT:    sll a3, a4, a3
-; RV32I-NEXT:    slti a4, a5, 0
-; RV32I-NEXT:    neg a5, a4
-; RV32I-NEXT:    addi a4, a4, -1
-; RV32I-NEXT:    and a2, a5, a2
-; RV32I-NEXT:    and a3, a4, a3
+; RV32I-NEXT:    srli a5, a5, 31
+; RV32I-NEXT:    neg a4, a5
+; RV32I-NEXT:    addi a5, a5, -1
+; RV32I-NEXT:    and a2, a4, a2
+; RV32I-NEXT:    and a3, a5, a3
 ; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    not a3, a3
 ; RV32I-NEXT:    and a0, a2, a0
@@ -70,7 +70,7 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBSNOZBB-NEXT:    bset a2, zero, a2
 ; RV32ZBSNOZBB-NEXT:    addi a4, a3, -32
 ; RV32ZBSNOZBB-NEXT:    bset a3, zero, a3
-; RV32ZBSNOZBB-NEXT:    slti a4, a4, 0
+; RV32ZBSNOZBB-NEXT:    srli a4, a4, 31
 ; RV32ZBSNOZBB-NEXT:    neg a5, a4
 ; RV32ZBSNOZBB-NEXT:    addi a4, a4, -1
 ; RV32ZBSNOZBB-NEXT:    and a2, a5, a2
@@ -87,7 +87,7 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBSZBB-NEXT:    bset a2, zero, a2
 ; RV32ZBSZBB-NEXT:    bset a4, zero, a3
 ; RV32ZBSZBB-NEXT:    addi a3, a3, -32
-; RV32ZBSZBB-NEXT:    slti a3, a3, 0
+; RV32ZBSZBB-NEXT:    srli a3, a3, 31
 ; RV32ZBSZBB-NEXT:    addi a5, a3, -1
 ; RV32ZBSZBB-NEXT:    neg a3, a3
 ; RV32ZBSZBB-NEXT:    and a4, a5, a4
@@ -188,7 +188,7 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a1, a0, -32
 ; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    slti a1, a1, 0
+; RV32I-NEXT:    srli a1, a1, 31
 ; RV32I-NEXT:    sll a2, a2, a0
 ; RV32I-NEXT:    neg a0, a1
 ; RV32I-NEXT:    addi a1, a1, -1
@@ -200,11 +200,11 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    addi a1, a0, -32
 ; RV32ZBS-NEXT:    bset a2, zero, a0
-; RV32ZBS-NEXT:    slti a0, a1, 0
-; RV32ZBS-NEXT:    neg a1, a0
-; RV32ZBS-NEXT:    addi a3, a0, -1
-; RV32ZBS-NEXT:    and a0, a1, a2
-; RV32ZBS-NEXT:    and a1, a3, a2
+; RV32ZBS-NEXT:    srli a1, a1, 31
+; RV32ZBS-NEXT:    neg a0, a1
+; RV32ZBS-NEXT:    addi a1, a1, -1
+; RV32ZBS-NEXT:    and a0, a0, a2
+; RV32ZBS-NEXT:    and a1, a1, a2
 ; RV32ZBS-NEXT:    ret
   %shl = shl i64 1, %a
   ret i64 %shl
