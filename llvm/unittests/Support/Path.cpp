@@ -1491,11 +1491,12 @@ TEST_F(FileSystemTest, FileMappingSync) {
     std::copy(Content.begin(), Content.end(), MFR.data());
 
     // Synchronize and check the contents before unmapping.
-    MFR.sync();
+    ASSERT_FALSE((bool)MFR.sync());
     auto Buffer = MemoryBuffer::getFile(File.TmpName);
     if (!Buffer)
-      llvm::outs() << "failed to open \'" << File.TmpName
+      llvm::errs() << "failed to open \'" << File.TmpName
                    << "\': " << Buffer.getError().message() << "\n";
+    sleep(1);
     ASSERT_TRUE((bool)Buffer);
     ASSERT_EQ(Content, Buffer->get()->getBuffer());
   }
