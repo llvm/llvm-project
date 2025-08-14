@@ -2459,13 +2459,10 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   if (getSideEffects())
     p << " side_effects";
 
-  llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
-  elidedAttrs.push_back("asm_flavor");
-  elidedAttrs.push_back("asm_string");
-  elidedAttrs.push_back("constraints");
-  elidedAttrs.push_back("operand_attrs");
-  elidedAttrs.push_back("operands_segments");
-  elidedAttrs.push_back("side_effects");
+  std::array elidedAttrs{
+      llvm::StringRef("asm_flavor"),        llvm::StringRef("asm_string"),
+      llvm::StringRef("constraints"),       llvm::StringRef("operand_attrs"),
+      llvm::StringRef("operands_segments"), llvm::StringRef("side_effects")};
   p.printOptionalAttrDict(getOperation()->getAttrs(), elidedAttrs);
 
   if (auto v = getRes())
