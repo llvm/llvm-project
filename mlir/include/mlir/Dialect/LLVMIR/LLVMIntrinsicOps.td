@@ -87,21 +87,21 @@ class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits),
-            /*requiresFastmath=*/0, /*requiresArgAndResultAttrs*/0,
+            /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
             /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_zero_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
                    I1Attr:$is_zero_poison);
 }
 
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
-    /*requiresFastmath=*/0, /*requiresArgAndResultAttrs*/0,
+    /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
     /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_int_min_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
                    I1Attr:$is_int_min_poison);
 }
 
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
-  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs*/0,
+  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
@@ -360,7 +360,7 @@ def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end">;
 
 def LLVM_InvariantStartOp : LLVM_OneResultIntrOp<"invariant.start", [], [1],
     [DeclareOpInterfaceMethods<PromotableOpInterface>],
-    /*requiresFastmath=*/0, /*requiresArgAndResultAttrs*/0,
+    /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
     /*immArgPositions=*/[0], /*immArgAttrNames=*/["size"]> {
   let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
   let results = (outs LLVM_DefaultPointer:$res);
@@ -412,7 +412,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                                !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
                                true : []),
                            /*requiresFastmath=*/0,
-                           /*requiresArgAndResultAttrs*/0,
+                           /*requiresArgAndResultAttrs=*/0,
                            /*immArgPositions=*/[],
                            /*immArgAttrNames=*/[]> {
   dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
@@ -590,7 +590,7 @@ def LLVM_ExpectOp
 def LLVM_ExpectWithProbabilityOp
   : LLVM_OneResultIntrOp<"expect.with.probability", [], [0],
                          [Pure, AllTypesMatch<["val", "expected", "res"]>],
-                         /*requiresFastmath=*/0, /*requiresArgAndResultAttrs*/0,
+                         /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                          /*immArgPositions=*/[2], /*immArgAttrNames=*/["prob"]> {
   let arguments = (ins AnySignlessInteger:$val,
                        AnySignlessInteger:$expected,
@@ -1229,7 +1229,7 @@ def LLVM_vector_insert
                   PredOpTrait<"it is not inserting scalable into fixed-length vectors.",
                     CPred<"!isScalableVectorType($srcvec.getType()) || "
                           "isScalableVectorType($dstvec.getType())">>],
-                  /*requiresFastmath=*/0, /*requiresArgAndResultattrs=*/0,
+                  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                   /*immArgPositions=*/[2], /*immArgAttrNames=*/["pos"]> {
   let arguments = (ins LLVM_AnyVector:$dstvec, LLVM_AnyVector:$srcvec,
                        I64Attr:$pos);
@@ -1263,7 +1263,7 @@ def LLVM_vector_extract
                   PredOpTrait<"it is not extracting scalable from fixed-length vectors.",
                     CPred<"!isScalableVectorType($res.getType()) || "
                           "isScalableVectorType($srcvec.getType())">>],
-                  /*requiresFastmath=*/0, /*requiresArgAndResultattrs=*/0,
+                  /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
                   /*immArgPositions=*/[1], /*immArgAttrNames=*/["pos"]> {
   let arguments = (ins LLVM_AnyVector:$srcvec, I64Attr:$pos);
   let results = (outs LLVM_AnyVector:$res);
