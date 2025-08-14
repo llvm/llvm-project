@@ -17,7 +17,7 @@
 #  include <__cxx03/__locale_dir/locale_base_api/android.h>
 #elif defined(__sun__)
 #  include <__cxx03/__locale_dir/locale_base_api/solaris.h>
-#elif defined(_NEWLIB_VERSION)
+#elif _LIBCPP_HAS_NEWLIB_LIBC || _LIBC_HAS_PICOLIBC
 #  include <__cxx03/__locale_dir/locale_base_api/newlib.h>
 #elif defined(__OpenBSD__)
 #  include <__cxx03/__locale_dir/locale_base_api/openbsd.h>
