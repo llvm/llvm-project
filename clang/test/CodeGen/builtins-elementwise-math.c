@@ -66,7 +66,7 @@ void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.abs.i32(i32 [[IA1]], i1 false)
   b = __builtin_elementwise_abs(int_as_one);
 
-  // CHECK:   call i32 @llvm.abs.i32(i32 -10, i1 false)
+  // CHECK:   store i32 %elt.abs11, ptr @b, align 4
   b = __builtin_elementwise_abs(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
