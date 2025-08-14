@@ -9122,8 +9122,7 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(RTLIB::STRLEN),
-          Type::getInt32Ty(*getContext()),
+          TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
           getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setTailCall(IsTailCall);
