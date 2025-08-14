@@ -15419,17 +15419,17 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
         return SDValue();
     }
 
-    // Avoid returning the same shuffle operation. For example,
-    // t7: v16i16 = vector_shuffle<8,9,10,11,4,5,6,7,0,1,2,3,12,13,14,15> t5,
-    //                             undef:v16i16
-    if (CrossLaneMask == Mask || InLaneMask == Mask)
-      return SDValue();
-
     // Simplify CrossLaneMask based on the actual demanded elements.
     if (V1.hasOneUse())
       for (int i = 0; i != NumElts; ++i)
         if (!DemandedCrossLane[i])
           CrossLaneMask[i] = SM_SentinelUndef;
+
+    // Avoid returning the same shuffle operation. For example,
+    // t7: v16i16 = vector_shuffle<8,9,10,11,4,5,6,7,0,1,2,3,12,13,14,15> t5,
+    //                             undef:v16i16
+    if (CrossLaneMask == Mask || InLaneMask == Mask)
+      return SDValue();
 
     SDValue CrossLane = DAG.getVectorShuffle(VT, DL, V1, V2, CrossLaneMask);
     return DAG.getVectorShuffle(VT, DL, CrossLane, DAG.getUNDEF(VT),
