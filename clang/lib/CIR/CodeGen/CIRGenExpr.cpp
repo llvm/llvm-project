@@ -1544,9 +1544,9 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitCallee: call to member function is NYI");
     return {};
+  } else if (auto *pde = dyn_cast<CXXPseudoDestructorExpr>(e)) {
+    return CIRGenCallee::forPseudoDestructor(pde);
   }
-
-  assert(!cir::MissingFeatures::opCallPseudoDtor());
 
   // Otherwise, we have an indirect reference.
   mlir::Value calleePtr;
@@ -1599,10 +1599,8 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
     return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,
                            returnValue);
 
-  if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
-    cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
-  }
-  assert(!cir::MissingFeatures::opCallPseudoDtor());
+  if (callee.isPseudoDestructor())
+    return emitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
 
   return emitCall(e->getCallee()->getType(), callee, e, returnValue);
 }
