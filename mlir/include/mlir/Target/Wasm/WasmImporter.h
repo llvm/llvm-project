@@ -21,12 +21,9 @@
 
 namespace mlir::wasm {
 
-/// Translates the given operation to C++ code. The operation or operations in
-/// the region of 'op' need almost all be in EmitC dialect. The parameter
-/// 'declareVariablesAtTop' enforces that all variables for op results and block
-/// arguments are declared at the beginning of the function.
-/// If parameter 'fileId' is non-empty, then body of `emitc.file` ops
-/// with matching id are emitted.
+/// If `source` contains a valid Wasm binary file, this function returns a
+/// a ModuleOp containing the representation of trhe Wasm module encoded in
+/// the source file in the `wasmssa` dialect.
 OwningOpRef<ModuleOp> importWebAssemblyToModule(llvm::SourceMgr &source,
                                                 MLIRContext *context);
 } // namespace mlir::wasm

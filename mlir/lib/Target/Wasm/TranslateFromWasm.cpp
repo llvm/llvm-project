@@ -319,7 +319,7 @@ public:
     LDBG() << "  Current offset: " << offset;
     if (nBytes > size())
       return emitError(getLocation(), "trying to extract ")
-             << nBytes << "bytes when only " << size() << "are avilables";
+             << nBytes << "bytes when only " << size() << "are available";
 
     StringRef res = head.slice(offset, offset + nBytes);
     offset += nBytes;
