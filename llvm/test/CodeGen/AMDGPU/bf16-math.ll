@@ -370,9 +370,6 @@ define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_exp_bf16_e64 v0, v0 clamp
 ; GCN-NEXT:    ; return to shader part epilog
-
-
-
   %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
   %max = call bfloat @llvm.maxnum.bf16(bfloat %exp, bfloat 0.0)
   %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
@@ -384,9 +381,6 @@ define amdgpu_ps float @test_clamp_v2bf16_folding(<2 x bfloat> %src0, <2 x bfloa
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_mul_bf16 v0, v0, v1 clamp
 ; GCN-NEXT:    ; return to shader part epilog
-
-
-
   %mul = fmul <2 x bfloat> %src0, %src1
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %mul, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
   %clamp = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %max, <2 x bfloat> <bfloat 1.0, bfloat 1.0>)
@@ -400,9 +394,6 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vvv(ptr addrspace(1) %out, <2 x bfl
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, v3, v4
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
-
-
-
   %mul = fmul contract <2 x bfloat> %a, %b
   %add = fadd contract <2 x bfloat> %mul, %c
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -415,9 +406,6 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vss(ptr addrspace(1) %out, <2 x bfl
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
-
-
-
   %mul = fmul contract <2 x bfloat> %a, %b
   %add = fadd contract <2 x bfloat> %mul, %c
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -432,9 +420,6 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_sss(ptr addrspace(1) %out, <2 x bfl
 ; GCN-NEXT:    v_pk_fma_bf16 v2, s0, s1, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
-
-
-
   %mul = fmul contract <2 x bfloat> %a, %b
   %add = fadd contract <2 x bfloat> %mul, %c
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -447,9 +432,6 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vsc(ptr addrspace(1) %out, <2 x bfl
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, 0.5 op_sel_hi:[1,1,0]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
-
-
-
   %mul = fmul contract <2 x bfloat> %a, %b
   %add = fadd contract <2 x bfloat> %mul, <bfloat 0.5, bfloat 0.5>
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -464,9 +446,6 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vll(ptr addrspace(1) %out, <2 x bfl
 ; GCN-NEXT:    v_pk_fma_bf16 v2, 0x42c83f80, v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
-
-
-
   %mul = fmul contract <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
   %add = fadd contract <2 x bfloat> %mul, <bfloat 2.0, bfloat 200.0>
   store <2 x bfloat> %add, ptr addrspace(1) %out

@@ -43,6 +43,7 @@ private:
     std::unique_ptr<std::byte[]> Memory;
     Allocation(std::unique_ptr<std::byte[]> Memory)
         : Memory(std::move(Memory)) {}
+    Block *block() const { return reinterpret_cast<Block *>(Memory.get()); }
   };
 
   struct AllocationSite {
@@ -99,6 +100,9 @@ public:
 
 private:
   llvm::DenseMap<const Expr *, AllocationSite> AllocationSites;
+  // Allocations that have already been deallocated but had pointers
+  // to them.
+  llvm::SmallVector<Allocation> DeadAllocations;
 
   using PoolAllocTy = llvm::BumpPtrAllocator;
   PoolAllocTy DescAllocator;

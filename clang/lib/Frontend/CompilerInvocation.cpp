@@ -1542,6 +1542,16 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
           Discrimination::Constant, InitFiniPointerConstantDiscriminator);
     }
 
+    Opts.BlockInvocationFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.BlockHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.BlockByrefHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.BlockDescriptorPointers =
+        PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                          BlockDescriptorConstantDiscriminator);
+
     Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
     Opts.ObjCMethodListPointer =
@@ -3621,7 +3631,6 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
       Args.hasArg(OPT_faarch64_jump_table_hardening);
-
   Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
   Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
   Opts.PointerAuthObjcInterfaceSel =
@@ -4441,7 +4450,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
     StringRef Ver = A->getValue();
     std::pair<StringRef, StringRef> VerParts = Ver.split('.');
-    unsigned Major, Minor = 0;
+    int Major, Minor = 0;
 
     // Check the version number is valid: either 3.x (0 <= x <= 9) or
     // y or y.0 (4 <= y <= current version).
@@ -4454,7 +4463,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
              : VerParts.first.size() == Ver.size() || VerParts.second == "0")) {
       // Got a valid version number.
 #define ABI_VER_MAJOR_MINOR(Major_, Minor_)                                    \
-  if (std::tie(Major, Minor) <= std::tuple(Major_, Minor_))                    \
+  if (std::tuple(Major, Minor) <= std::tuple(Major_, Minor_))                  \
     Opts.setClangABICompat(LangOptions::ClangABI::Ver##Major_##_##Minor_);     \
   else
 #define ABI_VER_MAJOR(Major_)                                                  \

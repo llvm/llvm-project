@@ -63,9 +63,9 @@ namespace NS2 {
   // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:11 cbuffer CB2
   // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
   cbuffer CB2 {
-    // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo':'hlsl_constant Foo'
+    // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo'
     ::Foo foo0;
-    // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo':'hlsl_constant NS2::Foo'
+    // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo'
     Foo foo1;
     // CHECK: VarDecl {{.*}} foo2 'hlsl_constant NS1::Foo'
     NS1::Foo foo2;

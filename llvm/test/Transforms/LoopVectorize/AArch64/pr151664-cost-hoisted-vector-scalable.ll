@@ -12,13 +12,13 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = add i64 1, [[INDEX1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP8]], i32 4
-; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[P]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 4
+; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], -8
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
