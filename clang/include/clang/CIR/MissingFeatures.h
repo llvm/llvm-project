@@ -87,7 +87,6 @@ struct MissingFeatures {
   static bool setFunctionAttributes() { return false; }
 
   // CallOp handling
-  static bool opCallPseudoDtor() { return false; }
   static bool opCallAggregateArgs() { return false; }
   static bool opCallPaddingArgs() { return false; }
   static bool opCallABIExtendArg() { return false; }
