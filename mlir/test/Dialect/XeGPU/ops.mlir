@@ -786,15 +786,15 @@ gpu.func @load_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, stri
 
 // CHECK: gpu.func @store_matrix_desc([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16>, [[ARG1:%.+]]: vector<16x16xf16>)
 gpu.func @store_matrix_desc(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<16x16xf16>) {
-  // CHECK: xegpu.store_matrix [[ARG0]][8, 8], [[ARG1]] : !xegpu.matrix_desc<16x64xf16>, vector<16x16xf16>
-  xegpu.store_matrix %arg0[8, 8], %arg1: !xegpu.matrix_desc<16x64xf16>, vector<16x16xf16>
+  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 8] : vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16>
+  xegpu.store_matrix %arg1, %arg0[8, 8]: vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16>
   gpu.return
 }
 
 // CHECK: gpu.func @store_matrix_desc_with_stride([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>, [[ARG1:%.+]]: vector<16x16xf16>)
 gpu.func @store_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>, %arg1: vector<16x16xf16>) {
-  // CHECK: xegpu.store_matrix [[ARG0]][8, 8], [[ARG1]] : !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>, vector<16x16xf16>
-  xegpu.store_matrix %arg0[8, 8], %arg1: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>, vector<16x16xf16>
+  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 8] : vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
+  xegpu.store_matrix %arg1, %arg0[8, 8]: vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
   gpu.return
 }
 
@@ -802,6 +802,13 @@ gpu.func @store_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, str
 gpu.func @matrix_desc_subview(%arg0: !xegpu.matrix_desc<16x64xf16>) {
   //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16>
   %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16>
+  gpu.return
+}
+
+// CHECK: gpu.func @matrix_desc_subview_lower_rank([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16>)
+gpu.func @matrix_desc_subview_lower_rank(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<16xf16>
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<16xf16>
   gpu.return
 }
 

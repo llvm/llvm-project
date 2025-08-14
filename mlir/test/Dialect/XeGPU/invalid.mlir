@@ -795,14 +795,14 @@ func.func @load_matrix_desc_invalid_result_size(%arg0: !xegpu.matrix_desc<16x64x
 // -----
 func.func @store_matrix_desc_mismatch_element_type(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<16x16xf32>) {
   // expected-error@+1 {{failed to verify that all of {matrix_desc, data} have same element type}}
-  xegpu.store_matrix %arg0[8, 8], %arg1: !xegpu.matrix_desc<16x64xf16>, vector<16x16xf32>
+  xegpu.store_matrix %arg1, %arg0[8, 8] : vector<16x16xf32>, !xegpu.matrix_desc<16x64xf16>
   return
 }
 
 // -----
 func.func @store_matrix_desc_invalid_data_size(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<32x32xf16>) {
   // expected-error@+1 {{data shape must not exceed matrix desc shape}}
-  xegpu.store_matrix %arg0[8, 8], %arg1: !xegpu.matrix_desc<16x64xf16>, vector<32x32xf16>
+  xegpu.store_matrix %arg1, %arg0[8, 8] : vector<32x32xf16>, !xegpu.matrix_desc<16x64xf16>
   return
 }
 
@@ -821,8 +821,16 @@ func.func @matrix_desc_subview_layout_mismatch(%arg0: !xegpu.matrix_desc<16x64xf
 }
 
 // -----
-func.func @matrix_desc_subview_rank_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+func.func @matrix_desc_subview_element_type_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
   // expected-error@+1 {{failed to verify that all of {src, res} have same element type}}
   %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf32>
   return
 }
+
+// -----
+func.func @matrix_desc_subview_rank_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  // expected-error@+1 {{result rank must not exceed source rank}}
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<4x8x16xf16>
+  return
+}
+

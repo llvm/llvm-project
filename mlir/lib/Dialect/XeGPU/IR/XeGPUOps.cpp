@@ -965,15 +965,15 @@ LogicalResult LoadMatrixOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreMatrixOp
 //===----------------------------------------------------------------------===//
-void StoreMatrixOp::build(OpBuilder &builder, OperationState &state,
+void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
                           TypedValue<MatrixDescType> matrixDesc,
-                          llvm::ArrayRef<OpFoldResult> offsets, Value data,
+                          llvm::ArrayRef<OpFoldResult> offsets,
                           LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  build(builder, state, matrixDesc, dynamicOffsets, staticOffsetsAttr, data,
+  build(builder, state, data, matrixDesc, dynamicOffsets, staticOffsetsAttr,
         layout);
 }
 
@@ -1002,13 +1002,20 @@ void MatrixDescSubviewOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult MatrixDescSubviewOp::verify() {
-  ArrayRef<int64_t> srcShape = getSrc().getType().getShape();
-  ArrayRef<int64_t> resShape = getRes().getType().getShape();
-  if (llvm::any_of(llvm::zip_equal(resShape, srcShape),
-                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+  MatrixDescType srcTy = getSrc().getType();
+  MatrixDescType resTy = getRes().getType();
+  ArrayRef<int64_t> srcShape = srcTy.getShape();
+  ArrayRef<int64_t> resShape = resTy.getShape();
+
+  if (srcTy.getRank() < resTy.getRank())
+    return emitOpError("result rank must not exceed source rank.");
+
+  if (llvm::any_of(
+          llvm::zip_equal(resShape, srcShape.take_back(resShape.size())),
+          [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
     return emitOpError("result shape must not exceed source shape.");
 
-  if (getSrc().getType().getLayout() != getRes().getType().getLayout())
+  if (srcTy.getLayout() != resTy.getLayout())
     return emitOpError("result must inherit the source layout.");
 
   return success();

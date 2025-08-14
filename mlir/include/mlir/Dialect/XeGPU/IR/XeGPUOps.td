@@ -1177,16 +1177,14 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
                               AllElementTypesMatch<["matrix_desc", "data"]>,
                               AllRanksMatch<["matrix_desc", "data"]>]> {
   let arguments = (ins
+    XeGPU_ValueType:$data,
     XeGPU_MatrixDesc:$matrix_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
-    XeGPU_ValueType:$data,
     OptionalAttr<LayoutTrait>:$layout
   );
-  let assemblyFormat = [{
-    $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets) `,` $data
-    prop-dict attr-dict `:` type(operands)
-  }];
+  let assemblyFormat = [{ $data `,` $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+                          prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
     This operation writes the `data` fragment into the shared local memory region
     identified by `matrix_desc`.
@@ -1200,8 +1198,8 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
                  LayoutAttr or SliceAttr.
   }];
   let builders = [
-    OpBuilder<(ins "TypedValue<MatrixDescType>": $matrix_desc, "llvm::ArrayRef<OpFoldResult>": $offsets,
-                   "Value" : $data, "LayoutTrait": $layout)>,
+    OpBuilder<(ins "Value" : $data, "TypedValue<MatrixDescType>": $matrix_desc,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -1212,14 +1210,19 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
-def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview", [Pure, ViewLikeOpInterface,
-                                                                AllElementTypesMatch<["src", "res"]>,
-                                                                AllRanksMatch<["src", "res"]>]> {
+def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview",
+          [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
   let description = [{
-    Create a subview of a matrix descriptor.
-    Results:
+    Creates a subview of a matrix descriptor. The resulting matrix descriptor
+    may have a lower rank than the source, in which case the dimensions are left-aligned.
+
+    Arguments:
      - `src` : a matrix descriptor.
      - `offsets` : the coordinates within the matrix the subview will be created from.
+
+    Results:
+    - `res` : a matrix descriptor with smaller size.
+
   }];
   let arguments = (ins XeGPU_MatrixDesc:$src,
                        Variadic<Index>:$offsets,
