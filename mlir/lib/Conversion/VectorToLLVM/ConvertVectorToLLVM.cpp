@@ -421,8 +421,13 @@ public:
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
                                      adaptor.getBase(), adaptor.getIndices());
 
+    // From:
+    // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+    //   The pointer alignment defaults to 1.
+    uint64_t alignment = compress.getAlignment().value_or(1);
+
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
-        compress, adaptor.getValueToStore(), ptr, adaptor.getMask());
+        compress, adaptor.getValueToStore(), ptr, adaptor.getMask(), alignment);
     return success();
   }
 };
