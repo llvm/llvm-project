@@ -101,7 +101,7 @@ enum class SamplerFeedbackType : uint32_t {
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
-LLVM_ABI ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> getResourceClasses();
+LLVM_ABI ArrayRef<EnumEntry<ResourceClass>> getResourceClasses();
 
 LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
 

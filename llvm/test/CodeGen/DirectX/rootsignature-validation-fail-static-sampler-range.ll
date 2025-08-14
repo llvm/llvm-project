@@ -7,6 +7,7 @@ entry:
 }
 
 !dx.rootsignatures = !{!0}
+
 !0 = !{ptr @CSMain, !1, i32 2}
 !1 = !{!2, !3}
 !2 = !{ !"StaticSampler", i32 5, i32 4, i32 5, i32 3, float 0x3FF7CCCCC0000000, i32 10, i32 2, i32 1, float -1.270000e+02, float 1.220000e+02, i32 42, i32 0, i32 0 }
