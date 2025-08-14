@@ -387,9 +387,9 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
   case clang::Type::Record:
-    return CanImport(qual_type->getAsRecordDecl());
+    return CanImport(qual_type->getAsCXXRecordDecl());
   case clang::Type::Enum:
-    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getDecl());
+    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl());
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
     const clang::ObjCObjectType *objc_class_type =
@@ -761,9 +761,6 @@ bool ClangASTImporter::LayoutRecordType(
         &base_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &vbase_offsets) {
-
-  record_decl = llvm::cast<RecordDecl>(record_decl->getFirstDecl());
-
   RecordDeclToLayoutMap::iterator pos =
       m_record_decl_to_layout_map.find(record_decl);
   base_offsets.clear();
@@ -794,11 +791,8 @@ bool ClangASTImporter::LayoutRecordType(
 }
 
 void ClangASTImporter::SetRecordLayout(clang::RecordDecl *decl,
-                                        const LayoutInfo &layout) {
-  decl = llvm::cast<RecordDecl>(decl->getFirstDecl());
-
+                                       const LayoutInfo &layout) {
   assert(!HasRecordLayout(decl) && "Trying to overwrite layout?");
-
   m_record_decl_to_layout_map.insert(std::make_pair(decl, layout));
 }
 
@@ -830,10 +824,7 @@ bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
 
 bool ClangASTImporter::CompleteTagDeclWithOrigin(clang::TagDecl *decl,
                                                  clang::TagDecl *origin_decl) {
-  if (!origin_decl->getDefinition())
-    return false;
-
-  SetDeclOrigin(decl, origin_decl->getFirstDecl());
+  SetDeclOrigin(decl, origin_decl);
   return CompleteTagDecl(decl);
 }
 
