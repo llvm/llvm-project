@@ -292,4 +292,3 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   def PSRA_WS     : RVPBinaryScalar_rr<0b100, 0b01, 0b100, "psra.ws">;
 } // Predicates = [HasStdExtP, IsRV64]
-
