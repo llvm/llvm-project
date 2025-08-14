@@ -77,18 +77,19 @@ int test14(int *a, int b) {
   a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{non-pointer argument to '__builtin_assume_aligned' is not allowed}}
 }
 
-int test15(int *b) {
+void test15(void (*f)()) {
+  f = (void (*)())__builtin_assume_aligned(f, 32); // expected-error {{function pointer argument to '__builtin_assume_aligned' is not allowed}}
+}
+
+void foo();
+
+void test16(void (*f)()) {
+  f = (void (*)())__builtin_assume_aligned(foo, 32); // expected-error {{function pointer argument to '__builtin_assume_aligned' is not allowed}}
+}
+
+int test17(int *b) {
   int arr[3] = {1, 2, 3};
   b = (int *)__builtin_assume_aligned(arr, 32);
-  return b[0];
-}
-
-int val(int x) {
-  return x;
-}
-
-int test16(int *b) {
-  b = (int *)__builtin_assume_aligned(val, 32);
   return b[0];
 }
 

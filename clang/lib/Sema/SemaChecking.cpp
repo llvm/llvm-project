@@ -5660,9 +5660,10 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
   {
     ExprResult FirstArgResult =
         DefaultFunctionArrayLvalueConversion(FirstArg);
-    if (!FirstArgResult.get()->getType()->isPointerType()) {
+    QualType FirstArgType = FirstArgResult.get()->getType();
+    if (!FirstArgType->isObjectPointerType()) {
       Diag(TheCall->getBeginLoc(), diag::err_builtin_assume_aligned_invalid_arg)
-          << TheCall->getSourceRange();
+          << FirstArgType->isFunctionPointerType() << TheCall->getSourceRange();
       return true;
     }
     TheCall->setArg(0, FirstArgResult.get());
