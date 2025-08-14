@@ -17,7 +17,7 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i8> [[TMP5]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <8 x i8> <i8 0, i8 0, i8 poison, i8 0, i8 0, i8 poison, i8 0, i8 0>, <8 x i8> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 9, i32 3, i32 4, i32 poison, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP2]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i8> zeroinitializer, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i8> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i48> <i48 poison, i48 0, i48 0, i48 0>, i48 [[TEST_STRUCTCOPY_14_S14_CM_COERCE_SROA_2_0_COPYLOAD]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i48> [[TMP9]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i8> zeroinitializer, [[TMP10]]
