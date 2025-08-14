@@ -232,6 +232,20 @@ struct ScalarEnumerationTraits<
   }
 };
 
+template <> struct MappingTraits<FormatStyle::IndentBracesOptions> {
+  static void enumInput(IO &IO, FormatStyle::IndentBracesOptions &Value) {
+    // For backward compatibility.
+    IO.enumCase(Value, "false",
+                FormatStyle::IndentBracesOptions({/*Enabled=*/false}));
+    IO.enumCase(Value, "true",
+                FormatStyle::IndentBracesOptions({/*Enabled=*/true}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::IndentBracesOptions &Value) {
+    IO.mapOptional("Enabled", Value.Enabled);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<
     FormatStyle::BreakBeforeConceptDeclarationsStyle> {
@@ -1389,7 +1403,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*BeforeElse=*/false,
                             /*BeforeLambdaBody=*/false,
                             /*BeforeWhile=*/false,
-                            /*IndentBraces=*/false,
+                            /*IndentBraces=*/{/*Enabled=*/false},
                             /*SplitEmptyFunction=*/true,
                             /*SplitEmptyRecord=*/true,
                             /*SplitEmptyNamespace=*/true};
@@ -1459,7 +1473,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*BeforeElse=*/true,
         /*BeforeLambdaBody=*/true,
         /*BeforeWhile=*/true,
-        /*IndentBraces=*/true,
+        /*IndentBraces=*/{/*Enabled=*/true},
         /*SplitEmptyFunction=*/true,
         /*SplitEmptyRecord=*/true,
         /*SplitEmptyNamespace=*/true};
@@ -1559,7 +1573,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*BeforeElse=*/false,
                              /*BeforeLambdaBody=*/false,
                              /*BeforeWhile=*/false,
-                             /*IndentBraces=*/false,
+                             /*IndentBraces=*/{/*Enabled=*/false},
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
