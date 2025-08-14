@@ -34,7 +34,11 @@ enum {{Name}}
                 <td>{{ValueExpr}}</td>
                 {{/Value}}
                 {{#EnumValueComments}}
-                    <td>{{>Comments}}</td>
+                    <td>
+                        <md>
+{{>Comments}}
+                        </md>
+                    </td>
                 {{/EnumValueComments}}
             </tr>
             {{/Members}}
@@ -42,7 +46,9 @@ enum {{Name}}
     </table>
     {{#EnumComments}}
     <div>
-        {{>Comments}}
+        <md>
+{{>Comments}}
+        </md>
     </div>
     {{/EnumComments}}
     {{#Location}}

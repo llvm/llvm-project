@@ -7,37 +7,47 @@
 }}
 {{#BriefComments}}
     <div>
-    {{#.}}
-        <p>{{TextComment}}</p>
-    {{/.}}
+        <md>
+        {{#.}}
+            <p>
+{{TextComment}}
+            </p>
+        {{/.}}
+        </md>
     </div>
 {{/BriefComments}}
 {{#ParagraphComments}}
     <div>
-    {{#.}}
-        <p>{{TextComment}}</p>
-    {{/.}}
+        <md>
+        {{#.}}
+            <p>
+{{TextComment}}
+            </p>
+        {{/.}}
+        </md>
     </div>
 {{/ParagraphComments}}
-{{#ParagraphComment}}
-    {{#Children}}
-    {{>Comments}}
-    {{/Children}}
-{{/ParagraphComment}}
 {{#HasParamComments}}
     <h3>Parameters</h3>
     {{#ParamComments}}
     <div>
-        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{>Comments}}{{/Children}}
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} 
+        {{#Children}}
+{{>Comments}}
+        {{/Children}}
     </div> 
     {{/ParamComments}}
 {{/HasParamComments}}
 {{#HasReturnComments}}
     <h3>Returns</h3>
     {{#ReturnComments}}
+    <md>
         {{#.}}
-        <p>{{TextComment}}</p>
+        <p>
+{{TextComment}}
+        </p>
         {{/.}}
+    </md>
     {{/ReturnComments}}
 {{/HasReturnComments}}
 {{#HasCodeComments}}
@@ -61,13 +71,13 @@
         </div>
         <div>
             {{#Children}}
-                {{>Comments}}
+{{>Comments}}
             {{/Children}}
         </div>
     </div>
 {{/BlockCommandComment}}
 {{#TextComment}}
     <div>
-        <p>{{TextComment}}</p>
+{{TextComment}}
     </div>
 {{/TextComment}}

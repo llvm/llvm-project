@@ -130,7 +130,7 @@
                     <h1 class="hero__title-large">{{TagType}} {{Name}}</h1>
                     {{#Description}}
                     <div class="hero__subtitle">
-                        {{>Comments}}
+{{>Comments}}
                     </div>
                     {{/Description}}
                 </div>
@@ -145,9 +145,9 @@
                             <code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code>
                         </pre>
                         {{#MemberComments}}
-                        <div>
-                            {{>Comments}}
-                        </div>
+                            <div>
+{{>Comments}}
+                            </div>
                         {{/MemberComments}}
                     </div>
                     {{/PublicMembers}}
@@ -165,7 +165,7 @@
                         </pre>
                         {{#MemberComments}}
                         <div>
-                            {{>Comments}}
+{{>Comments}}
                         </div>
                         {{/MemberComments}}
                     </div>
@@ -226,4 +226,5 @@
     </div>
 </main>
 </body>
+<script src="https://cdn.jsdelivr.net/gh/MarketingPipeline/Markdown-Tag/markdown-tag-commonmark.js"></script> 
 </html>
