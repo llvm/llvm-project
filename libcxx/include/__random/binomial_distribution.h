@@ -14,6 +14,7 @@
 #include <__random/uniform_real_distribution.h>
 #include <cmath>
 #include <iosfwd>
+#include <math.h> // for ::lgamma_r
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -97,17 +98,12 @@ public:
   }
 };
 
-// The LLVM C library provides this with conflicting `noexcept` attributes.
-#if !defined(_LIBCPP_MSVCRT_LIKE) && !defined(__LLVM_LIBC__)
-extern "C" double lgamma_r(double, int*);
-#endif
-
 inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
-#if defined(_LIBCPP_MSVCRT_LIKE) || defined(__LLVM_LIBC__)
-  return lgamma(__d);
+#if defined(_LIBCPP_MSVCRT_LIKE)
+  return ::lgamma(__d);
 #else
   int __sign;
-  return lgamma_r(__d, &__sign);
+  return ::lgamma_r(__d, &__sign);
 #endif
 }
 
