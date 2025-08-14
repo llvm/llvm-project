@@ -160,6 +160,8 @@ class IndVarSimplify {
 
   bool sinkUnusedInvariants(Loop *L);
 
+  bool isIVInitValTargetType(Value *InitVal, unsigned TargetTypeSize);
+
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
@@ -817,6 +819,37 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
           isa<SCEVAddRecExpr>(SE->getSCEV(IncV)));
 }
 
+/// Determine if the initial value of IV is within the range of TargetTypeSize.
+/// If it is a constant, check if it falls within the representable range. If
+/// not, verify whether the width of the initial type exceeds TargetTypeSize.
+bool IndVarSimplify::isIVInitValTargetType(Value *InitVal,
+                                           unsigned TargetTypeSize) {
+
+  unsigned InitTypeSize = SE->getTypeSizeInBits(InitVal->getType());
+  if (InitTypeSize <= TargetTypeSize)
+    return true;
+
+  // If the initial value of the IV is a constant, check whether it is within
+  // the range.
+  if (auto *CI = dyn_cast<ConstantInt>(InitVal)) {
+
+    APInt Value = CI->getValue();
+    APInt MinRange = APInt(TargetTypeSize, 1ULL << (TargetTypeSize - 1));
+    APInt MaxRange = APInt(TargetTypeSize, (1ULL << (TargetTypeSize - 1)) - 1);
+    // Check if the constant is within a valid range
+    return (Value.sle(MaxRange) && Value.sge(-MinRange));
+  }
+
+  // Check the initial type of the initial value.
+  if (auto *SextInst = dyn_cast<SExtInst>(InitVal)) {
+    return isIVInitValTargetType(SextInst->getOperand(0), TargetTypeSize);
+  }
+  if (auto *ZextInst = dyn_cast<ZExtInst>(InitVal)) {
+    return isIVInitValTargetType(ZextInst->getOperand(0), TargetTypeSize);
+  }
+  return false;
+}
+
 /// Search the loop header for a loop counter (anadd rec w/step of one)
 /// suitable for use by LFTR.  If multiple counters are available, select the
 /// "best" one based profitable heuristics.
@@ -1049,9 +1082,27 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     if (Extended) {
       bool Discard;
       L->makeLoopInvariant(ExitCnt, Discard);
-    } else
-      CmpIndVar = Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(),
-                                      "lftr.wideiv");
+    } else {
+      // The design of LFTR requires:
+      // 1. The IV to be a LoopCounter, ensuring a step of 1.
+      // 2. The ICmpInst::Predicate can only be eq or ne, meaning that
+      //    ExitCnt must represent the final value of IV.
+      // Given these conditions, if the initial value 'start' of IV does not
+      // exceed ExitCntSize, then the range [start, end) of IV will stay
+      // within ExitCntSize. Consequently, the truncation will not result in
+      // signed or unsigned overflow.
+      // By legally adding the nsw/nuw flag to the Trunc instruction, avoid the
+      // unnecessary masking issue.
+      Value *InitVal = IndVar->getIncomingValueForBlock(L->getLoopPreheader());
+      if (isIVInitValTargetType(InitVal, ExitCntSize))
+        CmpIndVar = Builder.CreateTrunc(
+            CmpIndVar, ExitCnt->getType(), "lftr.wideiv",
+            cast<ICmpInst>(BI->getCondition())->isUnsigned(),
+            cast<ICmpInst>(BI->getCondition())->isSigned());
+      else
+        CmpIndVar =
+            Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(), "lftr.wideiv");
+    }
   }
   LLVM_DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
                     << "      LHS:" << *CmpIndVar << '\n'
