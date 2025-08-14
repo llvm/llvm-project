@@ -4117,6 +4117,29 @@ LogicalResult LLVM::masked_scatter::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// masked_expandload (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
+                                    mlir::TypeRange resTys, Value ptr,
+                                    Value mask, Value passthru,
+                                    uint64_t align) {
+  ArrayAttr callArgs = nullptr;
+  if (align != 1) {
+    auto emptyDictAttr = builder.getDictionaryAttr({});
+    auto alignmentAttr = builder.getI64IntegerAttr(align);
+    auto namedAttr =
+        builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
+    SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+    auto alignDictAttr = builder.getDictionaryAttr(attrs);
+    callArgs =
+        builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
+  }
+  build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/callArgs,
+        /*res_attrs=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 
