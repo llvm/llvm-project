@@ -93,19 +93,22 @@ class ROCDL_IntrPure1Op<string mnemonic> :
 
 class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
   list<int> overloadedOperands, list<Trait> traits, int numResults,
-  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0, list<int> immArgPositions = [],
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0,
+  int requiresArgAndResultAttrs = 0,
+  list<int> immArgPositions = [],
   list<string> immArgAttrNames = []> :
   LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
     "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
     overloadedOperands, traits, numResults, requiresAccessGroup,
-    requiresAliasAnalysis, 0, 0, 0, immArgPositions, immArgAttrNames>;
+    requiresAliasAnalysis, 0, requiresArgAndResultAttrs, 0,
+    immArgPositions, immArgAttrNames>;
 
 // Subclass to save typing and ease readibility when there aren't overloaded
 // operands or memory accesses.
 class ROCDL_ConcreteNonMemIntrOp<string mnemonic, list<Trait> traits,
     int numResults, list<int> immArgPositions = [],
     list<string> immArgNames = []>
-  : ROCDL_IntrOp<mnemonic, [], [], traits, numResults, 0, 0,
+  : ROCDL_IntrOp<mnemonic, [], [], traits, numResults, 0, 0, 0,
       immArgPositions, immArgNames>;
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
@@ -148,8 +151,11 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 //===----------------------------------------------------------------------===//
 
 class ROCDL_MbcntOp<string mnemonic> :
-    ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
-  Arguments<(ins I32:$in0, I32:$in1)> {
+    ROCDL_IntrOp<"mbcnt." # mnemonic, [], [], [Pure], 1,
+    0, 0, /*requiresArgAndResultAttrs=*/1> {
+  dag args = (ins I32:$in0, I32:$in1);
+  let arguments = !con(args, baseArgs);
+  let results = (outs I32:$res);
   let assemblyFormat = [{
     $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
    }];
@@ -515,7 +521,7 @@ def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
 //===---------------------------------------------------------------------===//
 
 def ROCDL_LoadToLDSOp :
-  ROCDL_IntrOp<"load.to.lds", [], [0], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  ROCDL_IntrOp<"load.to.lds", [], [0], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
   dag args = (ins Arg<LLVM_AnyPointer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
@@ -534,7 +540,7 @@ def ROCDL_LoadToLDSOp :
 }
 
 def ROCDL_GlobalLoadLDSOp :
-  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
   dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
@@ -748,7 +754,7 @@ def ROCDL_RawBufferAtomicUMinOp :
 
 // DPP Update intrinsic
 def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
-    [AllTypesMatch<["res", "src", "old"]>], 1, 0, 0,
+    [AllTypesMatch<["res", "src", "old"]>], 1, 0, 0, 0,
       [2, 3, 4, 5], ["dppCtrl", "rowMask", "bankMask", "boundCtrl"]>,
   Arguments<(ins LLVM_Type:$old, LLVM_Type:$src, I32Attr:$dppCtrl, I32Attr:$rowMask,
       I32Attr:$bankMask, I1Attr:$boundCtrl)> {
@@ -760,7 +766,7 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
 
 // PermLaneX16 intrinsic operation
 def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
-    [AllTypesMatch<["res", "old", "src0"]>, AllTypesMatch<["src1", "src2"]>], 1, 0, 0,
+    [AllTypesMatch<["res", "old", "src0"]>, AllTypesMatch<["src1", "src2"]>], 1, 0, 0, 0,
     [4, 5], ["fi", "boundControl"]>,
   Arguments<(ins LLVM_Type:$old, LLVM_Type:$src0, LLVM_Type:$src1, LLVM_Type:$src2,
              I1Attr:$fi, I1Attr:$boundControl)> {
