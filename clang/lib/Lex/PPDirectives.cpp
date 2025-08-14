@@ -3940,9 +3940,13 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
             [[fallthrough]];
           case tok::r_brace:
           case tok::r_square: {
+            if (BracketStack.empty()) {
+              ExpectOrDiagAndSkipToEOD(tok::r_paren);
+              return false;
+            }
             tok::TokenKind Matching =
                 GetMatchingCloseBracket(BracketStack.back().first);
-            if (BracketStack.empty() || CurTok.getKind() != Matching) {
+            if (CurTok.getKind() != Matching) {
               DiagMismatchedBracesAndSkipToEOD(Matching, BracketStack.back());
               return false;
             }
