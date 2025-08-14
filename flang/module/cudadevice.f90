@@ -625,29 +625,29 @@ implicit none
     end function
   end interface
 
-  interface __double2ll_rn
-    attributes(device) integer(8) function __double2ll_rn(r) bind(c)
+  interface __double2ll_rd
+    attributes(device) integer(8) function __double2ll_rd(r) bind(c, name='__nv_double2ll_rd')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
-  interface __double2ll_rz
-    attributes(device) integer(8) function __double2ll_rz(r) bind(c)
+  interface __double2ll_rn
+    attributes(device) integer(8) function __double2ll_rn(r) bind(c, name='__nv_double2ll_rn')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2ll_ru
-    attributes(device) integer(8) function __double2ll_ru(r) bind(c)
+    attributes(device) integer(8) function __double2ll_ru(r) bind(c, name='__nv_double2ll_ru')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
-  interface __double2ll_rd
-    attributes(device) integer(8) function __double2ll_rd(r) bind(c)
+  interface __double2ll_rz
+    attributes(device) integer(8) function __double2ll_rz(r) bind(c, name='__nv_double2ll_rz')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
