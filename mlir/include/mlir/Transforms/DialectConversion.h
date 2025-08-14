@@ -575,15 +575,15 @@ protected:
   /// if possible and emit diagnostic with a failure return value otherwise.
   /// 'self' should be '*this' of the derived-pattern and is used to dispatch
   /// to the correct 'matchAndRewrite' method in the derived pattern.
-  template <typename Pattern, typename SourceOp>
-  static LogicalResult dispatchTo1To1(const Pattern &self, SourceOp op,
+  template <typename SelfPattern, typename SourceOp>
+  static LogicalResult dispatchTo1To1(const SelfPattern &self, SourceOp op,
                                       ArrayRef<ValueRange> operands,
                                       ConversionPatternRewriter &rewriter);
 
   /// Same as above, but accepts an adaptor as operand.
-  template <typename Pattern, typename SourceOp>
+  template <typename SelfPattern, typename SourceOp>
   static LogicalResult dispatchTo1To1(
-      const Pattern &self, SourceOp op,
+      const SelfPattern &self, SourceOp op,
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>> adaptor,
       ConversionPatternRewriter &rewriter);
 
@@ -878,9 +878,9 @@ private:
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };
 
-template <class Pattern, typename SourceOp>
+template <typename SelfPattern, typename SourceOp>
 LogicalResult
-ConversionPattern::dispatchTo1To1(const Pattern &self, SourceOp op,
+ConversionPattern::dispatchTo1To1(const SelfPattern &self, SourceOp op,
                                   ArrayRef<ValueRange> operands,
                                   ConversionPatternRewriter &rewriter) {
   FailureOr<SmallVector<Value>> oneToOneOperands =
@@ -892,9 +892,9 @@ ConversionPattern::dispatchTo1To1(const Pattern &self, SourceOp op,
   return self.matchAndRewrite(op, *oneToOneOperands, rewriter);
 }
 
-template <typename Pattern, typename SourceOp>
+template <typename SelfPattern, typename SourceOp>
 LogicalResult ConversionPattern::dispatchTo1To1(
-    const Pattern &self, SourceOp op,
+    const SelfPattern &self, SourceOp op,
     typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>> adaptor,
     ConversionPatternRewriter &rewriter) {
   FailureOr<SmallVector<Value>> oneToOneOperands =
