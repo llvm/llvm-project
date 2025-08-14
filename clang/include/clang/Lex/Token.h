@@ -86,12 +86,10 @@ public:
                                 // macro stringizing or charizing operator.
     CommaAfterElided = 0x200, // The comma following this token was elided (MS).
     IsEditorPlaceholder = 0x400, // This identifier is a placeholder.
-
-    IsReinjected = 0x800,  // A phase 4 token that was produced before and
-                           // re-added, e.g. via EnterTokenStream. Annotation
-                           // tokens are *not* reinjected.
-    FirstPPToken = 0x1000, // This token is the first pp token in the
-                           // translation unit.
+    IsReinjected = 0x800,        // A phase 4 token that was produced before and
+                          // re-added, e.g. via EnterTokenStream. Annotation
+                          // tokens are *not* reinjected.
+    SeenNoTrivialPPDirective = 0x1000,
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -321,8 +319,9 @@ public:
   /// lexer uses identifier tokens to represent placeholders.
   bool isEditorPlaceholder() const { return getFlag(IsEditorPlaceholder); }
 
-  /// Returns true if this token is the first pp-token.
-  bool isFirstPPToken() const { return getFlag(FirstPPToken); }
+  bool hasSeenNoTrivialPPDirective() const {
+    return getFlag(SeenNoTrivialPPDirective);
+  }
 };
 
 /// Information about the conditional stack (\#if directives)

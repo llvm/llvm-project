@@ -50,6 +50,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Lex/TrivialDirectiveTracer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -247,8 +248,6 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [LeadingSpace]";
   if (Tok.isExpandDisabled())
     llvm::errs() << " [ExpandDisabled]";
-  if (Tok.isFirstPPToken())
-    llvm::errs() << " [First pp-token]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
     llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
@@ -577,8 +576,11 @@ void Preprocessor::EnterMainSourceFile() {
     // export module M; // error: module declaration must occur
     //                  //        at the start of the translation unit.
     if (getLangOpts().CPlusPlusModules) {
+      auto Tracer = std::make_unique<TrivialDirectiveTracer>(*this);
+      DirTracer = Tracer.get();
+      addPPCallbacks(std::move(Tracer));
       std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
-      if (FirstPPTok && FirstPPTok->isFirstPPToken())
+      if (FirstPPTok)
         FirstPPTokenLoc = FirstPPTok->getLocation();
     }
   }
@@ -940,6 +942,8 @@ void Preprocessor::Lex(Token &Result) {
       StdCXXImportSeqState.handleHeaderName();
       break;
     case tok::kw_export:
+      if (hasSeenNoTrivialPPDirective())
+        Result.setFlag(Token::SeenNoTrivialPPDirective);
       TrackGMFState.handleExport();
       StdCXXImportSeqState.handleExport();
       ModuleDeclState.handleExport();
@@ -968,6 +972,8 @@ void Preprocessor::Lex(Token &Result) {
           }
           break;
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
+          if (hasSeenNoTrivialPPDirective())
+            Result.setFlag(Token::SeenNoTrivialPPDirective);
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
           break;
@@ -1681,4 +1687,38 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   }
 
   return nullptr;
+}
+
+/// Whether allow C++ module directive.
+bool Preprocessor::hasSeenNoTrivialPPDirective() const {
+  return DirTracer && DirTracer->hasSeenNoTrivialPPDirective();
+}
+
+bool TrivialDirectiveTracer::hasSeenNoTrivialPPDirective() const {
+  return SeenNoTrivialPPDirective;
+}
+
+void TrivialDirectiveTracer::setSeenNoTrivialPPDirective(bool Val) {
+  if (InMainFile && !SeenNoTrivialPPDirective && Val)
+    SeenNoTrivialPPDirective = Val;
+}
+
+void TrivialDirectiveTracer::FileChanged(SourceLocation Loc,
+                                         FileChangeReason Reason,
+                                         SrcMgr::CharacteristicKind FileType,
+                                         FileID PrevFID) {
+  setSeenNoTrivialPPDirective(false);
+}
+
+void TrivialDirectiveTracer::LexedFileChanged(
+    FileID FID, LexedFileChangeReason Reason,
+    SrcMgr::CharacteristicKind FileType, FileID PrevFID, SourceLocation Loc) {
+  InMainFile = FID == PP.getSourceManager().getMainFileID();
+}
+
+void TrivialDirectiveTracer::MacroExpands(const Token &MacroNameTok,
+                                          const MacroDefinition &MD,
+                                          SourceRange Range,
+                                          const MacroArgs *Args) {
+  setSeenNoTrivialPPDirective(!MD.getMacroInfo()->isBuiltinMacro());
 }
