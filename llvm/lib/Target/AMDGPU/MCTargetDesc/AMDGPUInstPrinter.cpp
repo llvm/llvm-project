@@ -1273,7 +1273,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
 
   for (auto [SrcMod, Src] : MOps) {
     if (!AMDGPU::hasNamedOperand(Opc, Src))
-      continue; // Some instructions have src0, src2, but no src1. 
+      continue; // Some instructions have src0, src2, but no src1.
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, SrcMod);
     Ops[NumOps++] =
