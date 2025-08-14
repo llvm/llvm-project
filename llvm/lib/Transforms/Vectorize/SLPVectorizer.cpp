@@ -11307,27 +11307,27 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   }
 
   ScalarsVectorizationLegality Legality = getScalarsVectorizationLegality(
-      VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+      VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/true);
   InstructionsState S = Legality.getInstructionsState();
   if (!Legality.isLegal()) {
-    if (Legality.trySplitVectorize()) {
-      auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
-      // Last chance to try to vectorize alternate node.
-      if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
-        return;
-    }
-    if (!S)
+    if (!S) {
       Legality = getScalarsVectorizationLegality(
-          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/true);
+          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+      S = Legality.getInstructionsState();
+    }
     if (!Legality.isLegal()) {
+      if (Legality.trySplitVectorize()) {
+        auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
+        // Last chance to try to vectorize alternate node.
+        if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
+          return;
+      }
       if (Legality.tryToFindDuplicates())
         tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S,
                             UserTreeIdx);
-
       newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
       return;
     }
-    S = Legality.getInstructionsState();
   }
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.

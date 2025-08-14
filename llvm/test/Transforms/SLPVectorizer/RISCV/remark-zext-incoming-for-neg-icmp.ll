@@ -16,11 +16,11 @@ define i32 @test(i32 %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[C]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[TMP1]], <i8 -1, i8 -2, i8 -3, i8 -4>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i8> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle <4 x i16> [[TMP8]], [[TMP9]]

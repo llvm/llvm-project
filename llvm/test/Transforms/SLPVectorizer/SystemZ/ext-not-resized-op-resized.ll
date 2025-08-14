@@ -4,12 +4,12 @@
 define void @test(i64 %0, i1 %.cmp.i.2, i1 %1, ptr %a) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[TMP0:%.*]], i1 [[DOTCMP_I_2:%.*]], i1 [[TMP1:%.*]], ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i1> poison, i1 [[DOTCMP_I_2]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> [[TMP6]], i1 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i64> [[TMP15]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP16]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP5]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP10]], <4 x i1> [[TMP8]]

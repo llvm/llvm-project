@@ -9,11 +9,11 @@ define void @test() #0 {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[OP_RDX1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 2, [[ENTRY]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[DUMMY_ADD:%.*]] = add i16 0, 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[TMP2]], <i64 3, i64 2, i64 1, i64 0>
 ; CHECK-NEXT:    [[TMP4]] = extractelement <4 x i64> [[TMP3]], i32 3
-; CHECK-NEXT:    [[DUMMY_ADD:%.*]] = add i16 0, 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[DUMMY_SHL:%.*]] = shl i64 [[TMP5]], 32
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> splat (i64 1), [[TMP3]]

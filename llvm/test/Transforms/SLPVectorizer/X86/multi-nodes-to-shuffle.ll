@@ -9,8 +9,8 @@ define void @test(i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[P1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[P2:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[P3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i64> [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i64> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl <4 x i64> [[TMP4]], [[TMP7]]
@@ -34,8 +34,8 @@ define void @test(i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
 ; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[P1:%.*]], i32 1
 ; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[P2:%.*]], i32 2
 ; AVX2-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[P3:%.*]], i32 3
-; AVX2-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], [[TMP3]]
 ; AVX2-NEXT:    [[TMP5:%.*]] = mul <4 x i64> [[TMP3]], [[TMP3]]
+; AVX2-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], [[TMP3]]
 ; AVX2-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[TMP3]], [[TMP3]]
 ; AVX2-NEXT:    [[TMP7:%.*]] = sub <4 x i64> [[TMP5]], [[TMP6]]
 ; AVX2-NEXT:    [[TMP8:%.*]] = shl <4 x i64> [[TMP4]], [[TMP7]]
