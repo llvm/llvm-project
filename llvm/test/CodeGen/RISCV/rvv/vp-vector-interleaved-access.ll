@@ -674,16 +674,20 @@ define <vscale x 2 x i32> @load_factor2_oneactive(ptr %ptr, i32 %evl) {
 define <vscale x 2 x i32> @load_factor5_oneactive(ptr %ptr, i32 %evl) {
 ; RV32-LABEL: load_factor5_oneactive:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi a0, a0, 12
+; RV32-NEXT:    li a2, 20
 ; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg5e32.v v5, (a0)
+; RV32-NEXT:    vlse32.v v8, (a0), a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: load_factor5_oneactive:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    addi a0, a0, 12
 ; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    li a2, 20
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg5e32.v v5, (a0)
+; RV64-NEXT:    vlse32.v v8, (a0), a2
 ; RV64-NEXT:    ret
   %rvl = mul nuw i32 %evl, 5
   %wide.masked.load = call <vscale x 10 x i32> @llvm.vp.load(ptr %ptr, <vscale x 10 x i1> splat (i1 true), i32 %rvl)

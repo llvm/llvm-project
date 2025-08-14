@@ -1205,50 +1205,62 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     Register DstReg = MI.getOperand(0).getReg();
     if (DstReg == MI.getOperand(3).getReg()) {
       // Expand to BIT
-      BuildMI(MBB, MBBI, MI.getDebugLoc(),
-              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
-                                                  : AArch64::BITv16i8))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(3))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(1));
+      auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                       TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
+                                                           : AArch64::BITv16i8))
+                   .add(MI.getOperand(0))
+                   .add(MI.getOperand(3))
+                   .add(MI.getOperand(2))
+                   .add(MI.getOperand(1));
+      transferImpOps(MI, I, I);
     } else if (DstReg == MI.getOperand(2).getReg()) {
       // Expand to BIF
-      BuildMI(MBB, MBBI, MI.getDebugLoc(),
-              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
-                                                  : AArch64::BIFv16i8))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(3))
-          .add(MI.getOperand(1));
+      auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                       TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
+                                                           : AArch64::BIFv16i8))
+                   .add(MI.getOperand(0))
+                   .add(MI.getOperand(2))
+                   .add(MI.getOperand(3))
+                   .add(MI.getOperand(1));
+      transferImpOps(MI, I, I);
     } else {
       // Expand to BSL, use additional move if required
       if (DstReg == MI.getOperand(1).getReg()) {
-        BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
-                                                    : AArch64::BSLv16i8))
-            .add(MI.getOperand(0))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(2))
-            .add(MI.getOperand(3));
+        auto I =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                        : AArch64::BSLv16i8))
+                .add(MI.getOperand(0))
+                .add(MI.getOperand(1))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3));
+        transferImpOps(MI, I, I);
       } else {
+        unsigned RegState =
+            getRenamableRegState(MI.getOperand(1).isRenamable()) |
+            getKillRegState(
+                MI.getOperand(1).isKill() &&
+                MI.getOperand(1).getReg() != MI.getOperand(2).getReg() &&
+                MI.getOperand(1).getReg() != MI.getOperand(3).getReg());
         BuildMI(MBB, MBBI, MI.getDebugLoc(),
                 TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::ORRv8i8
                                                     : AArch64::ORRv16i8))
             .addReg(DstReg,
                     RegState::Define |
                         getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(1));
-        BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
-                                                    : AArch64::BSLv16i8))
-            .add(MI.getOperand(0))
-            .addReg(DstReg,
-                    RegState::Kill |
-                        getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(2))
-            .add(MI.getOperand(3));
+            .addReg(MI.getOperand(1).getReg(), RegState)
+            .addReg(MI.getOperand(1).getReg(), RegState);
+        auto I2 =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                        : AArch64::BSLv16i8))
+                .add(MI.getOperand(0))
+                .addReg(DstReg,
+                        RegState::Kill | getRenamableRegState(
+                                             MI.getOperand(0).isRenamable()))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3));
+        transferImpOps(MI, I2, I2);
       }
     }
     MI.eraseFromParent();

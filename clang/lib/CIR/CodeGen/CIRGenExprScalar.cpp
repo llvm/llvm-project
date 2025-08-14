@@ -48,8 +48,8 @@ struct BinOpInfo {
   /// Check if the binop can result in integer overflow.
   bool mayHaveIntegerOverflow() const {
     // Without constant input, we can't rule out overflow.
-    auto lhsci = dyn_cast<cir::ConstantOp>(lhs.getDefiningOp());
-    auto rhsci = dyn_cast<cir::ConstantOp>(rhs.getDefiningOp());
+    auto lhsci = lhs.getDefiningOp<cir::ConstantOp>();
+    auto rhsci = rhs.getDefiningOp<cir::ConstantOp>();
     if (!lhsci || !rhsci)
       return true;
 
@@ -87,6 +87,10 @@ public:
   //===--------------------------------------------------------------------===//
   //                               Utilities
   //===--------------------------------------------------------------------===//
+
+  mlir::Value emitComplexToScalarConversion(mlir::Location loc,
+                                            mlir::Value value, CastKind kind,
+                                            QualType destTy);
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
     return builder.createFloatingCast(result, cgf.convertType(promotionType));
@@ -435,7 +439,7 @@ public:
       value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
-      bool canPerformLossyDemotionCheck = false;
+      [[maybe_unused]] bool canPerformLossyDemotionCheck = false;
       if (cgf.getContext().isPromotableIntegerType(type)) {
         promotedType = cgf.getContext().getPromotedIntegerType(type);
         assert(promotedType != type && "Shouldn't promote to the same type.");
@@ -622,6 +626,7 @@ public:
 
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
+  mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
   }
@@ -1055,19 +1060,21 @@ public:
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
   }
+
+  mlir::Value VisitAtomicExpr(AtomicExpr *e) {
+    return cgf.emitAtomicExpr(e).getValue();
+  }
 };
 
 LValue ScalarExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ScalarExprEmitter::*func)(const BinOpInfo &),
     mlir::Value &result) {
+  if (e->getComputationResultType()->isAnyComplexType())
+    return cgf.emitScalarCompoundAssignWithComplex(e, result);
+
   QualType lhsTy = e->getLHS()->getType();
   BinOpInfo opInfo;
-
-  if (e->getComputationResultType()->isAnyComplexType()) {
-    cgf.cgm.errorNYI(result.getLoc(), "complex lvalue assign");
-    return LValue();
-  }
 
   // Emit the RHS first.  __block variables need to have the rhs evaluated
   // first, plus this should improve codegen a little.
@@ -1125,7 +1132,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   // 'An assignment expression has the value of the left operand after the
   // assignment...'.
   if (lhsLV.isBitField())
-    cgf.cgm.errorNYI(e->getSourceRange(), "store through bitfield lvalue");
+    cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 
@@ -1133,6 +1140,31 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
     cgf.cgm.errorNYI(e->getSourceRange(), "openmp");
 
   return lhsLV;
+}
+
+mlir::Value ScalarExprEmitter::emitComplexToScalarConversion(mlir::Location lov,
+                                                             mlir::Value value,
+                                                             CastKind kind,
+                                                             QualType destTy) {
+  cir::CastKind castOpKind;
+  switch (kind) {
+  case CK_FloatingComplexToReal:
+    castOpKind = cir::CastKind::float_complex_to_real;
+    break;
+  case CK_IntegralComplexToReal:
+    castOpKind = cir::CastKind::int_complex_to_real;
+    break;
+  case CK_FloatingComplexToBoolean:
+    castOpKind = cir::CastKind::float_complex_to_bool;
+    break;
+  case CK_IntegralComplexToBoolean:
+    castOpKind = cir::CastKind::int_complex_to_bool;
+    break;
+  default:
+    llvm_unreachable("invalid complex-to-scalar cast kind");
+  }
+
+  return builder.createCast(lov, castOpKind, value, cgf.convertType(destTy));
 }
 
 mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
@@ -1186,6 +1218,29 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 
   // Otherwise, reload the value.
   return emitLoadOfLValue(lhs, e->getExprLoc());
+}
+
+mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
+  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
+  mlir::OpBuilder &builder = cgf.builder;
+
+  auto scope = cir::ScopeOp::create(
+      builder, scopeLoc,
+      /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
+        CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                              builder.getInsertionBlock()};
+        mlir::Value scopeYieldVal = Visit(e->getSubExpr());
+        if (scopeYieldVal) {
+          // Defend against dominance problems caused by jumps out of expression
+          // evaluation through the shared cleanup block.
+          lexScope.forceCleanup();
+          cir::YieldOp::create(builder, loc, scopeYieldVal);
+          yieldTy = scopeYieldVal.getType();
+        }
+      });
+
+  return scope.getNumResults() > 0 ? scope->getResult(0) : nullptr;
 }
 
 } // namespace
@@ -1758,6 +1813,15 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                 ce->getExprLoc(), opts);
   }
 
+  case CK_FloatingComplexToReal:
+  case CK_IntegralComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_IntegralComplexToBoolean: {
+    mlir::Value value = cgf.emitComplexExpr(subExpr);
+    return emitComplexToScalarConversion(cgf.getLoc(ce->getExprLoc()), value,
+                                         kind, destTy);
+  }
+
   case CK_FloatingRealToComplex:
   case CK_FloatingComplexCast:
   case CK_IntegralRealToComplex:
@@ -1891,6 +1955,29 @@ mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,
          "Invalid scalar expression to emit");
   return ScalarExprEmitter(*this, builder)
       .emitScalarConversion(src, srcTy, dstTy, loc);
+}
+
+mlir::Value CIRGenFunction::emitComplexToScalarConversion(mlir::Value src,
+                                                          QualType srcTy,
+                                                          QualType dstTy,
+                                                          SourceLocation loc) {
+  assert(srcTy->isAnyComplexType() && hasScalarEvaluationKind(dstTy) &&
+         "Invalid complex -> scalar conversion");
+
+  QualType complexElemTy = srcTy->castAs<ComplexType>()->getElementType();
+  if (dstTy->isBooleanType()) {
+    auto kind = complexElemTy->isFloatingType()
+                    ? cir::CastKind::float_complex_to_bool
+                    : cir::CastKind::int_complex_to_bool;
+    return builder.createCast(getLoc(loc), kind, src, convertType(dstTy));
+  }
+
+  auto kind = complexElemTy->isFloatingType()
+                  ? cir::CastKind::float_complex_to_real
+                  : cir::CastKind::int_complex_to_real;
+  mlir::Value real =
+      builder.createCast(getLoc(loc), kind, src, convertType(complexElemTy));
+  return emitScalarConversion(real, complexElemTy, dstTy, loc);
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {

@@ -731,6 +731,7 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
     IO.mapOptional("AfterFunctionDeclarationName",
                    Spacing.AfterFunctionDeclarationName);
     IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
+    IO.mapOptional("AfterNot", Spacing.AfterNot);
     IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
     IO.mapOptional("AfterPlacementOperator", Spacing.AfterPlacementOperator);
     IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
@@ -1753,7 +1754,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AttributeMacros.push_back("absl_nullable");
   GoogleStyle.AttributeMacros.push_back("absl_nullability_unknown");
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
                                                 {"^<.*\\.h>", 1, 0, false},
@@ -1862,6 +1862,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
+    GoogleStyle.DerivePointerAlignment = true;
     // "Regroup" doesn't work well for ObjC yet (main header heuristic,
     // relationship between ObjC standard library headers and other heades,
     // #imports, etc.)
@@ -2638,31 +2639,44 @@ private:
 
   int countVariableAlignments(const SmallVectorImpl<AnnotatedLine *> &Lines) {
     int AlignmentDiff = 0;
+
     for (const AnnotatedLine *Line : Lines) {
       AlignmentDiff += countVariableAlignments(Line->Children);
-      for (FormatToken *Tok = Line->First; Tok && Tok->Next; Tok = Tok->Next) {
+
+      for (const auto *Tok = Line->getFirstNonComment(); Tok; Tok = Tok->Next) {
         if (Tok->isNot(TT_PointerOrReference))
           continue;
-        // Don't treat space in `void foo() &&` as evidence.
-        if (const auto *Prev = Tok->getPreviousNonComment()) {
-          if (Prev->is(tok::r_paren) && Prev->MatchingParen) {
-            if (const auto *Func =
-                    Prev->MatchingParen->getPreviousNonComment()) {
-              if (Func->isOneOf(TT_FunctionDeclarationName, TT_StartOfName,
-                                TT_OverloadedOperator)) {
-                continue;
-              }
-            }
-          }
+
+        const auto *Prev = Tok->Previous;
+        const bool PrecededByName = Prev && Prev->Tok.getIdentifierInfo();
+        const bool SpaceBefore = Tok->hasWhitespaceBefore();
+
+        // e.g. `int **`, `int*&`, etc.
+        while (Tok->Next && Tok->Next->is(TT_PointerOrReference))
+          Tok = Tok->Next;
+
+        const auto *Next = Tok->Next;
+        const bool FollowedByName = Next && Next->Tok.getIdentifierInfo();
+        const bool SpaceAfter = Next && Next->hasWhitespaceBefore();
+
+        if ((!PrecededByName && !FollowedByName) ||
+            // e.g. `int * i` or `int*i`
+            (PrecededByName && FollowedByName && SpaceBefore == SpaceAfter)) {
+          continue;
         }
-        bool SpaceBefore = Tok->hasWhitespaceBefore();
-        bool SpaceAfter = Tok->Next->hasWhitespaceBefore();
-        if (SpaceBefore && !SpaceAfter)
+
+        if ((PrecededByName && SpaceBefore) ||
+            (FollowedByName && !SpaceAfter)) {
+          // Right alignment.
           ++AlignmentDiff;
-        if (!SpaceBefore && SpaceAfter)
+        } else if ((PrecededByName && !SpaceBefore) ||
+                   (FollowedByName && SpaceAfter)) {
+          // Left alignment.
           --AlignmentDiff;
+        }
       }
     }
+
     return AlignmentDiff;
   }
 

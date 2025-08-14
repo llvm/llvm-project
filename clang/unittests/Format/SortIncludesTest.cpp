@@ -1084,10 +1084,10 @@ TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
 }
 
 TEST_F(SortIncludesTest, DoNotSortCSharp) {
-  constexpr StringRef Code{"const string expectedDataStruct = @\"\n"
+  constexpr StringRef Code("const string expectedDataStruct = @\"\n"
                            "            #include <b.h>\n"
                            "            #include <a.h>\n"
-                           "        \";"};
+                           "        \";");
   FmtStyle.Language = FormatStyle::LK_CSharp;
   EXPECT_TRUE(sortIncludes(FmtStyle, Code, GetCodeRange(Code), "a.cs").empty());
 }

@@ -93,7 +93,7 @@ TEST(LlvmLibcWcsncmpTest, StringArgumentSwapChangesSignWithSufficientLength) {
   ASSERT_LT(result, 0);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcWcsncmpTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcsncmp(L"aaaaaaaaaaaaaa", nullptr, 3); },
@@ -101,7 +101,7 @@ TEST(LlvmLibcWcsncmpTest, NullptrCrash) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcsncmp(nullptr, L"aaaaaaaaaaaaaa", 3); },
                WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS
 
 // This group is actually testing wcsncmp functionality
 

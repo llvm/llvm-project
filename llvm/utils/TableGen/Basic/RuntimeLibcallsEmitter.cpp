@@ -242,11 +242,10 @@ public:
     SmallVector<const Record *, 1024> AllRuntimeLibcallImpls(
         AllRuntimeLibcallImplsRaw);
 
-    // Sort by libcall impl name, not the enum name. This keeps the order
-    // suitable for using the name table for libcall recognition binary search.
-    llvm::sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
-      return A->getValueAsString("LibCallFuncName") <
-             B->getValueAsString("LibCallFuncName");
+    // Sort by libcall impl name and secondarily by the enum name.
+    sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
+      return std::pair(A->getValueAsString("LibCallFuncName"), A->getName()) <
+             std::pair(B->getValueAsString("LibCallFuncName"), B->getName());
     });
 
     RuntimeLibcallImplDefList.reserve(AllRuntimeLibcallImpls.size());
@@ -318,29 +317,6 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
 
 void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
     raw_ostream &OS) const {
-  OS << "const RTLIB::LibcallImpl "
-        "llvm::RTLIB::RuntimeLibcallsInfo::"
-        "DefaultLibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
-
-  for (const RuntimeLibcall &LibCall : RuntimeLibcallDefList) {
-    auto I = LibCallToDefaultImpl.find(&LibCall);
-    if (I == LibCallToDefaultImpl.end()) {
-      OS << "  RTLIB::Unsupported,";
-    } else {
-      const RuntimeLibcallImpl *LibCallImpl = I->second;
-      OS << "  ";
-      LibCallImpl->emitEnumEntry(OS);
-      OS << ',';
-    }
-
-    OS << " // ";
-    LibCall.emitEnumEntry(OS);
-    OS << '\n';
-  }
-
-  OS << "  RTLIB::Unsupported\n"
-        "};\n\n";
-
   // Emit the implementation names
   StringToOffsetTable Table(/*AppendZero=*/true,
                             "RTLIB::RuntimeLibcallsInfo::");
@@ -380,10 +356,21 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
 void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     raw_ostream &OS) const {
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
-        "const llvm::Triple &TT, FloatABI::ABIType FloatABI) {\n"
+        "const llvm::Triple &TT, FloatABI::ABIType FloatABI, EABI EABIVersion, "
+        "StringRef ABIName) {\n"
         "  struct LibcallImplPair {\n"
         "    RTLIB::Libcall Func;\n"
         "    RTLIB::LibcallImpl Impl;\n"
+        "  };\n"
+        "  auto setLibcallsImpl = [this](\n"
+        "    ArrayRef<LibcallImplPair> Libcalls,\n"
+        "    std::optional<llvm::CallingConv::ID> CC = {})\n"
+        "  {\n"
+        "    for (const auto [Func, Impl] : Libcalls) {\n"
+        "      setLibcallImpl(Func, Impl);\n"
+        "      if (CC)\n"
+        "        setLibcallImplCallingConv(Impl, *CC);\n"
+        "    }\n"
         "  };\n";
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
@@ -509,31 +496,18 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       Funcs.erase(UniqueI, Funcs.end());
 
-      OS << indent(IndentDepth + 2)
-         << "static const LibcallImplPair LibraryCalls";
-      SubsetPredicate.emitTableVariableNameSuffix(OS);
-      OS << "[] = {\n";
+      OS << indent(IndentDepth + 2) << "setLibcallsImpl({\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 6);
+        OS << indent(IndentDepth + 4);
         LibCallImpl->emitTableEntry(OS);
       }
-
-      OS << indent(IndentDepth + 2) << "};\n\n"
-         << indent(IndentDepth + 2)
-         << "for (const auto [Func, Impl] : LibraryCalls";
-      SubsetPredicate.emitTableVariableNameSuffix(OS);
-      OS << ") {\n"
-         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
-
+      OS << indent(IndentDepth + 2) << "}";
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
             FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
-           << CCEnum << ");\n";
+        OS << ", " << CCEnum;
       }
-
-      OS << indent(IndentDepth + 2) << "}\n";
-      OS << '\n';
+      OS << ");\n\n";
 
       if (!SubsetPredicate.isAlwaysAvailable()) {
         OS << indent(IndentDepth);
@@ -546,13 +520,11 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     TopLevelPredicate.emitEndIf(OS);
   }
 
-  // Fallback to the old default set for manual table entries.
-  //
-  // TODO: Remove this when targets have switched to using generated tables by
-  // default.
-  OS << "  initDefaultLibCallImpls();\n";
-
-  OS << "}\n\n";
+  // FIXME: This should be a fatal error. A few contexts are improperly relying
+  // on RuntimeLibcalls constructed with fully unknown triples.
+  OS << "  LLVM_DEBUG(dbgs() << \"no system runtime library applied to target "
+        "\\'\" << TT.str() << \"\\'\\n\");\n"
+        "}\n\n";
 }
 
 void RuntimeLibcallEmitter::run(raw_ostream &OS) {
@@ -591,7 +563,9 @@ void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,
       auto [It, Inserted] = Func2Preds.insert({LibcallImpl, {{}, CCClass}});
       if (!Inserted) {
         PrintError(
-            Def, "combining nested libcall set predicates currently unhandled");
+            Def,
+            "combining nested libcall set predicates currently unhandled: '" +
+                LibcallImpl->getLibcallFuncName() + "'");
       }
 
       It->second.first.push_back(AP.getDef());

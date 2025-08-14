@@ -22,7 +22,7 @@ def XeGPU_DpasResType: FixedVectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
 def XeGPU_ValueType: FixedVectorOfNonZeroRankOf<[XeGPU_ScalarType]>;
-def XeGPU_Vector2DType: FixedVectorOfRankAndType<[2], [XeGPU_ScalarType]>;
+def XeGPU_VectorType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
 
 // common base class for types in XeGPU dialect
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
@@ -131,12 +131,12 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::cast<TensorDescType>(cloneWith(getShape(), elementType));
     }
 
-    BlockTensorDescAttr getEncodingAsBlockTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<BlockTensorDescAttr>(getEncoding());
-    }
-
-    ScatterTensorDescAttr getEncodingAsScatterTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
+    template <typename T,
+              typename = std::enable_if_t<
+                            std::is_same_v<T, BlockTensorDescAttr> ||
+                            std::is_same_v<T, ScatterTensorDescAttr>>>
+    T getEncodingOfType() const {
+      return llvm::dyn_cast_if_present<T>(getEncoding());
     }
 
     LayoutAttr getLayoutAttr() const {
@@ -144,49 +144,35 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     }
 
     xegpu::MemorySpace getMemorySpace() const {
-      auto block_attr = getEncodingAsBlockTensorDescAttr();
-      if (block_attr && block_attr.getMemorySpace())
-        return block_attr.getMemorySpace().getValue();
+      if (auto attr = getEncodingOfType<BlockTensorDescAttr>())
+        return attr.getMemorySpace().getValue();
 
-      auto scatter_attr = getEncodingAsScatterTensorDescAttr();
-      if (scatter_attr && scatter_attr.getMemorySpace())
-        return scatter_attr.getMemorySpace().getValue();
-
-      // return default value
-      return MemorySpace::Global;
+      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
+      return attr.getMemorySpace().getValue();
     }
 
     // get the ArrayLength for blocked TensorDesc
     int getArrayLength() {
-      auto attr = getEncoding();
-      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
-      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
-      if (block_attr && block_attr.getArrayLength())
-        return block_attr.getArrayLength().getInt();
-      // return default value
-      return 1;
+      auto attr = getEncodingOfType<BlockTensorDescAttr>();
+      assert(attr && "invalid on non BlockTensorDescAttr.");
+      return attr.getArrayLength().getInt();
     }
 
     bool getBoundaryCheck() {
-      auto attr = getEncoding();
-      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
-      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
-      if (block_attr && block_attr.getBoundaryCheck())
-        return block_attr.getBoundaryCheck().getValue();
-      // return default value
-      return true;
+      auto attr = getEncodingOfType<BlockTensorDescAttr>();
+      assert(attr && "invalid on non BlockTensorDescAttr.");
+      return attr.getBoundaryCheck().getValue();
     }
 
     bool isScattered() {
-      return bool(getEncodingAsScatterTensorDescAttr());
+      return bool(getEncodingOfType<ScatterTensorDescAttr>());
     }
 
     // get the ChunkSize for scattered TensorDesc
     int getChunkSizeAsInt() {
-      auto attr = getEncoding();
-      auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
-      assert(scatter_attr && "invalid on non ScatterTensorDescAttr.");
-      return scatter_attr.getChunkSizeAsInt();
+      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
+      assert(attr && "invalid on non ScatterTensorDescAttr.");
+      return attr.getChunkSizeAsInt();
     }
 
     /// Helper to drop all layout information from the TensorDesc type.
@@ -203,6 +189,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   let genVerifyDecl = 1;
 }
 
+def XeGPU_GatherScatterSourceType : AnyTypeOf<[XeGPU_TensorDesc,Non0RankedMemRefOf<[XeGPU_ScalarType]>, UI64]>;
 
 def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
   let summary = "!xegpu.nbarrier a custom XeGPU type representing a barrier.";

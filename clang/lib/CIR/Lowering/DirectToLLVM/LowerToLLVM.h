@@ -44,6 +44,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMAssumeAlignedOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeAlignedOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeAlignedOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeAlignedOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMAssumeSepStorageOpLowering
     : public mlir::OpConversionPattern<cir::AssumeSepStorageOp> {
 public:
@@ -81,6 +91,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::BitCtzOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMBitFfsOpLowering
+    : public mlir::OpConversionPattern<cir::BitFfsOp> {
+public:
+  using mlir::OpConversionPattern<cir::BitFfsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BitFfsOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -257,6 +277,11 @@ class CIRToLLVMFuncOpLowering : public mlir::OpConversionPattern<cir::FuncOp> {
       cir::FuncOp func, bool filterArgAndResAttrs,
       mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
+  mlir::LogicalResult
+  matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
+                       OpAdaptor adaptor,
+                       mlir::ConversionPatternRewriter &rewriter) const;
+
 public:
   using mlir::OpConversionPattern<cir::FuncOp>::OpConversionPattern;
 
@@ -387,6 +412,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMUnreachableOpLowering
+    : public mlir::OpConversionPattern<cir::UnreachableOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnreachableOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnreachableOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMTrapOpLowering : public mlir::OpConversionPattern<cir::TrapOp> {
 public:
   using mlir::OpConversionPattern<cir::TrapOp>::OpConversionPattern;
@@ -419,6 +454,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::BaseClassAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVTableAddrPointOpLowering
+    : public mlir::OpConversionPattern<cir::VTableAddrPointOp> {
+public:
+  using mlir::OpConversionPattern<cir::VTableAddrPointOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VTableAddrPointOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -610,6 +655,32 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::GetBitfieldOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMFAbsOpLowering : public mlir::OpConversionPattern<cir::FAbsOp> {
+public:
+  using mlir::OpConversionPattern<cir::FAbsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::FAbsOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMInlineAsmOpLowering
+    : public mlir::OpConversionPattern<cir::InlineAsmOp> {
+  mlir::DataLayout const &dataLayout;
+
+public:
+  CIRToLLVMInlineAsmOpLowering(const mlir::TypeConverter &typeConverter,
+                               mlir::MLIRContext *context,
+                               mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+
+  using mlir::OpConversionPattern<cir::InlineAsmOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::InlineAsmOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

@@ -27,11 +27,10 @@ static const TokenKind RootElementKeywords[] = {
 };
 
 RootSignatureParser::RootSignatureParser(
-    llvm::dxbc::RootSignatureVersion Version,
-    SmallVector<RootSignatureElement> &Elements, StringLiteral *Signature,
+    llvm::dxbc::RootSignatureVersion Version, StringLiteral *Signature,
     Preprocessor &PP)
-    : Version(Version), Elements(Elements), Signature(Signature),
-      Lexer(Signature->getString()), PP(PP), CurToken(0) {}
+    : Version(Version), Signature(Signature), Lexer(Signature->getString()),
+      PP(PP), CurToken(0) {}
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootSignatureElements as possible, until we hit the

@@ -15,7 +15,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcExp2m1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 

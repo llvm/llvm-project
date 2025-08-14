@@ -123,6 +123,7 @@ protected:
   bool HasSMemRealTime = false;
   bool HasIntClamp = false;
   bool HasFmaMixInsts = false;
+  bool HasFmaMixBF16Insts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
   bool HasScalarDwordx3Loads = false;
@@ -186,6 +187,7 @@ protected:
   bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
+  bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -235,6 +237,7 @@ protected:
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -244,7 +247,10 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
+  bool HasSafeCUPrefetch = false;
+  bool HasCUStores = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -265,14 +271,18 @@ protected:
   bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
+  bool HasAddSubU64Insts = false;
+  bool HasMadU32Inst = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
+  bool HasGloballyAddressableScratch = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -459,6 +469,8 @@ public:
   bool hasFmaMixInsts() const {
     return HasFmaMixInsts;
   }
+
+  bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
 
   bool hasCARRY() const {
     return true;
@@ -707,7 +719,9 @@ public:
   bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
+  bool hasLdsAtomicAddF64() const {
+    return hasGFX90AInsts() || hasGFX1250Insts();
+  }
 
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
@@ -937,6 +951,12 @@ public:
     return HasAgentScopeFineGrainedRemoteMemoryAtomics;
   }
 
+  /// \return true is HW emulates system scope atomics unsupported by the PCI-e
+  /// via CAS loop.
+  bool hasEmulatedSystemScopeAtomics() const {
+    return HasEmulatedSystemScopeAtomics;
+  }
+
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
   bool hasDefaultComponentBroadcast() const {
@@ -985,7 +1005,13 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
+  bool hasVmemPrefInsts() const { return HasVmemPrefInsts; }
+
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
+  bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
+
+  bool hasCUStores() const { return HasCUStores; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1022,7 +1048,10 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
+  void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                 const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -1059,7 +1088,7 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts; }
+  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1250Insts; }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
@@ -1166,6 +1195,9 @@ public:
   bool hasScaleOffset() const { return GFX1250Insts; }
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
+
+  // FLAT GLOBAL VOffset is signed
+  bool hasSignedGVSOffset() const { return GFX1250Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1301,9 +1333,13 @@ public:
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
+  bool hasGloballyAddressableScratch() const {
+    return HasGloballyAddressableScratch;
+  }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+  bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
@@ -1384,7 +1420,11 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
+  bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
+
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1497,12 +1537,41 @@ public:
 
   bool hasVOPD3() const { return GFX1250Insts; }
 
+  // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
+  bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
+
+  // \returns true if the target has V_MAD_U32 instruction.
+  bool hasMadU32Inst() const { return HasMadU32Inst; }
+
+  // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
+  bool hasVectorMulU64() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
+  // instructions.
+  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
+  bool hasIntMinMax64() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
+  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
+  bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
+  bool hasPkMinMax3Insts() const { return GFX1250Insts; }
+
+  // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
+  bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
+
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
-  // of sign-extending.
-  bool hasGetPCZeroExtension() const { return GFX12Insts; }
+  // of sign-extending. Note that GFX1250 has not only fixed the bug but also
+  // extended VA to 57 bits.
+  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1638,6 +1707,10 @@ public:
   unsigned getMaxNumAGPRs(const Function &F) const {
     return getMaxNumVGPRs(F);
   }
+
+  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
+  /// of waves per execution unit required for the function \p MF.
+  std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
 
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of VGPRs explicitly

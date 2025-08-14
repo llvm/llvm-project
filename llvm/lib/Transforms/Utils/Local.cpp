@@ -481,17 +481,15 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
-      auto *Arg = II->getArgOperand(1);
-      // Lifetime intrinsics are dead when their right-hand is undef.
-      if (isa<UndefValue>(Arg))
+      auto *Arg = II->getArgOperand(0);
+      if (isa<PoisonValue>(Arg))
         return true;
-      // If the right-hand is an alloc, global, or argument and the only uses
-      // are lifetime intrinsics then the intrinsics are dead.
-      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
-        return llvm::all_of(Arg->uses(), [](Use &Use) {
-          return isa<LifetimeIntrinsic>(Use.getUser());
-        });
-      return false;
+
+      // If the only uses of the alloca are lifetime intrinsics, then the
+      // intrinsics are dead.
+      return llvm::all_of(Arg->uses(), [](Use &Use) {
+        return isa<LifetimeIntrinsic>(Use.getUser());
+      });
     }
 
     // Assumptions are dead if their condition is trivially true.
@@ -3185,9 +3183,8 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename ShouldReplaceFn>
+template <typename ShouldReplaceFn>
 static unsigned replaceDominatedUsesWith(Value *From, Value *To,
-                                         const RootType &Root,
                                          const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
@@ -3196,7 +3193,7 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (II && II->getIntrinsicID() == Intrinsic::fake_use)
       continue;
-    if (!ShouldReplace(Root, U))
+    if (!ShouldReplace(U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3225,39 +3222,33 @@ unsigned llvm::replaceNonLocalUsesWith(Instruction *From, Value *To) {
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlockEdge &Root) {
-  auto Dominates = [&DT](const BasicBlockEdge &Root, const Use &U) {
-    return DT.dominates(Root, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, Root, Dominates);
+  auto Dominates = [&](const Use &U) { return DT.dominates(Root, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlock *BB) {
-  auto Dominates = [&DT](const BasicBlock *BB, const Use &U) {
-    return DT.dominates(BB, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, BB, Dominates);
+  auto Dominates = [&](const Use &U) { return DT.dominates(BB, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto DominatesAndShouldReplace =
-      [&DT, &ShouldReplace, To](const BasicBlockEdge &Root, const Use &U) {
-        return DT.dominates(Root, U) && ShouldReplace(U, To);
-      };
-  return ::replaceDominatedUsesWith(From, To, Root, DominatesAndShouldReplace);
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(Root, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto DominatesAndShouldReplace = [&DT, &ShouldReplace,
-                                    To](const BasicBlock *BB, const Use &U) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
     return DT.dominates(BB, U) && ShouldReplace(U, To);
   };
-  return ::replaceDominatedUsesWith(From, To, BB, DominatesAndShouldReplace);
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
@@ -3855,6 +3846,10 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // argument; swifterror pointers are not allowed to be used in select or phi
   // instructions.
   if (Op->isSwiftError())
+    return false;
+
+  // Cannot replace alloca argument with phi/select.
+  if (I->isLifetimeStartOrEnd())
     return false;
 
   // Early exit.
