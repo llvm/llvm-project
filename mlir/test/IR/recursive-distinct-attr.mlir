@@ -5,5 +5,5 @@
 #attr_ugly = #test<attr_ugly begin distinct[0]<> end>
 #attr_ugly1 = #test<attr_ugly begin #attr_ugly end>
 
-module attributes {test.alias = #attr_ugly} {
-} loc(fused<#attr_ugly1>[])
+module attributes {test.alias = #attr_ugly, test.alias1 = #attr_ugly1} {
+}
