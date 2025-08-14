@@ -2832,7 +2832,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), /*Qualifier=*/nullptr, Base));
+              MD->getType(), /*Qualifier=*/std::nullopt, Base));
       F->addTypeMetadata(0, Id);
     }
   }
@@ -4194,9 +4194,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 // Check if T is a class type with a destructor that's not dllimport.
 static bool HasNonDllImportDtor(QualType T) {
   if (const auto *RT = T->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+      RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
         return true;
+    }
 
   return false;
 }
@@ -6071,7 +6073,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
       return true;
 
     if (const auto *RT = VarType->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       for (const FieldDecl *FD : RD->fields()) {
         if (FD->isBitField())
           continue;
@@ -6780,7 +6782,7 @@ QualType CodeGenModule::getObjCFastEnumerationStateType() {
     }
 
     D->completeDefinition();
-    ObjCFastEnumerationStateType = Context.getTagDeclType(D);
+    ObjCFastEnumerationStateType = Context.getCanonicalTagType(D);
   }
 
   return ObjCFastEnumerationStateType;
@@ -7290,7 +7292,8 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     CXXRecordDecl *CRD = cast<CXXRecordDecl>(D);
     if (CGDebugInfo *DI = getModuleDebugInfo()) {
       if (CRD->hasDefinition())
-        DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(D)));
+        DI->EmitAndRetainType(
+            getContext().getCanonicalTagType(cast<RecordDecl>(D)));
       if (auto *ES = D->getASTContext().getExternalSource())
         if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
           DI->completeUnusedClass(*CRD);
@@ -7509,20 +7512,23 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
     if (CGDebugInfo *DI = getModuleDebugInfo())
-      DI->EmitAndRetainType(
-          getContext().getTypedefType(cast<TypedefNameDecl>(D)));
+      DI->EmitAndRetainType(getContext().getTypedefType(
+          ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt,
+          cast<TypedefNameDecl>(D)));
     break;
 
   case Decl::Record:
     if (CGDebugInfo *DI = getModuleDebugInfo())
       if (cast<RecordDecl>(D)->getDefinition())
-        DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(D)));
+        DI->EmitAndRetainType(
+            getContext().getCanonicalTagType(cast<RecordDecl>(D)));
     break;
 
   case Decl::Enum:
     if (CGDebugInfo *DI = getModuleDebugInfo())
       if (cast<EnumDecl>(D)->getDefinition())
-        DI->EmitAndRetainType(getContext().getEnumType(cast<EnumDecl>(D)));
+        DI->EmitAndRetainType(
+            getContext().getCanonicalTagType(cast<EnumDecl>(D)));
     break;
 
   case Decl::HLSLBuffer:
@@ -7944,8 +7950,8 @@ bool CodeGenModule::NeedAllVtablesTypeId() const {
 void CodeGenModule::AddVTableTypeMetadata(llvm::GlobalVariable *VTable,
                                           CharUnits Offset,
                                           const CXXRecordDecl *RD) {
-  llvm::Metadata *MD =
-      CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
+  CanQualType T = getContext().getCanonicalTagType(RD);
+  llvm::Metadata *MD = CreateMetadataIdentifierForType(T);
   VTable->addTypeMetadata(Offset.getQuantity(), MD);
 
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -9818,9 +9824,9 @@ bool CodeGenModule::isStdNameSpace(const CallExpr *Call) const {
     if (isa<DeclRefExpr>(CE)) {
       const DeclRefExpr *DRE = cast<DeclRefExpr>(CE);
       if (DRE->hasQualifier()) {
-        const NestedNameSpecifier *NS = DRE->getQualifier();
-        if (NS->getKind() == NestedNameSpecifier::Namespace &&
-            !NS->getAsNamespace()->getNameAsString().compare("std"))
+        NestedNameSpecifier NS = DRE->getQualifier();
+        if (NS.getKind() == NestedNameSpecifier::Kind::Namespace &&
+            !NS.getAsNamespaceAndPrefix().Namespace->getNameAsString().compare("std"))
           return true;
       }
     }

@@ -2794,7 +2794,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// null.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3235,7 +3235,7 @@ public:
   SourceLocation getNameLoc() const { return NameInfo.getLoc(); }
 
   /// Fetches the nested-name qualifier, if one was given.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3553,7 +3553,7 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies this
   /// declaration.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3968,7 +3968,7 @@ public:
   }
 
   /// Retrieve the nested-name-specifier that qualifies the member name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 

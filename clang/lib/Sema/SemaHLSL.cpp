@@ -238,7 +238,7 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
   constexpr unsigned CBufferAlign = 16;
   if (const RecordType *RT = T->getAs<RecordType>()) {
     unsigned Size = 0;
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
@@ -380,7 +380,7 @@ static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
 // needs to be created for HLSL Buffer use that will exclude these unwanted
 // declarations (see createHostLayoutStruct function).
 static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
-  if (RD->getTypeForDecl()->isHLSLIntangibleType() || RD->isEmpty())
+  if (RD->isHLSLIntangible() || RD->isEmpty())
     return true;
   // check fields
   for (const FieldDecl *Field : RD->fields()) {
@@ -465,7 +465,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
       RD = createHostLayoutStruct(S, RD);
       if (!RD)
         return nullptr;
-      Ty = RD->getTypeForDecl();
+      Ty = S.Context.getCanonicalTagType(RD)->getTypePtr();
     }
   }
 
@@ -515,8 +515,8 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
       BaseDecl = createHostLayoutStruct(S, BaseDecl);
       if (BaseDecl) {
-        TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(
-            QualType(BaseDecl->getTypeForDecl(), 0));
+        TypeSourceInfo *TSI =
+            AST.getTrivialTypeSourceInfo(AST.getCanonicalTagType(BaseDecl));
         Base = CXXBaseSpecifier(SourceRange(), false, StructDecl->isClass(),
                                 AS_none, TSI, SourceLocation());
       }
@@ -1850,7 +1850,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                        const RecordType *RT) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 
@@ -3403,7 +3403,7 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
       continue;
     }
     if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isUnion())
         continue;
 
@@ -3941,7 +3941,8 @@ class InitListTransformer {
       }
       while (!RecordTypes.empty()) {
         const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD : RT->getDecl()->fields()) {
+        for (auto *FD :
+             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -3989,7 +3990,8 @@ class InitListTransformer {
       }
       while (!RecordTypes.empty()) {
         const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD : RT->getDecl()->fields()) {
+        for (auto *FD :
+             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
           Inits.push_back(generateInitListsImpl(FD->getType()));
         }
       }

@@ -605,7 +605,7 @@ struct BuiltinDumpStructGenerator {
 
   bool dumpUnnamedRecord(const RecordDecl *RD, Expr *E, unsigned Depth) {
     Expr *IndentLit = getIndentString(Depth);
-    Expr *TypeLit = getTypeString(S.Context.getRecordType(RD));
+    Expr *TypeLit = getTypeString(S.Context.getCanonicalTagType(RD));
     if (IndentLit ? callPrintFunction("%s%s", {IndentLit, TypeLit})
                   : callPrintFunction("%s", {TypeLit}))
       return true;
@@ -2290,7 +2290,7 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
       return ExprError();
     }
 
-    const Type *MemPtrClass = MPT->getQualifier()->getAsType();
+    const Type *MemPtrClass = MPT->getQualifier().getAsType();
     QualType ObjectT = Args[1]->getType();
 
     if (MPT->isMemberDataPointer() && S.checkArgCount(TheCall, 2))
@@ -3325,7 +3325,9 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
   if (const RecordType *UT = Expr->getType()->getAsUnionType();
-      UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+      UT && UT->getOriginalDecl()
+                ->getMostRecentDecl()
+                ->hasAttr<TransparentUnionAttr>()) {
     if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
       if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
         Expr = ILE->getInit(0);
@@ -5182,7 +5184,9 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
                return false;
              if (!Type->isEnumeralType())
                return true;
-             const EnumDecl *ED = Type->castAs<EnumType>()->getDecl();
+             const EnumDecl *ED = Type->castAs<EnumType>()
+                                      ->getOriginalDecl()
+                                      ->getDefinitionOrSelf();
              return !(ED &&
                       Context.typesAreCompatible(ED->getPromotionType(), Type));
            }()) {
@@ -7794,8 +7798,11 @@ CXXRecordMembersNamed(StringRef Name, Sema &S, QualType Ty) {
 
   if (!RT)
     return Results;
-  const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-  if (!RD || !RD->getDefinition())
+  CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
+  if (!RD)
+    return Results;
+  RD = RD->getDefinition();
+  if (!RD)
     return Results;
 
   LookupResult R(S, &S.Context.Idents.get(Name), SourceLocation(),
@@ -7804,7 +7811,7 @@ CXXRecordMembersNamed(StringRef Name, Sema &S, QualType Ty) {
 
   // We just need to include all members of the right kind turned up by the
   // filter, at this point.
-  if (S.LookupQualifiedName(R, RT->getDecl()))
+  if (S.LookupQualifiedName(R, RD))
     for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I) {
       NamedDecl *decl = (*I)->getUnderlyingDecl();
       if (MemberKind *FK = dyn_cast<MemberKind>(decl))
@@ -8334,7 +8341,8 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
   bool IsScopedEnum = false;
   QualType IntendedTy = ExprTy;
   if (auto EnumTy = ExprTy->getAs<EnumType>()) {
-    IntendedTy = EnumTy->getDecl()->getIntegerType();
+    IntendedTy =
+        EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     if (EnumTy->isUnscopedEnumerationType()) {
       ExprTy = IntendedTy;
       // This controls whether we're talking about the underlying type or not,
@@ -8370,7 +8378,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         NamedDecl *ND = Result.getFoundDecl();
         if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(ND))
           if (TD->getUnderlyingType() == IntendedTy)
-            IntendedTy = S.Context.getTypedefType(TD);
+            IntendedTy =
+                S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                         /*Qualifier=*/std::nullopt, TD);
       }
     }
   }
@@ -9633,7 +9643,10 @@ struct SearchNonTrivialToInitializeField
     S.DiagRuntimeBehavior(SL, E, S.PDiag(diag::note_nontrivial_field) << 1);
   }
   void visitStruct(QualType FT, SourceLocation SL) {
-    for (const FieldDecl *FD : FT->castAs<RecordType>()->getDecl()->fields())
+    for (const FieldDecl *FD : FT->castAs<RecordType>()
+                                   ->getOriginalDecl()
+                                   ->getDefinitionOrSelf()
+                                   ->fields())
       visit(FD->getType(), FD->getLocation());
   }
   void visitArray(QualType::PrimitiveDefaultInitializeKind PDIK,
@@ -9678,7 +9691,10 @@ struct SearchNonTrivialToCopyField
     S.DiagRuntimeBehavior(SL, E, S.PDiag(diag::note_nontrivial_field) << 0);
   }
   void visitStruct(QualType FT, SourceLocation SL) {
-    for (const FieldDecl *FD : FT->castAs<RecordType>()->getDecl()->fields())
+    for (const FieldDecl *FD : FT->castAs<RecordType>()
+                                   ->getOriginalDecl()
+                                   ->getDefinitionOrSelf()
+                                   ->fields())
       visit(FD->getType(), FD->getLocation());
   }
   void visitArray(QualType::PrimitiveCopyKind PCK, const ArrayType *AT,
@@ -9959,8 +9975,9 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
           getLangOpts().CPlusPlus && !RT->isIncompleteType() &&
           !RT->desugar().isTriviallyCopyableType(Context);
 
+      const auto *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
-          RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize()) {
+          RD->isNonTrivialToPrimitiveDefaultInitialize()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 0);
@@ -9973,7 +9990,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                             PDiag(diag::warn_cxxstruct_memaccess)
                                 << FnName << PointeeTy);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
-                 RT->getDecl()->isNonTrivialToPrimitiveCopy()) {
+                 RD->isNonTrivialToPrimitiveCopy()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 1);
@@ -10479,10 +10496,14 @@ struct IntRange {
     if (!C.getLangOpts().CPlusPlus) {
       // For enum types in C code, use the underlying datatype.
       if (const auto *ET = dyn_cast<EnumType>(T))
-        T = ET->getDecl()->getIntegerType().getDesugaredType(C).getTypePtr();
+        T = ET->getOriginalDecl()
+                ->getDefinitionOrSelf()
+                ->getIntegerType()
+                .getDesugaredType(C)
+                .getTypePtr();
     } else if (const auto *ET = dyn_cast<EnumType>(T)) {
       // For enum types in C++, use the known bit width of the enumerators.
-      EnumDecl *Enum = ET->getDecl();
+      EnumDecl *Enum = ET->getOriginalDecl()->getDefinitionOrSelf();
       // In C++11, enums can have a fixed underlying type. Use this type to
       // compute the range.
       if (Enum->isFixed()) {
@@ -10524,7 +10545,9 @@ struct IntRange {
     if (const AtomicType *AT = dyn_cast<AtomicType>(T))
       T = AT->getValueType().getTypePtr();
     if (const EnumType *ET = dyn_cast<EnumType>(T))
-      T = C.getCanonicalType(ET->getDecl()->getIntegerType()).getTypePtr();
+      T = C.getCanonicalType(
+               ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType())
+              .getTypePtr();
 
     if (const auto *EIT = dyn_cast<BitIntType>(T))
       return IntRange(EIT->getNumBits(), EIT->isUnsigned());
@@ -11496,7 +11519,9 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
      return false;
 
   if (BitfieldType->isEnumeralType()) {
-    EnumDecl *BitfieldEnumDecl = BitfieldType->castAs<EnumType>()->getDecl();
+    EnumDecl *BitfieldEnumDecl = BitfieldType->castAs<EnumType>()
+                                     ->getOriginalDecl()
+                                     ->getDefinitionOrSelf();
     // If the underlying enum type was not explicitly specified as an unsigned
     // type and the enum contain only positive values, MSVC++ will cause an
     // inconsistency by storing this as a signed type.
@@ -11533,7 +11558,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
         EnumTy = PTAttr->getType()->getAs<EnumType>();
     }
     if (EnumTy) {
-      EnumDecl *ED = EnumTy->getDecl();
+      EnumDecl *ED = EnumTy->getOriginalDecl()->getDefinitionOrSelf();
       bool SignedBitfield = BitfieldType->isSignedIntegerOrEnumerationType();
 
       // Enum types are implicitly signed on Windows, so check if there are any
@@ -12601,8 +12626,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (const EnumType *SourceEnum = Source->getAs<EnumType>())
     if (const EnumType *TargetEnum = Target->getAs<EnumType>())
-      if (SourceEnum->getDecl()->hasNameForLinkage() &&
-          TargetEnum->getDecl()->hasNameForLinkage() &&
+      if (SourceEnum->getOriginalDecl()->hasNameForLinkage() &&
+          TargetEnum->getOriginalDecl()->hasNameForLinkage() &&
           SourceEnum != TargetEnum) {
         if (SourceMgr.isInSystemMacro(CC))
           return;
@@ -15126,10 +15151,9 @@ static bool isLayoutCompatible(const ASTContext &C, const EnumDecl *ED1,
 static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
                                const FieldDecl *Field2,
                                bool AreUnionMembers = false) {
-  [[maybe_unused]] const Type *Field1Parent =
-      Field1->getParent()->getTypeForDecl();
-  [[maybe_unused]] const Type *Field2Parent =
-      Field2->getParent()->getTypeForDecl();
+#ifndef NDEBUG
+  CanQualType Field1Parent = C.getCanonicalTagType(Field1->getParent());
+  CanQualType Field2Parent = C.getCanonicalTagType(Field2->getParent());
   assert(((Field1Parent->isStructureOrClassType() &&
            Field2Parent->isStructureOrClassType()) ||
           (Field1Parent->isUnionType() && Field2Parent->isUnionType())) &&
@@ -15138,6 +15162,7 @@ static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
   assert(((!AreUnionMembers && Field1Parent->isStructureOrClassType()) ||
           (AreUnionMembers && Field1Parent->isUnionType())) &&
          "AreUnionMembers should be 'true' for union fields (only).");
+#endif
 
   if (!isLayoutCompatible(C, Field1->getType(), Field2->getType()))
     return false;
@@ -15242,16 +15267,16 @@ static bool isLayoutCompatible(const ASTContext &C, QualType T1, QualType T2) {
     return false;
 
   if (TC1 == Type::Enum) {
-    return isLayoutCompatible(C,
-                              cast<EnumType>(T1)->getDecl(),
-                              cast<EnumType>(T2)->getDecl());
+    return isLayoutCompatible(
+        C, cast<EnumType>(T1)->getOriginalDecl()->getDefinitionOrSelf(),
+        cast<EnumType>(T2)->getOriginalDecl()->getDefinitionOrSelf());
   } else if (TC1 == Type::Record) {
     if (!T1->isStandardLayoutType() || !T2->isStandardLayoutType())
       return false;
 
-    return isLayoutCompatible(C,
-                              cast<RecordType>(T1)->getDecl(),
-                              cast<RecordType>(T2)->getDecl());
+    return isLayoutCompatible(
+        C, cast<RecordType>(T1)->getOriginalDecl()->getDefinitionOrSelf(),
+        cast<RecordType>(T2)->getOriginalDecl()->getDefinitionOrSelf());
   }
 
   return false;
@@ -15605,7 +15630,9 @@ void Sema::RefersToMemberWithReducedAlignment(
       return;
     if (ME->isArrow())
       BaseType = BaseType->getPointeeType();
-    RecordDecl *RD = BaseType->castAs<RecordType>()->getDecl();
+    RecordDecl *RD = BaseType->castAs<RecordType>()
+                         ->getOriginalDecl()
+                         ->getDefinitionOrSelf();
     if (RD->isInvalidDecl())
       return;
 
@@ -15650,7 +15677,7 @@ void Sema::RefersToMemberWithReducedAlignment(
 
   // Compute the CompleteObjectAlignment as the alignment of the whole chain.
   CharUnits CompleteObjectAlignment = Context.getTypeAlignInChars(
-      ReverseMemberChain.back()->getParent()->getTypeForDecl());
+      Context.getCanonicalTagType(ReverseMemberChain.back()->getParent()));
 
   // The base expression of the innermost MemberExpr may give
   // stronger guarantees than the class containing the member.
@@ -15680,9 +15707,9 @@ void Sema::RefersToMemberWithReducedAlignment(
       if (FDI->hasAttr<PackedAttr>() ||
           FDI->getParent()->hasAttr<PackedAttr>()) {
         FD = FDI;
-        Alignment = std::min(
-            Context.getTypeAlignInChars(FD->getType()),
-            Context.getTypeAlignInChars(FD->getParent()->getTypeForDecl()));
+        Alignment = std::min(Context.getTypeAlignInChars(FD->getType()),
+                             Context.getTypeAlignInChars(
+                                 Context.getCanonicalTagType(FD->getParent())));
         break;
       }
     }

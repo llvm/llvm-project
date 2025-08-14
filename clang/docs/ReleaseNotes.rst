@@ -68,12 +68,16 @@ ABI Changes in This Version
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
+- How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
+  ElaboratedTypes. The value becomes unused, and all the existing users should
+  expect the former underlying type to be reported instead.
 
 What's New in Clang |release|?
 ==============================
@@ -111,13 +115,13 @@ Non-comprehensive list of changes in this release
 
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
-- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for 
-  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display 
-  the reason for trapping if the trap is reached. The string is currently encoded in the debug 
-  info as an artificial frame that claims to be inlined at the trap location. The function used 
-  for the artificial frame is an artificial function whose name encodes the reason for trapping. 
-  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future. 
-  This feature is enabled by default but can be disabled by compiling with 
+- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for
+  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display
+  the reason for trapping if the trap is reached. The string is currently encoded in the debug
+  info as an artificial frame that claims to be inlined at the trap location. The function used
+  for the artificial frame is an artificial function whose name encodes the reason for trapping.
+  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future.
+  This feature is enabled by default but can be disabled by compiling with
   ``-fno-sanitize-annotate-debug-info-traps``.
 
 - ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
@@ -394,7 +398,7 @@ Improvements to Clang's diagnostics
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
-- Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
+- Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
@@ -451,6 +455,9 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
+- Fixed ElaboratedTypes appearing within NestedNameSpecifier, which was not a
+  legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -529,6 +536,8 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Removed elaboratedType matchers, and related nested name specifier changes,
+  following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
 
@@ -553,7 +562,7 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
-- Fixed a crash in the static analyzer that when the expression in an 
+- Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 
