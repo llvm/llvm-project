@@ -9358,6 +9358,20 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     *Lit = APValue();
   } else {
     assert(!Info.getLangOpts().CPlusPlus);
+
+    // TO_UPSTREAM(BoundsSafety) ON
+    // BoundsSafety can reuse the same CLE when emitting a bounds-check
+    // condition. If the state already exist, reset it and evaluate again.
+    // FIXME: Same as above, we could re-use the previously evaluated value.
+    APValue *Val;
+    if (Info.getLangOpts().BoundsSafety &&
+        (Val = Info.CurrentCall->getCurrentTemporary(E))) {
+      Lit = Val;
+      Result.set(E);
+      *Lit = APValue();
+    } else
+    // TO_UPSTREAM(BoundsSafety) OFF
+
     Lit = &Info.CurrentCall->createTemporary(E, E->getInitializer()->getType(),
                                              ScopeKind::Block, Result);
   }

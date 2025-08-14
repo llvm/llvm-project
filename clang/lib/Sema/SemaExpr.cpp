@@ -16371,7 +16371,8 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
 // C99 6.5.[13,14]
 inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                            SourceLocation Loc,
-                                           BinaryOperatorKind Opc) {
+                                           BinaryOperatorKind Opc,
+                                           bool Diagnose) {
   // Check vector operands differently.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
@@ -16402,7 +16403,8 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // Diagnose cases where the user write a logical and/or but probably meant a
   // bitwise one.  We do this when the LHS is a non-bool integer and the RHS
   // is a constant.
-  if (!EnumConstantInBoolContext && LHS.get()->getType()->isIntegerType() &&
+  if (Diagnose && !EnumConstantInBoolContext &&
+      LHS.get()->getType()->isIntegerType() &&
       !LHS.get()->getType()->isBooleanType() &&
       RHS.get()->getType()->isIntegerType() && !RHS.get()->isValueDependent() &&
       // Don't warn in macros or template instantiations.
@@ -18107,7 +18109,8 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 
 ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
                                     BinaryOperatorKind Opc, Expr *LHSExpr,
-                                    Expr *RHSExpr, bool ForFoldExpression) {
+                                    Expr *RHSExpr, bool ForFoldExpression,
+                                    bool ForBoundsCheckExpression) {
   if (getLangOpts().CPlusPlus11 && isa<InitListExpr>(RHSExpr)) {
     // The syntax only allows initializer lists on the RHS of assignment,
     // so we don't need to worry about accepting invalid code for
@@ -18264,7 +18267,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_LAnd:
   case BO_LOr:
     ConvertHalfVec = true;
-    ResultTy = CheckLogicalOperands(LHS, RHS, OpLoc, Opc);
+    ResultTy = CheckLogicalOperands(LHS, RHS, OpLoc, Opc,
+                                    /*Diagnose=*/!ForBoundsCheckExpression);
     break;
   case BO_MulAssign:
   case BO_DivAssign:
@@ -26025,7 +26029,9 @@ ExprResult BoundsCheckBuilder::BuildImplicitPointerArith(Sema &S,
     Pointer = CastResult.get();
   }
 
-  return S.CreateBuiltinBinOp(SourceLocation(), Opc, Pointer, RHS);
+  return S.CreateBuiltinBinOp(SourceLocation(), Opc, Pointer, RHS,
+                              /*ForFoldExpression=*/false,
+                              /*ForBoundsCheckExpression=*/true);
 }
 
 OpaqueValueExpr *BoundsCheckBuilder::OpaqueWrap(Sema &S, Expr *E) {
@@ -26044,7 +26050,9 @@ bool BoundsCheckBuilder::BuildIndexBounds(Sema &S, Expr *Min, Expr *Max,
     if (!(Max = Upper.get()))
       return false;
   }
-  ExprResult Count = S.CreateBuiltinBinOp(Max->getBeginLoc(), BO_Sub, Max, Min);
+  ExprResult Count = S.CreateBuiltinBinOp(Max->getBeginLoc(), BO_Sub, Max, Min,
+                                          /*ForFoldExpression=*/false,
+                                          /*ForBoundsCheckExpression=*/true);
   if (!Count.get())
     return false;
 
@@ -26067,7 +26075,8 @@ bool BoundsCheckBuilder::BuildIndexBounds(Sema &S, Expr *Min, Expr *Max,
     R.push_back(OpaqueStart);
     IsSigned |= OpaqueStart->getType()->isSignedIntegerOrEnumerationType();
     ExprResult CountTotal = S.CreateBuiltinBinOp(
-        OpaqueStart->getBeginLoc(), BO_Add, OpaqueStart, AccessCount);
+        OpaqueStart->getBeginLoc(), BO_Add, OpaqueStart, AccessCount,
+        /*ForFoldExpression=*/false, /*ForBoundsCheckExpression=*/true);
     if (!(AccessCount = CountTotal.get()))
       return false;
   }
@@ -26252,7 +26261,9 @@ ExprResult BoundsCheckBuilder::Build(Sema &S, Expr *GuardedValue) {
     if (NullCheck.isInvalid())
       return ExprError();
     // !Ptr || 0 <= Count <= (Upper - Ptr)
-    Cond = S.CreateBuiltinBinOp(Loc, BO_LOr, NullCheck.get(), Cond.get());
+    Cond = S.CreateBuiltinBinOp(Loc, BO_LOr, NullCheck.get(), Cond.get(),
+                                /*ForFoldExpression=*/false,
+                                /*ForBoundsCheckExpression=*/true);
     if (Cond.isInvalid())
       return ExprError();
   }
@@ -26267,8 +26278,10 @@ ExprResult BoundsCheckBuilder::Build(Sema &S, Expr *GuardedValue) {
     ExprResult BasePtrBoundsCheck = BuildLEChecks(S, Loc, Bounds, OVEs);
     if (!BasePtrBoundsCheck.get())
       return ExprError();
-    Cond = S.CreateBuiltinBinOp(
-        Loc, BO_LAnd, BasePtrBoundsCheck.get(), Cond.get());
+    Cond =
+        S.CreateBuiltinBinOp(Loc, BO_LAnd, BasePtrBoundsCheck.get(), Cond.get(),
+                             /*ForFoldExpression=*/false,
+                             /*ForBoundsCheckExpression=*/true);
     if (!Cond.get())
       return ExprError();
   }
@@ -26308,15 +26321,18 @@ ExprResult BoundsCheckBuilder::BuildLEChecks(
       Bound = OVEs.back();
     }
 
-    ExprResult LEBounds = S.CreateBuiltinBinOp(Loc, BO_LE, Bound, Next);
+    ExprResult LEBounds = S.CreateBuiltinBinOp(
+        Loc, BO_LE, Bound, Next, /*ForFoldExpression=*/false,
+        /*ForBoundsCheckExpression=*/true);
     if (LEBounds.isInvalid())
       return ExprError();
 
     if (!CondAccum) {
       CondAccum = LEBounds.get();
     } else {
-      ExprResult CondAnd = S.CreateBuiltinBinOp(Loc, BO_LAnd,
-                                                CondAccum, LEBounds.get());
+      ExprResult CondAnd = S.CreateBuiltinBinOp(
+          Loc, BO_LAnd, CondAccum, LEBounds.get(), /*ForFoldExpression=*/false,
+          /*ForBoundsCheckExpression=*/true);
       if (CondAnd.isInvalid())
         return ExprError();
       CondAccum = CondAnd.get();

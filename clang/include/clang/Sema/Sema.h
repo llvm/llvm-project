@@ -7901,7 +7901,8 @@ public:
   /// built-in operations; ActOnBinOp handles overloaded operators.
   ExprResult CreateBuiltinBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
                                 Expr *LHSExpr, Expr *RHSExpr,
-                                bool ForFoldExpression = false);
+                                bool ForFoldExpression = false,
+                                bool ForBoundsCheckExpression = false);
   void LookupBinOp(Scope *S, SourceLocation OpLoc, BinaryOperatorKind Opc,
                    UnresolvedSetImpl &Functions);
 
@@ -8612,7 +8613,7 @@ public:
       BinaryOperatorKind Opc);
   QualType CheckLogicalOperands( // C99 6.5.[13,14]
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
-      BinaryOperatorKind Opc);
+      BinaryOperatorKind Opc, bool Diagnose = true);
   // CheckAssignmentOperands is used for both simple and compound assignment.
   // For simple assignment, pass both expressions and a null converted type.
   // For compound assignment, pass both expressions and the converted type.

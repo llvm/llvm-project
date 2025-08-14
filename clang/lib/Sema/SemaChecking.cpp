@@ -14129,6 +14129,14 @@ public:
     SequenceExpressionsInOrder(PLIE->getInitExprs());
   }
 
+  void VisitMaterializeSequenceExpr(const MaterializeSequenceExpr *MSE) {
+    Visit(MSE->getWrappedExpr());
+  }
+
+  void VisitBoundsCheckExpr(const BoundsCheckExpr *BCE) {
+    Visit(BCE->getGuardedExpr());
+  }
+
 private:
   void SequenceExpressionsInOrder(ArrayRef<const Expr *> ExpressionList) {
     SmallVector<SequenceTree::Seq, 32> Elts;
