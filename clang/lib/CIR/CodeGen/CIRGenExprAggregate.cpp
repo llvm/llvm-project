@@ -73,7 +73,7 @@ public:
     CIRGenFunction::StmtExprEvaluation eval(cgf);
     Address retAlloca =
         cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
-    cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca, dest);
+    (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca, dest);
   }
 
   void VisitDeclRefExpr(DeclRefExpr *e) { emitAggLoadOfLValue(e); }

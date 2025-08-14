@@ -490,13 +490,10 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
   // We start with function level scope for variables.
   SymTableScopeTy varScope(symbolTable);
 
-  auto result = mlir::LogicalResult::success();
   if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
-    emitCompoundStmtWithoutScope(*block);
-  else
-    result = emitStmt(body, /*useCurrentScope=*/true);
+    return emitCompoundStmtWithoutScope(*block);
 
-  return result;
+  return emitStmt(body, /*useCurrentScope=*/true);
 }
 
 static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
