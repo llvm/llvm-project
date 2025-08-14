@@ -1,5 +1,4 @@
 // Test big archive recognition and error handling in llvm-symbolizer
-// REQUIRES: system-linux || system-aix
 
 // Generate object files
 // RUN: yaml2obj -o %t-32.o %S/Inputs/big-archive-32.yaml

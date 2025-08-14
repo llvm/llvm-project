@@ -1,5 +1,4 @@
 // Test archive member recognition by name (ELF format)
-// REQUIRES: system-linux || system-aix
 
 // Generate object files from YAML
 // RUN: yaml2obj -o %t-1.o %S/Inputs/big-archive-elf-1.yaml
