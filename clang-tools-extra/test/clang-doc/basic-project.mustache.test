@@ -384,6 +384,10 @@ HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
 HTML-CALC:                        <p> double The result of a / b.</p>
 HTML-CALC:                        <p></p>
+HTML-CALC:                    <h3>Throws</h3>
+HTML-CALC:                    <div>
+HTML-CALC:                        <b></b>     <div>
+HTML-CALC:                        <p>if b is zero.</p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
