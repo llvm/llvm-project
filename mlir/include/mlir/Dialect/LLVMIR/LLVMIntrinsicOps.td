@@ -1104,7 +1104,7 @@ def LLVM_masked_expandload
         auto namedAttr = $_builder.getNamedAttr("llvm.align", alignmentAttr);
         SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
         auto alignDictAttr = $_builder.getDictionaryAttr(attrs);
-        callArgs = $_builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
+        callArgs = $_builder.getArrayAttr({alignDictAttr, emptyDictAttr, emptyDictAttr});
       }
       build($_builder, $_state, resTy, ptr, mask, passthru, /*arg_attrs=*/callArgs, /*res_attrs=*/nullptr);
     }]>
