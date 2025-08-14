@@ -5494,7 +5494,6 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
                                     RecordDecl *AnonRecord, AccessSpecifier AS,
                                     StorageClass SC,
                                     SmallVectorImpl<NamedDecl *> &Chaining) {
-
   bool Invalid = false;
 
   // Look every FieldDecl and IndirectFieldDecl with a name.
@@ -5507,7 +5506,7 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
       //   distinct from the names of any other entity in the
       //   scope in which the anonymous union is declared.
 
-      const bool FieldInvalid = CheckAnonMemberRedeclaration(
+      bool FieldInvalid = CheckAnonMemberRedeclaration(
           SemaRef, S, Owner, VD->getDeclName(), VD->getLocation(),
           AnonRecord->isUnion(), SC);
       if (FieldInvalid)
