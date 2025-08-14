@@ -3,9 +3,9 @@
 
 #define __cfi_salt(S) __attribute__((cfi_salt(S)))
 
-int bad1() __cfi_salt(); // expected-error{{'cfi_salt' attribute takes one argument}}
-int bad2() __cfi_salt(42); // expected-error{{expected string literal as argument of 'cfi_salt' attribute}}
-int bad3() __attribute__((cfi_salt("a", "b", "c"))); // expected-error{{'cfi_salt' attribute takes one argument}}
+int bad1(void) __cfi_salt(); // expected-error{{'cfi_salt' attribute takes one argument}}
+int bad2(void) __cfi_salt(42); // expected-error{{expected string literal as argument of 'cfi_salt' attribute}}
+int bad3(void) __attribute__((cfi_salt("a", "b", "c"))); // expected-error{{'cfi_salt' attribute takes one argument}}
 
 
 int foo(int a, int b) __cfi_salt("pepper"); // ok
