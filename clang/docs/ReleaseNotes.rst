@@ -180,7 +180,6 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
-
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
 - `-Wunreachable-code`` now diagnoses tautological or contradictory
@@ -188,89 +187,6 @@ Bug Fixes in This Version
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
-- Clang now outputs correct values when #embed data contains bytes with negative
-  signed char values (#GH102798).
-- Fixed a crash when merging named enumerations in modules (#GH114240).
-- Fixed rejects-valid problem when #embed appears in std::initializer_list or
-  when it can affect template argument deduction (#GH122306).
-- Fix crash on code completion of function calls involving partial order of function templates
-  (#GH125500).
-- Fixed clang crash when #embed data does not fit into an array
-  (#GH128987).
-- Non-local variable and non-variable declarations in the first clause of a ``for`` loop in C are no longer incorrectly
-  considered an error in C23 mode and are allowed as an extension in earlier language modes.
-
-- Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
-- Fixed a modules crash where exception specifications were not propagated properly (#GH121245, relanded in #GH129982)
-- Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
-  ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
-- Fixed a modules crash where an explicit Constructor was deserialized. (#GH132794)
-- Defining an integer literal suffix (e.g., ``LL``) before including
-  ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
-  when using the ``INTn_C`` macros. (#GH85995)
-- Fixed an assertion failure in the expansion of builtin macros like ``__has_embed()`` with line breaks before the
-  closing paren. (#GH133574)
-- Fixed a crash in error recovery for expressions resolving to templates. (#GH135621)
-- Clang no longer accepts invalid integer constants which are too large to fit
-  into any (standard or extended) integer type when the constant is unevaluated.
-  Merely forming the token is sufficient to render the program invalid. Code
-  like this was previously accepted and is now rejected (#GH134658):
-  .. code-block:: c
-
-    #if 1 ? 1 : 999999999999999999999
-    #endif
-- ``#embed`` directive now diagnoses use of a non-character file (device file)
-  such as ``/dev/urandom`` as an error. This restriction may be relaxed in the
-  future. See (#GH126629).
-- Fixed a clang 20 regression where diagnostics attached to some calls to member functions
-  using C++23 "deducing this" did not have a diagnostic location (#GH135522)
-
-- Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
-- Fixed a crash when ``#embed`` appears as a part of a failed constant
-  evaluation. The crashes were happening during diagnostics emission due to
-  unimplemented statement printer. (#GH132641)
-- Fixed visibility calculation for template functions. (#GH103477)
-- Fixed a bug where an attribute before a ``pragma clang attribute`` or
-  ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
-  the invalid attribute location appropriately. (#GH137861)
-- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an
-  ``#include`` directive. (#GH138094)
-- Fixed a crash during constant evaluation involving invalid lambda captures
-  (#GH138832)
-- Fixed compound literal is not constant expression inside initializer list
-  (#GH87867)
-- Fixed a crash when instantiating an invalid dependent friend template specialization.
-  (#GH139052)
-- Fixed a crash with an invalid member function parameter list with a default
-  argument which contains a pragma. (#GH113722)
-- Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
-- Fixed an assertion failure in constant compound literal statements. (#GH139160)
-- Fix crash due to unknown references and pointer implementation and handling of
-  base classes. (GH139452)
-- Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
-- Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
-- Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
-- Constant evaluation now correctly runs the destructor of a variable declared in
-  the second clause of a C-style ``for`` loop. (#GH139818)
-- Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
-- Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
-- Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
-- Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
-- Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
-- Clang doesn't erroneously inject a ``static_assert`` macro in ms-compatibility and
-  -std=c99 mode. This resulted in deletion of ``-W/Wno-microsoft-static-assert``
-  flag and diagnostic because the macro injection was used to emit this warning.
-  Unfortunately there is no other good way to diagnose usage of ``static_assert``
-  macro without inclusion of ``<assert.h>``.
-- In C23, something like ``[[/*possible attributes*/]];`` is an attribute
-  declaration, not a statement. So it is not allowed by the syntax in places
-  where a statement is required, specifically as the secondary block of a
-  selection or iteration statement. This differs from C++, since C++ allows
-  declaration statements. Clang now emits a warning for these patterns. (#GH141659)
-- Fixed false positives for redeclaration errors of using enum in
-  nested scopes. (#GH147495)
-- Fixed a failed assertion with an operator call expression which comes from a
-  macro expansion when performing analysis for nullability attributes. (#GH138371)
 - Fixed scope of typedefs present inside a template class. (#GH91451)
 
 Bug Fixes to Compiler Builtins
