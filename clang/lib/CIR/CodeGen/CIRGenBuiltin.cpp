@@ -312,6 +312,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateright64:
     return emitRotate(e, /*isRotateLeft=*/false);
 
+  case Builtin::BI__builtin_return_address:
+  case Builtin::BI__builtin_frame_address: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Attribute levelAttr = ConstantEmitter(*this).emitAbstract(
+        e->getArg(0), e->getArg(0)->getType());
+    uint64_t level = mlir::cast<cir::IntAttr>(levelAttr).getUInt();
+    if (builtinID == Builtin::BI__builtin_return_address) {
+      return RValue::get(builder.create<cir::ReturnAddrOp>(
+          loc, builder.getUInt32(level, loc)));
+    }
+    return RValue::get(
+        builder.create<cir::FrameAddrOp>(loc, builder.getUInt32(level, loc)));
+  }
+
   case Builtin::BI__builtin_trap:
     emitTrap(loc, /*createNewBlock=*/true);
     return RValue::get(nullptr);
