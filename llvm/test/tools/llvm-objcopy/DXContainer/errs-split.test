@@ -1,0 +1,21 @@
+## Check that llvm-objcopy reports a suitable error when it
+## can't find the section to split
+
+## We can't have multiple DXIL parts.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: not llvm-objcopy %t1 --split-section=UNKNOWN=%t.unknown.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
+
+# ERROR1: error: '[[FILE]]': part 'UNKNOWN' not found
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+Parts:
+  - Name:            FKE0
+    Size:            8
+...
