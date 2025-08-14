@@ -37,7 +37,7 @@ bool misaligned = false;
 void *Thread(void *unused) {
   big_object x;
   uintptr_t alignment = (uintptr_t)&x % alignof(big_object);
-a
+
   if (alignment != 0)
     misaligned = true;
 
