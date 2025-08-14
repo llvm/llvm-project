@@ -246,9 +246,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
-    // Set avgceilu as legal for i8x16 and i16x8
-    // and isel will convert to AVGR_U w/ tablegen
-    setOperationAction({ISD::AVGCEILU}, {MVT::v8i16, MVT::v16i8}, Legal);
+    setOperationAction(ISD::AVGCEILU, {MVT::v8i16, MVT::v16i8}, Legal);
 
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
