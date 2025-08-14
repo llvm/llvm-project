@@ -1,6 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: register CBuffer (space=666, register=2) does not have a binding in the Root Signature
-; Root Signature(RootConstants(num32BitConstants=4, b2))
+; CHECK: error: register CBV (space=666, register=2) does not have a binding in the Root Signature
 
 %__cblayout_CB = type <{ float }>
 
@@ -8,9 +7,6 @@
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
-; cbuffer CB : register(b2, space666) {
-;  float a;
-; }
   %CB = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 666, i32 2, i32 1, i32 0, i1 false, ptr nonnull @CB.str)
   ret void
 }
