@@ -169,22 +169,41 @@ async function getDAPArguments(
 async function getDAPEnvironment(
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
-): Promise<string[]> {
+): Promise<{ [key: string]: string }> {
   const debugConfigEnv = configuration.debugAdapterEnv;
   if (debugConfigEnv) {
     if (
-      Array.isArray(debugConfigEnv) ||
-      typeof debugConfigEnv !== "object" ||
-      Object.values(debugConfigEnv).findIndex(
-        (entry) => typeof entry !== "string",
-      ) !== -1
+      (typeof debugConfigEnv !== "object" ||
+
+        Object.values(debugConfigEnv).findIndex(
+          (entry) => typeof entry !== "string",
+        ) !== -1) &&
+      (!Array.isArray(debugConfigEnv) ||
+        debugConfigEnv.findIndex(
+          (entry) =>
+            typeof entry !== "string" || !/^((\\w+=.*)|^\\w+)$/.test(entry),
+        ) !== -1)
     ) {
       throw new ErrorWithNotification(
-        "The debugAdapterEnv property must be a dictionary with string values. Please update your launch configuration",
+        "The debugAdapterEnv property must be a dictionary of string keys and values OR an array of string values. Please update your launch configuration",
         new ConfigureButton(),
       );
     }
-    return debugConfigEnv;
+    // Transform, so that the returned value is always a dictionary.
+    if (Array.isArray(debugConfigEnv)) {
+      const ret: { [key: string]: string } = {};
+      for (const envVar of debugConfigEnv as string[]) {
+        const equalSignPos = envVar.search("=");
+        if (equalSignPos >= 0) {
+          ret[envVar.substr(0, equalSignPos)] = envVar.substr(equalSignPos + 1);
+        } else {
+          ret[envVar] = "";
+        }
+      }
+      return ret;
+    } else {
+      return debugConfigEnv;
+    }
   }
 
   const config = vscode.workspace.workspaceFile
