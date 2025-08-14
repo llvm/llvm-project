@@ -111,7 +111,7 @@ static bool isZAorZT0RegOp(const TargetRegisterInfo &TRI,
 /// to where any code required to change the ZA state should be inserted.
 static std::pair<ZAState, MachineBasicBlock::iterator>
 getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
-                     bool ZALiveAtReturn) {
+                     bool ZAOffAtReturn) {
   MachineBasicBlock::iterator InsertPt(MI);
 
   if (MI.getOpcode() == AArch64::InOutZAUsePseudo)
@@ -121,7 +121,7 @@ getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
     return {ZAState::LOCAL_SAVED, std::prev(InsertPt)};
 
   if (MI.isReturn())
-    return {ZALiveAtReturn ? ZAState::ACTIVE : ZAState::OFF, InsertPt};
+    return {ZAOffAtReturn ? ZAState::OFF : ZAState::ACTIVE, InsertPt};
 
   for (auto &MO : MI.operands()) {
     if (isZAorZT0RegOp(TRI, MO))
@@ -257,7 +257,7 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = GetPhysLiveRegs();
       auto [NeededState, InsertPt] = getZAStateBeforeInst(
-          *TRI, MI, /*ZALiveAtReturn=*/SMEFnAttrs.hasSharedZAInterface());
+          *TRI, MI, /*ZAOffAtReturn=*/SMEFnAttrs.hasPrivateZAInterface());
       assert((InsertPt == MBBI ||
               InsertPt->getOpcode() == AArch64::ADJCALLSTACKDOWN) &&
              "Unexpected state change insertion point!");
@@ -287,7 +287,7 @@ void MachineSMEABI::assignBundleZAStates() {
     for (unsigned BlockID : Bundles->getBlocks(I)) {
       LLVM_DEBUG(dbgs() << "- bb." << BlockID);
 
-      BlockInfo &Block = State.Blocks[BlockID];
+      const BlockInfo &Block = State.Blocks[BlockID];
       if (Block.Insts.empty()) {
         LLVM_DEBUG(dbgs() << " (no state preference)\n");
         continue;
@@ -332,7 +332,7 @@ void MachineSMEABI::assignBundleZAStates() {
 
 void MachineSMEABI::insertStateChanges() {
   for (MachineBasicBlock &MBB : *MF) {
-    BlockInfo &Block = State.Blocks[MBB.getNumber()];
+    const BlockInfo &Block = State.Blocks[MBB.getNumber()];
     ZAState InState =
         State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/false)];
 

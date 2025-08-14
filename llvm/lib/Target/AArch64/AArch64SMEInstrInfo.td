@@ -94,7 +94,7 @@ def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
 // New SME ABI lowering ISD nodes/pseudos (-aarch64-new-sme-abi)
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 1 in {
+let hasSideEffects = 1, isMeta = 1 in {
   def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
