@@ -106,6 +106,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
+  case PPC::BI__builtin_ppc_bcdsetsign:
   case PPC::BI__builtin_ppc_national2packed:
   case PPC::BI__builtin_ppc_packed2zoned:
   case PPC::BI__builtin_ppc_zoned2packed:
@@ -118,7 +119,6 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3);
   case PPC::BI__builtin_tbegin:
   case PPC::BI__builtin_tend:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 1);
   case PPC::BI__builtin_tsr:
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 7);
   case PPC::BI__builtin_tabortwc:
