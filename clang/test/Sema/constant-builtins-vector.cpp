@@ -865,6 +865,8 @@ static_assert(__builtin_elementwise_max(1, 2) == 2);
 static_assert(__builtin_elementwise_max(-1, 1) == 1);
 static_assert(__builtin_elementwise_max(1U, 2U) == 2U);
 static_assert(__builtin_elementwise_max(~0U, 0U) == ~0U);
+static_assert(__builtin_fabs(__builtin_elementwise_max(1.0f, 2.0f) - 2.0f) < 1e-6);
+static_assert(__builtin_fabs(__builtin_elementwise_max(-1.0f, 1.0f) - 1.0f) < 1e-6);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_max((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFF03FE04 : 0x04FE03FF ));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_max((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x04030304U);
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_max((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFF0003FFFE0004 : 0x0004FFFE0003FFFF));
@@ -873,6 +875,27 @@ static_assert(__builtin_elementwise_min(1, 2) == 1);
 static_assert(__builtin_elementwise_min(-1, 1) == -1);
 static_assert(__builtin_elementwise_min(1U, 2U) == 1U);
 static_assert(__builtin_elementwise_min(~0U, 0U) == 0U);
+static_assert(__builtin_fabs(__builtin_elementwise_min(1.0f, 2.0f) - 1.0f) < 1e-6);
+static_assert(__builtin_fabs(__builtin_elementwise_min(-1.0f, 1.0f) - (-1.0f)) < 1e-6);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFC02FD01 : 0x01FD02FC));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x01020201U);
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_min((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFC0002FFFD0001 : 0x0001FFFD0002FFFC));
+
+#define CHECK_VECTOR4_FLOAT_EQ(v1, v2) \
+    static_assert(__builtin_fabs((v1)[0] - (v2)[0]) < 1e-6 &&      \
+                  __builtin_fabs((v1)[1] - (v2)[1]) < 1e-6 &&      \
+                  __builtin_fabs((v1)[2] - (v2)[2]) < 1e-6 &&      \
+                  __builtin_fabs((v1)[3] - (v2)[3]) < 1e-6);
+CHECK_VECTOR4_FLOAT_EQ(
+    (__builtin_elementwise_max((vector4float){1.0f, -2.0f, 3.0f, -4.0f}, (vector4float){4.0f, -3.0f, 2.0f, -1.0f})),
+    ((vector4float){4.0f, -2.0f, 3.0f, -1.0f}))
+CHECK_VECTOR4_FLOAT_EQ(
+    (__builtin_elementwise_max((vector4double){1.0f, -2.0f, 3.0f, -4.0f}, (vector4double){4.0f, -3.0f, 2.0f, -1.0f})),
+    ((vector4double){4.0f, -2.0f, 3.0f, -1.0f}))
+CHECK_VECTOR4_FLOAT_EQ(
+    (__builtin_elementwise_min((vector4float){1.0f, -2.0f, 3.0f, -4.0f}, (vector4float){4.0f, -3.0f, 2.0f, -1.0f})),
+    ((vector4float){1.0f, -3.0f, 2.0f, -4.0f}))
+CHECK_VECTOR4_FLOAT_EQ(
+    (__builtin_elementwise_max((vector4double){1.0f, -2.0f, 3.0f, -4.0f}, (vector4double){4.0f, -3.0f, 2.0f, -1.0f})),
+    ((vector4double){4.0f, -2.0f, 3.0f, -1.0f}))
+#undef CHECK_VECTOR4_FLOAT_EQ

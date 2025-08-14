@@ -11697,28 +11697,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
 
-    if (!DestEltTy->isIntegerType())
-      return false;
-
     unsigned SourceLen = SourceLHS.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
 
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
-      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
-      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
-      switch (E->getBuiltinCallee()) {
-      case Builtin::BI__builtin_elementwise_max:
-        ResultElements.push_back(
-            APValue(APSInt(std::max(LHS, RHS),
-                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
-        break;
-      case Builtin::BI__builtin_elementwise_min:
-        ResultElements.push_back(
-            APValue(APSInt(std::min(LHS, RHS),
-                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
-        break;
+      APValue LHS = SourceLHS.getVectorElt(EltNum);
+      APValue RHS = SourceRHS.getVectorElt(EltNum);
+      APValue ResultElt;
+      if (DestEltTy->isIntegerType()) {
+        APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+        APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+        switch (E->getBuiltinCallee()) {
+        case Builtin::BI__builtin_elementwise_max:
+          ResultElt =
+              APValue(APSInt(std::max(LHS, RHS),
+                             DestEltTy->isUnsignedIntegerOrEnumerationType()));
+          break;
+        case Builtin::BI__builtin_elementwise_min:
+          ResultElt =
+              APValue(APSInt(std::min(LHS, RHS),
+                             DestEltTy->isUnsignedIntegerOrEnumerationType()));
+          break;
+        }
+      } else if (DestEltTy->isRealFloatingType()) {
+        APFloat LHS = SourceLHS.getVectorElt(EltNum).getFloat();
+        APFloat RHS = SourceRHS.getVectorElt(EltNum).getFloat();
+        switch (E->getBuiltinCallee()) {
+        case Builtin::BI__builtin_elementwise_max:
+          ResultElt = APValue(maxnum(LHS, RHS));
+          break;
+        case Builtin::BI__builtin_elementwise_min:
+          ResultElt = APValue(minnum(LHS, RHS));
+          break;
+        }
       }
+      ResultElements.push_back(std::move(ResultElt));
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
@@ -15917,7 +15931,8 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
-  case Builtin::BI__builtin_fmaxf128: {
+  case Builtin::BI__builtin_fmaxf128:
+  case Builtin::BI__builtin_elementwise_max: {
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
@@ -15930,7 +15945,8 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
-  case Builtin::BI__builtin_fminf128: {
+  case Builtin::BI__builtin_fminf128:
+  case Builtin::BI__builtin_elementwise_min: {
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))

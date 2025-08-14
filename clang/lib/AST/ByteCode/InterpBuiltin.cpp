@@ -2339,20 +2339,13 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 2);
 
   QualType Arg0Type = Call->getArg(0)->getType();
+  QualType Arg1Type = Call->getArg(1)->getType();
 
-  // TODO: Support floating-point types.
-  if (!(Arg0Type->isIntegerType() ||
-        (Arg0Type->isVectorType() &&
-         Arg0Type->castAs<VectorType>()->getElementType()->isIntegerType())))
-    return false;
-
-  if (!Arg0Type->isVectorType()) {
-    assert(!Call->getArg(1)->getType()->isVectorType());
-    APSInt RHS = popToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
-    APSInt LHS = popToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
-    APInt Result;
+  if (Arg0Type->isIntegerType()) {
+    assert(Arg1Type->isIntegerType());
+    APSInt RHS = popToAPSInt(S.Stk, *S.getContext().classify(Arg1Type));
+    APSInt LHS = popToAPSInt(S.Stk, *S.getContext().classify(Arg0Type));
+    APSInt Result;
     if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
       Result = std::max(LHS, RHS);
     } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
@@ -2360,47 +2353,74 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
     } else {
       llvm_unreachable("Wrong builtin ID");
     }
+    pushInteger(S, Result, Call->getType());
+    return true;
+  }
 
-    pushInteger(S, APSInt(Result, !LHS.isSigned()), Call->getType());
+  if (Arg0Type->isRealFloatingType()) {
+    assert(Arg1Type->isRealFloatingType());
+    APFloat RHS = S.Stk.pop<Floating>().getAPFloat();
+    APFloat LHS = S.Stk.pop<Floating>().getAPFloat();
+    Floating Result = S.allocFloat(RHS.getSemantics());
+    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+      Result.copy(maxnum(LHS, RHS));
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+      Result.copy(minnum(LHS, RHS));
+    } else {
+      llvm_unreachable("Wrong builtin ID");
+    }
+    S.Stk.push<Floating>(Result);
     return true;
   }
 
   // Vector case.
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  assert(VT->getElementType() ==
-         Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
-  assert(VT->getNumElements() ==
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
-  assert(VT->getElementType()->isIntegralOrEnumerationType());
+  assert(Arg0Type->isVectorType() && Arg1Type->isVectorType());
+
+  const auto *VT = Arg0Type->castAs<VectorType>();
+  QualType ElemType = VT->getElementType();
+  unsigned NumElems = VT->getNumElements();
+
+  assert(ElemType == Arg1Type->castAs<VectorType>()->getElementType());
+  assert(NumElems == Arg1Type->castAs<VectorType>()->getNumElements());
+  assert(ElemType->isIntegerType() || ElemType->isRealFloatingType());
 
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
-  unsigned NumElems = VT->getNumElements();
+  PrimType ElemT = *S.getContext().classify(ElemType);
   for (unsigned I = 0; I != NumElems; ++I) {
-    APSInt Elem1;
-    APSInt Elem2;
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = RHS.elem<T>(I).toAPSInt();
-    });
+    if (ElemType->isIntegerType()) {
+      APSInt LHSInt;
+      APSInt RHSInt;
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        LHSInt = LHS.elem<T>(I).toAPSInt();
+        RHSInt = RHS.elem<T>(I).toAPSInt();
+      });
 
-    APSInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
-      Result = APSInt(std::max(Elem1, Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
-      Result = APSInt(std::min(Elem1, Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+      APSInt Result;
+      if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+        Result = std::max(LHSInt, RHSInt);
+      } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+        Result = std::min(LHSInt, RHSInt);
+      } else {
+        llvm_unreachable("Wrong builtin ID");
+      }
+
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(I) = static_cast<T>(Result); });
     } else {
-      llvm_unreachable("Wrong builtin ID");
+      APFloat RHSFloat = RHS.elem<Floating>(I).getAPFloat();
+      APFloat LHSFloat = LHS.elem<Floating>(I).getAPFloat();
+      Floating Result = S.allocFloat(RHSFloat.getSemantics());
+      if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+        Result.copy(maxnum(LHSFloat, RHSFloat));
+      } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+        Result.copy(minnum(LHSFloat, RHSFloat));
+      } else {
+        llvm_unreachable("Wrong builtin ID");
+      }
+      Dst.elem<Floating>(I) = Result;
     }
-
-    INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                            { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
   Dst.initializeAllElements();
 
