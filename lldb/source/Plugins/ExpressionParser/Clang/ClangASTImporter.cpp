@@ -389,7 +389,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
   case clang::Type::Record:
     return CanImport(qual_type->getAsCXXRecordDecl());
   case clang::Type::Enum:
-    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl());
+    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getDecl());
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
     const clang::ObjCObjectType *objc_class_type =
