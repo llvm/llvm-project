@@ -396,6 +396,7 @@ public:
     // initializations and destructions are processed in the correct sequence.
     for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
       CurrentBlockFacts.clear();
+      VisitedStmts.clear();
       for (unsigned I = 0; I < Block->size(); ++I) {
         const CFGElement &Element = Block->Elements[I];
         if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
@@ -406,6 +407,12 @@ public:
       }
       FactMgr.addBlockFacts(Block, CurrentBlockFacts);
     }
+  }
+
+  void Visit(const Stmt *S) {
+    if (!S || !VisitedStmts.insert(S).second)
+      return;
+    Base::Visit(S);
   }
 
   void VisitDeclStmt(const DeclStmt *DS) {
@@ -551,6 +558,7 @@ private:
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+  llvm::DenseSet<const Stmt *> VisitedStmts;
 };
 
 // ========================================================================= //
