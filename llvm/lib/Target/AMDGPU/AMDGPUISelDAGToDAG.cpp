@@ -76,6 +76,40 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
   return false;
 }
 
+static SDValue createVOP3PSrc32FromLo16(SDValue Lo, SDValue Src,
+                                        llvm::SelectionDAG *CurDAG,
+                                        const GCNSubtarget *Subtarget) {
+  if (!Subtarget->useRealTrue16Insts()) {
+    return Lo;
+  }
+
+  SDValue NewSrc;
+  SDLoc SL(Lo);
+
+  if (Lo->isDivergent()) {
+    SDValue Undef = SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
+                                                   SL, Lo.getValueType()),
+                            0);
+    const SDValue Ops[] = {
+        CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, SL, MVT::i32), Lo,
+        CurDAG->getTargetConstant(AMDGPU::lo16, SL, MVT::i16), Undef,
+        CurDAG->getTargetConstant(AMDGPU::hi16, SL, MVT::i16)};
+
+    NewSrc = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
+                                            Src.getValueType(), Ops),
+                     0);
+  } else {
+    // the S_MOV is needed since the Lo could still be a VGPR16.
+    // With S_MOV, isel insert a "sgpr32 = copy vgpr16" and we reply on
+    // the fixvgpr2sgprcopy pass to legalize it
+    NewSrc = SDValue(
+        CurDAG->getMachineNode(AMDGPU::S_MOV_B32, SL, Src.getValueType(), Lo),
+        0);
+  }
+
+  return NewSrc;
+}
+
 // Look through operations that obscure just looking at the low 16-bits of the
 // same register.
 static SDValue stripExtractLoElt(SDValue In) {
@@ -3412,8 +3446,10 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       // Really a scalar input. Just select from the low half of the register to
       // avoid packing.
 
-      if (VecSize == 32 || VecSize == Lo.getValueSizeInBits()) {
+      if (VecSize == Lo.getValueSizeInBits()) {
         Src = Lo;
+      } else if (VecSize == 32) {
+        Src = createVOP3PSrc32FromLo16(Lo, Src, CurDAG, Subtarget);
       } else {
         assert(Lo.getValueSizeInBits() == 32 && VecSize == 64);
 
