@@ -93,7 +93,7 @@ static Intrinsic::ID NonOverloadedCoroIntrinsics[] = {
     Intrinsic::coro_save,
     Intrinsic::coro_subfn_addr,
     Intrinsic::coro_suspend,
-    Intrinsic::coro_where
+    Intrinsic::coro_where,
 };
 
 bool coro::isSuspendBlock(BasicBlock *BB) {
