@@ -1845,37 +1845,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   DAG.RemoveDeadNodes();
 }
 
-static inline bool hasNoMergeProtection(const SDValue &V) {
-  if (SDNode *N = V.getNode()) {
-    if (N->getFlags().hasNoMerge())
-      return true;
-
-    // if V is (~X) expressed as (xor X, -1) also check X
-    if (V.getOpcode() == ISD::XOR) {
-      if (isAllOnesConstant(V.getOperand(1)) && V.getOperand(0).getNode() &&
-          V.getOperand(0)->getFlags().hasNoMerge())
-        return true;
-      if (isAllOnesConstant(V.getOperand(0)) && V.getOperand(1).getNode() &&
-          V.getOperand(1)->getFlags().hasNoMerge())
-        return true;
-    }
-  }
-  return false;
-}
-
-static inline bool touchesNoMerge(SDNode *N) {
-  if (N->getFlags().hasNoMerge())
-    return true;
-
-  for (const SDUse &U : N->ops()) {
-    if (hasNoMergeProtection(U.get()))
-      return true;
-  }
-  return false;
-}
-
 SDValue DAGCombiner::visit(SDNode *N) {
-  if (touchesNoMerge(N))
+  if (N->getFlags().hasNoMerge())
     return SDValue();
 
   // clang-format off

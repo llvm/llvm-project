@@ -422,7 +422,8 @@ public:
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
                             NonNeg | NoNaNs | NoInfs | SameSign,
 
-    // Flag for disabling optimization
+    // Instructs DAGCombiner to skip optimization passes for this node.
+    // Preserves the operation as-is without folding, merging, or elimination.
     NoMerge = 1 << 15,
   };
 

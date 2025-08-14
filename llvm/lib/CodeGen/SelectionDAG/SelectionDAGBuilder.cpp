@@ -6710,6 +6710,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
     }
 
+    // assert if Payloads type are Vector
+    assert(!VT.isVector() &&
+           "Vector type not supported yet for fallback implementation");
+
+    // We don't support floating points yet
+    assert(!VT.isFloatingPoint() &&
+           "Float point type not supported yet fallback implementation");
+
     setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
     return;
   }
