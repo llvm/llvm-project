@@ -361,16 +361,16 @@ Example invocations:
 .. code-block:: console
 
   # Run clang-tidy on all files in the compilation database in parallel
-  $ run-clang-tidy.py
+  $ run-clang-tidy.py -p=build/
 
   # Run with specific checks and apply fixes
-  $ run-clang-tidy.py -fix -checks=-*,readability-*
+  $ run-clang-tidy.py -p=build/ -fix -checks=-*,readability-*
 
   # Run on specific files/directories with header filtering
-  $ run-clang-tidy.py -header-filter=src/ src/
+  $ run-clang-tidy.py -p=build/ -header-filter=src/ src/
 
   # Run with parallel execution (uses all CPU cores by default)
-  $ run-clang-tidy.py -j 4
+  $ run-clang-tidy.py -p=build/ -j 4
 
 Running Clang-Tidy on Diff
 ---------------------------
@@ -422,7 +422,7 @@ relying solely on it may lead to incomplete analysis. Since the script only
 reports warnings from the modified lines, it may miss issues that are caused
 by the changes but manifest elsewhere in the code. For example, changes that
 only add lines to a function may cause it to violate size limits (e.g.,
-``readability-function-size``), but the diagnostic will be reported at the
+`readability-function-size <checks/readability/function-size.html>`_), but the diagnostic will be reported at the
 function declaration, which may not be in the diff and thus filtered out.
 Modifications to header files may also affect many implementation files, but
 only warnings in the modified header lines will be reported.
