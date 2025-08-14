@@ -1,3 +1,4 @@
+# REQUIRES: riscv
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax a.s -o ac.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax b.s -o bc.o
