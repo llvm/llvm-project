@@ -1482,11 +1482,6 @@ def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 
-def GNUEABIHalfConvertCalls :
-  LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
-    RuntimeLibcallPredicate<[{!TT.isOSBinFormatMachO() &&
-                              !TT.isTargetAEABI()}]>>;
-
 // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
 // they have a __gnu_ prefix (which is the default).
 def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
@@ -1507,13 +1502,6 @@ def GNUEABIHalfConvertCalls :
     RuntimeLibcallPredicate<[{!TT.isOSBinFormatMachO() &&
                               !TT.isTargetAEABI()}]>> {
   let CallingConv = ARMHalfConvertLibcallCallingConv;
-}
-
-// In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
-// they have a __gnu_ prefix (which is the default).
-def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
-                                        isTargetAEABIAndAAPCS_ABI> {
-  let CallingConv = ARM_AAPCS;
 }
 
 def WindowARMDivRemCalls : LibcallImpls<
