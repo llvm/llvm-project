@@ -6395,7 +6395,8 @@ Instruction *InstCombinerImpl::foldICmpWithSextAndAdd(ICmpInst &ICmp) {
       return nullptr;
 
     unsigned XBitWidth = XType->getIntegerBitWidth();
-    auto ExtractValue = [&](Value *V, Type *TargetType, int64_t &OutValue) -> Value* {
+    auto ExtractValue = [&](Value *V, Type *TargetType,
+                            int64_t &OutValue) -> Value * {
       if (auto *C = dyn_cast<ConstantInt>(V)) {
         OutValue = C->getSExtValue();
         return ConstantInt::get(TargetType, OutValue);
@@ -6414,7 +6415,8 @@ Instruction *InstCombinerImpl::foldICmpWithSextAndAdd(ICmpInst &ICmp) {
     if (!NewY || !NewZ)
       return nullptr;
 
-    bool AreYZVariables = match(Y, m_SExt(m_Value())) && match(Z, m_SExt(m_Value()));
+    bool AreYZVariables =
+        match(Y, m_SExt(m_Value())) && match(Z, m_SExt(m_Value()));
     if (AreYZVariables) {
       bool FoundCondition = false;
       BasicBlock *BB = ICmp.getParent();
@@ -6427,9 +6429,11 @@ Instruction *InstCombinerImpl::foldICmpWithSextAndAdd(ICmpInst &ICmp) {
             MaxValue <<= (XBitWidth - 1);
             APInt Limit = MaxValue;
             Limit += 1;
-            if (match(Cond, m_SpecificICmp(CmpInst::ICMP_ULT,
-                m_Sub(m_SExt(m_Value(Y)), m_SExt(m_Value(Z))), m_ConstantInt(C))) &&
-              C->getValue().ule(Limit)) {
+            if (match(Cond, m_SpecificICmp(
+                                CmpInst::ICMP_ULT,
+                                m_Sub(m_SExt(m_Value(Y)), m_SExt(m_Value(Z))),
+                                m_ConstantInt(C))) &&
+                C->getValue().ule(Limit)) {
               FoundCondition = true;
               if (Assume->use_empty()) {
                 eraseInstFromFunction(*Assume);
