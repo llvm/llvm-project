@@ -440,6 +440,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
+  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1250
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
