@@ -8615,16 +8615,10 @@ private:
   static std::pair<const Expr *, std::optional<size_t>> findAttachPtrExpr(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
 
-    llvm::errs() << "DEBUG: [findAttachPtrExpr] Called with " << Components.size() << " components\n";
-    
-    const auto *Begin = Components.begin();
-
     // If we only have a single component, we have a map like "map(p)", which
     // cannot have a base-pointer.
-    if (Components.size() < 2) {
-      llvm::errs() << "DEBUG: [findAttachPtrExpr] Only " << Components.size() << " components, returning nullptr\n";
+    if (Components.size() < 2)
       return {nullptr, std::nullopt};
-    }
 
     // To find the attach base-pointer, we start with the second component,
     // stripping away one component at a time, until we reach a pointer Expr
@@ -8632,36 +8626,23 @@ private:
     // attach base-pointer for the component list.
     for (size_t I = 1; I < Components.size(); ++I) {
       const Expr *CurExpr = Components[I].getAssociatedExpression();
-      llvm::errs() << "DEBUG: [findAttachPtrExpr] Checking component " << I << ": ";
-      if (CurExpr) {
-        CurExpr->dump();
-        llvm::errs() << "DEBUG: [findAttachPtrExpr] Type: " << getComponentExprElementType(CurExpr)->getCanonicalTypeInternal().getAsString() << "\n";
-      } else {
-        llvm::errs() << "nullptr\n";
-      }
       if (!CurExpr)
         break;
 
       // If CurExpr is something like `p + 10`, we need to ignore it, since
       // we are looking for `p`.
-      if (isa<BinaryOperator>(CurExpr)) {
-        llvm::errs() << "DEBUG: [findAttachPtrExpr] Skipping BinaryOperator\n";
+      if (isa<BinaryOperator>(CurExpr))
         continue;
-      }
 
       // Keep going until we reach an Expr of pointer type.
       QualType CurType = getComponentExprElementType(CurExpr);
-      if (!CurType->isPointerType()) {
-        llvm::errs() << "DEBUG: [findAttachPtrExpr] Not a pointer type, continuing\n";
+      if (!CurType->isPointerType())
         continue;
-      }
 
       // We have found a pointer Expr. This must be the attach pointer.
-      llvm::errs() << "DEBUG: [findAttachPtrExpr] Found attach pointer at component " << I << "\n";
       return {CurExpr, Components.size() - I};
     }
 
-    llvm::errs() << "DEBUG: [findAttachPtrExpr] No attach pointer found\n";
     return {nullptr, std::nullopt};
   }
 
@@ -8865,16 +8846,6 @@ private:
                                           const ValueDecl *VD, const Expr *IE,
                                           const Expr *DesiredAttachPtrExpr,
                                           bool IsDevAddr) -> bool {
-      // Debug: Print what we're looking for
-      llvm::errs() << "DEBUG: [IsMapInfoExist] VD: " << VD->getNameAsString() 
-                   << ", IsDevAddr: " << IsDevAddr 
-                   << ", DesiredAttachPtrExpr: ";
-      if (DesiredAttachPtrExpr) {
-        DesiredAttachPtrExpr->dump();
-      } else {
-        llvm::errs() << "nullptr\n";
-      }
-      
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
       // return true.
@@ -8892,19 +8863,11 @@ private:
           auto *It = llvm::find_if(Data, [&](const MapInfo &MI) {
             if (MI.Components.back().getAssociatedDeclaration() != VD)
               return false;
- 
+
             // Debug: Print what we're checking against
             const Expr *MapAttachPtr = getAttachPtrExpr(MI.Components);
-            llvm::errs() << "DEBUG: [IsMapInfoExist] Checking map clause with attach-ptr: ";
-            if (MapAttachPtr) {
-              MapAttachPtr->dump();
-            } else {
-              llvm::errs() << "nullptr\n";
-            }
-            
             bool Match = AttachPtrExprComparator(this).areEqual(
                 MapAttachPtr, DesiredAttachPtrExpr);
-            llvm::errs() << "DEBUG: [IsMapInfoExist] Match result: " << Match << "\n";
             return Match;
           });
 
@@ -8966,8 +8929,6 @@ private:
         //   map(ps->a) use_device_ptr(ps)   // match
         //   map(p) use_device_ptr(p)        // no match
         const Expr *UDPFirstExpr = Components.front().getAssociatedExpression();
-        llvm::errs() << "DEBUG: [use_device_ptr] First expression: ";
-        UDPFirstExpr->dump();
         if (IsMapInfoExist(CGF, VD, IE, /*DesiredAttachPtrExpr=*/UDPFirstExpr,
                            /*IsDevAddr=*/false))
           continue;
@@ -8998,8 +8959,6 @@ private:
             llvm::errs() << "error: use_device_addr expects base-pointer to be "
                             "an identifier (e.g., xpp or xpp[1]); got: ";
             IE->dump();
-            // Continue without marking; fall back to generating a zero-size
-            // entry if needed.
           }
         }
         // For use_device_addr, we match an existing map clause if its attach-ptr
@@ -10400,6 +10359,7 @@ static void genMapInfoForCaptures(
       // must have a base-variable, like map(s), map(s.x) etc. In such cases, we
       // do not need to handle default map generation for s.
       bool HasEntryWithoutAttachPtr = false;
+      bool AttachPtrIsMemberOfThis = false;
       for (const auto &MapData : DeclComponentLists) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
             std::get<0>(MapData);
@@ -10408,12 +10368,21 @@ static void genMapInfoForCaptures(
           HasEntryWithoutAttachPtr = true;
           break;
         }
+        // Check if the attach pointer is a member expression (this->member)
+        if (CI->capturesThis() && isa<MemberExpr>(AttachPtr)) {
+          const auto *ME = cast<MemberExpr>(AttachPtr);
+          if (ME->isImplicitCXXThis() ||
+              isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
+            AttachPtrIsMemberOfThis = true;
+          }
+        }
       }
 
       // Generate default map info first if there's no direct map with CV as
       // the base-variable, or attach pointer.
       if (DeclComponentLists.empty() ||
-          (!HasEntryWithCVAsAttachPtr && !HasEntryWithoutAttachPtr))
+          (!HasEntryWithCVAsAttachPtr && !HasEntryWithoutAttachPtr &&
+           !AttachPtrIsMemberOfThis))
         MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
 
       // If we have any information in the map clause, we use it, otherwise we

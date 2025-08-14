@@ -55,9 +55,9 @@ void f6() {
 }
 
 void f7() {
+  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
   // &ptr[0], &ptr[2], sizeof(ptr[2]), TO | FROM
   // &ptr, &ptr[2], sizeof(ptr), ATTACH
-  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
   #pragma omp target data map(ptr[2], ptr)
     ptr[2] = 11;
 }
@@ -75,8 +75,8 @@ void f7() {
 // CHECK: @.offload_maptypes.8 = private unnamed_addr constant [3 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x4000]]]
 // CHECK: @.offload_sizes.9 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
 // CHECK: @.offload_maptypes.10 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x4000]]]
-// CHECK: @.offload_sizes.11 = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 8]
-// CHECK: @.offload_maptypes.12 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x4000]], i64 [[#0x3]]]
+// CHECK: @.offload_sizes.11 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
+// CHECK: @.offload_maptypes.12 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x4000]]]
 //.
 // CHECK-LABEL: define {{[^@]+}}@_Z2f1v
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
@@ -300,13 +300,13 @@ void f7() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr @ptr, align 8
 // CHECK:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 2
 // CHECK:    [[TMP2:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP0]], ptr [[TMP2]], align 8
+// CHECK:    store ptr @ptr, ptr [[TMP2]], align 8
 // CHECK:    [[TMP3:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[ARRAYIDX]], ptr [[TMP3]], align 8
+// CHECK:    store ptr @ptr, ptr [[TMP3]], align 8
 // CHECK:    [[TMP4:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
 // CHECK:    store ptr null, ptr [[TMP4]], align 8
 // CHECK:    [[TMP5:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
-// CHECK:    store ptr @ptr, ptr [[TMP5]], align 8
+// CHECK:    store ptr [[TMP0]], ptr [[TMP5]], align 8
 // CHECK:    [[TMP6:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
 // CHECK:    store ptr [[ARRAYIDX]], ptr [[TMP6]], align 8
 // CHECK:    [[TMP7:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
@@ -314,7 +314,7 @@ void f7() {
 // CHECK:    [[TMP8:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
 // CHECK:    store ptr @ptr, ptr [[TMP8]], align 8
 // CHECK:    [[TMP9:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
-// CHECK:    store ptr @ptr, ptr [[TMP9]], align 8
+// CHECK:    store ptr [[ARRAYIDX]], ptr [[TMP9]], align 8
 // CHECK:    [[TMP10:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
 // CHECK:    store ptr null, ptr [[TMP10]], align 8
 // CHECK:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
