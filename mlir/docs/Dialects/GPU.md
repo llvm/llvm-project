@@ -193,10 +193,18 @@ llvm.func @foo() {
 // mlir-translate --mlir-to-llvmir:
 @binary_bin_cst = internal constant [6 x i8] c"AMDGPU", align 8
 @binary_func_kernel_name = private unnamed_addr constant [7 x i8] c"func\00", align 1
+@module = internal global ptr null
+@llvm.global_ctors = appending global [1 x {i32, ptr, ptr}] [{i32 123, ptr @binary_load, ptr null}]
+@llvm.global_dtors = appending global [1 x {i32, ptr, ptr}] [{i32 123, ptr @binary_unload, ptr null}]
+define internal void @binary_load() section ".text.startup" {
+entry:
+  %0 = call ptr @mgpuModuleLoad(ptr @binary_bin_cst)
+  store ptr %0, ptr @module
+  ...
+}
 ...
 define void @foo() {
   ...
-  %module = call ptr @mgpuModuleLoad(ptr @binary_bin_cst)
   %kernel = call ptr @mgpuModuleGetFunction(ptr %module, ptr @binary_func_kernel_name)
   call void @mgpuLaunchKernel(ptr %kernel, ...) ; Launch the kernel
   ...
