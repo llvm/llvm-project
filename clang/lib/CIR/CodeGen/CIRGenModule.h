@@ -161,6 +161,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return the mlir::GlobalViewAttr for the address of the given global.
+  cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
+
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);

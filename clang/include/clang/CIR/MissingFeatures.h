@@ -213,6 +213,8 @@ struct MissingFeatures {
   static bool fastMathFlags() { return false; }
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool globalViewIndices() { return false; }
+  static bool globalViewIntLowering() { return false; }
   static bool hip() { return false; }
   static bool implicitConstructorArgs() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -237,7 +239,6 @@ struct MissingFeatures {
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
   static bool openMP() { return false; }
-  static bool opGlobalViewAttr() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
