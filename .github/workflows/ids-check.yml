@@ -69,6 +69,7 @@ jobs:
                -D Clang_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-x86_64-pc-windows-msvc/lib/cmake/clang/" \
                -D FILECHECK_EXECUTABLE=$(which filecheck) \
                -D LIT_EXECUTABLE=$(which lit)
+               -G Ninja
 
     - name: Build ids
       shell: bash
