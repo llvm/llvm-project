@@ -458,14 +458,15 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
         else {
           Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
-              .addReg(VLENB)
+              .addReg(VLENB, getKillRegState(I + RegNumHandled == NumRegs))
               .addImm(ShiftAmount);
         }
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
           .addReg(Base, getKillRegState(I != 0 || IsBaseKill))
-          .addReg(Step, getKillRegState(I + RegNumHandled == NumRegs));
+          .addReg(Step, getKillRegState(Step != VLENB ||
+                                        I + RegNumHandled == NumRegs));
       Base = NewBase;
     }
 
