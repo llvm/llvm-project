@@ -1690,7 +1690,7 @@ struct DecomposeOuterUnitDimsPackOpPattern
 /// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
 ///
 /// Before:
 /// ```
