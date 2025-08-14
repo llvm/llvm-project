@@ -14333,7 +14333,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       LC = RTLIB::getFPTOUINT(Op0.getValueType(), N->getValueType(0));
     MakeLibCallOptions CallOptions;
     EVT OpVT = Op0.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+    CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     SDValue Result;
     std::tie(Result, Chain) =
@@ -14368,7 +14368,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Op0.getValueType() == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
     MakeLibCallOptions CallOptions;
     EVT OpVT = Op0.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
     Results.push_back(Result);

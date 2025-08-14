@@ -2786,7 +2786,7 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getUINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -2811,7 +2811,7 @@ SDValue LoongArchTargetLowering::lowerSINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getSINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -4107,7 +4107,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     LC = RTLIB::getFPTOSINT(Src.getValueType(), VT);
     MakeLibCallOptions CallOptions;
     EVT OpVT = Src.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, VT, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, VT);
     SDValue Chain = SDValue();
     SDValue Result;
     std::tie(Result, Chain) =
@@ -4360,7 +4360,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     RTLIB::Libcall LC =
         OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
     MakeLibCallOptions CallOptions;
-    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
     Results.push_back(Result);
