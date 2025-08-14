@@ -3541,13 +3541,12 @@ cc_library(
         ":InferTypeOpInterface",
         ":Support",
         ":WasmSSAIncGen",
+        ":WasmSSAInterfacesIncGen",
         ":WasmSSAOpsIncGen",
         ":WasmSSATypesIncGen",
-        ":WasmSSAInterfacesIncGen",
         "//llvm:Support",
     ],
 )
-
 
 ##---------------------------------------------------------------------------##
 # XeGPU dialect.
@@ -3632,21 +3631,35 @@ gentbl_cc_library(
     deps = [":XeGPUAttrTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "XeGPUAttrInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.h.inc": ["-gen-attr-interface-decls"],
+        "include/mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.td",
+    deps = [":XeGPUAttrTdFiles"],
+)
+
 cc_library(
     name = "XeGPUDialect",
     srcs = glob(["lib/Dialect/XeGPU/IR/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/XeGPU/IR/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineUtils",
         ":ArithDialect",
         ":ArithUtils",
         ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
+        ":IndexDialect",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":VectorDialect",
         ":ViewLikeInterface",
+        ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
         "//llvm:Support",
@@ -4120,6 +4133,7 @@ cc_library(
         ":TosaToTensor",
         ":UBToLLVM",
         ":UBToSPIRV",
+        ":VectorToAMX",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -5495,6 +5509,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -9089,6 +9104,7 @@ cc_library(
         ":X86VectorDialect",
         ":XeGPUDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
     ],
 )
 
@@ -9183,6 +9199,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorTransformOps",
         ":XeVMToLLVM",
+        ":XeVMToLLVMIRTranslation",
     ],
 )
 
@@ -10683,6 +10700,7 @@ cc_library(
         ":AsmParser",
         ":BufferizationDialect",
         ":BufferizationTransforms",
+        ":CommonFolders",
         ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
@@ -10706,6 +10724,7 @@ cc_library(
         ":TransformDialectInterfaces",
         ":TransformDialectUtils",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
         ":VectorTransforms",
         "//llvm:Support",
@@ -10818,6 +10837,7 @@ cc_library(
         ":TensorUtils",
         ":TilingInterface",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorToSCF",
@@ -11113,6 +11133,32 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToAMX",
+    srcs = glob([
+        "lib/Conversion/VectorToAMX/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToAMX/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMXDialect",
+        ":AffineDialect",
+        ":AffineUtils",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":IR",
+        ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
@@ -13772,6 +13818,32 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMTarget",
+    srcs = ["lib/Target/LLVM/XeVM/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/XeVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ExecutionEngineUtils",
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        ":XeVMToLLVMIRTranslation",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Object",
+        "//llvm:SPIRVCodeGen",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:config",
+    ],
 )
 
 cc_library(

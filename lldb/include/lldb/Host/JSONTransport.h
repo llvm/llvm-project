@@ -14,8 +14,9 @@
 #define LLDB_HOST_JSONTRANSPORT_H
 
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Utility/IOObject.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -31,10 +32,8 @@ public:
   static char ID;
 
   TransportEOFError() = default;
-  void log(llvm::raw_ostream &OS) const override { OS << "transport EOF"; }
-  std::error_code convertToErrorCode() const override {
-    return std::make_error_code(std::errc::io_error);
-  }
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
 };
 
 class TransportUnhandledContentsError
@@ -42,15 +41,10 @@ class TransportUnhandledContentsError
 public:
   static char ID;
 
-  explicit TransportUnhandledContentsError(std::string unhandled_contents)
-      : m_unhandled_contents(unhandled_contents) {}
+  explicit TransportUnhandledContentsError(std::string unhandled_contents);
 
-  void log(llvm::raw_ostream &OS) const override {
-    OS << "transport EOF with unhandled contents " << m_unhandled_contents;
-  }
-  std::error_code convertToErrorCode() const override {
-    return std::make_error_code(std::errc::bad_message);
-  }
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
 
   const std::string &getUnhandledContents() const {
     return m_unhandled_contents;
@@ -66,12 +60,8 @@ public:
 
   TransportInvalidError() = default;
 
-  void log(llvm::raw_ostream &OS) const override {
-    OS << "transport IO object invalid";
-  }
-  std::error_code convertToErrorCode() const override {
-    return std::make_error_code(std::errc::not_connected);
-  }
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
 };
 
 /// A transport class that uses JSON for communication.
@@ -79,8 +69,7 @@ class JSONTransport {
 public:
   using ReadHandleUP = MainLoopBase::ReadHandleUP;
   template <typename T>
-  using Callback =
-      llvm::unique_function<void(MainLoopBase &, const llvm::Expected<T>)>;
+  using Callback = std::function<void(MainLoopBase &, const llvm::Expected<T>)>;
 
   JSONTransport(lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~JSONTransport() = default;
@@ -100,44 +89,43 @@ public:
   /// Registers the transport with the MainLoop.
   template <typename T>
   llvm::Expected<ReadHandleUP> RegisterReadObject(MainLoopBase &loop,
-                                                  Callback<T> callback) {
+                                                  Callback<T> read_cb) {
     Status error;
     ReadHandleUP handle = loop.RegisterReadObject(
         m_input,
-        [&](MainLoopBase &loop) {
-          char buffer[kReadBufferSize];
-          size_t len = sizeof(buffer);
-          if (llvm::Error error = m_input->Read(buffer, len).takeError()) {
-            callback(loop, std::move(error));
+        [read_cb, this](MainLoopBase &loop) {
+          char buf[kReadBufferSize];
+          size_t num_bytes = sizeof(buf);
+          if (llvm::Error error = m_input->Read(buf, num_bytes).takeError()) {
+            read_cb(loop, std::move(error));
             return;
           }
-
-          if (len)
-            m_buffer.append(std::string(buffer, len));
+          if (num_bytes)
+            m_buffer.append(std::string(buf, num_bytes));
 
           // If the buffer has contents, try parsing any pending messages.
           if (!m_buffer.empty()) {
             llvm::Expected<std::vector<std::string>> messages = Parse();
             if (llvm::Error error = messages.takeError()) {
-              callback(loop, std::move(error));
+              read_cb(loop, std::move(error));
               return;
             }
 
             for (const auto &message : *messages)
               if constexpr (std::is_same<T, std::string>::value)
-                callback(loop, message);
+                read_cb(loop, message);
               else
-                callback(loop, llvm::json::parse<T>(message));
+                read_cb(loop, llvm::json::parse<T>(message));
           }
 
           // On EOF, notify the callback after the remaining messages were
           // handled.
-          if (len == 0) {
+          if (num_bytes == 0) {
             if (m_buffer.empty())
-              callback(loop, llvm::make_error<TransportEOFError>());
+              read_cb(loop, llvm::make_error<TransportEOFError>());
             else
-              callback(loop, llvm::make_error<TransportUnhandledContentsError>(
-                                 m_buffer));
+              read_cb(loop, llvm::make_error<TransportUnhandledContentsError>(
+                                std::string(m_buffer)));
           }
         },
         error);
@@ -155,11 +143,11 @@ protected:
   virtual llvm::Error WriteImpl(const std::string &message) = 0;
   virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
 
+  static constexpr size_t kReadBufferSize = 1024;
+
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
-  std::string m_buffer;
-
-  static constexpr size_t kReadBufferSize = 1024;
+  llvm::SmallString<kReadBufferSize> m_buffer;
 };
 
 /// A transport class for JSON with a HTTP header.
