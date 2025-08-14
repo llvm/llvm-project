@@ -1,12 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-
 ; CHECK: error: register SRV (space=0, register=0) does not have a binding in the Root Signature
-
-; Root Signature(
-;   CBV(b3, space=666, visibility=SHADER_VISIBILITY_ALL)
-;   DescriptorTable(SRV(t0, space=0, numDescriptors=1), visibility=SHADER_VISIBILITY_VERTEX)
-;   DescriptorTable(Sampler(s0, numDescriptors=2), visibility=SHADER_VISIBILITY_ALL)
-;   DescriptorTable(UAV(u0, numDescriptors=unbounded), visibility=SHADER_VISIBILITY_ALL)
 
 @SB.str = private unnamed_addr constant [3 x i8] c"SB\00", align 1
 
