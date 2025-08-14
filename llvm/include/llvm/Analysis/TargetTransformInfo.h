@@ -1357,7 +1357,7 @@ public:
   /// \return true if a mask should be formed that disables lanes that could
   /// alias between two pointers. The mask is created by the
   /// loop_dependence_{war,raw}_mask intrinsics.
-  LLVM_ABI bool useSafeEltsMask(ElementCount VF) const;
+  LLVM_ABI bool useSafeEltsMask() const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism

@@ -5598,7 +5598,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   return Cost;
 }
 
-bool AArch64TTIImpl::useSafeEltsMask(ElementCount VF) const {
+bool AArch64TTIImpl::useSafeEltsMask() const {
   // The whilewr/rw instructions require SVE2
   return ST->hasSVE2();
 }

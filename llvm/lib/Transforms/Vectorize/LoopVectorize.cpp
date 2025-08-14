@@ -2077,9 +2077,9 @@ static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
 }
 
 static bool useSafeEltsMask(TailFoldingStyle TFStyle, RTCheckStyle Style,
-                            ElementCount VF, const TargetTransformInfo &TTI) {
+                            const TargetTransformInfo &TTI) {
   return useActiveLaneMask(TFStyle) && Style == RTCheckStyle::UseSafeEltsMask &&
-         TTI.useSafeEltsMask(VF);
+         TTI.useSafeEltsMask();
 }
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
@@ -6730,7 +6730,7 @@ void LoopVectorizationPlanner::plan(
   ArrayRef<PointerDiffInfo> DiffChecks;
   auto TFStyle = CM.getTailFoldingStyle();
   if (RTChecks.has_value() &&
-      useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), UserVF, TTI))
+      useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), TTI))
     DiffChecks = *RTChecks;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
@@ -10149,7 +10149,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (VF.Width.isVector() || SelectedIC > 1) {
       TailFoldingStyle TFStyle = CM.getTailFoldingStyle();
       bool UseSafeEltsMask =
-          useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), VF.Width, *TTI);
+          useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), *TTI);
       if (UseSafeEltsMask)
         LoopsAliasMasked++;
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,

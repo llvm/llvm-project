@@ -878,8 +878,8 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
                                           BinOp, CostKind);
 }
 
-bool TargetTransformInfo::useSafeEltsMask(ElementCount VF) const {
-  return TTIImpl->useSafeEltsMask(VF);
+bool TargetTransformInfo::useSafeEltsMask() const {
+  return TTIImpl->useSafeEltsMask();
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
