@@ -69,7 +69,7 @@ DumpValueObjectOptions &DumpValueObjectOptions::DisableObjectiveC() {
   // Reset these options to their default values.
   SetUseObjectiveC(false);
   SetHideRootType(false);
-  SetHideRootName(false);
+  SetHideName(false);
   SetHideValue(false);
   SetShowSummary(true);
   return *this;
