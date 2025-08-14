@@ -829,8 +829,7 @@ Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
   if (VF.isScalable() && isPowerOf2_64(Step)) {
     return B.CreateShl(
         B.CreateVScale(Ty),
-        ConstantInt::get(Ty, Log2_64((VF * Step).getKnownMinValue())), "",
-        true);
+        ConstantInt::get(Ty, Log2_64(VFxStep.getKnownMinValue())), "", true);
   }
   return B.CreateElementCount(Ty, VFxStep);
 }
