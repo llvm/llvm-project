@@ -5770,8 +5770,7 @@ SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
   SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
-  // Invert outer-dims-perm and use it to restore the original order
-  // of the outer dims.
+  // Recover the original order of the outer dims.
   SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
   invertPermutationVector(outerDimPermInv);
   if (!outerDimPermInv.empty())
