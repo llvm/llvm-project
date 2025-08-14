@@ -326,7 +326,9 @@ static int initCnt = 0;
 // A helper function that will be called during the JIT's initialization.
 static void initCallback() { initCnt += 1; }
 
-#if __has_feature(memory_sanitizer) || __has_feature(address_sanitizer)
+#if __has_feature(memory_sanitizer) || __has_feature(address_sanitizer) ||     \
+    __has_feature(hwaddress_sanitizer) ||                                      \
+    __has_feature(undefined_behavior_sanitizer)
 #define MAYBE_JITCallbackInGlobalCtor DISABLED_JITCallbackInGlobalCtor
 #else
 #define MAYBE_JITCallbackInGlobalCtor SKIP_WITHOUT_JIT(JITCallbackInGlobalCtor)
