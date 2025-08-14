@@ -590,6 +590,9 @@ public:
     case BinaryFn::powf:
       assert(allFloatingPoint);
       return math::PowFOp::create(builder, arg0.getLoc(), arg0, arg1);
+    case BinaryFn::maximumf:
+      assert(allFloatingPoint);
+      return arith::MaximumFOp::create(builder, arg0.getLoc(), arg0, arg1);
     }
     if (emitError) {
       emitError() << "unsupported binary function";

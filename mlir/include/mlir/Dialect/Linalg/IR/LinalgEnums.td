@@ -44,7 +44,8 @@ def BinaryFn : I32EnumAttr<"BinaryFn", "", [
   I32EnumAttrCase<"min_signed", 6>,
   I32EnumAttrCase<"max_unsigned", 7>,
   I32EnumAttrCase<"min_unsigned", 8>,
-  I32EnumAttrCase<"powf", 9>
+  I32EnumAttrCase<"powf", 9>,
+  I32EnumAttrCase<"maximumf", 10>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";

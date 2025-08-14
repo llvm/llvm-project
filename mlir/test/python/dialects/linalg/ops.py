@@ -831,6 +831,22 @@ def testElementwiseOp():
                         ],
                     )
 
+                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<maximumf>
+                    # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$IdentMap2D]]]
+                    # CHECK-SAME: ins(%[[VertLine]], %[[HorLine]] : tensor<8xf32>, tensor<16xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    linalg.elementwise(
+                        vert_line,
+                        hor_line,
+                        outs=(out_rect,),
+                        kind=linalg.ElementwiseKind.maximumf,
+                        indexing_maps=[
+                            vert_line_bcast_map,
+                            hor_line_bcast_map,
+                            ident_map_2d,
+                        ],
+                    )
+
                 if _ops_with_non_ident_and_transposed_input_maps := True:
                     # CHECK: %[[VertLineBoolsMem:.*]] = memref.alloca() : memref<8xi1>
                     vert_line_bools_mem = memref.alloca(
