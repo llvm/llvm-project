@@ -161,7 +161,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD);
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST);
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
@@ -509,5 +509,6 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
 MachineBasicBlock::iterator
 getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
+size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
