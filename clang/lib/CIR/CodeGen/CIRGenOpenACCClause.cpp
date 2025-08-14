@@ -405,8 +405,8 @@ class OpenACCClauseCIREmitter final
       cgf.cgm.errorNYI(exprRange, "OpenACC firstprivate recipe init");
     }
 
-     CIRGenFunction::AutoVarEmission tempDeclEmission{
-         CIRGenFunction::AutoVarEmission::invalid()};
+    CIRGenFunction::AutoVarEmission tempDeclEmission{
+        CIRGenFunction::AutoVarEmission::invalid()};
 
     // Do the 'init' section of the recipe IR, which does an alloca, then the
     // initialization (except for firstprivate).
