@@ -829,6 +829,18 @@ public:
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
+public:
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
+                                      SourceLocation loc,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, const Expr *expr,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
