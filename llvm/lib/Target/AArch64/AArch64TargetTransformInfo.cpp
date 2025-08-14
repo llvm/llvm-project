@@ -4337,7 +4337,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
 InstructionCost
 AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                          const SCEV *Ptr) const {
+                                          const SCEV *Ptr,
+                                          TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
