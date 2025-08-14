@@ -9,6 +9,7 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
 
@@ -22,8 +23,39 @@ using namespace RTLIB;
 #undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
-                               FloatABI::ABIType FloatABIType,
-                               EABI EABIVersion) {
+                               FloatABI::ABIType FloatABIType, EABI EABIVersion,
+                               StringRef ABIName) {
+  // The half <-> float conversion functions are always soft-float on
+  // non-watchos platforms, but are needed for some targets which use a
+  // hard-float calling convention by default.
+  if (!TT.isWatchABI()) {
+    ARM::ARMABI TargetABI = ARM::computeTargetABI(TT, ABIName);
+
+    if (TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16) {
+      Info.setLibcallImplCallingConv(RTLIB::__truncsfhf2,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__truncdfhf2,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__extendhfsf2,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee,
+                                     CallingConv::ARM_AAPCS);
+    } else {
+      Info.setLibcallImplCallingConv(RTLIB::__truncsfhf2,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__truncdfhf2,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__extendhfsf2,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee,
+                                     CallingConv::ARM_APCS);
+    }
+  }
+
   static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
       RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
       RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
@@ -75,7 +107,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
 
   if (TT.isARM() || TT.isThumb()) {
-    setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
+    setARMLibcallNames(*this, TT, FloatABI, EABIVersion, ABIName);
     return;
   }
 
