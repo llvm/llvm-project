@@ -325,6 +325,13 @@ implicit none
     end function
   end interface
 
+  interface saturate
+    attributes(device) real function __saturatef(r) bind(c, name='__nv_saturatef')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface __sad
     attributes(device) integer function __sad(i,j,k) bind(c, name='__nv_sad')
       !dir$ ignore_tkr (d) i, (d) j, (d) k
