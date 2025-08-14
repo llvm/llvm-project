@@ -72,6 +72,7 @@ static_library("Support") {
     "CrashRecoveryContext.cpp",
     "DAGDeltaAlgorithm.cpp",
     "DJB.cpp",
+    "DXILABI.cpp",
     "DataExtractor.cpp",
     "Debug.cpp",
     "DebugCounter.cpp",
