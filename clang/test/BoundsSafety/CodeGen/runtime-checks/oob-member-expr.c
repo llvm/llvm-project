@@ -15,7 +15,7 @@ struct S {
 // O2-SAME: ptr noundef readnone captures(none) [[A:%.*]], i64 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// O2-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S]]) #[[ATTR3:[0-9]+]]
+// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S]]) #[[ATTR3:[0-9]+]]
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
 // O2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i64 24
 // O2-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[TMP0]], !annotation [[META2:![0-9]+]]
@@ -24,7 +24,7 @@ struct S {
 // O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META4:![0-9]+]]
 // O2-NEXT:    unreachable, !annotation [[META4]]
 // O2:       [[CONT9]]:
-// O2-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S]]) #[[ATTR3]]
+// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S]]) #[[ATTR3]]
 // O2-NEXT:    ret void
 //
 // O0-LABEL: define dso_local void @foo(

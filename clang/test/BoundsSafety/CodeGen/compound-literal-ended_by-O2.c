@@ -390,7 +390,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_eb* ptr,
 // CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x %struct.eb], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_START]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_START]], i64 16
@@ -414,7 +414,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_eb* ptr,
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[ARRAYINIT_ELEMENT]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    call void @consume_eb_arr(ptr noundef nonnull [[ARR]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void array_of_struct_init(char* __bidi_indexable new_start, char* new_end) {
@@ -559,7 +559,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    store ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], ptr [[BYVAL_TEMP]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0_BYVAL_TEMP_SROA_IDX]], align 8
@@ -568,7 +568,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA19:![0-9]+]]
 // CHECK-NEXT:    call void @receive_transparent_union(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_untransparently(
@@ -790,7 +790,7 @@ void assign_via_ptr_nested_v2_from_eb(struct nested_eb* ptr,
 // CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x %struct.eb], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp ugt ptr [[NEW_START]], [[NEW_END]], !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[CMP19_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
@@ -803,7 +803,7 @@ void assign_via_ptr_nested_v2_from_eb(struct nested_eb* ptr,
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[ARRAYINIT_ELEMENT]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    call void @consume_eb_arr(ptr noundef nonnull [[ARR]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void array_of_struct_init_from_eb(char* __ended_by(new_end) new_start, char* new_end) {
@@ -915,7 +915,7 @@ void call_arg_transparent_union_from_eb(char* __ended_by(new_end) new_start,
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    store ptr [[NEW_START]], ptr [[BYVAL_TEMP]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0_BYVAL_TEMP_SROA_IDX]], align 8
@@ -924,7 +924,7 @@ void call_arg_transparent_union_from_eb(char* __ended_by(new_end) new_start,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA19]]
 // CHECK-NEXT:    call void @receive_transparent_union(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_untransparently_from_eb(

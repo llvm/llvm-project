@@ -40,7 +40,7 @@ void foo(int *buf __counted_by(len), int len) {
 // CHECK-LABEL: @main(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca [10 x i32], align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[A]]) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[ADD_PTR3_I:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH5_I:%.*]] = getelementptr i8, ptr [[A]], i64 -40
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 -36, {{!annotation ![0-9]+}}
@@ -54,7 +54,7 @@ void foo(int *buf __counted_by(len), int len) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       foo.exit:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]]) #[[ATTR4]]
 // CHECK-NEXT:    ret i32 0
 //
 int main() {

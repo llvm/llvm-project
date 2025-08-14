@@ -25,7 +25,7 @@ void oob(void) {
 // CHECK-LABEL: @oob2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH_I]], [[ADD_PTR_I]], {{!annotation ![0-9]+}}
@@ -37,7 +37,7 @@ void oob(void) {
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       foo.exit:
 // CHECK-NEXT:    call void @bar(ptr noundef [[BOUND_PTR_ARITH_I]], i32 noundef 4) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void oob2(void) {
@@ -59,10 +59,10 @@ void oob3(void) {
 // CHECK-LABEL: @good(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 36, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    call void @bar(ptr noundef nonnull [[BOUND_PTR_ARITH_I]], i32 noundef 4) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void good(void) {

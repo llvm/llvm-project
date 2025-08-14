@@ -101,9 +101,9 @@ static inline int *__addrof_bidi_i_to_single(struct foo *__bidi_indexable f) {
 // CHECK-LABEL: @addrof_bidi_i_to_single(
 // CHECK-NEXT:  cont3.i:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 8
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 int *addrof_bidi_i_to_single(void) {
@@ -140,9 +140,9 @@ static inline long *__addrof_bidi_l_to_single(struct foo *__bidi_indexable f) {
 // CHECK-LABEL: @addrof_bidi_l_to_single(
 // CHECK-NEXT:  __addrof_bidi_l_to_single.exit:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 16
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 long *addrof_bidi_l_to_single(void) {

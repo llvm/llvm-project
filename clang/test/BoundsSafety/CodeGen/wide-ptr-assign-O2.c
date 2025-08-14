@@ -104,7 +104,7 @@ void wide_member_assign_ok() {
 // CHECK-LABEL: @wide_member_assign_trap(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[W:%.*]] = alloca [[STRUCT_WIDE_MEMBER_T:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[W]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[W]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[W]], i64 24
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[W]], i64 48
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -113,7 +113,7 @@ void wide_member_assign_ok() {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[W]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[W]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void wide_member_assign_trap() {

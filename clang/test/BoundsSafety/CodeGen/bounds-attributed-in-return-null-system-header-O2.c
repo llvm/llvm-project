@@ -15,10 +15,10 @@ void consume(int* __bidi_indexable);
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[INLINE_HEADER_FUNC_UNSPECIFIED_PTR_EXIT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[BYVAL_TEMP]], i8 0, i64 24, i1 false)
 // CHECK-NEXT:    call void @consume(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 // LEGACY-LABEL: define dso_local void @use_inline_header_func_unspecified_ptr(
@@ -27,14 +27,14 @@ void consume(int* __bidi_indexable);
 // LEGACY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // LEGACY-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[COUNT]] to i64
 // LEGACY-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[IDX_EXT]]
-// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3:[0-9]+]]
+// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3:[0-9]+]]
 // LEGACY-NEXT:    store ptr null, ptr [[BYVAL_TEMP]], align 8
 // LEGACY-NEXT:    [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 8
 // LEGACY-NEXT:    store ptr [[ADD_PTR]], ptr [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 8
 // LEGACY-NEXT:    [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
 // LEGACY-NEXT:    store ptr null, ptr [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 8, !tbaa [[TBAA2:![0-9]+]]
 // LEGACY-NEXT:    call void @consume(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
-// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
 // LEGACY-NEXT:    ret void
 //
 void use_inline_header_func_unspecified_ptr(int count) {
@@ -52,10 +52,10 @@ void use_inline_header_func_unspecified_ptr(int count) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[INLINE_HEADER_FUNC_UNSAFE_INDEXABLE_PTR_EXIT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[BYVAL_TEMP]], i8 0, i64 24, i1 false)
 // CHECK-NEXT:    call void @consume(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 // LEGACY-LABEL: define dso_local void @use_inline_header_func_unsafe_indexable_ptr(
@@ -64,14 +64,14 @@ void use_inline_header_func_unspecified_ptr(int count) {
 // LEGACY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // LEGACY-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[COUNT]] to i64
 // LEGACY-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[IDX_EXT]]
-// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
 // LEGACY-NEXT:    store ptr null, ptr [[BYVAL_TEMP]], align 8
 // LEGACY-NEXT:    [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 8
 // LEGACY-NEXT:    store ptr [[ADD_PTR]], ptr [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 8
 // LEGACY-NEXT:    [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
 // LEGACY-NEXT:    store ptr null, ptr [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // LEGACY-NEXT:    call void @consume(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
-// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
 // LEGACY-NEXT:    ret void
 //
 void use_inline_header_func_unsafe_indexable_ptr(int count) {

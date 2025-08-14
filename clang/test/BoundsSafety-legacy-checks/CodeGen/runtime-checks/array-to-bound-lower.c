@@ -94,7 +94,7 @@
 // CHECK-O2-LABEL: @main(
 // CHECK-O2-NEXT:  entry:
 // CHECK-O2-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR3:[0-9]+]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR3:[0-9]+]]
 // CHECK-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
 // CHECK-O2-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
@@ -105,13 +105,13 @@
 // CHECK-O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-O2-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-O2:       cont14:
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR3]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR3]]
 // CHECK-O2-NEXT:    ret i32 undef
 //
 // CHECK-ARM-O2-LABEL: @main(
 // CHECK-ARM-O2-NEXT:  entry:
 // CHECK-ARM-O2-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 4
-// CHECK-ARM-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR3:[0-9]+]]
+// CHECK-ARM-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR3:[0-9]+]]
 // CHECK-ARM-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i32 40
 // CHECK-ARM-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i32 -4
 // CHECK-ARM-O2-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
@@ -122,7 +122,7 @@
 // CHECK-ARM-O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-ARM-O2-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-ARM-O2:       cont14:
-// CHECK-ARM-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR3]]
+// CHECK-ARM-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR3]]
 // CHECK-ARM-O2-NEXT:    ret i32 undef
 //
 int main() {

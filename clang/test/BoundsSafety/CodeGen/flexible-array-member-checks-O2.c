@@ -72,7 +72,7 @@ void test_under_base_ok() {
 // CHECK-LABEL: @test_under_base_fail2(
 // CHECK-NEXT:  {{.*}}:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [20 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[ARR]]) #[[ATTR11:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR11:[0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -1
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT8:%.*]], {{!annotation ![0-9]+}}
@@ -80,7 +80,7 @@ void test_under_base_ok() {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR10]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       {{.*}}:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[ARR]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR11]]
 // CHECK-NEXT:    ret void
 //
 void test_under_base_fail2() {
@@ -115,7 +115,7 @@ void test_over_base_ok() {
 // CHECK-LABEL: @test_over_base_fail2(
 // CHECK-NEXT:  {{.*}}:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [20 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[ARR]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR11]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 20
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARR]], i64 24
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
@@ -124,7 +124,7 @@ void test_over_base_ok() {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR10]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       {{.*}}:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[ARR]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR11]]
 // CHECK-NEXT:    ret void
 //
 void test_over_base_fail2() {
@@ -137,7 +137,7 @@ void test_over_base_fail2() {
 // CHECK-LABEL: @test_small_base_fail(
 // CHECK-NEXT:  {{.*}}:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [3 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr nonnull [[ARR]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR11]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FLEX_T:%.*]], ptr [[ARR]], i64 1
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARR]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -164,7 +164,7 @@ void test_small_base_ok() {
 // CHECK-LABEL: @test_small_base_fail2(
 // CHECK-NEXT:  {{.*}}:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [3 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr nonnull [[ARR]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FLEX_T:%.*]], ptr [[ARR]], i64 1
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARR]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
@@ -349,10 +349,10 @@ void sink(flex_t *__single flex);
 // CHECK-LABEL: @test_flex_argument_ok(
 // CHECK-NEXT:  {{.*}}:
 // CHECK-NEXT:    [[BUF:%.*]] = alloca [20 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[BUF]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BUF]]) #[[ATTR11]]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(20) [[BUF]], ptr noundef nonnull align 1 dereferenceable(20) @__const.test_flex_argument_ok.buf, i64 20, i1 false)
 // CHECK-NEXT:    call void @sink(ptr noundef nonnull [[BUF]]) #[[ATTR11]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[BUF]]) #[[ATTR11]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BUF]]) #[[ATTR11]]
 // CHECK-NEXT:    ret void
 //
 void test_flex_argument_ok() {

@@ -62,7 +62,7 @@ void TestRangeOK4(void) {
 // CHECK-LABEL: @TestIterFail(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH8:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    tail call void @foo() #[[ATTR6]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH60:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
@@ -74,7 +74,7 @@ void TestRangeOK4(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR7:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont96:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void TestIterFail(void) {
@@ -106,7 +106,7 @@ void TestStartFail(void) {
 // CHECK-LABEL: @TestEndFail(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    [[UPPER3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 44
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER3]], {{!annotation ![0-9]+}}
@@ -117,7 +117,7 @@ void TestStartFail(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR7]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont48:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void TestEndFail(void) {

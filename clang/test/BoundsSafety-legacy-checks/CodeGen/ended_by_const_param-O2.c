@@ -15,10 +15,10 @@ void foo(int * const __ended_by(end) start, int* const end);
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [40 x i32], align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 160, ptr nonnull [[ARR]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 160
 // CHECK-NEXT:    call void @foo(ptr noundef nonnull [[ARR]], ptr noundef nonnull [[BOUND_PTR_ARITH]]) #[[ATTR5]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 160, ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 void good(void) {
@@ -30,7 +30,7 @@ void good(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [40 x i32], align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 160, ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 160
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 164
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation [[META2:![0-9]+]]
@@ -42,7 +42,7 @@ void good(void) {
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    call void @foo(ptr noundef nonnull [[ARR]], ptr noundef [[BOUND_PTR_ARITH]]) #[[ATTR5]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 160, ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 void oob_upper(void) {
@@ -54,7 +54,7 @@ void oob_upper(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [40 x i32], align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 160, ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 160
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation [[META2]]
@@ -66,7 +66,7 @@ void oob_upper(void) {
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    call void @foo(ptr noundef nonnull [[ARR]], ptr noundef [[BOUND_PTR_ARITH]]) #[[ATTR5]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 160, ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 void oob_lower(void) {
