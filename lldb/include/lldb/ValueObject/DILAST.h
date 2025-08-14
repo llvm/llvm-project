@@ -21,9 +21,10 @@ enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
   eErrorNode,
+  eFloatLiteralNode,
   eIdentifierNode,
+  eIntegerLiteralNode,
   eMemberOfNode,
-  eScalarLiteralNode,
   eUnaryOpNode,
 };
 
@@ -179,52 +180,50 @@ private:
   int64_t m_last_index;
 };
 
+enum class IntegerTypeSuffix { None, Long, LongLong };
+
 class IntegerLiteralNode : public ASTNode {
 public:
   IntegerLiteralNode(uint32_t location, llvm::APInt value, uint32_t radix,
-                     bool is_unsigned, bool is_long, bool is_longlong)
-      : ASTNode(location, NodeKind::eScalarLiteralNode), m_value(value),
-        m_radix(radix), m_is_unsigned(is_unsigned), m_is_long(is_long),
-        m_is_longlong(is_longlong) {}
+                     bool is_unsigned, IntegerTypeSuffix type)
+      : ASTNode(location, NodeKind::eIntegerLiteralNode),
+        m_value(std::move(value)), m_radix(radix), m_is_unsigned(is_unsigned),
+        m_type(type) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  llvm::APInt GetValue() const { return m_value; }
+  const llvm::APInt &GetValue() const { return m_value; }
   uint32_t GetRadix() const { return m_radix; }
   bool IsUnsigned() const { return m_is_unsigned; }
-  bool IsLong() const { return m_is_long; }
-  bool IsLongLong() const { return m_is_longlong; }
+  IntegerTypeSuffix GetTypeSuffix() const { return m_type; }
 
   static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eScalarLiteralNode;
+    return node->GetKind() == NodeKind::eIntegerLiteralNode;
   }
 
 private:
   llvm::APInt m_value;
   uint32_t m_radix;
   bool m_is_unsigned;
-  bool m_is_long;
-  bool m_is_longlong;
+  IntegerTypeSuffix m_type;
 };
 
 class FloatLiteralNode : public ASTNode {
 public:
-  FloatLiteralNode(uint32_t location, llvm::APFloat value, bool is_float)
-      : ASTNode(location, NodeKind::eScalarLiteralNode), m_value(value),
-        m_is_float(is_float) {}
+  FloatLiteralNode(uint32_t location, llvm::APFloat value)
+      : ASTNode(location, NodeKind::eFloatLiteralNode),
+        m_value(std::move(value)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  llvm::APFloat GetValue() const { return m_value; }
-  bool IsFloat() const { return m_is_float; }
+  const llvm::APFloat &GetValue() const { return m_value; }
 
   static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eScalarLiteralNode;
+    return node->GetKind() == NodeKind::eFloatLiteralNode;
   }
 
 private:
   llvm::APFloat m_value;
-  bool m_is_float;
 };
 
 /// This class contains one Visit method for each specialized type of

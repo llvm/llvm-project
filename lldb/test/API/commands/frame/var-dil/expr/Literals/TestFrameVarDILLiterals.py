@@ -32,6 +32,11 @@ class TestFrameVarDILLiterals(TestBase):
         self.expect_var_path("0x1ULL", value="1", type="unsigned long long")
         self.expect_var_path("0x1llu", value="1", type="unsigned long long")
         self.expect(
+            "frame var '1LLL'",
+            error=True,
+            substrs=["Failed to parse token as numeric-constant"],
+        )
+        self.expect(
             "frame var '1ullu'",
             error=True,
             substrs=["Failed to parse token as numeric-constant"],

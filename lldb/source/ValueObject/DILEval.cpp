@@ -499,19 +499,14 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
   return child_valobj_sp;
 }
 
-static lldb::TypeSystemSP GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
   SymbolContext symbol_context =
       ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
 
   symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      symbol_context.module_sp->GetTypeSystemForLanguage(language);
-
-  if (type_system)
-    return *type_system;
-
-  return lldb::TypeSystemSP();
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
@@ -531,40 +526,39 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
   // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
   // an unsigned integer.
   bool unsigned_is_allowed = literal->IsUnsigned() || literal->GetRadix() != 10;
+  llvm::APInt apint = literal->GetValue();
 
   // Try int/unsigned int.
-  uint64_t int_byte_size = 0;
-  if (auto temp =
-          GetBasicType(type_system, lldb::eBasicTypeInt).GetByteSize(ctx.get()))
-    int_byte_size = *temp;
-  unsigned int_size = int_byte_size * CHAR_BIT;
-  llvm::APInt apint = literal->GetValue();
-  if (!literal->IsLong() && !literal->IsLongLong() && apint.isIntN(int_size)) {
-    if (!literal->IsUnsigned() && apint.isIntN(int_size - 1))
+  llvm::Expected<uint64_t> int_size =
+      GetBasicType(type_system, lldb::eBasicTypeInt).GetBitSize(ctx.get());
+  if (!int_size)
+    return int_size.takeError();
+  if (literal->GetTypeSuffix() == IntegerTypeSuffix::None &&
+      apint.isIntN(*int_size)) {
+    if (!literal->IsUnsigned() && apint.isIntN(*int_size - 1))
       return GetBasicType(type_system, lldb::eBasicTypeInt);
     if (unsigned_is_allowed)
       return GetBasicType(type_system, lldb::eBasicTypeUnsignedInt);
   }
   // Try long/unsigned long.
-  uint64_t long_byte_size = 0;
-  if (auto temp = GetBasicType(type_system, lldb::eBasicTypeLong)
-                      .GetByteSize(ctx.get()))
-    long_byte_size = *temp;
-  unsigned long_size = long_byte_size * CHAR_BIT;
-  if (!literal->IsLongLong() && apint.isIntN(long_size)) {
-    if (!literal->IsUnsigned() && apint.isIntN(long_size - 1))
+  llvm::Expected<uint64_t> long_size =
+      GetBasicType(type_system, lldb::eBasicTypeLong).GetBitSize(ctx.get());
+  if (!long_size)
+    return long_size.takeError();
+  if (literal->GetTypeSuffix() != IntegerTypeSuffix::LongLong &&
+      apint.isIntN(*long_size)) {
+    if (!literal->IsUnsigned() && apint.isIntN(*long_size - 1))
       return GetBasicType(type_system, lldb::eBasicTypeLong);
     if (unsigned_is_allowed)
       return GetBasicType(type_system, lldb::eBasicTypeUnsignedLong);
   }
   // Try long long/unsigned long long.
-  uint64_t long_long_byte_size = 0;
-  if (auto temp = GetBasicType(type_system, lldb::eBasicTypeLongLong)
-                      .GetByteSize(ctx.get()))
-    long_long_byte_size = *temp;
-  unsigned long_long_size = long_long_byte_size * CHAR_BIT;
-  if (apint.isIntN(long_long_size)) {
-    if (!literal->IsUnsigned() && apint.isIntN(long_long_size - 1))
+  llvm::Expected<uint64_t> long_long_size =
+      GetBasicType(type_system, lldb::eBasicTypeLongLong).GetBitSize(ctx.get());
+  if (!long_long_size)
+    return long_long_size.takeError();
+  if (apint.isIntN(*long_long_size)) {
+    if (!literal->IsUnsigned() && apint.isIntN(*long_long_size - 1))
       return GetBasicType(type_system, lldb::eBasicTypeLongLong);
     // If we still couldn't decide a type, we probably have something that
     // does not fit in a signed long long, but has no U suffix. Also known as:
@@ -582,31 +576,40 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IntegerLiteralNode *node) {
-  auto type_system = GetTypeSystemFromCU(m_exe_ctx_scope);
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "unable to create a const literal", node->GetLocation());
+    return type_system.takeError();
 
-  auto type = PickIntegerType(type_system, m_exe_ctx_scope, node);
-  if (type) {
-    Scalar scalar = node->GetValue();
-    // APInt from StringRef::getAsInteger comes with just enough bitwidth to
-    // hold the value. This adjusts APInt bitwidth to match the compiler type.
-    auto type_bitsize = type->GetBitSize(m_exe_ctx_scope.get());
-    if (type_bitsize)
-      scalar.TruncOrExtendTo(*type_bitsize, false);
-    return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
-                                                    "result");
-  } else
+  llvm::Expected<CompilerType> type =
+      PickIntegerType(*type_system, m_exe_ctx_scope, node);
+  if (!type)
     return type.takeError();
+
+  Scalar scalar = node->GetValue();
+  // APInt from StringRef::getAsInteger comes with just enough bitwidth to
+  // hold the value. This adjusts APInt bitwidth to match the compiler type.
+  llvm::Expected<uint64_t> type_bitsize =
+      type->GetBitSize(m_exe_ctx_scope.get());
+  if (!type_bitsize)
+    return type_bitsize.takeError();
+  scalar.TruncOrExtendTo(*type_bitsize, false);
+  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
+                                                  "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FloatLiteralNode *node) {
-  auto type_system = GetTypeSystemFromCU(m_exe_ctx_scope);
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+
+  bool isFloat =
+      &node->GetValue().getSemantics() == &llvm::APFloat::IEEEsingle();
   lldb::BasicType basic_type =
-      node->IsFloat() ? lldb::eBasicTypeFloat : lldb::eBasicTypeDouble;
-  CompilerType type = GetBasicType(type_system, basic_type);
+      isFloat ? lldb::eBasicTypeFloat : lldb::eBasicTypeDouble;
+  CompilerType type = GetBasicType(*type_system, basic_type);
 
   if (!type)
     return llvm::make_error<DILDiagnosticError>(
