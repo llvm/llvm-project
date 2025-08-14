@@ -8122,6 +8122,7 @@ __m256 test_mm256_broadcast_f32x4(__m128 __A) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   return _mm256_broadcast_f32x4(__A); 
 }
+TEST_CONSTEXPR(match_m256(_mm256_broadcast_f32x4((__m128)(__v4sf){1.0f, 3.0f, -5.0f, -8.0f}), 1.0f, 3.0f, -5.0f, -8.0f, 1.0f, 3.0f, -5.0f, -8.0f));
 
 __m256 test_mm256_mask_broadcast_f32x4(__m256 __O, __mmask8 __M, __m128 __A) {
   // CHECK-LABEL: test_mm256_mask_broadcast_f32x4
@@ -8142,6 +8143,7 @@ __m256i test_mm256_broadcast_i32x4(__m128i const* __A) {
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   return _mm256_broadcast_i32x4(_mm_loadu_si128(__A)); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_broadcast_i32x4((__m128i)(__v4si){1, 3, -5, -8}), 1, 3, -5, -8, 1, 3, -5, -8));
 
 __m256i test_mm256_mask_broadcast_i32x4(__m256i __O, __mmask8 __M, __m128i const* __A) {
   // CHECK-LABEL: test_mm256_mask_broadcast_i32x4
