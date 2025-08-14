@@ -131,7 +131,6 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 
-
 attributes(global) subroutine test_drcp_rX()
   double precision :: res
   double precision :: r
@@ -200,3 +199,32 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_ll2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_ll2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_ll2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
+attributes(global) subroutine test_float2int_rX()
+  integer :: res
+  real :: r
+  res = __float2int_rd(r)
+  res = __float2int_rn(r)
+  res = __float2int_ru(r)
+  res = __float2int_rz(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_float2int_rx
+! CHECK: %{{.*}} = fir.call @__nv_float2int_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32    
+! CHECK: %{{.*}} = fir.call @__nv_float2int_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2int_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2int_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+
+attributes(global) subroutine test_float2uint_rX()
+  integer :: res
+  real :: r
+  res = __float2uint_rd(r)
+  res = __float2uint_rn(r)
+  res = __float2uint_ru(r)
+  res = __float2uint_rz(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_float2uint_rx
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_float2uint_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
