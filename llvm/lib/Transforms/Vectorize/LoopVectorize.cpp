@@ -2396,6 +2396,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
                                    static_cast<DominatorTree *>(nullptr), LI,
                                    nullptr, "vector.ph");
+
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
@@ -6730,12 +6731,6 @@ void LoopVectorizationPlanner::plan(
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 
-  ArrayRef<PointerDiffInfo> DiffChecks;
-  auto TFStyle = CM.getTailFoldingStyle();
-  if (RTChecks.has_value() &&
-      useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), TTI))
-    DiffChecks = *RTChecks;
-
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM.blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
       !useMaskedInterleavedAccesses(TTI)) {
@@ -6768,7 +6763,7 @@ void LoopVectorizationPlanner::plan(
       CM.collectInLoopReductions();
       if (CM.selectUserVectorizationFactor(UserVF)) {
         LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-        buildVPlansWithVPRecipes(UserVF, UserVF, DiffChecks);
+        buildVPlansWithVPRecipes(UserVF, UserVF);
         LLVM_DEBUG(printPlans(dbgs()));
         return;
       }
@@ -6792,10 +6787,8 @@ void LoopVectorizationPlanner::plan(
     CM.collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
-  buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF,
-                           DiffChecks);
-  buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF,
-                           DiffChecks);
+  buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF);
+  buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
 }
@@ -8402,9 +8395,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
                                       ScaleFactor, Reduction);
 }
 
-void LoopVectorizationPlanner::buildVPlansWithVPRecipes(
-    ElementCount MinVF, ElementCount MaxVF,
-    ArrayRef<PointerDiffInfo> DiffChecks) {
+void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
+                                                        ElementCount MaxVF) {
   if (ElementCount::isKnownGT(MinVF, MaxVF))
     return;
 
@@ -8430,8 +8422,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
-            std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer,
-            DiffChecks)) {
+            std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
       bool HasScalarVF = Plan->hasScalarVFOnly();
       // Now optimize the initial VPlan.
       if (!HasScalarVF)
@@ -8656,8 +8647,7 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
 }
 
 VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
-    VPlanPtr Plan, VFRange &Range, LoopVersioning *LVer,
-    ArrayRef<PointerDiffInfo> DiffChecks) {
+    VPlanPtr Plan, VFRange &Range, LoopVersioning *LVer) {
 
   using namespace llvm::VPlanPatternMatch;
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
@@ -8945,6 +8935,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
     bool WithoutRuntimeCheck =
         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+
+    ArrayRef<PointerDiffInfo> DiffChecks;
+    std::optional<ArrayRef<PointerDiffInfo>> RTChecks =
+        CM.Legal->getRuntimePointerChecking()->getDiffChecks();
+    if (RTChecks.has_value() &&
+        useSafeEltsMask(Style, CM.getRTCheckStyle(Style), TTI))
+      DiffChecks = *RTChecks;
+
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck, PSE, DiffChecks);
   }
