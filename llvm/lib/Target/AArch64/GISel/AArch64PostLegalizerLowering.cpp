@@ -639,7 +639,8 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x ule c => x ult c + 1
     // x ugt c => s uge c + 1
     //
-    assert(C != (Size == 32 ? UINT32_MAX : UINT64_MAX) && "C should not be -1 here!");
+    assert(C != (Size == 32 ? UINT32_MAX : UINT64_MAX) &&
+           "C should not be -1 here!");
     P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     C += 1;
     break;
