@@ -662,7 +662,7 @@ exit:
 define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; CHECK-LABEL: define void @stride1(
 ; CHECK-SAME: ptr noalias [[B:%.*]], i32 [[BSTRIDE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[BSTRIDE]], i64 0
@@ -696,7 +696,6 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
@@ -711,7 +710,7 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ;
 ; PGSO-LABEL: define void @stride1(
 ; PGSO-SAME: ptr noalias [[B:%.*]], i32 [[BSTRIDE:%.*]]) #[[ATTR0]] {
-; PGSO-NEXT:  [[ENTRY:.*]]:
+; PGSO-NEXT:  [[ENTRY:.*:]]
 ; PGSO-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PGSO:       [[VECTOR_PH]]:
 ; PGSO-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[BSTRIDE]], i64 0
@@ -745,7 +744,6 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    br label %[[FOR_END:.*]]
 ; PGSO:       [[SCALAR_PH]]:
-; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; PGSO:       [[FOR_BODY]]:
 ; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
@@ -760,7 +758,7 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ;
 ; NPGSO-LABEL: define void @stride1(
 ; NPGSO-SAME: ptr noalias [[B:%.*]], i32 [[BSTRIDE:%.*]]) #[[ATTR0]] {
-; NPGSO-NEXT:  [[ENTRY:.*]]:
+; NPGSO-NEXT:  [[ENTRY:.*:]]
 ; NPGSO-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NPGSO:       [[VECTOR_PH]]:
 ; NPGSO-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[BSTRIDE]], i64 0
@@ -794,7 +792,6 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br label %[[FOR_END:.*]]
 ; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; NPGSO:       [[FOR_BODY]]:
 ; NPGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
