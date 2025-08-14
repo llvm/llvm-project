@@ -134,7 +134,7 @@ constexpr int dedup_params_into_type_list(TypeList<__builtin_dedup_pack<T...>...
 static_assert(dedup_params_into_type_list(static_cast<TypeList<int,short,long>*>(nullptr), 1, short(1), 1, 1l, 1l) != 5); // expected-error {{static assertion failed}} \
                                                                                                                           // expected-note {{expression evaluates}}
 
-template <class T, __builtin_dedup_pack<T, int>...> // expected-error 2 {{expansions of '__builtin_dedup_pack' are not supported here}}
+template <class T, __builtin_dedup_pack<T, int>...> // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here}}
 struct InTemplateParams {};
 InTemplateParams<int> itp1;
 InTemplateParams<int, 1, 2, 3, 4, 5> itp2;
@@ -150,7 +150,7 @@ DeepTemplateParams<int>::Templ<> dtp1; // expected-note {{requested here}} \
 
 template <class ...T>
 struct MemInitializers : T... {
-  MemInitializers() : __builtin_dedup_pack<T...>()... {} // expected-error 2 {{expansions of '__builtin_dedup_pack' are not supported here.}}
+  MemInitializers() : __builtin_dedup_pack<T...>()... {} // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here.}}
 };
 MemInitializers<> mi1; // expected-note {{in instantiation of member function}}
 MemInitializers<Base1, Base2> mi2; // expected-note {{in instantiation of member function}}
@@ -212,7 +212,7 @@ template <class ...T>
 struct LambdaInitCaptures {
   static constexpr int test() {
     [...foos=__builtin_dedup_pack<T...>()]{}; // expected-warning {{initialized lambda pack captures are a C++20 extension}} \
-                                              // expected-error 2 {{expansions of '__builtin_dedup_pack' are not supported here.}}
+                                              // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here.}}
     return 3;
   }
 };
@@ -220,7 +220,7 @@ static_assert(LambdaInitCaptures<>::test() == 3); // expected-note {{in instanti
 static_assert(LambdaInitCaptures<int, int, int>::test() == 3); // expected-note {{in instantiation of member function}}
 
 template <class ...T>
-struct alignas(__builtin_dedup_pack<T...>...) AlignAs {}; // expected-error 2 {{expansions of '__builtin_dedup_pack' are not supported here.}}
+struct alignas(__builtin_dedup_pack<T...>...) AlignAs {}; // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here.}}
 AlignAs<> aa1; // expected-note {{in instantiation of template class}}
 AlignAs<int, double> aa2; // expected-note {{in instantiation of template class}}
 
