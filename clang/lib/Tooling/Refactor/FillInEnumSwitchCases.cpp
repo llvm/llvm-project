@@ -69,7 +69,7 @@ clang::tooling::initiateFillInEnumSwitchCasesOperation(
   const Expr *Cond = Switch->getCond()->IgnoreImpCasts();
   const EnumDecl *ED = nullptr;
   if (const auto *ET = Cond->getType()->getAs<EnumType>())
-    ED = ET->getDecl();
+    ED = ET->getOriginalDecl();
   else {
     // Enum literals are 'int' in C.
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {

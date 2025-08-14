@@ -113,10 +113,10 @@ void edit::fillInMissingSwitchEnumCases(
         for (const auto *EnumCase : UncoveredEnumCases) {
           OS << "case ";
           if (SwitchContext) {
-            const auto *NS = NestedNameSpecifier::getRequiredQualification(
+            const auto NS = NestedNameSpecifier::getRequiredQualification(
                 Context, SwitchContext, Enum->getLexicalDeclContext());
             if (NS)
-              NS->print(OS, Context.getPrintingPolicy());
+              NS.print(OS, Context.getPrintingPolicy());
           }
           if (Enum->isScoped())
             OS << Enum->getName() << "::";
