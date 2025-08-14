@@ -1,8 +1,5 @@
 ## Check that llvm-objcopy reports a suitable error when it
-## encounters an invalid input during reading. The purpose is not to have
-## extensive of all read errors, that should be done in DXContainerTest.cpp,
-## instead this is a sanity check that the error is produced when using the
-## reader in llvm-objcopy.
+## encounters an invalid input during reading.
 
 ## We can't have multiple DXIL parts.
 # RUN: yaml2obj %s --docnum=1 -o %t1
@@ -25,7 +22,7 @@ Parts:
     Size:            28
 ...
 
-## The first part offset is out of file bound.
+## The first part offset is out of file bounds.
 # RUN: yaml2obj %s --docnum=2 -o %t2
 # RUN: not llvm-objcopy %t2 %t2.out 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERROR2
 
