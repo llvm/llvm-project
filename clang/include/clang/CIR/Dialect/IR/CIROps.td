@@ -2255,6 +2255,87 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 }
 
 //===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AsmFlavor : CIR_I32EnumAttr<"AsmFlavor", "ATT or Intel",
+                                    [I32EnumAttrCase<"x86_att", 0>,
+                                     I32EnumAttrCase<"x86_intel", 1>]>;
+
+def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
+  let description = [{
+    The `cir.asm` operation represents C/C++ asm inline.
+
+    CIR constraints strings follow the same rules that are established for
+    the C level assembler constraints with several differences caused by
+    clang::AsmStmt processing.
+
+    Thus, numbers that appears in the constraint string may also refer to:
+    - the output variable index referenced by the input operands.
+    - the index of early-clobber operand
+
+    Operand attributes are a storage, where each element corresponds to the
+    operand with the same index. The first index relates to the operation
+    result (if any).
+    The operands themselves are stored as VariadicOfVariadic in the following
+    order: output, input and then in/out operands. When several output operands
+    are present, the result type may be represented as an anonymous record type.
+
+    Example:
+    ```C++
+    __asm__("foo" : : : );
+    __asm__("bar $42 %[val]" : [val] "=r" (x), "+&r"(x));
+    __asm__("baz $42 %[val]" : [val] "=r" (x), "+&r"(x) : "[val]"(y));
+    ```
+
+    ```mlir
+    !rec_22anon2E022 = !cir.record<struct "anon.0" {!cir.int<s, 32>, !cir.int<s, 32>}>
+    !rec_22anon2E122 = !cir.record<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>}>
+    ...
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+    ...
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+
+    cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [],
+      {"foo" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+
+    cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [%2 : !s32i],
+      {"bar $$42 $0" "=r,=&r,1,~{dirflag},~{fpsr},~{flags}"}) -> !rec_22anon2E022
+
+    cir.asm(x86_att,
+      out = [],
+      in = [%3 : !s32i],
+      in_out = [%2 : !s32i],
+      {"baz $$42 $0" "=r,=&r,0,1,~{dirflag},~{fpsr},~{flags}"}) -> !rec_22anon2E122
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$res);
+
+  let arguments =
+      (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
+          StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
+          CIR_AsmFlavor:$asm_flavor, ArrayAttr:$operand_attrs,
+          DenseI32ArrayAttr:$operands_segments);
+
+  let builders = [OpBuilder<(ins
+      "llvm::ArrayRef<mlir::ValueRange>":$asmOperands,
+      "llvm::StringRef":$asmString, "llvm::StringRef":$constraints,
+      "bool":$sideEffects, "AsmFlavor":$asmFlavor,
+      "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // UnreachableOp
 //===----------------------------------------------------------------------===//
 
