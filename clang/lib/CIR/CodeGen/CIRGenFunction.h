@@ -23,6 +23,7 @@
 #include "Address.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -337,6 +338,15 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// True if an insertion point is defined. If not, this indicates that the
+  /// current code being emitted is unreachable.
+  /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
+  /// since we don't yet force null insertion point to designate behavior (like
+  /// LLVM's codegen does) and we probably shouldn't.
+  bool haveInsertPoint() const {
+    return builder.getInsertionBlock() != nullptr;
+  }
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {
@@ -500,6 +510,25 @@ public:
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
+  struct VPtr {
+    clang::BaseSubobject base;
+    const clang::CXXRecordDecl *nearestVBase;
+    clang::CharUnits offsetFromNearestVBase;
+    const clang::CXXRecordDecl *vtableClass;
+  };
+
+  using VPtrsVector = llvm::SmallVector<VPtr, 4>;
+  VPtrsVector getVTablePointers(const clang::CXXRecordDecl *vtableClass);
+  void getVTablePointers(clang::BaseSubobject base,
+                         const clang::CXXRecordDecl *nearestVBase,
+                         clang::CharUnits offsetFromNearestVBase,
+                         bool baseIsNonVirtualPrimaryBase,
+                         const clang::CXXRecordDecl *vtableClass,
+                         VPtrsVector &vptrs);
+  /// Return the Value of the vtable pointer member pointed to by thisAddr.
+  mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
+                           const clang::CXXRecordDecl *vtableClass);
+
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -547,6 +576,10 @@ public:
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
   }
+
+  void initializeVTablePointers(mlir::Location loc,
+                                const clang::CXXRecordDecl *rd);
+  void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
 
   /// Return the address of a local variable.
   Address getAddrOfLocalVar(const clang::VarDecl *vd) {
@@ -829,6 +862,18 @@ public:
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
+public:
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
+                                      SourceLocation loc,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, const Expr *expr,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
@@ -880,6 +925,9 @@ public:
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *array);
+
+  RValue emitAtomicExpr(AtomicExpr *e);
+  void emitAtomicInit(Expr *init, LValue dest);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1011,7 +1059,7 @@ public:
   RValue emitCXXMemberOrOperatorMemberCallExpr(
       const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
       ReturnValueSlot returnValue, bool hasQualifier,
-      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
@@ -1019,6 +1067,8 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1088,6 +1138,8 @@ public:
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
+  LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
+                                             mlir::Value &result);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -1128,6 +1180,9 @@ public:
                              std::optional<mlir::Location> elseLoc = {});
 
   mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+
+  mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
+  mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
@@ -1185,7 +1240,7 @@ public:
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
-                                   LValueBaseInfo *baseInfo);
+                                   LValueBaseInfo *baseInfo = nullptr);
 
   /// Emits a reference binding to the passed in expression.
   RValue emitReferenceBindingToExpr(const Expr *e);

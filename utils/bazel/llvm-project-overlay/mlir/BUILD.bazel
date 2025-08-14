@@ -8,6 +8,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//llvm:targets.bzl", "llvm_targets")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -4133,6 +4134,7 @@ cc_library(
         ":TosaToTensor",
         ":UBToLLVM",
         ":UBToSPIRV",
+        ":VectorToAMX",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -5508,6 +5510,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -8036,6 +8039,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -9102,6 +9106,7 @@ cc_library(
         ":X86VectorDialect",
         ":XeGPUDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
     ],
 )
 
@@ -9196,6 +9201,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorTransformOps",
         ":XeVMToLLVM",
+        ":XeVMToLLVMIRTranslation",
     ],
 )
 
@@ -11129,6 +11135,32 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToAMX",
+    srcs = glob([
+        "lib/Conversion/VectorToAMX/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToAMX/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMXDialect",
+        ":AffineDialect",
+        ":AffineUtils",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":IR",
+        ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
@@ -13788,6 +13820,34 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMTarget",
+    srcs = ["lib/Target/LLVM/XeVM/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/XeVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ExecutionEngineUtils",
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        ":XeVMToLLVMIRTranslation",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:config",
+    ] + ([
+        "//llvm:SPIRVCodeGen",
+        "//llvm:SPIRVUtilsAndDesc",
+    ] if "SPIRV" in llvm_targets else []),
 )
 
 cc_library(
