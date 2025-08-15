@@ -535,18 +535,22 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
   LogicalResult
   matchAndRewrite(LDSBarrierOp op, LDSBarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    bool requiresInlineAsm = chipset < kGfx90a || chipset.majorVersion == 11;
+    bool requiresInlineAsm = chipset < kGfx90a || chipset.majorVersion >= 11;
 
     if (requiresInlineAsm) {
       auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
                                                       LLVM::AsmDialect::AD_ATT);
-      const char *asmStr =
+      const char *asmStrPreGfx12 =
           ";;;WARNING: BREAKS DEBUG WATCHES\ns_waitcnt lgkmcnt(0)\ns_barrier";
+      const char *asmStr =
+          ";;;WARNING: BREAKS DEBUG WATCHES\n"
+          "s_wait_dscnt 0x0\ns_barrier_signal -1\ns_barrier_wait -1";
       const char *constraints = "";
       rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
           op,
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
-          /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
+          /*asm_string=*/chipset.majorVersion >= 12 ? asmStr : asmStrPreGfx12,
+          constraints, /*has_side_effects=*/true,
           /*is_align_stack=*/false, LLVM::TailCallKind::None,
           /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
@@ -574,14 +578,12 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
       Location loc = op->getLoc();
       ROCDL::SWaitcntOp::create(rewriter, loc, ldsOnlyBits);
       rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
+      return success();
     } else {
-      Location loc = op->getLoc();
-      ROCDL::WaitDscntOp::create(rewriter, loc, 0);
-      ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
-      rewriter.replaceOpWithNewOp<ROCDL::BarrierWaitOp>(op, -1);
+      return op.emitOpError(
+                 "don't know how to lower this for chipset major version")
+             << chipset.majorVersion;
     }
-
-    return success();
   }
 };
 
