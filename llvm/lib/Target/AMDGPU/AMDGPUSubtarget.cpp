@@ -246,6 +246,24 @@ AMDGPUSubtarget::getReqdWorkGroupSize(const Function &Kernel,
   return std::nullopt;
 }
 
+bool AMDGPUSubtarget::hasWavefrontsEvenlySplittingXDim(
+    const Function &F, bool RequiresUniformYZ) const {
+  auto *Node = F.getMetadata("reqd_work_group_size");
+  if (!Node || Node->getNumOperands() != 3)
+    return false;
+  unsigned XLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+  unsigned YLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue();
+  unsigned ZLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue();
+
+  bool Is1D = YLen <= 1 && ZLen <= 1;
+  bool IsXLargeEnough =
+      isPowerOf2_32(XLen) && (!RequiresUniformYZ || XLen >= getWavefrontSize());
+  return Is1D || IsXLargeEnough;
+}
+
 bool AMDGPUSubtarget::isMesaKernel(const Function &F) const {
   return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
 }

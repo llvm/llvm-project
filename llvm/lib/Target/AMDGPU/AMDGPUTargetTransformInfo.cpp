@@ -1006,18 +1006,12 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     }
     case Intrinsic::amdgcn_workitem_id_y:
     case Intrinsic::amdgcn_workitem_id_z: {
-      // If the X dimension is guaranteed to launch with a size that is a power
-      // of 2
-      // >= the wavefront size, then the Y and Z dimensions are uniform.
-      // Similarly, if the dimension has size 1, it is also uniform.
       const Function *F = Intrinsic->getFunction();
-      std::optional<unsigned> ReqdXDimSize = ST->getReqdWorkGroupSize(*F, 0);
-      if (ReqdXDimSize && isPowerOf2_32(*ReqdXDimSize) &&
-          *ReqdXDimSize >= ST->getWavefrontSize())
-        return false;
+      bool HasUniformYZ =
+          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequitezUniformYZ=*/true);
       std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
           *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
-      return !ThisDimSize || *ThisDimSize != 1;
+      return !HasUniformYZ && (!ThisDimSize || *ThisDimSize != 1);
     }
     default:
       return AMDGPU::isIntrinsicSourceOfDivergence(IID);
@@ -1073,11 +1067,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   bool XDimDoesntResetWithinWaves = false;
   if (auto *I = dyn_cast<Instruction>(V)) {
     const Function *F = I->getFunction();
-    std::optional<unsigned> ReqdXDimSize = ST->getReqdWorkGroupSize(*F, 0);
-    XDimDoesntResetWithinWaves =
-        ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
-    if (ReqdXDimSize.has_value() && isPowerOf2_32(*ReqdXDimSize))
-      XDimDoesntResetWithinWaves = true;
+    XDimDoesntResetWithinWaves = ST->hasWavefrontsEvenlySplittingXDim(*F);
   }
   using namespace llvm::PatternMatch;
   uint64_t C;
