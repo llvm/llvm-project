@@ -98,20 +98,25 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
   return Result;
 }
 
-static std::tuple<Value *, Value *, Value *>
-extractThreeVariables(Value *Root) {
+static std::tuple<Value *, Value *, Value *, SmallVector<Instruction *>>
+extractThreeVariablesAndInstructions(Value *Root) {
   SmallPtrSet<Value *, 3> Variables;
   SmallPtrSet<Value *, 32> Visited; // Prevent hanging during loop unrolling
                                     // (see bitreverse-hang.ll)
+  SmallVector<Instruction *> Instructions;
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
 
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
 
+    if (!Visited.insert(V).second)
+      continue;
+
     Value *NotV;
     if (match(V, m_Not(m_Value(NotV)))) {
-      Visited.insert(NotV);
+      if (auto *I = dyn_cast<Instruction>(V))
+        Instructions.push_back(I);
       if (V == Root ||
           V->hasOneUse()) { // Due to lack of cost-based heuristic, only
                             // traverse if it belongs to this expression tree
@@ -121,16 +126,16 @@ extractThreeVariables(Value *Root) {
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
       if (!BO->isBitwiseLogicOp())
-        return {nullptr, nullptr, nullptr};
+        return {nullptr, nullptr, nullptr, {}};
+
+      Instructions.push_back(BO);
 
       if (V == Root || V->hasOneUse()) {
-        Visited.insert(BO->getOperand(0));
-        Visited.insert(BO->getOperand(1));
         Worklist.push_back(BO->getOperand(0));
         Worklist.push_back(BO->getOperand(1));
       }
     } else if (isa<Argument>(V) || isa<Instruction>(V)) {
-      if (!isa<Constant>(V) && V != Root) {
+      if (V != Root) {
         Variables.insert(V);
       }
     }
@@ -145,7 +150,7 @@ extractThreeVariables(Value *Root) {
         if (!FirstBB) {
           FirstBB = I->getParent();
         } else if (I->getParent() != FirstBB) {
-          return {nullptr, nullptr, nullptr};
+          return {nullptr, nullptr, nullptr, {}};
         }
       }
     }
@@ -157,35 +162,22 @@ extractThreeVariables(Value *Root) {
           return IA->comesBefore(IB);
       return A < B;
     });
-    return {SortedVars[0], SortedVars[1], SortedVars[2]};
+
+    // Sort instructions within the same BB
+    llvm::sort(Instructions, [](Instruction *A, Instruction *B) {
+      return A->comesBefore(B);
+    });
+
+    return {SortedVars[0], SortedVars[1], SortedVars[2],
+            std::move(Instructions)};
   }
-  return {nullptr, nullptr, nullptr};
+  return {nullptr, nullptr, nullptr, {}};
 }
 
 /// Evaluate a boolean expression with bit-vector inputs for all 8 combinations.
 static std::optional<std::bitset<8>>
-evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2) {
-  // Post-order traversal of the expression tree
-  SmallVector<Instruction *> Instructions;
-  SmallVector<Value *> ToVisit;
-  SmallPtrSet<Instruction *, 8> Seen;
-
-  ToVisit.push_back(Expr);
-  while (!ToVisit.empty()) {
-    Value *V = ToVisit.pop_back_val();
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      if (Seen.insert(I).second) {
-        Instructions.push_back(I);
-        for (Value *Op : I->operands()) {
-          ToVisit.push_back(Op);
-        }
-      }
-    }
-  }
-
-  // Sort instructions within the same BB
-  llvm::sort(Instructions,
-             [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
+evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
+                          const SmallVector<Instruction *> &Instructions) {
 
   // Initialize bit-vector values for the 3 variables
   // Op0: 0b11110000 (true for combinations 000,001,010,011)
@@ -221,14 +213,12 @@ evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2) {
         Computed[I] = LHS ^ RHS; // Bitwise XOR
         break;
       default:
-        return std::nullopt;
+        llvm_unreachable("Unexpected opcode in boolean expression evaluation");
       }
     }
   }
 
-  auto It = Computed.find(Expr);
-  return It != Computed.end() ? std::optional<std::bitset<8>>(It->second)
-                              : std::nullopt;
+  return std::bitset<8>(Computed.at(Expr));
 }
 
 /// Try to canonicalize 3-variable boolean expressions using truth table lookup.
@@ -242,11 +232,12 @@ static Value *foldThreeVarBoolExpr(Instruction &Root,
       !isa<BinaryOperator>(BO.getOperand(1)))
     return nullptr;
 
-  auto [Op0, Op1, Op2] = extractThreeVariables(&Root);
+  auto [Op0, Op1, Op2, Instructions] =
+      extractThreeVariablesAndInstructions(&Root);
   if (!Op0 || !Op1 || !Op2)
     return nullptr;
 
-  auto Table = evaluateBooleanExpression(&Root, Op0, Op1, Op2);
+  auto Table = evaluateBooleanExpression(&Root, Op0, Op1, Op2, Instructions);
   if (!Table)
     return nullptr;
 
