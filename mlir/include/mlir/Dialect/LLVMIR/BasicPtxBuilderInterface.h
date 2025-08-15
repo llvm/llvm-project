@@ -44,7 +44,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case PTXRegisterMod::ReadWrite:
     return os << "ReadWrite";
   }
-  return os << "Unknown";
+  default:
+    llvm_unreachable("Unknown PTXRegisterMod value");
+  }
 }
 } // namespace NVVM
 } // namespace mlir
