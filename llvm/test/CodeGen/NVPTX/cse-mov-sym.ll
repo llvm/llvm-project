@@ -35,8 +35,7 @@ define i32 @test_mov_sym(i32 %offset1, i32 %offset2, i1 %cond) {
 ; CHECK-NEXT:    @%p3 bra $L__BB0_2;
 ; CHECK-NEXT:  // %bb.3: // %if2
 ; CHECK-NEXT:    cvt.s64.s32 %rd4, %r5;
-; CHECK-NEXT:    mov.b64 %rd5, global_smem;
-; CHECK-NEXT:    add.s64 %rd6, %rd5, %rd4;
+; CHECK-NEXT:    add.s64 %rd6, %rd2, %rd4;
 ; CHECK-NEXT:    ld.shared.b32 %r6, [%rd6];
 ; CHECK-NEXT:    add.s32 %r7, %r7, %r6;
 ; CHECK-NEXT:  $L__BB0_4: // %end
