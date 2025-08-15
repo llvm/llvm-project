@@ -29,9 +29,7 @@ public:
   }
 
 private:
-  std::vector<llvm::StringRef> IgnoredFunctions;
-  std::vector<llvm::StringRef> IgnoredFromTypes;
-  std::vector<llvm::StringRef> IgnoredToTypes;
+  std::vector<llvm::StringRef> IgnoredCasts;
 };
 
 } // namespace clang::tidy::bugprone

@@ -1,40 +1,33 @@
-// RUN: %check_clang_tidy -check-suffixes=FUNC %s bugprone-cast-to-struct %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-cast-to-struct.IgnoredFunctions: 'ignored_f$'}}"
-// RUN: %check_clang_tidy -check-suffixes=FROM-TY %s bugprone-cast-to-struct %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-cast-to-struct.IgnoredFromTypes: 'int'}}"
-// RUN: %check_clang_tidy -check-suffixes=TO-TY %s bugprone-cast-to-struct %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-cast-to-struct.IgnoredToTypes: 'IgnoredType'}}"
+// RUN: %check_clang_tidy %s bugprone-cast-to-struct %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-cast-to-struct.IgnoredCasts: 'char;S1;int;Other*'}}"
 
-struct IgnoredType {
+struct S1 {
   int a;
 };
 
-struct OtherType {
+struct S2 {
+  char a;
+};
+
+struct OtherS {
   int a;
   int b;
 };
 
-void ignored_f(char *p) {
-  struct OtherType *p1;
-  p1 = (struct OtherType *)p;
-  // CHECK-MESSAGES-FROM-TY: :[[@LINE-1]]:8: warning: casting a 'char *' pointer to a 'struct OtherType *' pointer and accessing a field can lead to memory access errors or data corruption
-  // CHECK-MESSAGES-TO-TY: :[[@LINE-2]]:8: warning: casting a 'char *' pointer to a 'struct OtherType *' pointer and accessing a field can lead to memory access errors or data corruption
+void test1(char *p1, int *p2) {
+  struct S1 *s1;
+  s1 = (struct S1 *)p1;
+  struct S2 *s2;
+  s2 = (struct S2 *)p1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: casting a 'char *' pointer to a 'struct S2 *'
+  s2 = (struct S2 *)p2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: casting a 'int *' pointer to a 'struct S2 *'
+  struct OtherS *s3;
+  s3 = (struct OtherS *)p2;
+  s3 = (struct OtherS *)p1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: casting a 'char *' pointer to a 'struct OtherS *'
 }
 
-void ignored_from_type(int *p) {
-  struct OtherType *p1;
-  p1 = (struct OtherType *)p;
-  // CHECK-MESSAGES-FUNC: :[[@LINE-1]]:8: warning: casting a 'int *' pointer to a 'struct OtherType *' pointer and accessing a field can lead to memory access errors or data corruption
-  // CHECK-MESSAGES-TO-TY: :[[@LINE-2]]:8: warning: casting a 'int *' pointer to a 'struct OtherType *' pointer and accessing a field can lead to memory access errors or data corruption
-}
-
-void ignored_to_type(char *p) {
-  struct IgnoredType *p1;
-  p1 = (struct IgnoredType *)p;
-  // CHECK-MESSAGES-FUNC: :[[@LINE-1]]:8: warning: casting a 'char *' pointer to a 'struct IgnoredType *' pointer and accessing a field can lead to memory access errors or data corruption
-  // CHECK-MESSAGES-FROM-TY: :[[@LINE-2]]:8: warning: casting a 'char *' pointer to a 'struct IgnoredType *' pointer and accessing a field can lead to memory access errors or data corruption
-}
-
-struct OtherType *test_void_is_always_ignored(void *p) {
-  return (struct OtherType *)p;
+struct S2 *test_void_is_always_ignored(void *p) {
+  return (struct S2 *)p;
 }

@@ -17,42 +17,31 @@ namespace clang::tidy::bugprone {
 
 CastToStructCheck::CastToStructCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoredFunctions(
-          utils::options::parseStringList(Options.get("IgnoredFunctions", ""))),
-      IgnoredFromTypes(
-          utils::options::parseStringList(Options.get("IgnoredFromTypes", ""))),
-      IgnoredToTypes(
-          utils::options::parseStringList(Options.get("IgnoredToTypes", ""))) {}
+      IgnoredCasts(
+          utils::options::parseStringList(Options.get("IgnoredCasts", ""))) {}
 
 void CastToStructCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IgnoredFunctions",
-                utils::options::serializeStringList(IgnoredFunctions));
-  Options.store(Opts, "IgnoredFromTypes",
-                utils::options::serializeStringList(IgnoredFromTypes));
-  Options.store(Opts, "IgnoredToTypes",
-                utils::options::serializeStringList(IgnoredToTypes));
+  Options.store(Opts, "IgnoredCasts",
+                utils::options::serializeStringList(IgnoredCasts));
 }
 
 void CastToStructCheck::registerMatchers(MatchFinder *Finder) {
   auto FromPointee =
       qualType(hasUnqualifiedDesugaredType(type().bind("FromType")),
-               unless(qualType(matchers::matchesAnyListedTypeName(
-                   IgnoredFromTypes, false))))
+               unless(voidType()),
+               unless(hasDeclaration(recordDecl(isUnion()))))
           .bind("FromPointee");
   auto ToPointee =
-      qualType(hasUnqualifiedDesugaredType(recordType().bind("ToType")),
-               unless(qualType(
-                   matchers::matchesAnyListedTypeName(IgnoredToTypes, false))))
+      qualType(hasUnqualifiedDesugaredType(
+                   recordType(unless(hasDeclaration(recordDecl(isUnion()))))
+                       .bind("ToType")))
           .bind("ToPointee");
   auto FromPtrType = qualType(pointsTo(FromPointee)).bind("FromPtr");
   auto ToPtrType = qualType(pointsTo(ToPointee)).bind("ToPtr");
-  Finder->addMatcher(
-      cStyleCastExpr(hasSourceExpression(hasType(FromPtrType)),
-                     hasType(ToPtrType),
-                     unless(hasAncestor(functionDecl(
-                         matchers::matchesAnyListedName(IgnoredFunctions)))))
-          .bind("CastExpr"),
-      this);
+  Finder->addMatcher(cStyleCastExpr(hasSourceExpression(hasType(FromPtrType)),
+                                    hasType(ToPtrType))
+                         .bind("CastExpr"),
+                     this);
 }
 
 void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
@@ -65,13 +54,24 @@ void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *const ToPointee = Result.Nodes.getNodeAs<QualType>("ToPointee");
   const auto *const FromType = Result.Nodes.getNodeAs<Type>("FromType");
   const auto *const ToType = Result.Nodes.getNodeAs<RecordType>("ToType");
-  if (!FromPointee || !ToPointee)
-    return;
-  if (FromType->isVoidType() || FromType->isUnionType() ||
-      ToType->isUnionType())
-    return;
+
   if (FromType == ToType)
     return;
+
+  const std::string FromName = FromPointee->getAsString();
+  const std::string ToName = ToPointee->getAsString();
+  llvm::Regex FromR;
+  llvm::Regex ToR;
+  for (auto [Idx, Str] : llvm::enumerate(IgnoredCasts)) {
+    if (Idx % 2 == 0) {
+      FromR = llvm::Regex(Str);
+    } else {
+      ToR = llvm::Regex(Str);
+      if (FromR.match(FromName) && ToR.match(ToName))
+        return;
+    }
+  }
+
   diag(FoundCastExpr->getExprLoc(),
        "casting a %0 pointer to a "
        "%1 pointer and accessing a field can lead to memory "
