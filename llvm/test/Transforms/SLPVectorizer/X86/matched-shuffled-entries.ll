@@ -5,17 +5,17 @@ define i32 @bar() local_unnamed_addr {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD78_1:%.*]] = add nsw i32 undef, undef
-; CHECK-NEXT:    [[SUB86_1:%.*]] = sub nsw i32 undef, undef
 ; CHECK-NEXT:    [[ADD94_1:%.*]] = add nsw i32 undef, undef
-; CHECK-NEXT:    [[SUB102_1:%.*]] = sub nsw i32 undef, undef
 ; CHECK-NEXT:    [[ADD78_2:%.*]] = add nsw i32 undef, undef
 ; CHECK-NEXT:    [[SUB102_3:%.*]] = sub nsw i32 undef, undef
+; CHECK-NEXT:    [[SUB102_1:%.*]] = sub nsw i32 undef, undef
+; CHECK-NEXT:    [[SUB102_4:%.*]] = sub nsw i32 undef, undef
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 undef, i32 undef, i32 poison, i32 poison, i32 undef, i32 undef, i32 undef, i32 undef>, i32 [[SUB102_1]], i32 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[ADD94_1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> <i32 undef, i32 undef, i32 poison, i32 poison, i32 undef, i32 poison, i32 poison, i32 undef>, i32 [[SUB86_1]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> <i32 undef, i32 undef, i32 poison, i32 poison, i32 undef, i32 poison, i32 poison, i32 undef>, i32 [[SUB102_3]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[ADD78_1]], i32 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[ADD78_2]], i32 5
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[SUB102_3]], i32 6
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[SUB102_4]], i32 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> <i32 undef, i32 undef, i32 poison, i32 poison, i32 poison, i32 undef, i32 undef, i32 undef>, <8 x i32> <i32 8, i32 9, i32 3, i32 2, i32 5, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP5]], <8 x i32> <i32 poison, i32 poison, i32 3, i32 2, i32 poison, i32 poison, i32 poison, i32 14>
