@@ -2153,43 +2153,37 @@ Expected<SmallVector<char, 0>>
 MCCASBuilder::mergeMCFragmentContents(const MCSection *Section,
                                       bool IsDebugLineSection) {
   SmallVector<char, 0> mergedData;
+  if (!Section->curFragList())
+    return mergedData;
   for (const MCFragment &Fragment : *Section) {
-    if (const auto *DataFragment = dyn_cast<MCDataFragment>(&Fragment))
-      llvm::append_range(mergedData, DataFragment->getContents());
-    else if (const auto *RelaxableFragment =
-                 dyn_cast<MCRelaxableFragment>(&Fragment))
-      llvm::append_range(mergedData, RelaxableFragment->getContents());
-    else if (const auto *DwarfLineAddrFrag =
-                 dyn_cast<MCDwarfLineAddrFragment>(&Fragment))
-      if (IsDebugLineSection)
-        llvm::append_range(mergedData, DwarfLineAddrFrag->getContents());
-      else
+    if (Fragment.getKind() == MCFragment::FT_Dwarf) {
+      if (IsDebugLineSection) {
+        llvm::append_range(mergedData, Fragment.getContents());
+        llvm::append_range(mergedData, Fragment.getVarContents());
+      } else
         return createStringError(
             inconvertibleErrorCode(),
-            "Invalid MCDwarfLineAddrFragment in a non debug line section");
-    else if (const auto *DwarfCallFrameFragment =
-                 dyn_cast<MCDwarfCallFrameFragment>(&Fragment))
-      llvm::append_range(mergedData, DwarfCallFrameFragment->getContents());
-    else if (const auto *CVDefRangeFragment =
-                 dyn_cast<MCCVDefRangeFragment>(&Fragment))
+            "Invalid  MCFragment::FT_Dwarf type in a non debug line section");
+    } else if (const auto *CVDefRangeFragment =
+                   dyn_cast<MCCVDefRangeFragment>(&Fragment)) {
       llvm::append_range(mergedData, CVDefRangeFragment->getContents());
-    else if (const auto *PseudoProbeAddrFragment =
-                 dyn_cast<MCPseudoProbeAddrFragment>(&Fragment))
-      llvm::append_range(mergedData, PseudoProbeAddrFragment->getContents());
-    else if (const auto *LEBFragment = dyn_cast<MCLEBFragment>(&Fragment))
-      llvm::append_range(mergedData, LEBFragment->getContents());
-    else if (const auto *CVInlineLineTableFragment =
-                 dyn_cast<MCCVInlineLineTableFragment>(&Fragment))
+      llvm::append_range(mergedData, CVDefRangeFragment->getVarContents());
+    } else if (const auto *CVInlineLineTableFragment =
+                   dyn_cast<MCCVInlineLineTableFragment>(&Fragment)) {
       llvm::append_range(mergedData, CVInlineLineTableFragment->getContents());
-    else if (const auto *AlignFragment = dyn_cast<MCAlignFragment>(&Fragment)) {
+      llvm::append_range(mergedData,
+                         CVInlineLineTableFragment->getVarContents());
+    } else if (Fragment.getKind() == MCFragment::FT_Align) {
       auto FragmentSize = Asm.computeFragmentSize(Fragment);
       raw_svector_ostream OS(mergedData);
-      if (auto E = writeAlignFragment(*this, *AlignFragment, OS, FragmentSize))
+      if (auto E = writeAlignFragment(*this, Fragment, OS, FragmentSize))
         return std::move(E);
-    } else
-      // All other fragment types can be considered empty, see
-      // getFragmentContents() for all fragments that have contents.
-      continue;
+    } else {
+      if (Fragment.getFixedSize() != 0)
+        llvm::append_range(mergedData, Fragment.getContents());
+      if (Fragment.getVarSize() != 0)
+        llvm::append_range(mergedData, Fragment.getVarContents());
+    }
   }
   return mergedData;
 }
