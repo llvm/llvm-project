@@ -18,9 +18,9 @@ if(LIBOMP_OMPD_SUPPORT)
     add_subdirectory(src)
     if(LIBOMP_OMPD_GDB_SUPPORT)
         add_subdirectory(gdb-plugin)
-		# GDB is required to run the tests
-		if (GDB_FOUND)
-	        add_subdirectory(test)
-		endif()
+        # GDB is required to run the tests
+        if (GDB_FOUND AND OPENMP_INCLUDE_TESTS)
+            add_subdirectory(test)
+        endif()
     endif()
 endif()
