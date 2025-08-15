@@ -42,13 +42,22 @@ protected:
     return *CommonSection;
   }
 
+  Section &getOriginalObjectContentSection() {
+    if (!OriginalObjectContentSection)
+      OriginalObjectContentSection = &G->createSection(
+          OriginalObjectContentSectionName, orc::MemProt::Read | orc::MemProt::Write);
+    return *OriginalObjectContentSection;
+  }
+
   std::unique_ptr<LinkGraph> G;
 
 private:
   static StringRef CommonSectionName;
+  static StringRef OriginalObjectContentSectionName;
   static ArrayRef<const char *> DwarfSectionNames;
 
   Section *CommonSection = nullptr;
+  Section *OriginalObjectContentSection = nullptr;
 };
 
 /// LinkGraph building code that's specific to the given ELFT, but common
