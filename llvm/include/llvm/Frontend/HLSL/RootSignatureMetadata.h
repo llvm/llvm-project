@@ -28,39 +28,6 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-inline dxil::ResourceClass
-toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return dxil::ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return dxil::ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return dxil::ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return dxil::ResourceClass::Sampler;
-  }
-  llvm_unreachable("Unknown DescriptorRangeType");
-}
-
-inline dxil::ResourceClass toResourceClass(dxbc::RootParameterType Type) {
-  using namespace dxbc;
-  switch (Type) {
-  case RootParameterType::Constants32Bit:
-    return dxil::ResourceClass::CBuffer;
-  case RootParameterType::SRV:
-    return dxil::ResourceClass::SRV;
-  case RootParameterType::UAV:
-    return dxil::ResourceClass::UAV;
-  case RootParameterType::CBV:
-    return dxil::ResourceClass::CBuffer;
-  case dxbc::RootParameterType::DescriptorTable:
-    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
-  }
-  llvm_unreachable("Unknown RootParameterType");
-}
-
 template <typename T>
 class RootSignatureValidationError
     : public ErrorInfo<RootSignatureValidationError<T>> {

@@ -13,7 +13,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -237,10 +236,11 @@ static void validateRootSignatureBindings(Module &M,
     case dxbc::RootParameterType::CBV: {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
-      Builder.trackBinding(hlsl::rootsig::toResourceClass(static_cast<dxbc::RootParameterType>(
-                               ParamInfo.Header.ParameterType)),
-                           Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, &ParamInfo);
+      Builder.trackBinding(
+          dxbc::toResourceClass(static_cast<dxbc::RootParameterType>(
+              ParamInfo.Header.ParameterType)),
+          Desc.RegisterSpace, Desc.ShaderRegister, Desc.ShaderRegister,
+          &ParamInfo);
 
       break;
     }
@@ -254,7 +254,7 @@ static void validateRootSignatureBindings(Module &M,
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
         Builder.trackBinding(
-            hlsl::rootsig::toResourceClass(
+            dxbc::toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
             Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
             &ParamInfo);
