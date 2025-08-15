@@ -432,7 +432,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("terminateCommands", output, terminateCommands)
 
     # Flakey on 32-bit Arm Linux.
-    @skipif(oslist=["linux"], archs=["arm$"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     def test_extra_launch_commands(self):
         """
         Tests the "launchCommands" with extra launching settings
