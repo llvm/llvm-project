@@ -47,11 +47,9 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
       RTLIB::__aeabi_ui2f,        RTLIB::__aeabi_l2f,
       RTLIB::__aeabi_ul2f,        RTLIB::__aeabi_lmul,
       RTLIB::__aeabi_llsl,        RTLIB::__aeabi_llsr,
-      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv__i8,
-      RTLIB::__aeabi_idiv__i16,   RTLIB::__aeabi_idiv__i32,
+      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv,
       RTLIB::__aeabi_idivmod,     RTLIB::__aeabi_uidivmod,
-      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv__i8,
-      RTLIB::__aeabi_uidiv__i16,  RTLIB::__aeabi_uidiv__i32,
+      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv,
       RTLIB::__aeabi_uldivmod,    RTLIB::__aeabi_f2h,
       RTLIB::__aeabi_d2h,         RTLIB::__aeabi_h2f,
       RTLIB::__aeabi_memcpy,      RTLIB::__aeabi_memmove,
@@ -75,9 +73,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (ExceptionModel == ExceptionHandling::SjLj)
     setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
-
-  if (TT.isOSOpenBSD())
-    setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
 
   if (TT.isARM() || TT.isThumb()) {
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);

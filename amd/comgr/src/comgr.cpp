@@ -310,7 +310,8 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
 
 
   // TODO: Add a LIT test for this
-  if (IdentStr == "amdgcn-amd-amdhsa--amdgcnspirv") {
+  if (IdentStr == "amdgcn-amd-amdhsa--amdgcnspirv" ||
+      IdentStr == "amdgcn-amd-amdhsa-unknown-amdgcnspirv") {
     // Features not supported for SPIR-V
     if (!Ident.Features.empty())
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;

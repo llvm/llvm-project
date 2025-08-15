@@ -737,6 +737,12 @@ public:
   CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
                                CompilerType type, llvm::StringRef name);
 
+  /// Create a value object containing the given Scalar value.
+  static lldb::ValueObjectSP CreateValueObjectFromScalar(lldb::TargetSP target,
+                                                         Scalar &s,
+                                                         CompilerType type,
+                                                         llvm::StringRef name);
+
   /// Create a value object containing the given boolean value.
   static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
                                                        bool value,

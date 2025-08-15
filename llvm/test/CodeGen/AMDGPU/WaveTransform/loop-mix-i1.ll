@@ -258,7 +258,7 @@ define amdgpu_kernel void @loop_mix_i1(ptr addrspace(1) %filter.coerce, ptr addr
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GISEL-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_5]]
-  ; GISEL-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY15]], [[V_AND_B32_e64_]], implicit $exec
+  ; GISEL-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[COPY15]], [[V_AND_B32_e64_]], implicit $exec
   ; GISEL-NEXT:   [[COPY16:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY2]]
   ; GISEL-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[COPY16]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.arrayidx7, addrspace 1)
   ; GISEL-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 2
@@ -294,7 +294,7 @@ define amdgpu_kernel void @loop_mix_i1(ptr addrspace(1) %filter.coerce, ptr addr
   ; GISEL-NEXT:   [[COPY20:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY19]]
   ; GISEL-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GISEL-NEXT:   [[COPY21:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_7]]
-  ; GISEL-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY21]], [[V_AND_B32_e64_]], implicit $exec
+  ; GISEL-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[COPY21]], [[V_AND_B32_e64_]], implicit $exec
   ; GISEL-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_LSHLREV_B32_e64_1]], [[V_AND_B32_e64_]], [[COPY20]], 0, 0, implicit $exec :: (store (s32) into %ir.arrayidx13, addrspace 1)
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.10.if.end14:

@@ -513,6 +513,7 @@ cc_test(
         "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:FrontendHLSL",
+        "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenACC",
         "//llvm:FrontendOpenMP",
         "//llvm:Passes",

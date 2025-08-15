@@ -30,9 +30,7 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:  // %bb.1: // %vector.body
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ldr z4, [x0]
-; CHECK-NEXT:    ldr z5, [x0, #2, mul vl]
-; CHECK-NEXT:    ldr z6, [x0, #3, mul vl]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    umov w8, v0.b[8]
 ; CHECK-NEXT:    mov v1.b[1], v0.b[1]
 ; CHECK-NEXT:    fmov s2, w8
@@ -62,20 +60,20 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    asr z1.s, z1.s, #31
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
-; CHECK-NEXT:    bic z1.d, z4.d, z1.d
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
-; CHECK-NEXT:    str z1, [x0]
 ; CHECK-NEXT:    lsl z3.s, z3.s, #31
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
-; CHECK-NEXT:    bic z0.d, z5.d, z0.d
+; CHECK-NEXT:    st1w { z1.s }, p1, [x0]
+; CHECK-NEXT:    cmpne p2.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    asr z3.s, z3.s, #31
-; CHECK-NEXT:    bic z1.d, z4.d, z2.d
-; CHECK-NEXT:    str z0, [x0, #2, mul vl]
-; CHECK-NEXT:    bic z3.d, z6.d, z3.d
-; CHECK-NEXT:    str z1, [x0, #1, mul vl]
-; CHECK-NEXT:    str z3, [x0, #3, mul vl]
+; CHECK-NEXT:    cmpne p3.s, p0/z, z3.s, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
+; CHECK-NEXT:    st1w { z1.s }, p2, [x0, #2, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p3, [x0, #3, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:  .LBB1_2: // %exit
 ; CHECK-NEXT:    ret
   %broadcast.splat = shufflevector <32 x i1> zeroinitializer, <32 x i1> zeroinitializer, <32 x i32> zeroinitializer

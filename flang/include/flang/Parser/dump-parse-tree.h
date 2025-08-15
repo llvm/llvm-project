@@ -721,7 +721,6 @@ public:
   NODE(parser, OpenMPDeclareTargetConstruct)
   NODE(parser, OpenMPDeclareMapperConstruct)
   NODE_ENUM(common, OmpMemoryOrderType)
-  NODE(parser, OmpMemoryOrderClause)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPUtilityConstruct)

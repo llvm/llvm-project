@@ -78,9 +78,17 @@ TEST_P(olGetDeviceInfoTest, SuccessDriverVersion) {
 }
 
 TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSize) {
-  ol_dimensions_t Value{0, 0, 0};
+  uint32_t Value;
   ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE,
                                  sizeof(Value), &Value));
+  ASSERT_GT(Value, 0u);
+}
+
+TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSizePerDimension) {
+  ol_dimensions_t Value{0, 0, 0};
+  ASSERT_SUCCESS(
+      olGetDeviceInfo(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION,
+                      sizeof(Value), &Value));
   ASSERT_GT(Value.x, 0u);
   ASSERT_GT(Value.y, 0u);
   ASSERT_GT(Value.z, 0u);

@@ -436,7 +436,7 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
     NewV = NewV->stripPointerCasts();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {NewV->getType()});
-    II->setArgOperand(1, NewV);
+    II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
@@ -493,7 +493,7 @@ void InferAddressSpacesImpl::collectRewritableIntrinsicOperands(
   }
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
-    appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(1),
+    appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
   }

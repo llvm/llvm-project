@@ -20,28 +20,22 @@ jobs:
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
-            ccache-variant: sccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
-          # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
-            ccache-variant: ccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
           - os: windows-2022
-            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: windows-2025
-            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: macos-14
-            ccache-variant: sccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
@@ -61,7 +55,7 @@ jobs:
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
-        variant: ${{ matrix.ccache-variant }}
+        variant: sccache
     
     # MPFR is required by some of the mathlib tests.
     - name: Prepare dependencies (Ubuntu)
@@ -97,8 +91,8 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
         -DCMAKE_BUILD_TYPE=Debug
-        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
-        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLLVM_ENABLE_RUNTIMES=libc

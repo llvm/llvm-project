@@ -307,7 +307,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     return Plugin::success();
   }
 
@@ -342,6 +343,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error waitEventImpl(void *EventPtr,
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
+  }
+  Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
+    return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 

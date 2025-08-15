@@ -270,7 +270,6 @@ struct OpenMPConstruct;
 struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
-struct OmpMemoryOrderClause;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -4987,9 +4986,9 @@ struct OmpEndCriticalDirective {
   CharBlock source;
   std::tuple<Verbatim, std::optional<Name>> t;
 };
-struct OpenMPCriticalConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct);
-  std::tuple<OmpCriticalDirective, Block, OmpEndCriticalDirective> t;
+
+struct OpenMPCriticalConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct, OmpBlockConstruct);
 };
 
 // 2.11.3 allocate -> ALLOCATE [(variable-name-list)] [clause]
@@ -5014,17 +5013,6 @@ struct OpenMPExecutableAllocate {
 struct OpenMPAllocatorsConstruct : public OmpBlockConstruct {
   INHERITED_TUPLE_CLASS_BOILERPLATE(
       OpenMPAllocatorsConstruct, OmpBlockConstruct);
-};
-
-// 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
-//        memory-order-clause -> acq_rel
-//                               acquire
-//                               release
-//                               relaxed
-//                               seq_cst
-struct OmpMemoryOrderClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
-  CharBlock source;
 };
 
 struct OpenMPAtomicConstruct : public OmpBlockConstruct {

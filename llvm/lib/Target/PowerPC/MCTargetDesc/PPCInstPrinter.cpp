@@ -492,9 +492,9 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
 
 void PPCInstPrinter::printcrbitm(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned CCReg = MI->getOperand(OpNo).getReg();
+  MCRegister CCReg = MI->getOperand(OpNo).getReg();
   unsigned RegNo;
-  switch (CCReg) {
+  switch (CCReg.id()) {
   default: llvm_unreachable("Unknown CR register");
   case PPC::CR0: RegNo = 0; break;
   case PPC::CR1: RegNo = 1; break;
@@ -648,7 +648,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
