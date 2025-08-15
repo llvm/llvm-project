@@ -301,8 +301,12 @@ static void DetermineCopyInOutArgument(
     return;
   }
   // All the checks below are for arrays
-  bool actualIsArray{actual.Rank() > 0};
-  bool dummyIsArray{dummyObj->type.Rank() > 0};
+
+  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+  bool actualIsArray{actualIsAssumedRank || actual.Rank() > 0};
+  bool dummyIsAssumedRank{dummyObj->type.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedRank)};
+  bool dummyIsArray{dummyIsAssumedRank || dummyObj->type.Rank() > 0};
   if (!actualIsArray || !dummyIsArray) {
     return;
   }
