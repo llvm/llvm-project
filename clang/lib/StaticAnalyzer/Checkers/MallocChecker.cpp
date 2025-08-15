@@ -422,6 +422,14 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+
+  // Smart pointer related helper methods
+  ProgramStateRef
+  handleSmartPointerConstructorArguments(const CallEvent &Call,
+                                         ProgramStateRef State) const;
+  ProgramStateRef handleSmartPointerRelatedCalls(const CallEvent &Call,
+                                                 CheckerContext &C,
+                                                 ProgramStateRef State) const;
   void checkNewAllocator(const CXXAllocatorCall &Call, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &Call, CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
@@ -3190,24 +3198,37 @@ static bool isRvalueByValueRecordWithSmartPtr(const Expr *AE) {
   return CRD && hasSmartPtrField(CRD);
 }
 
+/// Check if a CXXRecordDecl represents a smart owning pointer type.
+static bool isSmartOwningPtrRecord(const CXXRecordDecl *RD) {
+  if (!RD)
+    return false;
+
+  auto isSmartPtrName = [](StringRef Name) {
+    return Name == "unique_ptr" || Name == "shared_ptr";
+  };
+
+  // Check the record name directly
+  if (isSmartPtrName(RD->getName())) {
+    // Accept both std and custom smart pointer implementations
+    return true;
+  }
+
+  return false;
+}
+
 /// Check if a call is a smart pointer constructor call that takes ownership
 /// of pointer arguments.
 static bool isSmartPtrCall(const CallEvent &Call) {
   // Only check for smart pointer constructor calls
   if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(Call.getDecl())) {
     const auto *RD = CD->getParent();
-    if (RD) {
-      ASTContext &Ctx = CD->getASTContext();
-      QualType RecordType = Ctx.getRecordType(RD);
-      if (isSmartOwningPtrType(RecordType)) {
-        // Check if constructor takes a pointer parameter
-        for (const auto *Param : CD->parameters()) {
-          QualType ParamType = Param->getType();
-          if (ParamType->isPointerType() &&
-              !ParamType->isFunctionPointerType() &&
-              !ParamType->isVoidPointerType()) {
-            return true;
-          }
+    if (isSmartOwningPtrRecord(RD)) {
+      // Check if constructor takes a pointer parameter
+      for (const auto *Param : CD->parameters()) {
+        QualType ParamType = Param->getType();
+        if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
+            !ParamType->isVoidPointerType()) {
+          return true;
         }
       }
     }
@@ -3250,45 +3271,46 @@ static void collectDirectSmartOwningPtrFieldRegions(
   }
 }
 
-void MallocChecker::checkPostCall(const CallEvent &Call,
-                                  CheckerContext &C) const {
-  // Keep existing post-call handlers.
-  if (const auto *PostFN = PostFnMap.lookup(Call)) {
-    (*PostFN)(this, C.getState(), Call, C);
-  }
+/// Handle smart pointer constructor calls by escaping allocated symbols
+/// that are passed as pointer arguments to the constructor.
+ProgramStateRef MallocChecker::handleSmartPointerConstructorArguments(
+    const CallEvent &Call, ProgramStateRef State) const {
+  const auto *CD = cast<CXXConstructorDecl>(Call.getDecl());
+  for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+    const Expr *ArgExpr = Call.getArgExpr(I);
+    if (!ArgExpr)
+      continue;
 
-  ProgramStateRef State = C.getState();
-
-  // Handle smart pointer constructor calls with targeted escape logic
-  if (isSmartPtrCall(Call)) {
-    // For smart pointer constructor calls, escape the allocated symbols
-    // that are passed as pointer arguments to the constructor
-    const auto *CD = cast<CXXConstructorDecl>(Call.getDecl());
-    for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
-      const Expr *ArgExpr = Call.getArgExpr(I);
-      if (!ArgExpr)
-        continue;
-
-      QualType ParamType = CD->getParamDecl(I)->getType();
-      if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
-          !ParamType->isVoidPointerType()) {
-        // This argument is a pointer being passed to smart pointer constructor
-        SVal ArgVal = Call.getArgSVal(I);
-        SymbolRef Sym = ArgVal.getAsSymbol();
-        if (Sym && State->contains<RegionState>(Sym)) {
-          const RefState *RS = State->get<RegionState>(Sym);
-          if (RS && (RS->isAllocated() || RS->isAllocatedOfSizeZero())) {
-            State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
-          }
+    QualType ParamType = CD->getParamDecl(I)->getType();
+    if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
+        !ParamType->isVoidPointerType()) {
+      // This argument is a pointer being passed to smart pointer constructor
+      SVal ArgVal = Call.getArgSVal(I);
+      SymbolRef Sym = ArgVal.getAsSymbol();
+      if (Sym && State->contains<RegionState>(Sym)) {
+        const RefState *RS = State->get<RegionState>(Sym);
+        if (RS && (RS->isAllocated() || RS->isAllocatedOfSizeZero())) {
+          State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
         }
       }
     }
-    C.addTransition(State);
-    return;
+  }
+  return State;
+}
+
+/// Handle all smart pointer related processing in function calls.
+/// This includes both direct smart pointer constructor calls and by-value
+/// arguments containing smart pointer fields.
+ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
+    const CallEvent &Call, CheckerContext &C, ProgramStateRef State) const {
+
+  // Handle direct smart pointer constructor calls first
+  if (isSmartPtrCall(Call)) {
+    return handleSmartPointerConstructorArguments(Call, State);
   }
 
+  // Handle smart pointer fields in by-value record arguments
   SmallVector<const MemRegion *, 8> SmartPtrFieldRoots;
-
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     const Expr *AE = Call.getArgExpr(I);
     if (!AE)
@@ -3302,24 +3324,35 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
     SVal ArgVal = Call.getArgSVal(I);
     const MemRegion *ArgRegion = ArgVal.getAsRegion();
     if (!ArgRegion) {
-      // Remove broad fallback - instead skip this argument to prevent
-      // overly broad escaping that would suppress legitimate leak detection
+      // Skip this argument to prevent overly broad escaping that would
+      // suppress legitimate leak detection
       continue;
     }
 
-    // Push direct smart owning pointer field regions only (precise root set).
+    // Collect direct smart owning pointer field regions
     collectDirectSmartOwningPtrFieldRegions(ArgRegion, AE->getType(), C,
                                             SmartPtrFieldRoots);
   }
 
-  // Escape only from those field roots
+  // Escape symbols reachable from smart pointer fields
   if (!SmartPtrFieldRoots.empty()) {
     State = EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
         SmartPtrFieldRoots, State);
   }
 
-  // Apply state changes - addTransition will check if State differs
-  // from current state
+  return State;
+}
+
+void MallocChecker::checkPostCall(const CallEvent &Call,
+                                  CheckerContext &C) const {
+  // Keep existing post-call handlers
+  if (const auto *PostFN = PostFnMap.lookup(Call)) {
+    (*PostFN)(this, C.getState(), Call, C);
+  }
+
+  // Handle all smart pointer related processing
+  ProgramStateRef State = handleSmartPointerRelatedCalls(Call, C, C.getState());
+
   C.addTransition(State);
 }
 
