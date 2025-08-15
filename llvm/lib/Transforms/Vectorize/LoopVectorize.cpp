@@ -5363,6 +5363,9 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
       UseMaskForGaps);
 
+  // Add the address computation cost.
+  Cost += TTI.getAddressComputationCost(WideVecTy);
+
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
     assert(!Legal->isMaskRequired(I) &&
