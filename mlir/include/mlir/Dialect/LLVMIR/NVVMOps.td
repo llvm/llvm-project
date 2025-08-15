@@ -3036,30 +3036,46 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
 // NVVM Griddepcontrol Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_GriddepcontrolWaitOp : NVVM_IntrOp<"griddepcontrol.wait", [], 0> {
-  let assemblyFormat = "attr-dict";
+def GridDepActionWait : I32EnumCase<"wait", 0>;
+def GridDepActionLaunchDependent : I32EnumCase<"launch_dependents", 1>;
 
+def GridDepActionKind : I32Enum<"GridDepActionKind", "Action kind for grid dependency control",
+  [GridDepActionWait, GridDepActionLaunchDependent]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def GridDepActionAttr : EnumAttr<NVVM_Dialect, GridDepActionKind, "grid_dep_action">;
+
+def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   let description = [{
-    Causes the executing thread to wait until all prerequisite grids in flight 
+    If the $kind attribute is set to `wait`, it causes the 
+    executing thread to wait until all prerequisite grids in flight 
     have completed and all the memory operations from the prerequisite grids 
     are performed and made visible to the current grid.
 
+    When the $kind is launch_dependents, it signals that specific dependents 
+    the runtime system designated to react to this instruction can be scheduled 
+    as soon as all other CTAs in the grid issue the same instruction or have 
+    completed.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
   }];
-}
 
-def NVVM_GriddepcontrolLaunchDependentsOp
-    : NVVM_IntrOp<"griddepcontrol.launch.dependents", [], 0> {
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins GridDepActionAttr:$kind);
 
-  let description = [{
-    Signals that specific dependents the runtime system designated to react to 
-    this instruction can be scheduled as soon as all other CTAs in the grid 
-    issue the same instruction or have completed.
+  let assemblyFormat = "$kind attr-dict";
 
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  string llvmBuilder = [{
+    llvm::Intrinsic::ID id;
+      switch ($kind) {
+        case NVVM::GridDepActionKind::wait:
+          id = llvm::Intrinsic::nvvm_griddepcontrol_wait;
+          break;
+        case NVVM::GridDepActionKind::launch_dependents:
+          id = llvm::Intrinsic::nvvm_griddepcontrol_launch_dependents;
+          break;
+      }
+      createIntrinsicCall(builder, id);
   }];
 }
 
