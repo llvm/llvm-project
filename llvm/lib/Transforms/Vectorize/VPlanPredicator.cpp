@@ -238,8 +238,8 @@ VPValue *VPPredicator::findCommonEdgeMask(const VPPhi *PhiR) const {
   if (!EdgeMask ||
       !match(EdgeMask, m_LogicalAnd(m_VPValue(CommonEdgeMask), m_VPValue())))
     return nullptr;
-  for (unsigned In = 1; In < PhiR->getNumIncoming(); In++)
-    if (!match(getEdgeMask(PhiR->getIncomingBlock(In), PhiR->getParent()),
+  for (const VPBasicBlock *InVPBB : drop_begin(PhiR->incoming_blocks()))
+    if (!match(getEdgeMask(InVPBB, PhiR->getParent()),
                m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue())))
       return nullptr;
   return CommonEdgeMask;
