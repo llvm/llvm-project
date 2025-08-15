@@ -166,7 +166,7 @@ private:
   void renderSectionLambdas(const llvm::json::Value &Contexts,
                             llvm::raw_ostream &OS, SectionLambda &L);
 
-  void indentTextNode(std::string &body, size_t Indentation, bool lastChild);
+  void indentTextNode(std::string &Body, size_t Indentation, bool FinalNode);
 
   void indentNodes(ASTNode *Node, bool isPartial);
 
@@ -685,17 +685,19 @@ void ASTNode::renderChild(const json::Value &Contexts, llvm::raw_ostream &OS) {
     Child->render(Contexts, OS);
 }
 
-void ASTNode::indentTextNode(std::string &body, size_t Indentation,
-                             bool lastChild) {
+void ASTNode::indentTextNode(std::string &Body, size_t Indentation,
+                             bool FinalNode) {
   std::string spaces(Indentation, ' ');
   size_t pos = 0;
+  size_t LastChar = std::string::npos;
 
-  if (lastChild)
-    body.erase(body.find_last_not_of(" \t\r\f\v") + 1); // .rtrim??
+  if (FinalNode)
+    // body.erase(body.find_last_not_of(" \t\r\f\v") + 1);
+    LastChar = Body.find_last_not_of(" \t\r\f\v");
 
-  while ((pos = body.find('\n', pos)) != std::string::npos) {
-    if ((!lastChild) || (pos != body.size() - 1)) {
-      body.insert(pos + 1, spaces);
+  while ((pos = Body.find('\n', pos)) != std::string::npos) {
+    if ((!FinalNode) || (pos != LastChar)) {
+      Body.insert(pos + 1, spaces);
       pos += 1 + Indentation;
     } else {
       break;
