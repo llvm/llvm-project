@@ -1863,15 +1863,15 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   unsigned ExtCnt = 0;
   bool ExtLane0 = false;
   for (User *U : Ext->users()) {
-    const APInt *Idx;
-    if (!match(U, m_ExtractElt(m_Value(), m_APInt(Idx))))
+    uint64_t Idx;
+    if (!match(U, m_ExtractElt(m_Value(), m_ConstantInt(Idx))))
       return false;
     if (cast<Instruction>(U)->use_empty())
       continue;
     ExtCnt += 1;
-    ExtLane0 |= Idx->isZero();
+    ExtLane0 |= !Idx;
     VectorCost += TTI.getVectorInstrCost(Instruction::ExtractElement, DstTy,
-                                         CostKind, Idx->getZExtValue(), U);
+                                         CostKind, Idx, U);
   }
 
   InstructionCost ScalarCost =
