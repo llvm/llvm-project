@@ -541,6 +541,17 @@ extern char &GCNRewritePartialRegUsesID;
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
+class AMDGPUEliminateAGPRToVGPRCopyPass
+    : public PassInfoMixin<AMDGPUEliminateAGPRToVGPRCopyPass> {
+public:
+  AMDGPUEliminateAGPRToVGPRCopyPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+void initializeAMDGPUEliminateAGPRToVGPRCopyLegacyPass(PassRegistry &);
+extern char &AMDGPUEliminateAGPRToVGPRCopyLegacyID;
+
 class AMDGPURewriteAGPRCopyMFMAPass
     : public PassInfoMixin<AMDGPURewriteAGPRCopyMFMAPass> {
 public:
