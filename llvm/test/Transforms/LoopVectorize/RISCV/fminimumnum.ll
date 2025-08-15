@@ -618,8 +618,8 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP20]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -674,8 +674,8 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP19]] to i64
 ; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP16]], [[INDEX]]
 ; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
-; ZVFHMIN-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
-; ZVFHMIN-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; ZVFHMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; ZVFHMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; ZVFHMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFHMIN:       [[SCALAR_PH]]:
@@ -753,8 +753,8 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP20]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -809,8 +809,8 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP19]] to i64
 ; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP16]], [[INDEX]]
 ; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
-; ZVFHMIN-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
-; ZVFHMIN-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; ZVFHMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; ZVFHMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; ZVFHMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFHMIN:       [[SCALAR_PH]]:
