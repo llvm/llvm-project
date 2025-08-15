@@ -205,7 +205,7 @@ public:
       std::vector<P1689ModuleInfo> Requires) override {
     ModuleName = Provided ? Provided->ModuleName : "";
     llvm::transform(Requires, std::back_inserter(NamedModuleDeps),
-                    [](const auto &Module) { return Module.ModuleName; });
+                    [](const auto &Module) -> const auto & { return Module.ModuleName; });
   }
 
   TranslationUnitDeps takeTranslationUnitDeps();
