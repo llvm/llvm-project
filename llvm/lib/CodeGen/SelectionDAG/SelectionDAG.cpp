@@ -4999,6 +4999,11 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         TargetLowering::ZeroOrNegativeOneBooleanContent)
       return VTBits;
     break;
+  case ISD::SCMP:
+  case ISD::UCMP:
+    // Returns -1/0/1 with i2 type or larger.
+    assert(VTBits >= 2 && "Result type not large enough for SCMP/UCMP node");
+    return VTBits - 1;
   case ISD::SETCC:
   case ISD::SETCCCARRY:
   case ISD::STRICT_FSETCC:
