@@ -203,13 +203,12 @@ define <4 x i32> @freeze_add_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_add_vec_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
+; X64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
   %y = freeze <4 x i32> %x
@@ -274,13 +273,12 @@ define <4 x i32> @freeze_sub_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_sub_vec_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sub_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
+; X64-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = sub <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
   %y = freeze <4 x i32> %x
@@ -345,14 +343,12 @@ define <8 x i16> @freeze_mul_vec(<8 x i16> %a0) nounwind {
 define <8 x i16> @freeze_mul_vec_undef(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_mul_vec_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,3,4,4,3,0,1]
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,3,2,1,1,2,u,4]
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,6,6,4,4,6,0,4]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4,4,3,0,1]
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,3,2,1,1,2,u,4]
+; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,6,6,4,4,6,0,4]
 ; X64-NEXT:    retq
   %x = mul <8 x i16> %a0, <i16 1, i16 2, i16 3, i16 4, i16 4, i16 3, i16 undef, i16 1>
   %y = freeze <8 x i16> %x
