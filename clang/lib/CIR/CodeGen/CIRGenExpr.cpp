@@ -1178,7 +1178,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
             rt->getOriginalDecl()->getDefinitionOrSelf())) {
       if (!classDecl->hasTrivialDestructor())
-        referenceTemporaryDtor = classDecl->getDestructor();
+        referenceTemporaryDtor =
+            classDecl->getDefinitionOrSelf()->getDestructor();
     }
   }
 
