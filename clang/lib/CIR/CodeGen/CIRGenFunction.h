@@ -518,6 +518,13 @@ public:
     symbolTable.insert(vd, addr.getPointer());
   }
 
+  /// Removes a declaration from the address-relationship.  This is a function
+  /// that shouldn't need to be used except in cases where we're adding/removing
+  /// things that aren't part of the language-semantics AST.
+  void removeAddrOfLocalVar(const clang::VarDecl *vd) {
+    localDeclMap.erase(vd);
+  }
+
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
   RValue convertTempToRValue(Address addr, clang::QualType type,
