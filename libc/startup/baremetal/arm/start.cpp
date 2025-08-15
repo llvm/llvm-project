@@ -15,7 +15,7 @@
 #include "startup/baremetal/fini.h"
 #include "startup/baremetal/init.h"
 
-#include <arm_acle.h>
+#include <arm_acle.h> // For __arm_wsr
 
 extern "C" {
 int main(int argc, char **argv);
