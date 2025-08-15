@@ -1652,15 +1652,16 @@ MCCVInlineLineTableFragmentRef::materialize(MCCASReader &Reader,
 }
 
 Expected<MCFillFragmentRef>
-MCFillFragmentRef::create(MCCASBuilder &MB, const MCFillFragment &F,
+MCFillFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                           unsigned FragmentSize,
                           ArrayRef<char> FragmentContents) {
+  auto *FillFrag = cast<MCFillFragment>(&F);
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
   writeVBR8(FragmentSize, B->Data);
-  writeVBR8(F.getValue(), B->Data);
-  writeVBR8(F.getValueSize(), B->Data);
+  writeVBR8(FillFrag->getValue(), B->Data);
+  writeVBR8(FillFrag->getValueSize(), B->Data);
   return get(B->build());
 }
 
