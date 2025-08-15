@@ -423,7 +423,6 @@ public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 
-  // Smart pointer related helper methods
   ProgramStateRef
   handleSmartPointerConstructorArguments(const CallEvent &Call,
                                          ProgramStateRef State) const;
@@ -3125,14 +3124,15 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(state->set<RegionState>(RS), N);
 }
 
+// Helper function to check if a name is a recognized smart pointer name
+static bool isSmartPtrName(StringRef Name) {
+  return Name == "unique_ptr" || Name == "shared_ptr";
+}
+
 // Allowlist of owning smart pointers we want to recognize.
 // Start with unique_ptr and shared_ptr. (intentionally exclude weak_ptr)
 static bool isSmartOwningPtrType(QualType QT) {
   QT = QT->getCanonicalTypeUnqualified();
-
-  auto isSmartPtrName = [](StringRef Name) {
-    return Name == "unique_ptr" || Name == "shared_ptr";
-  };
 
   // First try TemplateSpecializationType (for std smart pointers)
   if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
@@ -3154,12 +3154,14 @@ static bool isSmartOwningPtrType(QualType QT) {
   // Also try RecordType (for custom smart pointer implementations)
   if (const auto *RD = QT->getAsCXXRecordDecl()) {
     // Accept any custom unique_ptr or shared_ptr implementation
-    return (isSmartPtrName(RD->getName()));
+    return isSmartPtrName(RD->getName());
   }
 
   return false;
 }
 
+/// Check if a record type has smart pointer fields (directly or in base
+/// classes).
 static bool hasSmartPtrField(const CXXRecordDecl *CRD) {
   // Check direct fields
   if (llvm::any_of(CRD->fields(), [](const FieldDecl *FD) {
@@ -3177,6 +3179,7 @@ static bool hasSmartPtrField(const CXXRecordDecl *CRD) {
   return false;
 }
 
+/// Check if an expression is an rvalue record type passed by value.
 static bool isRvalueByValueRecord(const Expr *AE) {
   if (AE->isGLValue())
     return false;
@@ -3190,6 +3193,8 @@ static bool isRvalueByValueRecord(const Expr *AE) {
              InitListExpr, ImplicitCastExpr, CXXBindTemporaryExpr>(AE);
 }
 
+/// Check if an expression is an rvalue record with smart pointer fields passed
+/// by value.
 static bool isRvalueByValueRecordWithSmartPtr(const Expr *AE) {
   if (!isRvalueByValueRecord(AE))
     return false;
@@ -3198,14 +3203,10 @@ static bool isRvalueByValueRecordWithSmartPtr(const Expr *AE) {
   return CRD && hasSmartPtrField(CRD);
 }
 
-/// Check if a CXXRecordDecl represents a smart owning pointer type.
+/// Check if a CXXRecordDecl has a name matching recognized smart pointer names.
 static bool isSmartOwningPtrRecord(const CXXRecordDecl *RD) {
   if (!RD)
     return false;
-
-  auto isSmartPtrName = [](StringRef Name) {
-    return Name == "unique_ptr" || Name == "shared_ptr";
-  };
 
   // Check the record name directly
   if (isSmartPtrName(RD->getName())) {
@@ -3216,21 +3217,24 @@ static bool isSmartOwningPtrRecord(const CXXRecordDecl *RD) {
   return false;
 }
 
-/// Check if a call is a smart pointer constructor call that takes ownership
-/// of pointer arguments.
+/// Check if a call is a constructor of a smart pointer class that accepts
+/// pointer parameters.
 static bool isSmartPtrCall(const CallEvent &Call) {
   // Only check for smart pointer constructor calls
-  if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(Call.getDecl())) {
-    const auto *RD = CD->getParent();
-    if (isSmartOwningPtrRecord(RD)) {
-      // Check if constructor takes a pointer parameter
-      for (const auto *Param : CD->parameters()) {
-        QualType ParamType = Param->getType();
-        if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
-            !ParamType->isVoidPointerType()) {
-          return true;
-        }
-      }
+  const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(Call.getDecl());
+  if (!CD)
+    return false;
+
+  const auto *RD = CD->getParent();
+  if (!isSmartOwningPtrRecord(RD))
+    return false;
+
+  // Check if constructor takes a pointer parameter
+  for (const auto *Param : CD->parameters()) {
+    QualType ParamType = Param->getType();
+    if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
+        !ParamType->isVoidPointerType()) {
+      return true;
     }
   }
 
