@@ -583,8 +583,10 @@ TEST_F(ProgramEnvTest, TestLockFileExclusive) {
     int FD2;
     ASSERT_NO_ERROR(fs::openFileForReadWrite(LockedFile, FD2,
                                              fs::CD_OpenExisting, fs::OF_None));
-    // File should be non-exclusive locked. Try acquire exclusive lock will fail
-    // but non-exclusive will succeed.
+
+    // File should currently be non-exclusive locked by the main process, thus
+    // trying to acquire exclusive lock will fail and trying to acquire
+    // non-exclusive will succeed.
     EXPECT_TRUE(
         fs::tryLockFile(FD2, std::chrono::seconds(0), /*Exclusive=*/true));
 
