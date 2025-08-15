@@ -33,6 +33,7 @@
 
 namespace llvm {
 class CanonicalLoopInfo;
+class CodeExtractor;
 class ScanInfo;
 struct TargetRegionEntryInfo;
 class OffloadEntriesInfoManager;
@@ -2440,30 +2441,34 @@ public:
   /// during finalization.
   struct OutlineInfo {
     using PostOutlineCBTy = std::function<void(Function &)>;
-    using CustomArgAllocatorCBTy = std::function<Instruction *(
-        BasicBlock *, BasicBlock::iterator, Type *, const Twine &)>;
-    using CustomArgDeallocatorCBTy = std::function<Instruction *(
-        BasicBlock *, BasicBlock::iterator, Value *, Type *)>;
     PostOutlineCBTy PostOutlineCB;
-    CustomArgAllocatorCBTy CustomArgAllocatorCB;
-    CustomArgDeallocatorCBTy CustomArgDeallocatorCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocaBB;
     SmallVector<Value *, 2> ExcludeArgsFromAggregate;
     SetVector<Value *> Inputs, Outputs;
     // TODO: this should be safe to enable by default
     bool FixUpNonEntryAllocas = false;
 
+    LLVM_ABI virtual ~OutlineInfo() = default;
+
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
     LLVM_ABI void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
                                 SmallVectorImpl<BasicBlock *> &BlockVector);
+
+    /// Create a CodeExtractor instance based on the information stored in this
+    /// structure, the list of collected blocks from a previous call to
+    /// \c collectBlocks and a flag stating whether arguments must be passed in
+    /// address space 0.
+    LLVM_ABI virtual std::unique_ptr<CodeExtractor>
+    createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
+                        bool ArgsInZeroAddressSpace, Twine Suffix = Twine(""));
 
     /// Return the function that contains the region to be outlined.
     Function *getFunction() const { return EntryBB->getParent(); }
   };
 
   /// Collection of regions that need to be outlined during finalization.
-  SmallVector<OutlineInfo, 16> OutlineInfos;
+  SmallVector<std::unique_ptr<OutlineInfo>, 16> OutlineInfos;
 
   /// A collection of candidate target functions that's constant allocas will
   /// attempt to be raised on a call of finalize after all currently enqueued
@@ -2478,7 +2483,9 @@ public:
   std::forward_list<ScanInfo> ScanInfos;
 
   /// Add a new region that will be outlined later.
-  void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
+  void addOutlineInfo(std::unique_ptr<OutlineInfo> &&OI) {
+    OutlineInfos.emplace_back(std::move(OI));
+  }
 
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +

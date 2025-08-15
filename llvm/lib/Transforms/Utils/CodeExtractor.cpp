@@ -262,22 +262,14 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             BasicBlock *AllocationBlock, std::string Suffix,
-                             bool ArgsInZeroAddressSpace,
-                             CustomArgAllocatorCBTy *CustomArgAllocatorCB,
-                             BasicBlock *DeallocationBlock,
-                             CustomArgDeallocatorCBTy *CustomArgDeallocatorCB)
+                             BasicBlock *AllocationBlock,
+                             BasicBlock *DeallocationBlock, std::string Suffix,
+                             bool ArgsInZeroAddressSpace)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-      AllowVarArgs(AllowVarArgs),
+      DeallocationBlock(DeallocationBlock), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
-      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
-      CustomArgAllocatorCB(CustomArgAllocatorCB),
-      DeallocationBlock(DeallocationBlock),
-      CustomArgDeallocatorCB(CustomArgDeallocatorCB) {
-  assert((!CustomArgDeallocatorCB || CustomArgAllocatorCB) &&
-         "custom deallocator only allowed if a custom allocator is provided");
-}
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -449,6 +441,27 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
   return CommonExitBlock;
+}
+
+Instruction *CodeExtractor::allocateVar(BasicBlock *BB,
+                                        BasicBlock::iterator AllocIP,
+                                        Type *VarType, const Twine &Name,
+                                        AddrSpaceCastInst **CastedAlloc) {
+  const DataLayout &DL = BB->getModule()->getDataLayout();
+  Instruction *Alloca =
+      new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocIP);
+
+  if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+    *CastedAlloc = new AddrSpaceCastInst(
+        Alloca, PointerType::get(BB->getContext(), 0), Name + ".ascast");
+    (*CastedAlloc)->insertAfter(Alloca->getIterator());
+  }
+  return Alloca;
+}
+
+Instruction *CodeExtractor::deallocateVar(BasicBlock *, BasicBlock::iterator,
+                                          Value *, Type *) {
+  return nullptr;
 }
 
 // Find the pair of life time markers for address 'Addr' that are either
@@ -1828,7 +1841,6 @@ CallInst *CodeExtractor::emitReplacerCall(
     std::vector<Value *> &Reloads) {
   LLVMContext &Context = oldFunction->getContext();
   Module *M = oldFunction->getParent();
-  const DataLayout &DL = M->getDataLayout();
 
   // This takes place of the original loop
   BasicBlock *codeReplacer =
@@ -1859,39 +1871,22 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (StructValues.contains(output))
       continue;
 
-    Value *OutAlloc;
-    if (CustomArgAllocatorCB)
-      OutAlloc = (*CustomArgAllocatorCB)(
-          AllocaBlock, AllocaBlock->getFirstInsertionPt(), output->getType(),
-          output->getName() + ".loc");
-    else
-      OutAlloc = new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
-                                nullptr, output->getName() + ".loc",
-                                AllocaBlock->getFirstInsertionPt());
-
+    Value *OutAlloc =
+        allocateVar(AllocaBlock, AllocaBlock->getFirstInsertionPt(),
+                    output->getType(), output->getName() + ".loc");
     params.push_back(OutAlloc);
     ReloadOutputs.push_back(OutAlloc);
   }
 
   Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
-    BasicBlock::iterator StructArgIP = AllocaBlock->getFirstInsertionPt();
-    if (CustomArgAllocatorCB) {
-      Struct = (*CustomArgAllocatorCB)(AllocaBlock, StructArgIP, StructArgTy,
-                                       "structArg");
+    AddrSpaceCastInst *StructSpaceCast = nullptr;
+    Struct = allocateVar(AllocaBlock, AllocaBlock->getFirstInsertionPt(),
+                         StructArgTy, "structArg", &StructSpaceCast);
+    if (StructSpaceCast)
+      params.push_back(StructSpaceCast);
+    else
       params.push_back(Struct);
-    } else {
-      Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                              "structArg", StructArgIP);
-      if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
-        auto *StructSpaceCast = new AddrSpaceCastInst(
-            Struct, PointerType ::get(Context, 0), "structArg.ascast");
-        StructSpaceCast->insertAfter(Struct->getIterator());
-        params.push_back(StructSpaceCast);
-      } else {
-        params.push_back(Struct);
-      }
-    }
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
@@ -2034,25 +2029,23 @@ CallInst *CodeExtractor::emitReplacerCall(
   insertLifetimeMarkersSurroundingCall(oldFunction->getParent(), LifetimesStart,
                                        {}, call);
 
-  // Deallocate variables that used a custom allocator.
-  if (CustomArgAllocatorCB && CustomArgDeallocatorCB) {
-    BasicBlock *DeallocBlock = codeReplacer;
-    BasicBlock::iterator DeallocIP = codeReplacer->end();
-    if (DeallocationBlock) {
-      DeallocBlock = DeallocationBlock;
-      DeallocIP = DeallocationBlock->getFirstInsertionPt();
-    }
-
-    int Index = 0;
-    for (Value *Output : outputs) {
-      if (!StructValues.contains(Output))
-        (*CustomArgDeallocatorCB)(DeallocBlock, DeallocIP,
-                                  ReloadOutputs[Index++], Output->getType());
-    }
-
-    if (Struct)
-      (*CustomArgDeallocatorCB)(DeallocBlock, DeallocIP, Struct, StructArgTy);
+  // Deallocate intermediate variables if they need explicit deallocation.
+  BasicBlock *DeallocBlock = codeReplacer;
+  BasicBlock::iterator DeallocIP = codeReplacer->end();
+  if (DeallocationBlock) {
+    DeallocBlock = DeallocationBlock;
+    DeallocIP = DeallocationBlock->getFirstInsertionPt();
   }
+
+  int Index = 0;
+  for (Value *Output : outputs) {
+    if (!StructValues.contains(Output))
+      deallocateVar(DeallocBlock, DeallocIP, ReloadOutputs[Index++],
+                    Output->getType());
+  }
+
+  if (Struct)
+    deallocateVar(DeallocBlock, DeallocIP, Struct, StructArgTy);
 
   return call;
 }

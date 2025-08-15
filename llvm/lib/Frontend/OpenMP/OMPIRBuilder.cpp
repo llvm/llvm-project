@@ -488,6 +488,88 @@ enum OpenMPOffloadingRequiresDirFlags {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_REQ_DYNAMIC_ALLOCATORS)
 };
 
+class OMPCodeExtractor : public CodeExtractor {
+public:
+  OMPCodeExtractor(OpenMPIRBuilder &OMPBuilder, ArrayRef<BasicBlock *> BBs,
+                   DominatorTree *DT = nullptr, bool AggregateArgs = false,
+                   BlockFrequencyInfo *BFI = nullptr,
+                   BranchProbabilityInfo *BPI = nullptr,
+                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+                   bool AllowAlloca = false,
+                   BasicBlock *AllocationBlock = nullptr,
+                   BasicBlock *DeallocationBlock = nullptr,
+                   std::string Suffix = "", bool ArgsInZeroAddressSpace = false)
+      : CodeExtractor(BBs, DT, AggregateArgs, BFI, BPI, AC, AllowVarArgs,
+                      AllowAlloca, AllocationBlock, DeallocationBlock, Suffix,
+                      ArgsInZeroAddressSpace),
+        OMPBuilder(OMPBuilder) {}
+
+  virtual ~OMPCodeExtractor() = default;
+
+protected:
+  OpenMPIRBuilder &OMPBuilder;
+};
+
+class DeviceSharedMemCodeExtractor : public OMPCodeExtractor {
+public:
+  DeviceSharedMemCodeExtractor(
+      OpenMPIRBuilder &OMPBuilder, BasicBlock *AllocBlockOverride,
+      ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
+      bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
+      BranchProbabilityInfo *BPI = nullptr, AssumptionCache *AC = nullptr,
+      bool AllowVarArgs = false, bool AllowAlloca = false,
+      BasicBlock *AllocationBlock = nullptr,
+      BasicBlock *DeallocationBlock = nullptr, std::string Suffix = "",
+      bool ArgsInZeroAddressSpace = false)
+      : OMPCodeExtractor(OMPBuilder, BBs, DT, AggregateArgs, BFI, BPI, AC,
+                         AllowVarArgs, AllowAlloca, AllocationBlock,
+                         DeallocationBlock, Suffix, ArgsInZeroAddressSpace),
+        AllocBlockOverride(AllocBlockOverride) {}
+  virtual ~DeviceSharedMemCodeExtractor() = default;
+
+protected:
+  virtual Instruction *
+  allocateVar(BasicBlock *, BasicBlock::iterator, Type *VarType,
+              const Twine &Name = Twine(""),
+              AddrSpaceCastInst **CastedAlloc = nullptr) override {
+    // Ignore the CastedAlloc pointer, if requested, because shared memory
+    // should not be casted to address space 0 to be passed around.
+    return OMPBuilder.createOMPAllocShared(
+        OpenMPIRBuilder::InsertPointTy(
+            AllocBlockOverride, AllocBlockOverride->getFirstInsertionPt()),
+        VarType, Name);
+  }
+
+  virtual Instruction *deallocateVar(BasicBlock *BB,
+                                     BasicBlock::iterator DeallocIP, Value *Var,
+                                     Type *VarType) override {
+    return OMPBuilder.createOMPFreeShared(
+        OpenMPIRBuilder::InsertPointTy(BB, DeallocIP), Var, VarType);
+  }
+
+private:
+  // TODO: Remove the need for this override and instead get the CodeExtractor
+  // to provide a valid insert point for explicit deallocations by correctly
+  // populating its DeallocationBlock.
+  BasicBlock *AllocBlockOverride;
+};
+
+/// Helper storing information about regions to outline using device shared
+/// memory for intermediate allocations.
+struct DeviceSharedMemOutlineInfo : public OpenMPIRBuilder::OutlineInfo {
+  OpenMPIRBuilder &OMPBuilder;
+  BasicBlock *AllocBlockOverride = nullptr;
+
+  DeviceSharedMemOutlineInfo(OpenMPIRBuilder &OMPBuilder)
+      : OMPBuilder(OMPBuilder) {}
+  virtual ~DeviceSharedMemOutlineInfo() = default;
+
+  virtual std::unique_ptr<CodeExtractor>
+  createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
+                      bool ArgsInZeroAddressSpace,
+                      Twine Suffix = Twine("")) override;
+};
+
 } // anonymous namespace
 
 OpenMPIRBuilderConfig::OpenMPIRBuilderConfig()
@@ -822,20 +904,20 @@ static void hoistNonEntryAllocasToEntryBlock(llvm::BasicBlock &Block) {
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
-  SmallVector<OutlineInfo, 16> DeferredOutlines;
-  for (OutlineInfo &OI : OutlineInfos) {
+  SmallVector<std::unique_ptr<OutlineInfo>, 16> DeferredOutlines;
+  for (std::unique_ptr<OutlineInfo> &OI : OutlineInfos) {
     // Skip functions that have not finalized yet; may happen with nested
     // function generation.
-    if (Fn && OI.getFunction() != Fn) {
-      DeferredOutlines.push_back(OI);
+    if (Fn && OI->getFunction() != Fn) {
+      DeferredOutlines.push_back(std::move(OI));
       continue;
     }
 
     ParallelRegionBlockSet.clear();
     Blocks.clear();
-    OI.collectBlocks(ParallelRegionBlockSet, Blocks);
+    OI->collectBlocks(ParallelRegionBlockSet, Blocks);
 
-    Function *OuterFn = OI.getFunction();
+    Function *OuterFn = OI->getFunction();
     CodeExtractorAnalysisCache CEAC(*OuterFn);
     // If we generate code for the target device, we need to allocate
     // struct for aggregate params in the device default alloca address space.
@@ -844,31 +926,20 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     // CodeExtractor generates correct code for extracted functions
     // which are used by OpenMP runtime.
     bool ArgsInZeroAddressSpace = Config.isTargetDevice();
-    CodeExtractor Extractor(
-        Blocks, /* DominatorTree */ nullptr,
-        /* AggregateArgs */ true,
-        /* BlockFrequencyInfo */ nullptr,
-        /* BranchProbabilityInfo */ nullptr,
-        /* AssumptionCache */ nullptr,
-        /* AllowVarArgs */ true,
-        /* AllowAlloca */ true,
-        /* AllocaBlock*/ OI.OuterAllocaBB,
-        /* Suffix */ ".omp_par", ArgsInZeroAddressSpace,
-        OI.CustomArgAllocatorCB ? &OI.CustomArgAllocatorCB : nullptr,
-        /* DeallocationBlock */ OI.ExitBB,
-        OI.CustomArgDeallocatorCB ? &OI.CustomArgDeallocatorCB : nullptr);
+    std::unique_ptr<CodeExtractor> Extractor =
+        OI->createCodeExtractor(Blocks, ArgsInZeroAddressSpace, ".omp_par");
 
     LLVM_DEBUG(dbgs() << "Before     outlining: " << *OuterFn << "\n");
-    LLVM_DEBUG(dbgs() << "Entry " << OI.EntryBB->getName()
-                      << " Exit: " << OI.ExitBB->getName() << "\n");
-    assert(Extractor.isEligible() &&
+    LLVM_DEBUG(dbgs() << "Entry " << OI->EntryBB->getName()
+                      << " Exit: " << OI->ExitBB->getName() << "\n");
+    assert(Extractor->isEligible() &&
            "Expected OpenMP outlining to be possible!");
 
-    for (auto *V : OI.ExcludeArgsFromAggregate)
-      Extractor.excludeArgFromAggregate(V);
+    for (auto *V : OI->ExcludeArgsFromAggregate)
+      Extractor->excludeArgFromAggregate(V);
 
     Function *OutlinedFn =
-        Extractor.extractCodeRegion(CEAC, OI.Inputs, OI.Outputs);
+        Extractor->extractCodeRegion(CEAC, OI->Inputs, OI->Outputs);
 
     // Forward target-cpu, target-features attributes to the outlined function.
     auto TargetCpuAttr = OuterFn->getFnAttribute("target-cpu");
@@ -893,8 +964,8 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     // made our own entry block after all.
     {
       BasicBlock &ArtificialEntry = OutlinedFn->getEntryBlock();
-      assert(ArtificialEntry.getUniqueSuccessor() == OI.EntryBB);
-      assert(OI.EntryBB->getUniquePredecessor() == &ArtificialEntry);
+      assert(ArtificialEntry.getUniqueSuccessor() == OI->EntryBB);
+      assert(OI->EntryBB->getUniquePredecessor() == &ArtificialEntry);
       // Move instructions from the to-be-deleted ArtificialEntry to the entry
       // basic block of the parallel region. CodeExtractor generates
       // instructions to unwrap the aggregate argument and may sink
@@ -910,26 +981,27 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
         if (I.isTerminator()) {
           // Absorb any debug value that terminator may have
-          if (OI.EntryBB->getTerminator())
-            OI.EntryBB->getTerminator()->adoptDbgRecords(
+          if (OI->EntryBB->getTerminator())
+            OI->EntryBB->getTerminator()->adoptDbgRecords(
                 &ArtificialEntry, I.getIterator(), false);
           continue;
         }
 
-        I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
+        I.moveBeforePreserving(*OI->EntryBB,
+                               OI->EntryBB->getFirstInsertionPt());
       }
 
-      OI.EntryBB->moveBefore(&ArtificialEntry);
+      OI->EntryBB->moveBefore(&ArtificialEntry);
       ArtificialEntry.eraseFromParent();
     }
-    assert(&OutlinedFn->getEntryBlock() == OI.EntryBB);
+    assert(&OutlinedFn->getEntryBlock() == OI->EntryBB);
     assert(OutlinedFn && OutlinedFn->hasNUses(1));
 
     // Run a user callback, e.g. to add attributes.
-    if (OI.PostOutlineCB)
-      OI.PostOutlineCB(*OutlinedFn);
+    if (OI->PostOutlineCB)
+      OI->PostOutlineCB(*OutlinedFn);
 
-    if (OI.FixUpNonEntryAllocas) {
+    if (OI->FixUpNonEntryAllocas) {
       PostDominatorTree PostDomTree(*OutlinedFn);
       for (llvm::BasicBlock &BB : *OutlinedFn)
         if (PostDomTree.properlyDominates(&BB, &OutlinedFn->getEntryBlock()))
@@ -1753,26 +1825,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
 
-  OutlineInfo OI;
-  if (Config.isTargetDevice()) {
-    // Generate OpenMP target specific runtime call
-    OI.PostOutlineCB = [=, ToBeDeletedVec =
-                               std::move(ToBeDeleted)](Function &OutlinedFn) {
-      targetParallelCallback(this, OutlinedFn, OuterFn, OuterAllocaBlock, Ident,
-                             IfCondition, NumThreads, PrivTID, PrivTIDAddr,
-                             ThreadID, ToBeDeletedVec);
-    };
+  auto OI = [&]() -> std::unique_ptr<OutlineInfo> {
+    if (Config.isTargetDevice()) {
+      std::optional<omp::OMPTgtExecModeFlags> ExecMode =
+          getTargetKernelExecMode(*OuterFn);
 
-    std::optional<omp::OMPTgtExecModeFlags> ExecMode =
-        getTargetKernelExecMode(*OuterFn);
+      // If OuterFn is not a Generic kernel, skip custom allocation. This causes
+      // the CodeExtractor to follow its default behavior. Otherwise, we need to
+      // use device shared memory to allocate argument structures.
+      if (ExecMode && *ExecMode & OMP_TGT_EXEC_MODE_GENERIC) {
+        auto Info = std::make_unique<DeviceSharedMemOutlineInfo>(*this);
 
-    // If OuterFn is not a Generic kernel, skip custom allocation. This causes
-    // the CodeExtractor to follow its default behavior. Otherwise, we need to
-    // use device shared memory to allocate argument structures.
-    if (ExecMode && *ExecMode & OMP_TGT_EXEC_MODE_GENERIC) {
-      OI.CustomArgAllocatorCB = [this,
-                                 EntryBB](BasicBlock *, BasicBlock::iterator,
-                                          Type *ArgTy, const Twine &Name) {
         // Instead of using the insertion point provided by the CodeExtractor,
         // here we need to use the block that eventually calls the outlined
         // function for the `parallel` construct.
@@ -1796,34 +1859,38 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
         // The current approach results in an explicit allocation and
         // deallocation pair for each `distribute` loop iteration in that case,
         // which is suboptimal.
-        return createOMPAllocShared(
-            InsertPointTy(EntryBB, EntryBB->getFirstInsertionPt()), ArgTy,
-            Name);
-      };
-      OI.CustomArgDeallocatorCB =
-          [this](BasicBlock *BB, BasicBlock::iterator AllocIP, Value *Arg,
-                 Type *ArgTy) -> Instruction * {
-        return createOMPFreeShared(InsertPointTy(BB, AllocIP), Arg, ArgTy);
-      };
+        Info->AllocBlockOverride = EntryBB;
+        return Info;
+      }
     }
-    OI.FixUpNonEntryAllocas = true;
+    return std::make_unique<OutlineInfo>();
+  }();
+
+  if (Config.isTargetDevice()) {
+    // Generate OpenMP target specific runtime call
+    OI->PostOutlineCB = [=, ToBeDeletedVec =
+                                std::move(ToBeDeleted)](Function &OutlinedFn) {
+      targetParallelCallback(this, OutlinedFn, OuterFn, OuterAllocaBlock, Ident,
+                             IfCondition, NumThreads, PrivTID, PrivTIDAddr,
+                             ThreadID, ToBeDeletedVec);
+    };
   } else {
     // Generate OpenMP host runtime call
-    OI.PostOutlineCB = [=, ToBeDeletedVec =
-                               std::move(ToBeDeleted)](Function &OutlinedFn) {
+    OI->PostOutlineCB = [=, ToBeDeletedVec =
+                                std::move(ToBeDeleted)](Function &OutlinedFn) {
       hostParallelCallback(this, OutlinedFn, OuterFn, Ident, IfCondition,
                            PrivTID, PrivTIDAddr, ToBeDeletedVec);
     };
-    OI.FixUpNonEntryAllocas = true;
   }
-
-  OI.OuterAllocaBB = OuterAllocaBlock;
-  OI.EntryBB = PRegEntryBB;
-  OI.ExitBB = PRegExitBB;
+  
+  OI->FixUpNonEntryAllocas = true;
+  OI->OuterAllocaBB = OuterAllocaBlock;
+  OI->EntryBB = PRegEntryBB;
+  OI->ExitBB = PRegExitBB;
 
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
-  OI.collectBlocks(ParallelRegionBlockSet, Blocks);
+  OI->collectBlocks(ParallelRegionBlockSet, Blocks);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
@@ -1834,6 +1901,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                           /* AllowVarArgs */ true,
                           /* AllowAlloca */ true,
                           /* AllocationBlock */ OuterAllocaBlock,
+                          /* DeallocationBlock */ nullptr,
                           /* Suffix */ ".omp_par", ArgsInZeroAddressSpace);
 
   // Find inputs to, outputs from the code region.
@@ -1858,7 +1926,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   auto PrivHelper = [&](Value &V) -> Error {
     if (&V == TIDAddr || &V == ZeroAddr) {
-      OI.ExcludeArgsFromAggregate.push_back(&V);
+      OI->ExcludeArgsFromAggregate.push_back(&V);
       return Error::success();
     }
 
@@ -2522,19 +2590,19 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
   if (Error Err = BodyGenCB(TaskAllocaIP, TaskBodyIP))
     return Err;
 
-  OutlineInfo OI;
-  OI.EntryBB = TaskAllocaBB;
-  OI.OuterAllocaBB = AllocaIP.getBlock();
-  OI.ExitBB = TaskExitBB;
+  auto OI = std::make_unique<OutlineInfo>();
+  OI->EntryBB = TaskAllocaBB;
+  OI->OuterAllocaBB = AllocaIP.getBlock();
+  OI->ExitBB = TaskExitBB;
 
   // Add the thread ID argument.
   SmallVector<Instruction *, 4> ToBeDeleted;
-  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+  OI->ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
-  OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Mergeable, Priority, EventHandle, TaskAllocaBB,
-                      ToBeDeleted](Function &OutlinedFn) mutable {
+  OI->PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
+                       Mergeable, Priority, EventHandle, TaskAllocaBB,
+                       ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -5900,19 +5968,19 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
 
-  OutlineInfo OI;
-  OI.OuterAllocaBB = CLI->getPreheader();
+  auto OI = std::make_unique<OutlineInfo>();
+  OI->OuterAllocaBB = CLI->getPreheader();
   Function *OuterFn = CLI->getPreheader()->getParent();
 
   // Instructions which need to be deleted at the end of code generation
   SmallVector<Instruction *, 4> ToBeDeleted;
 
-  OI.OuterAllocaBB = AllocaIP.getBlock();
+  OI->OuterAllocaBB = AllocaIP.getBlock();
 
   // Mark the body loop as region which needs to be extracted
-  OI.EntryBB = CLI->getBody();
-  OI.ExitBB = CLI->getLatch()->splitBasicBlock(CLI->getLatch()->begin(),
-                                               "omp.prelatch", true);
+  OI->EntryBB = CLI->getBody();
+  OI->ExitBB = CLI->getLatch()->splitBasicBlock(CLI->getLatch()->begin(),
+                                                "omp.prelatch", true);
 
   // Prepare loop body for extraction
   Builder.restoreIP({CLI->getPreheader(), CLI->getPreheader()->begin()});
@@ -5932,7 +6000,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   // loop body region.
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
-  OI.collectBlocks(ParallelRegionBlockSet, Blocks);
+  OI->collectBlocks(ParallelRegionBlockSet, Blocks);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks,
@@ -5944,6 +6012,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
                           /* AllowVarArgs */ true,
                           /* AllowAlloca */ true,
                           /* AllocationBlock */ CLI->getPreheader(),
+                          /* DeallocationBlock */ nullptr,
                           /* Suffix */ ".omp_wsloop",
                           /* AggrArgsIn0AddrSpace */ true);
 
@@ -5968,15 +6037,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   }
   // Make sure that loop counter variable is not merged into loop body
   // function argument structure and it is passed as separate variable
-  OI.ExcludeArgsFromAggregate.push_back(NewLoopCntLoad);
+  OI->ExcludeArgsFromAggregate.push_back(NewLoopCntLoad);
 
   // PostOutline CB is invoked when loop body function is outlined and
   // loop body is replaced by call to outlined function. We need to add
   // call to OpenMP device rtl inside loop preheader. OpenMP device rtl
   // function will handle loop control logic.
   //
-  OI.PostOutlineCB = [=, ToBeDeletedVec =
-                             std::move(ToBeDeleted)](Function &OutlinedFn) {
+  OI->PostOutlineCB = [=, ToBeDeletedVec =
+                              std::move(ToBeDeleted)](Function &OutlinedFn) {
     workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ToBeDeletedVec,
                                 LoopType, NoLoop);
   };
@@ -8801,13 +8870,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
                                    TargetTaskAllocaBB->begin());
   InsertPointTy TargetTaskBodyIP(TargetTaskBodyBB, TargetTaskBodyBB->begin());
 
-  OutlineInfo OI;
-  OI.EntryBB = TargetTaskAllocaBB;
-  OI.OuterAllocaBB = AllocaIP.getBlock();
+  auto OI = std::make_unique<OutlineInfo>();
+  OI->EntryBB = TargetTaskAllocaBB;
+  OI->OuterAllocaBB = AllocaIP.getBlock();
 
   // Add the thread ID argument.
   SmallVector<Instruction *, 4> ToBeDeleted;
-  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+  OI->ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
 
   // Generate the task body which will subsequently be outlined.
@@ -8825,8 +8894,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   // OI.ExitBlock is set to the single task body block and will get left out of
   // the outlining process. So, simply create a new empty block to which we
   // uncoditionally branch from where TaskBodyCB left off
-  OI.ExitBB = BasicBlock::Create(Builder.getContext(), "target.task.cont");
-  emitBlock(OI.ExitBB, Builder.GetInsertBlock()->getParent(),
+  OI->ExitBB = BasicBlock::Create(Builder.getContext(), "target.task.cont");
+  emitBlock(OI->ExitBB, Builder.GetInsertBlock()->getParent(),
             /*IsFinished=*/true);
 
   SmallVector<Value *, 2> OffloadingArraysToPrivatize;
@@ -8838,13 +8907,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
           RTArgs.SizesArray}) {
       if (V && !isa<ConstantPointerNull, GlobalVariable>(V)) {
         OffloadingArraysToPrivatize.push_back(V);
-        OI.ExcludeArgsFromAggregate.push_back(V);
+        OI->ExcludeArgsFromAggregate.push_back(V);
       }
     }
   }
-  OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, NeedsTargetTask,
-                      DeviceID, OffloadingArraysToPrivatize](
-                         Function &OutlinedFn) mutable {
+  OI->PostOutlineCB = [this, ToBeDeleted, Dependencies, NeedsTargetTask,
+                       DeviceID, OffloadingArraysToPrivatize](
+                          Function &OutlinedFn) mutable {
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
 
@@ -10824,17 +10893,17 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   if (Error Err = BodyGenCB(AllocaIP, CodeGenIP))
     return Err;
 
-  OutlineInfo OI;
-  OI.EntryBB = AllocaBB;
-  OI.ExitBB = ExitBB;
-  OI.OuterAllocaBB = &OuterAllocaBB;
+  auto OI = std::make_unique<OutlineInfo>();
+  OI->EntryBB = AllocaBB;
+  OI->ExitBB = ExitBB;
+  OI->OuterAllocaBB = &OuterAllocaBB;
 
   // Insert fake values for global tid and bound tid.
   SmallVector<Instruction *, 8> ToBeDeleted;
   InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
-  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+  OI->ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
-  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+  OI->ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
 
   auto HostPostOutlineCB = [this, Ident,
@@ -10875,7 +10944,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   };
 
   if (!Config.isTargetDevice())
-    OI.PostOutlineCB = HostPostOutlineCB;
+    OI->PostOutlineCB = HostPostOutlineCB;
 
   addOutlineInfo(std::move(OI));
 
@@ -10914,11 +10983,10 @@ OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
   // When using target we use different runtime functions which require a
   // callback.
   if (Config.isTargetDevice()) {
-    OutlineInfo OI;
-    OI.OuterAllocaBB = OuterAllocaIP.getBlock();
-    OI.EntryBB = AllocaBB;
-    OI.ExitBB = ExitBB;
-
+    auto OI = std::make_unique<OutlineInfo>();
+    OI->OuterAllocaBB = OuterAllocaIP.getBlock();
+    OI->EntryBB = AllocaBB;
+    OI->ExitBB = ExitBB;
     addOutlineInfo(std::move(OI));
   }
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
@@ -10978,6 +11046,39 @@ void OpenMPIRBuilder::OutlineInfo::collectBlocks(
       if (BlockSet.insert(SuccBB).second)
         Worklist.push_back(SuccBB);
   }
+}
+
+std::unique_ptr<CodeExtractor>
+OpenMPIRBuilder::OutlineInfo::createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
+                                                  bool ArgsInZeroAddressSpace,
+                                                  Twine Suffix) {
+  return std::make_unique<CodeExtractor>(Blocks, /* DominatorTree */ nullptr,
+                                         /* AggregateArgs */ true,
+                                         /* BlockFrequencyInfo */ nullptr,
+                                         /* BranchProbabilityInfo */ nullptr,
+                                         /* AssumptionCache */ nullptr,
+                                         /* AllowVarArgs */ true,
+                                         /* AllowAlloca */ true,
+                                         /* AllocationBlock*/ OuterAllocaBB,
+                                         /* DeallocationBlock */ nullptr,
+                                         /* Suffix */ Suffix.str(),
+                                         ArgsInZeroAddressSpace);
+}
+
+std::unique_ptr<CodeExtractor> DeviceSharedMemOutlineInfo::createCodeExtractor(
+    ArrayRef<BasicBlock *> Blocks, bool ArgsInZeroAddressSpace, Twine Suffix) {
+  // TODO: Initialize the DeallocationBlock with a proper pair to OuterAllocaBB.
+  return std::make_unique<DeviceSharedMemCodeExtractor>(
+      OMPBuilder, AllocBlockOverride, Blocks, /* DominatorTree */ nullptr,
+      /* AggregateArgs */ true,
+      /* BlockFrequencyInfo */ nullptr,
+      /* BranchProbabilityInfo */ nullptr,
+      /* AssumptionCache */ nullptr,
+      /* AllowVarArgs */ true,
+      /* AllowAlloca */ true,
+      /* AllocationBlock*/ OuterAllocaBB,
+      /* DeallocationBlock */ ExitBB,
+      /* Suffix */ Suffix.str(), ArgsInZeroAddressSpace);
 }
 
 void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
