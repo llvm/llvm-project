@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class FoundationDisassembleTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(bugnumber = "rdar://135575668")
     @skipIfAsan
     @expectedFailureDarwin('rdar://problem/54977700')
     def test_foundation_disasm(self):
