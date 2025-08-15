@@ -339,6 +339,43 @@ func.func private @some_callback_into_python(memref<*xf32>) attributes {llvm.emi
 
 run(testUnrankedMemRefWithOffsetCallback)
 
+# Test JIT callback in global constructor
+# CHECK-LABEL: TEST: testJITCallbackInGlobalCtor
+def testJITCallbackInGlobalCtor():
+    init_cnt = 0
+
+    @ctypes.CFUNCTYPE(None)
+    def initCallback():
+        nonlocal init_cnt
+        init_cnt += 1
+
+    with Context():
+        module = Module.parse(r"""
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
+llvm.func @ctor() {
+  func.call @init_callback() : () -> ()
+  llvm.return
+}
+func.func private @init_callback() attributes { llvm.emit_c_interface }
+        """)
+
+        # Setup execution engine
+        execution_engine = ExecutionEngine(lowerToLLVM(module))
+
+        # Validate initialization hasn't run yet
+        assert init_cnt == 0
+
+        # # Register callback
+        execution_engine.register_runtime("init_callback", initCallback)
+
+        # # Initialize and verify
+        execution_engine.initialize()
+        assert init_cnt == 1
+        # # Second initialization should be no-op
+        execution_engine.initialize()
+        assert init_cnt == 1
+
+run(testJITCallbackInGlobalCtor)
 
 #  Test addition of two memrefs.
 # CHECK-LABEL: TEST: testMemrefAdd
