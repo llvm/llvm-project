@@ -13,13 +13,11 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
@@ -327,8 +325,9 @@ static void validateRootSignature(Module &M,
   }
 }
 
-mcdxbc::RootSignatureDesc *getRootSignature(RootSignatureBindingInfo &RSBI,
-                                            dxil::ModuleMetadataInfo &MMI) {
+static mcdxbc::RootSignatureDesc *
+getRootSignature(RootSignatureBindingInfo &RSBI,
+                 dxil::ModuleMetadataInfo &MMI) {
   if (MMI.EntryPropertyVec.size() == 0)
     return nullptr;
   return RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
