@@ -2556,6 +2556,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
     return true;
   case Intrinsic::amdgcn_cs_chain:
+  case Intrinsic::amdgcn_call_whole_wave:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
@@ -2786,11 +2787,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  diagnoseDontCall(CI);
-
   Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
-  if (!F || ID == Intrinsic::not_intrinsic)
-    return translateCallBase(CI, MIRBuilder);
+  if (!F || ID == Intrinsic::not_intrinsic) {
+    if (translateCallBase(CI, MIRBuilder)) {
+      diagnoseDontCall(CI);
+      return true;
+    }
+    return false;
+  }
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 

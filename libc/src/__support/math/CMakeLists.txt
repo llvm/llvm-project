@@ -374,6 +374,50 @@ add_header_library(
     libc.src.__support.macros.optimization
 )
 
+add_header_library(
+  cosf
+  HDRS
+    cosf.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cosf16
+  HDRS
+    cosf16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  coshf
+  HDRS
+    coshf.h
+  DEPENDS
+    .sinhfcoshf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
 
 add_header_library(
   erff
@@ -650,6 +694,19 @@ add_header_library(
 )
 
 add_header_library(
+  range_reduction
+  HDRS
+    range_reduction.h
+    range_reduction_fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+)
+
+add_header_library(
   sincos_eval
   HDRS
     sincos_eval.h
@@ -659,4 +716,34 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
+)
+
+add_header_library(
+  sincosf_utils
+  HDRS
+    sincosf_utils.h
+  DEPENDS
+    .range_reduction
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+)
+
+add_header_library(
+  sincosf16_utils
+  HDRS
+    sincosf16_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+)
+
+add_header_library(
+  sinhfcoshf_utils
+  HDRS
+    sinhfcoshf_utils.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.FPUtil.multiply_add
 )

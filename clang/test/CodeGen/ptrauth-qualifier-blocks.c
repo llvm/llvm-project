@@ -82,9 +82,15 @@ void test_block_address_byref_capture() {
   // CHECK: store i32 33554432,
   // CHECK: store i32 48,
   // CHECK: [[COPY_HELPER_FIELD:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 4
-  // CHECK: store ptr @__Block_byref_object_copy_, ptr [[COPY_HELPER_FIELD]], align
+  // CHECK: [[T0:%.*]] = ptrtoint ptr [[COPY_HELPER_FIELD]] to i64
+  // CHECK: [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr @__Block_byref_object_copy_ to i64), i32 0, i64 [[T0]])
+  // CHECK: [[T2:%.*]] = inttoptr i64 [[T1]] to ptr
+  // CHECK: store ptr [[T2]], ptr [[COPY_HELPER_FIELD]], align
   // CHECK: [[DISPOSE_HELPER_FIELD:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 5
-  // CHECK: store ptr @__Block_byref_object_dispose_, ptr [[DISPOSE_HELPER_FIELD]], align
+  // CHECK: [[T0:%.*]] = ptrtoint ptr [[DISPOSE_HELPER_FIELD]] to i64
+  // CHECK: [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr @__Block_byref_object_dispose_ to i64), i32 0, i64 [[T0]])
+  // CHECK: [[T2:%.*]] = inttoptr i64 [[T1]] to ptr
+  // CHECK: store ptr [[T2]], ptr [[DISPOSE_HELPER_FIELD]], align
   //   flags - copy/dispose required
   // CHECK: store i32 1107296256, ptr
   __block struct A * __ptrauth(1, 1, 60) ptr = createA();
