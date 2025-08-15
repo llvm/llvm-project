@@ -15,10 +15,8 @@
 
 #include "llvm/CGData/StableFunctionMap.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include <mutex>
 
 #define DEBUG_TYPE "stable-function-map"
 
@@ -95,10 +93,9 @@ void StableFunctionMap::insert(const StableFunction &Func) {
 
 void StableFunctionMap::merge(const StableFunctionMap &OtherMap) {
   assert(!Finalized && "Cannot merge after finalization");
-  deserializeLazyLoadingEntries();
   for (auto &[Hash, Funcs] : OtherMap.HashToFuncs) {
-    auto &ThisFuncs = HashToFuncs[Hash].Entries;
-    for (auto &Func : Funcs.Entries) {
+    auto &ThisFuncs = HashToFuncs[Hash];
+    for (auto &Func : Funcs) {
       auto FuncNameId =
           getIdOrCreateForName(*OtherMap.getNameForId(Func->FunctionNameId));
       auto ModuleNameId =
@@ -117,63 +114,25 @@ size_t StableFunctionMap::size(SizeType Type) const {
   case UniqueHashCount:
     return HashToFuncs.size();
   case TotalFunctionCount: {
-    deserializeLazyLoadingEntries();
     size_t Count = 0;
     for (auto &Funcs : HashToFuncs)
-      Count += Funcs.second.Entries.size();
+      Count += Funcs.second.size();
     return Count;
   }
   case MergeableFunctionCount: {
-    deserializeLazyLoadingEntries();
     size_t Count = 0;
     for (auto &[Hash, Funcs] : HashToFuncs)
-      if (Funcs.Entries.size() >= 2)
-        Count += Funcs.Entries.size();
+      if (Funcs.size() >= 2)
+        Count += Funcs.size();
     return Count;
   }
   }
   llvm_unreachable("Unhandled size type");
 }
 
-const StableFunctionMap::StableFunctionEntries &
-StableFunctionMap::at(HashFuncsMapType::key_type FunctionHash) const {
-  auto It = HashToFuncs.find(FunctionHash);
-  if (isLazilyLoaded())
-    deserializeLazyLoadingEntry(It);
-  return It->second.Entries;
-}
-
-void StableFunctionMap::deserializeLazyLoadingEntry(
-    HashFuncsMapType::iterator It) const {
-  assert(isLazilyLoaded() && "Cannot deserialize non-lazily-loaded map");
-  auto &[Hash, Storage] = *It;
-  std::call_once(Storage.LazyLoadFlag,
-                 [this, HashArg = Hash, &StorageArg = Storage]() {
-                   for (auto Offset : StorageArg.Offsets)
-                     StableFunctionMapRecord::deserializeEntry(
-                         reinterpret_cast<const unsigned char *>(Offset),
-                         HashArg, const_cast<StableFunctionMap *>(this));
-                 });
-}
-
-void StableFunctionMap::deserializeLazyLoadingEntries() const {
-  if (!isLazilyLoaded())
-    return;
-  for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It)
-    deserializeLazyLoadingEntry(It);
-}
-
-const StableFunctionMap::HashFuncsMapType &
-StableFunctionMap::getFunctionMap() const {
-  // Ensure all entries are deserialized before returning the raw map.
-  if (isLazilyLoaded())
-    deserializeLazyLoadingEntries();
-  return HashToFuncs;
-}
-
 using ParamLocs = SmallVector<IndexPair>;
-static void
-removeIdenticalIndexPair(StableFunctionMap::StableFunctionEntries &SFS) {
+static void removeIdenticalIndexPair(
+    SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>> &SFS) {
   auto &RSF = SFS[0];
   unsigned StableFunctionCount = SFS.size();
 
@@ -200,7 +159,9 @@ removeIdenticalIndexPair(StableFunctionMap::StableFunctionEntries &SFS) {
       SF->IndexOperandHashMap->erase(Pair);
 }
 
-static bool isProfitable(const StableFunctionMap::StableFunctionEntries &SFS) {
+static bool isProfitable(
+    const SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>>
+        &SFS) {
   unsigned StableFunctionCount = SFS.size();
   if (StableFunctionCount < GlobalMergingMinMerges)
     return false;
@@ -241,11 +202,8 @@ static bool isProfitable(const StableFunctionMap::StableFunctionEntries &SFS) {
 }
 
 void StableFunctionMap::finalize(bool SkipTrim) {
-  deserializeLazyLoadingEntries();
-  SmallVector<HashFuncsMapType::iterator> ToDelete;
   for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
-    auto &[StableHash, Storage] = *It;
-    auto &SFS = Storage.Entries;
+    auto &[StableHash, SFS] = *It;
 
     // Group stable functions by ModuleIdentifier.
     llvm::stable_sort(SFS, [&](const std::unique_ptr<StableFunctionEntry> &L,
@@ -278,7 +236,7 @@ void StableFunctionMap::finalize(bool SkipTrim) {
       }
     }
     if (Invalid) {
-      ToDelete.push_back(It);
+      HashToFuncs.erase(It);
       continue;
     }
 
@@ -290,10 +248,8 @@ void StableFunctionMap::finalize(bool SkipTrim) {
     removeIdenticalIndexPair(SFS);
 
     if (!isProfitable(SFS))
-      ToDelete.push_back(It);
+      HashToFuncs.erase(It);
   }
-  for (auto It : ToDelete)
-    HashToFuncs.erase(It);
 
   Finalized = true;
 }
