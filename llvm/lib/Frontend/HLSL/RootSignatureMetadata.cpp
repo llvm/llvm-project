@@ -121,7 +121,7 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
   StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
+      enumToStringRef(dxil::ResourceClass(Descriptor.Type),
                       dxil::getResourceClasses());
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
@@ -163,7 +163,7 @@ MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
   StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
+      enumToStringRef(dxil::ResourceClass(Clause.Type),
                       dxil::getResourceClasses());
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
