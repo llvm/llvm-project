@@ -100,8 +100,12 @@ export class SymbolsProvider extends DisposableContext {
       }
     );
 
+    let tabulatorJsFilename = "tabulator_modern.min.css";
+    if (vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast) {
+      tabulatorJsFilename = "tabulator_midnight.min.css";
+    }
+    const tabulatorCssPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), tabulatorJsFilename));
     const tabulatorJsPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"));
-    const tabulatorCssPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.css"));
     const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
 
     panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath, symbols);
@@ -115,7 +119,32 @@ export class SymbolsProvider extends DisposableContext {
     <meta charset="UTF-8">
     <link href="${tabulatorCssPath}" rel="stylesheet">
     <style>
-      #symbols-table { height: 100vh; }
+      .tabulator {
+        background-color: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
+      }
+
+      .tabulator .tabulator-header {
+        background-color: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
+      }
+
+      .tabulator-row {
+        background-color: var(--vscode-editor-background);
+      }
+
+      .tabulator.tabulator-row-even {
+        background-color: var(--vscode-tree-tableOddRowsBackground);
+      }
+
+      .tabulator-row.tabulator-selected {
+        background-color: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
+      }
+
+      #symbols-table { 
+        height: 100vh; 
+      }
     </style>
 </head>
 <body>
