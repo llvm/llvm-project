@@ -351,8 +351,8 @@ static void DetermineCopyInOutArgument(
   bool actualIsAssumedShape{IsAssumedShape(actual)};
   if ((actualIsAssumedRank && dummyIsAssumedRank) ||
       (actualIsAssumedShape && dummyIsAssumedShape)) {
-      // Assumed-rank and assumed-shape arrays are represented by descriptors,
-      // so don't need to do polymorphic check.
+    // Assumed-rank and assumed-shape arrays are represented by descriptors,
+    // so don't need to do polymorphic check.
   } else if (!dummyObj->ignoreTKR.test(common::IgnoreTKR::Type)) {
     // flang supports limited cases of passing polymorphic to non-polimorphic.
     // These cases require temporary of non-polymorphic type. (For example,
