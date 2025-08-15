@@ -139,6 +139,9 @@ enum {
   // 3 -> SEW * 4
   DestEEWShift = ElementsDependOnMaskShift + 1,
   DestEEWMask = 3ULL << DestEEWShift,
+
+  ReadsPastVLShift = DestEEWShift + 2,
+  ReadsPastVLMask = 1ULL << ReadsPastVLShift,
 };
 
 // Helper functions to read TSFlags.
@@ -193,6 +196,12 @@ static inline bool elementsDependOnVL(uint64_t TSFlags) {
 /// e.g. vredsum.vs/viota.m
 static inline bool elementsDependOnMask(uint64_t TSFlags) {
   return TSFlags & ElementsDependOnMaskMask;
+}
+
+/// \returns true if the instruction may read elements past VL, e.g.
+/// vslidedown/vrgather
+static inline bool readsPastVL(uint64_t TSFlags) {
+  return TSFlags & ReadsPastVLMask;
 }
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {

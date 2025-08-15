@@ -15,8 +15,6 @@ RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-single.ll -o %t/merg
 # Merge an object file having cgdata (__llvm_merge)
 RUN: llvm-cgdata -m --skip-trim %t/merge-single.o -o %t/merge-single.cgdata
 RUN: llvm-cgdata -s %t/merge-single.cgdata | FileCheck %s
-RUN: llvm-cgdata -m --skip-trim %t/merge-single.o -o %t/merge-single-lazy.cgdata -indexed-codegen-data-lazy-loading 
-RUN: llvm-cgdata -s %t/merge-single-lazy.cgdata -indexed-codegen-data-lazy-loading | FileCheck %s
 CHECK: Stable function map:
 CHECK-NEXT:  Unique hash Count: 1
 CHECK-NEXT:  Total function Count: 1
@@ -35,4 +33,4 @@ CHECK-NEXT:  Mergeable function Count: 0
 ...
 
 ;--- merge-single-template.ll
-@.data = private unnamed_addr constant [84 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
+@.data = private unnamed_addr constant [68 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"

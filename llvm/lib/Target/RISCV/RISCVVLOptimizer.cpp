@@ -1272,34 +1272,6 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   }
 }
 
-/// Return true if MI may read elements past VL.
-static bool mayReadPastVL(const MachineInstr &MI) {
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-  if (!RVV)
-    return true;
-
-  switch (RVV->BaseInstr) {
-  // vslidedown instructions may read elements past VL. They are handled
-  // according to current tail policy.
-  case RISCV::VSLIDEDOWN_VI:
-  case RISCV::VSLIDEDOWN_VX:
-  case RISCV::VSLIDE1DOWN_VX:
-  case RISCV::VFSLIDE1DOWN_VF:
-
-  // vrgather instructions may read the source vector at any index < VLMAX,
-  // regardless of VL.
-  case RISCV::VRGATHER_VI:
-  case RISCV::VRGATHER_VV:
-  case RISCV::VRGATHER_VX:
-  case RISCV::VRGATHEREI16_VV:
-    return true;
-
-  default:
-    return false;
-  }
-}
-
 bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
@@ -1360,7 +1332,8 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
     return std::nullopt;
   }
 
-  if (mayReadPastVL(UserMI)) {
+  if (RISCVII::readsPastVL(
+          TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
     LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
     return std::nullopt;
   }

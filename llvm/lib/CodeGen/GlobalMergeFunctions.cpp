@@ -350,8 +350,9 @@ checkConstLocationCompatible(const StableFunctionMap::StableFunctionEntry &SF,
   return true;
 }
 
-static ParamLocsVecTy
-computeParamInfo(const StableFunctionMap::StableFunctionEntries &SFS) {
+static ParamLocsVecTy computeParamInfo(
+    const SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>>
+        &SFS) {
   std::map<std::vector<stable_hash>, ParamLocs> HashSeqToLocs;
   auto &RSF = *SFS[0];
   unsigned StableFunctionCount = SFS.size();
@@ -395,18 +396,19 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   // Collect stable functions related to the current module.
   DenseMap<stable_hash, SmallVector<std::pair<Function *, FunctionHashInfo>>>
       HashToFuncs;
+  auto &Maps = FunctionMap->getFunctionMap();
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
     auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
-    if (FunctionMap->contains(FI.FunctionHash))
+    if (Maps.contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
 
   for (auto &[Hash, Funcs] : HashToFuncs) {
     std::optional<ParamLocsVecTy> ParamLocsVec;
     SmallVector<FuncMergeInfo> FuncMergeInfos;
-    auto &SFS = FunctionMap->at(Hash);
+    auto &SFS = Maps.at(Hash);
     assert(!SFS.empty());
     auto &RFS = SFS[0];
 

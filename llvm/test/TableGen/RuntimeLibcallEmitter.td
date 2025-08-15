@@ -149,6 +149,32 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::sqrtl_f80
 // CHECK-NEXT: };
 
+// CHECK: #ifdef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
+// CHECK-NEXT: size_t Size = Name.size();
+// CHECK-NEXT: if (Size == 0 || Size > 9)
+// CHECK-NEXT:   return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+// CHECK-NEXT: return lookupLibcallImplNameImpl(Name);
+// CHECK-NEXT: #endif
+
+// CHECK: #ifdef DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+// CHECK-NEXT: static inline uint64_t hash(StringRef Str) {
+// CHECK-NEXT: return static_cast<uint32_t>(xxh3_64bits(Str));
+// CHECK-NEXT: }
+
+// CHECK: iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::lookupLibcallImplNameImpl(StringRef Name) {
+// CHECK: static constexpr std::pair<uint16_t, uint16_t> HashTableNameToEnum[16] = {
+// CHECK: {2, 9}, // 0x000000705301b8, ___memset
+// CHECK: {0, 0},
+// CHECK: {6, 6}, // 0x0000001417a2af, calloc
+// CHECK: {0, 0},
+// CHECK: };
+
+// CHECK: unsigned Idx = (hash(Name) % 8) * 2;
+// CHECK: for (int I = 0; I != 2; ++I) {
+// CHECK: return libcallImplNameHit(Entry, StrOffset);
+
+// CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+// CHECK-NEXT: }
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
 // CHECK-NEXT:  struct LibcallImplPair {
