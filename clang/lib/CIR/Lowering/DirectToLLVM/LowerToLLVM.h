@@ -467,6 +467,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVTableGetVPtrOpLowering
+    : public mlir::OpConversionPattern<cir::VTableGetVPtrOp> {
+public:
+  using mlir::OpConversionPattern<cir::VTableGetVPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VTableGetVPtrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:

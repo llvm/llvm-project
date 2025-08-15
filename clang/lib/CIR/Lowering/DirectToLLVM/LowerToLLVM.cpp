@@ -2344,7 +2344,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecSplatOpLowering,
                CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMVTableAddrPointOpLowering
+               CIRToLLVMVTableAddrPointOpLowering,
+               CIRToLLVMVTableGetVPtrOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2465,6 +2466,18 @@ mlir::LogicalResult CIRToLLVMVTableAddrPointOpLowering::matchAndRewrite(
       mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, targetType, eltType,
                                                  symAddr, offsets, inboundsNuw);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVTableGetVPtrOpLowering::matchAndRewrite(
+    cir::VTableGetVPtrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // cir.vtable.get_vptr is equivalent to a bitcast from the source object
+  // pointer to the vptr type. Since the LLVM dialect uses opaque pointers
+  // we can just replace uses of this operation with the original pointer.
+  mlir::Value srcVal = adaptor.getSrc();
+  rewriter.replaceAllUsesWith(op, srcVal);
+  rewriter.eraseOp(op);
   return mlir::success();
 }
 
