@@ -53,37 +53,6 @@
 #19 0x00005895d1e5067d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5</pre></details></td>
     </tr>
   <tr>
-  </tr>
-    <tr>
-    <td>test2.ll</td>
-    <td>LoopVectorizePass</td>
-    <td>add</td>
-    <td>foo</td>
-    <td>no-name</td>
-    <td>not-generate</td>
-    <td><details><summary>View Origin StackTrace</summary><pre>Stack Trace 0:
- #0 0x000046afd035c935 llvm::DbgLocOrigin::DbgLocOrigin(bool) /tmp/llvm-project/llvm/lib/IR/DebugLoc.cpp:22:9
- #1 0x000046afd03af013 llvm::DILocAndCoverageTracking::DILocAndCoverageTracking() /tmp/llvm-project/llvm/include/llvm/IR/DebugLoc.h:90:11
- #2 0x000046afd03af013 llvm::DebugLoc::DebugLoc() /tmp/llvm-project/llvm/include/llvm/IR/DebugLoc.h:133:5
- #3 0x000046afd03af013 llvm::Instruction::Instruction(llvm::Type*, unsigned int, llvm::User::AllocInfo, llvm::InsertPosition) /tmp/llvm-project/llvm/lib/IR/Instruction.cpp:37:14
- #4 0x000046afd06862b5 llvm::PHINode::PHINode(llvm::Type*, unsigned int, llvm::Twine const&, llvm::InsertPosition) /tmp/llvm-project/llvm/include/llvm/IR/Instructions.h:0:9
- #5 0x000046afd06862b5 llvm::PHINode::Create(llvm::Type*, unsigned int, llvm::Twine const&, llvm::InsertPosition) /tmp/llvm-project/llvm/include/llvm/IR/Instructions.h:2651:9
- #6 0x000046afd06862b5 llvm::InstCombinerImpl::foldPHIArgGEPIntoPHI(llvm::PHINode&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstCombinePHI.cpp:617:9
- #7 0x000046afd0688fe0 llvm::InstCombinerImpl::visitPHINode(llvm::PHINode&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstCombinePHI.cpp:1456:22
- #8 0x000046afd05cd21f llvm::InstCombinerImpl::run() /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstructionCombining.cpp:5327:22
- #9 0x000046afd05d067e combineInstructionsOverFunction(llvm::Function&, llvm::InstructionWorklist&, llvm::AAResults*, llvm::AssumptionCache&, llvm::TargetLibraryInfo&, llvm::TargetTransformInfo&, llvm::DominatorTree&, llvm::OptimizationRemarkEmitter&, llvm::BlockFrequencyInfo*, llvm::BranchProbabilityInfo*, llvm::ProfileSummaryInfo*, llvm::InstCombineOptions const&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstructionCombining.cpp:5643:31
-#10 0x000046afd05cf9a9 llvm::InstCombinePass::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/lib/Transforms/InstCombine/InstructionCombining.cpp:5706:8
-#11 0x000046afd107d07d llvm::detail::PassModel>::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
-#12 0x000046afd04204a7 llvm::PassManager>::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerImpl.h:85:8
-#13 0x000046afce4cb09d llvm::detail::PassModel>, llvm::AnalysisManager>::run(llvm::Function&, llvm::AnalysisManager&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
-#14 0x000046afcfae2865 llvm::CGSCCToFunctionPassAdaptor::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/lib/Analysis/CGSCCPassManager.cpp:0:38
-#15 0x000046afce4cad5d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
-#16 0x000046afcfade813 llvm::PassManager, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/lib/Analysis/CGSCCPassManager.cpp:93:12
-#17 0x000046afd1e3968d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>, llvm::AnalysisManager, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
-#18 0x000046afcfae1224 llvm::DevirtSCCRepeatedPass::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/lib/Analysis/CGSCCPassManager.cpp:0:38
-#19 0x000046afd1e5067d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5</pre></details></td>
-    </tr>
-  <tr>
 </table>
 <br>
 <table>
