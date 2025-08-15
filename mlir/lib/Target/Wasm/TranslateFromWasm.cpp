@@ -1052,6 +1052,8 @@ public:
   ModuleOp getModule() {
     if (isValid)
       return mOp;
+    if (mOp)
+      mOp.erase();
     return ModuleOp{};
   }
 
