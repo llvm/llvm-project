@@ -25,7 +25,7 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
-/// Returns true if only scalar values of \p Def is used by all users.
+/// Returns true if only scalar values of \p Def are used by all users.
 bool onlyScalarValuesUsed(const VPValue *Def);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
