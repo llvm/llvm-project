@@ -969,7 +969,7 @@ else:
 def target_page_size():
     try:
         proc = subprocess.Popen(
-            f"{emulator or ""} python3",
+            f"{emulator or ''} python3",
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
