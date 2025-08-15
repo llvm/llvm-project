@@ -52,20 +52,6 @@ static std::optional<StringRef> extractMdStringValue(MDNode *Node,
   return NodeText->getString();
 }
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"CBV", dxil::ResourceClass::CBuffer},
-    {"SRV", dxil::ResourceClass::SRV},
-    {"UAV", dxil::ResourceClass::UAV},
-    {"Sampler", dxil::ResourceClass::Sampler},
-};
-
-static std::optional<StringRef> getResourceName(dxil::ResourceClass Class) {
-  for (const auto &ClassEnum : ResourceClassNames)
-    if (ClassEnum.Value == Class)
-      return ClassEnum.Name;
-  return std::nullopt;
-}
-
 namespace {
 
 // We use the OverloadVisit with std::visit to ensure the compiler catches if a
@@ -134,10 +120,11 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  std::optional<StringRef> ResName =
-      getResourceName(dxil::ResourceClass(to_underlying(Descriptor.Type)));
-  assert(ResName && "Provided an invalid Resource Class");
-  SmallString<7> Name({"Root", *ResName});
+  StringRef ResName =
+      enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
+                      dxil::getResourceClasses());
+  assert(!ResName.empty() && "Provided an invalid Resource Class");
+  SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
       MDString::get(Ctx, Name),
       ConstantAsMetadata::get(
@@ -175,11 +162,12 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  std::optional<StringRef> ResName =
-      getResourceName(dxil::ResourceClass(to_underlying(Clause.Type)));
-  assert(ResName && "Provided an invalid Resource Class");
+  StringRef ResName =
+      enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
+                      dxil::getResourceClasses());
+  assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
-      MDString::get(Ctx, *ResName),
+      MDString::get(Ctx, ResName),
       ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
       ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
       ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),

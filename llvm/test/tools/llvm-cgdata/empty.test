@@ -16,7 +16,7 @@ RUN: llvm-cgdata --show %t_emptyheader.cgdata | count 0
 
 # The version number appears when asked, as it's in the header
 RUN: llvm-cgdata --show --cgdata-version %t_emptyheader.cgdata | FileCheck %s --check-prefix=VERSION
-VERSION: Version: 3
+VERSION: Version: 4
 
 # When converting a binary file (w/ the header only) to a text file, it's an empty file as the text format does not have an explicit header.
 RUN: llvm-cgdata --convert %t_emptyheader.cgdata --format text | count 0
@@ -30,7 +30,7 @@ RUN: llvm-cgdata --convert %t_emptyheader.cgdata --format text | count 0
 #   uint64_t StableFunctionMapOffset;
 # }
 RUN: printf '\xffcgdata\x81' > %t_header.cgdata
-RUN: printf '\x03\x00\x00\x00' >> %t_header.cgdata
+RUN: printf '\x04\x00\x00\x00' >> %t_header.cgdata
 RUN: printf '\x00\x00\x00\x00' >> %t_header.cgdata
 RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_header.cgdata
 RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_header.cgdata

@@ -276,6 +276,7 @@ foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
 }
 
 // Memory
+def MEMCMP : RuntimeLibcall;
 def MEMCPY : RuntimeLibcall;
 def MEMMOVE : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
@@ -1148,8 +1149,7 @@ defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
 
 // Targets which support windows should start with these as a base and
 // add in calls for other OSes
-defvar Win32DefaultLibcallImpls = !listremove(DefaultLibcallImpls32, WindowsExclusions);
-defvar Win64DefaultLibcallImpls = !listremove(DefaultLibcallImpls64, WindowsExclusions);
+defvar WinDefaultLibcallImpls = !listremove(DefaultRuntimeLibcallImpls, WindowsExclusions);
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
@@ -1233,7 +1233,7 @@ def isAArch64_ILP64  : RuntimeLibcallPredicate<"TT.isAArch64(64)">;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
-  (add Win64DefaultLibcallImpls,
+  (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1249,7 +1249,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = Win64DefaultLibcallImpls in {
+  foreach libcall = WinDefaultLibcallImpls in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -1279,6 +1279,9 @@ def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
 //===----------------------------------------------------------------------===//
+
+def isTargetAEABIAndAAPCS_ABI : RuntimeLibcallPredicate<
+  [{TT.isTargetAEABI() && isAAPCS_ABI(TT, ABIName)}]>;
 
 // if (isTargetMachO()) {
 // if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
@@ -1473,13 +1476,33 @@ def __udivmodsi4 : RuntimeLibcallImpl<UDIVREM_I32>;
 // a __gnu_ prefix (which is the default).
 // isTargetAEABI()
 def __aeabi_f2h : RuntimeLibcallImpl<FPROUND_F32_F16>; // CallingConv::ARM_AAPCS
-//def __aeabi_d2h : RuntimeLibcallImpl<FPROUND_F64_F16>; // CallingConv::ARM_AAPCS
 def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 
 // !isTargetMachO()
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 
+// In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
+// they have a __gnu_ prefix (which is the default).
+def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
+                                        isTargetAEABIAndAAPCS_ABI> {
+  let CallingConv = ARM_AAPCS;
+}
+
+// The half <-> float conversion functions are always soft-float on
+// non-watchos platforms, but are needed for some targets which use a
+// hard-float calling convention by default.
+def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
+  [{TT.isWatchABI() ? DefaultCC :
+    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+>;
+
+def GNUEABIHalfConvertCalls :
+  LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
+    RuntimeLibcallPredicate<[{!TT.isOSBinFormatMachO() &&
+                              !TT.isTargetAEABI()}]>> {
+  let CallingConv = ARMHalfConvertLibcallCallingConv;
+}
 
 def WindowARMDivRemCalls : LibcallImpls<
   (add __rt_sdiv, __rt_sdiv64, __rt_udiv, __rt_udiv64),
@@ -1498,8 +1521,101 @@ def WindowARMFPIntCasts : LibcallImpls<
 def AEABIDivRemCalls : LibcallImpls<
   (add __aeabi_idivmod, __aeabi_ldivmod,
        __aeabi_uidivmod, __aeabi_uldivmod),
-  RuntimeLibcallPredicate<[{TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-    TT.isTargetMuslAEABI()}]>> {
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def AEABICalls : LibcallImpls<
+  (add
+      // Double-precision floating-point arithmetic helper functions
+      // RTABI chapter 4.1.2, Table 2
+      __aeabi_dadd,
+      __aeabi_ddiv,
+      __aeabi_dmul,
+      __aeabi_dsub,
+
+      // Double-precision floating-point comparison helper functions
+      // RTABI chapter 4.1.2, Table 3
+      __aeabi_dcmpeq__oeq,
+      __aeabi_dcmpeq__une,
+      __aeabi_dcmplt,
+      __aeabi_dcmple,
+      __aeabi_dcmpge,
+      __aeabi_dcmpgt,
+       __aeabi_dcmpun,
+
+      // Single-precision floating-point arithmetic helper functions
+      // RTABI chapter 4.1.2, Table 4
+      __aeabi_fadd,
+      __aeabi_fdiv,
+      __aeabi_fmul,
+      __aeabi_fsub,
+
+      // Single-precision floating-point comparison helper functions
+      // RTABI chapter 4.1.2, Table 5
+      __aeabi_fcmpeq__oeq,
+      __aeabi_fcmpeq__une,
+      __aeabi_fcmplt,
+      __aeabi_fcmple,
+      __aeabi_fcmpge,
+      __aeabi_fcmpgt,
+      __aeabi_fcmpun,
+
+      // Floating-point to integer conversions.
+      // RTABI chapter 4.1.2, Table 6
+      __aeabi_d2iz,
+      __aeabi_d2uiz,
+      __aeabi_d2lz,
+      __aeabi_d2ulz,
+      __aeabi_f2iz,
+      __aeabi_f2uiz,
+      __aeabi_f2lz,
+      __aeabi_f2ulz,
+
+      // Conversions between floating types.
+      // RTABI chapter 4.1.2, Table 7
+      __aeabi_d2f,
+      __aeabi_f2d,
+      //__aeabi_h2f added separately
+      //__aeabi_f2h added separately
+      __aeabi_d2h,
+
+      // Integer to floating-point conversions.
+      // RTABI chapter 4.1.2, Table 8
+      __aeabi_i2d,
+      __aeabi_ui2d,
+      __aeabi_l2d,
+      __aeabi_ul2d,
+      __aeabi_i2f,
+      __aeabi_ui2f,
+      __aeabi_l2f,
+      __aeabi_ul2f,
+
+      // Long long helper functions
+      // RTABI chapter 4.2, Table 9
+      __aeabi_lmul,
+      __aeabi_llsl,
+      __aeabi_llsr,
+      __aeabi_lasr,
+
+      // Integer division functions
+      // RTABI chapter 4.3.1
+      __aeabi_idiv,
+      __aeabi_uidiv),
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+// EABI dependent RTLIB, Memory operations
+// RTABI chapter 4.3.4
+def AEABI45MemCalls : LibcallImpls<
+  (add __aeabi_memcpy,  __aeabi_memcpy4, __aeabi_memcpy8,
+       __aeabi_memmove, __aeabi_memmove4, __aeabi_memmove8,
+       __aeabi_memset, __aeabi_memset4, __aeabi_memset8,
+       __aeabi_memclr, __aeabi_memclr4, __aeabi_memclr8),
+  RuntimeLibcallPredicate<[{(EABIVersion == EABI::EABI4 ||
+                             EABIVersion == EABI::EABI5) &&
+                             hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
   let CallingConv = ARM_AAPCS;
 }
 
@@ -1507,7 +1623,7 @@ def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      (add Win32DefaultLibcallImpls,
+      (add WinDefaultLibcallImpls,
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
            LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1518,6 +1634,11 @@ def ARMSystemLibrary
            DarwinSinCosStret, DarwinExp10,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
+
+           AEABICalls,
+           AEABI45MemCalls,
+           EABIHalfConvertCalls,
+           GNUEABIHalfConvertCalls,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
@@ -1990,12 +2111,14 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 }
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
+  def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
+  def ___memcmp : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
@@ -2161,7 +2284,8 @@ defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLib
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
 defvar X86CommonLibcalls =
-  (add DarwinSinCosStret, DarwinExp10,
+  (add WinDefaultLibcallImpls,
+       DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
@@ -2186,11 +2310,11 @@ defvar Windows32DivRemMulCalls =
 def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
       (add X86CommonLibcalls,
-           Windows32DivRemMulCalls, Win32DefaultLibcallImpls)>;
+           Windows32DivRemMulCalls)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,
-      (add X86CommonLibcalls, Win64DefaultLibcallImpls, Int128RTLibcalls)>;
+      (add X86CommonLibcalls, Int128RTLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
