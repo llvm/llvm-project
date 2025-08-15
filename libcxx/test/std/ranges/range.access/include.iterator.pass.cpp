@@ -18,7 +18,7 @@
 #include "test_macros.h"
 
 template <class CPO, class... Args>
-constexpr bool test(CPO& o, Args&&...) {
+constexpr void test(CPO& o, Args&&... args) {
   static_assert(std::is_const_v<CPO>);
   static_assert(std::is_class_v<CPO>);
   static_assert(std::is_trivially_copyable_v<CPO>);
@@ -26,6 +26,7 @@ constexpr bool test(CPO& o, Args&&...) {
 
   auto p  = o;
   using T = decltype(p);
+  (void)o(args...); // to make sure the CPO can actually be used
 
   // The type of a customization point object, ignoring cv-qualifiers, shall model semiregular.
   static_assert(std::semiregular<T>);
@@ -35,26 +36,33 @@ constexpr bool test(CPO& o, Args&&...) {
   static_assert(std::invocable<const T&, Args...>);
   static_assert(std::invocable<T, Args...>);
   static_assert(std::invocable<const T, Args...>);
-
-  return true;
 }
 
 int a[10];
 
-static_assert(test(std::ranges::begin, a));
-static_assert(test(std::ranges::end, a));
-static_assert(test(std::ranges::cbegin, a));
-static_assert(test(std::ranges::cdata, a));
-static_assert(test(std::ranges::cend, a));
-static_assert(test(std::ranges::crbegin, a));
-static_assert(test(std::ranges::crend, a));
-static_assert(test(std::ranges::data, a));
-static_assert(test(std::ranges::empty, a));
-static_assert(test(std::ranges::rbegin, a));
-static_assert(test(std::ranges::rend, a));
-static_assert(test(std::ranges::size, a));
-static_assert(test(std::ranges::ssize, a));
+constexpr bool test() {
+  test(std::ranges::begin, a);
+  test(std::ranges::end, a);
+  test(std::ranges::cbegin, a);
+  test(std::ranges::cdata, a);
+  test(std::ranges::cend, a);
+  test(std::ranges::crbegin, a);
+  test(std::ranges::crend, a);
+  test(std::ranges::data, a);
+  test(std::ranges::empty, a);
+  test(std::ranges::rbegin, a);
+  test(std::ranges::rend, a);
+  test(std::ranges::size, a);
+  test(std::ranges::ssize, a);
 
 #if TEST_STD_VER >= 26
-// static_assert(test(std::views::reserve_hint, a));
+  // test(std::views::reserve_hint, a);
 #endif
+
+  return true;
+}
+
+int main() {
+  test();
+  static_assert(test());
+}
