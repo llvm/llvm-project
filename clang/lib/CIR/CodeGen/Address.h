@@ -68,6 +68,12 @@ public:
     return pointerAndKnownNonNull.getPointer() != nullptr;
   }
 
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(mlir::Value newPtr) const {
+    return Address(newPtr, getElementType(), getAlignment());
+  }
+
   /// Return address with different element type, a bitcast pointer, and
   /// the same alignment.
   Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;

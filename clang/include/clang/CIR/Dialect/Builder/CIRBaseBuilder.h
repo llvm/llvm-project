@@ -231,8 +231,10 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
-                           mlir::IntegerAttr align = {}) {
-    return create<cir::StoreOp>(loc, val, dst, align);
+                           bool isVolatile = false,
+                           mlir::IntegerAttr align = {},
+                           cir::MemOrderAttr order = {}) {
+    return cir::StoreOp::create(*this, loc, val, dst, align, order);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
@@ -255,7 +257,8 @@ public:
                                clang::CharUnits alignment) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
-    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignmentAttr);
+    return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
+                               alignmentAttr, /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
