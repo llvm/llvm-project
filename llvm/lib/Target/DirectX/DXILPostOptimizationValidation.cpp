@@ -205,7 +205,57 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
   return RDs;
 }
 
-static void validateRootSignatureBindings(Module &M,
+static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
+                                            dxbc::RootFlags Mask) {
+  if ((Flags & Mask) == Mask) {
+    SmallString<128> Message;
+    raw_svector_ostream OS(Message);
+    OS << "Shader has root bindings but root signature uses a DENY flag to "
+          "disallow root binding access to the shader stage.";
+    M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+  }
+}
+
+static void validateDeniedStagedNotInUse(Module &M,
+                                         const mcdxbc::RootSignatureDesc &RSD,
+                                         const dxil::ModuleMetadataInfo &MMI) {
+  dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
+
+  switch (MMI.ShaderProfile) {
+  case Triple::Pixel:
+    reportIfDeniedShaderStageAccess(M, Flags,
+                                    dxbc::RootFlags::DenyPixelShaderRootAccess);
+    break;
+  case Triple::Vertex:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyVertexShaderRootAccess);
+    break;
+  case Triple::Geometry:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyGeometryShaderRootAccess);
+    break;
+  case Triple::Hull:
+    reportIfDeniedShaderStageAccess(M, Flags,
+                                    dxbc::RootFlags::DenyHullShaderRootAccess);
+    break;
+  case Triple::Domain:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyDomainShaderRootAccess);
+    break;
+  case Triple::Mesh:
+    reportIfDeniedShaderStageAccess(M, Flags,
+                                    dxbc::RootFlags::DenyMeshShaderRootAccess);
+    break;
+  case Triple::Amplification:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyAmplificationShaderRootAccess);
+    break;
+  default:
+    llvm_unreachable("Invalid triple to shader stage conversion");
+  }
+}
+
+static bool validateRootSignatureBindings(Module &M,
                                           const mcdxbc::RootSignatureDesc &RSD,
                                           dxil::ModuleMetadataInfo &MMI,
                                           DXILResourceMap &DRM) {
@@ -275,23 +325,27 @@ static void validateRootSignatureBindings(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-    SmallVector<ResourceInfo::ResourceBinding> RDs =
-        getRootDescriptorsBindingInfo(RSD, Visibility);
-    for (const auto &ResList :
-         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
-          std::make_pair(ResourceClass::UAV, DRM.uavs()),
-          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
-          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
-      for (auto Res : ResList.second) {
-        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
-        llvm::hlsl::BindingInfo::BindingRange ResRange(
-            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
+  bool HasBindings = false;
+  SmallVector<ResourceInfo::ResourceBinding> RDs =
+      getRootDescriptorsBindingInfo(RSD, Visibility);
+  for (const auto &ResList :
+       {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+        std::make_pair(ResourceClass::UAV, DRM.uavs()),
+        std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+        std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+    for (auto Res : ResList.second) {
+      llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+      llvm::hlsl::BindingInfo::BindingRange ResRange(
+          ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
-        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
-          reportRegNotBound(M, ResList.first, ResBinding);
-      }
-      checkInvalidHandleTy(M, RDs, ResList.second);
+      if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
+        reportRegNotBound(M, ResList.first, ResBinding);
+      else
+        HasBindings = true;
+    }
+    checkInvalidHandleTy(M, RDs, ResList.second);
   }
+  return HasBindings;
 }
 
 static mcdxbc::RootSignatureDesc *
@@ -316,7 +370,9 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
-    validateRootSignatureBindings(M, *RSD, MMI, DRM);
+    bool HasBindings = validateRootSignatureBindings(M, *RSD, MMI, DRM);
+    if (HasBindings && MMI.ShaderProfile != Triple::Compute)
+      validateDeniedStagedNotInUse(M, *RSD, MMI);
   }
 }
 
