@@ -201,24 +201,24 @@ def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
   }];
 }
 
-def XeGPU_MatrixDesc: XeGPUTypeDef<"MatrixDesc", "matrix_desc", [ShapedTypeInterface], "mlir::Type"> {
-  let summary = "MatrixDesc describing the data in SLM";
+def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "mlir::Type"> {
+  let summary = "MemDesc describing the data in SLM";
   let description = [{
-    MatrixDesc represents a block of data stored in shared local memory.
+    MemDesc represents a block of data stored in shared local memory.
     By default, unless a layout attribute is provided, the data is stored
     contiguously in row-major order within the region.
 
     Examples:
     ```mlir
     // A matrix of data stored in column-major order.
-    !xegpu.matrix_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128]>>
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128]>>
 
     // A matrix of data stored in a blocked layout. Elements within the same block
     // are stored contiguously in memory. Blocks are stored in row-major order.
-    !xegpu.matrix_desc<128x128xf16, #xegpu.mem_layout<block = [8, 8]>>
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<block = [8, 8]>>
 
     // A matrix of data stored in column-major order with blocked layout.
-    !xegpu.matrix_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [8, 8]>>
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [8, 8]>>
     ```
   }];
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
@@ -228,8 +228,8 @@ def XeGPU_MatrixDesc: XeGPUTypeDef<"MatrixDesc", "matrix_desc", [ShapedTypeInter
   let extraClassDeclaration = [{
     bool hasRank() const { return true; }
 
-    MatrixDescType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, Type elementType) const {
-      return MatrixDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
+    MemDescType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, Type elementType) const {
+      return MemDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
     }
 
     ArrayAttr getStrides() {

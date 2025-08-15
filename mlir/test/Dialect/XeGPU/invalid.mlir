@@ -763,74 +763,74 @@ func.func @slice_attr_repeat_dim() {
 }
 
 // -----
-func.func @create_matrix_desc_non_slm() {
+func.func @create_mem_desc_non_slm() {
   %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 1>
   // expected-error@+1 {{operand #0 must be statically shaped memref of 8-bit signless integer values for shared memory}}
-  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 1> -> !xegpu.matrix_desc<16x64xf16>
+  %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 1> -> !xegpu.mem_desc<16x64xf16>
   return
 }
 
 // -----
-func.func @create_matrix_desc_mismatch_sizes() {
+func.func @create_mem_desc_mismatch_sizes() {
   %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
-  // expected-error@+1 {{failed to verify that all of {source, matrix_desc} have same size in bits}}
-  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x32xf16>
+  // expected-error@+1 {{failed to verify that all of {source, mem_desc} have same size in bits}}
+  %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x32xf16>
   return
 }
 
 // -----
-func.func @load_matrix_desc_mismatch_element_type(%arg0: !xegpu.matrix_desc<16x64xf16>) {
-  // expected-error@+1 {{failed to verify that all of {matrix_desc, res} have same element type}}
-  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> vector<8x16xf32>
+func.func @load_mem_desc_mismatch_element_type(%arg0: !xegpu.mem_desc<16x64xf16>) {
+  // expected-error@+1 {{failed to verify that all of {mem_desc, res} have same element type}}
+  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @load_matrix_desc_invalid_result_size(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+func.func @load_mem_desc_invalid_result_size(%arg0: !xegpu.mem_desc<16x64xf16>) {
   // expected-error@+1 {{result shape must not exceed matrix desc shape}}
-  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> vector<32x16xf16>
+  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> vector<32x16xf16>
   return
 }
 
 // -----
-func.func @store_matrix_desc_mismatch_element_type(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<16x16xf32>) {
-  // expected-error@+1 {{failed to verify that all of {matrix_desc, data} have same element type}}
-  xegpu.store_matrix %arg1, %arg0[8, 8] : vector<16x16xf32>, !xegpu.matrix_desc<16x64xf16>
+func.func @store_mem_desc_mismatch_element_type(%arg0: !xegpu.mem_desc<16x64xf16>, %arg1: vector<16x16xf32>) {
+  // expected-error@+1 {{failed to verify that all of {mem_desc, data} have same element type}}
+  xegpu.store_matrix %arg1, %arg0[8, 8] : vector<16x16xf32>, !xegpu.mem_desc<16x64xf16>
   return
 }
 
 // -----
-func.func @store_matrix_desc_invalid_data_size(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<32x32xf16>) {
+func.func @store_mem_desc_invalid_data_size(%arg0: !xegpu.mem_desc<16x64xf16>, %arg1: vector<32x32xf16>) {
   // expected-error@+1 {{data shape must not exceed matrix desc shape}}
-  xegpu.store_matrix %arg1, %arg0[8, 8] : vector<32x32xf16>, !xegpu.matrix_desc<16x64xf16>
+  xegpu.store_matrix %arg1, %arg0[8, 8] : vector<32x32xf16>, !xegpu.mem_desc<16x64xf16>
   return
 }
 
 // -----
-func.func @matrix_desc_subview_size_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+func.func @mem_desc_subview_size_mismatch(%arg0: !xegpu.mem_desc<16x64xf16>) {
   // expected-error@+1 {{result shape must not exceed source shape}}
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<32x16xf16>
+  %data = xegpu.mem_desc_subview %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> !xegpu.mem_desc<32x16xf16>
   return
 }
 
 // -----
-func.func @matrix_desc_subview_layout_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride =[1, 16]>>) {
+func.func @mem_desc_subview_layout_mismatch(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride =[1, 16]>>) {
   // expected-error@+1 {{result must inherit the source strides}}
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride =[1, 16]>> -> !xegpu.matrix_desc<8x16xf16>
+  %data = xegpu.mem_desc_subview %arg0[8, 8]: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride =[1, 16]>> -> !xegpu.mem_desc<8x16xf16>
   return
 }
 
 // -----
-func.func @matrix_desc_subview_element_type_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+func.func @mem_desc_subview_element_type_mismatch(%arg0: !xegpu.mem_desc<16x64xf16>) {
   // expected-error@+1 {{failed to verify that all of {src, res} have same element type}}
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf32, #xegpu.mem_layout<stride =[64, 1]>>
+  %data = xegpu.mem_desc_subview %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> !xegpu.mem_desc<8x16xf32, #xegpu.mem_layout<stride =[64, 1]>>
   return
 }
 
 // -----
-func.func @matrix_desc_subview_rank_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+func.func @mem_desc_subview_rank_mismatch(%arg0: !xegpu.mem_desc<16x64xf16>) {
   // expected-error@+1 {{result rank must not exceed source rank}}
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<4x8x16xf16>
+  %data = xegpu.mem_desc_subview %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> !xegpu.mem_desc<4x8x16xf16>
   return
 }
 

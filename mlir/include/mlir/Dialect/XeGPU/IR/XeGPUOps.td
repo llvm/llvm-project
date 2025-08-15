@@ -1114,8 +1114,8 @@ class AllMemSizesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, SizeInBits<"_self">.result,
                               "size in bits">;
 
-def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure,
-      AllMemSizesMatch<["source", "matrix_desc"]>]>  {
+def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
+      AllMemSizesMatch<["source", "mem_desc"]>]>  {
   let summary = "Create a matrix descriptor.";
   let description = [{
     Creates a matrix descriptor from a shared local memory (SLM) buffer.
@@ -1125,24 +1125,24 @@ def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure,
     Arguments:
      - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
     Results:
-     - `matrix_desc` : the matrix descriptor.
+     - `mem_desc` : the matrix descriptor.
   }];
   let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
-  let results = (outs XeGPU_MatrixDesc:$matrix_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($matrix_desc))";
+  let results = (outs XeGPU_MemDesc:$mem_desc);
+  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
-                              AllElementTypesMatch<["matrix_desc", "res"]>,
-                              AllRanksMatch<["matrix_desc", "res"]>]>  {
-  let arguments = (ins XeGPU_MatrixDesc:$matrix_desc,
+                              AllElementTypesMatch<["mem_desc", "res"]>,
+                              AllRanksMatch<["mem_desc", "res"]>]>  {
+  let arguments = (ins XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<LayoutTrait>:$layout
   );
   let results = (outs XeGPU_ValueType:$res);
   let assemblyFormat = [{
-    $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+    $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
   }];
 
@@ -1151,7 +1151,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     using the provided matrix descriptor.
 
     Arguments:
-     - `matrix_desc`: the matrix descriptor identifying the SLM region.
+     - `mem_desc`: the matrix descriptor identifying the SLM region.
      - `offsets`: the coordinates within the matrix to read from.
      - `layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
@@ -1161,7 +1161,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   }];
 
   let builders = [
-    OpBuilder<(ins "Type":$res, "TypedValue<MatrixDescType>": $matrix_desc,
+    OpBuilder<(ins "Type":$res, "TypedValue<MemDescType>": $mem_desc,
                     "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
   ];
   let extraClassDeclaration = [{
@@ -1174,23 +1174,23 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
 }
 
 def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
-                              AllElementTypesMatch<["matrix_desc", "data"]>,
-                              AllRanksMatch<["matrix_desc", "data"]>]> {
+                              AllElementTypesMatch<["mem_desc", "data"]>,
+                              AllRanksMatch<["mem_desc", "data"]>]> {
   let arguments = (ins
     XeGPU_ValueType:$data,
-    XeGPU_MatrixDesc:$matrix_desc,
+    XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<LayoutTrait>:$layout
   );
-  let assemblyFormat = [{ $data `,` $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+  let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
     This operation writes the `data` fragment into the shared local memory region
-    identified by `matrix_desc`.
+    identified by `mem_desc`.
 
     Arguments:
-     - `matrix_desc`: the matrix descriptor specifying the SLM region.
+     - `mem_desc`: the matrix descriptor specifying the SLM region.
      - `offsets`: the coordinates within the matrix where the data will be written.
      - `data`: the values to be stored in the matrix.
      - `layout`: [optional] An attribute for guiding distributions among
@@ -1198,7 +1198,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
                  LayoutAttr or SliceAttr.
   }];
   let builders = [
-    OpBuilder<(ins "Value" : $data, "TypedValue<MatrixDescType>": $matrix_desc,
+    OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,
                    "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
   ];
   let extraClassDeclaration = [{
@@ -1210,7 +1210,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
-def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview",
+def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
           [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
   let description = [{
     Creates a subview of a matrix descriptor. The resulting matrix descriptor can have
@@ -1225,10 +1225,10 @@ def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview",
     - `res` : a matrix descriptor with smaller size.
 
   }];
-  let arguments = (ins XeGPU_MatrixDesc:$src,
+  let arguments = (ins XeGPU_MemDesc:$src,
                        Variadic<Index>:$offsets,
                        DenseI64ArrayAttr:$const_offsets);
-  let results = (outs XeGPU_MatrixDesc:$res);
+  let results = (outs XeGPU_MemDesc:$res);
   let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
                          attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
   let builders = [

@@ -592,9 +592,9 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_MatrixDescType
+// XeGPU_MemDescType
 //===----------------------------------------------------------------------===//
-mlir::Type MatrixDescType::parse(AsmParser &parser) {
+mlir::Type MemDescType::parse(AsmParser &parser) {
   llvm::SmallVector<int64_t> shape;
   mlir::Type elementType;
   mlir::FailureOr<MemLayoutAttr> layout;
@@ -629,12 +629,12 @@ mlir::Type MatrixDescType::parse(AsmParser &parser) {
     return {};
 
   MLIRContext *ctxt = parser.getContext();
-  return MatrixDescType::getChecked(
+  return MemDescType::getChecked(
       [&]() { return parser.emitError(parser.getNameLoc()); }, ctxt, shape,
       elementType, layout.value_or(MemLayoutAttr()));
 }
 
-void MatrixDescType::print(AsmPrinter &printer) const {
+void MemDescType::print(AsmPrinter &printer) const {
   printer << "<";
 
   printer.printDimensionList(getShape());
@@ -648,7 +648,7 @@ void MatrixDescType::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_MatrixDescType
+// XeGPU_MemDescType
 //===----------------------------------------------------------------------===//
 
 Attribute MemLayoutAttr::parse(AsmParser &parser, Type type) {

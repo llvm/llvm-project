@@ -942,7 +942,7 @@ void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // XeGPU_LoadMatrixOp
 //===----------------------------------------------------------------------===//
 void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
-                         TypedValue<MatrixDescType> matrixDesc,
+                         TypedValue<MemDescType> matrixDesc,
                          llvm::ArrayRef<OpFoldResult> offsets,
                          LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
@@ -955,7 +955,7 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
 
 LogicalResult LoadMatrixOp::verify() {
   ArrayRef<int64_t> valueShape = getRes().getType().getShape();
-  ArrayRef<int64_t> mdescShape = getMatrixDesc().getType().getShape();
+  ArrayRef<int64_t> mdescShape = getMemDesc().getType().getShape();
   if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
     return emitOpError("result shape must not exceed matrix desc shape.");
@@ -966,7 +966,7 @@ LogicalResult LoadMatrixOp::verify() {
 // XeGPU_StoreMatrixOp
 //===----------------------------------------------------------------------===//
 void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
-                          TypedValue<MatrixDescType> matrixDesc,
+                          TypedValue<MemDescType> matrixDesc,
                           llvm::ArrayRef<OpFoldResult> offsets,
                           LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
@@ -979,7 +979,7 @@ void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
 
 LogicalResult StoreMatrixOp::verify() {
   ArrayRef<int64_t> dataShape = getData().getType().getShape();
-  ArrayRef<int64_t> mdescShape = getMatrixDesc().getType().getShape();
+  ArrayRef<int64_t> mdescShape = getMemDesc().getType().getShape();
   if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
     return emitOpError("data shape must not exceed matrix desc shape.");
@@ -988,12 +988,12 @@ LogicalResult StoreMatrixOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_MatrixDescSubviewOp
+// XeGPU_MemDescSubviewOp
 //===----------------------------------------------------------------------===//
 
-void MatrixDescSubviewOp::build(OpBuilder &builder, OperationState &state,
-                                Type resTy, Value src,
-                                llvm::ArrayRef<OpFoldResult> offsets) {
+void MemDescSubviewOp::build(OpBuilder &builder, OperationState &state,
+                             Type resTy, Value src,
+                             llvm::ArrayRef<OpFoldResult> offsets) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -1001,9 +1001,9 @@ void MatrixDescSubviewOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr);
 }
 
-LogicalResult MatrixDescSubviewOp::verify() {
-  MatrixDescType srcTy = getSrc().getType();
-  MatrixDescType resTy = getRes().getType();
+LogicalResult MemDescSubviewOp::verify() {
+  MemDescType srcTy = getSrc().getType();
+  MemDescType resTy = getRes().getType();
   ArrayRef<int64_t> srcShape = srcTy.getShape();
   ArrayRef<int64_t> resShape = resTy.getShape();
 
