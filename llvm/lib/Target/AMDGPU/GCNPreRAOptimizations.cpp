@@ -854,7 +854,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       if (SIInstrInfo::isMFMA(MI)){
         const MCSchedClassDesc *SchedClassDesc = SchedModel.resolveSchedClass(&MI);
         NumMFMACycles = SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-        // createListOfPackedInstr(MI, instrsToUnpack, NumMFMACycles);
+        createListOfPackedInstr(MI, instrsToUnpack, NumMFMACycles);
       }
       if (ST.useRealTrue16Insts()){
         if (MI.getOpcode() != AMDGPU::COPY)
