@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
-
-# This script clears release notes, which is needed when bumping trunk version.
+# ===-- clear-release-notes.py  ---------------------------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===------------------------------------------------------------------------===#
+#
+# Clear release notes, which is needed when bumping trunk version.
+#
+# ===------------------------------------------------------------------------===#
 
 import argparse
 from pathlib import Path
