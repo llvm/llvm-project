@@ -49,7 +49,7 @@ size_t RootSignatureDesc::getSize() const {
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
-      if (Version == 1)
+      if (Version == dxbc::RootSignatureVersion::V1_0)
         Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
         Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
@@ -62,7 +62,7 @@ size_t RootSignatureDesc::getSize() const {
       // 4 bytes for the number of ranges in table and
       // 4 bytes for the ranges offset
       Size += 2 * sizeof(uint32_t);
-      if (Version == 1)
+      if (Version == dxbc::RootSignatureVersion::V1_0)
         Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
       else
         Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
@@ -130,7 +130,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Descriptor.RegisterSpace,
                              llvm::endianness::little);
-      if (Version > 1)
+      if (Version > dxbc::RootSignatureVersion::V1_0)
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
       break;
     }
@@ -148,7 +148,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                                llvm::endianness::little);
         support::endian::write(BOS, Range.RegisterSpace,
                                llvm::endianness::little);
-        if (Version > 1)
+        if (Version > dxbc::RootSignatureVersion::V1_0)
           support::endian::write(BOS, Range.Flags, llvm::endianness::little);
         support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
                                llvm::endianness::little);

@@ -200,9 +200,9 @@ enum class DescriptorRangeType : uint32_t {
 LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
-  case Val:                                                                    \
+  case dxbc::RootParameterType::Enum:                                          \
     return true;
-inline bool isValidParameterType(uint32_t V) {
+inline bool isValidParameterType(dxbc::RootParameterType V) {
   switch (V) {
 #include "DXContainerConstants.def"
   }
@@ -217,9 +217,9 @@ enum class ShaderVisibility : uint32_t {
 LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
 #define SHADER_VISIBILITY(Val, Enum)                                           \
-  case Val:                                                                    \
+  case dxbc::ShaderVisibility::Enum:                                           \
     return true;
-inline bool isValidShaderVisibility(uint32_t V) {
+inline bool isValidShaderVisibility(dxbc::ShaderVisibility V) {
   switch (V) {
 #include "DXContainerConstants.def"
   }
@@ -253,6 +253,14 @@ enum class StaticBorderColor : uint32_t {
 };
 
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
+
+// D3D_ROOT_SIGNATURE_VERSION
+enum class RootSignatureVersion {
+  V1_0 = 0x1,
+  V1_1 = 0x2,
+};
+
+LLVM_ABI ArrayRef<EnumEntry<RootSignatureVersion>> getRootSignatureVersions();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 
@@ -646,19 +654,19 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 namespace RTS0 {
 namespace v1 {
 struct StaticSampler {
-  uint32_t Filter;
-  uint32_t AddressU;
-  uint32_t AddressV;
-  uint32_t AddressW;
+  dxbc::SamplerFilter Filter;
+  dxbc::TextureAddressMode AddressU;
+  dxbc::TextureAddressMode AddressV;
+  dxbc::TextureAddressMode AddressW;
   float MipLODBias;
   uint32_t MaxAnisotropy;
-  uint32_t ComparisonFunc;
-  uint32_t BorderColor;
+  dxbc::ComparisonFunc ComparisonFunc;
+  dxbc::StaticBorderColor BorderColor;
   float MinLOD;
   float MaxLOD;
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
-  uint32_t ShaderVisibility;
+  dxbc::ShaderVisibility ShaderVisibility;
   void swapBytes() {
     sys::swapByteOrder(Filter);
     sys::swapByteOrder(AddressU);
@@ -677,7 +685,7 @@ struct StaticSampler {
 };
 
 struct DescriptorRange {
-  uint32_t RangeType;
+  dxbc::DescriptorRangeType RangeType;
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
@@ -715,8 +723,8 @@ struct RootConstants {
 };
 
 struct RootParameterHeader {
-  uint32_t ParameterType;
-  uint32_t ShaderVisibility;
+  dxbc::RootParameterType ParameterType;
+  dxbc::ShaderVisibility ShaderVisibility;
   uint32_t ParameterOffset;
 
   void swapBytes() {
@@ -760,7 +768,7 @@ struct RootDescriptor : public v1::RootDescriptor {
 };
 
 struct DescriptorRange {
-  uint32_t RangeType;
+  dxbc::DescriptorRangeType RangeType;
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
@@ -777,12 +785,6 @@ struct DescriptorRange {
 };
 } // namespace v2
 } // namespace RTS0
-
-// D3D_ROOT_SIGNATURE_VERSION
-enum class RootSignatureVersion {
-  V1_0 = 0x1,
-  V1_1 = 0x2,
-};
 
 } // namespace dxbc
 } // namespace llvm

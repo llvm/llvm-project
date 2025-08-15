@@ -17,6 +17,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -116,9 +117,13 @@ analyzeModule(Module &M) {
       continue;
     }
 
+    assert(hlsl::rootsig::verifyVersion(
+        static_cast<dxbc::RootSignatureVersion>(*V)));
+
     llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
     llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
-        MDParser.ParseRootSignature(V.value());
+        MDParser.ParseRootSignature(
+            static_cast<dxbc::RootSignatureVersion>(*V));
 
     if (!RSDOrErr) {
       handleAllErrors(RSDOrErr.takeError(), [&](ErrorInfoBase &EIB) {
@@ -197,7 +202,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
             RS.ParametersContainer.getRootDescriptor(Loc);
         OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
            << "  Shader Register: " << Descriptor.ShaderRegister << "\n";
-        if (RS.Version > 1)
+        if (RS.Version > dxbc::RootSignatureVersion::V1_0)
           OS << "  Flags: " << Descriptor.Flags << "\n";
         break;
       }
@@ -213,7 +218,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
              << "    Num Descriptors: " << Range.NumDescriptors << "\n"
              << "    Offset In Descriptors From Table Start: "
              << Range.OffsetInDescriptorsFromTableStart << "\n";
-          if (RS.Version > 1)
+          if (RS.Version > dxbc::RootSignatureVersion::V1_0)
             OS << "    Flags: " << Range.Flags << "\n";
         }
         break;

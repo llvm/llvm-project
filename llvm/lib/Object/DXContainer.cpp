@@ -250,7 +250,8 @@ Error DirectX::RootSignature::parse() {
     return parseFailed(
         "Invalid root signature, insufficient space for header.");
 
-  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Version = support::endian::read<dxbc::RootSignatureVersion,
+                                  llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
   NumParameters =

@@ -146,8 +146,7 @@ struct RootParameterView {
 
 struct RootConstantView : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return V->Header.ParameterType ==
-           (uint32_t)dxbc::RootParameterType::Constants32Bit;
+    return V->Header.ParameterType == dxbc::RootParameterType::Constants32Bit;
   }
 
   llvm::Expected<dxbc::RTS0::v1::RootConstants> read() {
@@ -157,25 +156,24 @@ struct RootConstantView : RootParameterView {
 
 struct RootDescriptorView : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return (V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
-            V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
-            V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::UAV));
+    return (V->Header.ParameterType == dxbc::RootParameterType::CBV ||
+            V->Header.ParameterType == dxbc::RootParameterType::SRV ||
+            V->Header.ParameterType == dxbc::RootParameterType::UAV);
   }
 
-  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
-    if (Version == 1) {
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor>
+  read(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
       auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
       if (Error E = Descriptor.takeError())
         return E;
       return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
     }
-    if (Version != 2)
-      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
-                                                Twine(Version),
-                                            object_error::parse_failed);
+    if (Version != dxbc::RootSignatureVersion::V1_1)
+      return make_error<GenericBinaryError>(
+          "Invalid Root Signature version: " +
+              Twine(static_cast<uint32_t>(Version)),
+          object_error::parse_failed);
     return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
@@ -192,7 +190,7 @@ template <typename T> struct DescriptorTable {
 struct DescriptorTableView : RootParameterView {
   static bool classof(const RootParameterView *V) {
     return (V->Header.ParameterType ==
-            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable));
+            dxbc::RootParameterType::DescriptorTable);
   }
 
   // Define a type alias to access the template parameter from inside classof
@@ -220,7 +218,7 @@ static Error parseFailed(const Twine &Msg) {
 
 class RootSignature {
 private:
-  uint32_t Version;
+  dxbc::RootSignatureVersion Version;
   uint32_t NumParameters;
   uint32_t RootParametersOffset;
   uint32_t NumStaticSamplers;
@@ -238,7 +236,7 @@ public:
   RootSignature(StringRef PD) : PartData(PD) {}
 
   LLVM_ABI Error parse();
-  uint32_t getVersion() const { return Version; }
+  dxbc::RootSignatureVersion getVersion() const { return Version; }
   uint32_t getNumParameters() const { return NumParameters; }
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
@@ -269,7 +267,7 @@ public:
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
-      if (Version == 1)
+      if (Version == dxbc::RootSignatureVersion::V1_0)
         DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
         DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
@@ -281,7 +279,7 @@ public:
       uint32_t NumRanges =
           support::endian::read<uint32_t, llvm::endianness::little>(
               PartData.begin() + Header.ParameterOffset);
-      if (Version == 1)
+      if (Version == dxbc::RootSignatureVersion::V1_0)
         DataSize = sizeof(dxbc::RTS0::v1::DescriptorRange) * NumRanges;
       else
         DataSize = sizeof(dxbc::RTS0::v2::DescriptorRange) * NumRanges;

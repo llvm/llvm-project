@@ -72,7 +72,7 @@ struct RootParametersContainer {
     Tables.push_back(Table);
   }
 
-  std::pair<uint32_t, uint32_t>
+  std::pair<dxbc::RootParameterType, uint32_t>
   getTypeAndLocForParameter(uint32_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
     return {Info.Header.ParameterType, Info.Location};
@@ -106,7 +106,7 @@ struct RootParametersContainer {
 };
 struct RootSignatureDesc {
 
-  uint32_t Version = 2U;
+  dxbc::RootSignatureVersion Version = dxbc::RootSignatureVersion::V1_1;
   uint32_t Flags = 0U;
   uint32_t RootParameterOffset = 0U;
   uint32_t StaticSamplersOffset = 0u;

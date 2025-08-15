@@ -309,7 +309,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           dxbc::RTS0::v2::RootDescriptor Descriptor;
           Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
-          if (RS.Version > 1)
+          if (RS.Version > dxbc::RootSignatureVersion::V1_0)
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
           break;
@@ -327,7 +327,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Range.RegisterSpace = R.RegisterSpace;
             Range.OffsetInDescriptorsFromTableStart =
                 R.OffsetInDescriptorsFromTableStart;
-            if (RS.Version > 1)
+            if (RS.Version > dxbc::RootSignatureVersion::V1_0)
               Range.Flags = R.getEncodedFlags();
             Table.Ranges.push_back(Range);
           }

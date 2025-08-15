@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 
 #include <cmath>
 
@@ -20,7 +21,10 @@ namespace rootsig {
 
 bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-bool verifyVersion(uint32_t Version) { return (Version == 1 || Version == 2); }
+bool verifyVersion(dxbc::RootSignatureVersion Version) {
+  return (Version == dxbc::RootSignatureVersion::V1_0 ||
+          Version == dxbc::RootSignatureVersion::V1_1);
+}
 
 bool verifyRegisterValue(uint32_t RegisterValue) {
   return RegisterValue != ~0U;
@@ -32,13 +36,15 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0);
 }
 
-bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
+bool verifyRootDescriptorFlag(dxbc::RootSignatureVersion Version,
+                              uint32_t FlagsVal) {
   using FlagT = dxbc::RootDescriptorFlags;
   FlagT Flags = FlagT(FlagsVal);
-  if (Version == 1)
+  if (Version == dxbc::RootSignatureVersion::V1_0)
     return Flags == FlagT::DataVolatile;
 
-  assert(Version == 2 && "Provided invalid root signature version");
+  assert(Version == dxbc::RootSignatureVersion::V1_1 &&
+         "Provided invalid root signature version");
 
   // The data-specific flags are mutually exclusive.
   FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
@@ -51,10 +57,9 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
   return (Flags | DataFlags) == DataFlags;
 }
 
-bool verifyRangeType(uint32_t Type) {
+bool verifyRangeType(dxbc::DescriptorRangeType Type) {
   switch (Type) {
-#define DESCRIPTOR_RANGE(Num, Val)                                             \
-  case llvm::to_underlying(dxbc::DescriptorRangeType::Val):
+#define DESCRIPTOR_RANGE(Num, Val) case dxbc::DescriptorRangeType::Val:
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   };
@@ -62,15 +67,15 @@ bool verifyRangeType(uint32_t Type) {
   return false;
 }
 
-bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
+bool verifyDescriptorRangeFlag(llvm::dxbc::RootSignatureVersion Version,
+                               llvm::dxbc::DescriptorRangeType Type,
                                uint32_t FlagsVal) {
   using FlagT = dxbc::DescriptorRangeFlags;
   FlagT Flags = FlagT(FlagsVal);
 
-  const bool IsSampler =
-      (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
+  const bool IsSampler = (Type == dxbc::DescriptorRangeType::Sampler);
 
-  if (Version == 1) {
+  if (Version == dxbc::RootSignatureVersion::V1_0) {
     // Since the metadata is unversioned, we expect to explicitly see the values
     // that map to the version 1 behaviour here.
     if (IsSampler)
@@ -128,9 +133,9 @@ bool verifyNumDescriptors(uint32_t NumDescriptors) {
   return NumDescriptors > 0;
 }
 
-bool verifySamplerFilter(uint32_t Value) {
+bool verifySamplerFilter(dxbc::SamplerFilter Value) {
   switch (Value) {
-#define FILTER(Num, Val) case llvm::to_underlying(dxbc::SamplerFilter::Val):
+#define FILTER(Num, Val) case dxbc::SamplerFilter::Val:
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
@@ -139,10 +144,9 @@ bool verifySamplerFilter(uint32_t Value) {
 
 // Values allowed here:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode#syntax
-bool verifyAddress(uint32_t Address) {
+bool verifyAddress(dxbc::TextureAddressMode Address) {
   switch (Address) {
-#define TEXTURE_ADDRESS_MODE(Num, Val)                                         \
-  case llvm::to_underlying(dxbc::TextureAddressMode::Val):
+#define TEXTURE_ADDRESS_MODE(Num, Val) case dxbc::TextureAddressMode::Val:
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
@@ -157,20 +161,18 @@ bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
   return MaxAnisotropy <= 16u;
 }
 
-bool verifyComparisonFunc(uint32_t ComparisonFunc) {
+bool verifyComparisonFunc(dxbc::ComparisonFunc ComparisonFunc) {
   switch (ComparisonFunc) {
-#define COMPARISON_FUNC(Num, Val)                                              \
-  case llvm::to_underlying(dxbc::ComparisonFunc::Val):
+#define COMPARISON_FUNC(Num, Val) case dxbc::ComparisonFunc::Val:
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
   return false;
 }
 
-bool verifyBorderColor(uint32_t BorderColor) {
+bool verifyBorderColor(dxbc::StaticBorderColor BorderColor) {
   switch (BorderColor) {
-#define STATIC_BORDER_COLOR(Num, Val)                                          \
-  case llvm::to_underlying(dxbc::StaticBorderColor::Val):
+#define STATIC_BORDER_COLOR(Num, Val) case dxbc::StaticBorderColor::Val:
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
