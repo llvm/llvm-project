@@ -3576,11 +3576,10 @@ class TypePromotionTransaction {
         }
         // Replace types
         DIExprBuilder Builder(Expr->getContext());
-        int I = 0;
-        int ArgI = 0;
-        for (DIOp::Variant Op : *Elems) {
-          DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
-          DIOp::Convert *CvtArg = std::get_if<DIOp::Convert>(&Op);
+        unsigned long ArgI = 0;
+        for (auto [I, Op] : enumerate(*Elems)) {
+          const DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
+          const DIOp::Convert *CvtArg = std::get_if<DIOp::Convert>(&Op);
           if (AsArg && Idxs[AsArg->getIndex()]) {
             ArgI = I;
             Builder.append<DIOp::Arg>(AsArg->getIndex(), Ty);
