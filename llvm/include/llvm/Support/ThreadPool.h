@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
@@ -180,6 +181,7 @@ private:
   void grow(int requested);
 
   void processTasks(ThreadPoolTaskGroup *WaitingForGroup);
+  void processTasksWithJobserver();
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;
@@ -208,6 +210,8 @@ private:
 
   /// Maximum number of threads to potentially grow this pool to.
   const unsigned MaxThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 #endif // LLVM_ENABLE_THREADS
 
