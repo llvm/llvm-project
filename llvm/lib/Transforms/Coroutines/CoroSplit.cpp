@@ -345,8 +345,7 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
 
 /// Replace an unwind call to llvm.coro.end.
 static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
-                                 Value *FramePtr, bool InRamp,
-                                 CallGraph *CG) {
+                                 Value *FramePtr, bool InRamp, CallGraph *CG) {
   IRBuilder<> Builder(End);
 
   switch (Shape.ABI) {
