@@ -427,7 +427,7 @@ RangeAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
 
-mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
+mlir::Type TensorDescType::parse(AsmParser &parser) {
   llvm::SmallVector<int64_t> shape;
   mlir::Type elementType;
   mlir::FailureOr<mlir::Attribute> encoding;
@@ -477,7 +477,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
       layout.value_or(mlir::Attribute()));
 }
 
-void TensorDescType::print(::mlir::AsmPrinter &printer) const {
+void TensorDescType::print(AsmPrinter &printer) const {
   printer << "<";
 
   auto shape = getShape();
@@ -522,10 +522,10 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
   return Base::get(context, shape, elementType, attr, layout);
 }
 
-LogicalResult TensorDescType::verify(
-    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-    llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
-    mlir::Attribute encoding, mlir::Attribute layout) {
+LogicalResult
+TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                       llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
+                       mlir::Attribute encoding, mlir::Attribute layout) {
   size_t rank = shape.size();
 
   if (rank == 0)
@@ -589,6 +589,119 @@ LogicalResult TensorDescType::verify(
     }
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_MemDescType
+//===----------------------------------------------------------------------===//
+mlir::Type MemDescType::parse(AsmParser &parser) {
+  llvm::SmallVector<int64_t> shape;
+  mlir::Type elementType;
+  mlir::FailureOr<MemLayoutAttr> layout;
+
+  // Parse literal '<'
+  if (parser.parseLess())
+    return {};
+
+  auto shapeLoc = parser.getCurrentLocation();
+  if (mlir::failed(parser.parseDimensionList(shape, false, true))) {
+    parser.emitError(shapeLoc, "failed to parse parameter 'shape'");
+    return {};
+  }
+
+  auto elemTypeLoc = parser.getCurrentLocation();
+  if (mlir::failed(parser.parseType(elementType))) {
+    parser.emitError(elemTypeLoc, "failed to parse parameter 'elementType'");
+    return {};
+  }
+
+  // parse optional attributes
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    MemLayoutAttr attr;
+    ParseResult res = parser.parseAttribute(attr);
+    if (mlir::failed(res))
+      return {};
+    layout = attr;
+  }
+
+  // Parse literal '>'
+  if (parser.parseGreater())
+    return {};
+
+  MLIRContext *ctxt = parser.getContext();
+  return MemDescType::getChecked(
+      [&]() { return parser.emitError(parser.getNameLoc()); }, ctxt, shape,
+      elementType, layout.value_or(MemLayoutAttr()));
+}
+
+void MemDescType::print(AsmPrinter &printer) const {
+  printer << "<";
+
+  printer.printDimensionList(getShape());
+  printer << 'x';
+  printer << getElementType();
+
+  if (auto layout = getMemLayout())
+    printer << ", " << layout;
+
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_MemDescType
+//===----------------------------------------------------------------------===//
+
+Attribute MemLayoutAttr::parse(AsmParser &parser, Type type) {
+
+  auto context = parser.getContext();
+  llvm::SMLoc loc = parser.getCurrentLocation();
+
+  llvm::SmallDenseSet<StringRef> seenKeys;
+  SmallVector<NamedAttribute> attributes;
+
+  auto parseElt = [&]() -> ParseResult {
+    StringRef nameId;
+    if (failed(parser.parseKeyword(&nameId)))
+      return parser.emitError(loc, "expected valid attribute name");
+
+    if (!seenKeys.insert(nameId).second)
+      return parser.emitError(loc, "duplicate key '")
+             << nameId << " in mem layout attribute";
+
+    if (failed(parser.parseEqual()))
+      return failure();
+
+    Attribute attr;
+    if (failed(parser.parseAttribute(attr)))
+      return failure();
+    attributes.emplace_back(nameId, attr);
+    return success();
+  };
+
+  // Parse literal '<'
+  if (parser.parseLess())
+    return {};
+
+  if (failed(parser.parseCommaSeparatedList(parseElt)))
+    return {};
+
+  // Parse literal '>'
+  if (parser.parseGreater())
+    return {};
+
+  return parser.getChecked<MemLayoutAttr>(
+      loc, context, DictionaryAttr::get(context, attributes));
+}
+
+void MemLayoutAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  ArrayRef<NamedAttribute> attrs = getAttrs().getValue();
+  for (size_t i = 0; i < attrs.size(); i++) {
+    printer << attrs[i].getName().str() << " = " << attrs[i].getValue();
+    if (i < attrs.size() - 1)
+      printer << ", ";
+  }
+  printer << ">";
 }
 
 } // namespace xegpu

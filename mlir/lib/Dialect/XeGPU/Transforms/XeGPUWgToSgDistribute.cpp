@@ -524,8 +524,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 // is lowered to:
 //   #a = #xegpu.layout<inst_data = [16, 16]>
 //   #b = #xegpu.layout<inst_data = [8, 16]>
-//   store_matrix %1, %slm <{layout_input_0 = #a}> : vector<32x16>, matrix_desc<32x64xf32>
-//   %d = load_matrix %slm <{layout_result_0 = #a}> : matrix_desc<32x64xf32> -> vector<16x32xf32>
+//   store_matrix %1, %slm <{layout_input_0 = #a}> : vector<32x16>, mem_desc<32x64xf32>
+//   %d = load_matrix %slm <{layout_result_0 = #a}> : mem_desc<32x64xf32> -> vector<16x32xf32>
 //   xegpu.convert_layout %d <{input_layout = #a, target_layout = #b}> : vector<16x32xf32>
 // clang-format on
 struct WgToSgConvertLayoutOp
