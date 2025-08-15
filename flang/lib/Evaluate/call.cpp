@@ -309,16 +309,15 @@ static void DetermineCopyInOutArgument(
 
   bool dummyIntentIn{dummyObj->intent == common::Intent::In};
   bool dummyIntentOut{dummyObj->intent == common::Intent::Out};
-
   auto setCopyIn = [&]() {
     if (!dummyIntentOut) {
-      // INTENT(OUT) never need copy-in
+      // INTENT(OUT) dummy args never need copy-in
       actual.SetMayNeedCopyIn();
     }
   };
   auto setCopyOut = [&]() {
     if (!dummyIntentIn) {
-      // INTENT(IN) never need copy-out
+      // INTENT(IN) dummy args never need copy-out
       actual.SetMayNeedCopyOut();
     }
   };
@@ -358,8 +357,6 @@ static void DetermineCopyInOutArgument(
       setCopyOut();
     }
   }
-
-  // TODO: character type differences?
 }
 
 void ProcedureRef::DetermineCopyInOut() {
