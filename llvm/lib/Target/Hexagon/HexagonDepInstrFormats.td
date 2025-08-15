@@ -3049,7 +3049,6 @@ class Enc_cf1927 : OpcodeHexagon {
 class Enc_d0fe02 : OpcodeHexagon {
   bits <5> Rxx32;
   let Inst{20-16} = Rxx32{4-0};
-  bits <0> sgp10;
 }
 class Enc_d15d19 : OpcodeHexagon {
   bits <1> Mu2;

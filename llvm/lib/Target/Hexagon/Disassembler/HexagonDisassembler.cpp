@@ -172,6 +172,11 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
                                     const MCDisassembler *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const MCDisassembler *Decoder);
+
+static DecodeStatus decodeCRSWAP10(MCInst &Inst, unsigned Bits,
+                                   uint64_t Address,
+                                   const MCDisassembler *Decoder);
+
 #include "HexagonDepDecoders.inc"
 #include "HexagonGenDisassemblerTables.inc"
 
@@ -838,6 +843,16 @@ static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
   if (!Disassembler.tryAddingSymbolicOperand(MI, Extended, Address, true, 0, 0,
                                              4))
     HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeCRSWAP10(MCInst &Inst, unsigned int Bits,
+                                   uint64_t Address,
+                                   const MCDisassembler *Decoder) {
+  unsigned RegNo = fieldFromInstruction(Bits, 16, 5);
+  DecodeDoubleRegsRegisterClass(Inst, RegNo, Address, Decoder);
+  DecodeDoubleRegsRegisterClass(Inst, RegNo, Address, Decoder);
+  Inst.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
   return MCDisassembler::Success;
 }
 
