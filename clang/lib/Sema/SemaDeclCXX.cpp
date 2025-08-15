@@ -7012,9 +7012,12 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E;
          ++I) {
       NamedDecl *D = (*I)->getUnderlyingDecl();
+      // Invalid IndirectFieldDecls have already been diagnosed with
+      // err_anonymous_record_member_redecl in
+      // SemaDecl.cpp:CheckAnonMemberRedeclaration.
       if (((isa<FieldDecl>(D) || isa<UnresolvedUsingValueDecl>(D)) &&
            Record->hasUserDeclaredConstructor()) ||
-          isa<IndirectFieldDecl>(D)) {
+          (isa<IndirectFieldDecl>(D) && !D->isInvalidDecl())) {
         Diag((*I)->getLocation(), diag::err_member_name_of_class)
           << D->getDeclName();
         break;
