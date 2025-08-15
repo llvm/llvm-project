@@ -446,9 +446,9 @@ int llvm_add_globaldebuginfo(void) {
   size_t numEntries;
   LLVMValueMetadataEntry *ME = LLVMGlobalCopyAllMetadata(Global, &numEntries);
   assert(ME != NULL);
-  (void)ME;
   assert(numEntries == 2);
 
+  LLVMDisposeValueMetadataEntries(ME);
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
 
