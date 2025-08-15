@@ -4051,18 +4051,13 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-
-  Entry.Ty = IntPtrTy;
-  Entry.Node = Trmp; Args.push_back(Entry);
-
+  Args.emplace_back(Trmp, IntPtrTy);
   // TrampSize == (isPPC64 ? 48 : 40);
-  Entry.Node =
-      DAG.getConstant(isPPC64 ? 48 : 40, dl, Subtarget.getScalarIntVT());
-  Args.push_back(Entry);
-
-  Entry.Node = FPtr; Args.push_back(Entry);
-  Entry.Node = Nest; Args.push_back(Entry);
+  Args.emplace_back(
+      DAG.getConstant(isPPC64 ? 48 : 40, dl, Subtarget.getScalarIntVT()),
+      IntPtrTy);
+  Args.emplace_back(FPtr, IntPtrTy);
+  Args.emplace_back(Nest, IntPtrTy);
 
   // Lower to a call to __trampoline_setup(Trmp, TrampSize, FPtr, ctx_reg)
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -19553,12 +19548,10 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
       DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
   bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, false);
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (const SDValue &N : Op->op_values()) {
     EVT ArgVT = N.getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-    Entry.Node = N;
-    Entry.Ty = ArgTy;
+    TargetLowering::ArgListEntry Entry(N, ArgTy);
     Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, SignExtend);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
