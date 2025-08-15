@@ -533,10 +533,10 @@ public:
 
 protected:
   // Populates the insn given the uid.
-  void insnWithID(insn_t &Insn, unsigned Opcode) const {
+  insn_t insnWithID(unsigned Opcode) const {
     const Record *EncodingDef = AllInstructions[Opcode].EncodingDef;
     const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
-    Insn.resize(std::max(BitWidth, Bits.getNumBits()), BitValue::BIT_UNSET);
+    insn_t Insn(std::max(BitWidth, Bits.getNumBits()), BitValue::BIT_UNSET);
     // We may have a SoftFail bitmask, which specifies a mask where an encoding
     // may differ from the value in "Inst" and yet still be valid, but the
     // disassembler should return SoftFail instead of Success.
@@ -550,6 +550,7 @@ protected:
       else
         Insn[i] = BitValue(Bits, i);
     }
+    return Insn;
   }
 
   // Populates the field of the insn given the start position and the number of
@@ -582,7 +583,7 @@ protected:
   // This returns a list of undecoded bits of an instructions, for example,
   // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
   // decoded bits in order to verify that the instruction matches the Opcode.
-  unsigned getIslands(std::vector<Island> &Islands, const insn_t &Insn) const;
+  std::vector<Island> getIslands(const insn_t &Insn) const;
 
   // Emits code to check the Predicates member of an instruction are true.
   // Returns true if predicate matches were emitted, false otherwise.
@@ -622,7 +623,8 @@ protected:
   // FilterProcessor scans the well-known encoding bits of the instructions and
   // builds up a list of candidate filters.  It chooses the best filter and
   // recursively descends down the decoding tree.
-  bool filterProcessor(bool AllowMixed, bool Greedy = true);
+  bool filterProcessor(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
+                       bool Greedy = true);
 
   // Decides on the best configuration of filter(s) to use in order to decode
   // the instructions.  A conflict of instructions may occur, in which case we
@@ -658,10 +660,8 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
   LastOpcFiltered = {0, 0};
 
   for (const auto &OpcPair : Owner.Opcodes) {
-    insn_t Insn;
-
     // Populates the insn given the uid.
-    Owner.insnWithID(Insn, OpcPair.EncodingID);
+    insn_t Insn = Owner.insnWithID(OpcPair.EncodingID);
 
     // Scans the segment for possibly well-specified encoding bits.
     auto [Ok, Field] = Owner.fieldFromInsn(Insn, StartBit, NumBits);
@@ -1162,8 +1162,9 @@ void FilterChooser::dumpStack(raw_ostream &OS, const char *prefix) const {
 // This returns a list of undecoded bits of an instructions, for example,
 // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
 // decoded bits in order to verify that the instruction matches the Opcode.
-unsigned FilterChooser::getIslands(std::vector<Island> &Islands,
-                                   const insn_t &Insn) const {
+std::vector<FilterChooser::Island>
+FilterChooser::getIslands(const insn_t &Insn) const {
+  std::vector<Island> Islands;
   uint64_t FieldVal;
   unsigned StartBit;
 
@@ -1203,7 +1204,7 @@ unsigned FilterChooser::getIslands(std::vector<Island> &Islands,
   if (State == 2)
     Islands.push_back({StartBit, BitWidth - StartBit, FieldVal});
 
-  return Islands.size();
+  return Islands;
 }
 
 bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
@@ -1452,12 +1453,10 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
 // Emits table entries to decode the singleton.
 void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                             EncodingIDAndOpcode Opc) const {
-  std::vector<Island> Islands;
-  insn_t Insn;
-  insnWithID(Insn, Opc.EncodingID);
+  insn_t Insn = insnWithID(Opc.EncodingID);
 
   // Look for islands of undecoded bits of the singleton.
-  getIslands(Islands, Insn);
+  std::vector<Island> Islands = getIslands(Insn);
 
   // Emit the predicate table entry if one is needed.
   emitPredicateTableEntry(TableInfo, Opc.EncodingID);
@@ -1552,88 +1551,27 @@ void FilterChooser::reportRegion(bitAttr_t RA, unsigned StartBit,
 // FilterProcessor scans the well-known encoding bits of the instructions and
 // builds up a list of candidate filters.  It chooses the best filter and
 // recursively descends down the decoding tree.
-bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
+bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
+                                    bool AllowMixed, bool Greedy) {
   Filters.clear();
   BestIndex = -1;
-  unsigned numInstructions = Opcodes.size();
 
-  assert(numInstructions && "Filter created with no instructions");
-
-  // No further filtering is necessary.
-  if (numInstructions == 1)
-    return true;
+  assert(Opcodes.size() >= 2 && "Nothing to filter");
 
   // Heuristics.  See also doFilter()'s "Heuristics" comment when num of
   // instructions is 3.
   if (AllowMixed && !Greedy) {
-    assert(numInstructions == 3);
+    assert(Opcodes.size() == 3);
 
     for (const auto &Opcode : Opcodes) {
-      std::vector<Island> Islands;
-      insn_t Insn;
-
-      insnWithID(Insn, Opcode.EncodingID);
+      insn_t Insn = insnWithID(Opcode.EncodingID);
 
       // Look for islands of undecoded bits of any instruction.
-      if (getIslands(Islands, Insn) > 0) {
+      std::vector<Island> Islands = getIslands(Insn);
+      if (!Islands.empty()) {
         // Found an instruction with island(s).  Now just assign a filter.
         runSingleFilter(Islands[0].StartBit, Islands[0].NumBits);
         return true;
-      }
-    }
-  }
-
-  unsigned BitIndex;
-
-  // We maintain BIT_WIDTH copies of the bitAttrs automaton.
-  // The automaton consumes the corresponding bit from each
-  // instruction.
-  //
-  //   Input symbols: 0, 1, and _ (unset).
-  //   States:        NONE, FILTERED, ALL_SET, ALL_UNSET, and MIXED.
-  //   Initial state: NONE.
-  //
-  // (NONE) ------- [01] -> (ALL_SET)
-  // (NONE) ------- _ ----> (ALL_UNSET)
-  // (ALL_SET) ---- [01] -> (ALL_SET)
-  // (ALL_SET) ---- _ ----> (MIXED)
-  // (ALL_UNSET) -- [01] -> (MIXED)
-  // (ALL_UNSET) -- _ ----> (ALL_UNSET)
-  // (MIXED) ------ . ----> (MIXED)
-  // (FILTERED)---- . ----> (FILTERED)
-
-  std::vector<bitAttr_t> bitAttrs(BitWidth, ATTR_NONE);
-
-  // FILTERED bit positions provide no entropy and are not worthy of pursuing.
-  // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
-  for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
-    if (FilterBitValues[BitIndex].isSet())
-      bitAttrs[BitIndex] = ATTR_FILTERED;
-
-  for (const auto &OpcPair : Opcodes) {
-    insn_t insn;
-
-    insnWithID(insn, OpcPair.EncodingID);
-
-    for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
-      switch (bitAttrs[BitIndex]) {
-      case ATTR_NONE:
-        if (insn[BitIndex] == BitValue::BIT_UNSET)
-          bitAttrs[BitIndex] = ATTR_ALL_UNSET;
-        else
-          bitAttrs[BitIndex] = ATTR_ALL_SET;
-        break;
-      case ATTR_ALL_SET:
-        if (insn[BitIndex] == BitValue::BIT_UNSET)
-          bitAttrs[BitIndex] = ATTR_MIXED;
-        break;
-      case ATTR_ALL_UNSET:
-        if (insn[BitIndex] != BitValue::BIT_UNSET)
-          bitAttrs[BitIndex] = ATTR_MIXED;
-        break;
-      case ATTR_MIXED:
-      case ATTR_FILTERED:
-        break;
       }
     }
   }
@@ -1661,8 +1599,8 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   bitAttr_t RA = ATTR_NONE;
   unsigned StartBit = 0;
 
-  for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
-    bitAttr_t bitAttr = bitAttrs[BitIndex];
+  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+    bitAttr_t bitAttr = BitAttrs[BitIndex];
 
     assert(bitAttr != ATTR_NONE && "Bit without attributes");
 
@@ -1742,12 +1680,12 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(RA, StartBit, BitIndex, AllowMixed);
+    reportRegion(RA, StartBit, BitWidth, AllowMixed);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(RA, StartBit, BitIndex, AllowMixed);
+    reportRegion(RA, StartBit, BitWidth, AllowMixed);
     break;
   }
 
@@ -1779,22 +1717,77 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
 // the instructions.  A conflict of instructions may occur, in which case we
 // dump the conflict set to the standard error.
 void FilterChooser::doFilter() {
-  unsigned Num = Opcodes.size();
-  assert(Num && "FilterChooser created with no instructions");
+  assert(!Opcodes.empty() && "FilterChooser created with no instructions");
+
+  // No filter needed.
+  if (Opcodes.size() < 2)
+    return;
+
+  // We maintain BIT_WIDTH copies of the bitAttrs automaton.
+  // The automaton consumes the corresponding bit from each
+  // instruction.
+  //
+  //   Input symbols: 0, 1, _ (unset), and . (any of the above).
+  //   States:        NONE, FILTERED, ALL_SET, ALL_UNSET, and MIXED.
+  //   Initial state: NONE.
+  //
+  // (NONE) ------- [01] -> (ALL_SET)
+  // (NONE) ------- _ ----> (ALL_UNSET)
+  // (ALL_SET) ---- [01] -> (ALL_SET)
+  // (ALL_SET) ---- _ ----> (MIXED)
+  // (ALL_UNSET) -- [01] -> (MIXED)
+  // (ALL_UNSET) -- _ ----> (ALL_UNSET)
+  // (MIXED) ------ . ----> (MIXED)
+  // (FILTERED)---- . ----> (FILTERED)
+
+  SmallVector<bitAttr_t, 128> BitAttrs(BitWidth, ATTR_NONE);
+
+  // FILTERED bit positions provide no entropy and are not worthy of pursuing.
+  // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
+  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
+    if (FilterBitValues[BitIndex].isSet())
+      BitAttrs[BitIndex] = ATTR_FILTERED;
+
+  for (const EncodingIDAndOpcode &OpcPair : Opcodes) {
+    insn_t EncodingBits = insnWithID(OpcPair.EncodingID);
+
+    for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+      switch (BitAttrs[BitIndex]) {
+      case ATTR_NONE:
+        if (EncodingBits[BitIndex] == BitValue::BIT_UNSET)
+          BitAttrs[BitIndex] = ATTR_ALL_UNSET;
+        else
+          BitAttrs[BitIndex] = ATTR_ALL_SET;
+        break;
+      case ATTR_ALL_SET:
+        if (EncodingBits[BitIndex] == BitValue::BIT_UNSET)
+          BitAttrs[BitIndex] = ATTR_MIXED;
+        break;
+      case ATTR_ALL_UNSET:
+        if (EncodingBits[BitIndex] != BitValue::BIT_UNSET)
+          BitAttrs[BitIndex] = ATTR_MIXED;
+        break;
+      case ATTR_MIXED:
+      case ATTR_FILTERED:
+        break;
+      }
+    }
+  }
 
   // Try regions of consecutive known bit values first.
-  if (filterProcessor(false))
+  if (filterProcessor(BitAttrs, /*AllowMixed=*/false))
     return;
 
   // Then regions of mixed bits (both known and unitialized bit values allowed).
-  if (filterProcessor(true))
+  if (filterProcessor(BitAttrs, /*AllowMixed=*/true))
     return;
 
   // Heuristics to cope with conflict set {t2CMPrs, t2SUBSrr, t2SUBSrs} where
   // no single instruction for the maximum ATTR_MIXED region Inst{14-4} has a
   // well-known encoding pattern.  In such case, we backtrack and scan for the
   // the very first consecutive ATTR_ALL_SET region and assign a filter to it.
-  if (Num == 3 && filterProcessor(true, false))
+  if (Opcodes.size() == 3 &&
+      filterProcessor(BitAttrs, /*AllowMixed=*/true, /*Greedy=*/false))
     return;
 
   // If we come to here, the instruction decoding has failed.

@@ -18121,6 +18121,8 @@ void Sema::PopExpressionEvaluationContext() {
     MaybeODRUseExprs.insert_range(Rec.SavedMaybeODRUseExprs);
   }
 
+  DiagnoseMisalignedMembers();
+
   // Pop the current expression evaluation context off the stack.
   ExprEvalContexts.pop_back();
 }

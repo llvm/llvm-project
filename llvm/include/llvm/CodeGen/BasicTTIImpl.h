@@ -3026,8 +3026,9 @@ public:
     return LT.first.getValue();
   }
 
-  InstructionCost getAddressComputationCost(Type *PtrTy, ScalarEvolution *,
-                                            const SCEV *) const override {
+  InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *, const SCEV *,
+                            TTI::TargetCostKind) const override {
     return 0;
   }
 
