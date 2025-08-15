@@ -655,6 +655,16 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
                                           g.getSymName());
 }
 
+cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
+  assert(d->hasGlobalStorage() && "Not a global variable");
+  mlir::Type ty = getTypes().convertTypeForMem(d->getType());
+
+  cir::GlobalOp globalOp = getOrCreateCIRGlobal(d, ty, NotForDefinition);
+  assert(!cir::MissingFeatures::addressSpace());
+  cir::PointerType ptrTy = builder.getPointerTo(globalOp.getSymType());
+  return builder.getGlobalViewAttr(ptrTy, globalOp);
+}
+
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
   if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
