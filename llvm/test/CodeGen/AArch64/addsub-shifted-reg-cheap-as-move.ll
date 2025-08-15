@@ -97,15 +97,13 @@ define void @f1(i1 %c0, i1 %c1, ptr %a, i64 %i) {
 ; LSLFAST-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; LSLFAST-NEXT:    .cfi_def_cfa_offset 16
 ; LSLFAST-NEXT:    .cfi_offset w30, -16
-; LSLFAST-NEXT:    add x8, x2, x3, lsl #4
+; LSLFAST-NEXT:    add x0, x2, x3, lsl #4
 ; LSLFAST-NEXT:    tbz w1, #0, .LBB1_3
 ; LSLFAST-NEXT:  // %bb.2: // %B
-; LSLFAST-NEXT:    mov x0, x8
 ; LSLFAST-NEXT:    bl g
 ; LSLFAST-NEXT:    b .LBB1_4
 ; LSLFAST-NEXT:  .LBB1_3: // %C
-; LSLFAST-NEXT:    add x0, x2, x3, lsl #4
-; LSLFAST-NEXT:    mov x1, x8
+; LSLFAST-NEXT:    mov x1, x0
 ; LSLFAST-NEXT:    bl g
 ; LSLFAST-NEXT:  .LBB1_4:
 ; LSLFAST-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
