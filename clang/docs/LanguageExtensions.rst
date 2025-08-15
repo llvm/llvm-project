@@ -860,6 +860,15 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                left by z, and the most significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+
+T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                right by z, and the least significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
 ============================================== ====================================================================== =========================================
 
 
