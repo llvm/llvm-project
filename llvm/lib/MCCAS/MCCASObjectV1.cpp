@@ -3002,7 +3002,7 @@ Error MCCASBuilder::buildFragments() {
   startGroup();
 
   for (const MCSection &Sec : Asm) {
-    if (Sec.isVirtualSection())
+    if (Sec.isBssSection())
       continue;
 
     // Handle Debug Info sections separately.
