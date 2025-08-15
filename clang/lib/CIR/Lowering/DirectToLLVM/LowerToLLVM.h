@@ -209,6 +209,26 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override;
 };
 
+class CIRToLLVMReturnAddrOpLowering
+    : public mlir::OpConversionPattern<cir::ReturnAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::ReturnAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ReturnAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMFrameAddrOpLowering
+    : public mlir::OpConversionPattern<cir::FrameAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::FrameAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::FrameAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMAllocaOpLowering
     : public mlir::OpConversionPattern<cir::AllocaOp> {
   mlir::DataLayout const &dataLayout;
