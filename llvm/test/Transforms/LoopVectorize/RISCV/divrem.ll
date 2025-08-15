@@ -29,18 +29,7 @@ define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[DIVREM:%.*]] = udiv i64 [[ELEM]], [[V]]
-; CHECK-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -61,18 +50,7 @@ define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[DIVREM:%.*]] = udiv i64 [[ELEM]], [[V]]
-; FIXED-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -115,18 +93,7 @@ define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], [[V]]
-; CHECK-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -147,18 +114,7 @@ define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], [[V]]
-; FIXED-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -201,18 +157,7 @@ define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[DIVREM:%.*]] = urem i64 [[ELEM]], [[V]]
-; CHECK-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -233,18 +178,7 @@ define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[DIVREM:%.*]] = urem i64 [[ELEM]], [[V]]
-; FIXED-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -287,18 +221,7 @@ define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[DIVREM:%.*]] = srem i64 [[ELEM]], [[V]]
-; CHECK-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -319,18 +242,7 @@ define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[DIVREM:%.*]] = srem i64 [[ELEM]], [[V]]
-; FIXED-NEXT:    store i64 [[DIVREM]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -381,24 +293,7 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[V]], 0
-; CHECK-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; CHECK:       do_op:
-; CHECK-NEXT:    [[DIVREM:%.*]] = udiv i64 [[ELEM]], [[V]]
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; CHECK-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -422,24 +317,7 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
-; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[C:%.*]] = icmp ne i64 [[V]], 0
-; FIXED-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; FIXED:       do_op:
-; FIXED-NEXT:    [[DIVREM:%.*]] = udiv i64 [[ELEM]], [[V]]
-; FIXED-NEXT:    br label [[LATCH]]
-; FIXED:       latch:
-; FIXED-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; FIXED-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; FIXED-NEXT:    br label [[LATCH:%.*]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -496,24 +374,7 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[V]], 0
-; CHECK-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; CHECK:       do_op:
-; CHECK-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], [[V]]
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; CHECK-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -537,24 +398,7 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
-; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[C:%.*]] = icmp ne i64 [[V]], 0
-; FIXED-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; FIXED:       do_op:
-; FIXED-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], [[V]]
-; FIXED-NEXT:    br label [[LATCH]]
-; FIXED:       latch:
-; FIXED-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; FIXED-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; FIXED-NEXT:    br label [[LATCH:%.*]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -603,24 +447,7 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[ELEM]], 42
-; CHECK-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; CHECK:       do_op:
-; CHECK-NEXT:    [[DIVREM:%.*]] = udiv i64 [[ELEM]], 27
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; CHECK-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -641,24 +468,7 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
-; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[C:%.*]] = icmp ne i64 [[ELEM]], 42
-; FIXED-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; FIXED:       do_op:
-; FIXED-NEXT:    [[DIVREM:%.*]] = udiv i64 [[ELEM]], 27
-; FIXED-NEXT:    br label [[LATCH]]
-; FIXED:       latch:
-; FIXED-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; FIXED-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; FIXED-NEXT:    br label [[LATCH:%.*]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -707,24 +517,7 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[ELEM]], 42
-; CHECK-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; CHECK:       do_op:
-; CHECK-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], 27
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; CHECK-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -745,24 +538,7 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
-; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[C:%.*]] = icmp ne i64 [[ELEM]], 42
-; FIXED-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; FIXED:       do_op:
-; FIXED-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], 27
-; FIXED-NEXT:    br label [[LATCH]]
-; FIXED:       latch:
-; FIXED-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; FIXED-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; FIXED-NEXT:    br label [[LATCH:%.*]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
@@ -817,24 +593,7 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEM:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[ELEM]], -128
-; CHECK-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; CHECK:       do_op:
-; CHECK-NEXT:    [[DIVREM:%.*]] = sdiv i8 [[ELEM]], -1
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; CHECK-NEXT:    store i8 [[PHI]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -856,24 +615,7 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[FOR_END:%.*]]
-; FIXED:       scalar.ph:
-; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
-; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
-; FIXED-NEXT:    [[ELEM:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; FIXED-NEXT:    [[C:%.*]] = icmp ne i8 [[ELEM]], -128
-; FIXED-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
-; FIXED:       do_op:
-; FIXED-NEXT:    [[DIVREM:%.*]] = sdiv i8 [[ELEM]], -1
-; FIXED-NEXT:    br label [[LATCH]]
-; FIXED:       latch:
-; FIXED-NEXT:    [[PHI:%.*]] = phi i8 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
-; FIXED-NEXT:    store i8 [[PHI]], ptr [[ARRAYIDX]], align 1
-; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; FIXED-NEXT:    br label [[LATCH:%.*]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;
