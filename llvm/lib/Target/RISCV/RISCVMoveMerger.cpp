@@ -26,6 +26,7 @@ struct RISCVMoveMerge : public MachineFunctionPass {
 
   RISCVMoveMerge() : MachineFunctionPass(ID) {}
 
+  const RISCVSubtarget *ST;
   const RISCVInstrInfo *TII;
   const TargetRegisterInfo *TRI;
 
@@ -37,15 +38,15 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   // Merge the two instructions indicated into a single pair instruction.
   MachineBasicBlock::iterator
   mergePairedInsns(MachineBasicBlock::iterator I,
-                   MachineBasicBlock::iterator Paired, unsigned Opcode);
+                   MachineBasicBlock::iterator Paired, bool MoveFromSToA);
 
   // Look for C.MV instruction that can be combined with
   // the given instruction into CM.MVA01S or CM.MVSA01. Return the matching
   // instruction if one exists.
   MachineBasicBlock::iterator
-  findMatchingInst(MachineBasicBlock::iterator &MBBI, unsigned InstOpcode,
+  findMatchingInst(MachineBasicBlock::iterator &MBBI, bool MoveFromSToA,
                    const DestSourcePair &RegPair);
-  bool mergeMoveSARegPair(const RISCVSubtarget &STI, MachineBasicBlock &MBB);
+  bool mergeMoveSARegPair(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   StringRef getPassName() const override { return RISCV_MOVE_MERGE_NAME; }
@@ -58,41 +59,21 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static bool isMoveFromAToS(unsigned Opcode) {
-  switch (Opcode) {
-  case RISCV::CM_MVA01S:
-  case RISCV::QC_CM_MVA01S:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static unsigned getMoveFromAToSOpcode(const RISCVSubtarget &STI) {
-  if (STI.hasStdExtZcmp())
+static unsigned getMoveFromSToAOpcode(const RISCVSubtarget &ST) {
+  if (ST.hasStdExtZcmp())
     return RISCV::CM_MVA01S;
 
-  if (STI.hasVendorXqccmp())
+  if (ST.hasVendorXqccmp())
     return RISCV::QC_CM_MVA01S;
 
   llvm_unreachable("Unhandled subtarget with paired A to S move.");
 }
 
-static bool isMoveFromSToA(unsigned Opcode) {
-  switch (Opcode) {
-  case RISCV::CM_MVSA01:
-  case RISCV::QC_CM_MVSA01:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static unsigned getMoveFromSToAOpcode(const RISCVSubtarget &STI) {
-  if (STI.hasStdExtZcmp())
+static unsigned getMoveFromAToSOpcode(const RISCVSubtarget &ST) {
+  if (ST.hasStdExtZcmp())
     return RISCV::CM_MVSA01;
 
-  if (STI.hasVendorXqccmp())
+  if (ST.hasVendorXqccmp())
     return RISCV::QC_CM_MVSA01;
 
   llvm_unreachable("Unhandled subtarget with paired S to A move");
@@ -123,21 +104,20 @@ bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
 MachineBasicBlock::iterator
 RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
                                  MachineBasicBlock::iterator Paired,
-                                 unsigned Opcode) {
+                                 bool MoveFromSToA) {
   const MachineOperand *Sreg1, *Sreg2;
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
   DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
   DestSourcePair PairedRegs = TII->isCopyInstrImpl(*Paired).value();
-  Register ARegInFirstPair = isMoveFromAToS(Opcode)
-                                 ? FirstPair.Destination->getReg()
-                                 : FirstPair.Source->getReg();
+  Register ARegInFirstPair = MoveFromSToA ? FirstPair.Destination->getReg()
+                                          : FirstPair.Source->getReg();
 
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
   DebugLoc DL = I->getDebugLoc();
 
-  // Make a copy so we can update the kill flag in the MoveFromAToS case. The
+  // Make a copy so we can update the kill flag in the MoveFromSToA case. The
   // copied operand needs to be scoped outside the if since we make a pointer
   // to it.
   MachineOperand PairedSource = *PairedRegs.Source;
@@ -151,7 +131,8 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //   mv a0, s2
   //   mv a1, s1    =>  cm.mva01s s2,s1
   bool StartWithX10 = ARegInFirstPair == RISCV::X10;
-  if (isMoveFromAToS(Opcode)) {
+  unsigned Opcode;
+  if (MoveFromSToA) {
     // We are moving one of the copies earlier so its kill flag may become
     // invalid. Clear the copied kill flag if there are any reads of the
     // register between the new location and the old location.
@@ -159,9 +140,11 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
       if (It->readsRegister(PairedSource.getReg(), TRI))
         PairedSource.setIsKill(false);
 
+    Opcode = getMoveFromSToAOpcode(*ST);
     Sreg1 = StartWithX10 ? FirstPair.Source : &PairedSource;
     Sreg2 = StartWithX10 ? &PairedSource : FirstPair.Source;
   } else {
+    Opcode = getMoveFromAToSOpcode(*ST);
     Sreg1 = StartWithX10 ? FirstPair.Destination : PairedRegs.Destination;
     Sreg2 = StartWithX10 ? PairedRegs.Destination : FirstPair.Destination;
   }
@@ -175,7 +158,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
 
 MachineBasicBlock::iterator
 RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
-                                 unsigned InstOpcode,
+                                 bool MoveFromSToA,
                                  const DestSourcePair &RegPair) {
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
 
@@ -193,7 +176,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
       Register SourceReg = SecondPair->Source->getReg();
       Register DestReg = SecondPair->Destination->getReg();
 
-      if (isMoveFromAToS(InstOpcode) && isCandidateToMergeMVA01S(*SecondPair)) {
+      if (MoveFromSToA && isCandidateToMergeMVA01S(*SecondPair)) {
         // If register pair is valid and destination registers are different.
         if ((RegPair.Destination->getReg() == DestReg))
           return E;
@@ -207,8 +190,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
           return E;
 
         return I;
-      } else if (isMoveFromSToA(InstOpcode) &&
-                 isCandidateToMergeMVSA01(*SecondPair)) {
+      } else if (!MoveFromSToA && isCandidateToMergeMVSA01(*SecondPair)) {
         if ((RegPair.Source->getReg() == SourceReg) ||
             (RegPair.Destination->getReg() == DestReg))
           return E;
@@ -229,8 +211,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
 
 // Finds instructions, which could be represented as C.MV instructions and
 // merged into CM.MVA01S or CM.MVSA01.
-bool RISCVMoveMerge::mergeMoveSARegPair(const RISCVSubtarget &STI,
-                                        MachineBasicBlock &MBB) {
+bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -239,22 +220,17 @@ bool RISCVMoveMerge::mergeMoveSARegPair(const RISCVSubtarget &STI,
     // can, return Dest/Src register pair.
     auto RegPair = TII->isCopyInstrImpl(*MBBI);
     if (RegPair.has_value()) {
-      unsigned Opcode = 0;
-
-      if (isCandidateToMergeMVA01S(*RegPair))
-        Opcode = getMoveFromAToSOpcode(STI);
-      else if (isCandidateToMergeMVSA01(*RegPair))
-        Opcode = getMoveFromSToAOpcode(STI);
-      else {
+      bool MoveFromSToA = isCandidateToMergeMVA01S(*RegPair);
+      if (!MoveFromSToA && !isCandidateToMergeMVSA01(*RegPair)) {
         ++MBBI;
         continue;
       }
 
       MachineBasicBlock::iterator Paired =
-          findMatchingInst(MBBI, Opcode, RegPair.value());
+          findMatchingInst(MBBI, MoveFromSToA, RegPair.value());
       // If matching instruction can be found merge them.
       if (Paired != E) {
-        MBBI = mergePairedInsns(MBBI, Paired, Opcode);
+        MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);
         Modified = true;
         continue;
       }
@@ -268,12 +244,12 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
-  const RISCVSubtarget *Subtarget = &Fn.getSubtarget<RISCVSubtarget>();
-  if (!(Subtarget->hasStdExtZcmp() || Subtarget->hasVendorXqccmp()))
+  ST = &Fn.getSubtarget<RISCVSubtarget>();
+  if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp())
     return false;
 
-  TII = Subtarget->getInstrInfo();
-  TRI = Subtarget->getRegisterInfo();
+  TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
   // Resize the modified and used register unit trackers.  We do this once
   // per function and then clear the register units each time we optimize a
   // move.
@@ -281,7 +257,7 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
   UsedRegUnits.init(*TRI);
   bool Modified = false;
   for (auto &MBB : Fn)
-    Modified |= mergeMoveSARegPair(*Subtarget, MBB);
+    Modified |= mergeMoveSARegPair(MBB);
   return Modified;
 }
 
