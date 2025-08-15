@@ -90,9 +90,6 @@ LTO:
   - llvm/lib/Transforms/*/FunctionImport*
   - llvm/tools/gold/**
 
-mc:
-  - llvm/*/MC/**
-
 clang:driver:
   - clang/*/Driver/**
 
@@ -620,6 +617,10 @@ llvm:adt:
 
 llvm:support:
   - llvm/**/Support/**
+
+# Skip llvm/test/MC, which includes target-specific directories
+llvm:mc:
+  - llvm/lib/MC/**
 
 llvm:transforms:
   - llvm/lib/Transforms/**
