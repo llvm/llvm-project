@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "NearbyIntTest.h"
 
 #include "src/__support/FPUtil/bfloat16.h"
