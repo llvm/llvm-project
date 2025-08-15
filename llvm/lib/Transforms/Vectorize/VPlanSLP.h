@@ -47,7 +47,8 @@ class VPInterleavedAccessInfo {
                   InterleavedAccessInfo &IAI);
 
 public:
-  VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
+  LLVM_ABI_FOR_TEST VPInterleavedAccessInfo(VPlan &Plan,
+                                            InterleavedAccessInfo &IAI);
   VPInterleavedAccessInfo(const VPInterleavedAccessInfo &) = delete;
   VPInterleavedAccessInfo &operator=(const VPInterleavedAccessInfo &) = delete;
 
@@ -132,7 +133,7 @@ public:
 
   /// Tries to build an SLP tree rooted at \p Operands and returns a
   /// VPInstruction combining \p Operands, if they can be combined.
-  VPInstruction *buildGraph(ArrayRef<VPValue *> Operands);
+  LLVM_ABI_FOR_TEST VPInstruction *buildGraph(ArrayRef<VPValue *> Operands);
 
   /// Return the width of the widest combined bundle in bits.
   unsigned getWidestBundleBits() const { return WidestBundleBits; }

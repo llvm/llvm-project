@@ -447,6 +447,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   // Add the target features.
   switch (TC.getArch()) {
   default:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
   case llvm::Triple::aarch64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -612,6 +613,8 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   bool AssociativeMath = false;
   bool ReciprocalMath = false;
 
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
+
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
     if (Val == "fast" || Val == "off") {
@@ -636,6 +639,20 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     default:
       continue;
 
+    case options::OPT_fcomplex_arithmetic_EQ: {
+      StringRef Val = A->getValue();
+      if (Val == "full")
+        Range = LangOptions::ComplexRangeKind::CX_Full;
+      else if (Val == "improved")
+        Range = LangOptions::ComplexRangeKind::CX_Improved;
+      else if (Val == "basic")
+        Range = LangOptions::ComplexRangeKind::CX_Basic;
+      else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Val;
+      }
+      break;
+    }
     case options::OPT_fhonor_infinities:
       HonorINFs = true;
       break;
@@ -705,6 +722,13 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   StringRef Recip = parseMRecipOption(D.getDiags(), Args);
   if (!Recip.empty())
     CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
+
+  if (Range != LangOptions::ComplexRangeKind::CX_None) {
+    std::string ComplexRangeStr = renderComplexRangeOption(Range);
+    CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
+    CmdArgs.push_back(Args.MakeArgString("-fcomplex-arithmetic=" +
+                                         complexRangeKindToStr(Range)));
+  }
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
@@ -913,6 +937,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -928,6 +954,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << A->getValue();
       break;
     }
+  } else {
+    Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                    options::OPT_fno_openmp_simd);
   }
 
   // Pass the path to compiler resource files.

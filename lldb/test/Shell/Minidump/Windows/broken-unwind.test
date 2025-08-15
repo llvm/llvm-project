@@ -1,7 +1,8 @@
 Test that we can cope with broken unwind information that suggests
 reading out of bounds.
 
-RUN: yaml2obj %S/Inputs/broken-unwind.exe.yaml -o %T/broken-unwind.exe
-RUN: yaml2obj %S/Inputs/broken-unwind.dmp.yaml -o %T/broken-unwind.dmp
-RUN: %lldb -O "settings set target.exec-search-paths %T" \
-RUN:   -c %T/broken-unwind.dmp -o "image show-unwind -a 0xb1000" -o exit
+RUN: mkdir -p %t.dir
+RUN: yaml2obj %S/Inputs/broken-unwind.exe.yaml -o %t.dir/broken-unwind.exe
+RUN: yaml2obj %S/Inputs/broken-unwind.dmp.yaml -o %t.dir/broken-unwind.dmp
+RUN: %lldb -O "settings set target.exec-search-paths %t.dir" \
+RUN:   -c %t.dir/broken-unwind.dmp -o "image show-unwind -a 0xb1000" -o exit

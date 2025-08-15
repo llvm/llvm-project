@@ -31,6 +31,40 @@ static bool isAligned(const Value *Base, Align Alignment,
   return Base->getPointerAlignment(DL) >= Alignment;
 }
 
+static bool isDereferenceableAndAlignedPointerViaAssumption(
+    const Value *Ptr, Align Alignment,
+    function_ref<bool(const RetainedKnowledge &RK)> CheckSize,
+    const DataLayout &DL, const Instruction *CtxI, AssumptionCache *AC,
+    const DominatorTree *DT) {
+  // Dereferenceable information from assumptions is only valid if the value
+  // cannot be freed between the assumption and use. For now just use the
+  // information for values that cannot be freed in the function.
+  // TODO: More precisely check if the pointer can be freed between assumption
+  // and use.
+  if (!CtxI || Ptr->canBeFreed())
+    return false;
+  /// Look through assumes to see if both dereferencability and alignment can
+  /// be proven by an assume if needed.
+  RetainedKnowledge AlignRK;
+  RetainedKnowledge DerefRK;
+  bool IsAligned = Ptr->getPointerAlignment(DL) >= Alignment;
+  return getKnowledgeForValue(
+      Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
+      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+        if (!isValidAssumeForContext(Assume, CtxI, DT))
+          return false;
+        if (RK.AttrKind == Attribute::Alignment)
+          AlignRK = std::max(AlignRK, RK);
+        if (RK.AttrKind == Attribute::Dereferenceable)
+          DerefRK = std::max(DerefRK, RK);
+        IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
+        if (IsAligned && DerefRK && CheckSize(DerefRK))
+          return true; // We have found what we needed so we stop looking
+        return false;  // Other assumes may have better information. so
+                       // keep looking
+      });
+}
+
 /// Test if V is always a pointer to allocated and suitably aligned memory for
 /// a simple load or store.
 static bool isDereferenceableAndAlignedPointer(
@@ -169,38 +203,12 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  // Dereferenceable information from assumptions is only valid if the value
-  // cannot be freed between the assumption and use. For now just use the
-  // information for values that cannot be freed in the function.
-  // TODO: More precisely check if the pointer can be freed between assumption
-  // and use.
-  if (CtxI && AC && !V->canBeFreed()) {
-    /// Look through assumes to see if both dereferencability and alignment can
-    /// be proven by an assume if needed.
-    RetainedKnowledge AlignRK;
-    RetainedKnowledge DerefRK;
-    bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
-    if (getKnowledgeForValue(
-            V, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
-            [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-              if (!isValidAssumeForContext(Assume, CtxI, DT))
-                return false;
-              if (RK.AttrKind == Attribute::Alignment)
-                AlignRK = std::max(AlignRK, RK);
-              if (RK.AttrKind == Attribute::Dereferenceable)
-                DerefRK = std::max(DerefRK, RK);
-              IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
-              if (IsAligned && DerefRK &&
-                  DerefRK.ArgValue >= Size.getZExtValue())
-                return true; // We have found what we needed so we stop looking
-              return false;  // Other assumes may have better information. so
-                             // keep looking
-            }))
-      return true;
-  }
-
-  // If we don't know, assume the worst.
-  return false;
+  return AC && isDereferenceableAndAlignedPointerViaAssumption(
+                   V, Alignment,
+                   [Size](const RetainedKnowledge &RK) {
+                     return RK.ArgValue >= Size.getZExtValue();
+                   },
+                   DL, CtxI, AC, DT);
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(
@@ -268,8 +276,7 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   // this function is only used when one address use dominates the
   // other, which means that they'll always either have the same
   // value or one of them will have an undefined value.
-  if (isa<BinaryOperator>(A) || isa<CastInst>(A) || isa<PHINode>(A) ||
-      isa<GetElementPtrInst>(A))
+  if (isa<CastInst>(A) || isa<PHINode>(A) || isa<GetElementPtrInst>(A))
     if (const Instruction *BI = dyn_cast<Instruction>(B))
       if (cast<Instruction>(A)->isIdenticalToWhenDefined(BI))
         return true;
@@ -317,16 +324,24 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     return false;
 
   const SCEV *MaxBECount =
-      Predicates ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
-                 : SE.getConstantMaxBackedgeTakenCount(L);
+      Predicates ? SE.getPredicatedSymbolicMaxBackedgeTakenCount(L, *Predicates)
+                 : SE.getSymbolicMaxBackedgeTakenCount(L);
   const SCEV *BECount = Predicates
                             ? SE.getPredicatedBackedgeTakenCount(L, *Predicates)
                             : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
+  if (isa<SCEVCouldNotCompute>(BECount)) {
+    // TODO: Support symbolic max backedge taken counts for loops without
+    // computable backedge taken counts.
+    MaxBECount =
+        Predicates
+            ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
+            : SE.getConstantMaxBackedgeTakenCount(L);
+  }
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
+      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -339,9 +354,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
 
   Value *Base = nullptr;
   APInt AccessSize;
+  const SCEV *AccessSizeSCEV = nullptr;
   if (const SCEVUnknown *NewBase = dyn_cast<SCEVUnknown>(AccessStart)) {
     Base = NewBase->getValue();
     AccessSize = MaxPtrDiff;
+    AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
     if (MinAdd->getNumOperands() != 2)
       return false;
@@ -365,12 +382,20 @@ bool llvm::isDereferenceableAndAlignedInLoop(
       return false;
 
     AccessSize = MaxPtrDiff + Offset->getAPInt();
+    AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
     Base = NewBase->getValue();
   } else
     return false;
 
   Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
-  return isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
+  return isDereferenceableAndAlignedPointerViaAssumption(
+             Base, Alignment,
+             [&SE, AccessSizeSCEV](const RetainedKnowledge &RK) {
+               return SE.isKnownPredicate(CmpInst::ICMP_ULE, AccessSizeSCEV,
+                                          SE.getSCEV(RK.IRArgValue));
+             },
+             DL, HeaderFirstNonPHI, AC, &DT) ||
+         isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
                                             HeaderFirstNonPHI, AC, &DT);
 }
 
@@ -605,9 +630,13 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!Val || !Len)
       return nullptr;
 
-    // TODO: Handle offsets.
-    Value *Dst = MSI->getDest();
-    if (!AreEquivalentAddressValues(Dst, Ptr))
+    // Handle offsets.
+    int64_t StoreOffset = 0, LoadOffset = 0;
+    const Value *StoreBase =
+        GetPointerBaseWithConstantOffset(MSI->getDest(), StoreOffset, DL);
+    const Value *LoadBase =
+        GetPointerBaseWithConstantOffset(Ptr, LoadOffset, DL);
+    if (StoreBase != LoadBase || LoadOffset < StoreOffset)
       return nullptr;
 
     if (IsLoadCSE)
@@ -619,7 +648,7 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
 
     // Make sure the read bytes are contained in the memset.
     uint64_t LoadSize = LoadTypeSize.getFixedValue();
-    if ((Len->getValue() * 8).ult(LoadSize))
+    if ((Len->getValue() * 8).ult(LoadSize + (LoadOffset - StoreOffset) * 8))
       return nullptr;
 
     APInt Splat = LoadSize >= 8 ? APInt::getSplat(LoadSize, Val->getValue())
@@ -806,6 +835,10 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
   // Not a pointer, just return true.
   if (!To->getType()->isPointerTy())
     return true;
+
+  // Do not perform replacements in lifetime intrinsic arguments.
+  if (isa<LifetimeIntrinsic>(U.getUser()))
+    return false;
 
   if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;

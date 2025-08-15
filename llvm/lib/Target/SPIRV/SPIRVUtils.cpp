@@ -463,8 +463,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-      .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
@@ -756,7 +758,7 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
   for (unsigned I = 0; I < MaxIters; ++I) {
     std::string OrdName = Name + Twine(I).str();
     if (!M.getFunction(OrdName)) {
-      Name = OrdName;
+      Name = std::move(OrdName);
       return true;
     }
   }
@@ -993,6 +995,29 @@ int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType) {
   return foldImm(ResType->getOperand(2), MRI);
+}
+
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  MachineBasicBlock::iterator VarPos = BB.begin();
+  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
+    ++VarPos;
+  }
+  // Advance VarPos to the next instruction after OpFunction, it will either
+  // be an OpFunctionParameter, so that we can start the next loop, or the
+  // position to insert the OpVariable instruction.
+  ++VarPos;
+  while (VarPos != BB.end() &&
+         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+    ++VarPos;
+  }
+  // VarPos is now pointing at after the last OpFunctionParameter, if any,
+  // or after OpFunction, if no parameters.
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
 }
 
 } // namespace llvm

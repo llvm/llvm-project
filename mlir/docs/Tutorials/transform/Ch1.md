@@ -26,6 +26,7 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant 0.0 : f32
   %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> ()>, affine_map<(d0, d1) -> (d0, d1)>]
     ins(%biased, %c0f : tensor<512x512xf32>, f32)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -95,18 +96,18 @@ $ mlir-opt sequence.mlir --pass-pipeline="
 The `sequence.mlir` file contains _both_ the payload IR function _and_ the transform IR sequence nested in the same module. The transform interpreter pass will apply the `@__transform_main` named sequence to the anchor operation of the pass. In our case, we also asked the interpreter pass to associate the two extra arguments of the top-level sequence with all `linalg.matmul` and `linalg.elementwise` payload operations through the respective pass options. Running this pass results in the expected remarks:
 
 ```sh
-sequence.mlir:7:13: remark: matmul
+sequence.mlir:5:13: remark: matmul
   %matmul = linalg.matmul ins(%lhs, %rhs: tensor<512x512xf32>, tensor<512x512xf32>)
             ^
-sequence.mlir:7:13: note: see current operation: %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
-sequence.mlir:10:13: remark: elemwise_binaries
+sequence.mlir:5:13: note: see current operation: %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:9:13: remark: elemwise_binaries
   %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
             ^
-sequence.mlir:10:13: note: see current operation: %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>> ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
-sequence.mlir:14:13: remark: elemwise_binaries
+sequence.mlir:9:13: note: see current operation: %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:15:13: remark: elemwise_binaries
   %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
             ^
-sequence.mlir:14:13: note: see current operation: %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>> ins(%1, %cst : tensor<512x512xf32>, f32) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:15:13: note: see current operation: %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed> indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> ()>, affine_map<(d0, d1) -> (d0, d1)>] ins(%1, %cst : tensor<512x512xf32>, f32) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
 ```
 
 Note that `%arg2` is associated with both elementwise payload operations. Any handle is associated with a list of entities. Individual transformations may or may not care about the order of elements in that list.
@@ -140,33 +141,39 @@ The transformation returns two handles, as indicated in its [documentation](http
 Running this transformation with the same command as above expectedly produces the tiled code.
 
 ```mlir
+#map = affine_map<(d0) -> (d0 * 4)>
+#map1 = affine_map<(d0) -> (d0 * 32)>
+#map2 = affine_map<(d0, d1) -> (d0, d1)>
+#map3 = affine_map<(d0, d1) -> ()>
+
 func.func @fc_relu(%arg0: tensor<512x512xf32>,
                    %arg1: tensor<512x512xf32>,
                    %arg2: tensor<512x512xf32>,
                    %arg3: tensor<512x512xf32>) -> tensor<512x512xf32> {
-  %cst = arith.constant 0.000000e+00 : f32
   %0 = scf.forall (%arg4, %arg5) in (128, 16) shared_outs(%arg6 = %arg3) -> (tensor<512x512xf32>) {
-    %3 = affine.apply affine_map<(d0) -> (d0 * 4)>(%arg4)
-    %4 = affine.apply affine_map<(d0) -> (d0 * 32)>(%arg5)
+    %3 = affine.apply #map(%arg4)
+    %4 = affine.apply #map1(%arg5)
     %extracted_slice = tensor.extract_slice %arg0[%3, 0] [4, 512] [1, 1]
                      : tensor<512x512xf32> to tensor<4x512xf32>
     %extracted_slice_0 = tensor.extract_slice %arg1[0, %4] [512, 32] [1, 1]
-                       : tensor<512x512xf32> to tensor<512x32xf32>
+                     : tensor<512x512xf32> to tensor<512x32xf32>
     %extracted_slice_1 = tensor.extract_slice %arg6[%3, %4] [4, 32] [1, 1]
-                      : tensor<512x512xf32> to tensor<4x32xf32>
+                     : tensor<512x512xf32> to tensor<4x32xf32>
     %5 = linalg.matmul
          ins(%extracted_slice, %extracted_slice_0
-             : tensor<4x512xf32>, tensor<512x32xf32>)
+            : tensor<4x512xf32>, tensor<512x32xf32>)
          outs(%extracted_slice_1 : tensor<4x32xf32>) -> tensor<4x32xf32>
     scf.forall.in_parallel {
       tensor.parallel_insert_slice %5 into %arg6[%3, %4] [4, 32] [1, 1]
-          : tensor<4x32xf32> into tensor<512x512xf32>
+           : tensor<4x32xf32> into tensor<512x512xf32>
     }
   }
-  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>>
-    ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>)
-    outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
-  %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+     ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>)
+     outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    indexing_maps = [#map2, #map3, #map2]
     ins(%1, %cst : tensor<512x512xf32>, f32)
     outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
   return %2 : tensor<512x512xf32>
@@ -216,7 +223,7 @@ One may observe that some operations such as `transform.cast` do not consume the
 
 ```mlir
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main
+  transform.named_sequence @__transform_main(
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
        %arg2: !transform.op<"linalg.elementwise">) {

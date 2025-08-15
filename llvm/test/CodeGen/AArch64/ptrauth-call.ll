@@ -169,13 +169,20 @@ define i32 @test_tailcall_ib_var(ptr %arg0, ptr %arg1) #0 {
 
 define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
 ; CHECK-LABEL: test_tailcall_omit_mov_x16_x16:
-; CHECK-NEXT:    ldr     x16, [x0]
-; CHECK-NEXT:    mov     x17, x0
-; CHECK-NEXT:    movk    x17, #6503, lsl #48
-; CHECK-NEXT:    autda   x16, x17
-; CHECK-NEXT:    ldr     x1, [x16]
-; CHECK-NEXT:    movk    x16, #54167, lsl #48
-; CHECK-NEXT:    braa    x1, x16
+; DARWIN-NEXT:    ldr     x16, [x0]
+; DARWIN-NEXT:    mov     x17, x0
+; DARWIN-NEXT:    movk    x17, #6503, lsl #48
+; DARWIN-NEXT:    autda   x16, x17
+; DARWIN-NEXT:    ldr     x1, [x16]
+; DARWIN-NEXT:    movk    x16, #54167, lsl #48
+; DARWIN-NEXT:    braa    x1, x16
+; ELF-NEXT:       ldr     x1, [x0]
+; ELF-NEXT:       mov     x8, x0
+; ELF-NEXT:       movk    x8, #6503, lsl #48
+; ELF-NEXT:       autda   x1, x8
+; ELF-NEXT:       ldr     x2, [x1]
+; ELF-NEXT:       movk    x1, #54167, lsl #48
+; ELF-NEXT:       braa    x2, x1
   %vtable.signed = load ptr, ptr %objptr, align 8
   %objptr.int = ptrtoint ptr %objptr to i64
   %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)
@@ -191,16 +198,24 @@ define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
 define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
 ; CHECK-LABEL: test_call_omit_extra_moves:
 ; DARWIN-NEXT:   stp     x29, x30, [sp, #-16]!
-; ELF-NEXT:      str     x30, [sp, #-16]!
-; CHECK-NEXT:    ldr     x16, [x0]
-; CHECK-NEXT:    mov     x17, x0
-; CHECK-NEXT:    movk    x17, #6503, lsl #48
-; CHECK-NEXT:    autda   x16, x17
-; CHECK-NEXT:    ldr     x8, [x16]
-; CHECK-NEXT:    movk    x16, #34646, lsl #48
-; CHECK-NEXT:    blraa   x8, x16
-; CHECK-NEXT:    mov     w0, #42
+; DARWIN-NEXT:   ldr     x16, [x0]
+; DARWIN-NEXT:   mov     x17, x0
+; DARWIN-NEXT:   movk    x17, #6503, lsl #48
+; DARWIN-NEXT:   autda   x16, x17
+; DARWIN-NEXT:   ldr     x8, [x16]
+; DARWIN-NEXT:   movk    x16, #34646, lsl #48
+; DARWIN-NEXT:   blraa   x8, x16
+; DARWIN-NEXT:   mov     w0, #42
 ; DARWIN-NEXT:   ldp     x29, x30, [sp], #16
+; ELF-NEXT:      str     x30, [sp, #-16]!
+; ELF-NEXT:      ldr     x8, [x0]
+; ELF-NEXT:      mov     x9, x0
+; ELF-NEXT:      movk    x9, #6503, lsl #48
+; ELF-NEXT:      autda   x8, x9
+; ELF-NEXT:      ldr     x9, [x8]
+; ELF-NEXT:      movk    x8, #34646, lsl #48
+; ELF-NEXT:      blraa   x9, x8
+; ELF-NEXT:      mov     w0, #42
 ; ELF-NEXT:      ldr     x30, [sp], #16
 ; CHECK-NEXT:    ret
   %vtable.signed = load ptr, ptr %objptr

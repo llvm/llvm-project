@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#undef signbit
+#ifndef __CLC_OPENCL_RELATIONAL_SIGNBIT_H__
+#define __CLC_OPENCL_RELATIONAL_SIGNBIT_H__
+
+#include <clc/opencl/opencl-base.h>
 
 #define FUNCTION signbit
 #define __CLC_BODY <clc/relational/unary_decl.inc>
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_RELATIONAL_SIGNBIT_H__

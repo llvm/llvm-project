@@ -106,6 +106,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisls %s -o - | FileCheck --check-prefix=RV32XQCISLS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xandesperf %s -o - | FileCheck --check-prefix=RV32XANDESPERF %s
+; RUN: llc -mtriple=riscv32 -mattr=+xandesbfhcvt %s -o - | FileCheck --check-prefix=RV32XANDESBFHCVT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xandesvbfhcvt %s -o - | FileCheck --check-prefix=RV32XANDESVBFHCVT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xandesvsintload %s -o - | FileCheck --check-prefix=RV32XANDESVSINTLOAD %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xandesvdot %s -o - | FileCheck --check-prefix=RV32XANDESVDOT %s
@@ -262,6 +263,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadsync %s -o - | FileCheck --check-prefix=RV64XTHEADSYNC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadvdot %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADVDOT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesperf %s -o - | FileCheck --check-prefix=RV64XANDESPERF %s
+; RUN: llc -mtriple=riscv64 -mattr=+xandesbfhcvt %s -o - | FileCheck --check-prefix=RV64XANDESBFHCVT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesvbfhcvt %s -o - | FileCheck --check-prefix=RV64XANDESVBFHCVT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesvsintload %s -o - | FileCheck --check-prefix=RV64XANDESVSINTLOAD %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesvdot %s -o - | FileCheck --check-prefix=RV64XANDESVDOT %s
@@ -433,7 +435,7 @@
 ; RV32XCVMEM: .attribute 5, "rv32i2p1_xcvmem1p0"
 ; RV32XCVSIMD: .attribute 5, "rv32i2p1_xcvsimd1p0"
 ; RV32XCVBI: .attribute 5, "rv32i2p1_xcvbi1p0"
-; RV32XSFVFWMACCQQQ: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0_xsfvfwmaccqqq1p0"
+; RV32XSFVFWMACCQQQ: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xsfvfwmaccqqq1p0"
 ; RV32XTHEADCMO: .attribute 5, "rv32i2p1_xtheadcmo1p0"
 ; RV32XTHEADCONDMOV: .attribute 5, "rv32i2p1_xtheadcondmov1p0"
 ; RV32XTHEADFMEMIDX: .attribute 5, "rv32i2p1_xtheadfmemidx1p0"
@@ -462,6 +464,7 @@
 ; RV32XQCISLS: .attribute 5, "rv32i2p1_xqcisls0p2"
 ; RV32XQCISYNC: attribute 5, "rv32i2p1_zca1p0_xqcisync0p3"
 ; RV32XANDESPERF: .attribute 5, "rv32i2p1_xandesperf5p0"
+; RV32XANDESBFHCVT: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_xandesbfhcvt5p0"
 ; RV32XANDESVBFHCVT: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xandesvbfhcvt5p0"
 ; RV32XANDESVSINTLOAD: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xandesvsintload5p0"
 ; RV32XANDESVDOT: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xandesvdot5p0"
@@ -607,7 +610,7 @@
 ; RV64SVVPTC: .attribute 5, "rv64i2p1_svvptc1p0"
 ; RV64SVINVAL: .attribute 5, "rv64i2p1_svinval1p0"
 ; RV64XVENTANACONDOPS: .attribute 5, "rv64i2p1_xventanacondops1p0"
-; RV64XSFVFWMACCQQQ: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0_xsfvfwmaccqqq1p0"
+; RV64XSFVFWMACCQQQ: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xsfvfwmaccqqq1p0"
 ; RV64XTHEADBA: .attribute 5, "rv64i2p1_xtheadba1p0"
 ; RV64XTHEADBB: .attribute 5, "rv64i2p1_xtheadbb1p0"
 ; RV64XTHEADBS: .attribute 5, "rv64i2p1_xtheadbs1p0"
@@ -620,6 +623,7 @@
 ; RV64XTHEADSYNC: .attribute 5, "rv64i2p1_xtheadsync1p0"
 ; RV64XTHEADVDOT: .attribute 5, "rv64i2p1_f2p2_d2p2_v1p0_zicsr2p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xtheadvdot1p0"
 ; RV64XANDESPERF: .attribute 5, "rv64i2p1_xandesperf5p0"
+; RV64XANDESBFHCVT: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_xandesbfhcvt5p0"
 ; RV64XANDESVBFHCVT: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xandesvbfhcvt5p0"
 ; RV64XANDESVSINTLOAD: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xandesvsintload5p0"
 ; RV64XANDESVDOT: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xandesvdot5p0"

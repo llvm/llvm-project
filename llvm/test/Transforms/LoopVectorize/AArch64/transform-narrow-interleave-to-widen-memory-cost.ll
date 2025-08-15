@@ -180,11 +180,10 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP13]], i32 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP13]], i32 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP13]], i32 6
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x double>, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x double>, ptr [[TMP17]], align 8
@@ -226,8 +225,7 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX14:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX14]]
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[TMP31]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <2 x double>, ptr [[TMP32]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <2 x double>, ptr [[TMP31]], align 8
 ; CHECK-NEXT:    [[TMP33:%.*]] = fmul <2 x double> [[WIDE_LOAD15]], splat (double 5.000000e+00)
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr [2 x double], ptr [[DST]], i64 [[INDEX14]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <2 x double> [[TMP33]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -332,11 +330,10 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr double, ptr [[TMP23]], i32 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[TMP23]], i32 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[TMP23]], i32 6
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP24]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x double>, ptr [[TMP25]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <2 x double>, ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <2 x double>, ptr [[TMP27]], align 8
@@ -386,8 +383,7 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX24:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX24]]
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr double, ptr [[TMP45]], i32 0
-; CHECK-NEXT:    [[TMP47:%.*]] = load double, ptr [[TMP46]], align 8
+; CHECK-NEXT:    [[TMP47:%.*]] = load double, ptr [[TMP45]], align 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP47]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], splat (double 5.000000e+00)

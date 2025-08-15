@@ -1186,24 +1186,22 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; O1VEC2:       vector.body:
 ; O1VEC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; O1VEC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[INDEX]]
-; O1VEC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; O1VEC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 4
-; O1VEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; O1VEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; O1VEC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; O1VEC2-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; O1VEC2-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
 ; O1VEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[INDEX]]
-; O1VEC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP6]], i32 0
 ; O1VEC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP6]], i32 4
-; O1VEC2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP7]], align 4
+; O1VEC2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP6]], align 4
 ; O1VEC2-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP8]], align 4
 ; O1VEC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; O1VEC2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; O1VEC2-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; O1VEC2:       middle.block:
-; O1VEC2-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; O1VEC2-NEXT:    br label [[FOR_END:%.*]]
 ; O1VEC2:       scalar.ph:
-; O1VEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; O1VEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; O1VEC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; O1VEC2:       for.body:
 ; O1VEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1229,24 +1227,22 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; OzVEC2:       vector.body:
 ; OzVEC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; OzVEC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[INDEX]]
-; OzVEC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; OzVEC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 4
-; OzVEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; OzVEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; OzVEC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; OzVEC2-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; OzVEC2-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
 ; OzVEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[INDEX]]
-; OzVEC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP6]], i32 0
 ; OzVEC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP6]], i32 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP7]], align 4
+; OzVEC2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP6]], align 4
 ; OzVEC2-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP8]], align 4
 ; OzVEC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; OzVEC2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OzVEC2-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OzVEC2:       middle.block:
-; OzVEC2-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; OzVEC2-NEXT:    br label [[FOR_END:%.*]]
 ; OzVEC2:       scalar.ph:
-; OzVEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; OzVEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; OzVEC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; OzVEC2:       for.body:
 ; OzVEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

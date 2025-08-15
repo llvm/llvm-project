@@ -410,7 +410,7 @@ void SetSignalHandler(const FuzzingOptions &Options) {
 
   // Early exit if no crash handler needed.
   if (!Options.HandleSegv && !Options.HandleBus && !Options.HandleIll &&
-      !Options.HandleFpe && !Options.HandleAbrt)
+      !Options.HandleFpe && !Options.HandleAbrt && !Options.HandleTrap)
     return;
 
   // Set up the crash handler and wait until it is ready before proceeding.

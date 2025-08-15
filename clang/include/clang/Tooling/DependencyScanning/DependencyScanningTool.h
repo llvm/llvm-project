@@ -57,6 +57,10 @@ struct TranslationUnitDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
+  /// A list of module names that are visible to this translation unit. This
+  /// includes both direct and transitive module dependencies.
+  std::vector<std::string> VisibleModules;
+
   /// A list of the C++20 named modules this translation unit depends on.
   std::vector<std::string> NamedModuleDeps;
 
@@ -150,7 +154,7 @@ public:
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the
   /// information needed for explicit build.
-  llvm::Expected<ModuleDepsGraph> getModuleDependencies(
+  llvm::Expected<TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, const std::vector<std::string> &CommandLine,
       StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput);
@@ -188,6 +192,10 @@ public:
     DirectModuleDeps.push_back(ID);
   }
 
+  void handleVisibleModule(std::string ModuleName) override {
+    VisibleModules.push_back(ModuleName);
+  }
+
   void handleContextHash(std::string Hash) override {
     ContextHash = std::move(Hash);
   }
@@ -201,7 +209,6 @@ public:
   }
 
   TranslationUnitDeps takeTranslationUnitDeps();
-  ModuleDepsGraph takeModuleGraphDeps();
 
 private:
   std::vector<std::string> Dependencies;
@@ -210,6 +217,7 @@ private:
   std::string ModuleName;
   std::vector<std::string> NamedModuleDeps;
   std::vector<ModuleID> DirectModuleDeps;
+  std::vector<std::string> VisibleModules;
   std::vector<Command> Commands;
   std::string ContextHash;
   std::vector<std::string> OutputPaths;

@@ -201,11 +201,9 @@ unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
   }
 }
 
-bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool ARMAsmBackend::mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand>,
                                       const MCSubtargetInfo &STI) const {
-  if (getRelaxedOpcode(Inst.getOpcode(), STI) != Inst.getOpcode())
-    return true;
-  return false;
+  return getRelaxedOpcode(Opcode, STI) != Opcode;
 }
 
 static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
@@ -217,7 +215,7 @@ static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
 
 const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
                                                     uint64_t Value) const {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case ARM::fixup_arm_thumb_br: {
     // Relaxing tB to t2B. tB has a signed 12-bit displacement with the
     // low bit being an implied zero. There's an implied +4 offset for the
@@ -298,9 +296,9 @@ static bool needsInterworking(const MCAssembler &Asm, const MCSymbol *Sym,
                               unsigned FixupKind) {
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (!Sym || !Sym->isELF())
+  if (!Sym || !Asm.getContext().isELF())
     return false;
-  unsigned Type = cast<MCSymbolELF>(Sym)->getType();
+  unsigned Type = static_cast<const MCSymbolELF *>(Sym)->getType();
   if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
     if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
       return true;
@@ -313,12 +311,13 @@ static bool needsInterworking(const MCAssembler &Asm, const MCSymbol *Sym,
   return false;
 }
 
-bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                 const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
   const MCSymbol *Sym = Target.getAddSym();
-  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getKind()))
     return true;
 
   if (!Resolved)
@@ -949,7 +948,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
   }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getKind()))
     return true;
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
@@ -1095,7 +1094,7 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
   // For a few PC-relative fixups in Thumb mode, offsets need to be aligned
   // down. We compensate here because the default handler's `Value` decrement
   // doesn't account for this alignment.
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case ARM::fixup_t2_ldst_pcrel_12:
   case ARM::fixup_t2_pcrel_10:
   case ARM::fixup_t2_pcrel_9:
@@ -1109,9 +1108,8 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
 }
 
 void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -1125,14 +1123,15 @@ void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return; // Doesn't change encoding.
   const unsigned NumBytes = getFixupKindNumBytes(Kind);
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FullSizeBytes;
   if (Endian == llvm::endianness::big) {
     FullSizeBytes = getFixupKindContainerSizeBytes(Kind);
-    assert((Offset + FullSizeBytes) <= Data.size() && "Invalid fixup size!");
+    assert(Fixup.getOffset() + FullSizeBytes <= F.getSize() &&
+           "Invalid fixup size!");
     assert(NumBytes <= FullSizeBytes && "Invalid fixup size!");
   }
 
@@ -1142,7 +1141,7 @@ void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx =
         Endian == llvm::endianness::little ? i : (FullSizeBytes - 1 - i);
-    Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 
