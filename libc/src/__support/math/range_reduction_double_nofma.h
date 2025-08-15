@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_NOFMA_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_NOFMA_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_DOUBLE_NOFMA_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_DOUBLE_NOFMA_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -16,9 +16,13 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/math/generic/range_reduction_double_common.h"
+#include "src/__support/math/range_reduction_double_common.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+namespace math {
+
+namespace range_reduction_double_internal {
 
 using fputil::DoubleDouble;
 
@@ -342,6 +346,10 @@ LIBC_INLINE constexpr DoubleDouble SIN_K_PI_OVER_128[] = {
 #endif // !LIBC_MATH_HAS_SMALL_TABLES
 };
 
+} // namespace range_reduction_double_internal
+
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_NOFMA_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_DOUBLE_NOFMA_H
