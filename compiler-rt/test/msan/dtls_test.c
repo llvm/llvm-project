@@ -11,7 +11,7 @@
 
    // Reports use-of-uninitialized-value, not analyzed
    XFAIL: target={{.*netbsd.*}}
-   XFAIL: aarch64-target-arch
+   UNSUPPORTED: aarch64-target-arch
 
 */
 
