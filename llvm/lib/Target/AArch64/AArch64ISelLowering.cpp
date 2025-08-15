@@ -498,12 +498,28 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT, MVT::i32, Custom);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::i8,  Promote);
+  setOperationAction(ISD::CTSELECT, MVT::i16, Promote);
+  setOperationAction(ISD::CTSELECT, MVT::i32, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::i64, Custom);
   if (Subtarget->hasFPARMv8()) {
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::SELECT, MVT::bf16, Custom);
   }
+  if (Subtarget->hasFullFP16()) {
+    setOperationAction(ISD::CTSELECT, MVT::f16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::bf16, Custom);
+  } else {
+    setOperationAction(ISD::CTSELECT, MVT::f16, Promote);
+    setOperationAction(ISD::CTSELECT, MVT::bf16, Promote);
+  }
   setOperationAction(ISD::SELECT, MVT::f32, Custom);
   setOperationAction(ISD::SELECT, MVT::f64, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::f32, Custom);
+  setOperationAction(ISD::CTSELECT, MVT::f64, Custom);
+  for (MVT VT : MVT::vector_valuetypes()) {
+    setOperationAction(ISD::CTSELECT, VT, Expand);
+  }
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
@@ -2678,6 +2694,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CSINV)
     MAKE_CASE(AArch64ISD::CSNEG)
     MAKE_CASE(AArch64ISD::CSINC)
+    MAKE_CASE(AArch64ISD::CTSELECT)
     MAKE_CASE(AArch64ISD::THREAD_POINTER)
     MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
     MAKE_CASE(AArch64ISD::TLSDESC_AUTH_CALLSEQ)
@@ -3302,6 +3319,18 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
   return BB;
 }
 
+MachineBasicBlock *AArch64TargetLowering::EmitCTSELECT(MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineInstrBuilder Builder = BuildMI(*MBB, MI, DL, TII->get(Opcode));
+  for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
+    Builder.add(MI.getOperand(Idx));
+  }
+  Builder->setFlag(MachineInstr::NoMerge);
+  MBB->remove_instr(&MI);
+  return MBB;
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -3342,6 +3371,18 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitGetSMESaveSize(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
+  case AArch64::I32CTSELECT:
+    return EmitCTSELECT(MI, BB, AArch64::CSELWr);
+  case AArch64::I64CTSELECT:
+    return EmitCTSELECT(MI, BB, AArch64::CSELXr);
+  case AArch64::BF16CTSELECT:
+    return EmitCTSELECT(MI, BB, AArch64::FCSELHrrr);
+  case AArch64::F16CTSELECT:
+    return EmitCTSELECT(MI, BB, AArch64::FCSELHrrr);
+  case AArch64::F32CTSELECT:
+    return EmitCTSELECT(MI, BB, AArch64::FCSELSrrr);
+  case AArch64::F64CTSELECT:
+    return EmitCTSELECT(MI, BB, AArch64::FCSELDrrr);
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while bl call instruction (where statepoint will be lowered at the end)
@@ -7344,6 +7385,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
+  case ISD::CTSELECT:
+    return LowerCTSELECT(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
   case ISD::BR_JT:
@@ -11515,6 +11558,22 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   }
 
   return Res;
+}
+
+SDValue AArch64TargetLowering::LowerCTSELECT(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue CCVal = Op->getOperand(0);
+  SDValue TVal = Op->getOperand(1);
+  SDValue FVal = Op->getOperand(2);
+  SDLoc DL(Op);
+
+  EVT VT = Op.getValueType();
+
+  SDValue Zero = DAG.getConstant(0, DL, CCVal.getValueType());
+  SDValue CC;
+  SDValue Cmp = getAArch64Cmp(CCVal, Zero, ISD::SETNE, CC, DAG, DL);
+
+  return DAG.getNode(AArch64ISD::CTSELECT, DL, VT, TVal, FVal, CC, Cmp);
 }
 
 SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,

@@ -96,6 +96,8 @@ enum NodeType : unsigned {
   CSNEG, // Conditional select negate.
   CSINC, // Conditional select increment.
 
+  CTSELECT, // AArch64 Constant-time conditional select, implemented with CSEL
+
   // Pointer to the thread's local storage area. Materialised from TPIDR_EL0 on
   // ELF.
   THREAD_POINTER,
@@ -677,6 +679,8 @@ public:
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitCTSELECT(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
@@ -1145,6 +1149,7 @@ private:
   SDValue LowerSELECT_CC(ISD::CondCode CC, SDValue LHS, SDValue RHS,
                          SDValue TVal, SDValue FVal, const SDLoc &dl,
                          SelectionDAG &DAG) const;
+  SDValue LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
@@ -1362,6 +1367,10 @@ private:
 
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
+  }
+
+  bool isSelectSupported(SelectSupportKind Kind) const override {
+    return true;
   }
 };
 
