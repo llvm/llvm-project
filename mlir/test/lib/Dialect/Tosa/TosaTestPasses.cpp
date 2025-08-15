@@ -178,8 +178,8 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       newTosaConv2DOp.getResult().getType().isUnsignedInteger();
   bool outputUnsigned = outputType.isUnsignedInteger();
 
-  RoundingTypeAttr doubleRoundAttr =
-      RoundingTypeAttr::get(rewriter.getContext(), RoundingType::DOUBLE_ROUND);
+  RoundingModeAttr doubleRoundAttr =
+      RoundingModeAttr::get(rewriter.getContext(), RoundingMode::DOUBLE_ROUND);
   auto newTosaRescaleOp = tosa::RescaleOp::create(
       rewriter, op->getLoc(), outputType, newTosaConv2DOp.getResult(),
       getConstTensorInt<int32_t>(rewriter, op->getLoc(), {multiplier}),

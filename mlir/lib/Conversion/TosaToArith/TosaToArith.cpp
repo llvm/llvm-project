@@ -64,9 +64,9 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {
-    RoundingType roundingMode = op.getRoundingMode();
-    if (roundingMode != RoundingType::DOUBLE_ROUND &&
-        roundingMode != RoundingType::SINGLE_ROUND) {
+    RoundingMode roundingMode = op.getRoundingMode();
+    if (roundingMode != RoundingMode::DOUBLE_ROUND &&
+        roundingMode != RoundingMode::SINGLE_ROUND) {
       return failure();
     }
 
@@ -101,7 +101,7 @@ public:
     multiply64 = arith::AddIOp::create(rewriter, loc, multiply64, round);
 
     // Apply double rounding if necessary.
-    if (op.getRoundingMode() == RoundingType::DOUBLE_ROUND) {
+    if (op.getRoundingMode() == RoundingMode::DOUBLE_ROUND) {
       int64_t roundInt = 1 << 30;
       Value roundUp = getConstantValue(loc, i64Ty, roundInt, rewriter);
       Value roundDown = getConstantValue(loc, i64Ty, -roundInt, rewriter);
@@ -130,9 +130,9 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {
-    RoundingType roundingMode = op.getRoundingMode();
-    if (roundingMode != RoundingType::DOUBLE_ROUND &&
-        roundingMode != RoundingType::SINGLE_ROUND) {
+    RoundingMode roundingMode = op.getRoundingMode();
+    if (roundingMode != RoundingMode::DOUBLE_ROUND &&
+        roundingMode != RoundingMode::SINGLE_ROUND) {
       return failure();
     }
 
@@ -181,7 +181,7 @@ public:
         arith::SelectOp::create(rewriter, loc, shiftOver32, shiftHighR, zero32);
 
     // Conditionally perform our double round.
-    if (op.getRoundingMode() == RoundingType::DOUBLE_ROUND) {
+    if (op.getRoundingMode() == RoundingMode::DOUBLE_ROUND) {
       Value negOne32 = getConstantValue(loc, i32Ty, -1, rewriter);
       Value valuePositive = arith::CmpIOp::create(
           rewriter, loc, arith::CmpIPredicate::sge, value32, zero32);
