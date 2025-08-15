@@ -382,17 +382,18 @@ run(testJITCallbackInGlobalCtor)
 def testMemrefAdd():
     with Context():
         module = Module.parse(
-            """
-    module  {
-      func.func @main(%arg0: memref<1xf32>, %arg1: memref<f32>, %arg2: memref<1xf32>) attributes { llvm.emit_c_interface } {
-        %0 = arith.constant 0 : index
-        %1 = memref.load %arg0[%0] : memref<1xf32>
-        %2 = memref.load %arg1[] : memref<f32>
-        %3 = arith.addf %1, %2 : f32
-        memref.store %3, %arg2[%0] : memref<1xf32>
-        return
-      }
-    } """
+            r"""
+module  {
+    func.func @main(%arg0: memref<1xf32>, %arg1: memref<f32>, %arg2: memref<1xf32>) attributes { llvm.emit_c_interface } {
+    %0 = arith.constant 0 : index
+    %1 = memref.load %arg0[%0] : memref<1xf32>
+    %2 = memref.load %arg1[] : memref<f32>
+    %3 = arith.addf %1, %2 : f32
+    memref.store %3, %arg2[%0] : memref<1xf32>
+    return
+    }
+}
+        """
         )
         arg1 = np.array([32.5]).astype(np.float32)
         arg2 = np.array(6).astype(np.float32)
