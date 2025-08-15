@@ -120,7 +120,7 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
 }
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(
-    const protocol::PersistenceData &persistence_data) {
+    const protocol::dap::PersistenceData &persistence_data) {
   lldb::SBFileSpec file_spec(persistence_data.module_path.c_str());
   lldb::SBFileSpecList comp_unit_list;
   lldb::SBFileSpecList file_spec_list;

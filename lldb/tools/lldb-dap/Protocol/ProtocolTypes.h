@@ -340,7 +340,7 @@ struct Source {
   /// Additional data that a debug adapter might want to loop through the
   /// client. The client should leave the data intact and persist it across
   /// sessions. The client should not interpret the data.
-  std::optional<SourceLLDBData> adapterData;
+  std::optional<dap::SourceLLDBData> adapterData;
 
   // unsupported keys: origin, sources, checksums
 };

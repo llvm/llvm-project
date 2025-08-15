@@ -8,17 +8,14 @@
 
 #include "Protocol/DAPTypes.h"
 #include "TestingSupport/TestUtilities.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
-using namespace lldb_dap::protocol;
+using namespace lldb_dap::protocol::dap;
 using lldb_private::roundtripJSON;
 
 TEST(DAPTypesTest, SourceLLDBData) {
@@ -36,7 +33,7 @@ TEST(DAPTypesTest, SourceLLDBData) {
 }
 
 TEST(DAPTypesTest, DAPSymbol) {
-  DAPSymbol symbol;
+  Symbol symbol;
   symbol.userId = 42;
   symbol.isDebug = true;
   symbol.isExternal = false;
@@ -47,7 +44,7 @@ TEST(DAPTypesTest, DAPSymbol) {
   symbol.size = 64;
   symbol.name = "testSymbol";
 
-  llvm::Expected<DAPSymbol> deserialized_symbol = roundtripJSON(symbol);
+  llvm::Expected<Symbol> deserialized_symbol = roundtripJSON(symbol);
   ASSERT_THAT_EXPECTED(deserialized_symbol, llvm::Succeeded());
 
   EXPECT_EQ(symbol.userId, deserialized_symbol->userId);

@@ -21,7 +21,7 @@
 #include <optional>
 #include <string>
 
-namespace lldb_dap::protocol {
+namespace lldb_dap::protocol::dap {
 
 /// Data used to help lldb-dap resolve breakpoints persistently across different
 /// sessions. This information is especially useful for assembly breakpoints,
@@ -48,7 +48,7 @@ struct SourceLLDBData {
 bool fromJSON(const llvm::json::Value &, SourceLLDBData &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceLLDBData &);
 
-struct DAPSymbol {
+struct Symbol {
   /// The symbol uid.
   uint32_t userId;
 
@@ -77,9 +77,9 @@ struct DAPSymbol {
   /// The symbol name.
   std::string name;
 };
-bool fromJSON(const llvm::json::Value &, DAPSymbol &, llvm::json::Path);
-llvm::json::Value toJSON(const DAPSymbol &);
+bool fromJSON(const llvm::json::Value &, Symbol &, llvm::json::Path);
+llvm::json::Value toJSON(const Symbol &);
 
-} // namespace lldb_dap::protocol
+} // namespace lldb_dap::protocol::dap
 
 #endif

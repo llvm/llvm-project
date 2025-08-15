@@ -25,9 +25,9 @@
 
 using namespace lldb_dap;
 
-static std::optional<protocol::PersistenceData>
+static std::optional<protocol::dap::PersistenceData>
 GetPersistenceDataForSymbol(lldb::SBSymbol &symbol) {
-  protocol::PersistenceData persistence_data;
+  protocol::dap::PersistenceData persistence_data;
   lldb::SBModule module = symbol.GetStartAddress().GetModule();
   if (!module.IsValid())
     return std::nullopt;
@@ -105,11 +105,11 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
 
         // Add persistent data so that the breakpoint can be resolved
         // in future sessions.
-        std::optional<protocol::PersistenceData> persistence_data =
+        std::optional<protocol::dap::PersistenceData> persistence_data =
             GetPersistenceDataForSymbol(symbol);
         if (persistence_data) {
           source->adapterData =
-              protocol::SourceLLDBData{std::move(persistence_data)};
+              protocol::dap::SourceLLDBData{std::move(persistence_data)};
         }
       }
     }

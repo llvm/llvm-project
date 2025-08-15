@@ -994,7 +994,7 @@ bool fromJSON(const llvm::json::Value &, DAPGetModuleSymbolsArguments &,
 /// Response to `getModuleSymbols` request.
 struct DAPGetModuleSymbolsResponseBody {
   /// The symbols for the specified module.
-  std::vector<DAPSymbol> symbols;
+  std::vector<dap::Symbol> symbols;
 };
 llvm::json::Value toJSON(const DAPGetModuleSymbolsResponseBody &);
 
