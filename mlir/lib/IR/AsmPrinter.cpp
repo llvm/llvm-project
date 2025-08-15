@@ -2658,7 +2658,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
         os << ")";
       });
     }
-  } else if (elementType.isIntOrIndex()) {
+  } else if (isa<IntegerLikeTypeInterface>(elementType)) {
     auto valueIt = attr.value_begin<APInt>();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
       printDenseIntElement(*(valueIt + index), os, elementType);

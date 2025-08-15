@@ -466,7 +466,8 @@ def Builtin_Function : Builtin_Type<"Function", "function"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_Index : Builtin_Type<"Index", "index",
-    [VectorElementTypeInterface]> {
+    [VectorElementTypeInterface,
+     DeclareTypeInterfaceMethods<IntegerLikeTypeInterface, ["getStorageBitWidth"]>]> {
   let summary = "Integer-like type with unknown platform-dependent bit width";
   let description = [{
     Syntax:
@@ -497,7 +498,8 @@ def Builtin_Index : Builtin_Type<"Index", "index",
 //===----------------------------------------------------------------------===//
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer",
-    [VectorElementTypeInterface]> {
+    [VectorElementTypeInterface,
+     DeclareTypeInterfaceMethods<IntegerLikeTypeInterface, ["getStorageBitWidth"]>]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
