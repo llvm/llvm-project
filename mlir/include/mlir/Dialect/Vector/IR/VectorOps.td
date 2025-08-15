@@ -2088,7 +2088,7 @@ def Vector_GatherOp :
     hardware ISA support for a gather.
 
     An optional `alignment` attribute allows to specify the byte alignment of the
-    scatter operation. It must be a positive power of 2. The operation must access
+    gather operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
     A value of 0 indicates no specific alignment requirement.
