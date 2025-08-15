@@ -1721,7 +1721,6 @@ Variable-length arrays (N683)                                                  C
 Flexible array members                                                         C99           C89, C++
 static and type quals in arrays                                                C99           C89
 ``long long`` (N601)                                                           C99           C89
-Universal character names                                                      C99           C89
 Hexadecimal floating constants (N308)                                          C99           C89
 Compound literals (N716)                                                       C99           C89, C++
 ``//`` comments (N644)                                                         C99           C89
@@ -1730,7 +1729,7 @@ Variadic macros (N707)                                                         C
 Empty macro arguments (N570)                                                   C99           C89
 Trailing comma in enum declaration                                             C99           C89
 Implicit ``return 0`` in ``main``                                              C99           C89
-``__func`` (N611)                                                              C99           C89
+``__func__`` (N611)                                                            C99           C89
 ``_Generic`` (N1441)                                                           C11           C89, C++
 ``_Static_assert`` (N1330)                                                     C11           C89, C++
 ``_Atomic`` (N1485)                                                            C11           C89, C++
