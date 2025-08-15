@@ -399,6 +399,13 @@ implicit none
     end function
   end interface
 
+  interface __fdividef
+    attributes(device) real function __fdividef(r,d) bind(c, name='__nv_fast_fdividef')
+      !dir$ ignore_tkr (d) r, (d) d
+      real, value :: r,d
+    end function
+  end interface
+
   interface __sinf
     attributes(device) real function __sinf(r) bind(c, name='__nv_sinf')
       !dir$ ignore_tkr (d) r
