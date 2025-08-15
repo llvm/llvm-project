@@ -118,6 +118,16 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
+static void reportInvalidHandleTyError(Module &M, Twine Type,
+                                       ResourceInfo::ResourceBinding Binding) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "resource " << Type << " at register (space=" << Binding.Space
+     << ", register=" << Binding.LowerBound << ")"
+     << " is bound to a texture or typed buffer.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void
 reportOverlappingRegisters(Module &M,
                            const llvm::hlsl::BindingInfoBuilder::Binding &R1,
@@ -145,6 +155,25 @@ reportRegNotBound(Module &M, ResourceClass Class,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
+static void checkInvalidHandleTy(
+    Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
+    const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
+        &Resources) {
+  for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
+    llvm::dxil::ResourceInfo::ResourceBinding Binding = Res->getBinding();
+    for (const auto &RD : RDs) {
+      if (Binding.overlapsWith(RD)) {
+        TargetExtType *Handle = Res->getHandleTy();
+        auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
+        auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
+
+        if (TypedBuffer != nullptr || Texture != nullptr)
+          reportInvalidHandleTyError(M, Res->getName(), Res->getBinding());
+      }
+    }
+  }
+}
+
 static dxbc::ShaderVisibility
 tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   switch (ET) {
@@ -165,6 +194,46 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   default:
     llvm_unreachable("Invalid triple to shader stage conversion");
   }
+}
+
+static SmallVector<ResourceInfo::ResourceBinding>
+getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
+                              dxbc::ShaderVisibility Visibility) {
+
+  SmallVector<ResourceInfo::ResourceBinding> RDs;
+
+  for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
+    dxbc::ShaderVisibility ParamVisibility =
+        static_cast<dxbc::ShaderVisibility>(Info.Header.ShaderVisibility);
+    if (ParamVisibility != dxbc::ShaderVisibility::All &&
+        ParamVisibility != Visibility)
+      continue;
+
+    dxbc::RootParameterType ParamType =
+        static_cast<dxbc::RootParameterType>(Info.Header.ParameterType);
+    switch (ParamType) {
+
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+    case dxbc::RootParameterType::CBV: {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Info.Location);
+
+      ResourceInfo::ResourceBinding Binding;
+      Binding.LowerBound = Desc.ShaderRegister;
+      Binding.Space = Desc.RegisterSpace;
+      Binding.Size = 1;
+
+      RDs.push_back(Binding);
+      break;
+    }
+    case dxbc::RootParameterType::DescriptorTable:
+    case dxbc::RootParameterType::Constants32Bit:
+      break;
+    }
+  }
+
+  return RDs;
 }
 
 static void validateRootSignature(Module &M,
@@ -236,6 +305,8 @@ static void validateRootSignature(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+  SmallVector<ResourceInfo::ResourceBinding> RDs =
+      getRootDescriptorsBindingInfo(RSD, Visibility);
   for (const auto &ResList :
        {std::make_pair(ResourceClass::SRV, DRM.srvs()),
         std::make_pair(ResourceClass::UAV, DRM.uavs()),
@@ -249,6 +320,7 @@ static void validateRootSignature(Module &M,
       if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
         reportRegNotBound(M, ResList.first, ResBinding);
     }
+    checkInvalidHandleTy(M, RDs, ResList.second);
   }
 }
 
