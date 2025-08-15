@@ -10998,16 +10998,16 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   SmallVector<Type *, 4> RetOrigTys;
   SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
-  ComputeValueTypes(DL, CLI.RetTy, RetOrigTys, &Offsets);
+  ComputeValueTypes(DL, CLI.OrigRetTy, RetOrigTys, &Offsets);
 
   SmallVector<EVT, 4> RetVTs;
-  for (Type *Ty : RetOrigTys)
-    RetVTs.push_back(getValueType(DL, Ty));
-
   if (CLI.RetTy != CLI.OrigRetTy) {
     assert(RetOrigTys.size() == 1 &&
            "Only supported for non-aggregate returns");
-    RetOrigTys[0] = CLI.OrigRetTy;
+    RetVTs.push_back(getValueType(DL, CLI.RetTy));
+  } else {
+    for (Type *Ty : RetOrigTys)
+      RetVTs.push_back(getValueType(DL, Ty));
   }
 
   if (CLI.IsPostTypeLegalization) {
@@ -11116,21 +11116,21 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   CLI.Outs.clear();
   CLI.OutVals.clear();
   for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-    SmallVector<Type *, 4> ArgTys;
-    ComputeValueTypes(DL, Args[i].Ty, ArgTys);
+    SmallVector<Type *, 4> OrigArgTys;
+    ComputeValueTypes(DL, Args[i].OrigTy, OrigArgTys);
     // FIXME: Split arguments if CLI.IsPostTypeLegalization
     Type *FinalType = Args[i].Ty;
     if (Args[i].IsByVal)
       FinalType = Args[i].IndirectType;
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg, DL);
-    for (unsigned Value = 0, NumValues = ArgTys.size(); Value != NumValues;
+    for (unsigned Value = 0, NumValues = OrigArgTys.size(); Value != NumValues;
          ++Value) {
-      Type *ArgTy = ArgTys[Value];
-      Type *OrigArgTy = ArgTy;
+      Type *OrigArgTy = OrigArgTys[Value];
+      Type *ArgTy = OrigArgTy;
       if (Args[i].Ty != Args[i].OrigTy) {
         assert(Value == 0 && "Only supported for non-aggregate arguments");
-        OrigArgTy = Args[i].OrigTy;
+        ArgTy = Args[i].Ty;
       }
 
       EVT VT = getValueType(DL, ArgTy);
