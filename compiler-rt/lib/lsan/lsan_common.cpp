@@ -806,7 +806,7 @@ static bool ReportUnsuspendedThreads(
       succeded = false;
       Report(
           "Running thread %zu was not suspended. False leaks are possible.\n",
-          os_id);
+          (size_t)os_id);
     }
   }
   return succeded;
