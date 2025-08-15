@@ -1411,6 +1411,19 @@ public:
                                     const clang::Stmt *thenS,
                                     const clang::Stmt *elseS);
 
+  /// Build a "reference" to a va_list; this is either the address or the value
+  /// of the expression, depending on how va_list is defined.
+  Address emitVAListRef(const Expr *e);
+
+  /// Emits a CIR variable-argument operation, either
+  /// \c cir.va.start or \c cir.va.end.
+  ///
+  /// \param argValue A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \param isStart If \c true, emits \c cir.va.start, otherwise \c cir.va.end.
+  void emitVAStartEnd(mlir::Value argValue, bool isStart);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------

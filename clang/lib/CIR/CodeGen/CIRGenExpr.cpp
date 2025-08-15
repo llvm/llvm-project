@@ -90,11 +90,8 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     } break;
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
-    case CK_ArrayToPointerDecay: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: array-to-pointer decay");
-      return Address::invalid();
-    }
+    case CK_ArrayToPointerDecay:
+      return emitArrayToPointerDecay(ce->getSubExpr());
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
