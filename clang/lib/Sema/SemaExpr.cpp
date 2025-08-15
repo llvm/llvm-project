@@ -10761,18 +10761,11 @@ static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
     return;
   if (BinaryOperator::isAssignmentOp(Opc) && LHSIsScoped)
     return;
-  bool IsCxx23 = S.getLangOpts().CPlusPlus23;
-  unsigned DiagID =
-      IsCxx23 ? diag::note_no_implicit_conversion_for_scoped_enum_cxx23
-              : diag::note_no_implicit_conversion_for_scoped_enum;
-  auto DiagnosticHelper = [&S, IsCxx23, DiagID](const Expr *expr, const QualType type) {
+  auto DiagnosticHelper = [&S](const Expr *expr, const QualType type) {
     SourceLocation BeginLoc = expr->getBeginLoc();
-    QualType IntType =
-        type->castAs<EnumType>()->getDecl()->getIntegerType();
-    std::string InsertionString =
-        IsCxx23 ? "std::to_underlying("
-                : "static_cast<" + IntType.getAsString() + ">(";
-    S.Diag(BeginLoc, DiagID)
+    QualType IntType = type->castAs<EnumType>()->getDecl()->getIntegerType();
+    std::string InsertionString = "static_cast<" + IntType.getAsString() + ">(";
+    S.Diag(BeginLoc, diag::note_no_implicit_conversion_for_scoped_enum)
         << FixItHint::CreateInsertion(BeginLoc, InsertionString)
         << FixItHint::CreateInsertion(expr->getEndLoc(), ")");
   };
@@ -10785,7 +10778,8 @@ static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
 }
 
 QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
-                                           SourceLocation Loc, BinaryOperatorKind Opc) {
+                                           SourceLocation Loc,
+                                           BinaryOperatorKind Opc) {
   bool IsCompAssign = Opc == BO_MulAssign || Opc == BO_DivAssign;
   bool IsDiv = Opc == BO_Div || Opc == BO_DivAssign;
 

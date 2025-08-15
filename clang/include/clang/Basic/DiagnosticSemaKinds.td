@@ -4405,9 +4405,6 @@ def warn_impcast_int_to_enum : Warning<
 def note_no_implicit_conversion_for_scoped_enum
     : Note<"no implicit conversion for scoped enum; consider casting to "
            "underlying type">;
-def note_no_implicit_conversion_for_scoped_enum_cxx23
-    : Note<"no implicit conversion for scoped enum; consider using "
-           "std::to_underlying">;
 
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
