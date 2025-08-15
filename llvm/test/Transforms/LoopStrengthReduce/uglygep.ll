@@ -9,9 +9,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Check that LSR hoists %t2 computation outside the loop,
 ; folds %t3's add within the address
 ; and uses the induction variable (%t4) to access the right element.
-define void @test(ptr %ptr.i8, ptr %ptr.float) {
+define void @test(ptr %ptr.i8, ptr %ptr.float, i8 %param) {
 ; CHECK-LABEL: define void @test
-; CHECK-SAME: (ptr [[PTR_I8:%.*]], ptr [[PTR_FLOAT:%.*]]) {
+; CHECK-SAME: (ptr [[PTR_I8:%.*]], ptr [[PTR_FLOAT:%.*]], i8 [[PARAM:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb1:
@@ -24,14 +24,14 @@ define void @test(ptr %ptr.i8, ptr %ptr.float) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[T7:%.*]] = icmp eq i64 [[T4]], 0
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PTR_I8]], i64 [[T4]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[PTR_I8]], i64 [[T4]]
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb14:
-; CHECK-NEXT:    store i8 undef, ptr [[SCEVGEP]], align 1
+; CHECK-NEXT:    store i8 [[PARAM]], ptr [[SCEVGEP2]], align 1
 ; CHECK-NEXT:    [[T6:%.*]] = load ptr, ptr [[PTR_FLOAT]], align 8
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[T6]], i64 16
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[T4]]
-; CHECK-NEXT:    store i8 undef, ptr [[SCEVGEP2]], align 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[T6]], i64 16
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[T4]]
+; CHECK-NEXT:    store i8 [[PARAM]], ptr [[SCEVGEP1]], align 1
 ; CHECK-NEXT:    br label [[BB14]]
 ;
 bb:
@@ -55,19 +55,19 @@ bb10:                                             ; preds = %bb9
 
 bb14:                                             ; preds = %bb14, %bb10
   %t2 = getelementptr inbounds i8, ptr %ptr.i8, i64 %t4 ; <ptr> [#uses=1]
-  store i8 undef, ptr %t2
+  store i8 %param, ptr %t2
   %t6 = load ptr, ptr %ptr.float
   %t9 = getelementptr inbounds i8, ptr %t6, i64 %t3 ; <ptr> [#uses=1]
-  store i8 undef, ptr %t9
+  store i8 %param, ptr %t9
   br label %bb14
 }
 
 ; Check that induction variable is initialized to -2.
 ; IVNEXT covers the uses of %i0 and %t0.
 ; Therefore, %t0 should be removed and the critical edge must be split.
-define fastcc void @TransformLine() nounwind {
+define fastcc void @TransformLine(i32 %param) nounwind {
 ; CHECK-LABEL: define fastcc void @TransformLine
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32 [[PARAM:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[LOOP0:%.*]]
 ; CHECK:       loop0:
@@ -78,27 +78,21 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ 0, [[BB0]] ], [ [[I1_NEXT:%.*]], [[BB5:%.*]] ]
-; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[LOOP1_BB6_CRIT_EDGE:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB6SPLIT:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 true, label [[BB6SPLITSPLIT:%.*]], label [[BB5]]
+; CHECK-NEXT:    br i1 true, label [[BB6SPLIT]], label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[I1_NEXT]] = add i32 [[I1]], 1
-; CHECK-NEXT:    br i1 true, label [[BB5_BB6SPLIT_CRIT_EDGE:%.*]], label [[LOOP1]]
-; CHECK:       bb5.bb6split_crit_edge:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT]], [[I1_NEXT]]
-; CHECK-NEXT:    br label [[BB6SPLIT:%.*]]
-; CHECK:       bb6splitsplit:
-; CHECK-NEXT:    br label [[BB6SPLIT]]
+; CHECK-NEXT:    br i1 true, label [[BB5_BB6_CRIT_EDGE:%.*]], label [[LOOP1]]
 ; CHECK:       bb6split:
-; CHECK-NEXT:    [[P8_PH:%.*]] = phi i32 [ [[TMP0]], [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ undef, [[BB6SPLITSPLIT]] ]
-; CHECK-NEXT:    [[P9_PH:%.*]] = phi i32 [ undef, [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ [[I1]], [[BB6SPLITSPLIT]] ]
+; CHECK-NEXT:    [[I1_LCSSA:%.*]] = phi i32 [ [[I1]], [[LOOP1]] ], [ [[I1]], [[BB2]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
-; CHECK:       loop1.bb6_crit_edge:
-; CHECK-NEXT:    [[I1_LCSSA:%.*]] = phi i32 [ [[I1]], [[LOOP1]] ]
+; CHECK:       bb5.bb6_crit_edge:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT]], [[I1_NEXT]]
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[P8:%.*]] = phi i32 [ undef, [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P8_PH]], [[BB6SPLIT]] ]
-; CHECK-NEXT:    [[P9:%.*]] = phi i32 [ [[I1_LCSSA]], [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P9_PH]], [[BB6SPLIT]] ]
+; CHECK-NEXT:    [[P8:%.*]] = phi i32 [ [[TMP0]], [[BB5_BB6_CRIT_EDGE]] ], [ [[PARAM]], [[BB6SPLIT]] ]
+; CHECK-NEXT:    [[P9:%.*]] = phi i32 [ [[PARAM]], [[BB5_BB6_CRIT_EDGE]] ], [ [[I1_LCSSA]], [[BB6SPLIT]] ]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -125,7 +119,7 @@ bb5:                                              ; preds = %bb2
   br i1 true, label %bb6, label %loop1
 
 bb6:                                              ; preds = %bb5, %bb2, %loop1
-  %p8 = phi i32 [ %t0, %bb5 ], [ undef, %loop1 ], [ undef, %bb2 ] ; <i32> [#uses=0]
-  %p9 = phi i32 [ undef, %bb5 ], [ %i1, %loop1 ], [ %i1, %bb2 ] ; <i32> [#uses=0]
+  %p8 = phi i32 [ %t0, %bb5 ], [ %param, %loop1 ], [ %param, %bb2 ] ; <i32> [#uses=0]
+  %p9 = phi i32 [ %param, %bb5 ], [ %i1, %loop1 ], [ %i1, %bb2 ] ; <i32> [#uses=0]
   unreachable
 }

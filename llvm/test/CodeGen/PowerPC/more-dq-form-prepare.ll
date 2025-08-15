@@ -259,8 +259,8 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    addi 28, 28, 6
 ; CHECK-NEXT:    add 26, 26, 2
 ; CHECK-NEXT:    add 20, 20, 2
-; CHECK-NEXT:    add 11, 11, 2
 ; CHECK-NEXT:    add 19, 19, 2
+; CHECK-NEXT:    add 11, 11, 2
 ; CHECK-NEXT:    add 3, 3, 2
 ; CHECK-NEXT:    add 12, 12, 2
 ; CHECK-NEXT:    addi 27, 27, 1

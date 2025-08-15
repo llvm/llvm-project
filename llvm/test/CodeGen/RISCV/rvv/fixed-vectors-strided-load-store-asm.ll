@@ -570,10 +570,10 @@ define void @gather_unroll(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    addi a5, a0, 12
 ; CHECK-NEXT:    vlse32.v v9, (a5), a4
 ; CHECK-NEXT:    addi a2, a2, -8
-; CHECK-NEXT:    addi a1, a1, 512
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    vsse32.v v8, (a5), a4
-; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    addi a1, a1, 512
 ; CHECK-NEXT:    bnez a2, .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret

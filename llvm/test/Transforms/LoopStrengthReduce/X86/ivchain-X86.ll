@@ -92,10 +92,10 @@ define i32 @user(ptr %a, ptr %b, i32 %x) nounwind {
 ; X64-LABEL: user:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movslq %edx, %rcx
-; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    shlq $4, %rdx
 ; X64-NEXT:    leaq (,%rcx,4), %rax
-; X64-NEXT:    leaq (%rax,%rax,2), %r8
+; X64-NEXT:    leaq (%rax,%rax,2), %rdx
+; X64-NEXT:    movq %rcx, %r8
+; X64-NEXT:    shlq $4, %r8
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB1_1: # %loop
@@ -103,9 +103,9 @@ define i32 @user(ptr %a, ptr %b, i32 %x) nounwind {
 ; X64-NEXT:    addl (%rdi), %eax
 ; X64-NEXT:    addl (%rdi,%rcx,4), %eax
 ; X64-NEXT:    addl (%rdi,%rcx,8), %eax
-; X64-NEXT:    addl (%rdi,%r8), %eax
+; X64-NEXT:    addl (%rdi,%rdx), %eax
 ; X64-NEXT:    movl %eax, (%rdi)
-; X64-NEXT:    addq %rdx, %rdi
+; X64-NEXT:    addq %r8, %rdi
 ; X64-NEXT:    cmpq %rsi, %rdi
 ; X64-NEXT:    jne .LBB1_1
 ; X64-NEXT:  # %bb.2: # %exit
@@ -119,10 +119,10 @@ define i32 @user(ptr %a, ptr %b, i32 %x) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %ecx, %edi
-; X32-NEXT:    shll $4, %edi
 ; X32-NEXT:    leal (,%ecx,4), %eax
-; X32-NEXT:    leal (%eax,%eax,2), %ebx
+; X32-NEXT:    leal (%eax,%eax,2), %edi
+; X32-NEXT:    movl %ecx, %ebx
+; X32-NEXT:    shll $4, %ebx
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    .p2align 4
 ; X32-NEXT:  .LBB1_1: # %loop
@@ -130,9 +130,9 @@ define i32 @user(ptr %a, ptr %b, i32 %x) nounwind {
 ; X32-NEXT:    addl (%esi), %eax
 ; X32-NEXT:    addl (%esi,%ecx,4), %eax
 ; X32-NEXT:    addl (%esi,%ecx,8), %eax
-; X32-NEXT:    addl (%esi,%ebx), %eax
+; X32-NEXT:    addl (%esi,%edi), %eax
 ; X32-NEXT:    movl %eax, (%esi)
-; X32-NEXT:    addl %edi, %esi
+; X32-NEXT:    addl %ebx, %esi
 ; X32-NEXT:    cmpl %edx, %esi
 ; X32-NEXT:    jne .LBB1_1
 ; X32-NEXT:  # %bb.2: # %exit
