@@ -471,6 +471,20 @@ implicit none
    end function
   end interface
 
+  interface int_as_float
+    attributes(device) real function __int_as_float(i) bind(c, name='__nv_int_as_float')
+      !dir$ ignore_tkr (d) i
+      integer, value :: i
+    end function
+  end interface
+
+  interface float_as_int
+    attributes(device) integer function __float_as_int(i) bind(c, name='__nv_float_as_int')
+      !dir$ ignore_tkr (d) i
+      real, value :: i
+    end function
+  end interface
+
   interface __float2half_rn
     attributes(device) real(2) function __float2half_rn(r) bind(c, name='__nv_float2half_rn')
       !dir$ ignore_tkr (d) r
