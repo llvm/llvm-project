@@ -161,6 +161,27 @@ define i1 @lt64_u16_and_23(i64 %0) {
   ret i1 %3
 }
 
+define i1 @test_disjoint(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %5 = and i32 %3, %4
+  %6 = icmp eq i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
 ; negative test
 define i1 @lt3_u8(i8 %0) {
 ; CHECK-LABEL: lt3_u8:
