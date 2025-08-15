@@ -243,9 +243,7 @@ public:
   virtual LogicalResult
   matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
-    SmallVector<Value> oneToOneOperands =
-        getOneToOneAdaptorOperands(adaptor.getOperands());
-    return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
+    return dispatchTo1To1(*this, op, adaptor, rewriter);
   }
 
 private:
@@ -286,7 +284,7 @@ public:
   virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const {
-    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
+    return dispatchTo1To1(*this, op, operands, rewriter);
   }
 
 private:
