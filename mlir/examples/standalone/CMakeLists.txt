@@ -9,8 +9,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(MLIR REQUIRED CONFIG)
 
 
-    # Define the default argument to use by `lit` when testing.
- set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
+  # Define the default argument to use by `lit` when testing.
+  set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
 
   message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
