@@ -2111,8 +2111,8 @@ Value *llvm::addDiffRuntimeChecks(
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
-      }
-      MemoryRuntimeCheck = IsConflict;
+    }
+    MemoryRuntimeCheck = IsConflict;
   }
 
   return MemoryRuntimeCheck;

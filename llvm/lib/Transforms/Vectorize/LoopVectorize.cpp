@@ -1344,7 +1344,8 @@ public:
                                : ChosenTailFoldingStyle->second;
   }
 
-  RTCheckStyle getRTCheckStyle(TailFoldingStyle TFStyle, const TargetTransformInfo &TTI) const {
+  RTCheckStyle getRTCheckStyle(TailFoldingStyle TFStyle,
+                               const TargetTransformInfo &TTI) const {
     if (!TTI.useSafeEltsMask())
       return RTCheckStyle::ScalarDifference;
 

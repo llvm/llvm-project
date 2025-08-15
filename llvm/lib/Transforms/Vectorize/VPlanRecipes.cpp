@@ -3793,12 +3793,14 @@ void VPAliasLaneMaskRecipe::execute(VPTransformState &State) {
   State.set(this, AliasMask, /*IsScalar=*/false);
 }
 
-InstructionCost
-VPAliasLaneMaskRecipe::computeCost(ElementCount VF, VPCostContext &Ctx) const {
+InstructionCost VPAliasLaneMaskRecipe::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
   Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
   Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  IntrinsicCostAttributes Attrs(isWriteAfterRead() ? Intrinsic::loop_dependence_war_mask : Intrinsic::loop_dependence_raw_mask, RetTy,
-                                {ArgTy, ArgTy});
+  IntrinsicCostAttributes Attrs(isWriteAfterRead()
+                                    ? Intrinsic::loop_dependence_war_mask
+                                    : Intrinsic::loop_dependence_raw_mask,
+                                RetTy, {ArgTy, ArgTy});
   return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
 }
 
