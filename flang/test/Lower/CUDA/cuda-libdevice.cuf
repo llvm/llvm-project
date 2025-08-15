@@ -245,6 +245,15 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_float2uint_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_float2uint_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> i32
 
+attributes(global) subroutine test_int2double_rn()
+  double precision :: res
+  integer :: r
+  res = __int2double_rn(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_int2double_rn
+! CHECK: %{{.*}} = fir.call @__nv_int2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f64
+
 attributes(global) subroutine test_fdividef()
   real :: res
   real :: r
