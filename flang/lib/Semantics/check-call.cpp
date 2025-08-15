@@ -600,7 +600,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                   "Element of pointer array may not be associated with a %s array"_err_en_US,
                   dummyName);
             }
-          } else if (IsAssumedShape(*actualLastSymbol) &&
+          } else if (evaluate::IsAssumedShape(*actualLastSymbol) &&
               !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
             if (isOkBecauseContiguous) {
               context.Warn(
@@ -1390,7 +1390,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       assumed.name(), dummyName);
                 } else if (object.type.attrs().test(characteristics::
                                    TypeAndShape::Attr::AssumedRank) &&
-                    !IsAssumedShape(assumed) &&
+                    !evaluate::IsAssumedShape(assumed) &&
                     !evaluate::IsAssumedRank(assumed)) {
                   messages.Say( // C711
                       "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed rank %s"_err_en_US,

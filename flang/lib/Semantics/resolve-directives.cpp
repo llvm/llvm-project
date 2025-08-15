@@ -2438,7 +2438,7 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     // investigate the flags we can intermix with.
     if (!(dsa & (dataSharingAttributeFlags | dataMappingAttributeFlags))
             .none() ||
-        !checkSym.flags().none() || semantics::IsAssumedShape(checkSym) ||
+        !checkSym.flags().none() || evaluate::IsAssumedShape(checkSym) ||
         semantics::IsAllocatableOrPointer(checkSym)) {
       return false;
     }
@@ -3164,7 +3164,7 @@ static bool IsSymbolPrivate(const Symbol &symbol) {
     case Scope::Kind::Subprogram:
     case Scope::Kind::BlockConstruct:
       return !symbol.attrs().test(Attr::SAVE) &&
-          !symbol.attrs().test(Attr::PARAMETER) && !IsAssumedShape(symbol) &&
+          !symbol.attrs().test(Attr::PARAMETER) && !evaluate::IsAssumedShape(symbol) &&
           !symbol.flags().test(Symbol::Flag::InCommonBlock);
     default:
       return false;

@@ -913,6 +913,23 @@ bool IsAssumedRank(const ActualArgument &arg) {
   }
 }
 
+bool IsAssumedShape(const Symbol &symbol) {
+  const Symbol &ultimate{ResolveAssociations(symbol)};
+  const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedShape() &&
+      !semantics::IsAllocatableOrObjectPointer(&ultimate);
+}
+
+bool IsAssumedShape(const ActualArgument &arg) {
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    return IsAssumedShape(*expr);
+  } else {
+    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
+    CHECK(assumedTypeDummy);
+    return IsAssumedShape(*assumedTypeDummy);
+  }
+}
+
 int GetCorank(const ActualArgument &arg) {
   const auto *expr{arg.UnwrapExpr()};
   return GetCorank(*expr);
@@ -2315,13 +2332,6 @@ bool IsDummy(const Symbol &symbol) {
           [](const SubprogramDetails &x) { return x.isDummy(); },
           [](const auto &) { return false; }},
       ResolveAssociations(symbol).details());
-}
-
-bool IsAssumedShape(const Symbol &symbol) {
-  const Symbol &ultimate{ResolveAssociations(symbol)};
-  const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
-  return object && object->IsAssumedShape() &&
-      !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
 bool IsDeferredShape(const Symbol &symbol) {

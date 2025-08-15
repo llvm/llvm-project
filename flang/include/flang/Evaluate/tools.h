@@ -103,6 +103,27 @@ template <typename A> bool IsAssumedRank(const A *x) {
   return x && IsAssumedRank(*x);
 }
 
+// Predicate: true when an expression is assumed-shape
+bool IsAssumedShape(const Symbol &);
+bool IsAssumedShape(const ActualArgument &);
+template <typename A> bool IsAssumedShape(const A &) { return false; }
+template <typename A> bool IsAssumedShape(const Designator<A> &designator) {
+  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
+    return evaluate::IsAssumedShape(symbol->get());
+  } else {
+    return false;
+  }
+}
+template <typename T> bool IsAssumedShape(const Expr<T> &expr) {
+  return common::visit([](const auto &x) { return IsAssumedShape(x); }, expr.u);
+}
+template <typename A> bool IsAssumedShape(const std::optional<A> &x) {
+  return x && IsAssumedShape(*x);
+}
+template <typename A> bool IsAssumedShape(const A *x) {
+  return x && IsAssumedShape(*x);
+}
+
 // Finds the corank of an entity, possibly packaged in various ways.
 // Unlike rank, only data references have corank > 0.
 int GetCorank(const ActualArgument &);
@@ -1549,7 +1570,6 @@ bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
-bool IsAssumedShape(const Symbol &);
 bool IsDeferredShape(const Symbol &);
 bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);
