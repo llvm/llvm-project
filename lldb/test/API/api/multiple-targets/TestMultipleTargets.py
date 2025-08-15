@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 class TestMultipleTargets(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @skipIfNoSBHeaders
     @expectedFailureAll(
         oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr20282"

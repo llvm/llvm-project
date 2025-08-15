@@ -28,11 +28,11 @@ MachThread::MachThread(MachProcess *process, bool is_64_bit,
                        uint64_t unique_thread_id, thread_t mach_port_num)
     : m_process(process), m_unique_id(unique_thread_id),
       m_mach_port_number(mach_port_num), m_seq_id(GetSequenceID()),
-      m_state(eStateUnloaded), m_state_mutex(PTHREAD_MUTEX_RECURSIVE),
-      m_suspend_count(0), m_stop_exception(),
-      m_arch_up(DNBArchProtocol::Create(this)), m_reg_sets(NULL),
-      m_num_reg_sets(0), m_extended_info(), m_dispatch_queue_name(),
-      m_is_64_bit(is_64_bit), m_pthread_qos_class_decode(nullptr) {
+      m_state(eStateUnloaded), m_state_mutex(), m_suspend_count(0),
+      m_stop_exception(), m_arch_up(DNBArchProtocol::Create(this)),
+      m_reg_sets(NULL), m_num_reg_sets(0), m_extended_info(),
+      m_dispatch_queue_name(), m_is_64_bit(is_64_bit),
+      m_pthread_qos_class_decode(nullptr) {
   nub_size_t num_reg_sets = 0;
   m_reg_sets = m_arch_up->GetRegisterSetInfo(&num_reg_sets);
   m_num_reg_sets = num_reg_sets;
@@ -469,13 +469,12 @@ bool MachThread::NotifyException(MachException::Data &exc) {
 }
 
 nub_state_t MachThread::GetState() {
-  // If any other threads access this we will need a mutex for it
-  PTHREAD_MUTEX_LOCKER(locker, m_state_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
   return m_state;
 }
 
 void MachThread::SetState(nub_state_t state) {
-  PTHREAD_MUTEX_LOCKER(locker, m_state_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
   m_state = state;
   DNBLogThreadedIf(LOG_THREAD,
                    "MachThread::SetState ( %s ) for tid = 0x%8.8" PRIx64 "",
@@ -509,10 +508,12 @@ void MachThread::DumpRegisterState(nub_size_t regSet) {
     if (m_arch_up->RegisterSetStateIsValid((int)regSet)) {
       const size_t numRegisters = GetNumRegistersInSet(regSet);
       uint32_t regIndex = 0;
-      DNBRegisterValueClass reg;
+      std::unique_ptr<DNBRegisterValueClass> reg =
+          std::make_unique<DNBRegisterValueClass>();
       for (regIndex = 0; regIndex < numRegisters; ++regIndex) {
-        if (m_arch_up->GetRegisterValue((uint32_t)regSet, regIndex, &reg)) {
-          reg.Dump(NULL, NULL);
+        if (m_arch_up->GetRegisterValue((uint32_t)regSet, regIndex,
+                                        reg.get())) {
+          reg->Dump(NULL, NULL);
         }
       }
     } else {

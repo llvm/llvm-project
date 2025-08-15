@@ -60,8 +60,8 @@ uint64_t LLLexer::atoull(const char *Buffer, const char *End) {
     uint64_t OldRes = Result;
     Result *= 10;
     Result += *Buffer-'0';
-    if (Result < OldRes) {  // Uh, oh, overflow detected!!!
-      LexError("constant bigger than 64 bits detected!");
+    if (Result < OldRes) { // overflow detected.
+      LexError("constant bigger than 64 bits detected");
       return 0;
     }
   }
@@ -75,8 +75,8 @@ uint64_t LLLexer::HexIntToVal(const char *Buffer, const char *End) {
     Result *= 16;
     Result += hexDigitValue(*Buffer);
 
-    if (Result < OldRes) {   // Uh, oh, overflow detected!!!
-      LexError("constant bigger than 64 bits detected!");
+    if (Result < OldRes) { // overflow detected.
+      LexError("constant bigger than 64 bits detected");
       return 0;
     }
   }
@@ -99,7 +99,7 @@ void LLLexer::HexToIntPair(const char *Buffer, const char *End,
     Pair[1] += hexDigitValue(*Buffer);
   }
   if (Buffer != End)
-    LexError("constant bigger than 128 bits detected!");
+    LexError("constant bigger than 128 bits detected");
 }
 
 /// FP80HexToIntPair - translate an 80 bit FP80 number (20 hexits) into
@@ -118,7 +118,7 @@ void LLLexer::FP80HexToIntPair(const char *Buffer, const char *End,
     Pair[0] += hexDigitValue(*Buffer);
   }
   if (Buffer != End)
-    LexError("constant bigger than 128 bits detected!");
+    LexError("constant bigger than 128 bits detected");
 }
 
 // UnEscapeLexed - Run through the specified buffer and change \xx codes to the
@@ -200,7 +200,6 @@ lltok::Kind LLLexer::LexToken() {
       // Handle letters: [a-zA-Z_]
       if (isalpha(static_cast<unsigned char>(CurChar)) || CurChar == '_')
         return LexIdentifier();
-
       return lltok::Error;
     case EOF: return lltok::Eof;
     case 0:
@@ -251,6 +250,12 @@ lltok::Kind LLLexer::LexToken() {
     case ',': return lltok::comma;
     case '*': return lltok::star;
     case '|': return lltok::bar;
+    case '/':
+      if (getNextChar() != '*')
+        return lltok::Error;
+      if (SkipCComment())
+        return lltok::Error;
+      continue;
     }
   }
 }
@@ -259,6 +264,28 @@ void LLLexer::SkipLineComment() {
   while (true) {
     if (CurPtr[0] == '\n' || CurPtr[0] == '\r' || getNextChar() == EOF)
       return;
+  }
+}
+
+/// This skips C-style /**/ comments. Returns true if there
+/// was an error.
+bool LLLexer::SkipCComment() {
+  while (true) {
+    int CurChar = getNextChar();
+    switch (CurChar) {
+    case EOF:
+      LexError("unterminated comment");
+      return true;
+    case '*':
+      // End of the comment?
+      CurChar = getNextChar();
+      if (CurChar == '/')
+        return false;
+      if (CurChar == EOF) {
+        LexError("unterminated comment");
+        return true;
+      }
+    }
   }
 }
 
@@ -292,7 +319,7 @@ lltok::Kind LLLexer::LexDollar() {
         StrVal.assign(TokStart + 2, CurPtr - 1);
         UnEscapeLexed(StrVal);
         if (StringRef(StrVal).contains(0)) {
-          LexError("Null bytes are not allowed in names");
+          LexError("NUL character is not allowed in names");
           return lltok::Error;
         }
         return lltok::ComdatVar;
@@ -354,7 +381,7 @@ lltok::Kind LLLexer::LexUIntID(lltok::Kind Token) {
 
   uint64_t Val = atoull(TokStart + 1, CurPtr);
   if ((unsigned)Val != Val)
-    LexError("invalid value number (too large)!");
+    LexError("invalid value number (too large)");
   UIntVal = unsigned(Val);
   return Token;
 }
@@ -375,7 +402,7 @@ lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
         StrVal.assign(TokStart+2, CurPtr-1);
         UnEscapeLexed(StrVal);
         if (StringRef(StrVal).contains(0)) {
-          LexError("Null bytes are not allowed in names");
+          LexError("NUL character is not allowed in names");
           return lltok::Error;
         }
         return Var;
@@ -410,7 +437,7 @@ lltok::Kind LLLexer::LexQuote() {
   if (CurPtr[0] == ':') {
     ++CurPtr;
     if (StringRef(StrVal).contains(0)) {
-      LexError("Null bytes are not allowed in names");
+      LexError("NUL character is not allowed in names");
       kind = lltok::Error;
     } else {
       kind = lltok::LabelStr;
@@ -492,7 +519,7 @@ lltok::Kind LLLexer::LexIdentifier() {
     uint64_t NumBits = atoull(StartChar, CurPtr);
     if (NumBits < IntegerType::MIN_INT_BITS ||
         NumBits > IntegerType::MAX_INT_BITS) {
-      LexError("bitwidth for integer type out of range!");
+      LexError("bitwidth for integer type out of range");
       return lltok::Error;
     }
     TyVal = IntegerType::get(Context, NumBits);
@@ -652,10 +679,12 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_cs_chain_preserve);
   KEYWORD(amdgpu_kernel);
   KEYWORD(amdgpu_gfx);
+  KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
+  KEYWORD(riscv_vls_cc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -674,9 +703,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(readwrite);
   KEYWORD(argmem);
   KEYWORD(inaccessiblemem);
+  KEYWORD(errnomem);
   KEYWORD(argmemonly);
   KEYWORD(inaccessiblememonly);
   KEYWORD(inaccessiblemem_or_argmemonly);
+  KEYWORD(nocapture);
+  KEYWORD(address_is_null);
+  KEYWORD(address);
+  KEYWORD(provenance);
+  KEYWORD(read_provenance);
 
   // nofpclass attribute
   KEYWORD(all);
@@ -715,6 +750,8 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   KEYWORD(xchg); KEYWORD(nand); KEYWORD(max); KEYWORD(min); KEYWORD(umax);
   KEYWORD(umin); KEYWORD(fmax); KEYWORD(fmin);
+  KEYWORD(fmaximum);
+  KEYWORD(fminimum);
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
   KEYWORD(usub_cond);
@@ -891,6 +928,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(fptoui,      FPToUI);
   INSTKEYWORD(fptosi,      FPToSI);
   INSTKEYWORD(inttoptr,    IntToPtr);
+  INSTKEYWORD(ptrtoaddr,   PtrToAddr);
   INSTKEYWORD(ptrtoint,    PtrToInt);
   INSTKEYWORD(bitcast,     BitCast);
   INSTKEYWORD(addrspacecast, AddrSpaceCast);
@@ -944,6 +982,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
+  DWKEYWORD(APPLE_ENUM_KIND, DwarfEnumKind);
 
 #undef DWKEYWORD
 
@@ -987,6 +1026,11 @@ lltok::Kind LLLexer::LexIdentifier() {
       Keyword == "Default") {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::NameTableKind;
+  }
+
+  if (Keyword == "Binary" || Keyword == "Decimal" || Keyword == "Rational") {
+    StrVal.assign(Keyword.begin(), Keyword.end());
+    return lltok::FixedPointKind;
   }
 
   // Check for [us]0x[0-9A-Fa-f]+ which are Hexadecimal constant generated by
@@ -1122,7 +1166,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
     uint64_t Val = atoull(TokStart, CurPtr);
     ++CurPtr; // Skip the colon.
     if ((unsigned)Val != Val)
-      LexError("invalid value number (too large)!");
+      LexError("invalid value number (too large)");
     UIntVal = unsigned(Val);
     return lltok::LabelID;
   }

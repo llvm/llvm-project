@@ -146,8 +146,3 @@ struct GpuMapParallelLoopsPass
 } // namespace
 } // namespace gpu
 } // namespace mlir
-
-std::unique_ptr<mlir::OperationPass<mlir::func::FuncOp>>
-mlir::createGpuMapParallelLoopsPass() {
-  return std::make_unique<gpu::GpuMapParallelLoopsPass>();
-}

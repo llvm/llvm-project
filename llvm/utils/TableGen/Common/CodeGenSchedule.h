@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -63,7 +64,7 @@ struct CodeGenSchedRW {
         HasVariants(false), IsVariadic(false), IsSequence(false) {}
   CodeGenSchedRW(unsigned Idx, const Record *Def)
       : Index(Idx), TheDef(Def), IsAlias(false), IsVariadic(false) {
-    Name = std::string(Def->getName());
+    Name = Def->getName().str();
     IsRead = Def->isSubClassOf("SchedRead");
     HasVariants = Def->isSubClassOf("SchedVariant");
     if (HasVariants)
@@ -192,7 +193,7 @@ struct CodeGenRegisterFile {
   unsigned MaxMovesEliminatedPerCycle;
   bool AllowZeroMoveEliminationOnly;
 
-  unsigned NumPhysRegs;
+  unsigned NumPhysRegs = 0;
   std::vector<CodeGenRegisterCost> Costs;
 
   CodeGenRegisterFile(StringRef name, const Record *def,
@@ -200,7 +201,7 @@ struct CodeGenRegisterFile {
                       bool AllowZeroMoveElimOnly = false)
       : Name(name), RegisterFileDef(def),
         MaxMovesEliminatedPerCycle(MaxMoveElimPerCy),
-        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly), NumPhysRegs(0) {}
+        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly) {}
 
   bool hasDefaultCosts() const { return Costs.empty(); }
 };
@@ -244,6 +245,15 @@ struct CodeGenProcModel {
   ConstRecVec WriteResDefs;
   ConstRecVec ReadAdvanceDefs;
 
+  // Map from the WriteType field to the parent WriteRes record.
+  DenseMap<const Record *, const Record *> WriteResMap;
+
+  // Map from the ReadType field to the parent ReadAdvance record.
+  DenseMap<const Record *, const Record *> ReadAdvanceMap;
+
+  // Set of WriteRes that are referenced by a ReadAdvance.
+  SmallPtrSet<const Record *, 8> ReadOfWriteSet;
+
   // Per-operand machine model resources associated with this processor.
   ConstRecVec ProcResourceDefs;
 
@@ -251,16 +261,16 @@ struct CodeGenProcModel {
   std::vector<CodeGenRegisterFile> RegisterFiles;
 
   // Optional Retire Control Unit definition.
-  const Record *RetireControlUnit;
+  const Record *RetireControlUnit = nullptr;
 
   // Load/Store queue descriptors.
-  const Record *LoadQueue;
-  const Record *StoreQueue;
+  const Record *LoadQueue = nullptr;
+  const Record *StoreQueue = nullptr;
 
   CodeGenProcModel(unsigned Idx, std::string Name, const Record *MDef,
                    const Record *IDef)
-      : Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
-        RetireControlUnit(nullptr), LoadQueue(nullptr), StoreQueue(nullptr) {}
+      : Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef) {
+  }
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -457,26 +467,6 @@ class CodeGenSchedModels {
 public:
   CodeGenSchedModels(const RecordKeeper &RK, const CodeGenTarget &TGT);
 
-  // iterator access to the scheduling classes.
-  using class_iterator = std::vector<CodeGenSchedClass>::iterator;
-  using const_class_iterator = std::vector<CodeGenSchedClass>::const_iterator;
-  class_iterator classes_begin() { return SchedClasses.begin(); }
-  const_class_iterator classes_begin() const { return SchedClasses.begin(); }
-  class_iterator classes_end() { return SchedClasses.end(); }
-  const_class_iterator classes_end() const { return SchedClasses.end(); }
-  iterator_range<class_iterator> classes() {
-    return make_range(classes_begin(), classes_end());
-  }
-  iterator_range<const_class_iterator> classes() const {
-    return make_range(classes_begin(), classes_end());
-  }
-  iterator_range<class_iterator> explicit_classes() {
-    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
-  }
-  iterator_range<const_class_iterator> explicit_classes() const {
-    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
-  }
-
   const Record *getModelOrItinDef(const Record *ProcDef) const {
     const Record *ModelDef = ProcDef->getValueAsDef("SchedModel");
     const Record *ItinsDef = ProcDef->getValueAsDef("ProcItin");
@@ -490,24 +480,21 @@ public:
 
   const CodeGenProcModel &getModelForProc(const Record *ProcDef) const {
     const Record *ModelDef = getModelOrItinDef(ProcDef);
-    ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
+    auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
     return ProcModels[I->second];
   }
 
-  CodeGenProcModel &getProcModel(const Record *ModelDef) {
-    ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
-    assert(I != ProcModelMap.end() && "missing machine model");
-    return ProcModels[I->second];
-  }
   const CodeGenProcModel &getProcModel(const Record *ModelDef) const {
-    return const_cast<CodeGenSchedModels *>(this)->getProcModel(ModelDef);
+    auto I = ProcModelMap.find(ModelDef);
+    assert(I != ProcModelMap.end() && "missing machine model");
+    return ProcModels[I->second];
+  }
+  CodeGenProcModel &getProcModel(const Record *ModelDef) {
+    return const_cast<CodeGenProcModel &>(
+        static_cast<const CodeGenSchedModels &>(*this).getProcModel(ModelDef));
   }
 
-  // Iterate over the unique processor models.
-  using ProcIter = std::vector<CodeGenProcModel>::const_iterator;
-  ProcIter procModelBegin() const { return ProcModels.begin(); }
-  ProcIter procModelEnd() const { return ProcModels.end(); }
   ArrayRef<CodeGenProcModel> procModels() const { return ProcModels; }
 
   // Return true if any processors have itineraries.
@@ -529,14 +516,14 @@ public:
   const CodeGenSchedRW &getSchedRW(unsigned Idx, bool IsRead) const {
     return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
-  CodeGenSchedRW &getSchedRW(const Record *Def) {
+  const CodeGenSchedRW &getSchedRW(const Record *Def) const {
     bool IsRead = Def->isSubClassOf("SchedRead");
     unsigned Idx = getSchedRWIdx(Def, IsRead);
-    return const_cast<CodeGenSchedRW &>(IsRead ? getSchedRead(Idx)
-                                               : getSchedWrite(Idx));
+    return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
-  const CodeGenSchedRW &getSchedRW(const Record *Def) const {
-    return const_cast<CodeGenSchedModels &>(*this).getSchedRW(Def);
+  CodeGenSchedRW &getSchedRW(const Record *Def) {
+    return const_cast<CodeGenSchedRW &>(
+        static_cast<const CodeGenSchedModels &>(*this).getSchedRW(Def));
   }
 
   unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
@@ -556,10 +543,10 @@ public:
   // for NoItinerary.
   unsigned getSchedClassIdx(const CodeGenInstruction &Inst) const;
 
-  using SchedClassIter = std::vector<CodeGenSchedClass>::const_iterator;
-  SchedClassIter schedClassBegin() const { return SchedClasses.begin(); }
-  SchedClassIter schedClassEnd() const { return SchedClasses.end(); }
   ArrayRef<CodeGenSchedClass> schedClasses() const { return SchedClasses; }
+  ArrayRef<CodeGenSchedClass> explicitSchedClasses() const {
+    return schedClasses().take_front(NumInstrSchedClasses);
+  }
 
   unsigned numInstrSchedClasses() const { return NumInstrSchedClasses; }
 
@@ -592,7 +579,6 @@ private:
   void collectSchedRW();
 
   std::string genRWName(ArrayRef<unsigned> Seq, bool IsRead);
-  unsigned findRWForSequence(ArrayRef<unsigned> Seq, bool IsRead);
 
   void collectSchedClasses();
 
@@ -631,8 +617,8 @@ private:
   void inferFromItinClass(const Record *ItinClassDef, unsigned FromClassIdx);
   void inferFromInstRWs(unsigned SCIdx);
 
-  bool hasSuperGroup(ConstRecVec &SubUnits, CodeGenProcModel &PM);
-  void verifyProcResourceGroups(CodeGenProcModel &PM);
+  bool hasSuperGroup(const ConstRecVec &SubUnits, const CodeGenProcModel &PM);
+  void verifyProcResourceGroups(const CodeGenProcModel &PM);
 
   void collectProcResources();
 
@@ -647,9 +633,9 @@ private:
   void addProcResource(const Record *ProcResourceKind, CodeGenProcModel &PM,
                        ArrayRef<SMLoc> Loc);
 
-  void addWriteRes(const Record *ProcWriteResDef, unsigned PIdx);
+  void addWriteRes(const Record *ProcWriteResDef, CodeGenProcModel &PM);
 
-  void addReadAdvance(const Record *ProcReadAdvanceDef, unsigned PIdx);
+  void addReadAdvance(const Record *ProcReadAdvanceDef, CodeGenProcModel &PM);
 };
 
 } // namespace llvm

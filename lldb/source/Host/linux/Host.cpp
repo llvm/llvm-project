@@ -30,7 +30,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Host.h"
-#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 #include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb;
@@ -213,6 +213,11 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
     } else if (Line.consume_front("Tgid:")) {
       Line = Line.ltrim();
       Line.consumeInteger(10, Tgid);
+    } else if (Line.consume_front("CoreDumping:")) {
+      uint32_t coredumping;
+      Line = Line.ltrim();
+      if (!Line.consumeInteger(2, coredumping))
+        ProcessInfo.SetIsCoreDumping(coredumping);
     }
   }
   return true;
@@ -410,8 +415,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   ProcessState State;
   return GetProcessAndStatInfo(pid, process_info, State, tracerpid);
 }
-
-Environment Host::GetEnvironment() { return Environment(environ); }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status::FromErrorString("unimplemented");

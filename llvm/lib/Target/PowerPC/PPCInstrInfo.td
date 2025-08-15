@@ -124,6 +124,21 @@ def SDT_PPCFPMinMax : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
 ]>;
 
+// RES, CARRY = op LHS, RHS
+def SDT_PPCBinaryArithWithFlagsOut : SDTypeProfile<2, 2, [
+  SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
+  SDTCisInt<0>,
+  SDTCisVT<1, i32>,
+]>;
+
+// RES, CARRY = op LHS, RHS, CARRY
+def SDT_PPCBinaryArithWithFlagsInOut : SDTypeProfile<2, 3, [
+  SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
+  SDTCisInt<0>,
+  SDTCisSameAs<1, 4>,
+  SDTCisVT<1, i32>,
+]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -166,17 +181,17 @@ def PPCany_fcfidus : PatFrags<(ops node:$op),
 
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
-           [SDNPHasChain, SDNPMayStore]>;
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCstfiwx : SDNode<"PPCISD::STFIWX", SDT_PPCstfiwx,
-                       [SDNPHasChain, SDNPMayStore]>;
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPClfiwax : SDNode<"PPCISD::LFIWAX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClfiwzx : SDNode<"PPCISD::LFIWZX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClxsizx : SDNode<"PPCISD::LXSIZX", SDT_PPCLxsizx,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxsix : SDNode<"PPCISD::STXSIX", SDT_PPCstxsix,
-                       [SDNPHasChain, SDNPMayStore]>;
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCVexts  : SDNode<"PPCISD::VEXTS", SDT_PPCVexts, []>;
 
 // Extract FPSCR (not modeled at the DAG level).
@@ -376,7 +391,7 @@ def PPCatomicCmpSwap_16 :
 def PPClbrx       : SDNode<"PPCISD::LBRX", SDT_PPClbrx,
                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstbrx      : SDNode<"PPCISD::STBRX", SDT_PPCstbrx,
-                           [SDNPHasChain, SDNPMayStore]>;
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCStoreCond  : SDNode<"PPCISD::STORE_COND", SDT_StoreCond,
                            [SDNPHasChain, SDNPMayStore,
                             SDNPMemOperand, SDNPOutGlue]>;
@@ -400,6 +415,15 @@ def PPCtlsdynamatpcreladdr : SDNode<"PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR",
                                     SDTIntUnaryOp, []>;
 def PPCtlslocalexecmataddr : SDNode<"PPCISD::TLS_LOCAL_EXEC_MAT_ADDR",
                                     SDTIntUnaryOp, []>;
+
+def PPCaddc : SDNode<"PPCISD::ADDC", SDT_PPCBinaryArithWithFlagsOut,
+                     [SDNPCommutative]>;
+def PPCadde : SDNode<"PPCISD::ADDE", SDT_PPCBinaryArithWithFlagsInOut,
+                     []>;
+def PPCsubc : SDNode<"PPCISD::SUBC", SDT_PPCBinaryArithWithFlagsOut,
+                     []>;
+def PPCsube : SDNode<"PPCISD::SUBE", SDT_PPCBinaryArithWithFlagsInOut,
+                     []>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -686,13 +710,15 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 
 // Load and Store Instruction Selection addressing modes.
-def DForm  : ComplexPattern<iPTR, 2, "SelectDForm",    [], [SDNPWantParent]>;
-def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm",   [], [SDNPWantParent]>;
-def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm",   [], [SDNPWantParent]>;
-def XForm  : ComplexPattern<iPTR, 2, "SelectXForm",    [], [SDNPWantParent]>;
-def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm", [], [SDNPWantParent]>;
-def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm", [], [SDNPWantParent]>;
-def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def DForm  : ComplexPattern<iPTR, 2, "SelectDForm">;
+  def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm">;
+  def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm">;
+  def XForm  : ComplexPattern<iPTR, 2, "SelectXForm">;
+  def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm">;
+  def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm">;
+  def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm">;
+}
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
@@ -2289,7 +2315,7 @@ let BaseName = "addic" in {
 let Defs = [CARRY] in
 def ADDIC  : DForm_2<12, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "addic $RST, $RA, $D", IIC_IntGeneral,
-                     [(set i32:$RST, (addc i32:$RA, imm32SExt16:$D))]>,
+                     [(set i32:$RST, (PPCaddc i32:$RA, imm32SExt16:$D))]>,
                      RecFormRel, PPC970_DGroup_Cracked;
 let Defs = [CARRY, CR0] in
 def ADDIC_rec : DForm_2<13, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
@@ -2303,14 +2329,14 @@ let isCodeGenOnly = 1 in
 def LA     : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
                      [(set i32:$RST, (add i32:$RA,
-                                          (PPClo tglobaladdr:$D, 0)))]>;
+                                          (PPClo tglobaladdr:$D, 0)))]>, MemriOp;
 def MULLI  : DForm_2< 7, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "mulli $RST, $RA, $D", IIC_IntMulLI,
                      [(set i32:$RST, (mul i32:$RA, imm32SExt16:$D))]>;
 let Defs = [CARRY] in
 def SUBFIC : DForm_2< 8, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "subfic $RST, $RA, $D", IIC_IntGeneral,
-                     [(set i32:$RST, (subc imm32SExt16:$D, i32:$RA))]>;
+                     [(set i32:$RST, (PPCsubc imm32SExt16:$D, i32:$RA))]>;
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
   def LI  : DForm_2_r0<14, (outs gprc:$RST), (ins s16imm:$D),
@@ -2907,7 +2933,7 @@ def ADD4TLS  : XOForm_1<31, 266, 0, (outs gprc:$RT), (ins gprc:$RA, tlsreg32:$RB
 let isCommutable = 1 in
 defm ADDC  : XOForm_1rc<31, 10, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "addc", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (addc i32:$RA, i32:$RB))]>,
+                        [(set i32:$RT, (PPCaddc i32:$RA, i32:$RB))]>,
                         PPC970_DGroup_Cracked;
 
 defm DIVW  : XOForm_1rcr<31, 491, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
@@ -2940,7 +2966,7 @@ defm SUBF  : XOForm_1rx<31, 40, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         [(set i32:$RT, (sub i32:$RB, i32:$RA))]>;
 defm SUBFC : XOForm_1rc<31, 8, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "subfc", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (subc i32:$RB, i32:$RA))]>,
+                        [(set i32:$RT, (PPCsubc i32:$RB, i32:$RA))]>,
                         PPC970_DGroup_Cracked;
 defm NEG    : XOForm_3r<31, 104, 0, (outs gprc:$RT), (ins gprc:$RA),
                         "neg", "$RT, $RA", IIC_IntSimple,
@@ -2949,22 +2975,22 @@ let Uses = [CARRY] in {
 let isCommutable = 1 in
 defm ADDE  : XOForm_1rc<31, 138, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "adde", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (adde i32:$RA, i32:$RB))]>;
+                        [(set i32:$RT, (PPCadde i32:$RA, i32:$RB, CARRY))]>;
 defm ADDME  : XOForm_3rc<31, 234, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "addme", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (adde i32:$RA, -1))]>;
+                         [(set i32:$RT, (PPCadde i32:$RA, -1, CARRY))]>;
 defm ADDZE  : XOForm_3rc<31, 202, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "addze", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (adde i32:$RA, 0))]>;
+                         [(set i32:$RT, (PPCadde i32:$RA, 0, CARRY))]>;
 defm SUBFE : XOForm_1rc<31, 136, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "subfe", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (sube i32:$RB, i32:$RA))]>;
+                        [(set i32:$RT, (PPCsube i32:$RB, i32:$RA, CARRY))]>;
 defm SUBFME : XOForm_3rc<31, 232, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "subfme", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (sube -1, i32:$RA))]>;
+                         [(set i32:$RT, (PPCsube -1, i32:$RA, CARRY))]>;
 defm SUBFZE : XOForm_3rc<31, 200, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "subfze", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (sube 0, i32:$RA))]>;
+                         [(set i32:$RT, (PPCsube 0, i32:$RA, CARRY))]>;
 }
 }
 
@@ -3466,7 +3492,18 @@ class PPCAsmPseudo<string asm, dag iops>
   let isAsmParserOnly = 1;
   let isPseudo = 1;
   let hasNoSchedulingInfo = 1;
+
+  // Indicate that this instruction takes a register+immediate memory operand.
+  bits<1> MemriOp = 0;
+  let TSFlags{10} = MemriOp;
 }
+
+// Mask immediates for MMA instructions (2, 4 and 8 bits).
+def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
+def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
+def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
+
+def MMA : Predicate<"Subtarget->hasMMA()">;
 
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
@@ -4714,7 +4751,7 @@ def : InstAlias<"tlbilxva $RA, $RB", (TLBILX 3, gprc:$RA, gprc:$RB)>,
                 Requires<[IsBookE]>;
 def : InstAlias<"tlbilxva $RB", (TLBILX 3, R0, gprc:$RB)>, Requires<[IsBookE]>;
 
-def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>;
+def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>, MemriOp;
 
 def SUBI : PPCAsmPseudo<"subi $rA, $rB, $imm",
                         (ins gprc:$rA, gprc:$rB, s16imm:$imm)>;
@@ -5047,12 +5084,12 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 DForm:$src)), (LWZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
 def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;
@@ -5105,7 +5142,6 @@ def : Pat<(int_ppc_store2r gprc:$a, ForceXForm:$ptr),
           (STHBRX gprc:$a, ForceXForm:$ptr)>;
 def : Pat<(int_ppc_store4r gprc:$a, ForceXForm:$ptr),
           (STWBRX gprc:$a, ForceXForm:$ptr)>;
-
 
 // Fast 32-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):
@@ -5287,10 +5323,14 @@ def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
 def : Pat<(i64 (bitreverse i64:$A)),
   (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;
 
+def : Pat<(int_ppc_lwarx ForceXForm:$ptr),
+          (LWARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 4),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+def : Pat<(int_ppc_lbarx ForceXForm:$ptr),
+          (LBARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 1),
@@ -5323,6 +5363,9 @@ def : Pat<(int_ppc_mtmsr gprc:$RS),
           (MTMSR $RS, 0)>;
 
 let Predicates = [IsISA2_07] in {
+  def : Pat<(int_ppc_lharx ForceXForm:$ptr),
+          (LHARX ForceXForm:$ptr)>;
+
   def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
             (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
   def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),

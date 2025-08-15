@@ -20,7 +20,11 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+
+#define DEBUG_TYPE "lanai-disassembler"
 
 using namespace llvm;
 
@@ -32,7 +36,8 @@ static MCDisassembler *createLanaiDisassembler(const Target & /*T*/,
   return new LanaiDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLanaiDisassembler() {
   // Register the disassembler
   TargetRegistry::RegisterMCDisassembler(getTheLanaiTarget(),
                                          createLanaiDisassembler);

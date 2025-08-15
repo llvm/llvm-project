@@ -15,6 +15,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
+#include "hdr/errno_macros.h" // For ERANGE
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
@@ -31,9 +33,6 @@
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
-#include "src/errno/libc_errno.h" // For ERANGE
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -108,11 +107,11 @@ eisel_lemire(ExpandedFloat<T> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
+  uint32_t clz = static_cast<uint32_t>(cpp::countl_zero<StorageType>(mantissa));
   mantissa <<= clz;
 
-  int32_t exp2 =
-      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - clz;
+  int32_t exp2 = exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS -
+                 static_cast<int32_t>(clz);
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -206,7 +205,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   using FPBits = typename fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
 
-  StorageType mantissa = init_num.mantissa;
+  UInt128 mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   // Exp10 Range
@@ -225,7 +224,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
+  int32_t clz = static_cast<int32_t>(cpp::countl_zero(mantissa)) -
+                ((sizeof(UInt128) - sizeof(StorageType)) * CHAR_BIT);
   mantissa <<= clz;
 
   int32_t exp2 =
@@ -276,9 +276,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // Shifting to 65 bits for 80 bit floats and 113 bits for 128 bit floats
   uint32_t msb =
       static_cast<uint32_t>(final_approx_upper >> (FPBits::STORAGE_LEN - 1));
-  StorageType final_mantissa =
-      final_approx_upper >>
-      (msb + FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3));
+  UInt128 final_mantissa = final_approx_upper >> (msb + FPBits::STORAGE_LEN -
+                                                  (FPBits::FRACTION_LEN + 3));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -315,7 +314,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   ExpandedFloat<long double> output;
-  output.mantissa = final_mantissa;
+  output.mantissa = static_cast<StorageType>(final_mantissa);
   output.exponent = exp2;
   return output;
 }
@@ -558,7 +557,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 
   FPBits result;
   T float_mantissa;
-  if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
+  if constexpr (is_big_int_v<StorageType> || sizeof(T) > sizeof(uint64_t)) {
     float_mantissa =
         (static_cast<T>(uint64_t(mantissa >> 64)) * static_cast<T>(0x1.0p64)) +
         static_cast<T>(uint64_t(mantissa));
@@ -802,7 +801,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 
   // Handle subnormals.
   if (biased_exponent <= 0) {
-    amount_to_shift_right += 1 - biased_exponent;
+    amount_to_shift_right += static_cast<uint32_t>(1 - biased_exponent);
     biased_exponent = 0;
 
     if (amount_to_shift_right > FPBits::STORAGE_LEN) {
@@ -909,7 +908,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isdigit(src[index])) {
-      uint32_t digit = src[index] - '0';
+      uint32_t digit = static_cast<uint32_t>(b36_char_to_int(src[index]));
       seen_digit = true;
 
       if (mantissa < bitstype_max_div_by_base) {
@@ -956,7 +955,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       if (result.has_error())
         output.error = result.error;
       int32_t add_to_exponent = result.value;
-      index += result.parsed_len;
+      index += static_cast<size_t>(result.parsed_len);
 
       // Here we do this operation as int64 to avoid overflow.
       int64_t temp_exponent = static_cast<int64_t>(exponent) +
@@ -1020,7 +1019,7 @@ hexadecimal_string_to_float(const char *__restrict src,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isalnum(src[index])) {
-      uint32_t digit = b36_char_to_int(src[index]);
+      uint32_t digit = static_cast<uint32_t>(b36_char_to_int(src[index]));
       if (digit < BASE)
         seen_digit = true;
       else
@@ -1070,7 +1069,7 @@ hexadecimal_string_to_float(const char *__restrict src,
         output.error = result.error;
 
       int32_t add_to_exponent = result.value;
-      index += result.parsed_len;
+      index += static_cast<size_t>(result.parsed_len);
 
       // Here we do this operation as int64 to avoid overflow.
       int64_t temp_exponent = static_cast<int64_t>(exponent) +
@@ -1135,7 +1134,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 
   int error = 0;
 
-  ptrdiff_t index = first_non_whitespace(src) - src;
+  size_t index = first_non_whitespace(src);
 
   if (src[index] == '+' || src[index] == '-') {
     sign = src[index];
@@ -1245,7 +1244,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   // special 80 bit long doubles. Otherwise it should be inlined out.
   set_implicit_bit<T>(result);
 
-  return {result.get_val(), index, error};
+  return {result.get_val(), static_cast<ptrdiff_t>(index), error};
 }
 
 template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {

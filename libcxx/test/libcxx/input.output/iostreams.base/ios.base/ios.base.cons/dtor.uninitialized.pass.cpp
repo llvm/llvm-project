@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // UNSUPPORTED: no-exceptions
 
 // The fix for issue 57964 requires an updated dylib due to explicit

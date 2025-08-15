@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "Clang.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +44,7 @@ static std::string normalizeForBundler(const llvm::Triple &T,
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
-                     : T.normalize();
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 // Collect undefined __hip_fatbin* and __hip_gpubin_handle* symbols from all
@@ -148,8 +147,8 @@ private:
   bool Verbose;
   std::set<std::string> FatBinSymbols;
   std::set<std::string> GPUBinHandleSymbols;
-  std::set<std::string> DefinedFatBinSymbols;
-  std::set<std::string> DefinedGPUBinHandleSymbols;
+  std::set<std::string, std::less<>> DefinedFatBinSymbols;
+  std::set<std::string, std::less<>> DefinedGPUBinHandleSymbols;
   const std::string FatBinPrefix = "__hip_fatbin";
   const std::string GPUBinHandlePrefix = "__hip_gpubin_handle";
 
@@ -190,8 +189,7 @@ private:
 
         processInput(BufferOrErr.get()->getMemBufferRef());
       } else
-        WorkList.insert(WorkList.end(), CurrentAction->getInputs().begin(),
-                        CurrentAction->getInputs().end());
+        llvm::append_range(WorkList, CurrentAction->getInputs());
     }
   }
 
@@ -260,11 +258,10 @@ private:
 
       // Add undefined symbols if they are not in the defined sets
       if (isFatBinSymbol &&
-          DefinedFatBinSymbols.find(Name.str()) == DefinedFatBinSymbols.end())
+          DefinedFatBinSymbols.find(Name) == DefinedFatBinSymbols.end())
         FatBinSymbols.insert(Name.str());
-      else if (isGPUBinHandleSymbol &&
-               DefinedGPUBinHandleSymbols.find(Name.str()) ==
-                   DefinedGPUBinHandleSymbols.end())
+      else if (isGPUBinHandleSymbol && DefinedGPUBinHandleSymbols.find(Name) ==
+                                           DefinedGPUBinHandleSymbols.end())
         GPUBinHandleSymbols.insert(Name.str());
     }
   }
@@ -292,7 +289,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   // ToDo: Remove the dummy host binary entry which is required by
   // clang-offload-bundler.
-  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
+  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux-gnu";
   // AMDGCN:
   // For code object version 2 and 3, the offload kind in bundle ID is 'hip'
   // for backward compatibility. For code object version 4 and greater, the
@@ -304,10 +301,14 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs) {
     const auto *A = II.getAction();
     auto ArchStr = llvm::StringRef(A->getOffloadingArch());
-    BundlerTargetArg +=
-        "," + OffloadKind + "-" + normalizeForBundler(TT, !ArchStr.empty());
+    BundlerTargetArg += ',' + OffloadKind + '-';
+    if (ArchStr == "amdgcnspirv")
+      BundlerTargetArg +=
+          normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
+    else
+      BundlerTargetArg += normalizeForBundler(TT, !ArchStr.empty());
     if (!ArchStr.empty())
-      BundlerTargetArg += "-" + ArchStr.str();
+      BundlerTargetArg += '-' + ArchStr.str();
   }
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
 
@@ -463,11 +464,11 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList ClangArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
                        "-x",      "assembler",
                        ObjinFile, "-c"};
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         D.getClangProgramPath(), McArgs,
+                                         D.getClangProgramPath(), ClangArgs,
                                          Inputs, Output, D.getPrependArg()));
 }

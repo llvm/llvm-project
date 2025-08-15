@@ -103,7 +103,7 @@ ExegesisEmitter::ExegesisEmitter(const RecordKeeper &RK)
     PrintFatalError("No 'Target' subclasses defined!");
   if (Targets.size() != 1)
     PrintFatalError("Multiple subclasses of Target defined!");
-  Target = std::string(Targets[0]->getName());
+  Target = Targets[0]->getName().str();
 }
 
 struct ValidationCounterInfo {

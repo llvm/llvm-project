@@ -11,11 +11,10 @@
 
 #include "FPBits.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -105,7 +104,7 @@ template <typename T> struct NormalFloat {
 
     constexpr int SUBNORMAL_EXPONENT = -FPBits<T>::EXP_BIAS + 1;
     if (exponent < SUBNORMAL_EXPONENT) {
-      unsigned shift = SUBNORMAL_EXPONENT - exponent;
+      unsigned shift = static_cast<unsigned>(SUBNORMAL_EXPONENT - exponent);
       // Since exponent > subnormalExponent, shift is strictly greater than
       // zero.
       if (shift <= FPBits<T>::FRACTION_LEN + 1) {
@@ -160,7 +159,7 @@ private:
     if (bits.is_subnormal()) {
       unsigned shift = evaluate_normalization_shift(bits.get_mantissa());
       mantissa = static_cast<StorageType>(bits.get_mantissa() << shift);
-      exponent = 1 - FPBits<T>::EXP_BIAS - shift;
+      exponent = 1 - FPBits<T>::EXP_BIAS - static_cast<int32_t>(shift);
     } else {
       exponent = bits.get_biased_exponent() - FPBits<T>::EXP_BIAS;
       mantissa = ONE | bits.get_mantissa();

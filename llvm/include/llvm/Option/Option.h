@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -81,7 +82,7 @@ protected:
   const OptTable *Owner;
 
 public:
-  Option(const OptTable::Info *Info, const OptTable *Owner);
+  LLVM_ABI Option(const OptTable::Info *Info, const OptTable *Owner);
 
   bool isValid() const {
     return Info != nullptr;
@@ -100,7 +101,8 @@ public:
   /// Get the name of this option without any prefix.
   StringRef getName() const {
     assert(Info && "Must have a valid info!");
-    return Info->getName();
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionName(Info->ID);
   }
 
   const Option getGroup() const {
@@ -127,15 +129,16 @@ public:
 
   /// Get the default prefix for this option.
   StringRef getPrefix() const {
-    return Info->Prefixes.empty()
-               ? StringRef()
-               : static_cast<const StringRef &>(Info->Prefixes[0]);
+    assert(Info && "Must have a valid info!");
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionPrefix(Info->ID);
   }
 
   /// Get the name of this option with the default prefix.
-  StringLiteral getPrefixedName() const {
+  StringRef getPrefixedName() const {
     assert(Info && "Must have a valid info!");
-    return Info->PrefixedName;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionPrefixedName(Info->ID);
   }
 
   /// Get the help text for this option.
@@ -211,7 +214,7 @@ public:
   /// Note that matches against options which are an alias should never be
   /// done -- aliases do not participate in matching and so such a query will
   /// always be false.
-  bool matches(OptSpecifier ID) const;
+  LLVM_ABI bool matches(OptSpecifier ID) const;
 
   /// Potentially accept the current argument, returning a new Arg instance,
   /// or 0 if the option does not accept this argument (or the argument is
@@ -225,16 +228,17 @@ public:
   /// underlying storage to represent a Joined argument.
   /// \p GroupedShortOption If true, we are handling the fallback case of
   /// parsing a prefix of the current argument as a short option.
-  std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
-                              bool GroupedShortOption, unsigned &Index) const;
+  LLVM_ABI std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
+                                       bool GroupedShortOption,
+                                       unsigned &Index) const;
 
 private:
   std::unique_ptr<Arg> acceptInternal(const ArgList &Args, StringRef CurArg,
                                       unsigned &Index) const;
 
 public:
-  void print(raw_ostream &O, bool AddNewLine = true) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &O, bool AddNewLine = true) const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace opt

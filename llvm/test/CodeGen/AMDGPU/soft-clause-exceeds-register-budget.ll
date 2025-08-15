@@ -34,7 +34,7 @@ entry:
   %conv = add i32 %i6, %i7
   %conv.frozen = freeze i32 %conv
   %div = udiv i32 %conv.frozen, 49
-  %add.ptr22 = getelementptr inbounds float, ptr addrspace(4) %wei_ptr, i64 undef
+  %add.ptr22 = getelementptr inbounds float, ptr addrspace(4) %wei_ptr, i64 0
   %in.ptr1 = getelementptr inbounds float, ptr addrspace(1) %in, i32 %i5
   br label %for.cond28.preheader
 
@@ -471,11 +471,11 @@ for.cond28.preheader:                             ; preds = %for.cond28.preheade
   br i1 %exitcond.not, label %for.cond.cleanup26, label %for.cond28.preheader
 
 for.cond.cleanup26:                               ; preds = %for.cond28.preheader
-  %mul119 = shl nuw nsw i32 undef, 1
+  %mul119 = shl nuw nsw i32 0, 1
   %mul120 = mul i32 %div, 200704
-  %mul121 = mul i32 undef, 6272
+  %mul121 = mul i32 0, 6272
   %add122 = add i32 %mul120, %mul121
-  %mul123 = mul nuw nsw i32 undef, 28
+  %mul123 = mul nuw nsw i32 0, 28
   %add124 = add i32 %add122, %mul123
   %add126 = add i32 %add124, %mul119
   %idx.ext127 = zext i32 %add126 to i64

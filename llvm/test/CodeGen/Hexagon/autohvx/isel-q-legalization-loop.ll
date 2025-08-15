@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that this doesn't crash.
@@ -15,10 +15,10 @@ declare <64 x i32> @llvm.hexagon.V6.vdealvdd.128B(<32 x i32>, <32 x i32>, i32) #
 declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>) #0
 
 ; Function Attrs: nounwind
-define void @f0() local_unnamed_addr #1 {
+define void @f0(ptr %p) local_unnamed_addr #1 {
 b0:
   %v0 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> undef, i32 16843009)
-  %v1 = getelementptr inbounds %s.0, ptr null, i32 0, i32 0, i32 3
+  %v1 = getelementptr inbounds %s.0, ptr %p, i32 0, i32 0, i32 3
   br label %b1
 
 b1:                                               ; preds = %b1, %b0

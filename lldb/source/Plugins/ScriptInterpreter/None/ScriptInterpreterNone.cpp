@@ -33,12 +33,12 @@ static const char *no_interpreter_err_msg =
 bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,
                                            const ExecuteScriptOptions &) {
-  m_debugger.GetErrorStream().PutCString(no_interpreter_err_msg);
+  m_debugger.GetAsyncErrorStream()->PutCString(no_interpreter_err_msg);
   return false;
 }
 
 void ScriptInterpreterNone::ExecuteInterpreterLoop() {
-  m_debugger.GetErrorStream().PutCString(no_interpreter_err_msg);
+  m_debugger.GetAsyncErrorStream()->PutCString(no_interpreter_err_msg);
 }
 
 void ScriptInterpreterNone::Initialize() {

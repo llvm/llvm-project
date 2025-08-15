@@ -7,7 +7,7 @@ define void @v3_load_i32_mul_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <3 x i32> [[TMP0]], <i32 10, i32 10, i32 10>
+; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <3 x i32> [[TMP0]], splat (i32 10)
 ; NON-POW2-NEXT:    store <3 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
@@ -18,7 +18,7 @@ define void @v3_load_i32_mul_by_constant_store(ptr %src, ptr %dst) {
 ; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_2]], 10
 ; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[TMP0]], <i32 10, i32 10>
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[TMP0]], splat (i32 10)
 ; POW2-ONLY-NEXT:    store <2 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
 ; POW2-ONLY-NEXT:    store i32 [[MUL_2]], ptr [[DST_2]], align 4
@@ -56,7 +56,7 @@ define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = udiv <3 x i32> <i32 10, i32 10, i32 10>, [[TMP0]]
+; NON-POW2-NEXT:    [[TMP1:%.*]] = udiv <3 x i32> splat (i32 10), [[TMP0]]
 ; NON-POW2-NEXT:    store <3 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
@@ -170,7 +170,7 @@ define void @v3_load_i32_mul_add_const_store(ptr %src.1, ptr %src.2, ptr %dst) {
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_1_0]], align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[GEP_SRC_2_0]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP0]], [[TMP1]]
-; NON-POW2-NEXT:    [[TMP3:%.*]] = add <3 x i32> [[TMP2]], <i32 9, i32 9, i32 9>
+; NON-POW2-NEXT:    [[TMP3:%.*]] = add <3 x i32> [[TMP2]], splat (i32 9)
 ; NON-POW2-NEXT:    store <3 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
@@ -187,7 +187,7 @@ define void @v3_load_i32_mul_add_const_store(ptr %src.1, ptr %src.2, ptr %dst) {
 ; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_1_0]], align 4
 ; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_2_0]], align 4
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = mul nsw <2 x i32> [[TMP0]], [[TMP1]]
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], <i32 9, i32 9>
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], splat (i32 9)
 ; POW2-ONLY-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
 ; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
 ; POW2-ONLY-NEXT:    store i32 [[ADD_2]], ptr [[DST_2]], align 4
@@ -231,7 +231,7 @@ define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>
+; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], splat (float 1.000000e+01)
 ; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
@@ -242,7 +242,7 @@ define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
 ; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
 ; POW2-ONLY-NEXT:    [[FADD_2:%.*]] = fadd float [[L_SRC_2]], 1.000000e+01
 ; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], <float 1.000000e+01, float 1.000000e+01>
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 1.000000e+01)
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr float, ptr [[DST]], i32 2
 ; POW2-ONLY-NEXT:    store float [[FADD_2]], ptr [[DST_2]], align 4
@@ -324,10 +324,10 @@ define void @store_try_reorder(ptr %dst) {
 ;
 ; POW2-ONLY-LABEL: @store_try_reorder(
 ; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[ADD:%.*]] = add i32 0, 0
-; POW2-ONLY-NEXT:    store i32 [[ADD]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[ARRAYIDX_I1887:%.*]] = getelementptr i32, ptr [[DST]], i64 1
-; POW2-ONLY-NEXT:    store <2 x i32> zeroinitializer, ptr [[ARRAYIDX_I1887]], align 4
+; POW2-ONLY-NEXT:    store <2 x i32> zeroinitializer, ptr [[ARRAYIDX_I1887:%.*]], align 4
+; POW2-ONLY-NEXT:    [[ADD216:%.*]] = sub i32 0, 0
+; POW2-ONLY-NEXT:    [[ARRAYIDX_I1891:%.*]] = getelementptr i32, ptr [[ARRAYIDX_I1887]], i64 2
+; POW2-ONLY-NEXT:    store i32 [[ADD216]], ptr [[ARRAYIDX_I1891]], align 4
 ; POW2-ONLY-NEXT:    ret void
 ;
 entry:
@@ -467,7 +467,7 @@ define i32 @reduce_add_after_mul(ptr %src) {
 ; NON-POW2-LABEL: @reduce_add_after_mul(
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP1]], <i32 10, i32 10, i32 10>
+; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP1]], splat (i32 10)
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP2]])
 ; NON-POW2-NEXT:    ret i32 [[TMP3]]
 ;
@@ -513,21 +513,16 @@ define i32 @dot_product_i32(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_i32(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load i32, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
-; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load i32, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load i32, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
-; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load i32, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load i32, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = mul nsw i32 [[L_A_0]], [[L_B_0]]
-; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[L_A_1]], [[L_B_1]]
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP1]], [[TMP2]]
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = add i32 [[MUL_0]], [[MUL_1]]
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP3]])
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD_0]], [[MUL_2]]
 ; POW2-ONLY-NEXT:    ret i32 [[ADD_1]]
 ;
@@ -568,21 +563,16 @@ define i32 @dot_product_i32_reorder(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_i32_reorder(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load i32, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
-; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load i32, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load i32, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
-; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load i32, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load i32, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = mul nsw i32 [[L_A_0]], [[L_B_0]]
-; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[L_A_1]], [[L_B_1]]
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP1]], [[TMP2]]
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = add i32 [[MUL_1]], [[MUL_0]]
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP3]])
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD_0]], [[MUL_2]]
 ; POW2-ONLY-NEXT:    ret i32 [[ADD_1]]
 ;
@@ -621,18 +611,21 @@ define float @dot_product_fp32(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_fp32(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load float, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i32 1
+; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load float, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load float, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load float, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B]], i32 1
+; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP2]]
+; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = fmul fast float [[L_A_0]], [[L_B_0]]
+; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = fmul fast float [[L_A_1]], [[L_B_1]]
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = fmul fast float [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast float [[MUL_0]], [[MUL_1]]
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
 ; POW2-ONLY-NEXT:    ret float [[ADD_1]]
 ;
@@ -673,18 +666,21 @@ define float @dot_product_fp32_reorder(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_fp32_reorder(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load float, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i32 1
+; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load float, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load float, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load float, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B]], i32 1
+; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP2]]
+; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = fmul fast float [[L_A_0]], [[L_B_0]]
+; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = fmul fast float [[L_A_1]], [[L_B_1]]
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = fmul fast float [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast float [[TMP5]], [[TMP4]]
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast float [[MUL_1]], [[MUL_0]]
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
 ; POW2-ONLY-NEXT:    ret float [[ADD_1]]
 ;
@@ -724,18 +720,21 @@ define double @dot_product_fp64(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_fp64(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load double, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds double, ptr [[A]], i32 1
+; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load double, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds double, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load double, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load double, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds double, ptr [[B]], i32 1
+; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load double, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds double, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load double, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP2]]
+; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = fmul fast double [[L_A_0]], [[L_B_0]]
+; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = fmul fast double [[L_A_1]], [[L_B_1]]
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = fmul fast double [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast double [[MUL_0]], [[MUL_1]]
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = fadd fast double [[ADD_0]], [[MUL_2]]
 ; POW2-ONLY-NEXT:    ret double [[ADD_1]]
 ;
@@ -798,7 +797,7 @@ define float @reduce_fadd_after_fmul_of_buildvec(float %a, float %b, float %c) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[A:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[B:%.*]], i32 1
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> [[TMP2]], float [[C:%.*]], i32 2
-; NON-POW2-NEXT:    [[TMP4:%.*]] = fmul fast <3 x float> [[TMP3]], <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>
+; NON-POW2-NEXT:    [[TMP4:%.*]] = fmul fast <3 x float> [[TMP3]], splat (float 1.000000e+01)
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP4]])
 ; NON-POW2-NEXT:    ret float [[TMP5]]
 ;

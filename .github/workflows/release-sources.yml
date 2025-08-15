@@ -47,7 +47,7 @@ jobs:
     outputs:
       ref: ${{ steps.inputs.outputs.ref }}
       export-args: ${{ steps.inputs.outputs.export-args }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - id: inputs
         run: |
@@ -63,7 +63,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - inputs
     permissions:
@@ -71,7 +71,7 @@ jobs:
       attestations: write
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ needs.inputs.outputs.ref }}
           fetch-tags: true

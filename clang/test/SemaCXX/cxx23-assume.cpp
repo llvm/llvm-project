@@ -2,9 +2,19 @@
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected
 // RUN: %clang_cc1 -std=c++23  -x c++ %s -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++26  -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++26  -x c++ %s -verify -fexperimental-new-constant-interpreter
 
 struct A{};
 struct B{ explicit operator bool() { return true; } };
+
+// This should be the first test case of this file.
+void IsActOnFinishFullExprCalled() {
+  // Do not add other test cases to this function.
+  // Make sure `ActOnFinishFullExpr` is called and creates `ExprWithCleanups`
+  // to avoid assertion failure.
+  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+}
 
 template <bool cond>
 void f() {
@@ -127,12 +137,12 @@ constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while che
 
 static_assert(f5<int>() == 1);
 static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}
-                             // expected-note@-1 3 {{in instantiation of}}
+                             // expected-note@-1 3 {{while substituting deduced template arguments}}
                              // expected-error@-2 {{no matching function for call}}
 
 static_assert(f5<double>() == 2);
-static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
-static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
+static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
+static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
 
 // Do not validate assumptions whose evaluation would have side-effects.
 constexpr int foo() {
@@ -167,3 +177,29 @@ int foo () {
     __attribute__((assume (a < b)));
 }
 }
+
+namespace GH114787 {
+
+// FIXME: Correct the C++26 value
+#if __cplusplus >= 202400L
+
+constexpr int test(auto... xs) {
+  // FIXME: Investigate why addresses of PackIndexingExprs are printed for the next
+  // 'in call to' note.
+  return [&]<int I>() { // expected-note {{in call to}}
+    [[assume(
+      xs...[I] == 2
+    )]];
+    [[assume(
+      xs...[I + 1] == 0 // expected-note {{assumption evaluated to false}}
+    )]];
+    return xs...[I];
+  }.template operator()<1>();
+}
+
+static_assert(test(1, 2, 3, 5, 6) == 2); // expected-error {{not an integral constant expression}} \
+                                         // expected-note {{in call to}}
+
+#endif
+
+} // namespace GH114787

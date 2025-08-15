@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific to the
+/// This file a TargetTransformInfoImplBase conforming object specific to the
 /// LoongArch target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
@@ -40,12 +40,18 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
-  unsigned getNumberOfRegisters(unsigned ClassID) const;
-  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
-  const char *getRegisterClassName(unsigned ClassID) const;
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector,
+                                   Type *Ty = nullptr) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  const char *getRegisterClassName(unsigned ClassID) const override;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
+
+  unsigned getCacheLineSize() const override;
+  unsigned getPrefetchDistance() const override;
+  bool enableWritePrefetching() const override;
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };

@@ -65,7 +65,7 @@ static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> syms) {
   // Sort symbols by address.
   for (auto &it : ret) {
     SmallVectorImpl<DefinedRegular *> &v = it.second;
-    std::stable_sort(v.begin(), v.end(), [](DefinedRegular *a, DefinedRegular *b) {
+    llvm::stable_sort(v, [](DefinedRegular *a, DefinedRegular *b) {
       return a->getRVA() < b->getRVA();
     });
   }

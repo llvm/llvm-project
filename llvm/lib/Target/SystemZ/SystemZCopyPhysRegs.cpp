@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZMachineFunctionInfo.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -21,7 +20,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -30,10 +28,7 @@ namespace {
 class SystemZCopyPhysRegs : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZCopyPhysRegs()
-    : MachineFunctionPass(ID), TII(nullptr), MRI(nullptr) {
-    initializeSystemZCopyPhysRegsPass(*PassRegistry::getPassRegistry());
-  }
+  SystemZCopyPhysRegs() : MachineFunctionPass(ID), TII(nullptr), MRI(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -77,6 +72,7 @@ bool SystemZCopyPhysRegs::visitMBB(MachineBasicBlock &MBB) {
     DebugLoc DL = MI->getDebugLoc();
     Register SrcReg = MI->getOperand(1).getReg();
     Register DstReg = MI->getOperand(0).getReg();
+
     if (DstReg.isVirtual() &&
         (SrcReg == SystemZ::CC || SystemZ::AR32BitRegClass.contains(SrcReg))) {
       Register Tmp = MRI->createVirtualRegister(&SystemZ::GR32BitRegClass);
@@ -91,7 +87,10 @@ bool SystemZCopyPhysRegs::visitMBB(MachineBasicBlock &MBB) {
              SystemZ::AR32BitRegClass.contains(DstReg)) {
       Register Tmp = MRI->createVirtualRegister(&SystemZ::GR32BitRegClass);
       MI->getOperand(0).setReg(Tmp);
-      BuildMI(MBB, MBBI, DL, TII->get(SystemZ::SAR), DstReg).addReg(Tmp);
+      MachineInstr *NMI =
+          BuildMI(MBB, MBBI, DL, TII->get(SystemZ::SAR), DstReg).addReg(Tmp);
+      // SAR now writes the final value to DstReg, so update debug values.
+      MBB.getParent()->substituteDebugValuesForInst(*MI, *NMI);
       Modified = true;
     }
   }

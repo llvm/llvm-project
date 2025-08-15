@@ -36,6 +36,50 @@ entry:
   ret i32 %call, !dbg !16
 }
 
+;; int foo(int arg) {
+;;   while (arg)
+;;    arg--;
+;;  return 0;
+;; }
+;;
+;; In this function, the entry block will fall through to while.cond, with no
+;; instructions having source-locations. The expectations at -O0 is that we'll
+;; put prologue_end on the first instruction of the loop, after %arg.addr is
+;; initialized.
+
+; CHECK:      _bar:
+; CHECK-NEXT: Lfunc_begin2:
+; CHECK-NEXT:     .loc    1 11 0 is_stmt 1
+; CHECK-NEXT:     .cfi_startproc
+; CHECK-NEXT: ## %bb.0:
+; CHECK-NEXT:     movl    %edi, -4(%rsp)
+; CHECK-NEXT: LBB2_1:
+; CHECK-NEXT:                  ## =>This Inner Loop Header: Depth=1
+; CHECK-NEXT: Ltmp4:
+; CHECK-NEXT:     .loc    1 12 3 prologue_end
+; CHECK-NEXT:     cmpl    $0, -4(%rsp)
+
+define dso_local i32 @bar(i32 noundef %arg) !dbg !30 {
+entry:
+  %arg.addr = alloca i32, align 4
+  store i32 %arg, ptr %arg.addr, align 4
+  br label %while.cond, !dbg !37
+
+while.cond:                                       ; preds = %while.body, %entry
+  %0 = load i32, ptr %arg.addr, align 4, !dbg !38
+  %tobool = icmp ne i32 %0, 0, !dbg !37
+  br i1 %tobool, label %while.body, label %while.end, !dbg !37
+
+while.body:                                       ; preds = %while.cond
+  %1 = load i32, ptr %arg.addr, align 4, !dbg !39
+  %dec = add nsw i32 %1, -1, !dbg !39
+  store i32 %dec, ptr %arg.addr, align 4, !dbg !39
+  br label %while.cond, !dbg !37
+
+while.end:                                        ; preds = %while.cond
+  ret i32 0, !dbg !42
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!21}
 !18 = !{!1, !6}
@@ -62,3 +106,10 @@ entry:
 !20 = !{}
 !21 = !{i32 1, !"Debug Info Version", i32 3}
 !22 = !DILocation(line: 0, column: 0, scope: !17)
+!30 = distinct !DISubprogram(name: "bar", scope: !2, file: !2, line: 10, type: !3, scopeLine: 11, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !34)
+!34 = !{}
+!36 = !DILocation(line: 11, column: 13, scope: !30)
+!37 = !DILocation(line: 12, column: 3, scope: !30)
+!38 = !DILocation(line: 12, column: 10, scope: !30)
+!39 = !DILocation(line: 13, column: 8, scope: !30)
+!42 = !DILocation(line: 14, column: 3, scope: !30)

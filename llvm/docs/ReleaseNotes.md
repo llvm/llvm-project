@@ -1,6 +1,9 @@
 <!-- This document is written in Markdown and uses extra directives provided by
 MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 LLVM {{env.config.release}} Release Notes
 =========================================
 
@@ -56,47 +59,9 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* The `x86_mmx` IR type has been removed. It will be translated to
-  the standard vector type `<1 x i64>` in bitcode upgrade.
-* Renamed `llvm.experimental.stepvector` intrinsic to `llvm.stepvector`.
-
-* Added `usub_cond` and `usub_sat` operations to `atomicrmw`.
-
-* Introduced `noalias.addrspace` metadata.
-
-* Remove the following intrinsics which can be replaced with a `bitcast`:
-
-  * `llvm.nvvm.bitcast.f2i`
-  * `llvm.nvvm.bitcast.i2f`
-  * `llvm.nvvm.bitcast.d2ll`
-  * `llvm.nvvm.bitcast.ll2d`
-
-* Remove the following intrinsics which can be replaced with a funnel-shift:
-
-  * `llvm.nvvm.rotate.b32`
-  * `llvm.nvvm.rotate.right.b64`
-  * `llvm.nvvm.rotate.b64`
-
-* Remove the following intrinsics which can be replaced with an
-  `addrspacecast`:
-
-  * `llvm.nvvm.ptr.gen.to.global`
-  * `llvm.nvvm.ptr.gen.to.shared`
-  * `llvm.nvvm.ptr.gen.to.constant`
-  * `llvm.nvvm.ptr.gen.to.local`
-  * `llvm.nvvm.ptr.global.to.gen`
-  * `llvm.nvvm.ptr.shared.to.gen`
-  * `llvm.nvvm.ptr.constant.to.gen`
-  * `llvm.nvvm.ptr.local.to.gen`
-
-* Remove the following intrinsics which can be relaced with a load from
-  addrspace(1) with an !invariant.load metadata
-
-  * `llvm.nvvm.ldg.global.i`
-  * `llvm.nvvm.ldg.global.f`
-  * `llvm.nvvm.ldg.global.p`
-
-* Operand bundle values can now be metadata strings.
+* The `ptrtoaddr` instruction was introduced. This instruction returns the
+  address component of a pointer type variable but unlike `ptrtoint` does not
+  capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -110,41 +75,21 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------------------------
+
+* Added initial support for copyable elements in SLP, which models copyable
+  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
+* SLP vectorizer supports initial recognition of FMA/FMAD pattern
+
 Changes to the AArch64 Backend
 ------------------------------
-
-* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
-  the required alignment space with a sequence of `0x0` bytes (the requested
-  fill value) rather than NOPs.
-
-* Assembler/disassembler support has been added for Armv9.6-A (2024)
-  architecture extensions.
 
 Changes to the AMDGPU Backend
 -----------------------------
 
-* Removed `llvm.amdgcn.flat.atomic.fadd` and
-  `llvm.amdgcn.global.atomic.fadd` intrinsics. Users should use the
-  {ref}`atomicrmw <i_atomicrmw>` instruction with `fadd` and
-  addrspace(0) or addrspace(1) instead.
-
 Changes to the ARM Backend
 --------------------------
-
-* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
-  the required alignment space with a sequence of `0x0` bytes (the requested
-  fill value) rather than NOPs.
-
-* The default behavior for frame pointers in leaf functions has been updated.
-  When the `-fno-omit-frame-pointer` option is specified, `FPKeepKindStr` is
-  set to `-mframe-pointer=all`, meaning the frame pointer (FP) is now retained
-  in leaf functions by default. To eliminate the frame pointer in leaf functions,
-  you must explicitly use the `-momit-leaf-frame-pointer` option.
-
-* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
-  ensure that any addend that is used is within a 16-bit signed value range. If the
-  addend falls outside of this range, the LLVM backend will emit an error like so
-  `Relocation Not In Range`.
 
 Changes to the AVR Backend
 --------------------------
@@ -167,64 +112,21 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
-  the required alignment space with a sequence of `0x0` bytes (the requested
-  fill value) rather than NOPs.
-* Added Syntacore SCR4 and SCR5 CPUs: `-mcpu=syntacore-scr4/5-rv32/64`
-* `-mcpu=sifive-p470` was added.
-* Added Hazard3 CPU as taped out for RP2350: `-mcpu=rp2350-hazard3` (32-bit
-  only).
-* Fixed length vector support using RVV instructions now requires VLEN>=64. This
-  means Zve32x and Zve32f will also require Zvl64b. The prior support was
-  largely untested.
-* The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
-* Added `Smctr`, `Ssctr` and `Svvptc` extensions.
-* `-mcpu=syntacore-scr7` was added.
-* The `Zacas` extension is no longer marked as experimental.
-* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
-  are no longer marked as experimental.
-* The `Sha` extension is now supported.
-* The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
-  as experimental.
+* The loop vectorizer now performs tail folding by default on RISC-V, which
+  removes the need for a scalar epilogue loop. To restore the previous behaviour
+  use `-prefer-predicate-over-epilogue=scalar-epilogue`.
+* `llvm-objdump` now has basic support for switching between disassembling code
+  and data using mapping symbols such as `$x` and `$d`. Switching architectures
+  using `$x` with an architecture string suffix is not yet supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
-
-The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
-and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
-and [Non-trapping float-to-int Conversions] language features, which are
-[widely implemented in engines].
-
-[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
-[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
-[widely implemented in engines]: https://webassembly.org/features/
 
 Changes to the Windows Target
 -----------------------------
 
 Changes to the X86 Backend
 --------------------------
-
-* `.balign N, 0x90`, `.p2align N, 0x90`, and `.align N, 0x90` in code sections
-  now fill the required alignment space with repeating `0x90` bytes, rather than
-  using optimised NOP filling. Optimised NOP filling fills the space with NOP
-  instructions of various widths, not just those that use the `0x90` byte
-  encoding. To use optimised NOP filling in a code section, leave off the
-  "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
-
-* Due to the removal of the `x86_mmx` IR type, functions with
-  `x86_mmx` arguments or return values will use a different,
-  incompatible, calling convention ABI. Such functions are not
-  generally seen in the wild (Clang never generates them!), so this is
-  not expected to result in real-world compatibility problems.
-
-* Support ISA of `AVX10.2-256` and `AVX10.2-512`.
-
-* Supported instructions of `MOVRS AND AVX10.2`
-
-* Supported ISA of `SM4(EVEX)`.
-
-* Supported ISA of `MSR_IMM`.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -234,54 +136,6 @@ Changes to the Python bindings
 
 Changes to the C API
 --------------------
-
-* The following symbols are deleted due to the removal of the `x86_mmx` IR type:
-
-  * `LLVMX86_MMXTypeKind`
-  * `LLVMX86MMXTypeInContext`
-  * `LLVMX86MMXType`
-
- * The following functions are added to further support non-null-terminated strings:
-
-  * `LLVMGetNamedFunctionWithLength`
-  * `LLVMGetNamedGlobalWithLength`
-
-* The following functions are added to access the `LLVMContextRef` associated
-   with `LLVMValueRef` and `LLVMBuilderRef` objects:
-
-  * `LLVMGetValueContext`
-  * `LLVMGetBuilderContext`
-
-* The new pass manager can now be invoked with a custom alias analysis pipeline, using
-  the `LLVMPassBuilderOptionsSetAAPipeline` function.
-
-* It is now also possible to run the new pass manager on a single function, by calling
-  `LLVMRunPassesOnFunction` instead of `LLVMRunPasses`.
-
-* Support for creating instructions with custom synchronization scopes has been added:
-
-  * `LLVMGetSyncScopeID` to map a synchronization scope name to an ID.
-  * `LLVMBuildFenceSyncScope`, `LLVMBuildAtomicRMWSyncScope` and
-    `LLVMBuildAtomicCmpXchgSyncScope` versions of the existing builder functions
-    with an additional synchronization scope ID parameter.
-  * `LLVMGetAtomicSyncScopeID` and `LLVMSetAtomicSyncScopeID` to get and set the
-    synchronization scope of any atomic instruction.
-  * `LLVMIsAtomic` to check if an instruction is atomic, for use with the above functions.
-    Because of backwards compatibility, `LLVMIsAtomicSingleThread` and
-    `LLVMSetAtomicSingleThread` continue to work with any instruction type.
-
-* The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
-  personality function and initializer respectively by passing a null pointer.
-
-* The following functions are added to allow iterating over debug records attached to
-  instructions:
-
-  * `LLVMGetFirstDbgRecord`
-  * `LLVMGetLastDbgRecord`
-  * `LLVMGetNextDbgRecord`
-  * `LLVMGetPreviousDbgRecord`
-
-* Added `LLVMAtomicRMWBinOpUSubCond` and `LLVMAtomicRMWBinOpUSubSat` to `LLVMAtomicRMWBinOp` enum for AtomicRMW instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -298,9 +152,8 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
-  files.
-
+* LLDB can now set breakpoints, show backtraces, and display variables when
+  debugging Wasm with supported runtimes (WAMR and V8).
 
 Changes to BOLT
 ---------------------------------

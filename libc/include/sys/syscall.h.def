@@ -1517,6 +1517,10 @@
 #define SYS_ppoll __NR_ppoll
 #endif
 
+#ifdef __NR_ppoll_time64
+#define SYS_ppoll_time64 __NR_ppoll_time64
+#endif
+
 #ifdef __NR_prctl
 #define SYS_prctl __NR_prctl
 #endif
@@ -2299,6 +2303,10 @@
 
 #ifdef __NR_utimes
 #define SYS_utimes __NR_utimes
+#endif
+
+#ifdef __NR_utimensat_time64
+#define SYS_utimensat_time64 __NR_utimensat_time64
 #endif
 
 #ifdef __NR_utrap_install

@@ -27,7 +27,7 @@ class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
   const Triple &TT;
 
 public:
-  AArch64RegisterInfo(const Triple &TT);
+  AArch64RegisterInfo(const Triple &TT, unsigned HwMode);
 
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const {
@@ -35,6 +35,7 @@ public:
   }
 
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
+  bool isUserReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isStrictlyReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;
   void emitReservedArgRegCallError(const MachineFunction &MF) const;
@@ -93,6 +94,7 @@ public:
   const uint32_t *getWindowsStackProbePreservedMask() const;
 
   BitVector getStrictlyReservedRegs(const MachineFunction &MF) const;
+  BitVector getUserReservedRegs(const MachineFunction &MF) const;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   std::optional<std::string>
   explainReservedReg(const MachineFunction &MF,
@@ -134,8 +136,13 @@ public:
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
+  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
+
   unsigned getLocalAddressRegister(const MachineFunction &MF) const;
-  bool regNeedsCFI(unsigned Reg, unsigned &RegToUseForCFI) const;
+  bool regNeedsCFI(MCRegister Reg, MCRegister &RegToUseForCFI) const;
 
   /// SrcRC and DstRC will be morphed into NewRC if this returns true
   bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
@@ -147,6 +154,8 @@ public:
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
+
+  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm

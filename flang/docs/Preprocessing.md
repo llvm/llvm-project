@@ -138,6 +138,18 @@ text.
 OpenMP-style directives that look like comments are not addressed by
 this scheme but are obvious extensions.
 
+## Currently implemented built-ins
+
+* `__DATE__`: Date, given as e.g. "Jun 16 1904"
+* `__TIME__`: Time in 24-hour format including seconds, e.g. "09:24:13"
+* `__TIMESTAMP__`: Date, time and year of last modification, given as e.g. "Fri May  9 09:16:17 2025"
+* `__FILE__`: Current file
+* `__LINE__`: Current line
+
+### Non-standard Extensions
+
+* `__COUNTER__`: Replaced by sequential integers on each expansion, starting from 0.
+
 ## Appendix
 `N` in the table below means "not supported"; this doesn't
 mean a bug, it just means that a particular behavior was

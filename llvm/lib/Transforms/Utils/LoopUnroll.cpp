@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist_iterator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -46,7 +45,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -56,7 +54,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -66,7 +63,6 @@
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <assert.h>
 #include <numeric>
 #include <type_traits>
@@ -526,7 +522,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (!BI)
       continue;
 
-    ExitInfo &Info = ExitInfos.try_emplace(ExitingBlock).first->second;
+    ExitInfo &Info = ExitInfos[ExitingBlock];
     Info.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
     Info.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     if (Info.TripCount != 0) {
@@ -595,7 +591,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
                                   EpilogProfitability, ULO.UnrollRemainder,
                                   ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, RemainderLoop)) {
+                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
+                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -685,8 +682,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // share the same exit blocks). We'll keep track of loops for which we can
   // break this so that later we can re-simplify them.
   SmallSetVector<Loop *, 4> LoopsToSimplify;
-  for (Loop *SubLoop : *L)
-    LoopsToSimplify.insert(SubLoop);
+  LoopsToSimplify.insert_range(*L);
 
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
@@ -754,6 +750,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         }
       }
 
+      // Remap source location atom instance. Do this now, rather than
+      // when we remap instructions, because remap is called once we've
+      // cloned all blocks (all the clones would get the same atom
+      // number).
+      if (!VMap.AtomMap.empty())
+        for (Instruction &I : *New)
+          RemapSourceAtom(&I, VMap);
+
       // Update our running map of newest clones
       LastValueMap[*BB] = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
@@ -804,7 +808,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       }
     }
 
-    // Remap all instructions in the most recent iteration
+    // Remap all instructions in the most recent iteration.
+    // Key Instructions: Nothing to do - we've already remapped the atoms.
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks)
       for (Instruction &I : *NewBlock)
@@ -883,7 +888,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    BranchInst::Create(Dest, Term->getIterator());
+    auto *BI = BranchInst::Create(Dest, Term->getIterator());
+    BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
     DTUpdates.emplace_back(DominatorTree::Delete, Src, DeadSucc);
@@ -998,7 +1004,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                     /*PredecessorWithTwoSuccessors=*/false,
                                     DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
-        std::replace(Latches.begin(), Latches.end(), Dest, Fold);
+        llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
     }

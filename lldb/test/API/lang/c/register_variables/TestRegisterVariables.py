@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 def re_expr_equals(val_type, val):
     # Match ({val_type}) ${sum_digits} = {val}
-    return re.compile(r"\(" + val_type + "\) \$\d+ = " + str(val))
+    return re.compile(r"\(" + val_type + r"\) \$\d+ = " + str(val))
 
 
 class RegisterVariableTestCase(TestBase):

@@ -129,12 +129,12 @@ let Uses = [FPC] in {
 }
 
 // Extract biased exponent.
-def EEDTR : UnaryRRE<"eedtr", 0xB3E5, null_frag, FP64,  FP64>;
-def EEXTR : UnaryRRE<"eextr", 0xB3ED, null_frag, FP128, FP128>;
+def EEDTR : UnaryRRE<"eedtr", 0xB3E5, null_frag, GR64, FP64>;
+def EEXTR : UnaryRRE<"eextr", 0xB3ED, null_frag, GR64, FP128>;
 
 // Extract significance.
-def ESDTR : UnaryRRE<"esdtr", 0xB3E7, null_frag, FP64,  FP64>;
-def ESXTR : UnaryRRE<"esxtr", 0xB3EF, null_frag, FP128, FP128>;
+def ESDTR : UnaryRRE<"esdtr", 0xB3E7, null_frag, GR64, FP64>;
+def ESXTR : UnaryRRE<"esxtr", 0xB3EF, null_frag, GR64, FP128>;
 
 
 //===----------------------------------------------------------------------===//
@@ -193,8 +193,8 @@ let Uses = [FPC] in {
 
 // Reround.
 let Uses = [FPC] in {
-  def RRDTR : TernaryRRFb<"rrdtr", 0xB3F7, FP64,  FP64,  FP64>;
-  def RRXTR : TernaryRRFb<"rrxtr", 0xB3FF, FP128, FP128, FP128>;
+  def RRDTR : TernaryRRFb<"rrdtr", 0xB3F7, FP64,  GR32, FP64>;
+  def RRXTR : TernaryRRFb<"rrxtr", 0xB3FF, FP128, GR32, FP128>;
 }
 
 // Shift significand left/right.
@@ -204,8 +204,8 @@ def SRDT : BinaryRXF<"srdt", 0xED41, null_frag, FP64,  FP64,  null_frag, 0>;
 def SRXT : BinaryRXF<"srxt", 0xED49, null_frag, FP128, FP128, null_frag, 0>;
 
 // Insert biased exponent.
-def IEDTR : BinaryRRFb<"iedtr", 0xB3F6, null_frag, FP64,  FP64,   FP64>;
-def IEXTR : BinaryRRFb<"iextr", 0xB3FE, null_frag, FP128, FP128, FP128>;
+def IEDTR : BinaryRRFb<"iedtr", 0xB3F6, null_frag, FP64,  GR64, FP64>;
+def IEXTR : BinaryRRFb<"iextr", 0xB3FE, null_frag, FP128, GR64, FP128>;
 
 
 //===----------------------------------------------------------------------===//

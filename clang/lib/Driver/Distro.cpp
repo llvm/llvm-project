@@ -8,7 +8,6 @@
 
 #include "clang/Driver/Distro.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorOr.h"
@@ -97,6 +96,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("noble", Distro::UbuntuNoble)
                     .Case("oracular", Distro::UbuntuOracular)
                     .Case("plucky", Distro::UbuntuPlucky)
+                    .Case("questing", Distro::UbuntuQuesting)
                     .Default(Distro::UnknownDistro);
   return Version;
 }
@@ -161,6 +161,10 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::DebianBookworm;
       case 13:
         return Distro::DebianTrixie;
+      case 14:
+        return Distro::DebianForky;
+      case 15:
+        return Distro::DebianDuke;
       default:
         return Distro::UnknownDistro;
       }
@@ -174,6 +178,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("bullseye/sid", Distro::DebianBullseye)
         .Case("bookworm/sid", Distro::DebianBookworm)
         .Case("trixie/sid", Distro::DebianTrixie)
+        .Case("forky/sid", Distro::DebianForky)
+        .Case("duke/sid", Distro::DebianDuke)
         .Default(Distro::UnknownDistro);
   }
 

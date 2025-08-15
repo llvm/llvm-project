@@ -34,7 +34,7 @@ define i42 @fshr_i42_constant(i42 %x, i42 %y) {
 
 define <2 x i16> @fshl_v2i16_constant_splat(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @fshl_v2i16_constant_splat(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> <i16 1, i16 1>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> splat (i16 1))
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 1, i16 1>
@@ -45,7 +45,7 @@ define <2 x i16> @fshl_v2i16_constant_splat(<2 x i16> %x, <2 x i16> %y) {
 
 define <2 x i16> @fshl_v2i16_constant_splat_poison0(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @fshl_v2i16_constant_splat_poison0(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> <i16 1, i16 1>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> splat (i16 1))
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 poison, i16 1>
@@ -56,7 +56,7 @@ define <2 x i16> @fshl_v2i16_constant_splat_poison0(<2 x i16> %x, <2 x i16> %y) 
 
 define <2 x i16> @fshl_v2i16_constant_splat_poison1(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @fshl_v2i16_constant_splat_poison1(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> <i16 1, i16 1>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> splat (i16 1))
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 1, i16 1>
@@ -69,7 +69,7 @@ define <2 x i16> @fshl_v2i16_constant_splat_poison1(<2 x i16> %x, <2 x i16> %y) 
 
 define <2 x i17> @fshr_v2i17_constant_splat(<2 x i17> %x, <2 x i17> %y) {
 ; CHECK-LABEL: @fshr_v2i17_constant_splat(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> <i17 5, i17 5>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> splat (i17 5))
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
   %shr = lshr <2 x i17> %x, <i17 12, i17 12>
@@ -80,7 +80,7 @@ define <2 x i17> @fshr_v2i17_constant_splat(<2 x i17> %x, <2 x i17> %y) {
 
 define <2 x i17> @fshr_v2i17_constant_splat_poison0(<2 x i17> %x, <2 x i17> %y) {
 ; CHECK-LABEL: @fshr_v2i17_constant_splat_poison0(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> <i17 5, i17 5>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> splat (i17 5))
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
   %shr = lshr <2 x i17> %x, <i17 12, i17 poison>
@@ -91,7 +91,7 @@ define <2 x i17> @fshr_v2i17_constant_splat_poison0(<2 x i17> %x, <2 x i17> %y) 
 
 define <2 x i17> @fshr_v2i17_constant_splat_poison1(<2 x i17> %x, <2 x i17> %y) {
 ; CHECK-LABEL: @fshr_v2i17_constant_splat_poison1(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> <i17 5, i17 5>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[Y:%.*]], <2 x i17> [[X:%.*]], <2 x i17> splat (i17 5))
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
   %shr = lshr <2 x i17> %x, <i17 12, i17 poison>
@@ -481,11 +481,11 @@ define i32 @fshl_concat_unknown_source(i32 %zext.x, i32 %zext.y, ptr %addr) {
 define <2 x i32> @fshl_concat_vector(<2 x i8> %x, <2 x i24> %y, ptr %addr) {
 ; CHECK-LABEL: @fshl_concat_vector(
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SLX:%.*]] = shl nuw <2 x i32> [[ZEXT_X]], <i32 24, i32 24>
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw <2 x i32> [[ZEXT_X]], splat (i32 24)
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext <2 x i24> [[Y:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[XY:%.*]] = or disjoint <2 x i32> [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store <2 x i32> [[XY]], ptr [[ADDR:%.*]], align 4
-; CHECK-NEXT:    [[YX:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[XY]], <2 x i32> [[XY]], <2 x i32> <i32 8, i32 8>)
+; CHECK-NEXT:    [[YX:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[XY]], <2 x i32> [[XY]], <2 x i32> splat (i32 8))
 ; CHECK-NEXT:    ret <2 x i32> [[YX]]
 ;
   %zext.x = zext <2 x i8> %x to <2 x i32>

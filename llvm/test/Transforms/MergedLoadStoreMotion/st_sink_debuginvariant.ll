@@ -18,9 +18,9 @@
 @g_173 = dso_local local_unnamed_addr global i16 0, !dbg !0
 
 ; Function Attrs: noinline norecurse nounwind
-define dso_local void @func_34(ptr noalias sret(%struct.S0) %agg.result) local_unnamed_addr #0 !dbg !11 {
+define dso_local void @func_34(ptr noalias sret(%struct.S0) %agg.result, i1 %arg) local_unnamed_addr #0 !dbg !11 {
 entry:
-  br i1 undef, label %if.end, label %if.then, !dbg !18
+  br i1 %arg, label %if.end, label %if.then, !dbg !18
 
 if.then:                                          ; preds = %entry
   call void @llvm.dbg.value(metadata i16 5, metadata !19, metadata !DIExpression()), !dbg !22

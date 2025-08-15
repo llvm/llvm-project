@@ -176,6 +176,13 @@ public:
   /// is invoked before inlined terminator operations have been processed.
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const {}
+
+  /// Returns true if the inliner can assume a fast path of not creating a new
+  /// block, if there is only one block.
+  virtual bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const {
+    return true;
+  }
 };
 
 /// This interface provides the hooks into the inlining interface.
@@ -184,6 +191,12 @@ public:
 class InlinerInterface
     : public DialectInterfaceCollection<DialectInlinerInterface> {
 public:
+  using CloneCallbackSigTy = void(OpBuilder &builder, Region *src,
+                                  Block *inlineBlock, Block *postInsertBlock,
+                                  IRMapping &mapper,
+                                  bool shouldCloneInlinedRegion);
+  using CloneCallbackTy = std::function<CloneCallbackSigTy>;
+
   using Base::Base;
 
   /// Process a set of blocks that have been inlined. This callback is invoked
@@ -223,6 +236,9 @@ public:
 
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const;
+
+  virtual bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -243,33 +259,39 @@ public:
 /// provided, will be used to update the inlined operations' location
 /// information. 'shouldCloneInlinedRegion' corresponds to whether the source
 /// region should be cloned into the 'inlinePoint' or spliced directly.
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Operation *inlinePoint, IRMapping &mapper,
-                           ValueRange resultsToReplace,
-                           TypeRange regionResultTypes,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Block *inlineBlock, Block::iterator inlinePoint,
-                           IRMapping &mapper, ValueRange resultsToReplace,
-                           TypeRange regionResultTypes,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+             Region *src, Operation *inlinePoint, IRMapping &mapper,
+             ValueRange resultsToReplace, TypeRange regionResultTypes,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+             Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+             IRMapping &mapper, ValueRange resultsToReplace,
+             TypeRange regionResultTypes,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
 
 /// This function is an overload of the above 'inlineRegion' that allows for
 /// providing the set of operands ('inlinedOperands') that should be used
 /// in-favor of the region arguments when inlining.
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Operation *inlinePoint, ValueRange inlinedOperands,
-                           ValueRange resultsToReplace,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Block *inlineBlock, Block::iterator inlinePoint,
-                           ValueRange inlinedOperands,
-                           ValueRange resultsToReplace,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+             Region *src, Operation *inlinePoint, ValueRange inlinedOperands,
+             ValueRange resultsToReplace,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+             Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+             ValueRange inlinedOperands, ValueRange resultsToReplace,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
 
 /// This function inlines a given region, 'src', of a callable operation,
 /// 'callable', into the location defined by the given call operation. This
@@ -277,9 +299,11 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
 /// failure, no changes are made to the module. 'shouldCloneInlinedRegion'
 /// corresponds to whether the source region should be cloned into the 'call' or
 /// spliced directly.
-LogicalResult inlineCall(InlinerInterface &interface, CallOpInterface call,
-                         CallableOpInterface callable, Region *src,
-                         bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineCall(InlinerInterface &interface,
+           function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+           CallOpInterface call, CallableOpInterface callable, Region *src,
+           bool shouldCloneInlinedRegion = true);
 
 } // namespace mlir
 

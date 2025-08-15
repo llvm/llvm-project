@@ -109,7 +109,7 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    bltu a0, a1, .LBB2_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
@@ -128,7 +128,7 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 16
-; RV64IZbb-NEXT:    addiw a1, a1, -1
+; RV64IZbb-NEXT:    addi a1, a1, -1
 ; RV64IZbb-NEXT:    minu a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %tmp = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y);

@@ -22,6 +22,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
@@ -42,6 +43,7 @@ class ConstantRangeList;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
+class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
@@ -113,14 +115,14 @@ public:
            Kind <= LastConstantRangeListAttr;
   }
 
-  static bool canUseAsFnAttr(AttrKind Kind);
-  static bool canUseAsParamAttr(AttrKind Kind);
-  static bool canUseAsRetAttr(AttrKind Kind);
+  LLVM_ABI static bool canUseAsFnAttr(AttrKind Kind);
+  LLVM_ABI static bool canUseAsParamAttr(AttrKind Kind);
+  LLVM_ABI static bool canUseAsRetAttr(AttrKind Kind);
 
-  static bool intersectMustPreserve(AttrKind Kind);
-  static bool intersectWithAnd(AttrKind Kind);
-  static bool intersectWithMin(AttrKind Kind);
-  static bool intersectWithCustom(AttrKind Kind);
+  LLVM_ABI static bool intersectMustPreserve(AttrKind Kind);
+  LLVM_ABI static bool intersectWithAnd(AttrKind Kind);
+  LLVM_ABI static bool intersectWithMin(AttrKind Kind);
+  LLVM_ABI static bool intersectWithCustom(AttrKind Kind);
 
 private:
   AttributeImpl *pImpl = nullptr;
@@ -135,36 +137,49 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return a uniquified Attribute object.
-  static Attribute get(LLVMContext &Context, AttrKind Kind, uint64_t Val = 0);
-  static Attribute get(LLVMContext &Context, StringRef Kind,
-                       StringRef Val = StringRef());
-  static Attribute get(LLVMContext &Context, AttrKind Kind, Type *Ty);
-  static Attribute get(LLVMContext &Context, AttrKind Kind,
-                       const ConstantRange &CR);
-  static Attribute get(LLVMContext &Context, AttrKind Kind,
-                       ArrayRef<ConstantRange> Val);
+  LLVM_ABI static Attribute get(LLVMContext &Context, AttrKind Kind,
+                                uint64_t Val = 0);
+  LLVM_ABI static Attribute get(LLVMContext &Context, StringRef Kind,
+                                StringRef Val = StringRef());
+  LLVM_ABI static Attribute get(LLVMContext &Context, AttrKind Kind, Type *Ty);
+  LLVM_ABI static Attribute get(LLVMContext &Context, AttrKind Kind,
+                                const ConstantRange &CR);
+  LLVM_ABI static Attribute get(LLVMContext &Context, AttrKind Kind,
+                                ArrayRef<ConstantRange> Val);
 
   /// Return a uniquified Attribute object that has the specific
   /// alignment set.
-  static Attribute getWithAlignment(LLVMContext &Context, Align Alignment);
-  static Attribute getWithStackAlignment(LLVMContext &Context, Align Alignment);
-  static Attribute getWithDereferenceableBytes(LLVMContext &Context,
-                                              uint64_t Bytes);
-  static Attribute getWithDereferenceableOrNullBytes(LLVMContext &Context,
-                                                     uint64_t Bytes);
-  static Attribute getWithAllocSizeArgs(
-      LLVMContext &Context, unsigned ElemSizeArg,
-      const std::optional<unsigned> &NumElemsArg);
-  static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
-                                          unsigned MinValue, unsigned MaxValue);
-  static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
-  static Attribute getWithStructRetType(LLVMContext &Context, Type *Ty);
-  static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
-  static Attribute getWithPreallocatedType(LLVMContext &Context, Type *Ty);
-  static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
-  static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
-  static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
-  static Attribute getWithNoFPClass(LLVMContext &Context, FPClassTest Mask);
+  LLVM_ABI static Attribute getWithAlignment(LLVMContext &Context,
+                                             Align Alignment);
+  LLVM_ABI static Attribute getWithStackAlignment(LLVMContext &Context,
+                                                  Align Alignment);
+  LLVM_ABI static Attribute getWithDereferenceableBytes(LLVMContext &Context,
+                                                        uint64_t Bytes);
+  LLVM_ABI static Attribute
+  getWithDereferenceableOrNullBytes(LLVMContext &Context, uint64_t Bytes);
+  LLVM_ABI static Attribute
+  getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
+                       const std::optional<unsigned> &NumElemsArg);
+  LLVM_ABI static Attribute getWithAllocKind(LLVMContext &Context,
+                                             AllocFnKind Kind);
+  LLVM_ABI static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
+                                                   unsigned MinValue,
+                                                   unsigned MaxValue);
+  LLVM_ABI static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
+  LLVM_ABI static Attribute getWithStructRetType(LLVMContext &Context,
+                                                 Type *Ty);
+  LLVM_ABI static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
+  LLVM_ABI static Attribute getWithPreallocatedType(LLVMContext &Context,
+                                                    Type *Ty);
+  LLVM_ABI static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
+  LLVM_ABI static Attribute getWithUWTableKind(LLVMContext &Context,
+                                               UWTableKind Kind);
+  LLVM_ABI static Attribute getWithMemoryEffects(LLVMContext &Context,
+                                                 MemoryEffects ME);
+  LLVM_ABI static Attribute getWithNoFPClass(LLVMContext &Context,
+                                             FPClassTest Mask);
+  LLVM_ABI static Attribute getWithCaptureInfo(LLVMContext &Context,
+                                               CaptureInfo CI);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -173,45 +188,45 @@ public:
     return get(Context, getKindAsEnum(), ReplacementTy);
   }
 
-  static Attribute::AttrKind getAttrKindFromName(StringRef AttrName);
+  LLVM_ABI static Attribute::AttrKind getAttrKindFromName(StringRef AttrName);
 
-  static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
+  LLVM_ABI static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
 
   /// Return true if the provided string matches the IR name of an attribute.
   /// example: "noalias" return true but not "NoAlias"
-  static bool isExistingAttribute(StringRef Name);
+  LLVM_ABI static bool isExistingAttribute(StringRef Name);
 
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
   //===--------------------------------------------------------------------===//
 
   /// Return true if the attribute is an Attribute::AttrKind type.
-  bool isEnumAttribute() const;
+  LLVM_ABI bool isEnumAttribute() const;
 
   /// Return true if the attribute is an integer attribute.
-  bool isIntAttribute() const;
+  LLVM_ABI bool isIntAttribute() const;
 
   /// Return true if the attribute is a string (target-dependent)
   /// attribute.
-  bool isStringAttribute() const;
+  LLVM_ABI bool isStringAttribute() const;
 
   /// Return true if the attribute is a type attribute.
-  bool isTypeAttribute() const;
+  LLVM_ABI bool isTypeAttribute() const;
 
   /// Return true if the attribute is a ConstantRange attribute.
-  bool isConstantRangeAttribute() const;
+  LLVM_ABI bool isConstantRangeAttribute() const;
 
   /// Return true if the attribute is a ConstantRangeList attribute.
-  bool isConstantRangeListAttribute() const;
+  LLVM_ABI bool isConstantRangeListAttribute() const;
 
   /// Return true if the attribute is any kind of attribute.
   bool isValid() const { return pImpl; }
 
   /// Return true if the attribute is present.
-  bool hasAttribute(AttrKind Val) const;
+  LLVM_ABI bool hasAttribute(AttrKind Val) const;
 
   /// Return true if the target-dependent attribute is present.
-  bool hasAttribute(StringRef Val) const;
+  LLVM_ABI bool hasAttribute(StringRef Val) const;
 
   /// Returns true if the attribute's kind can be represented as an enum (Enum,
   /// Integer, Type, ConstantRange, or ConstantRangeList attribute).
@@ -219,98 +234,102 @@ public:
 
   /// Return the attribute's kind as an enum (Attribute::AttrKind). This
   /// requires the attribute be representable as an enum (see: `hasKindAsEnum`).
-  Attribute::AttrKind getKindAsEnum() const;
+  LLVM_ABI Attribute::AttrKind getKindAsEnum() const;
 
   /// Return the attribute's value as an integer. This requires that the
   /// attribute be an integer attribute.
-  uint64_t getValueAsInt() const;
+  LLVM_ABI uint64_t getValueAsInt() const;
 
   /// Return the attribute's value as a boolean. This requires that the
   /// attribute be a string attribute.
-  bool getValueAsBool() const;
+  LLVM_ABI bool getValueAsBool() const;
 
   /// Return the attribute's kind as a string. This requires the
   /// attribute to be a string attribute.
-  StringRef getKindAsString() const;
+  LLVM_ABI StringRef getKindAsString() const;
 
   /// Return the attribute's value as a string. This requires the
   /// attribute to be a string attribute.
-  StringRef getValueAsString() const;
+  LLVM_ABI StringRef getValueAsString() const;
 
   /// Return the attribute's value as a Type. This requires the attribute to be
   /// a type attribute.
-  Type *getValueAsType() const;
+  LLVM_ABI Type *getValueAsType() const;
 
   /// Return the attribute's value as a ConstantRange. This requires the
   /// attribute to be a ConstantRange attribute.
-  const ConstantRange &getValueAsConstantRange() const;
+  LLVM_ABI const ConstantRange &getValueAsConstantRange() const;
 
   /// Return the attribute's value as a ConstantRange array. This requires the
   /// attribute to be a ConstantRangeList attribute.
-  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
+  LLVM_ABI ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
-  MaybeAlign getAlignment() const;
+  LLVM_ABI MaybeAlign getAlignment() const;
 
   /// Returns the stack alignment field of an attribute as a byte
   /// alignment value.
-  MaybeAlign getStackAlignment() const;
+  LLVM_ABI MaybeAlign getStackAlignment() const;
 
   /// Returns the number of dereferenceable bytes from the
   /// dereferenceable attribute.
-  uint64_t getDereferenceableBytes() const;
+  LLVM_ABI uint64_t getDereferenceableBytes() const;
 
   /// Returns the number of dereferenceable_or_null bytes from the
   /// dereferenceable_or_null attribute.
-  uint64_t getDereferenceableOrNullBytes() const;
+  LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
 
   /// Returns the argument numbers for the allocsize attribute.
-  std::pair<unsigned, std::optional<unsigned>> getAllocSizeArgs() const;
+  LLVM_ABI std::pair<unsigned, std::optional<unsigned>>
+  getAllocSizeArgs() const;
 
   /// Returns the minimum value for the vscale_range attribute.
-  unsigned getVScaleRangeMin() const;
+  LLVM_ABI unsigned getVScaleRangeMin() const;
 
   /// Returns the maximum value for the vscale_range attribute or std::nullopt
   /// when unknown.
-  std::optional<unsigned> getVScaleRangeMax() const;
+  LLVM_ABI std::optional<unsigned> getVScaleRangeMax() const;
 
   // Returns the unwind table kind.
-  UWTableKind getUWTableKind() const;
+  LLVM_ABI UWTableKind getUWTableKind() const;
 
   // Returns the allocator function kind.
-  AllocFnKind getAllocKind() const;
+  LLVM_ABI AllocFnKind getAllocKind() const;
 
   /// Returns memory effects.
-  MemoryEffects getMemoryEffects() const;
+  LLVM_ABI MemoryEffects getMemoryEffects() const;
+
+  /// Returns information from captures attribute.
+  LLVM_ABI CaptureInfo getCaptureInfo() const;
 
   /// Return the FPClassTest for nofpclass
-  FPClassTest getNoFPClass() const;
+  LLVM_ABI FPClassTest getNoFPClass() const;
 
   /// Returns the value of the range attribute.
-  const ConstantRange &getRange() const;
+  LLVM_ABI const ConstantRange &getRange() const;
 
   /// Returns the value of the initializes attribute.
-  ArrayRef<ConstantRange> getInitializes() const;
+  LLVM_ABI ArrayRef<ConstantRange> getInitializes() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
-  std::string getAsString(bool InAttrGrp = false) const;
+  LLVM_ABI std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute belongs to the LLVMContext.
-  bool hasParentContext(LLVMContext &C) const;
+  LLVM_ABI bool hasParentContext(LLVMContext &C) const;
 
   /// Equality and non-equality operators.
   bool operator==(Attribute A) const { return pImpl == A.pImpl; }
   bool operator!=(Attribute A) const { return pImpl != A.pImpl; }
 
   /// Used to sort attribute by kind.
-  int cmpKind(Attribute A) const;
+  LLVM_ABI int cmpKind(Attribute A) const;
 
   /// Less-than operator. Useful for sorting the attributes list.
-  bool operator<(Attribute A) const;
+  LLVM_ABI bool operator<(Attribute A) const;
 
-  void Profile(FoldingSetNodeID &ID) const;
+  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
 
   /// Return a raw pointer that uniquely identifies this attribute.
   void *getRawPointer() const {
@@ -359,93 +378,94 @@ public:
   AttributeSet(const AttributeSet &) = default;
   ~AttributeSet() = default;
 
-  static AttributeSet get(LLVMContext &C, const AttrBuilder &B);
-  static AttributeSet get(LLVMContext &C, ArrayRef<Attribute> Attrs);
+  LLVM_ABI static AttributeSet get(LLVMContext &C, const AttrBuilder &B);
+  LLVM_ABI static AttributeSet get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
   bool operator==(const AttributeSet &O) const { return SetNode == O.SetNode; }
   bool operator!=(const AttributeSet &O) const { return !(*this == O); }
 
   /// Add an argument attribute. Returns a new set because attribute sets are
   /// immutable.
-  [[nodiscard]] AttributeSet addAttribute(LLVMContext &C,
-                                          Attribute::AttrKind Kind) const;
+  [[nodiscard]] LLVM_ABI AttributeSet
+  addAttribute(LLVMContext &C, Attribute::AttrKind Kind) const;
 
   /// Add a target-dependent attribute. Returns a new set because attribute sets
   /// are immutable.
-  [[nodiscard]] AttributeSet addAttribute(LLVMContext &C, StringRef Kind,
-                                          StringRef Value = StringRef()) const;
+  [[nodiscard]] LLVM_ABI AttributeSet addAttribute(
+      LLVMContext &C, StringRef Kind, StringRef Value = StringRef()) const;
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  [[nodiscard]] AttributeSet addAttributes(LLVMContext &C,
-                                           AttributeSet AS) const;
+  [[nodiscard]] LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
+                                                    AttributeSet AS) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
-  [[nodiscard]] AttributeSet removeAttribute(LLVMContext &C,
-                                             Attribute::AttrKind Kind) const;
+  [[nodiscard]] LLVM_ABI AttributeSet
+  removeAttribute(LLVMContext &C, Attribute::AttrKind Kind) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
-  [[nodiscard]] AttributeSet removeAttribute(LLVMContext &C,
-                                             StringRef Kind) const;
+  [[nodiscard]] LLVM_ABI AttributeSet removeAttribute(LLVMContext &C,
+                                                      StringRef Kind) const;
 
   /// Remove the specified attributes from this set. Returns a new set because
   /// attribute sets are immutable.
-  [[nodiscard]] AttributeSet
+  [[nodiscard]] LLVM_ABI AttributeSet
   removeAttributes(LLVMContext &C, const AttributeMask &AttrsToRemove) const;
 
   /// Try to intersect this AttributeSet with Other. Returns std::nullopt if
   /// the two lists are inherently incompatible (imply different behavior, not
   /// just analysis).
-  [[nodiscard]] std::optional<AttributeSet>
+  [[nodiscard]] LLVM_ABI std::optional<AttributeSet>
   intersectWith(LLVMContext &C, AttributeSet Other) const;
 
   /// Return the number of attributes in this set.
-  unsigned getNumAttributes() const;
+  LLVM_ABI unsigned getNumAttributes() const;
 
   /// Return true if attributes exists in this set.
   bool hasAttributes() const { return SetNode != nullptr; }
 
   /// Return true if the attribute exists in this set.
-  bool hasAttribute(Attribute::AttrKind Kind) const;
+  LLVM_ABI bool hasAttribute(Attribute::AttrKind Kind) const;
 
   /// Return true if the attribute exists in this set.
-  bool hasAttribute(StringRef Kind) const;
+  LLVM_ABI bool hasAttribute(StringRef Kind) const;
 
   /// Return the attribute object.
-  Attribute getAttribute(Attribute::AttrKind Kind) const;
+  LLVM_ABI Attribute getAttribute(Attribute::AttrKind Kind) const;
 
   /// Return the target-dependent attribute object.
-  Attribute getAttribute(StringRef Kind) const;
+  LLVM_ABI Attribute getAttribute(StringRef Kind) const;
 
-  MaybeAlign getAlignment() const;
-  MaybeAlign getStackAlignment() const;
-  uint64_t getDereferenceableBytes() const;
-  uint64_t getDereferenceableOrNullBytes() const;
-  Type *getByValType() const;
-  Type *getStructRetType() const;
-  Type *getByRefType() const;
-  Type *getPreallocatedType() const;
-  Type *getInAllocaType() const;
-  Type *getElementType() const;
-  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
-      const;
-  unsigned getVScaleRangeMin() const;
-  std::optional<unsigned> getVScaleRangeMax() const;
-  UWTableKind getUWTableKind() const;
-  AllocFnKind getAllocKind() const;
-  MemoryEffects getMemoryEffects() const;
-  FPClassTest getNoFPClass() const;
-  std::string getAsString(bool InAttrGrp = false) const;
+  LLVM_ABI MaybeAlign getAlignment() const;
+  LLVM_ABI MaybeAlign getStackAlignment() const;
+  LLVM_ABI uint64_t getDereferenceableBytes() const;
+  LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
+  LLVM_ABI Type *getByValType() const;
+  LLVM_ABI Type *getStructRetType() const;
+  LLVM_ABI Type *getByRefType() const;
+  LLVM_ABI Type *getPreallocatedType() const;
+  LLVM_ABI Type *getInAllocaType() const;
+  LLVM_ABI Type *getElementType() const;
+  LLVM_ABI std::optional<std::pair<unsigned, std::optional<unsigned>>>
+  getAllocSizeArgs() const;
+  LLVM_ABI unsigned getVScaleRangeMin() const;
+  LLVM_ABI std::optional<unsigned> getVScaleRangeMax() const;
+  LLVM_ABI UWTableKind getUWTableKind() const;
+  LLVM_ABI AllocFnKind getAllocKind() const;
+  LLVM_ABI MemoryEffects getMemoryEffects() const;
+  LLVM_ABI CaptureInfo getCaptureInfo() const;
+  LLVM_ABI FPClassTest getNoFPClass() const;
+  LLVM_ABI std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
-  bool hasParentContext(LLVMContext &C) const;
+  LLVM_ABI bool hasParentContext(LLVMContext &C) const;
 
   using iterator = const Attribute *;
 
-  iterator begin() const;
-  iterator end() const;
+  LLVM_ABI iterator begin() const;
+  LLVM_ABI iterator end() const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
 #endif
@@ -504,16 +524,16 @@ private:
 
 public:
   /// Create an AttributeList with the specified parameters in it.
-  static AttributeList get(LLVMContext &C,
-                           ArrayRef<std::pair<unsigned, Attribute>> Attrs);
-  static AttributeList get(LLVMContext &C,
-                           ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
+  LLVM_ABI static AttributeList
+  get(LLVMContext &C, ArrayRef<std::pair<unsigned, Attribute>> Attrs);
+  LLVM_ABI static AttributeList
+  get(LLVMContext &C, ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
 
   /// Create an AttributeList from attribute sets for a function, its
   /// return value, and all of its arguments.
-  static AttributeList get(LLVMContext &C, AttributeSet FnAttrs,
-                           AttributeSet RetAttrs,
-                           ArrayRef<AttributeSet> ArgAttrs);
+  LLVM_ABI static AttributeList get(LLVMContext &C, AttributeSet FnAttrs,
+                                    AttributeSet RetAttrs,
+                                    ArrayRef<AttributeSet> ArgAttrs);
 
 private:
   explicit AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
@@ -531,42 +551,42 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return an AttributeList with the specified parameters in it.
-  static AttributeList get(LLVMContext &C, ArrayRef<AttributeList> Attrs);
-  static AttributeList get(LLVMContext &C, unsigned Index,
-                           ArrayRef<Attribute::AttrKind> Kinds);
-  static AttributeList get(LLVMContext &C, unsigned Index,
-                           ArrayRef<Attribute::AttrKind> Kinds,
-                           ArrayRef<uint64_t> Values);
-  static AttributeList get(LLVMContext &C, unsigned Index,
-                           ArrayRef<StringRef> Kind);
-  static AttributeList get(LLVMContext &C, unsigned Index,
-                           AttributeSet Attrs);
-  static AttributeList get(LLVMContext &C, unsigned Index,
-                           const AttrBuilder &B);
+  LLVM_ABI static AttributeList get(LLVMContext &C,
+                                    ArrayRef<AttributeList> Attrs);
+  LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
+                                    ArrayRef<Attribute::AttrKind> Kinds);
+  LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
+                                    ArrayRef<Attribute::AttrKind> Kinds,
+                                    ArrayRef<uint64_t> Values);
+  LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
+                                    ArrayRef<StringRef> Kind);
+  LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
+                                    AttributeSet Attrs);
+  LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
+                                    const AttrBuilder &B);
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
-  addAttributeAtIndex(LLVMContext &C, unsigned Index,
-                      Attribute::AttrKind Kind) const;
+  [[nodiscard]] LLVM_ABI AttributeList addAttributeAtIndex(
+      LLVMContext &C, unsigned Index, Attribute::AttrKind Kind) const;
 
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addAttributeAtIndex(LLVMContext &C, unsigned Index, StringRef Kind,
                       StringRef Value = StringRef()) const;
 
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
-  addAttributeAtIndex(LLVMContext &C, unsigned Index, Attribute A) const;
+  [[nodiscard]] LLVM_ABI AttributeList addAttributeAtIndex(LLVMContext &C,
+                                                           unsigned Index,
+                                                           Attribute A) const;
 
   /// Add attributes to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList addAttributesAtIndex(LLVMContext &C,
-                                                   unsigned Index,
-                                                   const AttrBuilder &B) const;
+  [[nodiscard]] LLVM_ABI AttributeList addAttributesAtIndex(
+      LLVMContext &C, unsigned Index, const AttrBuilder &B) const;
 
   /// Add a function attribute to the list. Returns a new list because
   /// attribute lists are immutable.
@@ -636,9 +656,8 @@ public:
 
   /// Add an attribute to the attribute list at the given arg indices. Returns a
   /// new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList addParamAttribute(LLVMContext &C,
-                                                ArrayRef<unsigned> ArgNos,
-                                                Attribute A) const;
+  [[nodiscard]] LLVM_ABI AttributeList addParamAttribute(
+      LLVMContext &C, ArrayRef<unsigned> ArgNos, Attribute A) const;
 
   /// Add an argument attribute to the list. Returns a new list because
   /// attribute lists are immutable.
@@ -649,13 +668,12 @@ public:
 
   /// Remove the specified attribute at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
-  removeAttributeAtIndex(LLVMContext &C, unsigned Index,
-                         Attribute::AttrKind Kind) const;
+  [[nodiscard]] LLVM_ABI AttributeList removeAttributeAtIndex(
+      LLVMContext &C, unsigned Index, Attribute::AttrKind Kind) const;
 
   /// Remove the specified attribute at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   removeAttributeAtIndex(LLVMContext &C, unsigned Index, StringRef Kind) const;
   [[nodiscard]] AttributeList removeAttribute(LLVMContext &C, unsigned Index,
                                               StringRef Kind) const {
@@ -664,14 +682,13 @@ public:
 
   /// Remove the specified attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
-  removeAttributesAtIndex(LLVMContext &C, unsigned Index,
-                          const AttributeMask &AttrsToRemove) const;
+  [[nodiscard]] LLVM_ABI AttributeList removeAttributesAtIndex(
+      LLVMContext &C, unsigned Index, const AttributeMask &AttrsToRemove) const;
 
   /// Remove all attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList removeAttributesAtIndex(LLVMContext &C,
-                                                      unsigned Index) const;
+  [[nodiscard]] LLVM_ABI AttributeList
+  removeAttributesAtIndex(LLVMContext &C, unsigned Index) const;
 
   /// Remove the specified attribute at the function index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
@@ -766,37 +783,35 @@ public:
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// index. Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList addDereferenceableRetAttr(LLVMContext &C,
-                                                        uint64_t Bytes) const;
+  [[nodiscard]] LLVM_ABI AttributeList
+  addDereferenceableRetAttr(LLVMContext &C, uint64_t Bytes) const;
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// arg index. Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList addDereferenceableParamAttr(LLVMContext &C,
-                                                          unsigned ArgNo,
-                                                          uint64_t Bytes) const;
+  [[nodiscard]] LLVM_ABI AttributeList addDereferenceableParamAttr(
+      LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const;
 
   /// Add the dereferenceable_or_null attribute to the attribute set at
   /// the given arg index. Returns a new list because attribute lists are
   /// immutable.
-  [[nodiscard]] AttributeList
-  addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned ArgNo,
-                                    uint64_t Bytes) const;
+  [[nodiscard]] LLVM_ABI AttributeList addDereferenceableOrNullParamAttr(
+      LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const;
 
   /// Add the range attribute to the attribute set at the return value index.
   /// Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList addRangeRetAttr(LLVMContext &C,
-                                              const ConstantRange &CR) const;
+  [[nodiscard]] LLVM_ABI AttributeList
+  addRangeRetAttr(LLVMContext &C, const ConstantRange &CR) const;
 
   /// Add the allocsize attribute to the attribute set at the given arg index.
   /// Returns a new list because attribute lists are immutable.
-  [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo, unsigned ElemSizeArg,
                         const std::optional<unsigned> &NumElemsArg) const;
 
   /// Try to intersect this AttributeList with Other. Returns std::nullopt if
   /// the two lists are inherently incompatible (imply different behavior, not
   /// just analysis).
-  [[nodiscard]] std::optional<AttributeList>
+  [[nodiscard]] LLVM_ABI std::optional<AttributeList>
   intersectWith(LLVMContext &C, AttributeList Other) const;
 
   //===--------------------------------------------------------------------===//
@@ -804,26 +819,27 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// The attributes for the specified index are returned.
-  AttributeSet getAttributes(unsigned Index) const;
+  LLVM_ABI AttributeSet getAttributes(unsigned Index) const;
 
   /// The attributes for the argument or parameter at the given index are
   /// returned.
-  AttributeSet getParamAttrs(unsigned ArgNo) const;
+  LLVM_ABI AttributeSet getParamAttrs(unsigned ArgNo) const;
 
   /// The attributes for the ret value are returned.
-  AttributeSet getRetAttrs() const;
+  LLVM_ABI AttributeSet getRetAttrs() const;
 
   /// The function attributes are returned.
-  AttributeSet getFnAttrs() const;
+  LLVM_ABI AttributeSet getFnAttrs() const;
 
   /// Return true if the attribute exists at the given index.
-  bool hasAttributeAtIndex(unsigned Index, Attribute::AttrKind Kind) const;
+  LLVM_ABI bool hasAttributeAtIndex(unsigned Index,
+                                    Attribute::AttrKind Kind) const;
 
   /// Return true if the attribute exists at the given index.
-  bool hasAttributeAtIndex(unsigned Index, StringRef Kind) const;
+  LLVM_ABI bool hasAttributeAtIndex(unsigned Index, StringRef Kind) const;
 
   /// Return true if attribute exists at the given index.
-  bool hasAttributesAtIndex(unsigned Index) const;
+  LLVM_ABI bool hasAttributesAtIndex(unsigned Index) const;
 
   /// Return true if the attribute exists for the given argument
   bool hasParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
@@ -854,10 +870,10 @@ public:
   bool hasRetAttrs() const { return hasAttributesAtIndex(ReturnIndex); }
 
   /// Return true if the attribute exists for the function.
-  bool hasFnAttr(Attribute::AttrKind Kind) const;
+  LLVM_ABI bool hasFnAttr(Attribute::AttrKind Kind) const;
 
   /// Return true if the attribute exists for the function.
-  bool hasFnAttr(StringRef Kind) const;
+  LLVM_ABI bool hasFnAttr(StringRef Kind) const;
 
   /// Return true the attributes exist for the function.
   bool hasFnAttrs() const { return hasAttributesAtIndex(FunctionIndex); }
@@ -865,14 +881,15 @@ public:
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index
   /// of a parameter with the specified attribute is provided.
-  bool hasAttrSomewhere(Attribute::AttrKind Kind,
-                        unsigned *Index = nullptr) const;
+  LLVM_ABI bool hasAttrSomewhere(Attribute::AttrKind Kind,
+                                 unsigned *Index = nullptr) const;
 
   /// Return the attribute object that exists at the given index.
-  Attribute getAttributeAtIndex(unsigned Index, Attribute::AttrKind Kind) const;
+  LLVM_ABI Attribute getAttributeAtIndex(unsigned Index,
+                                         Attribute::AttrKind Kind) const;
 
   /// Return the attribute object that exists at the given index.
-  Attribute getAttributeAtIndex(unsigned Index, StringRef Kind) const;
+  LLVM_ABI Attribute getAttributeAtIndex(unsigned Index, StringRef Kind) const;
 
   /// Return the attribute object that exists at the arg index.
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
@@ -900,75 +917,76 @@ public:
   }
 
   /// Return the alignment of the return value.
-  MaybeAlign getRetAlignment() const;
+  LLVM_ABI MaybeAlign getRetAlignment() const;
 
   /// Return the alignment for the specified function parameter.
-  MaybeAlign getParamAlignment(unsigned ArgNo) const;
+  LLVM_ABI MaybeAlign getParamAlignment(unsigned ArgNo) const;
 
   /// Return the stack alignment for the specified function parameter.
-  MaybeAlign getParamStackAlignment(unsigned ArgNo) const;
+  LLVM_ABI MaybeAlign getParamStackAlignment(unsigned ArgNo) const;
 
   /// Return the byval type for the specified function parameter.
-  Type *getParamByValType(unsigned ArgNo) const;
+  LLVM_ABI Type *getParamByValType(unsigned ArgNo) const;
 
   /// Return the sret type for the specified function parameter.
-  Type *getParamStructRetType(unsigned ArgNo) const;
+  LLVM_ABI Type *getParamStructRetType(unsigned ArgNo) const;
 
   /// Return the byref type for the specified function parameter.
-  Type *getParamByRefType(unsigned ArgNo) const;
+  LLVM_ABI Type *getParamByRefType(unsigned ArgNo) const;
 
   /// Return the preallocated type for the specified function parameter.
-  Type *getParamPreallocatedType(unsigned ArgNo) const;
+  LLVM_ABI Type *getParamPreallocatedType(unsigned ArgNo) const;
 
   /// Return the inalloca type for the specified function parameter.
-  Type *getParamInAllocaType(unsigned ArgNo) const;
+  LLVM_ABI Type *getParamInAllocaType(unsigned ArgNo) const;
 
   /// Return the elementtype type for the specified function parameter.
-  Type *getParamElementType(unsigned ArgNo) const;
+  LLVM_ABI Type *getParamElementType(unsigned ArgNo) const;
 
   /// Get the stack alignment of the function.
-  MaybeAlign getFnStackAlignment() const;
+  LLVM_ABI MaybeAlign getFnStackAlignment() const;
 
   /// Get the stack alignment of the return value.
-  MaybeAlign getRetStackAlignment() const;
+  LLVM_ABI MaybeAlign getRetStackAlignment() const;
 
   /// Get the number of dereferenceable bytes (or zero if unknown) of the return
   /// value.
-  uint64_t getRetDereferenceableBytes() const;
+  LLVM_ABI uint64_t getRetDereferenceableBytes() const;
 
   /// Get the number of dereferenceable bytes (or zero if unknown) of an arg.
-  uint64_t getParamDereferenceableBytes(unsigned Index) const;
+  LLVM_ABI uint64_t getParamDereferenceableBytes(unsigned Index) const;
 
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of
   /// the return value.
-  uint64_t getRetDereferenceableOrNullBytes() const;
+  LLVM_ABI uint64_t getRetDereferenceableOrNullBytes() const;
 
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
-  uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
+  LLVM_ABI uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
 
   /// Get range (or std::nullopt if unknown) of an arg.
-  std::optional<ConstantRange> getParamRange(unsigned ArgNo) const;
+  LLVM_ABI std::optional<ConstantRange> getParamRange(unsigned ArgNo) const;
 
   /// Get the disallowed floating-point classes of the return value.
-  FPClassTest getRetNoFPClass() const;
+  LLVM_ABI FPClassTest getRetNoFPClass() const;
 
   /// Get the disallowed floating-point classes of the argument value.
-  FPClassTest getParamNoFPClass(unsigned ArgNo) const;
+  LLVM_ABI FPClassTest getParamNoFPClass(unsigned ArgNo) const;
 
   /// Get the unwind table kind requested for the function.
-  UWTableKind getUWTableKind() const;
+  LLVM_ABI UWTableKind getUWTableKind() const;
 
-  AllocFnKind getAllocKind() const;
+  LLVM_ABI AllocFnKind getAllocKind() const;
 
   /// Returns memory effects of the function.
-  MemoryEffects getMemoryEffects() const;
+  LLVM_ABI MemoryEffects getMemoryEffects() const;
 
   /// Return the attributes at the index as a string.
-  std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
+  LLVM_ABI std::string getAsString(unsigned Index,
+                                   bool InAttrGrp = false) const;
 
   /// Return true if this attribute list belongs to the LLVMContext.
-  bool hasParentContext(LLVMContext &C) const;
+  LLVM_ABI bool hasParentContext(LLVMContext &C) const;
 
   //===--------------------------------------------------------------------===//
   // AttributeList Introspection
@@ -976,10 +994,10 @@ public:
 
   using iterator = const AttributeSet *;
 
-  iterator begin() const;
-  iterator end() const;
+  LLVM_ABI iterator begin() const;
+  LLVM_ABI iterator end() const;
 
-  unsigned getNumAttrSets() const;
+  LLVM_ABI unsigned getNumAttrSets() const;
 
   // Implementation of indexes(). Produces iterators that wrap an index. Mostly
   // to hide the awkwardness of unsigned wrapping when iterating over valid
@@ -1020,9 +1038,9 @@ public:
   /// Return true if there are no attributes.
   bool isEmpty() const { return pImpl == nullptr; }
 
-  void print(raw_ostream &O) const;
+  LLVM_ABI void print(raw_ostream &O) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1070,24 +1088,24 @@ public:
     addAttribute(A);
   }
 
-  AttrBuilder(LLVMContext &Ctx, AttributeSet AS);
+  LLVM_ABI AttrBuilder(LLVMContext &Ctx, AttributeSet AS);
 
-  void clear();
+  LLVM_ABI void clear();
 
   /// Add an attribute to the builder.
-  AttrBuilder &addAttribute(Attribute::AttrKind Val);
+  LLVM_ABI AttrBuilder &addAttribute(Attribute::AttrKind Val);
 
   /// Add the Attribute object to the builder.
-  AttrBuilder &addAttribute(Attribute A);
+  LLVM_ABI AttrBuilder &addAttribute(Attribute A);
 
   /// Add the target-dependent attribute to the builder.
-  AttrBuilder &addAttribute(StringRef A, StringRef V = StringRef());
+  LLVM_ABI AttrBuilder &addAttribute(StringRef A, StringRef V = StringRef());
 
   /// Remove an attribute from the builder.
-  AttrBuilder &removeAttribute(Attribute::AttrKind Val);
+  LLVM_ABI AttrBuilder &removeAttribute(Attribute::AttrKind Val);
 
   /// Remove the target-dependent attribute from the builder.
-  AttrBuilder &removeAttribute(StringRef A);
+  LLVM_ABI AttrBuilder &removeAttribute(StringRef A);
 
   /// Remove the target-dependent attribute from the builder.
   AttrBuilder &removeAttribute(Attribute A) {
@@ -1099,40 +1117,41 @@ public:
 
   /// Add the attributes from the builder. Attributes in the passed builder
   /// overwrite attributes in this builder if they have the same key.
-  AttrBuilder &merge(const AttrBuilder &B);
+  LLVM_ABI AttrBuilder &merge(const AttrBuilder &B);
 
   /// Remove the attributes from the builder.
-  AttrBuilder &remove(const AttributeMask &AM);
+  LLVM_ABI AttrBuilder &remove(const AttributeMask &AM);
 
   /// Return true if the builder has any attribute that's in the
   /// specified builder.
-  bool overlaps(const AttributeMask &AM) const;
+  LLVM_ABI bool overlaps(const AttributeMask &AM) const;
 
   /// Return true if the builder has the specified attribute.
-  bool contains(Attribute::AttrKind A) const;
+  LLVM_ABI bool contains(Attribute::AttrKind A) const;
 
   /// Return true if the builder has the specified target-dependent
   /// attribute.
-  bool contains(StringRef A) const;
+  LLVM_ABI bool contains(StringRef A) const;
 
   /// Return true if the builder has IR-level attributes.
   bool hasAttributes() const { return !Attrs.empty(); }
 
   /// Return Attribute with the given Kind. The returned attribute will be
   /// invalid if the Kind is not present in the builder.
-  Attribute getAttribute(Attribute::AttrKind Kind) const;
+  LLVM_ABI Attribute getAttribute(Attribute::AttrKind Kind) const;
 
   /// Return Attribute with the given Kind. The returned attribute will be
   /// invalid if the Kind is not present in the builder.
-  Attribute getAttribute(StringRef Kind) const;
+  LLVM_ABI Attribute getAttribute(StringRef Kind) const;
 
   /// Retrieve the range if the attribute exists (std::nullopt is returned
   /// otherwise).
-  std::optional<ConstantRange> getRange() const;
+  LLVM_ABI std::optional<ConstantRange> getRange() const;
 
   /// Return raw (possibly packed/encoded) value of integer attribute or
   /// std::nullopt if not set.
-  std::optional<uint64_t> getRawIntAttr(Attribute::AttrKind Kind) const;
+  LLVM_ABI std::optional<uint64_t>
+  getRawIntAttr(Attribute::AttrKind Kind) const;
 
   /// Retrieve the alignment attribute, if it exists.
   MaybeAlign getAlignment() const {
@@ -1156,8 +1175,15 @@ public:
     return getRawIntAttr(Attribute::DereferenceableOrNull).value_or(0);
   }
 
+  /// Retrieve the bitmask for nofpclass, if the nofpclass attribute exists
+  /// (fcNone is returned otherwise).
+  FPClassTest getNoFPClass() const {
+    std::optional<uint64_t> Raw = getRawIntAttr(Attribute::NoFPClass);
+    return static_cast<FPClassTest>(Raw.value_or(0));
+  }
+
   /// Retrieve type for the given type attribute.
-  Type *getTypeAttr(Attribute::AttrKind Kind) const;
+  LLVM_ABI Type *getTypeAttr(Attribute::AttrKind Kind) const;
 
   /// Retrieve the byval type.
   Type *getByValType() const { return getTypeAttr(Attribute::ByVal); }
@@ -1178,15 +1204,15 @@ public:
 
   /// Retrieve the allocsize args, or std::nullopt if the attribute does not
   /// exist.
-  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
-      const;
+  LLVM_ABI std::optional<std::pair<unsigned, std::optional<unsigned>>>
+  getAllocSizeArgs() const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).
-  AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
+  LLVM_ABI AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
 
   /// This turns an alignment into the form used internally in Attribute.
   /// This call has no effect if Align is not set.
-  AttrBuilder &addAlignmentAttr(MaybeAlign Align);
+  LLVM_ABI AttrBuilder &addAlignmentAttr(MaybeAlign Align);
 
   /// This turns an int alignment (which must be a power of 2) into the
   /// form used internally in Attribute.
@@ -1198,7 +1224,7 @@ public:
 
   /// This turns a stack alignment into the form used internally in Attribute.
   /// This call has no effect if Align is not set.
-  AttrBuilder &addStackAlignmentAttr(MaybeAlign Align);
+  LLVM_ABI AttrBuilder &addStackAlignmentAttr(MaybeAlign Align);
 
   /// This turns an int stack alignment (which must be a power of 2) into
   /// the form used internally in Attribute.
@@ -1210,76 +1236,86 @@ public:
 
   /// This turns the number of dereferenceable bytes into the form used
   /// internally in Attribute.
-  AttrBuilder &addDereferenceableAttr(uint64_t Bytes);
+  LLVM_ABI AttrBuilder &addDereferenceableAttr(uint64_t Bytes);
 
   /// This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.
-  AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
+  LLVM_ABI AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
 
   /// This turns one (or two) ints into the form used internally in Attribute.
-  AttrBuilder &addAllocSizeAttr(unsigned ElemSizeArg,
-                                const std::optional<unsigned> &NumElemsArg);
+  LLVM_ABI AttrBuilder &
+  addAllocSizeAttr(unsigned ElemSizeArg,
+                   const std::optional<unsigned> &NumElemsArg);
 
   /// This turns two ints into the form used internally in Attribute.
-  AttrBuilder &addVScaleRangeAttr(unsigned MinValue,
-                                  std::optional<unsigned> MaxValue);
+  LLVM_ABI AttrBuilder &addVScaleRangeAttr(unsigned MinValue,
+                                           std::optional<unsigned> MaxValue);
 
   /// Add a type attribute with the given type.
-  AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);
+  LLVM_ABI AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);
 
   /// This turns a byval type into the form used internally in Attribute.
-  AttrBuilder &addByValAttr(Type *Ty);
+  LLVM_ABI AttrBuilder &addByValAttr(Type *Ty);
 
   /// This turns a sret type into the form used internally in Attribute.
-  AttrBuilder &addStructRetAttr(Type *Ty);
+  LLVM_ABI AttrBuilder &addStructRetAttr(Type *Ty);
 
   /// This turns a byref type into the form used internally in Attribute.
-  AttrBuilder &addByRefAttr(Type *Ty);
+  LLVM_ABI AttrBuilder &addByRefAttr(Type *Ty);
 
   /// This turns a preallocated type into the form used internally in Attribute.
-  AttrBuilder &addPreallocatedAttr(Type *Ty);
+  LLVM_ABI AttrBuilder &addPreallocatedAttr(Type *Ty);
 
   /// This turns an inalloca type into the form used internally in Attribute.
-  AttrBuilder &addInAllocaAttr(Type *Ty);
+  LLVM_ABI AttrBuilder &addInAllocaAttr(Type *Ty);
 
   /// Add an allocsize attribute, using the representation returned by
   /// Attribute.getIntValue().
-  AttrBuilder &addAllocSizeAttrFromRawRepr(uint64_t RawAllocSizeRepr);
+  LLVM_ABI AttrBuilder &addAllocSizeAttrFromRawRepr(uint64_t RawAllocSizeRepr);
 
   /// Add a vscale_range attribute, using the representation returned by
   /// Attribute.getIntValue().
-  AttrBuilder &addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
+  LLVM_ABI AttrBuilder &
+  addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
 
   /// This turns the unwind table kind into the form used internally in
   /// Attribute.
-  AttrBuilder &addUWTableAttr(UWTableKind Kind);
+  LLVM_ABI AttrBuilder &addUWTableAttr(UWTableKind Kind);
 
   // This turns the allocator kind into the form used internally in Attribute.
-  AttrBuilder &addAllocKindAttr(AllocFnKind Kind);
+  LLVM_ABI AttrBuilder &addAllocKindAttr(AllocFnKind Kind);
 
   /// Add memory effect attribute.
-  AttrBuilder &addMemoryAttr(MemoryEffects ME);
+  LLVM_ABI AttrBuilder &addMemoryAttr(MemoryEffects ME);
+
+  /// Add captures attribute.
+  LLVM_ABI AttrBuilder &addCapturesAttr(CaptureInfo CI);
 
   // Add nofpclass attribute
-  AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
+  LLVM_ABI AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
 
   /// Add a ConstantRange attribute with the given range.
-  AttrBuilder &addConstantRangeAttr(Attribute::AttrKind Kind,
-                                    const ConstantRange &CR);
+  LLVM_ABI AttrBuilder &addConstantRangeAttr(Attribute::AttrKind Kind,
+                                             const ConstantRange &CR);
 
   /// Add range attribute.
-  AttrBuilder &addRangeAttr(const ConstantRange &CR);
+  LLVM_ABI AttrBuilder &addRangeAttr(const ConstantRange &CR);
 
   /// Add a ConstantRangeList attribute with the given ranges.
-  AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
-                                        ArrayRef<ConstantRange> Val);
+  LLVM_ABI AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
+                                                 ArrayRef<ConstantRange> Val);
 
   /// Add initializes attribute.
-  AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
+  LLVM_ABI AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
+
+  /// Add 0 or more parameter attributes which are equivalent to metadata
+  /// attached to \p I. e.g. !align -> align. This assumes the argument type is
+  /// the same as the original instruction and the attribute is compatible.
+  LLVM_ABI AttrBuilder &addFromEquivalentMetadata(const Instruction &I);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 
-  bool operator==(const AttrBuilder &B) const;
+  LLVM_ABI bool operator==(const AttrBuilder &B) const;
   bool operator!=(const AttrBuilder &B) const { return !(*this == B); }
 };
 
@@ -1293,7 +1329,7 @@ enum AttributeSafetyKind : uint8_t {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-bool isNoFPClassCompatibleType(Type *Ty);
+LLVM_ABI bool isNoFPClassCompatibleType(Type *Ty);
 
 /// Which attributes cannot be applied to a type. The argument \p AS
 /// is used as a hint for the attributes whose compatibility is being
@@ -1304,20 +1340,20 @@ bool isNoFPClassCompatibleType(Type *Ty);
 /// attributes that are known to be safely droppable are contained in
 /// the mask; only attributes that might be unsafe to drop (e.g.,
 /// ABI-related attributes) are in the mask; or both.
-AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
-                               AttributeSafetyKind ASK = ASK_ALL);
+LLVM_ABI AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
+                                        AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef
 /// implies UB), but not nonnull (where null implies poison). It also does not
 /// include attributes like nocapture, which constrain the function
 /// implementation rather than the passed value.
-AttributeMask getUBImplyingAttributes();
+LLVM_ABI AttributeMask getUBImplyingAttributes();
 
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.
-bool areInlineCompatible(const Function &Caller, const Function &Callee);
-
+LLVM_ABI bool areInlineCompatible(const Function &Caller,
+                                  const Function &Callee);
 
 /// Checks  if there are any incompatible function attributes between
 /// \p A and \p B.
@@ -1325,19 +1361,21 @@ bool areInlineCompatible(const Function &Caller, const Function &Callee);
 /// \param [in] A - The first function to be compared with.
 /// \param [in] B - The second function to be compared with.
 /// \returns true if the functions have compatible attributes.
-bool areOutlineCompatible(const Function &A, const Function &B);
+LLVM_ABI bool areOutlineCompatible(const Function &A, const Function &B);
 
 /// Merge caller's and callee's attributes.
-void mergeAttributesForInlining(Function &Caller, const Function &Callee);
+LLVM_ABI void mergeAttributesForInlining(Function &Caller,
+                                         const Function &Callee);
 
 /// Merges the functions attributes from \p ToMerge into function \p Base.
 ///
 /// \param [in,out] Base - The function being merged into.
 /// \param [in] ToMerge - The function to merge attributes from.
-void mergeAttributesForOutlining(Function &Base, const Function &ToMerge);
+LLVM_ABI void mergeAttributesForOutlining(Function &Base,
+                                          const Function &ToMerge);
 
 /// Update min-legal-vector-width if it is in Attribute and less than Width.
-void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
+LLVM_ABI void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
 
 } // end namespace AttributeFuncs
 

@@ -31,6 +31,7 @@ namespace llvm {
   FunctionPass *createXCoreISelDag(XCoreTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
   ModulePass *createXCoreLowerThreadLocalPass();
+  void initializeXCoreAsmPrinterPass(PassRegistry &);
   void initializeXCoreDAGToDAGISelLegacyPass(PassRegistry &);
 
 } // end namespace llvm;

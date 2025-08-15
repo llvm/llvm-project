@@ -2,7 +2,7 @@
 //      Check that Dexter command syntax errors associate with the line and file
 //      they appeared in rather than the current declared file.
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: not %dexter_base test --binary %t --debugger 'lldb' -v -- %s \
 // RUN:     | FileCheck %s --implicit-check-not=FAIL-FILENAME-MATCH
 

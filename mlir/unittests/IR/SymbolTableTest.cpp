@@ -49,8 +49,7 @@ protected:
     // Check that it got renamed.
     bool calleeFound = false;
     fooOp->walk([&](CallOpInterface callOp) {
-      StringAttr callee = callOp.getCallableForCallee()
-                              .dyn_cast<SymbolRefAttr>()
+      StringAttr callee = dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee())
                               .getLeafReference();
       EXPECT_EQ(callee, "baz");
       calleeFound = true;
@@ -131,6 +130,40 @@ TEST_F(ReplaceAllSymbolUsesTest, StringAttrInFuncOp) {
         StringAttr::get(context.get(), "bar"),
         StringAttr::get(context.get(), "baz"), fooOp);
   });
+}
+
+TEST(SymbolOpInterface, Visibility) {
+  DialectRegistry registry;
+  ::test::registerTestDialect(registry);
+  MLIRContext context(registry);
+
+  constexpr static StringLiteral kInput = R"MLIR(
+    "test.overridden_symbol_visibility"() {sym_name = "symbol_name"} : () -> ()
+  )MLIR";
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(kInput, &context);
+  auto symOp = cast<SymbolOpInterface>(module->getBody()->front());
+
+  ASSERT_TRUE(symOp.isPrivate());
+  ASSERT_FALSE(symOp.isPublic());
+  ASSERT_FALSE(symOp.isNested());
+  ASSERT_TRUE(symOp.canDiscardOnUseEmpty());
+
+  std::string diagStr;
+  context.getDiagEngine().registerHandler(
+      [&](Diagnostic &diag) { diagStr += diag.str(); });
+
+  std::string expectedDiag;
+  symOp.setPublic();
+  expectedDiag += "'test.overridden_symbol_visibility' op cannot change "
+                  "visibility of symbol to public";
+  symOp.setNested();
+  expectedDiag += "'test.overridden_symbol_visibility' op cannot change "
+                  "visibility of symbol to nested";
+  symOp.setPrivate();
+  expectedDiag += "'test.overridden_symbol_visibility' op cannot change "
+                  "visibility of symbol to private";
+
+  ASSERT_EQ(diagStr, expectedDiag);
 }
 
 } // namespace

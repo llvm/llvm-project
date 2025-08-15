@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -21,10 +23,8 @@ TEST_P(CASTest, PrintIDs) {
   std::unique_ptr<ObjectStore> CAS = createObjectStore();
 
   std::optional<CASID> ID1, ID2;
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
-                    Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "2").moveInto(ID2), Succeeded());
   EXPECT_NE(ID1, ID2);
   std::string PrintedID1 = ID1->toString();
   std::string PrintedID2 = ID2->toString();
@@ -56,7 +56,7 @@ multiline text multiline text multiline text multiline text multiline text)",
     // problems if the CAS is storing references to the input string instead of
     // copying it.
     std::optional<ObjectProxy> Blob;
-    ASSERT_THAT_ERROR(CAS1->createProxy(std::nullopt, Content).moveInto(Blob),
+    ASSERT_THAT_ERROR(CAS1->createProxy({}, Content).moveInto(Blob),
                       Succeeded());
     IDs.push_back(Blob->getID());
 
@@ -69,9 +69,8 @@ multiline text multiline text multiline text multiline text multiline text)",
   // Check that the blobs give the same IDs later.
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     std::optional<ObjectProxy> Blob;
-    ASSERT_THAT_ERROR(
-        CAS1->createProxy(std::nullopt, ContentStrings[I]).moveInto(Blob),
-        Succeeded());
+    ASSERT_THAT_ERROR(CAS1->createProxy({}, ContentStrings[I]).moveInto(Blob),
+                      Succeeded());
     EXPECT_EQ(IDs[I], Blob->getID());
   }
 
@@ -101,7 +100,7 @@ multiline text multiline text multiline text multiline text multiline text)",
     auto &ID = IDs[I - 1];
     auto &Content = ContentStrings[I - 1];
     std::optional<ObjectProxy> Blob;
-    ASSERT_THAT_ERROR(CAS2->createProxy(std::nullopt, Content).moveInto(Blob),
+    ASSERT_THAT_ERROR(CAS2->createProxy({}, Content).moveInto(Blob),
                       Succeeded());
     EXPECT_EQ(ID, Blob->getID());
 
@@ -119,19 +118,15 @@ TEST_P(CASTest, BlobsBig) {
   while (String1.size() < 1024U * 1024U) {
     std::optional<CASID> ID1;
     std::optional<CASID> ID2;
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, String1).moveInto(ID1),
-                      Succeeded());
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, String1).moveInto(ID2),
-                      Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, String1).moveInto(ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, String1).moveInto(ID2), Succeeded());
     ASSERT_THAT_ERROR(CAS->validate(*ID1), Succeeded());
     ASSERT_THAT_ERROR(CAS->validate(*ID2), Succeeded());
     ASSERT_EQ(ID1, ID2);
 
     String1.append(String2);
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, String2).moveInto(ID1),
-                      Succeeded());
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, String2).moveInto(ID2),
-                      Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, String2).moveInto(ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, String2).moveInto(ID2), Succeeded());
     ASSERT_THAT_ERROR(CAS->validate(*ID1), Succeeded());
     ASSERT_THAT_ERROR(CAS->validate(*ID2), Succeeded());
     ASSERT_EQ(ID1, ID2);
@@ -148,8 +143,7 @@ TEST_P(CASTest, BlobsBig) {
   for (size_t Size = InterestingSize - 2; Size != SizeE; ++Size) {
     StringRef Data(Storage.data(), Size);
     std::optional<ObjectProxy> Blob;
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, Data).moveInto(Blob),
-                      Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, Data).moveInto(Blob), Succeeded());
     ASSERT_EQ(Data, Blob->getData());
     ASSERT_EQ(0, Blob->getData().end()[0]);
   }
@@ -176,18 +170,16 @@ multiline text multiline text multiline text multiline text multiline text)",
     // copying it.
     std::optional<ObjectRef> Node;
     ASSERT_THAT_ERROR(
-        CAS1->store(std::nullopt, arrayRefFromStringRef<char>(Content))
-            .moveInto(Node),
+        CAS1->store({}, arrayRefFromStringRef<char>(Content)).moveInto(Node),
         Succeeded());
     Nodes.push_back(*Node);
 
     // Check basic printing of IDs.
     IDs.push_back(CAS1->getID(*Node));
-    EXPECT_EQ(IDs.back().toString(), IDs.back().toString());
-    EXPECT_EQ(Nodes.front(), Nodes.front());
-    EXPECT_EQ(Nodes.back(), Nodes.back());
-    EXPECT_EQ(IDs.front(), IDs.front());
-    EXPECT_EQ(IDs.back(), IDs.back());
+    auto ID = CAS1->getID(Nodes.back());
+    EXPECT_EQ(ID.toString(), IDs.back().toString());
+    EXPECT_EQ(*Node, Nodes.back());
+    EXPECT_EQ(ID, IDs.back());
     if (Nodes.size() <= 1)
       continue;
     EXPECT_NE(Nodes.front(), Nodes.back());
@@ -197,10 +189,10 @@ multiline text multiline text multiline text multiline text multiline text)",
   // Check that the blobs give the same IDs later.
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     std::optional<ObjectRef> Node;
-    ASSERT_THAT_ERROR(CAS1->store(std::nullopt, arrayRefFromStringRef<char>(
-                                                    ContentStrings[I]))
-                          .moveInto(Node),
-                      Succeeded());
+    ASSERT_THAT_ERROR(
+        CAS1->store({}, arrayRefFromStringRef<char>(ContentStrings[I]))
+            .moveInto(Node),
+        Succeeded());
     EXPECT_EQ(IDs[I], CAS1->getID(*Node));
   }
 
@@ -228,8 +220,7 @@ multiline text multiline text multiline text multiline text multiline text)",
     auto &Content = ContentStrings[I - 1];
     std::optional<ObjectRef> Node;
     ASSERT_THAT_ERROR(
-        CAS2->store(std::nullopt, arrayRefFromStringRef<char>(Content))
-            .moveInto(Node),
+        CAS2->store({}, arrayRefFromStringRef<char>(Content)).moveInto(Node),
         Succeeded());
     EXPECT_EQ(ID, CAS2->getID(*Node));
 
@@ -278,24 +269,20 @@ TEST_P(CASTest, NodesBig) {
     ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
 }
 
+#if LLVM_ENABLE_THREADS
 /// Common test functionality for creating blobs in parallel. You can vary which
 /// cas instances are the same or different, and the size of the created blobs.
 static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
                               ObjectStore &Write1, ObjectStore &Write2,
                               uint64_t BlobSize) {
-  SCOPED_TRACE(testBlobsParallel);
+  SCOPED_TRACE("testBlobsParallel");
   unsigned BlobCount = 100;
   std::vector<std::string> Blobs;
   Blobs.reserve(BlobCount);
   for (unsigned I = 0; I < BlobCount; ++I) {
     std::string Blob;
-    Blob.reserve(BlobSize);
-    while (Blob.size() < BlobSize) {
-      auto R = sys::Process::GetRandomNumber();
-      Blob.append((char *)&R, sizeof(R));
-    }
-    assert(Blob.size() >= BlobSize);
     Blob.resize(BlobSize);
+    getRandomBytes(Blob.data(), BlobSize);
     Blobs.push_back(std::move(Blob));
   }
 
@@ -340,7 +327,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
 }
 
 static void testBlobsParallel1(ObjectStore &CAS, uint64_t BlobSize) {
-  SCOPED_TRACE(testBlobsParallel1);
+  SCOPED_TRACE("testBlobsParallel1");
   testBlobsParallel(CAS, CAS, CAS, CAS, BlobSize);
 }
 
@@ -357,4 +344,5 @@ TEST_P(CASTest, BlobsBigParallel) {
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
-#endif
+#endif // EXPENSIVE_CHECKS
+#endif // LLVM_ENABLE_THREADS

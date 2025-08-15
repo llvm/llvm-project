@@ -83,3 +83,41 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
 
                     # only step one thread that is at the breakpoint and stop
                     break
+
+    def test_step_over_inlined_function(self):
+        """
+        Test stepping over when the program counter is in another file.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint_lines = [line_number(source, "// breakpoint 2")]
+        step_over_pos = line_number(source, "// position_after_step_over")
+        breakpoint_ids = self.set_source_breakpoints(source, breakpoint_lines)
+        self.assertEqual(
+            len(breakpoint_ids),
+            len(breakpoint_lines),
+            "expect correct number of breakpoints.",
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        thread_id = self.dap_server.get_thread_id()
+        self.stepOver(thread_id)
+        levels = 1
+        frames = self.get_stackFrames(thread_id, 0, levels)
+        self.assertEqual(len(frames), levels, "expect current number of frame levels.")
+        top_frame = frames[0]
+        self.assertEqual(
+            top_frame["source"]["name"], source, "expect we are in the same file."
+        )
+        self.assertTrue(
+            top_frame["source"]["path"].endswith(source),
+            f"expect path ending with '{source}'.",
+        )
+        self.assertEqual(
+            top_frame["line"],
+            step_over_pos,
+            f"expect step_over on line {step_over_pos}",
+        )
+
+        self.continue_to_exit()

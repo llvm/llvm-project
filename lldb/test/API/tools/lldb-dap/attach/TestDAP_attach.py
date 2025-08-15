@@ -1,17 +1,12 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap attach request
 """
 
-
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import os
-import shutil
 import subprocess
-import tempfile
 import threading
 import time
 
@@ -35,7 +30,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        # Test binary will sleep for 10s, offset the breakpoint timeout
+        # accordingly.
+        timeout_offset = 10
+        self.continue_to_breakpoints(
+            breakpoint_ids, timeout=timeout_offset + self.DEFAULT_TIMEOUT
+        )
         if continueToExit:
             self.continue_to_exit()
 
@@ -44,8 +44,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by process ID.
         """
-        self.build_and_create_debug_adaptor()
-        program = self.getBuildArtifact("a.out")
+        program = self.build_and_create_debug_adapter_for_attach()
         self.process = subprocess.Popen(
             [program],
             stdin=subprocess.PIPE,
@@ -60,49 +59,28 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by process name.
         """
-        self.build_and_create_debug_adaptor()
-        orig_program = self.getBuildArtifact("a.out")
-        # Since we are going to attach by process name, we need a unique
-        # process name that has minimal chance to match a process that is
-        # already running. To do this we use tempfile.mktemp() to give us a
-        # full path to a location where we can copy our executable. We then
-        # run this copy to ensure we don't get the error "more that one
-        # process matches 'a.out'".
-        program = tempfile.mktemp()
-        shutil.copyfile(orig_program, program)
-        shutil.copymode(orig_program, program)
+        program = self.build_and_create_debug_adapter_for_attach()
 
         # Use a file as a synchronization point between test and inferior.
         pid_file_path = lldbutil.append_to_process_working_directory(
             self, "pid_file_%d" % (int(time.time()))
         )
 
-        def cleanup():
-            if os.path.exists(program):
-                os.unlink(program)
-            self.run_platform_command("rm %s" % (pid_file_path))
-
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
-
         popen = self.spawnSubprocess(program, [pid_file_path])
-
-        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
+        lldbutil.wait_for_file_on_target(self, pid_file_path)
 
         self.attach(program=program)
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipUnlessDarwin
-    @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_by_name_waitFor(self):
         """
         Tests attaching to a process by process name and waiting for the
-        next instance of a process to be launched, ingoring all current
+        next instance of a process to be launched, ignoring all current
         ones.
         """
-        self.build_and_create_debug_adaptor()
-        program = self.getBuildArtifact("a.out")
+        program = self.build_and_create_debug_adapter_for_attach()
         self.spawn_thread = threading.Thread(
             target=spawn_and_wait,
             args=(
@@ -114,7 +92,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program, waitFor=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_commands(self):
         """
@@ -123,7 +100,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         that can be passed during attach.
 
         "initCommands" are a list of LLDB commands that get executed
-        before the targt is created.
+        before the target is created.
         "preRunCommands" are a list of LLDB commands that get executed
         after the target has been created and before the launch.
         "stopCommands" are a list of LLDB commands that get executed each
@@ -137,8 +114,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         "terminateCommands" are a list of LLDB commands that get executed when
         the debugger session terminates.
         """
-        self.build_and_create_debug_adaptor()
-        program = self.getBuildArtifact("a.out")
+        program = self.build_and_create_debug_adapter_for_attach()
+
         # Here we just create a target and launch the process as a way to test
         # if we are able to use attach commands to create any kind of a target
         # and use it for debugging
@@ -182,7 +159,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after we stop.
-        self.dap_server.request_continue()
+        self.do_continue()
         time.sleep(0.5)
         self.dap_server.request_pause()
         self.dap_server.wait_for_stopped()
@@ -201,18 +178,32 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfDarwin
+    def test_attach_command_process_failures(self):
+        """
+        Tests that a 'attachCommands' is expected to leave the debugger's
+        selected target with a valid process.
+        """
+        program = self.build_and_create_debug_adapter_for_attach()
+        attachCommands = ['script print("oops, forgot to attach to a process...")']
+        resp = self.attach(
+            program=program,
+            attachCommands=attachCommands,
+            expectFailure=True,
+        )
+        self.assertFalse(resp["success"])
+        self.assertIn(
+            "attachCommands failed to attach to a process",
+            resp["body"]["error"]["format"],
+        )
+
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(
-        archs=["arm", "aarch64"]
-    )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5517/steps/test/logs/stdio
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
         attach, are run when the debugger is disconnected.
         """
-        self.build_and_create_debug_adaptor()
-        program = self.getBuildArtifact("a.out")
+        program = self.build_and_create_debug_adapter_for_attach()
+
         # Here we just create a target and launch the process as a way to test
         # if we are able to use attach commands to create any kind of a target
         # and use it for debugging

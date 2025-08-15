@@ -1,9 +1,9 @@
-<!--===- docs/Extensions.md 
-  
+<!--===- docs/Extensions.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Extensions supported by Flang
@@ -126,7 +126,7 @@ end
   and `DO CONCURRENT`.
 * A non-definable actual argument, including the case of a vector
   subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
-  dummy argument, F'2023 15.5.2.5 p31 notwithstanding.
+  dummy argument, F'2023 15.5.2.5 p21 notwithstanding.
   The effects of these attributes are scoped over the lifetime of
   the procedure reference, and they can by added by internal subprograms
   and `BLOCK` constructs within the procedure.
@@ -141,6 +141,47 @@ end
   This interpretation has usability advantages and is what six other
   Fortran compilers do, but is not conforming now that J3 approved an
   "interp" in June 2024 to the contrary.
+* When an Arm processor raises an `ieee_overflow` or `ieee_underflow`
+  exception, the `ieee_inexact` exception is also raised. This happens
+  for a call to `ieee_set_flag` as well as for floating point expression
+  evaluation.
+* Arm has processors that allow a user to control what happens when an
+  arithmetic exception is signaled, as well as processors that do not
+  have this capability. An Arm executable will run on either type of
+  processor, so it is effectively unknown at compile time whether or
+  not this support will be available at runtime. The standard requires
+  that a call to intrinsic module procedure `ieee_support_halting` with
+  a constant argument has a compile time constant result in `constant
+  expression` and `specification expression` contexts. In compilations
+  where this information is not known at compile time, f18 generates code
+  to determine the absence or presence of this capability at runtime.
+  A call to `ieee_support_halting` in contexts that the standard requires
+  to be constant will generate a compilation error. `ieee_support_standard`
+  depends in part on `ieee_support_halting`, so this also applies to
+  `ieee_support_standard` calls.
+* F'2023 constraint C7108 prohibits the use of a structure constructor
+  that could also be interpreted as a generic function reference.
+  No other Fortran compiler enforces C7108 (to our knowledge);
+  they all resolve the ambiguity by interpreting the call as a function
+  reference.  We do the same, with a portability warning.
+* An override for an inaccessible procedure binding works only within
+  the same module; other apparent overrides of inaccessible bindings
+  are actually new bindings of the same name.
+  In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
+  however, overrides are necessary, so they are permitted for inaccessible
+  bindings with an optional warning.
+* Main program name is allowed to be the same as the other symbols used
+  in the main program, for example:
+```
+module m
+end
+program m
+use m
+end
+```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -148,7 +189,11 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved variables without explicit or default initializers are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized,
+  except for scalar variables from the main program that are not explicitly
+  initialized or marked with an explicit SAVE attribute (these variables may be
+  placed on the stack by flang and not zero initialized). It is not advised to
+  rely on this extension in new code.
 * In a saved entity of a type with a default initializer, components without default
   values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
@@ -196,7 +241,7 @@ end
   the length parameter of the implicit type, not the first.
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
-* Classic C-style /*comments*/ are skipped, so multi-language header
+* Classic C-style `/*comments*/` are skipped, so multi-language header
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
@@ -219,6 +264,8 @@ end
   the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
+* `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
+  spelling of `INT(boz, KIND=kind(mold))` or `REAL(boz, KIND=kind(mold))`.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
   as well as of sequences of non-default kinds of numeric types
   with each other.
@@ -264,7 +311,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument or
+* A forward reference to an INTEGER dummy argument is permitted to appear
+  in a specification expression, such as an array bound, in a scope with
+  IMPLICIT NONE(TYPE).
+* A forward reference to a default INTEGER scalar
   `COMMON` block variable is permitted to appear in a specification
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
@@ -370,8 +420,9 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
-* A comma in a fixed-width numeric input field terminates the
-  field rather than signaling an invalid character error.
+* A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
+  fixed-width numeric input field terminates the field rather than
+  signaling an invalid character error.
 * Arguments to the intrinsic functions `MAX` and `MIN` are converted
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
@@ -391,6 +442,16 @@ end
   has the SAVE attribute and was initialized.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
+* A character length specifier in a component or entity declaration
+  is accepted before an array specification (`ch*3(2)`) as well
+  as afterwards.
+* A zero field width is allowed for logical formatted output (`L0`).
+* `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
+  the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
+* A character string edit descriptor is allowed in an input format
+  with an optional compilation-time warning.  When executed, it
+  is treated as an 'nX' positioning control descriptor that skips
+  over the same number of characters, without comparison.
 
 ### Extensions supported when enabled by options
 
@@ -417,6 +478,10 @@ end
   [-fimplicit-none-type-never]
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
+* `UNSIGNED` type (-funsigned)
+* Default exponent of zero, e.g. `3.14159E`, on a READ from a
+  fixed-width input field.  Includes the case with only an
+  exponent letter for compatibility with other compilers.
 
 ### Extensions and legacy features deliberately not supported
 
@@ -430,7 +495,7 @@ end
 * `VIRTUAL` as synonym for `DIMENSION`
 * `ENCODE` and `DECODE` as synonyms for internal I/O
 * `IMPLICIT AUTOMATIC`, `IMPLICIT STATIC`
-* Default exponent of zero, e.g. `3.14159E`
+* Default exponent of zero, e.g. `3.14159E`, on a literal constant
 * Characters in defined operators that are neither letters nor digits
 * `B` suffix on unquoted octal constants
 * `Z` prefix on unquoted hexadecimal constants (dangerous)
@@ -480,6 +545,8 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 
@@ -787,6 +854,61 @@ print *, [(j,j=1,10)]
   F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
   integer overflow never occurs in address calculations and increment of
   do-variable unless the option `-fwrapv` is enabled.
+
+* Two new ieee_round_type values were added in f18 beyond the four values
+  defined in f03 and f08: ieee_away and ieee_other. Contemporary hardware
+  typically does not have support for these rounding modes;
+  ieee_support_rounding calls for these values return false.
+  ieee_set_rounding_mode calls that attempt to set the rounding mode to one
+  of these values in violation of the restriction in f23 clause 17.11.42 set
+  the mode to ieee_nearest.
+
+* Some compilers allow an `INTENT(OUT)` dummy argument's value to appear
+  via host association in a specification expression.  A non-host-associated
+  use is an error because an `INTENT(OUT)` dummy argument's value is not
+  defined.  The argument put forth to accept this usage in a `BLOCK` construct
+  or inner procedure is that the language in 10.1.11 (specification expressions)
+  allows any host-associated object to appear, but that's unconvincing
+  because it would also allow a host-associated `OPTIONAL` dummy argument to
+  be used in a nested scope, and that doesn't make sense.  This compiler
+  accepts an `INTENT(OUT)` non-`OPTIONAL` host-associated value to appear
+  in a specification expression via host association with a portability
+  warning since such values may have become defined by the time the nested
+  expression's value is required.
+
+* Intrinsic assignment of arrays is defined elementally, and intrinsic
+  assignment of derived type components is defined componentwise.
+  However, when intrinsic assignment takes place for an array of derived
+  type, the order of the loop nesting is not defined.
+  Some compilers will loop over the elements, assigning all of the components
+  of each element before proceeding to the next element.
+  This compiler loops over all of the components, and assigns all of
+  the elements for each component before proceeding to the next component.
+  A program using defined assignment might be able to detect the difference.
+
+* The standard forbids instances of derived types with defined unformatted
+  WRITE subroutines from appearing in the I/O list of an `INQUIRE(IOLENGTH=...)`
+  statement.  It then also says that these defined I/O procedures should be
+  ignored for that statement.  So we allow them to appear (like most
+  compilers) and don't use any defined unformatted WRITE that might have been
+  defined.
+
+* Forward references to target objects are allowed to appear
+  in the initializers of data pointer declarationss.
+  Forward references to target objects are not accepted in the default
+  initializers of derived type component declarations, however,
+  since these default values need to be available to process incomplete
+  structure constructors.
+
+* When an `ALLOCATE` or `DEALLOCATE` statement with multiple variables
+  has a `STAT=` specifier that allows the program to continue execution
+  after an error, the variables after the one with the error are left
+  deallocated (or allocated).  This interpretation allows the program to
+  identify the variable that encountered the problem while avoiding any
+  ambiguity in the case of multiple errors with distinct status codes.
+  Some compilers work differently; for maximum portability, avoid
+  `ALLOCATE` and `DEALLOCATE` statements with error recovery for
+  multiple variables.
 
 ## De Facto Standard Features
 

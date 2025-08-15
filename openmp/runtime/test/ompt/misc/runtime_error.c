@@ -29,7 +29,7 @@ int main() {
 // CHECK-SAME: severity=1
 // CHECK-SAME: message=User message goes here
 // CHECK-SAME: length=[[LENGTH]]
-// CHECK-SAME: codeptr_ra={{0x[0-f]+}}
+// CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}
 
 // Message from runtime
 // CHECK: {{^}}OMP: Warning{{.*}}User message goes here

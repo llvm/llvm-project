@@ -1,4 +1,4 @@
-! RUN: bbc %s -o "-" -emit-fir -hlfir=false | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 integer(1) function fct1()
 end
@@ -45,7 +45,7 @@ end
 ! CHECK-LABEL: func @_QPfct_body() -> i32
 ! CHECK:         cf.br ^bb1
 ! CHECK:       ^bb1
-! CHECK:         %{{.*}} = fir.call @_FortranAStopStatement
+! CHECK:         fir.call @_FortranAStopStatement
 ! CHECK:         fir.unreachable
 
 function fct_iarr1()
@@ -102,15 +102,19 @@ end
 ! CHECK-LABEL: func @_QPrfct4() -> f64
 ! CHECK:         return %{{.*}} : f64
 
-real(10) function rfct5()
+function rfct5()
+  integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+  real(kind10) :: rfct5
 end
-! CHECK-LABEL: func @_QPrfct5() -> f80
-! CHECK:         return %{{.*}} : f80
+! CHECK-KIND10-LABEL: func @_QPrfct5() -> f80
+! CHECK-KIND10:         return %{{.*}} : f80
 
-real(16) function rfct6()
+function rfct6()
+  integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
+  real(kind16) :: rfct6
 end
-! CHECK-LABEL: func @_QPrfct6() -> f128
-! CHECK:         return %{{.*}} : f128
+! CHECK-KIND16-LABEL: func @_QPrfct6() -> f128
+! CHECK-KIND16:         return %{{.*}} : f128
 
 complex(2) function cplxfct1()
 end
@@ -132,15 +136,19 @@ end
 ! CHECK-LABEL: func @_QPcplxfct4() -> complex<f64>
 ! CHECK:         return %{{.*}} : complex<f64>
 
-complex(10) function cplxfct5()
+function cplxfct5()
+  integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+  complex(kind10) :: cplxfct5
 end
-! CHECK-LABEL: func @_QPcplxfct5() -> complex<f80>
-! CHECK:         return %{{.*}} : complex<f80>
+! CHECK-KIND10-LABEL: func @_QPcplxfct5() -> complex<f80>
+! CHECK-KIND10:         return %{{.*}} : complex<f80>
 
-complex(16) function cplxfct6()
+function cplxfct6()
+  integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
+  complex(kind16) :: cplxfct6
 end
-! CHECK-LABEL: func @_QPcplxfct6() -> complex<f128>
-! CHECK:         return %{{.*}} : complex<f128>
+! CHECK-KIND16-LABEL: func @_QPcplxfct6() -> complex<f128>
+! CHECK-KIND16:         return %{{.*}} : complex<f128>
 
 function fct_with_character_return(i)
   character(10) :: fct_with_character_return

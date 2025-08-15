@@ -157,7 +157,6 @@ define ghccc void @test5() {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-8, %rsp
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %then
@@ -173,7 +172,7 @@ define ghccc void @test5() {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    jmp tail@PLT # TAILCALL
 entry:
-  br i1 undef, label %then, label %else
+  br i1 poison, label %then, label %else
 
 then:
   store i64 0, ptr undef
@@ -186,4 +185,3 @@ else:
 exit:
   ret void
 }
-

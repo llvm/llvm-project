@@ -82,8 +82,9 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                           CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Ignore empty structs/unions.
@@ -115,7 +116,7 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     // All integral types are promoted to XLen width, unless passed on the
     // stack.
@@ -144,7 +145,8 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
           llvm::IntegerType::get(getVMContext(), XLen), (Size + 31) / XLen));
     }
   }
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo CSKYABIInfo::classifyReturnType(QualType RetTy) const {

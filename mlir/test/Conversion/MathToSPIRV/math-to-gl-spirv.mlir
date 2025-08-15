@@ -46,6 +46,22 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %14 = math.ceil %arg0 : f32
   // CHECK: spirv.GL.Floor %{{.*}}: f32
   %15 = math.floor %arg0 : f32
+  // CHECK: spirv.GL.Tan %{{.*}}: f32
+  %16 = math.tan %arg0 : f32
+  // CHECK: spirv.GL.Asin %{{.*}}: f32
+  %17 = math.asin %arg0 : f32
+  // CHECK: spirv.GL.Acos %{{.*}}: f32
+  %18 = math.acos %arg0 : f32
+  // CHECK: spirv.GL.Sinh %{{.*}}: f32
+  %19 = math.sinh %arg0 : f32
+  // CHECK: spirv.GL.Cosh %{{.*}}: f32
+  %20 = math.cosh %arg0 : f32
+  // CHECK: spirv.GL.Asinh %{{.*}}: f32
+  %21 = math.asinh %arg0 : f32
+  // CHECK: spirv.GL.Acosh %{{.*}}: f32
+  %22 = math.acosh %arg0 : f32
+  // CHECK: spirv.GL.Atanh %{{.*}}: f32
+  %23 = math.atanh %arg0 : f32
   return
 }
 
@@ -85,6 +101,22 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %11 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sin %{{.*}}: vector<3xf32>
   %12 = math.sin %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Tan %{{.*}}: vector<3xf32>
+  %13 = math.tan %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Asin %{{.*}}: vector<3xf32>
+  %14 = math.asin %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Acos %{{.*}}: vector<3xf32>
+  %15 = math.acos %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Sinh %{{.*}}: vector<3xf32>
+  %16 = math.sinh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Cosh %{{.*}}: vector<3xf32>
+  %17 = math.cosh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Asinh %{{.*}}: vector<3xf32>
+  %18 = math.asinh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Acosh %{{.*}}: vector<3xf32>
+  %19 = math.acosh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Atanh %{{.*}}: vector<3xf32>
+  %20 = math.atanh %arg0 : vector<3xf32>
   return
 }
 

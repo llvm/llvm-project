@@ -105,6 +105,23 @@ public:
     return SizeOfUnwindException;
   }
 };
+
+class WindowsMIPSTargetCodeGenInfo : public MIPSTargetCodeGenInfo {
+public:
+  WindowsMIPSTargetCodeGenInfo(CodeGenTypes &CGT, bool IsO32)
+      : MIPSTargetCodeGenInfo(CGT, IsO32) {}
+
+  void getDependentLibraryOption(llvm::StringRef Lib,
+                                 llvm::SmallString<24> &Opt) const override {
+    Opt = "/DEFAULTLIB:";
+    Opt += qualifyWindowsLibrary(Lib);
+  }
+
+  void getDetectMismatchOption(llvm::StringRef Name, llvm::StringRef Value,
+                               llvm::SmallString<32> &Opt) const override {
+    Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
+  }
+};
 }
 
 void MipsABIInfo::CoerceToIntArgs(
@@ -144,7 +161,7 @@ llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
     return llvm::StructType::get(getVMContext(), ArgList);
   }
 
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
   assert(!(TySize % 8) && "Size of structure must be multiple of 8.");
 
@@ -209,7 +226,8 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
 
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
       Offset = OrigOffset + MinABIStackAlignInBytes;
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
     // If we have reached here, aggregates are passed directly by coercing to
@@ -224,14 +242,14 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() > 128 ||
         (EIT->getNumBits() > 64 &&
          !getContext().getTargetInfo().hasInt128Type()))
-      return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   // All integral types are promoted to the GPR width.
   if (Ty->isIntegralOrEnumerationType())
@@ -247,7 +265,7 @@ MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
   SmallVector<llvm::Type*, 8> RTList;
 
   if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
     unsigned FieldCnt = Layout.getFieldCount();
 
@@ -310,19 +328,20 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
       }
     }
 
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   }
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getDecl()->getIntegerType();
+    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = RetTy->getAs<BitIntType>())
     if (EIT->getNumBits() > 128 ||
         (EIT->getNumBits() > 64 &&
          !getContext().getTargetInfo().hasInt128Type()))
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
 
   if (isPromotableIntegerTypeForABI(RetTy))
     return ABIArgInfo::getExtend(RetTy);
@@ -435,4 +454,9 @@ MIPSTargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32) {
   return std::make_unique<MIPSTargetCodeGenInfo>(CGM.getTypes(), IsOS32);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createWindowsMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32) {
+  return std::make_unique<WindowsMIPSTargetCodeGenInfo>(CGM.getTypes(), IsOS32);
 }

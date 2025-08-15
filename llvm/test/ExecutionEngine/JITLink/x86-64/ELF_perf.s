@@ -1,5 +1,9 @@
 # REQUIRES: native && x86_64-linux
 
+# Linux perf not supported by Windows Kernel's Linux syscall emulation layer
+# https://github.com/microsoft/WSL/issues/4595
+# UNSUPPORTED: wsl1
+
 # FIXME: Investigate why broken with MSAN
 # UNSUPPORTED: msan
 

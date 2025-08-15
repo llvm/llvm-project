@@ -12,9 +12,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: merge_unmerge
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %a:_(s32), %b:_(s32) = G_UNMERGE_VALUES %0
     %merge:_(s64) = G_MERGE_VALUES %a, %b
@@ -33,11 +35,13 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: merge_unmerge_mismatched_order
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: %b:_(s32), %a:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: %merge:_(s64) = G_MERGE_VALUES %a(s32), %b(s32)
-    ; CHECK: $x0 = COPY %merge(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s32), %a:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: %merge:_(s64) = G_MERGE_VALUES %a(s32), %b(s32)
+    ; CHECK-NEXT: $x0 = COPY %merge(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %b:_(s32), %a:_(s32) = G_UNMERGE_VALUES %0
     %merge:_(s64) = G_MERGE_VALUES %a, %b
@@ -56,11 +60,13 @@ body:             |
     liveins: $q0
 
     ; CHECK-LABEL: name: merge_unmerge_mismatched_num_defs
-    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $q0
-    ; CHECK: %a:_(s32), %b:_(s32), %c:_(s32), %d:_(s32) = G_UNMERGE_VALUES [[COPY]](s128)
-    ; CHECK: %merge:_(s64) = G_MERGE_VALUES %a(s32), %b(s32)
-    ; CHECK: $x0 = COPY %merge(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $q0
+    ; CHECK-NEXT: %a:_(s32), %b:_(s32), %c:_(s32), %d:_(s32) = G_UNMERGE_VALUES [[COPY]](s128)
+    ; CHECK-NEXT: %merge:_(s64) = G_MERGE_VALUES %a(s32), %b(s32)
+    ; CHECK-NEXT: $x0 = COPY %merge(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s128) = COPY $q0
     %a:_(s32), %b:_(s32), %c:_(s32), %d:_(s32) = G_UNMERGE_VALUES %0
     %merge:_(s64) = G_MERGE_VALUES %a, %b
@@ -79,10 +85,12 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: merge_to_zext
-    ; CHECK: %v:_(s32) = COPY $w0
-    ; CHECK: %merge:_(s64) = G_ZEXT %v(s32)
-    ; CHECK: $x0 = COPY %merge(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %v:_(s32) = COPY $w0
+    ; CHECK-NEXT: %merge:_(s64) = G_ZEXT %v(s32)
+    ; CHECK-NEXT: $x0 = COPY %merge(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %v:_(s32) = COPY $w0
     %zero:_(s32) = G_CONSTANT i32 0
     %merge:_(s64) = G_MERGE_VALUES %v, %zero

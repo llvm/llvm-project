@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fclose.h"
-#include "src/__support/macros/config.h"
-#include "src/stdio/gpu/file.h"
 
 #include "hdr/stdio_macros.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
+#include "src/stdio/gpu/file.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   uint64_t ret = 0;
   uintptr_t file = reinterpret_cast<uintptr_t>(stream);
-  rpc::Client::Port port = rpc::client.open<RPC_CLOSE_FILE>();
+  rpc::Client::Port port = rpc::client.open<LIBC_CLOSE_FILE>();
   port.send_and_recv(
       [=](rpc::Buffer *buffer, uint32_t) { buffer->data[0] = file; },
       [&](rpc::Buffer *buffer, uint32_t) { ret = buffer->data[0]; });

@@ -16,7 +16,7 @@ def get_required_attr(config, attr_name):
 
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
-config.name = "UBSan-Minimal-" + config.target_arch
+config.name = "UBSan-Minimal" + config.name_suffix
 
 
 def build_invocation(compile_flags):
@@ -27,15 +27,19 @@ target_cflags = [get_required_attr(config, "target_cflags")]
 clang_ubsan_cflags = ["-fsanitize-minimal-runtime"] + target_cflags
 clang_ubsan_cxxflags = config.cxx_mode_flags + clang_ubsan_cflags
 
-# Define %clang and %clangxx substitutions to use in test RUN lines.
-config.substitutions.append(("%clang ", build_invocation(clang_ubsan_cflags)))
-config.substitutions.append(("%clangxx ", build_invocation(clang_ubsan_cxxflags)))
+# Define %clang_min_runtime and %clangxx_min_runtime substitutions to use in test RUN lines.
+config.substitutions.append(
+    ("%clang_min_runtime ", build_invocation(clang_ubsan_cflags))
+)
+config.substitutions.append(
+    ("%clangxx_min_runtime ", build_invocation(clang_ubsan_cxxflags))
+)
 
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
 # Check that the host supports UndefinedBehaviorSanitizerMinimal tests
-if config.host_os not in [
+if config.target_os not in [
     "Linux",
     "FreeBSD",
     "NetBSD",
@@ -44,6 +48,9 @@ if config.host_os not in [
     "SunOS",
 ]:  # TODO: Windows
     config.unsupported = True
+
+if config.test_cfi:
+    config.available_features.add("cfi")
 
 # Don't target x86_64h if the test machine can't execute x86_64h binaries.
 if "-arch x86_64h" in target_cflags and "x86_64h" not in config.available_features:

@@ -58,13 +58,18 @@ protected:
 class CASID {
 public:
   void dump() const;
-  void print(raw_ostream &OS) const {
-    return getContext().printIDImpl(OS, *this);
-  }
+
   friend raw_ostream &operator<<(raw_ostream &OS, const CASID &ID) {
     ID.print(OS);
     return OS;
   }
+
+  /// Print CASID.
+  void print(raw_ostream &OS) const {
+    return getContext().printIDImpl(OS, *this);
+  }
+
+  /// Return a printable string for CASID.
   std::string toString() const;
 
   ArrayRef<uint8_t> getHash() const {
@@ -108,6 +113,7 @@ public:
 
   CASID() = delete;
 
+  /// Create CASID from CASContext and raw hash bytes.
   static CASID create(const CASContext *Context, StringRef Hash) {
     return CASID(Context, Hash);
   }
@@ -118,21 +124,6 @@ private:
 
   const CASContext *Context;
   SmallString<32> Hash;
-};
-
-/// This is used to workaround the issue of MSVC needing default-constructible
-/// types for \c std::promise/future.
-template <typename T> struct AsyncValue {
-  Expected<std::optional<T>> take() { return std::move(Value); }
-
-  AsyncValue() : Value(std::nullopt) {}
-  AsyncValue(Error &&E) : Value(std::move(E)) {}
-  AsyncValue(T &&V) : Value(std::move(V)) {}
-  AsyncValue(std::nullopt_t) : Value(std::nullopt) {}
-  AsyncValue(Expected<std::optional<T>> &&Obj) : Value(std::move(Obj)) {}
-
-private:
-  Expected<std::optional<T>> Value;
 };
 
 } // namespace cas

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx940 -cse | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx942 -cse | FileCheck %s
 func.func @mfma_to_rocdl(%arg0 : f32, %arg1 : vector<32xf32>,
                     %arg2 : vector<16xf32>, %arg3 : vector<4xf32>,
                     %arg4 : vector<4xf16>, %arg5 : vector<4xi8>,

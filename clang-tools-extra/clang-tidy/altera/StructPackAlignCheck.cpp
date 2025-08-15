@@ -47,7 +47,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   // Do not trigger on templated struct declarations because the packing and
   // alignment requirements are unknown.
   if (Struct->isTemplated())
-     return;
+    return;
 
   // Packing and alignment requirements for invalid decls are meaningless.
   if (Struct->isInvalidDecl())

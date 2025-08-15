@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AddressSpacesImpl {
+def AddrSpaces {
   int Flat = 0;
   int Global = 1;
   int Region = 2;
@@ -20,8 +20,6 @@ class AddressSpacesImpl {
   int Private = 5;
   int Constant32Bit = 6;
 }
-
-def AddrSpaces : AddressSpacesImpl;
 
 
 class AMDGPUInst <dag outs, dag ins, string asm = "",
@@ -40,7 +38,7 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
   // instructions to not match without killing the whole decode process. It is
   // mainly used for ARM, but Tablegen expects this field to exist or it fails
   // to build the decode table.
-  field bits<96> SoftFail = 0;
+  field bits<128> SoftFail = 0; // FIXME: If this is smaller than largest instruction, DecodeEmitter crashes
 
   let DecoderNamespace = Namespace;
 
@@ -94,7 +92,8 @@ def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().F
 def NoFP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals == DenormalMode::getPreserveSign()">;
 def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
-def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
+def IEEEModeEnabled : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
+def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
 }
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
@@ -502,25 +501,42 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
   let IsLoad = 1;
 }
 
-def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
+def atomic_load_nonext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_16 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i8;
 }
 
-def atomic_load_16_#as : PatFrag<(ops node:$ptr), (atomic_load_16 node:$ptr)> {
+def atomic_load_nonext_32_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_32 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i16;
 }
 
-def atomic_load_32_#as : PatFrag<(ops node:$ptr), (atomic_load_32 node:$ptr)> {
+def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i32;
 }
 
-def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
+def atomic_load_zext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_8 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i64;
 }
+
+def atomic_load_sext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_8 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_aext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_8 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_zext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_aext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 } // End let AddressSpaces
 } // End foreach as
 

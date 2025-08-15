@@ -5,16 +5,16 @@
 ; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
 
 ; Checks are not critical here - verifier will assert if we fail.
-; CHECK0: @funInternal2Alias = alias
-; CHECK0: @funExternal2Alias = alias
-; CHECK0: define internal i32 @funInternal2
-; CHECK0: define i32 @funExternal2
+; CHECK0: @funInternalAlias = alias
+; CHECK0: define internal i32 @funInternal
 
-; CHECK1: @funInternalAlias = alias
-; CHECK1: define internal i32 @funInternal
+; CHECK1: @funExternalAlias = alias
+; CHECK1: define i32 @funExternal
 
-; CHECK2: @funExternalAlias = alias
-; CHECK2: define i32 @funExternal
+; CHECK2: @funInternal2Alias = alias
+; CHECK2: @funExternal2Alias = alias
+; CHECK2: define internal i32 @funInternal2
+; CHECK2: define i32 @funExternal2
 
 @funInternalAlias = alias i32 (), ptr @funInternal
 @funExternalAlias = alias i32 (), ptr @funExternal

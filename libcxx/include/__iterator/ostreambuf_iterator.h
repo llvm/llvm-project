@@ -11,12 +11,12 @@
 #define _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__fwd/ios.h>
 #include <__fwd/ostream.h>
 #include <__fwd/streambuf.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
-#include <cstddef>
 #include <iosfwd> // for forward declaration of ostreambuf_iterator
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator
+class ostreambuf_iterator
 #if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
     : public iterator<output_iterator_tag, void, void, void, void>
 #endif
@@ -65,9 +65,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++(int) { return *this; }
   _LIBCPP_HIDE_FROM_ABI bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
 
+#if _LIBCPP_HAS_LOCALIZATION
   template <class _Ch, class _Tr>
   friend _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_Ch, _Tr> __pad_and_output(
       ostreambuf_iterator<_Ch, _Tr> __s, const _Ch* __ob, const _Ch* __op, const _Ch* __oe, ios_base& __iob, _Ch __fl);
+#endif // _LIBCPP_HAS_LOCALIZATION
 };
 
 _LIBCPP_END_NAMESPACE_STD

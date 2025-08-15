@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Program.h"
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
@@ -100,7 +101,7 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
           [&](unsigned Idx) {
             // Allocate a buffer that is larger than needed so allocator hits
             // additional pages for test coverage.
-            unsigned *P = (unsigned *)Alloc->allocate(100);
+            unsigned *P = (unsigned *)cantFail(Alloc->allocate(100));
             *P = Idx;
             AllocatedPtr[Idx] = P;
           },

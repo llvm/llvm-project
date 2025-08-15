@@ -177,7 +177,7 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
         CGIOperandList::OperandInfo OpInfo = CGI.Operands[OpNo];
 
         unsigned MIOp = OpInfo.MIOperandNo;
-        Operands.emplace_back(OpInfo.PrinterMethodName, MIOp, Modifier,
+        Operands.emplace_back(OpInfo.PrinterMethodName.str(), MIOp, Modifier,
                               AsmWriterOperand::isMachineInstrOperand,
                               OpInfo.OperandType == "MCOI::OPERAND_PCREL");
       }

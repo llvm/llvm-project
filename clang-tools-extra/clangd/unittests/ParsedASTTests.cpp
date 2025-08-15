@@ -251,7 +251,7 @@ TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
   // this check runs the preprocessor, we need to make sure it does not break
   // our recording logic.
   TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
-  TU.Code = "inline int foo() {}";
+  TU.Code = "inline int foo() { return 0; }";
 
   auto AST = TU.build();
   const syntax::TokenBuffer &T = AST.getTokens();

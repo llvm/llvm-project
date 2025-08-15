@@ -22,7 +22,9 @@
 #include <__filesystem/perms.h>
 #include <__fwd/ostream.h>
 #include <__system_error/errc.h>
+#include <__system_error/error_category.h>
 #include <__system_error/error_code.h>
+#include <__system_error/error_condition.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
@@ -34,7 +36,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -274,15 +276,7 @@ private:
   _LIBCPP_EXPORTED_FROM_ABI error_code __do_refresh() noexcept;
 
   _LIBCPP_HIDE_FROM_ABI static bool __is_dne_error(error_code const& __ec) {
-    if (!__ec)
-      return true;
-    switch (static_cast<errc>(__ec.value())) {
-    case errc::no_such_file_or_directory:
-    case errc::not_a_directory:
-      return true;
-    default:
-      return false;
-    }
+    return !__ec || __ec == errc::no_such_file_or_directory || __ec == errc::not_a_directory;
   }
 
   _LIBCPP_HIDE_FROM_ABI void
@@ -292,7 +286,7 @@ private:
       return;
     }
     if (__ec && (!__allow_dne || !__is_dne_error(__ec)))
-      __throw_filesystem_error(__msg, __p_, __ec);
+      filesystem::__throw_filesystem_error(__msg, __p_, __ec);
   }
 
   _LIBCPP_HIDE_FROM_ABI void __refresh(error_code* __ec = nullptr) {
@@ -469,7 +463,7 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_POP_MACROS
 

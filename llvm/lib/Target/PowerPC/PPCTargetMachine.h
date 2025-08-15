@@ -15,15 +15,15 @@
 
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
 
 /// Common code between 32-bit and 64-bit PowerPC targets.
 ///
-class PPCTargetMachine final : public LLVMTargetMachine {
+class PPCTargetMachine final : public CodeGenTargetMachineImpl {
 public:
   enum PPCABI { PPC_ABI_UNKNOWN, PPC_ABI_ELFv1, PPC_ABI_ELFv2 };
   enum Endian { NOT_DETECTED, LITTLE, BIG };
@@ -63,6 +63,10 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 
   bool isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
   bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }

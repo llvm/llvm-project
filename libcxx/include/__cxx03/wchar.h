@@ -15,8 +15,8 @@
 
 #  include_next <wchar.h>
 
-#elif !defined(_LIBCPP_WCHAR_H)
-#  define _LIBCPP_WCHAR_H
+#elif !defined(_LIBCPP___CXX03_WCHAR_H)
+#  define _LIBCPP___CXX03_WCHAR_H
 
 /*
     wchar.h synopsis
@@ -105,8 +105,8 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 */
 
-#  include <__config>
-#  include <stddef.h>
+#  include <__cxx03/__config>
+#  include <__cxx03/stddef.h>
 
 #  if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #    error                                                                                                             \
@@ -126,7 +126,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  if __has_include_next(<wchar.h>)
 #    include_next <wchar.h>
 #  else
-#    include <__mbstate_t.h> // make sure we have mbstate_t regardless of the existence of <wchar.h>
+#    include <__cxx03/__mbstate_t.h> // make sure we have mbstate_t regardless of the existence of <wchar.h>
 #  endif
 
 // Determine whether we have const-correct overloads for wcschr and friends.
@@ -208,4 +208,4 @@ size_t wcsnrtombs(
 } // extern "C"
 #  endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 
-#endif // _LIBCPP_WCHAR_H
+#endif // _LIBCPP___CXX03_WCHAR_H

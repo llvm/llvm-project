@@ -299,16 +299,15 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   LLVM_DEBUG(dbgs() << "Subtarget features: SSELevel " << X86SSELevel
                     << ", MMX " << HasMMX << ", 64bit " << HasX86_64 << "\n");
   if (Is64Bit && !HasX86_64)
-    report_fatal_error("64-bit code requested on a subtarget that doesn't "
-                       "support it!");
+    reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
+                          "support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, NaCl, and for all
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
   // following the i386 psABI, while on Illumos it is always 16 bytes.
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
-  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
-           isTargetNaCl() || Is64Bit)
+  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() || Is64Bit)
     stackAlignment = Align(16);
 
   // Consume the vector width attribute or apply any target specific limit.
@@ -360,6 +359,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
   RegBankInfo.reset(RBI);
   InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
 }
+
+// Define the virtual destructor out-of-line for build efficiency.
+X86Subtarget::~X86Subtarget() = default;
 
 const CallLowering *X86Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();

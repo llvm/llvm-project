@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Defines API between compiled code and I/O runtime library.
+// Defines the API of the I/O runtime support library for lowering.
 
 #ifndef FORTRAN_RUNTIME_IO_API_H_
 #define FORTRAN_RUNTIME_IO_API_H_
 
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 #include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
 #include <cstddef>
@@ -50,9 +50,6 @@ constexpr InquiryKeywordHash HashInquiryKeyword(const char *p) {
   }
   return hash;
 }
-
-RT_API_ATTRS const char *InquiryKeywordHashDecode(
-    char *buffer, std::size_t, InquiryKeywordHash);
 
 extern "C" {
 
@@ -369,4 +366,5 @@ enum Iostat IODECL(EndIoStatement)(Cookie);
 
 } // extern "C"
 } // namespace Fortran::runtime::io
-#endif
+
+#endif /* FORTRAN_RUNTIME_IO_API_H_ */

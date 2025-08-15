@@ -101,7 +101,7 @@ namespace ConvertedConstant {
   struct {
     int i : 2;
   } b;
-  template <const int&> struct Y {};
+  template <const int&> struct Y {}; // expected-note {{template parameter is declared here}}
   void f(Y<b.i>) {} // expected-error {{reference cannot bind to bit-field in converted constant expression}}
 }
 
@@ -238,7 +238,7 @@ namespace UnnamedBitfield {
 }
 
 namespace Temporary {
-  template<const int &> struct A {};
+  template<const int &> struct A {}; // expected-note {{template parameter is declared here}}
   A<0> a0; // expected-error {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
 
   A<(const int&)1> a1; // expected-error {{reference to temporary object is not allowed in a template argument}}

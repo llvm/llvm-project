@@ -112,7 +112,9 @@ public:
 
   void addConstant(const Relocation &r);
   void addEntry(const Symbol &sym);
+  void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
+  void addTlsDescAuthEntry();
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
   uint32_t getTlsDescOffset(const Symbol &sym) const;
@@ -131,14 +133,19 @@ protected:
   size_t numEntries = 0;
   uint32_t tlsIndexOff = -1;
   uint64_t size = 0;
+  struct AuthEntryInfo {
+    size_t offset;
+    bool isSymbolFunc;
+  };
+  SmallVector<AuthEntryInfo, 0> authEntries;
 };
 
 // .note.GNU-stack section.
 class GnuStackSection : public SyntheticSection {
 public:
   GnuStackSection(Ctx &ctx)
-      : SyntheticSection(ctx, 0, llvm::ELF::SHT_PROGBITS, 1,
-                         ".note.GNU-stack") {}
+      : SyntheticSection(ctx, ".note.GNU-stack", llvm::ELF::SHT_PROGBITS, 0,
+                         1) {}
   void writeTo(uint8_t *buf) override {}
   size_t getSize() const override { return 0; }
 };
@@ -177,7 +184,9 @@ public:
   bool isNeeded() const override { return size != 0; }
   size_t getSize() const override { return size; }
 
-  static bool classof(const SectionBase *s) { return s->bss; }
+  static bool classof(const SectionBase *s) {
+    return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->bss;
+  }
   uint64_t size;
 };
 
@@ -318,9 +327,11 @@ private:
     size_t startIndex = 0;
 
     struct PageBlock {
+      Symbol *repSym; // Representative symbol for the OutputSection
       size_t firstIndex;
       size_t count;
-      PageBlock() : firstIndex(0), count(0) {}
+      PageBlock(Symbol *repSym = nullptr)
+          : repSym(repSym), firstIndex(0), count(0) {}
     };
 
     // Map output sections referenced by MIPS GOT relocations
@@ -409,61 +420,31 @@ private:
 
 class DynamicReloc {
 public:
-  enum Kind {
-    /// The resulting dynamic relocation does not reference a symbol (#sym must
-    /// be nullptr) and uses #addend as the result of computeAddend(ctx).
-    AddendOnly,
-    /// The resulting dynamic relocation will not reference a symbol: #sym is
-    /// only used to compute the addend with InputSection::getRelocTargetVA().
-    /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
-    AddendOnlyWithTargetVA,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses #addend as the value of computeAddend(ctx).
-    AgainstSymbol,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses InputSection::getRelocTargetVA() + #addend for the
-    /// final addend. It can be used for relocations that write the symbol VA as
-    // the addend (e.g. R_MIPS_TLS_TPREL64) but still reference the symbol.
-    AgainstSymbolWithTargetVA,
-    /// This is used by the MIPS multi-GOT implementation. It relocates
-    /// addresses of 64kb pages that lie inside the output section.
-    MipsMultiGotPage,
-  };
-  /// This constructor records a relocation against a symbol.
+  /// This constructor records a normal relocation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
-               RelExpr expr)
+               uint64_t offsetInSec, bool isAgainstSymbol, Symbol &sym,
+               int64_t addend, RelExpr expr)
       : sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(kind), expr(expr) {}
+        addend(addend), isAgainstSymbol(isAgainstSymbol), isFinal(false),
+        expr(expr) {}
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(AddendOnly), expr(R_ADDEND) {}
-  /// This constructor records dynamic relocation settings used by the MIPS
-  /// multi-GOT implementation.
-  DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, const OutputSection *outputSec,
-               int64_t addend)
-      : sym(nullptr), outputSec(outputSec), inputSec(inputSec),
-        offsetInSec(offsetInSec), type(type), addend(addend),
-        kind(MipsMultiGotPage), expr(R_ADDEND) {}
+      : DynamicReloc(type, inputSec, offsetInSec, false,
+                     *inputSec->getCtx().dummySym, addend, R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
-  bool needsDynSymIndex() const {
-    return kind == AgainstSymbol || kind == AgainstSymbolWithTargetVA;
-  }
+  bool needsDynSymIndex() const { return isAgainstSymbol; }
 
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend(Ctx &) const;
 
-  void computeRaw(Ctx &, SymbolTableBaseSection *symt);
+  void finalize(Ctx &, SymbolTableBaseSection *symt);
 
   Symbol *sym;
-  const OutputSection *outputSec = nullptr;
   const InputSectionBase *inputSec;
   uint64_t offsetInSec;
   uint64_t r_offset;
@@ -474,7 +455,15 @@ public:
   int64_t addend;
 
 private:
-  Kind kind;
+  /// Whether this was constructed with a Kind of AgainstSymbol.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isAgainstSymbol : 1;
+
+  /// The resulting dynamic relocation has already had its addend computed.
+  /// Calling computeAddend() is an error.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isFinal : 1;
+
   // The kind of expression used to calculate the added (required e.g. for
   // relative GOT relocations).
   RelExpr expr;
@@ -519,8 +508,8 @@ public:
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
-    addReloc<shard>(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec,
-                    offsetInSec, sym, addend, expr, addendRelType);
+    addReloc<shard>(false, dynType, isec, offsetInSec, sym, addend, expr,
+                    addendRelType);
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
@@ -529,14 +518,15 @@ public:
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   template <bool shard = false>
-  void addReloc(DynamicReloc::Kind kind, RelType dynType, InputSectionBase &sec,
+  void addReloc(bool isAgainstSymbol, RelType dynType, InputSectionBase &sec,
                 uint64_t offsetInSec, Symbol &sym, int64_t addend, RelExpr expr,
                 RelType addendRelType) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
     if (ctx.arg.writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
+    addReloc<shard>(
+        {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -794,6 +784,15 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
+class RandomizePaddingSection final : public SyntheticSection {
+  uint64_t size;
+
+public:
+  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
+};
+
 // Used by the merged DWARF32 .debug_names (a per-module index). If we
 // move to DWARF64, most of this data will need to be re-sized.
 class DebugNamesBaseSection : public SyntheticSection {
@@ -871,7 +870,7 @@ public:
 protected:
   void init(llvm::function_ref<void(InputFile *, InputChunk &, OutputChunk &)>);
   static void
-  parseDebugNames(InputChunk &inputChunk, OutputChunk &chunk,
+  parseDebugNames(Ctx &, InputChunk &inputChunk, OutputChunk &chunk,
                   llvm::DWARFDataExtractor &namesExtractor,
                   llvm::DataExtractor &strExtractor,
                   llvm::function_ref<SmallVector<uint32_t, 0>(
@@ -1084,7 +1083,7 @@ public:
 protected:
   MergeSyntheticSection(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags,
                         uint32_t addralign)
-      : SyntheticSection(ctx, flags, type, addralign, name) {}
+      : SyntheticSection(ctx, name, type, flags, addralign) {}
 };
 
 class MergeTailSection final : public MergeSyntheticSection {
@@ -1300,7 +1299,21 @@ private:
 const char ACLESESYM_PREFIX[] = "__acle_se_";
 const int ACLESESYM_SIZE = 8;
 
-class ArmCmseSGVeneer;
+class ArmCmseSGVeneer {
+public:
+  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+                  std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+
+private:
+  const std::optional<uint64_t> entAddr;
+};
 
 class ArmCmseSGSection final : public SyntheticSection {
 public:
@@ -1316,7 +1329,7 @@ public:
 
 private:
   SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
+  SmallVector<std::unique_ptr<ArmCmseSGVeneer>, 0> sgVeneers;
   uint64_t newEntries = 0;
 };
 
@@ -1382,8 +1395,8 @@ public:
 class MemtagAndroidNote final : public SyntheticSection {
 public:
   MemtagAndroidNote(Ctx &ctx)
-      : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
-                         /*alignment=*/4, ".note.android.memtag") {}
+      : SyntheticSection(ctx, ".note.android.memtag", llvm::ELF::SHT_NOTE,
+                         llvm::ELF::SHF_ALLOC, /*addralign=*/4) {}
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override;
 };
@@ -1391,8 +1404,8 @@ public:
 class PackageMetadataNote final : public SyntheticSection {
 public:
   PackageMetadataNote(Ctx &ctx)
-      : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
-                         /*alignment=*/4, ".note.package") {}
+      : SyntheticSection(ctx, ".note.package", llvm::ELF::SHT_NOTE,
+                         llvm::ELF::SHF_ALLOC, /*addralign=*/4) {}
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override;
 };
@@ -1400,9 +1413,9 @@ public:
 class MemtagGlobalDescriptors final : public SyntheticSection {
 public:
   MemtagGlobalDescriptors(Ctx &ctx)
-      : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC,
+      : SyntheticSection(ctx, ".memtag.globals.dynamic",
                          llvm::ELF::SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC,
-                         /*alignment=*/4, ".memtag.globals.dynamic") {}
+                         llvm::ELF::SHF_ALLOC, /*addralign=*/4) {}
   void writeTo(uint8_t *buf) override;
   // The size of the section is non-computable until all addresses are
   // synthetized, because the section's contents contain a sorted
@@ -1439,6 +1452,31 @@ Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
 
 void addVerneed(Ctx &, Symbol &ss);
 
+// This describes a program header entry.
+// Each contains type, access flags and range of output sections that will be
+// placed in it.
+struct PhdrEntry {
+  PhdrEntry(Ctx &ctx, unsigned type, unsigned flags)
+      : p_align(type == llvm::ELF::PT_LOAD ? ctx.arg.maxPageSize : 0),
+        p_type(type), p_flags(flags) {}
+  void add(OutputSection *sec);
+
+  uint64_t p_paddr = 0;
+  uint64_t p_vaddr = 0;
+  uint64_t p_memsz = 0;
+  uint64_t p_filesz = 0;
+  uint64_t p_offset = 0;
+  uint32_t p_align = 0;
+  uint32_t p_type = 0;
+  uint32_t p_flags = 0;
+
+  OutputSection *firstSec = nullptr;
+  OutputSection *lastSec = nullptr;
+  bool hasLMA = false;
+
+  uint64_t lmaOffset = 0;
+};
+
 // Linker generated per-partition sections.
 struct Partition {
   Ctx &ctx;
@@ -1447,7 +1485,7 @@ struct Partition {
 
   std::unique_ptr<SyntheticSection> elfHeader;
   std::unique_ptr<SyntheticSection> programHeaders;
-  SmallVector<PhdrEntry *, 0> phdrs;
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
 
   std::unique_ptr<ARMExidxSyntheticSection> armExidx;
   std::unique_ptr<BuildIdSection> buildId;

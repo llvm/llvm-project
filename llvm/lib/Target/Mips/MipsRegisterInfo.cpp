@@ -17,7 +17,6 @@
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -26,7 +25,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -39,7 +37,9 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "MipsGenRegisterInfo.inc"
 
-MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {}
+MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {
+  MIPS_MC::initLLVMToCVRegMapping(this);
+}
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
@@ -162,13 +162,6 @@ getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg R : ReservedGPR32)
     Reserved.set(R);
 
-  // Reserve registers for the NaCl sandbox.
-  if (Subtarget.isTargetNaCl()) {
-    Reserved.set(Mips::T6);   // Reserved for control flow mask.
-    Reserved.set(Mips::T7);   // Reserved for memory access mask.
-    Reserved.set(Mips::T8);   // Reserved for thread pointer.
-  }
-
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
 
@@ -207,6 +200,7 @@ getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve hardware registers.
   Reserved.set(Mips::HWR29);
+  Reserved.set(Mips::HWR2);
 
   // Reserve DSP control register.
   Reserved.set(Mips::DSPPos);

@@ -333,7 +333,7 @@ entry:
 define <4 x half> @copysign_splat(<4 x half> %a) {
 ; CHECK-LABEL: @copysign_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call <4 x half> @llvm.copysign.v4f16(<4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <4 x half> [[A:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call <4 x half> @llvm.copysign.v4f16(<4 x half> splat (half 0xH3C00), <4 x half> [[A:%.*]])
 ; CHECK-NEXT:    ret <4 x half> [[RET]]
 ;
 entry:

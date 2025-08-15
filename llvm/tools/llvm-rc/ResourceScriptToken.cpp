@@ -64,12 +64,22 @@ StringRef RCToken::value() const { return TokenValue; }
 
 Kind RCToken::kind() const { return TokenKind; }
 
-bool RCToken::isBinaryOp() const {
+bool RCToken::isLowPrecedenceBinaryOp() const {
   switch (TokenKind) {
   case Kind::Plus:
   case Kind::Minus:
   case Kind::Pipe:
   case Kind::Amp:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool RCToken::isHighPrecedenceBinaryOp() const {
+  switch (TokenKind) {
+  case Kind::Asterisk:
+  case Kind::Slash:
     return true;
   default:
     return false;

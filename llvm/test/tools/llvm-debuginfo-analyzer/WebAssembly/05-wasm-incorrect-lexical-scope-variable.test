@@ -34,7 +34,7 @@
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
 ; RUN:         %p/Inputs/pr-43860-clang.s -o %t.pr-43860-clang.o
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols \
 ; RUN:                         %t.pr-43860-clang.o \
@@ -46,6 +46,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-43860.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 19{{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT: [002]     2         {Function} extern inlined 'InlineFunction' -> 'int'
 ; ONE-NEXT: [003]                 {Block}
 ; ONE-NEXT: [004]     5             {Variable} 'Var_2' -> 'int'
@@ -66,6 +67,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-43860.cpp'
 ; ONE-NEXT: [002]               {Producer} 'GNU C++14 10.3.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus'
 ; ONE-NEXT: [002]     2         {Function} extern declared_inlined 'InlineFunction' -> 'int'
 ; ONE-NEXT: [003]                 {Block}
 ; ONE-NEXT: [004]     5             {Variable} 'Var_2' -> 'int'

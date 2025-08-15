@@ -14,7 +14,6 @@
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -521,7 +519,7 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   return Error::success();
 }
 
-StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) {
+StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) const {
   if (Pointer < Address)
     return StringRef();
   auto Offset = Pointer - Address;

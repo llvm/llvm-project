@@ -31,7 +31,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 template <class _Callback>
 class _LIBCPP_AVAILABILITY_SYNC stop_callback : private __stop_callback_base {
@@ -93,7 +93,7 @@ private:
 template <class _Callback>
 _LIBCPP_AVAILABILITY_SYNC stop_callback(stop_token, _Callback) -> stop_callback<_Callback>;
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

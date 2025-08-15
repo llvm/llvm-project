@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
@@ -21,9 +21,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
-#include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
-#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOROCDL
@@ -33,7 +31,6 @@ namespace mlir {
 using namespace mlir;
 
 #define DEBUG_TYPE "math-to-rocdl"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 template <typename OpTy>
 static void populateOpPatterns(const LLVMTypeConverter &converter,
@@ -57,7 +54,6 @@ void mlir::populateMathToROCDLConversionPatterns(
   // Handled by mathToLLVM: math::FmaOp
   // Handled by mathToLLVM: math::LogOp (32-bit only)
   // FIXME: math::IPowIOp
-  // FIXME: math::FPowIOp
   // Handled by mathToLLVM: math::RoundEvenOp
   // Handled by mathToLLVM: math::RoundOp
   // Handled by mathToLLVM: math::SqrtOp
@@ -114,6 +110,10 @@ void mlir::populateMathToROCDLConversionPatterns(
                                   "__ocml_tan_f64", "__ocml_tan_f16");
   populateOpPatterns<math::ErfOp>(converter, patterns, "__ocml_erf_f32",
                                   "__ocml_erf_f64", "__ocml_erf_f16");
+  populateOpPatterns<math::ErfcOp>(converter, patterns, "__ocml_erfc_f32",
+                                   "__ocml_erfc_f64", "__ocml_erfc_f16");
+  populateOpPatterns<math::FPowIOp>(converter, patterns, "__ocml_pown_f32",
+                                    "__ocml_pown_f64", "__ocml_pown_f16");
   // Single arith pattern that needs a ROCDL call, probably not
   // worth creating a separate pass for it.
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__ocml_fmod_f32",

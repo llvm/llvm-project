@@ -678,7 +678,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
           <reg name="cpsr" regnum="33" bitsize="32" type="cpsr_flags"/>"""
         )
 
-        self.expect("register read cpsr", patterns=["\(E = 1\)$"])
+        self.expect("register read cpsr", patterns=[r"\(E = 1\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -701,7 +701,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         )
 
         self.expect("register info cpsr", patterns=["E: 1 = def, 2 = geh$"])
-        self.expect("register read cpsr", patterns=["\(E = def \| geh\)$"])
+        self.expect("register read cpsr", patterns=[r"\(E = def \| geh\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -725,7 +725,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         )
 
         self.expect("register info cpsr", patterns=["E: 1 = def$"])
-        self.expect("register read cpsr", patterns=["\(E = def\)$"])
+        self.expect("register read cpsr", patterns=[r"\(E = def\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -1014,7 +1014,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
         self.expect("register info cpsr", patterns=expected_info)
 
-        expected_read = ["\(f2 = valid, f1 = valid\)$"]
+        expected_read = [r"\(f2 = valid, f1 = valid\)$"]
         self.expect("register read x0", patterns=expected_read)
         self.expect("register read cpsr", patterns=expected_read)
 
@@ -1055,4 +1055,4 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             ],
         )
 
-        self.expect("register read x0", patterns=["\(foo = foo_1, foo = foo_0\)$"])
+        self.expect("register read x0", patterns=[r"\(foo = foo_1, foo = foo_0\)$"])

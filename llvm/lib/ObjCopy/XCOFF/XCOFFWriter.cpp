@@ -75,7 +75,7 @@ void XCOFFWriter::writeSections() {
   for (const Section &Sec : Obj.Sections) {
     uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
                    Sec.SectionHeader.FileOffsetToRawData;
-    Ptr = std::copy(Sec.Contents.begin(), Sec.Contents.end(), Ptr);
+    Ptr = llvm::copy(Sec.Contents, Ptr);
   }
 
   // Write relocations.

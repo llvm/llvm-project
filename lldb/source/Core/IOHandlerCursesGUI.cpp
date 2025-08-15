@@ -22,6 +22,7 @@
 #if defined(__APPLE__)
 #include <deque>
 #endif
+#include <memory>
 #include <string>
 
 #include "lldb/Core/Debugger.h"
@@ -94,6 +95,7 @@ using llvm::StringRef;
 #define KEY_SHIFT_TAB (KEY_MAX + 1)
 #define KEY_ALT_ENTER (KEY_MAX + 2)
 
+namespace lldb_private {
 namespace curses {
 class Menu;
 class MenuDelegate;
@@ -4479,8 +4481,9 @@ protected:
 };
 
 } // namespace curses
+} // namespace lldb_private
 
-using namespace curses;
+using namespace lldb_private::curses;
 
 struct Row {
   ValueObjectUpdater value;
@@ -6534,7 +6537,7 @@ public:
       if (process && process->IsAlive() &&
           StateIsStoppedState(process->GetState(), true)) {
         if (submenus.size() == 7)
-          menu.AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
+          menu.AddSubmenu(std::make_shared<Menu>(Menu::Type::Separator));
         else if (submenus.size() > 8)
           submenus.erase(submenus.begin() + 8, submenus.end());
 
@@ -6556,9 +6559,9 @@ public:
             if (queue_name && queue_name[0])
               thread_menu_title.Printf(" %s", queue_name);
           }
-          menu.AddSubmenu(
-              MenuSP(new Menu(thread_menu_title.GetString().str().c_str(),
-                              nullptr, menu_char, thread_sp->GetID())));
+          menu.AddSubmenu(std::make_shared<Menu>(
+              thread_menu_title.GetString().str().c_str(), nullptr, menu_char,
+              thread_sp->GetID()));
         }
       } else if (submenus.size() > 7) {
         // Remove the separator and any other thread submenu items that were
@@ -6779,8 +6782,7 @@ protected:
 class SourceFileWindowDelegate : public WindowDelegate {
 public:
   SourceFileWindowDelegate(Debugger &debugger)
-      : WindowDelegate(), m_debugger(debugger), m_sc(), m_file_sp(),
-        m_disassembly_sp(), m_disassembly_range(), m_title() {}
+      : WindowDelegate(), m_debugger(debugger) {}
 
   ~SourceFileWindowDelegate() override = default;
 
@@ -6937,12 +6939,8 @@ public:
               m_disassembly_scope = m_sc.function;
               m_disassembly_sp = m_sc.function->GetInstructions(
                   exe_ctx, nullptr, !prefer_file_cache);
-              if (m_disassembly_sp) {
+              if (m_disassembly_sp)
                 set_selected_line_to_pc = true;
-                m_disassembly_range = m_sc.function->GetAddressRange();
-              } else {
-                m_disassembly_range.Clear();
-              }
             } else {
               set_selected_line_to_pc = context_changed;
             }
@@ -6951,14 +6949,8 @@ public:
               m_disassembly_scope = m_sc.symbol;
               m_disassembly_sp = m_sc.symbol->GetInstructions(
                   exe_ctx, nullptr, prefer_file_cache);
-              if (m_disassembly_sp) {
+              if (m_disassembly_sp)
                 set_selected_line_to_pc = true;
-                m_disassembly_range.GetBaseAddress() =
-                    m_sc.symbol->GetAddress();
-                m_disassembly_range.SetByteSize(m_sc.symbol->GetByteSize());
-              } else {
-                m_disassembly_range.Clear();
-              }
             } else {
               set_selected_line_to_pc = context_changed;
             }
@@ -7112,13 +7104,7 @@ public:
                  ++bp_loc_idx) {
               BreakpointLocationSP bp_loc_sp =
                   bp_sp->GetLocationAtIndex(bp_loc_idx);
-              LineEntry bp_loc_line_entry;
-              const lldb::addr_t file_addr =
-                  bp_loc_sp->GetAddress().GetFileAddress();
-              if (file_addr != LLDB_INVALID_ADDRESS) {
-                if (m_disassembly_range.ContainsFileAddress(file_addr))
-                  bp_file_addrs.insert(file_addr);
-              }
+              bp_file_addrs.insert(bp_loc_sp->GetAddress().GetFileAddress());
             }
           }
         }
@@ -7550,7 +7536,6 @@ protected:
   SourceManager::FileSP m_file_sp;
   SymbolContextScope *m_disassembly_scope = nullptr;
   lldb::DisassemblerSP m_disassembly_sp;
-  AddressRange m_disassembly_range;
   StreamString m_title;
   lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
   int m_line_width = 4;
@@ -7573,12 +7558,14 @@ IOHandlerCursesGUI::IOHandlerCursesGUI(Debugger &debugger)
 
 void IOHandlerCursesGUI::Activate() {
   IOHandler::Activate();
-  if (!m_app_ap) {
-    m_app_ap = std::make_unique<Application>(GetInputFILE(), GetOutputFILE());
+  if (!m_app_up) {
+    m_app_up = std::make_unique<Application>(
+        m_input_sp ? m_input_sp->GetStream() : nullptr,
+        m_output_sp ? m_input_sp->GetStream() : nullptr);
 
     // This is both a window and a menu delegate
     std::shared_ptr<ApplicationDelegate> app_delegate_sp(
-        new ApplicationDelegate(*m_app_ap, m_debugger));
+        new ApplicationDelegate(*m_app_up, m_debugger));
 
     MenuDelegateSP app_menu_delegate_sp =
         std::static_pointer_cast<MenuDelegate>(app_delegate_sp);
@@ -7587,73 +7574,70 @@ void IOHandlerCursesGUI::Activate() {
     MenuSP exit_menuitem_sp(
         new Menu("Exit", nullptr, 'x', ApplicationDelegate::eMenuID_LLDBExit));
     exit_menuitem_sp->SetCannedResult(MenuActionResult::Quit);
-    lldb_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "About LLDB", nullptr, 'a', ApplicationDelegate::eMenuID_LLDBAbout)));
-    lldb_menu_sp->AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
+    lldb_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "About LLDB", nullptr, 'a', ApplicationDelegate::eMenuID_LLDBAbout));
+    lldb_menu_sp->AddSubmenu(std::make_shared<Menu>(Menu::Type::Separator));
     lldb_menu_sp->AddSubmenu(exit_menuitem_sp);
 
     MenuSP target_menu_sp(new Menu("Target", "F2", KEY_F(2),
                                    ApplicationDelegate::eMenuID_Target));
-    target_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Create", nullptr, 'c', ApplicationDelegate::eMenuID_TargetCreate)));
-    target_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Delete", nullptr, 'd', ApplicationDelegate::eMenuID_TargetDelete)));
+    target_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Create", nullptr, 'c', ApplicationDelegate::eMenuID_TargetCreate));
+    target_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Delete", nullptr, 'd', ApplicationDelegate::eMenuID_TargetDelete));
 
     MenuSP process_menu_sp(new Menu("Process", "F3", KEY_F(3),
                                     ApplicationDelegate::eMenuID_Process));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Attach", nullptr, 'a', ApplicationDelegate::eMenuID_ProcessAttach)));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Attach", nullptr, 'a', ApplicationDelegate::eMenuID_ProcessAttach));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Detach and resume", nullptr, 'd',
+        ApplicationDelegate::eMenuID_ProcessDetachResume));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Detach suspended", nullptr, 's',
+        ApplicationDelegate::eMenuID_ProcessDetachSuspended));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Launch", nullptr, 'l', ApplicationDelegate::eMenuID_ProcessLaunch));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(Menu::Type::Separator));
     process_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Detach and resume", nullptr, 'd',
-                        ApplicationDelegate::eMenuID_ProcessDetachResume)));
-    process_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Detach suspended", nullptr, 's',
-                        ApplicationDelegate::eMenuID_ProcessDetachSuspended)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Launch", nullptr, 'l', ApplicationDelegate::eMenuID_ProcessLaunch)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
-    process_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Continue", nullptr, 'c',
-                        ApplicationDelegate::eMenuID_ProcessContinue)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Halt", nullptr, 'h', ApplicationDelegate::eMenuID_ProcessHalt)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Kill", nullptr, 'k', ApplicationDelegate::eMenuID_ProcessKill)));
+        std::make_shared<Menu>("Continue", nullptr, 'c',
+                               ApplicationDelegate::eMenuID_ProcessContinue));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Halt", nullptr, 'h', ApplicationDelegate::eMenuID_ProcessHalt));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Kill", nullptr, 'k', ApplicationDelegate::eMenuID_ProcessKill));
 
     MenuSP thread_menu_sp(new Menu("Thread", "F4", KEY_F(4),
                                    ApplicationDelegate::eMenuID_Thread));
-    thread_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Step In", nullptr, 'i', ApplicationDelegate::eMenuID_ThreadStepIn)));
+    thread_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Step In", nullptr, 'i', ApplicationDelegate::eMenuID_ThreadStepIn));
     thread_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Step Over", nullptr, 'v',
-                        ApplicationDelegate::eMenuID_ThreadStepOver)));
-    thread_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Step Out", nullptr, 'o', ApplicationDelegate::eMenuID_ThreadStepOut)));
+        std::make_shared<Menu>("Step Over", nullptr, 'v',
+                               ApplicationDelegate::eMenuID_ThreadStepOver));
+    thread_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Step Out", nullptr, 'o', ApplicationDelegate::eMenuID_ThreadStepOut));
 
     MenuSP view_menu_sp(
         new Menu("View", "F5", KEY_F(5), ApplicationDelegate::eMenuID_View));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Backtrace", nullptr, 't', ApplicationDelegate::eMenuID_ViewBacktrace));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Registers", nullptr, 'r', ApplicationDelegate::eMenuID_ViewRegisters));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Source", nullptr, 's', ApplicationDelegate::eMenuID_ViewSource));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Variables", nullptr, 'v', ApplicationDelegate::eMenuID_ViewVariables));
     view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Backtrace", nullptr, 't',
-                        ApplicationDelegate::eMenuID_ViewBacktrace)));
-    view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Registers", nullptr, 'r',
-                        ApplicationDelegate::eMenuID_ViewRegisters)));
-    view_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Source", nullptr, 's', ApplicationDelegate::eMenuID_ViewSource)));
-    view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Variables", nullptr, 'v',
-                        ApplicationDelegate::eMenuID_ViewVariables)));
-    view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Breakpoints", nullptr, 'b',
-                        ApplicationDelegate::eMenuID_ViewBreakpoints)));
+        std::make_shared<Menu>("Breakpoints", nullptr, 'b',
+                               ApplicationDelegate::eMenuID_ViewBreakpoints));
 
     MenuSP help_menu_sp(
         new Menu("Help", "F6", KEY_F(6), ApplicationDelegate::eMenuID_Help));
-    help_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "GUI Help", nullptr, 'g', ApplicationDelegate::eMenuID_HelpGUIHelp)));
+    help_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "GUI Help", nullptr, 'g', ApplicationDelegate::eMenuID_HelpGUIHelp));
 
-    m_app_ap->Initialize();
-    WindowSP &main_window_sp = m_app_ap->GetMainWindow();
+    m_app_up->Initialize();
+    WindowSP &main_window_sp = m_app_up->GetMainWindow();
 
     MenuSP menubar_sp(new Menu(Menu::Type::Bar));
     menubar_sp->AddSubmenu(lldb_menu_sp);
@@ -7734,10 +7718,10 @@ void IOHandlerCursesGUI::Activate() {
   }
 }
 
-void IOHandlerCursesGUI::Deactivate() { m_app_ap->Terminate(); }
+void IOHandlerCursesGUI::Deactivate() { m_app_up->Terminate(); }
 
 void IOHandlerCursesGUI::Run() {
-  m_app_ap->Run(m_debugger);
+  m_app_up->Run(m_debugger);
   SetIsDone(true);
 }
 
@@ -7752,7 +7736,7 @@ bool IOHandlerCursesGUI::Interrupt() {
 void IOHandlerCursesGUI::GotEOF() {}
 
 void IOHandlerCursesGUI::TerminalSizeChanged() {
-  m_app_ap->TerminalSizeChanged();
+  m_app_up->TerminalSizeChanged();
 }
 
 #endif // LLDB_ENABLE_CURSES

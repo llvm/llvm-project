@@ -20,14 +20,14 @@ subroutine omp_target_data
    type(my_type) :: my_var
    a = 1
 
-   !ERROR: A variable that is part of another variable (structure element) cannot appear on the TARGET DATA USE_DEVICE_PTR clause
+   !ERROR: A variable that is part of another variable cannot appear on the USE_DEVICE_PTR clause
    !$omp target data map(tofrom: a, arrayB) use_device_ptr(my_var%my_cptr)
       allocate(arrayB)
       call c_f_pointer(my_var%my_cptr, arrayB)
       a = arrayB
    !$omp end target data
 
-   !WARNING: Use of non-C_PTR type 'a' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead
+   !WARNING: Use of non-C_PTR type 'a' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead [-Wopen-mp-usage]
    !$omp target data map(tofrom: a) use_device_ptr(a)
       a = 2
    !$omp end target data

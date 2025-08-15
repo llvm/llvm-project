@@ -6,37 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COPY_BACKWARD_H
-#define _LIBCPP___ALGORITHM_COPY_BACKWARD_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COPY_BACKWARD_H
+#define _LIBCPP___CXX03___ALGORITHM_COPY_BACKWARD_H
 
-#include <__algorithm/copy_move_common.h>
-#include <__algorithm/iterator_operations.h>
-#include <__algorithm/min.h>
-#include <__config>
-#include <__iterator/segmented_iterator.h>
-#include <__type_traits/common_type.h>
-#include <__type_traits/is_constructible.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
+#include <__cxx03/__algorithm/copy_move_common.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/segmented_iterator.h>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _InIter, class _Sent, class _OutIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_InIter, _OutIter>
-__copy_backward(_InIter __first, _Sent __last, _OutIter __result);
+_LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> __copy_backward(_InIter __first, _Sent __last, _OutIter __result);
 
 template <class _AlgPolicy>
 struct __copy_backward_impl {
   template <class _InIter, class _Sent, class _OutIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     auto __last_iter          = _IterOps<_AlgPolicy>::next(__first, __last);
     auto __original_last_iter = __last_iter;
 
@@ -48,8 +46,7 @@ struct __copy_backward_impl {
   }
 
   template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _InIter __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_InIter>;
     auto __sfirst = _Traits::__segment(__first);
     auto __slast  = _Traits::__segment(__last);
@@ -79,8 +76,7 @@ struct __copy_backward_impl {
             __enable_if_t<__has_random_access_iterator_category<_InIter>::value &&
                               !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _InIter __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits           = __segmented_iterator_traits<_OutIter>;
     auto __orig_last        = __last;
     auto __segment_iterator = _Traits::__segment(__result);
@@ -107,21 +103,20 @@ struct __copy_backward_impl {
 
   // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.
   template <class _In, class _Out, __enable_if_t<__can_lower_copy_assignment_to_memmove<_In, _Out>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
-  operator()(_In* __first, _In* __last, _Out* __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_In*, _Out*> operator()(_In* __first, _In* __last, _Out* __result) const {
     return std::__copy_backward_trivial_impl(__first, __last, __result);
   }
 };
 
 template <class _AlgPolicy, class _BidirectionalIterator1, class _Sentinel, class _BidirectionalIterator2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_BidirectionalIterator1, _BidirectionalIterator2>
+_LIBCPP_HIDE_FROM_ABI pair<_BidirectionalIterator1, _BidirectionalIterator2>
 __copy_backward(_BidirectionalIterator1 __first, _Sentinel __last, _BidirectionalIterator2 __result) {
   return std::__copy_move_unwrap_iters<__copy_backward_impl<_AlgPolicy> >(
       std::move(__first), std::move(__last), std::move(__result));
 }
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIterator2
+inline _LIBCPP_HIDE_FROM_ABI _BidirectionalIterator2
 copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last, _BidirectionalIterator2 __result) {
   static_assert(std::is_copy_constructible<_BidirectionalIterator1>::value &&
                     std::is_copy_constructible<_BidirectionalIterator1>::value,
@@ -134,4 +129,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_COPY_BACKWARD_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COPY_BACKWARD_H

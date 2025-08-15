@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=riscv32 %s -run-pass=machine-sink -o - | FileCheck %s
+# RUN: llc -mtriple=riscv32 %s -passes=machine-sink -o - | FileCheck %s
 
 # Verify that sinking of '%20:gpr = LUI 1, implicit $x0' is not inhibited by
 # the implicit use of '$x0'.

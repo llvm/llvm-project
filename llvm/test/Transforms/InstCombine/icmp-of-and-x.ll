@@ -149,7 +149,7 @@ define <2 x i1> @icmp_sgt_x_negy_fail_partial(<2 x i8> %x, <2 x i8> %yy) {
 
 define <2 x i1> @icmp_sle_x_posy(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-LABEL: @icmp_sle_x_posy(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = and <2 x i8> %yy, <i8 127, i8 127>
@@ -187,7 +187,7 @@ define i1 @icmp_sgt_x_posy(i8 %x, i8 %y) {
 
 define <2 x i1> @icmp_sgt_negx_y(<2 x i8> %xx, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_sgt_negx_y(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %x = or <2 x i8> %xx, <i8 128, i8 128>

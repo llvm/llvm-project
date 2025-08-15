@@ -1,5 +1,10 @@
 # Linalg OpDSL
 
+**_Warning: Linalg's OpDSL is currently being [deprecated](https://discourse.llvm.org/t/how-to-add-custom-linalg-named-ops-using-opdsl/83200/2),
+with its operations slowly [being moved](https://github.com/llvm/llvm-project/pull/115319) into TableGen's ODS format.
+Please refer to the [MLIR Restructuring discussion](https://discourse.llvm.org/t/rfc-mlir-project-charter-and-restructuring/82896)
+for more in-depth information._**
+
 Python based DSL for authoring Linalg op definitions and generating
 `linalg.generic` IR based on them for samples.
 

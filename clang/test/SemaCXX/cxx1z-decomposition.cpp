@@ -121,7 +121,8 @@ void for_range() {
 }
 
 int error_recovery() {
-  auto [foobar]; // expected-error {{requires an initializer}}
+  auto [foobar]; // expected-error {{requires an initializer}} \
+                    expected-note {{'foobar' declared here}}
   return foobar_; // expected-error {{undeclared identifier 'foobar_'}}
 }
 
@@ -200,38 +201,32 @@ namespace lambdas {
 
 namespace by_value_array_copy {
   struct explicit_copy {
-    explicit_copy() = default; // expected-note 2{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-    explicit explicit_copy(const explicit_copy&) = default; // expected-note 2{{explicit constructor is not a candidate}}
+    explicit_copy() = default; // expected-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+    explicit explicit_copy(const explicit_copy&) = default; // expected-note {{explicit constructor is not a candidate}}
   };
 
-  constexpr int direct_initialization_for_elements() {
-    explicit_copy ec_arr[2];
-    auto [a1, b1](ec_arr);
+  constexpr int simple_array_elements() {
+    int arr[2]{1, 2};
 
-    int arr[3]{1, 2, 3};
-    auto [a2, b2, c2](arr);
-    arr[0]--;
-    return a2 + b2 + c2 + arr[0];
-  }
-  static_assert(direct_initialization_for_elements() == 6);
+    auto [a1, a2] = arr;
+    auto [b1, b2](arr);
+    auto [c1, c2]{arr}; // GH31813
 
-  constexpr int copy_initialization_for_elements() {
-    int arr[2]{4, 5};
-    auto [a1, b1] = arr;
-    auto [a2, b2]{arr}; // GH31813
     arr[0] = 0;
-    return a1 + b1 + a2 + b2 + arr[0];
+    return arr[0] + a1 + a2 + b1 + b2 + c1 + c2;
   }
-  static_assert(copy_initialization_for_elements() == 18);
+  static_assert(simple_array_elements() == 9);
 
-  void copy_initialization_for_elements_with_explicit_copy_ctor() {
-    explicit_copy ec_arr[2];
-    auto [a1, b1] = ec_arr; // expected-error {{no matching constructor for initialization of 'explicit_copy[2]'}}
-    auto [a2, b2]{ec_arr}; // expected-error {{no matching constructor for initialization of 'explicit_copy[2]'}}
+  void explicit_copy_ctor_array_elements() {
+    explicit_copy ec_arr[1];
+
+    auto [a] = ec_arr; // expected-error {{no matching constructor for initialization of 'explicit_copy[1]'}}
+    auto [b](ec_arr);
+    auto [c]{ec_arr};
 
     // Test prvalue
-    using T = explicit_copy[2];
-    auto [a3, b3] = T{};
-    auto [a4, b4]{T{}};
+    using T = explicit_copy[1];
+    auto [d] = T{};
   }
+
 } // namespace by_value_array_copy

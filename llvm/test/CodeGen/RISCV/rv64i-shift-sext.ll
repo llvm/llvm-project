@@ -175,10 +175,10 @@ define i8 @test13(ptr %0, i64 %1) {
 ; RV64I-LABEL: test13:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    subw a2, a2, a1
-; RV64I-NEXT:    add a2, a0, a2
 ; RV64I-NEXT:    li a3, 2
+; RV64I-NEXT:    subw a2, a2, a1
 ; RV64I-NEXT:    subw a3, a3, a1
+; RV64I-NEXT:    add a2, a0, a2
 ; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    lbu a1, 0(a2)
 ; RV64I-NEXT:    lbu a0, 0(a0)
@@ -203,8 +203,8 @@ define signext i32 @test14(ptr %0, ptr %1, i64 %2) {
 ; RV64I-NEXT:    li a3, 1
 ; RV64I-NEXT:    subw a3, a3, a2
 ; RV64I-NEXT:    add a0, a0, a3
-; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    slli a3, a3, 2
+; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    add a1, a1, a3
 ; RV64I-NEXT:    lw a1, 0(a1)
 ; RV64I-NEXT:    addw a0, a0, a1

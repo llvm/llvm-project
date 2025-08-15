@@ -215,3 +215,28 @@ struct ::template foo, struct ::template bar; // expected-error 2 {{expected ide
 struct ::foo struct::; // expected-error {{no struct named 'foo' in the global namespace}} expected-error {{expected identifier}}
 class :: : {} a;  // expected-error {{expected identifier}} expected-error {{expected class name}}
 }
+
+namespace GH125225 {
+void func(int);
+void k() {
+  func(1, ); // expected-error {{expected expression}}
+}
+}
+
+namespace GH136254 {
+
+void call() {
+  [a(42, )]() {} (); // expected-error {{expected expression}}
+
+  int *b = new int(42, ); // expected-error {{expected expression}}
+
+  struct S {
+    int c;
+
+    S() : c(42, ) {} // expected-error {{expected expression}}
+  };
+
+  int d(42, ); // expected-error {{expected expression}}
+}
+
+}

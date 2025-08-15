@@ -2469,10 +2469,10 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ;
 ; AVX2-FAST-ALL-LABEL: combine_unneeded_subvector1:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
 ; AVX2-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-FAST-ALL-NEXT:    retq
 ;
 ; AVX2-FAST-PERLANE-LABEL: combine_unneeded_subvector1:
@@ -2698,13 +2698,13 @@ define <4 x i32> @combine_constant_insertion_v4i32(i32 %f) {
 ;
 ; SSE41-LABEL: combine_constant_insertion_v4i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm0 = [0,4,5,30]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [u,4,5,30]
 ; SSE41-NEXT:    pinsrd $0, %edi, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_constant_insertion_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,4,5,30]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [u,4,5,30]
 ; AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a0 = insertelement <4 x i32> undef, i32 %f, i32 0
@@ -3355,7 +3355,7 @@ define void @PR45604(ptr %dst, ptr %src) {
 ; SSE41-NEXT:    movdqa (%rsi), %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [0,11,0,11]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [u,0,11,0,u,0,11,0]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
@@ -3374,21 +3374,18 @@ define void @PR45604(ptr %dst, ptr %src) {
 ; AVX1-LABEL: PR45604:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [11,11,11,0,11,11,11,0]
-; AVX1-NEXT:    # xmm2 = mem[0,0]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
-; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [720907,11,720907,11,720907,11,720907,11]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
+; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
 ; AVX1-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX1-NEXT:    vmovups %ymm1, 32(%rdi)
 ; AVX1-NEXT:    vzeroupper
@@ -3398,7 +3395,7 @@ define void @PR45604(ptr %dst, ptr %src) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rsi), %xmm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,2,0,2]
-; AVX2-NEXT:    vpmovsxdq {{.*#+}} ymm2 = [151519488,185205506,218891524,252577542]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,8,9,u,u,u,u,2,3,10,11,u,u,u,u,4,5,12,13,u,u,u,u,6,7,14,15,u,u,u,u]
 ; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm3[1],ymm1[2],ymm3[3],ymm1[4],ymm3[5],ymm1[6],ymm3[7]
@@ -3549,6 +3546,27 @@ define <16 x i8> @PR107289(<16 x i8> %0) {
   ret <16 x i8> %res
 }
 
+define <8 x i16> @PR141475(i32 %in) {
+; SSE-LABEL: PR141475:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %edi, %xmm0
+; SSE-NEXT:    pslld $1, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR141475:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %edi, %xmm0
+; AVX-NEXT:    vpslld $1, %xmm0, %xmm0
+; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; AVX-NEXT:    retq
+  %mul = shl i32 %in, 1
+  %vecinit = insertelement <4 x i32> zeroinitializer, i32 %mul, i64 0
+  %cast = bitcast <4 x i32> %vecinit to <8 x i16>
+  %shuf = shufflevector <8 x i16> %cast, <8 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuf
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
@@ -3657,9 +3675,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB142_1: # %CF242
+; CHECK-NEXT:  .LBB143_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB142_1
+; CHECK-NEXT:    jmp .LBB143_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>

@@ -234,7 +234,8 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {OpenACCComputeConstructScope, "OpenACCComputeConstructScope"},
       {TypeAliasScope, "TypeAliasScope"},
       {FriendScope, "FriendScope"},
-  };
+      {OpenACCComputeConstructScope, "OpenACCComputeConstructScope"},
+      {OpenACCLoopConstructScope, "OpenACCLoopConstructScope"}};
 
   for (auto Info : FlagInfo) {
     if (Flags & Info.first) {

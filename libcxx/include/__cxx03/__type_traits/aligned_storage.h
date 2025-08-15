@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
-#define _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ALIGNED_STORAGE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ALIGNED_STORAGE_H
 
-#include <__config>
-#include <__type_traits/conditional.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/nat.h>
-#include <__type_traits/type_list.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/nat.h>
+#include <__cxx03/__type_traits/type_list.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -87,7 +87,7 @@ struct __find_max_align<__type_list<_Hp, _Tp>, _Len>
     : public integral_constant<size_t, __select_align<_Len, _Hp::value, __find_max_align<_Tp, _Len>::value>::value> {};
 
 template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
-struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage {
+struct _LIBCPP_TEMPLATE_VIS aligned_storage {
   typedef typename __find_pod<__all_types, _Align>::type _Aligner;
   union type {
     _Aligner __align;
@@ -95,18 +95,9 @@ struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage {
   };
 };
 
-#if _LIBCPP_STD_VER >= 14
-
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
-using aligned_storage_t _LIBCPP_DEPRECATED_IN_CXX23 = typename aligned_storage<_Len, _Align>::type;
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-
-#endif
-
 #define _CREATE_ALIGNED_STORAGE_SPECIALIZATION(n)                                                                      \
   template <size_t _Len>                                                                                               \
-  struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage<_Len, n> {                                   \
+  struct _LIBCPP_TEMPLATE_VIS aligned_storage<_Len, n> {                                                               \
     struct _ALIGNAS(n) type {                                                                                          \
       unsigned char __lx[(_Len + n - 1) / n * n];                                                                      \
     };                                                                                                                 \
@@ -135,4 +126,4 @@ _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x4000);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ALIGNED_STORAGE_H

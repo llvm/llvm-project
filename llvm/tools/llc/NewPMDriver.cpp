@@ -48,10 +48,10 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
+static cl::opt<RegAllocType, false, RegAllocTypeParser>
     RegAlloc("regalloc-npm",
              cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init("default"));
+             cl::Hidden, cl::init(RegAllocType::Unset));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -93,13 +93,11 @@ int llvm::compileModuleWithNewPM(
     CodeGenFileType FileType) {
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
-    WithColor::warning(errs(), Arg0)
+    WithColor::error(errs(), Arg0)
         << "--passes cannot be used with "
         << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
     return 1;
   }
-
-  LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
 
   raw_pwrite_stream *OS = &Out->os();
 
@@ -109,12 +107,12 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
+  MachineModuleInfo MMI(Target.get());
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
-  registerCodeGenCallback(PIC, LLVMTM);
+  registerCodeGenCallback(PIC, *Target);
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -141,7 +139,7 @@ int llvm::compileModuleWithNewPM(
     // selection.
 
     if (!MIR) {
-      WithColor::warning(errs(), Arg0) << "-passes is for .mir file only.\n";
+      WithColor::error(errs(), Arg0) << "-passes is for .mir file only.\n";
       return 1;
     }
 
@@ -155,13 +153,12 @@ int llvm::compileModuleWithNewPM(
     FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-    if (MIR->parseMachineFunctions(*M, MAM))
-      return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(
+    ExitOnErr(Target->buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 
+  // If user only wants to print the pipeline, print it before parsing the MIR.
   if (PrintPipelinePasses) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
@@ -172,6 +169,9 @@ int llvm::compileModuleWithNewPM(
     outs() << PipelineStr << '\n';
     return 0;
   }
+
+  if (MIR && MIR->parseMachineFunctions(*M, MAM))
+    return 1;
 
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();
