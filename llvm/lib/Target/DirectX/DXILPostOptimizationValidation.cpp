@@ -25,38 +25,6 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return ResourceClass::Sampler;
-  }
-  llvm_unreachable("Unknown DescriptorRangeType");
-}
-
-static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
-  using namespace dxbc;
-  switch (Type) {
-  case RootParameterType::Constants32Bit:
-    return ResourceClass::CBuffer;
-  case RootParameterType::SRV:
-    return ResourceClass::SRV;
-  case RootParameterType::UAV:
-    return ResourceClass::UAV;
-  case RootParameterType::CBV:
-    return ResourceClass::CBuffer;
-  case dxbc::RootParameterType::DescriptorTable:
-    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
-  }
-  llvm_unreachable("Unknown RootParameterType");
-}
-
 static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
   for (const auto &UAV : DRM.uavs()) {
     if (UAV.CounterDirection != ResourceCounterDirection::Invalid)
@@ -237,10 +205,10 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
   return RDs;
 }
 
-static void validateRootSignature(Module &M,
-                                  const mcdxbc::RootSignatureDesc &RSD,
-                                  dxil::ModuleMetadataInfo &MMI,
-                                  DXILResourceMap &DRM) {
+static void validateRootSignatureBindings(Module &M,
+                                          const mcdxbc::RootSignatureDesc &RSD,
+                                          dxil::ModuleMetadataInfo &MMI,
+                                          DXILResourceMap &DRM) {
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
@@ -268,10 +236,11 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::CBV: {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
-      Builder.trackBinding(toResourceClass(static_cast<dxbc::RootParameterType>(
-                               ParamInfo.Header.ParameterType)),
-                           Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, &ParamInfo);
+      Builder.trackBinding(
+          dxbc::toResourceClass(static_cast<dxbc::RootParameterType>(
+              ParamInfo.Header.ParameterType)),
+          Desc.RegisterSpace, Desc.ShaderRegister, Desc.ShaderRegister,
+          &ParamInfo);
 
       break;
     }
@@ -285,7 +254,7 @@ static void validateRootSignature(Module &M,
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
         Builder.trackBinding(
-            toResourceClass(
+            dxbc::toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
             Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
             &ParamInfo);
@@ -346,8 +315,9 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
   assert(!DRBI.hasImplicitBinding() && "implicit bindings should be handled in "
                                        "DXILResourceImplicitBinding pass");
 
-  if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI))
-    validateRootSignature(M, *RSD, MMI, DRM);
+  if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
+    validateRootSignatureBindings(M, *RSD, MMI, DRM);
+  }
 }
 
 PreservedAnalyses

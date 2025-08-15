@@ -48,6 +48,51 @@ public:
   }
 };
 
+class TableRegisterOverflowError
+    : public ErrorInfo<TableRegisterOverflowError> {
+public:
+  static char ID;
+  dxbc::DescriptorRangeType Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  TableRegisterOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
+                             uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Cannot append range with implicit lower bound after an unbounded "
+          "range "
+       << getResourceClassName(toResourceClass(Type))
+       << "(register=" << Register << ", space=" << Space << ").";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class TableSamplerMixinError : public ErrorInfo<TableSamplerMixinError> {
+public:
+  static char ID;
+  dxbc::DescriptorRangeType Type;
+  uint32_t Location;
+
+  TableSamplerMixinError(dxbc::DescriptorRangeType Type, uint32_t Location)
+      : Type(Type), Location(Location) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Samplers cannot be mixed with other "
+       << "resource types in a descriptor table, "
+       << getResourceClassName(toResourceClass(Type))
+       << "(location=" << Location << ")";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
 class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
 public:
   LLVM_ABI static char ID;
