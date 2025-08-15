@@ -1532,17 +1532,19 @@ Expected<uint64_t> AtomRef::materialize(MCCASReader &Reader,
 }
 
 Expected<MCAlignFragmentRef>
-MCAlignFragmentRef::create(MCCASBuilder &MB, const MCAlignFragment &F,
+MCAlignFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                            unsigned FragmentSize,
                            ArrayRef<char> FragmentContents) {
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
 
-  uint64_t Count = FragmentSize / F.getFillLen();
-  if (F.hasEmitNops()) {
-    // Write 0 as size and use backend to emit nop.
-    writeVBR8(0, B->Data);
+  writeVBR8(FragmentContents.size(), B->Data);
+  B->Data.append(FragmentContents.begin(), FragmentContents.end());
+  uint64_t Count = (FragmentSize - F.getFixedSize()) / F.getAlignFillLen();
+  if (F.hasAlignEmitNops()) {
+    // Write 1 to signify that it has nops.
+    B->Data.push_back(1);
     if (!MB.Asm.getBackend().writeNopData(MB.FragmentOS, Count,
                                           F.getSubtargetInfo()))
       report_fatal_error("unable to write nop sequence of " + Twine(Count) +
@@ -1550,25 +1552,37 @@ MCAlignFragmentRef::create(MCCASBuilder &MB, const MCAlignFragment &F,
     B->Data.append(MB.FragmentData);
     return get(B->build());
   }
+  // Write 0 to signify that it doesn't have nops.
+  B->Data.push_back(0);
   writeVBR8(Count, B->Data);
-  writeVBR8(F.getFill(), B->Data);
-  writeVBR8(F.getFillLen(), B->Data);
+  writeVBR8(F.getAlignFill(), B->Data);
+  writeVBR8(F.getAlignFillLen(), B->Data);
   return get(B->build());
 }
 
 Expected<uint64_t> MCAlignFragmentRef::materialize(MCCASReader &Reader,
                                                    raw_ostream *Stream) const {
-  uint64_t Count;
+  uint64_t Count, FragContentSize, HasNops;
   auto Remaining = getData();
   auto Endian = Reader.getEndian();
+  if (auto E = consumeVBR8(Remaining, FragContentSize))
+    return std::move(E);
+
+  *Stream << Remaining.substr(0, FragContentSize);
+  Remaining = Remaining.drop_front(FragContentSize);
+
+  HasNops = Remaining[0];
+  Remaining = Remaining.drop_front();
+
+  // hasEmitNops.
+  if (HasNops) {
+    *Stream << Remaining;
+    return Remaining.size() + FragContentSize;
+  }
+
   if (auto E = consumeVBR8(Remaining, Count))
     return std::move(E);
 
-  // hasEmitNops.
-  if (!Count) {
-    *Stream << Remaining;
-    return Remaining.size();
-  }
   int64_t Value;
   unsigned ValueSize;
   if (auto E = consumeVBR8(Remaining, Value))
@@ -1594,7 +1608,7 @@ Expected<uint64_t> MCAlignFragmentRef::materialize(MCCASReader &Reader,
       break;
     }
   }
-  return Count * ValueSize;
+  return (Count * ValueSize) + FragContentSize;
 }
 
 Expected<MCBoundaryAlignFragmentRef> MCBoundaryAlignFragmentRef::create(
@@ -1918,11 +1932,16 @@ Error MCDataFragmentMerger::tryMerge(const MCFragment &F, unsigned Size,
   return Error::success();
 }
 
-static Error writeAlignFragment(MCCASBuilder &Builder,
-                                const MCAlignFragment &AF, raw_ostream &OS,
-                                unsigned FragmentSize) {
-  uint64_t Count = FragmentSize / AF.getFillLen();
-  if (AF.hasEmitNops()) {
+static Error writeAlignFragment(MCCASBuilder &Builder, const MCFragment &AF,
+                                raw_ostream &OS, unsigned FragmentSize,
+                                bool WriteFragmentContents = true) {
+  // Do not always write the contents of the FT_Align fragment into the OS, this
+  // is because that data can contain addend values as well and is undesirable
+  // when creating AlignFragment CAS Objects.
+  if (WriteFragmentContents)
+    OS << StringRef(AF.getContents().data(), AF.getContents().size());
+  uint64_t Count = (FragmentSize - AF.getFixedSize()) / AF.getAlignFillLen();
+  if (AF.hasAlignEmitNops()) {
     if (!Builder.Asm.getBackend().writeNopData(OS, Count,
                                                AF.getSubtargetInfo()))
       return createStringError(inconvertibleErrorCode(),
@@ -1933,20 +1952,20 @@ static Error writeAlignFragment(MCCASBuilder &Builder,
   auto Endian = Builder.ObjectWriter.Target.isLittleEndian() ? endianness::little
                                                              : endianness::big;
   for (uint64_t I = 0; I != Count; ++I) {
-    switch (AF.getFillLen()) {
+    switch (AF.getAlignFillLen()) {
     default:
       llvm_unreachable("Invalid size!");
     case 1:
-      OS << char(AF.getFill());
+      OS << char(AF.getAlignFill());
       break;
     case 2:
-      support::endian::write<uint16_t>(OS, AF.getFill(), Endian);
+      support::endian::write<uint16_t>(OS, AF.getAlignFill(), Endian);
       break;
     case 4:
-      support::endian::write<uint32_t>(OS, AF.getFill(), Endian);
+      support::endian::write<uint32_t>(OS, AF.getAlignFill(), Endian);
       break;
     case 8:
-      support::endian::write<uint64_t>(OS, AF.getFill(), Endian);
+      support::endian::write<uint64_t>(OS, AF.getAlignFill(), Endian);
       break;
     }
   }
@@ -1978,9 +1997,14 @@ Error MCDataFragmentMerger::emitMergedFragments() {
 #define MCFRAGMENT_ENCODED_FRAGMENT_ONLY
 #include "llvm/MCCAS/MCCASObjectV1.def"
     case MCFragment::FT_Align: {
-      const MCAlignFragment *AF = cast<MCAlignFragment>(Candidate.first);
-      if (auto E =
-              writeAlignFragment(Builder, *AF, FragmentOS, Candidate.second))
+      // Since an FT_Align can contain Addend Values, only write the
+      // post-fragment partitioned contents into the FragmentData and make sure
+      // that the writeAlignFragment function doesn't write any of the fragment
+      // data into FragmentData.
+      FragmentData.append(CandidateContents);
+      if (auto E = writeAlignFragment(Builder, *Candidate.first, FragmentOS,
+                                      Candidate.second,
+                                      false /*WriteFragmentContents*/))
         return E;
       break;
     }
