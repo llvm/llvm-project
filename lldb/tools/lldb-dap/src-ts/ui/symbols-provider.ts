@@ -84,25 +84,15 @@ export class SymbolsProvider extends DisposableContext {
     }
   }
 
-  private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbol[]> {
+  private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbolType[]> {
     console.log(`Getting symbols for module: ${moduleId}`);
     const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("dapGetModuleSymbols", { moduleId });
 
 
-    return symbols_response?.symbols.map(symbol => new DAPSymbol(
-      symbol.userId,
-      symbol.isDebug,
-      symbol.isSynthetic,
-      symbol.isExternal,
-      symbol.type,
-      symbol.fileAddress,
-      symbol.loadAddress,
-      symbol.size,
-      symbol.name,
-    )) || [];
+    return symbols_response?.symbols || [];
   }
 
-  private async showSymbolsInNewTab(moduleName: string, symbols: DAPSymbol[]) {
+  private async showSymbolsInNewTab(moduleName: string, symbols: DAPSymbolType[]) {
     const panel = vscode.window.createWebviewPanel(
       "lldb-dap.symbols",
       `Symbols for ${moduleName}`,
@@ -192,18 +182,4 @@ class ModuleQuickPickItem implements vscode.QuickPickItem {
   get description(): string {
     return this.module.id.toString();
   }
-}
-
-class DAPSymbol {
-  constructor(
-    public readonly userId: number,
-    public readonly isDebug: boolean,
-    public readonly isSynthetic: boolean,
-    public readonly isExternal: boolean,
-    public readonly type: string,
-    public readonly fileAddress: number,
-    public readonly loadAddress: number | undefined,
-    public readonly size: number,
-    public readonly name: string,
-  ) {}
 }
