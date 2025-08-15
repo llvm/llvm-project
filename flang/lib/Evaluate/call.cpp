@@ -335,8 +335,7 @@ static void DetermineCopyInOutArgument(
   bool dummyIsAssumedSize{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
-      dummyObj->attrs.test(
-          characteristics::DummyDataObject::Attr::Contiguous)};
+      dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
     // Cannot do copy-out for vector subscripts: there could be repeated

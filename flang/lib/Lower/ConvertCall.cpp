@@ -1257,10 +1257,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // The simple contiguity of the actual is "lost" when passing a polymorphic
   // to a non polymorphic entity because the dummy dynamic type matters for
   // the contiguity.
-  bool mustDoCopyIn =
-      actual.isArray() && arg.mustBeMadeContiguous() &&
-      (passingPolymorphicToNonPolymorphic ||
-       !isSimplyContiguous(*arg.entity, foldingContext));
+  bool mustDoCopyIn = actual.isArray() && arg.mustBeMadeContiguous() &&
+                      (passingPolymorphicToNonPolymorphic ||
+                       !isSimplyContiguous(*arg.entity, foldingContext));
   bool mustDoCopyOut = mustDoCopyIn && arg.mayBeModifiedByCall();
   bool newMustDoCopyIn = false;
   bool newMustDoCopyOut = false;
@@ -1268,15 +1267,15 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     newMustDoCopyIn = arg.entity->GetMayNeedCopyIn();
     newMustDoCopyOut = arg.entity->GetMayNeedCopyOut();
 #if 1
-    llvm::dbgs() << "copyinout: CALLER " <<
-        "copy-in: old=" << mustDoCopyIn << ", new=" << newMustDoCopyIn <<
-        "| copy-out: old=" << mustDoCopyOut << ", new=" << newMustDoCopyOut <<
-        "\n";
+    llvm::dbgs() << "copyinout: CALLER " << "copy-in: old=" << mustDoCopyIn
+                 << ", new=" << newMustDoCopyIn
+                 << "| copy-out: old=" << mustDoCopyOut
+                 << ", new=" << newMustDoCopyOut << "\n";
 #endif
   } else {
 #if 1
-    llvm::dbgs() << "copyinout: CALLEE " <<
-        "copy-in=" << mustDoCopyIn << ", copy-out=" << mustDoCopyOut << "\n";
+    llvm::dbgs() << "copyinout: CALLEE " << "copy-in=" << mustDoCopyIn
+                 << ", copy-out=" << mustDoCopyOut << "\n";
 #endif
   }
   mustDoCopyIn = newMustDoCopyIn;
