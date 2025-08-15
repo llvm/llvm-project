@@ -3109,9 +3109,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
     assert(FnTy->getNumParams() == 1 && "Invalid function signature");
 
     TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = GuardVal;
-    Entry.Ty = FnTy->getParamType(0);
+    TargetLowering::ArgListEntry Entry(GuardVal, FnTy->getParamType(0));
     if (GuardCheckFn->hasParamAttribute(0, Attribute::AttrKind::InReg))
       Entry.IsInReg = true;
     Args.push_back(Entry);
@@ -3208,9 +3206,7 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
     assert(FnTy->getNumParams() == 1 && "Invalid function signature");
 
     TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = GuardVal;
-    Entry.Ty = FnTy->getParamType(0);
+    TargetLowering::ArgListEntry Entry(GuardVal, FnTy->getParamType(0));
     if (GuardCheckFn->hasParamAttribute(0, Attribute::AttrKind::InReg))
       Entry.IsInReg = true;
     Args.push_back(Entry);
@@ -7515,10 +7511,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     }
     TargetLowering::ArgListTy Args;
     if (Intrinsic == Intrinsic::ubsantrap) {
-      Args.push_back(TargetLoweringBase::ArgListEntry());
-      Args[0].Val = I.getArgOperand(0);
-      Args[0].Node = getValue(Args[0].Val);
-      Args[0].Ty = Args[0].Val->getType();
+      Value *Arg = I.getArgOperand(0);
+      Args.emplace_back(Arg, getValue(Arg));
     }
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -7947,9 +7941,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Args.reserve(3);
 
     for (unsigned Idx : {2, 3, 1}) {
-      TargetLowering::ArgListEntry Arg;
-      Arg.Node = getValue(I.getOperand(Idx));
-      Arg.Ty = I.getOperand(Idx)->getType();
+      TargetLowering::ArgListEntry Arg(getValue(I.getOperand(Idx)),
+                                       I.getOperand(Idx)->getType());
       Arg.setAttributes(&I, Idx);
       Args.push_back(Arg);
     }
@@ -7960,9 +7953,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // Forward the flags and any additional arguments.
     for (unsigned Idx = 4; Idx < I.arg_size(); ++Idx) {
-      TargetLowering::ArgListEntry Arg;
-      Arg.Node = getValue(I.getOperand(Idx));
-      Arg.Ty = I.getOperand(Idx)->getType();
+      TargetLowering::ArgListEntry Arg(getValue(I.getOperand(Idx)),
+                                       I.getOperand(Idx)->getType());
       Arg.setAttributes(&I, Idx);
       Args.push_back(Arg);
     }
@@ -7988,10 +7980,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     TargetLowering::ArgListTy Args;
 
     // The first argument is the callee. Skip it when assembling the call args.
-    TargetLowering::ArgListEntry Arg;
     for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
-      Arg.Node = getValue(I.getArgOperand(Idx));
-      Arg.Ty = I.getArgOperand(Idx)->getType();
+      TargetLowering::ArgListEntry Arg(getValue(I.getArgOperand(Idx)),
+                                       I.getArgOperand(Idx)->getType());
       Arg.setAttributes(&I, Idx);
       Args.push_back(Arg);
     }
@@ -8945,7 +8936,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   }
 
   for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
-    TargetLowering::ArgListEntry Entry;
     const Value *V = *I;
 
     // Skip empty types
@@ -8953,8 +8943,7 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       continue;
 
     SDValue ArgNode = getValue(V);
-    Entry.Node = ArgNode; Entry.Ty = V->getType();
-
+    TargetLowering::ArgListEntry Entry(ArgNode, V->getType());
     Entry.setAttributes(&CB, I - CB.arg_begin());
 
     // Use swifterror virtual register as input to the call.
@@ -8978,11 +8967,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   // If call site has a cfguardtarget operand bundle, create and add an
   // additional ArgListEntry.
   if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_cfguardtarget)) {
-    TargetLowering::ArgListEntry Entry;
     Value *V = Bundle->Inputs[0];
-    SDValue ArgNode = getValue(V);
-    Entry.Node = ArgNode;
-    Entry.Ty = V->getType();
+    TargetLowering::ArgListEntry Entry(V, getValue(V));
     Entry.IsCFGuardTarget = true;
     Args.push_back(Entry);
   }
@@ -10645,9 +10631,7 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
 
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = getValue(V);
-    Entry.Ty = V->getType();
+    TargetLowering::ArgListEntry Entry(getValue(V), V->getType());
     Entry.setAttributes(Call, ArgI);
     Args.push_back(Entry);
   }
@@ -11063,21 +11047,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Type *StackSlotPtrType = PointerType::get(Context, DL.getAllocaAddrSpace());
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getFrameIndexTy(DL));
-    ArgListEntry Entry;
-    Entry.Node = DemoteStackSlot;
-    Entry.Ty = StackSlotPtrType;
-    Entry.IsSExt = false;
-    Entry.IsZExt = false;
-    Entry.IsInReg = false;
+    ArgListEntry Entry(DemoteStackSlot, StackSlotPtrType);
     Entry.IsSRet = true;
-    Entry.IsNest = false;
-    Entry.IsByVal = false;
-    Entry.IsByRef = false;
-    Entry.IsReturned = false;
-    Entry.IsSwiftSelf = false;
-    Entry.IsSwiftAsync = false;
-    Entry.IsSwiftError = false;
-    Entry.IsCFGuardTarget = false;
     Entry.Alignment = Alignment;
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;

@@ -2223,17 +2223,13 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
 
   SDLoc DL(Node);
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
 
   unsigned OpNum = 0;
   for (auto &VFParam : OptVFInfo->Shape.Parameters) {
     if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
       EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), *Ctx, VT);
-      Entry.Node = DAG.getBoolConstant(true, DL, MaskVT, VT);
-      Entry.Ty = MaskVT.getTypeForEVT(*Ctx);
-      Args.push_back(Entry);
+      Args.emplace_back(DAG.getBoolConstant(true, DL, MaskVT, VT),
+                        MaskVT.getTypeForEVT(*Ctx));
       continue;
     }
 
@@ -2241,9 +2237,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
     if (VFParam.ParamKind != VFParamKind::Vector)
       return false;
 
-    Entry.Node = Node->getOperand(OpNum++);
-    Entry.Ty = Ty;
-    Args.push_back(Entry);
+    Args.emplace_back(Node->getOperand(OpNum++), Ty);
   }
 
   // Emit a call to the vector function.
