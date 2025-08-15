@@ -429,7 +429,7 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ; ARM-NEXT:    str r0, [sp, #16] @ 4-byte Spill
 ; ARM-NEXT:    cmp r0, #0
 ; ARM-NEXT:    mov r3, r2
-; ARM-NEXT:    bge .LBB6_2
+; ARM-NEXT:    bpl .LBB6_2
 ; ARM-NEXT:  @ %bb.1:
 ; ARM-NEXT:    mov r3, r4
 ; ARM-NEXT:  .LBB6_2:
