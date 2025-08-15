@@ -1285,7 +1285,54 @@ INTERCEPTOR(int, puts, char *s) {
 #endif
 
 #if SANITIZER_INTERCEPT_PRCTL
-INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
+
+#if defined(__aarch64__)
+// https://llvm.org/docs/PointerAuth.html
+// AArch64 is currently the only architecture with full support for PAC. If
+// other architectures add support for PAC, similar logic should be implemented.
+// Because after resetting the PAC key, WRAP(prctl) will continue to perform
+// authentication using the old key, the authentication will fail. The solution
+// is to call REAL(prctl) directly when the prctl option is PR_PAC_RESET_KEYS.
+
+#define PR_PAC_RESET_KEYS 54
+
+#define PRCTL_INTERCEPTOR(ret_type, func, ...)                              \
+  DEFINE_REAL(ret_type, func, __VA_ARGS__)                                  \
+  extern "C" ret_type func(__VA_ARGS__);                                    \
+  extern "C" ret_type TRAMPOLINE(func)(__VA_ARGS__);                        \
+  extern "C" ret_type __interceptor_##func(__VA_ARGS__)                     \
+  INTERCEPTOR_ATTRIBUTE __attribute__((weak)) ALIAS(WRAP(func));            \
+  extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
+
+asm(
+  ".text\n"
+  ".weak prctl\n"
+  ".set prctl, " SANITIZER_STRINGIFY(TRAMPOLINE(prctl)) "\n"
+  ".global " SANITIZER_STRINGIFY(TRAMPOLINE(prctl)) "\n"
+  ".type " SANITIZER_STRINGIFY(TRAMPOLINE(prctl)) ", "
+      ASM_TYPE_FUNCTION_STR "\n"
+  SANITIZER_STRINGIFY(TRAMPOLINE(prctl)) ":\n"
+  C_ASM_STARTPROC "\n"
+    "cmp w0, #" SANITIZER_STRINGIFY(PR_PAC_RESET_KEYS) "\n"
+    "bne .L_wrap_prctl\n"
+    // tail jump to libc prctl
+    "adrp x6, :got:_ZN14__interception10real_prctlE\n"
+    "ldr x6, [x6, #:got_lo12:_ZN14__interception10real_prctlE]\n"
+    "ldr x6, [x6]\n"
+    "br x6\n"
+  ".L_wrap_prctl:"
+    C_ASM_TAIL_CALL(SANITIZER_STRINGIFY(TRAMPOLINE(prctl)),
+        "__interceptor_"
+        SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(prctl))) "\n"
+  C_ASM_ENDPROC "\n"
+  ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(prctl)) ", "
+      ".-" SANITIZER_STRINGIFY(TRAMPOLINE(prctl)) "\n"
+);
+#else
+#define PRCTL_INTERCEPTOR INTERCEPTOR
+#endif
+
+PRCTL_INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
             unsigned long arg4, unsigned long arg5) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, prctl, option, arg2, arg3, arg4, arg5);
