@@ -2244,6 +2244,68 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ReturnAddrOp and FrameAddrOp
+//===----------------------------------------------------------------------===//
+
+class CIR_FuncAddrBuiltinOp<string mnemonic> : CIR_Op<mnemonic, []> {
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_VoidPtrType:$result);
+  let assemblyFormat = [{
+    `(` $level `)` attr-dict
+  }];
+}
+
+def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
+  let summary =
+      "The return address of the current function, or of one of its callers";
+
+  let description = [{
+    Represents a call to builtin function ` __builtin_return_address` in CIR.
+    This builtin function returns the return address of the current function,
+    or of one of its callers.
+
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the return address of the current function,
+    value of 1 yields the return address of the caller of the current function,
+    and so forth.
+
+    Examples:
+
+    ```mlir
+    %p = return_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
+}
+
+def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
+  let summary =
+      "The frame address of the current function, or of one of its callers";
+
+  let description = [{
+    Represents a call to builtin function ` __builtin_frame_address` in CIR.
+    This builtin function returns the frame address of the current function,
+    or of one of its callers. The frame is the area on the stack that holds
+    local variables and saved registers. The frame address is normally the
+    address of the first word pushed on to the stack by the function.
+    However, the exact definition depends upon the processor and the calling
+    convention. If the processor has a dedicated frame pointer register, and
+    the function has a frame, then __builtin_frame_address returns the value of
+    the frame pointer register.
+
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the frame address of the current function,
+    value of 1 yields the frame address of the caller of the current function,
+    and so forth.
+
+    Examples:
+
+    ```mlir
+    %p = frame_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // StackSaveOp & StackRestoreOp
 //===----------------------------------------------------------------------===//
 
