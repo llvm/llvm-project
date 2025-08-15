@@ -1016,7 +1016,7 @@ def : InstRW<[CortexA510MCWrite<16, 13, CortexA510UnitVALU>], (instrs FADDA_VPZ_
 def : InstRW<[CortexA510MCWrite<8, 5, CortexA510UnitVALU>], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^FACG[ET]_PPzZZ_[HSD]",
+def : InstRW<[CortexA510MCWrite<4, 2, CortexA510UnitVALU>], (instregex "^FACG[ET]_PPzZZ_[HSD]",
                                             "^FCM(EQ|GE|GT|NE)_PPzZ[0Z]_[HSD]",
                                             "^FCM(LE|LT)_PPzZ0_[HSD]",
                                             "^FCMUO_PPzZZ_[HSD]")>;
