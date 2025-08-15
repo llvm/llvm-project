@@ -125,8 +125,8 @@ MPFRNumber MPFRNumber::atanh() const {
 
 MPFRNumber MPFRNumber::atanpi() const {
   MPFRNumber result(*this);
-#if (MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0))
-  mpfr_asinpi(result.value, value, mpfr_rounding);
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  mpfr_atanpi(result.value, value, mpfr_rounding);
   return result;
 #else
   MPFRNumber value_atan(0.0, 1280);
