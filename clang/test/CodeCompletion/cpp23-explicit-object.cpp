@@ -42,7 +42,23 @@ int func3() {
 
 int func4() {
   // TODO (&A::foo)(
-  (&A::bar)(
+  (&A::bar)()
 }
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC5 %s
 // CHECK-CC5: OVERLOAD: [#void#](<#A#>, int)
+
+struct C {
+  int member {};
+  void foo(this C& self) {
+    // Should not offer `member` here, since it needs to be 
+    // referenced as `self.member`.
+    mem
+  }
+  void bar(this C& self) {
+    self.mem
+  }
+};
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-8):8 -std=c++23 %s | FileCheck --allow-empty %s
+// CHECK-NOT: COMPLETION: member : [#int#]member
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-5):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC6 %s
+// CHECK-CC6: COMPLETION: member : [#int#]member
