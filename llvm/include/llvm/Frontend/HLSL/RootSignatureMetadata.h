@@ -15,7 +15,6 @@
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
@@ -42,6 +41,7 @@ toResourceClass(dxbc::DescriptorRangeType RangeType) {
   case DescriptorRangeType::Sampler:
     return dxil::ResourceClass::Sampler;
   }
+  llvm_unreachable("Unknown DescriptorRangeType");
 }
 
 inline dxil::ResourceClass toResourceClass(dxbc::RootParameterType Type) {
@@ -56,9 +56,9 @@ inline dxil::ResourceClass toResourceClass(dxbc::RootParameterType Type) {
   case RootParameterType::CBV:
     return dxil::ResourceClass::CBuffer;
   case dxbc::RootParameterType::DescriptorTable:
-    break;
+    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
   }
-  llvm_unreachable("Unconvertible RootParameterType");
+  llvm_unreachable("Unknown RootParameterType");
 }
 
 template <typename T>
