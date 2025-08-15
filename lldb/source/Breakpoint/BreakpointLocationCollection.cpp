@@ -115,7 +115,8 @@ BreakpointLocationCollection::GetByIndex(size_t i) const {
 }
 
 bool BreakpointLocationCollection::ShouldStop(
-    StoppointCallbackContext *context) {
+    StoppointCallbackContext *context,
+    BreakpointLocationCollection &stopped_bp_locs) {
   bool shouldStop = false;
   size_t i = 0;
   size_t prev_size = GetSize();
@@ -123,9 +124,20 @@ bool BreakpointLocationCollection::ShouldStop(
     // ShouldStop can remove the breakpoint from the list, or even delete
     // it, so we should
     BreakpointLocationSP cur_loc_sp = GetByIndex(i);
+    BreakpointLocationSP reported_loc_sp;
     BreakpointSP keep_bkpt_alive_sp = cur_loc_sp->GetBreakpoint().shared_from_this();
-    if (cur_loc_sp->ShouldStop(context))
+    // We're building up the list or which locations claim responsibility for
+    // this stop.  If the location's ShouldStop defers to a facade location by
+    // returning a non-null reported location, we want to use that.  Otherwise
+    // use the original location.
+    if (cur_loc_sp->ShouldStop(context, reported_loc_sp)) {
+      if (reported_loc_sp)
+        stopped_bp_locs.Add(reported_loc_sp);
+      else
+        stopped_bp_locs.Add(cur_loc_sp);
+
       shouldStop = true;
+    }
 
     if (prev_size == GetSize())
       i++;

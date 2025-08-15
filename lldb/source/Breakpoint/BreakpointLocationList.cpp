@@ -32,22 +32,23 @@ BreakpointLocationList::Create(const Address &addr,
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // The location ID is just the size of the location list + 1
   lldb::break_id_t bp_loc_id = ++m_next_id;
-  BreakpointLocationSP bp_loc_sp(
-      new BreakpointLocation(bp_loc_id, m_owner, addr, LLDB_INVALID_THREAD_ID,
-                             resolve_indirect_symbols));
+  BreakpointLocationSP bp_loc_sp(new 
+      BreakpointLocation(bp_loc_id, m_owner, addr, LLDB_INVALID_THREAD_ID, 
+      resolve_indirect_symbols));
   m_locations.push_back(bp_loc_sp);
   m_address_to_location[addr] = bp_loc_sp;
   return bp_loc_sp;
 }
 
 bool BreakpointLocationList::ShouldStop(StoppointCallbackContext *context,
-                                        lldb::break_id_t break_id) {
+                                        lldb::break_id_t break_id,
+                                        lldb::BreakpointLocationSP &bp_loc_sp) {
   BreakpointLocationSP bp = FindByID(break_id);
   if (bp) {
     // Let the BreakpointLocation decide if it should stop here (could not have
     // reached it's target hit count yet, or it could have a callback that
     // decided it shouldn't stop (shared library loads/unloads).
-    return bp->ShouldStop(context);
+    return bp->ShouldStop(context, bp_loc_sp);
   }
   // We should stop here since this BreakpointLocation isn't valid anymore or
   // it doesn't exist.

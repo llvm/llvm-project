@@ -38,6 +38,12 @@ namespace lldb_private {
 
 class BreakpointLocation
     : public std::enable_shared_from_this<BreakpointLocation> {
+  friend class BreakpointSite;
+  friend class BreakpointLocationList;
+  friend class Breakpoint;
+  friend class Process;
+  friend class StopInfoBreakpoint;
+
 public:
   ~BreakpointLocation();
 
@@ -55,16 +61,39 @@ public:
 
   Target &GetTarget();
 
+  /// This is a programmatic version of a breakpoint "condition".  When a
+  /// breakpoint is hit, WasHit will get called before the synchronous ShouldStop
+  /// callback is run, and if it returns an empty BreakpointLocationSP, lldb will
+  /// act as if that breakpoint wasn't hit.
+  ///
+  /// \param[in] context
+  ///   The context at the stop point
+  ///    
+  /// \return
+  ///    This will return the breakpoint location that was hit on this stop.
+  ///    If there was no facade location this will be the original location.
+  ///    If the shared pointer is empty, then we'll treat it as if the 
+  ///    breakpoint was not hit.
+  lldb::BreakpointLocationSP WasHit(StoppointCallbackContext *context);
+
   /// Determines whether we should stop due to a hit at this breakpoint
   /// location.
   ///
   /// Side Effects: This may evaluate the breakpoint condition, and run the
   /// callback.  So this command may do a considerable amount of work.
   ///
+  /// \param[in] context
+  ///   The context at the stop point
+  ///    
+  /// \param[out] facade_loc_sp
+  ///   If this stop should be attributed not to the location that was hit, but
+  ///   to a facade location, it will be returned in this facade_loc_sp.
+  ///    
   /// \return
   ///     \b true if this breakpoint location thinks we should stop,
   ///     \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context);
+  bool ShouldStop(StoppointCallbackContext *context, 
+          lldb::BreakpointLocationSP &facade_loc_sp);
 
   // The next section deals with various breakpoint options.
 
@@ -292,11 +321,6 @@ public:
   }
 
 protected:
-  friend class BreakpointSite;
-  friend class BreakpointLocationList;
-  friend class Process;
-  friend class StopInfoBreakpoint;
-
   /// Set the breakpoint site for this location to \a bp_site_sp.
   ///
   /// \param[in] bp_site_sp
@@ -346,8 +370,10 @@ private:
   // Constructors and Destructors
   //
   // Only the Breakpoint can make breakpoint locations, and it owns them.
-
   /// Constructor.
+  ///
+  /// \param[in] loc_id
+  ///     The location id of the new location. 
   ///
   /// \param[in] owner
   ///     A back pointer to the breakpoint that owns this location.
@@ -359,10 +385,25 @@ private:
   ///     The thread for which this breakpoint location is valid, or
   ///     LLDB_INVALID_THREAD_ID if it is valid for all threads.
   ///
-  BreakpointLocation(lldb::break_id_t bid, Breakpoint &owner,
+  BreakpointLocation(lldb::break_id_t loc_id, Breakpoint &owner,
                      const Address &addr, lldb::tid_t tid,
                      bool check_for_resolver = true);
 
+  /// This is the constructor for locations with no address.  Currently this is
+  /// just used for Facade locations. 
+  ///
+  /// \param[in] loc_id
+  ///     The location id of the new location. 
+  ///
+  /// \param[in] owner
+  ///     A back pointer to the breakpoint that owns this location.
+  ///
+  ///
+public:
+  BreakpointLocation(lldb::break_id_t loc_id, Breakpoint &owner);
+  bool IsValid() const { return m_is_valid; }
+  bool IsFacade() const { return m_is_facade; }
+private:
   // Data members:
   bool m_should_resolve_indirect_functions;
   bool m_is_reexported;
@@ -390,6 +431,17 @@ private:
   /// location was given somewhere in the virtual inlined call stack since the
   /// Address always resolves to the lowest entry in the stack.
   std::optional<LineEntry> m_preferred_line_entry;
+  bool m_is_valid = true;  /// Because Facade locations don't have sites
+                           /// we can't use the presence of the site to mean
+                           /// this breakpoint is valid, but must manage
+                           /// the state directly.
+  bool m_is_facade = false; /// Facade locations aren't directly triggered
+                            /// and don't have a breakpoint site.  They are
+                            /// a useful fiction when you want to represent
+                            /// the stop location as something lldb can't
+                            /// naturally stop at.
+
+  void SetInvalid() { m_is_valid = false; }
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
     m_should_resolve_indirect_functions = do_resolve;
