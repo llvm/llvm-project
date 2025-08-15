@@ -65,7 +65,7 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
     return result;
 
   auto nanMode = op.getNanMode();
-  if (nanMode == NanPropagation::PROPAGATE)
+  if (nanMode == NanPropagationMode::PROPAGATE)
     return result;
 
   // Unordered comparison of NaN against itself will always return true.
@@ -465,7 +465,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
     // In the case of "PROPAGATE" semantics no compare and selection is
     // required.
-    if (nanMode == NanPropagation::PROPAGATE)
+    if (nanMode == NanPropagationMode::PROPAGATE)
       return result;
 
     // In the case of "IGNORE" semantics materialize a comparison
@@ -1193,7 +1193,7 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
                 std::is_same_v<OpTy, tosa::ReduceMaxOp>) {
     // NaN propagation has no meaning for non floating point types.
     if (isa<FloatType>(elementTy) &&
-        op.getNanMode() == NanPropagation::IGNORE) {
+        op.getNanMode() == NanPropagationMode::IGNORE) {
       isNanIgnoreMode = true;
       // Because the TOSA spec requires the result be NaN iff all elements in
       // the reduction are NaN we can't simply perform a compare and select.
@@ -1356,11 +1356,11 @@ public:
     unsigned rank = inputTy.getRank();
 
     // This is an illegal configuration. terminate and log an error
-    if (op.getRoundingMode() == RoundingType::INEXACT_ROUND)
+    if (op.getRoundingMode() == RoundingMode::INEXACT_ROUND)
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale with rounding mode = 'INEXACT_ROUND' is not "
               "currently supported");
-    if (op.getRoundingMode() == RoundingType::DOUBLE_ROUND && !op.getScale32())
+    if (op.getRoundingMode() == RoundingMode::DOUBLE_ROUND && !op.getScale32())
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
@@ -1406,10 +1406,10 @@ public:
     // is ever true.
 
     bool doubleRound =
-        op.getRoundingMode() == RoundingType::DOUBLE_ROUND &&
+        op.getRoundingMode() == RoundingMode::DOUBLE_ROUND &&
         llvm::any_of(shiftValues, [](int32_t v) { return v > 31; });
-    RoundingType roundingMode =
-        doubleRound ? RoundingType::DOUBLE_ROUND : RoundingType::SINGLE_ROUND;
+    RoundingMode roundingMode =
+        doubleRound ? RoundingMode::DOUBLE_ROUND : RoundingMode::SINGLE_ROUND;
 
     SmallVector<AffineMap> indexingMaps = {
         rewriter.getMultiDimIdentityMap(rank)};
@@ -1592,7 +1592,7 @@ public:
     auto input = op.getInput();
     auto inputTy = cast<RankedTensorType>(input.getType());
     auto resultTy = cast<RankedTensorType>(op.getType());
-    const bool isBilinear = op.getMode() == ResizeType::BILINEAR;
+    const bool isBilinear = op.getMode() == ResizeMode::BILINEAR;
 
     auto inputH = inputTy.getDimSize(1);
     auto inputW = inputTy.getDimSize(2);
@@ -1603,8 +1603,8 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.resize is not a pure 1x1->1x1 image operation");
 
-    if (op.getMode() != ResizeType::NEAREST_NEIGHBOR &&
-        op.getMode() != ResizeType::BILINEAR)
+    if (op.getMode() != ResizeMode::NEAREST_NEIGHBOR &&
+        op.getMode() != ResizeMode::BILINEAR)
       return rewriter.notifyMatchFailure(
           op, "tosa.resize mode should be NEAREST_NEIGHBOR or BILINEAR");
 
@@ -1804,8 +1804,8 @@ public:
       return rewriter.notifyMatchFailure(
           op, "unable to get dynamic dimensions of tosa.resize");
 
-    if (op.getMode() != ResizeType::NEAREST_NEIGHBOR &&
-        op.getMode() != ResizeType::BILINEAR)
+    if (op.getMode() != ResizeMode::NEAREST_NEIGHBOR &&
+        op.getMode() != ResizeMode::BILINEAR)
       return rewriter.notifyMatchFailure(
           op, "tosa.resize mode should be NEAREST_NEIGHBOR or BILINEAR");
 
@@ -1910,7 +1910,7 @@ public:
         getIndexAndDeltaInt(ix, dx, inX, xScaleN, xScaleD, xOffset, imageW, b);
       }
 
-      if (op.getMode() == ResizeType::NEAREST_NEIGHBOR) {
+      if (op.getMode() == ResizeMode::NEAREST_NEIGHBOR) {
         auto one = arith::ConstantOp::create(b, b.getI32IntegerAttr(1));
 
         auto getNearestIndexAndClamp = [&](Value val, Value dval, Value scale,
@@ -1946,7 +1946,7 @@ public:
         linalg::YieldOp::create(b, result);
       } else {
         // The mode here must be BILINEAR.
-        assert(op.getMode() == ResizeType::BILINEAR);
+        assert(op.getMode() == ResizeMode::BILINEAR);
 
         auto oneVal = arith::ConstantOp::create(b, b.getI32IntegerAttr(1));
 
@@ -2311,7 +2311,7 @@ public:
 
           Value predicate;
           if (isa<FloatType>(inElementTy)) {
-            if (argmaxOp.getNanMode() == NanPropagation::IGNORE) {
+            if (argmaxOp.getNanMode() == NanPropagationMode::IGNORE) {
               // Only update index & max value for non NaN values. If all
               // values are NaNs, the initial index will be return which is 0.
               predicate = arith::CmpFOp::create(rewriter, nestedLoc,

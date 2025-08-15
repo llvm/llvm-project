@@ -508,13 +508,13 @@ private:
 
   bool attributeCheckRescale(Operation *op) {
     if (auto rescale = dyn_cast<tosa::RescaleOp>(op)) {
-      if (rescale.getRoundingMode() == RoundingType::DOUBLE_ROUND &&
+      if (rescale.getRoundingMode() == RoundingMode::DOUBLE_ROUND &&
           !targetEnv.allows(Extension::doubleround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = DOUBLE_ROUND "
             << "requires extension [doubleround]";
         return false;
-      } else if (rescale.getRoundingMode() == RoundingType::INEXACT_ROUND &&
+      } else if (rescale.getRoundingMode() == RoundingMode::INEXACT_ROUND &&
                  !targetEnv.allows(Extension::inexactround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = INEXACT_ROUND "
@@ -1122,7 +1122,7 @@ bool checkErrorIfRescale(Operation *op) {
   }
 
   // ERROR_IF(!scale32 && (rounding_mode == DOUBLE_ROUND))
-  if (!scale32 && roundingMode == RoundingType::DOUBLE_ROUND) {
+  if (!scale32 && roundingMode == RoundingMode::DOUBLE_ROUND) {
     op->emitOpError() << "DOUBLE_ROUND is only allowed with scale32=true.";
     return false;
   }

@@ -389,23 +389,23 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
 def Tosa_RESIZE_NEAREST_NEIGHBOR          : I32EnumAttrCase<"NEAREST_NEIGHBOR", 1>;
 def Tosa_RESIZE_BILINEAR                  : I32EnumAttrCase<"BILINEAR", 2>;
 
-def Tosa_ResizeTypeAttr
-    : Tosa_I32EnumAttr<"ResizeType", "Supported resize/upsampling strategies", "resize_type",
+def Tosa_ResizeModeAttr
+    : Tosa_I32EnumAttr<"ResizeMode", "Supported resize/upsampling strategies", "resize_mode",
                     [Tosa_RESIZE_NEAREST_NEIGHBOR, Tosa_RESIZE_BILINEAR]>;       
 
 def Tosa_NANPROPAGATION_PROPAGATE : I32EnumAttrCase<"PROPAGATE", 1>;
 def Tosa_NANPROPAGATION_IGNORE    : I32EnumAttrCase<"IGNORE", 2>;
 
-def Tosa_NanPropagationAttr
-    : Tosa_I32EnumAttr<"NanPropagation", "Supported NaN propagation strategies", "nan",
+def Tosa_NanPropagationModeAttr
+    : Tosa_I32EnumAttr<"NanPropagationMode", "Supported NaN propagation strategies", "nan_mode",
                     [Tosa_NANPROPAGATION_PROPAGATE, Tosa_NANPROPAGATION_IGNORE]>;  
 
 def Tosa_ROUNDING_SINGLE_ROUND    : I32EnumAttrCase<"SINGLE_ROUND", 1>;
 def Tosa_ROUNDING_INEXACT_ROUND   : I32EnumAttrCase<"INEXACT_ROUND", 2>;
 def Tosa_ROUNDING_DOUBLE_ROUND    : I32EnumAttrCase<"DOUBLE_ROUND", 3>;
 
-def Tosa_RoundingTypeAttr
-    : Tosa_I32EnumAttr<"RoundingType", "Supported rounding modes", "rounding_type",
+def Tosa_RoundingModeAttr
+    : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
                     [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;                         
 
 
