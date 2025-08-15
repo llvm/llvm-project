@@ -27,8 +27,8 @@ lpad:
 
   call void @print(i32 2)
   call void @llvm.coro.end(ptr null, i1 true, token none)
-  %need.resume = call i1 @llvm.coro.is_in_resume()
-  br i1 %need.resume, label %eh.resume, label %cleanup.cont
+  %in.ramp = call i1 @llvm.coro.is_in_ramp()
+  br i1 %in.ramp, label %cleanup.cont, label %eh.resume
 
 cleanup.cont:
   call void @print(i32 3) ; should not be present in f.resume

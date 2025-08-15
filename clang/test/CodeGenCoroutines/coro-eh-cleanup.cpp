@@ -76,8 +76,8 @@ coro_t f() {
 // CHECK-LPAD:             to label %{{.+}} unwind label %[[UNWINDBB:.+]]
 
 // CHECK-LPAD: [[UNWINDBB]]:
-// CHECK-LPAD:   %[[I1RESUME:.+]] = call i1 @llvm.coro.is_in_resume()
-// CHECK-LPAD:   br i1  %[[I1RESUME]], label %[[EHRESUME:.+]], label
+// CHECK-LPAD:   %[[InRamp:.+]] = call i1 @llvm.coro.is_in_ramp()
+// CHECK-LPAD:   br i1  %[[InRamp]], label %{{.+}}, label %[[EHRESUME:.+]]
 // CHECK-LPAD: [[EHRESUME]]:
 // CHECK-LPAD-NEXT:  %[[exn:.+]] = load ptr, ptr %exn.slot, align 8
 // CHECK-LPAD-NEXT:  %[[sel:.+]] = load i32, ptr %ehselector.slot, align 4

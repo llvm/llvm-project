@@ -1503,8 +1503,8 @@ For landingpad based exception model, it is expected that frontend uses the
 
     ehcleanup:
       call void @llvm.coro.end(ptr null, i1 true, token none)
-      %InResumePart = call i1 @llvm.coro.is_in_resume()
-      br i1 %InResumePart, label %eh.resume, label %cleanup.cont
+      %InRamp = call i1 @llvm.coro.is_in_ramp()
+      br i1 %InRamp, label %cleanup.cont, label %eh.resume
 
     cleanup.cont:
       ; rest of the cleanup
@@ -1516,10 +1516,10 @@ For landingpad based exception model, it is expected that frontend uses the
       %lpad.val29 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1
       resume { ptr, i32 } %lpad.val29
 
-The `CoroSpit` pass replaces `coro.is_in_resume` with ``True`` in the resume functions,
-thus leading to immediate unwind to the caller, whereas in ramp function it
-is replaced with ``False``, thus allowing to proceed to the rest of the cleanup
-code that is only needed during initial invocation of the coroutine.
+The `CoroSpit` pass replaces `coro.is_in_ramp` with ``True`` in the ramp functions,
+thus allowing to proceed to the rest of the cleanup code that is only needed during
+initial invocation of the coroutine. Otherwise, it is replaced with ``False``,
+thus leading to immediate unwind to the caller.
 
 For Windows Exception handling model, a frontend should attach a funclet bundle
 referring to an enclosing cleanuppad as follows:
@@ -2118,17 +2118,17 @@ Example:
       %hdl.result = ... ; get address of returned coroutine handle
       ret ptr %hdl.result
 
-'llvm.coro.is_in_resume' Intrinsic
+'llvm.coro.is_in_ramp' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.is_in_resume()
+  declare i1 @llvm.coro.is_in_ramp()
 
 Overview:
 """""""""
 
-The '``llvm.coro.is_in_resume``' intrinsic returns a bool value that marks coroutine resume
-function and ramp function.
+The '``llvm.coro.is_in_ramp``' intrinsic returns a bool value that marks coroutine ramp
+function and resume/destroy function.
 
 Arguments:
 """"""""""
@@ -2138,9 +2138,9 @@ None
 Semantics:
 """"""""""
 
-The `CoroSpit` pass replaces `coro.is_in_resume` with ``True`` in the resume functions,
-whereas in ramp function it is replaced with ``False``, thus allowing the frontend
-separate resume function and ramp function.
+The `CoroSpit` pass replaces `coro.is_in_ramp` with ``True`` ramp functions.
+Otherwise, it is replaced with ``False``, allowing the frontend to separate
+ramp function and resume/destroy function.
 
 Coroutine Transformation Passes
 ===============================

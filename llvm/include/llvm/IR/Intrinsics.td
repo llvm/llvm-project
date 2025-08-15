@@ -1781,7 +1781,7 @@ def int_coro_end_async
     : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
-def int_coro_is_in_resume : Intrinsic<[llvm_i1_ty], [], [IntrNoMem], "llvm.coro.is_in_resume">;
+def int_coro_is_in_ramp : Intrinsic<[llvm_i1_ty], [], [IntrNoMem], "llvm.coro.is_in_ramp">;
 def int_coro_noop : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 def int_coro_align : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;

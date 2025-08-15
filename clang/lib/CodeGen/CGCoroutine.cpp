@@ -585,10 +585,10 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
       // either to a cleanup block or a block with EH resume instruction.
       auto *ResumeBB = CGF.getEHResumeBlock(/*isCleanup=*/true);
       auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
-      auto *CoroIsInResumeFn =
-          CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_resume);
-      auto *CoroIsInResume = CGF.Builder.CreateCall(CoroIsInResumeFn);
-      CGF.Builder.CreateCondBr(CoroIsInResume, ResumeBB, CleanupContBB);
+      auto *CoroIsInRampFn =
+          CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
+      auto *CoroIsInRamp = CGF.Builder.CreateCall(CoroIsInRampFn);
+      CGF.Builder.CreateCondBr(CoroIsInRamp, CleanupContBB, ResumeBB);
       CGF.EmitBlock(CleanupContBB);
     }
   }
