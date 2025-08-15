@@ -1344,7 +1344,10 @@ public:
                                : ChosenTailFoldingStyle->second;
   }
 
-  RTCheckStyle getRTCheckStyle(TailFoldingStyle TFStyle) const {
+  RTCheckStyle getRTCheckStyle(TailFoldingStyle TFStyle, const TargetTransformInfo &TTI) const {
+    if (!TTI.useSafeEltsMask())
+      return RTCheckStyle::ScalarDifference;
+
     switch (TFStyle) {
     case TailFoldingStyle::Data:
     case TailFoldingStyle::DataAndControlFlow:
@@ -1355,8 +1358,8 @@ public:
     }
   }
 
-  RTCheckStyle getRTCheckStyle() const {
-    return getRTCheckStyle(getTailFoldingStyle());
+  RTCheckStyle getRTCheckStyle(const TargetTransformInfo &TTI) const {
+    return getRTCheckStyle(getTailFoldingStyle(), TTI);
   }
 
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
@@ -2077,12 +2080,6 @@ static bool useActiveLaneMask(TailFoldingStyle Style) {
 static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
   return Style == TailFoldingStyle::DataAndControlFlow ||
          Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-}
-
-static bool useSafeEltsMask(TailFoldingStyle TFStyle, RTCheckStyle Style,
-                            const TargetTransformInfo &TTI) {
-  return useActiveLaneMask(TFStyle) && Style == RTCheckStyle::UseSafeEltsMask &&
-         TTI.useSafeEltsMask();
 }
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
@@ -8940,7 +8937,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     std::optional<ArrayRef<PointerDiffInfo>> RTChecks =
         CM.Legal->getRuntimePointerChecking()->getDiffChecks();
     if (RTChecks.has_value() &&
-        useSafeEltsMask(Style, CM.getRTCheckStyle(Style), TTI))
+        CM.getRTCheckStyle(Style, TTI) == RTCheckStyle::UseSafeEltsMask)
       DiffChecks = *RTChecks;
 
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
@@ -10150,7 +10147,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (VF.Width.isVector() || SelectedIC > 1) {
       TailFoldingStyle TFStyle = CM.getTailFoldingStyle();
       bool UseSafeEltsMask =
-          useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), *TTI);
+          CM.getRTCheckStyle(TFStyle, *TTI) == RTCheckStyle::UseSafeEltsMask;
       if (UseSafeEltsMask)
         LoopsAliasMasked++;
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
