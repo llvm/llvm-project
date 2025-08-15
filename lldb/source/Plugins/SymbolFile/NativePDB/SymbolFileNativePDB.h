@@ -262,6 +262,9 @@ private:
 
   void CacheFunctionNames();
 
+  void CacheUdtDeclarations();
+  llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
@@ -282,6 +285,18 @@ private:
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
+
+  struct UdtDeclaration {
+    /// This could either be an index into the `/names` section (string table,
+    /// LF_UDT_MOD_SRC_LINE) or, this could be an index into the IPI stream to a
+    /// LF_STRING_ID record (LF_UDT_SRC_LINE).
+    llvm::codeview::TypeIndex FileNameIndex;
+    bool IsIpiIndex;
+
+    uint32_t Line;
+  };
+  llvm::DenseMap<llvm::codeview::TypeIndex, UdtDeclaration> m_udt_declarations;
+  std::once_flag m_cached_udt_declarations;
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
 
