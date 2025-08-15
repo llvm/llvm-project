@@ -3750,8 +3750,8 @@ static bool matchZExtedSubInteger(Value *V, Value *&Int, APInt &Mask,
                                   uint64_t &Offset, bool &IsShlNUW,
                                   bool &IsShlNSW) {
   Value *ShlOp0;
-  const APInt *ShlConst;
-  if (!match(V, m_OneUse(m_Shl(m_Value(ShlOp0), m_APInt(ShlConst)))))
+  uint64_t ShlAmt = 0;
+  if (!match(V, m_OneUse(m_Shl(m_Value(ShlOp0), m_ConstantInt(ShlAmt)))))
     return false;
 
   IsShlNUW = cast<BinaryOperator>(V)->hasNoUnsignedWrap();
@@ -3768,14 +3768,12 @@ static bool matchZExtedSubInteger(Value *V, Value *&Int, APInt &Mask,
                                   m_Value(MaskedOp0))))
     return false;
 
-  const APInt *LShrConst = nullptr;
+  uint64_t LShrAmt = 0;
   if (!match(MaskedOp0,
-             m_CombineOr(m_OneUse(m_LShr(m_Value(Int), m_APInt(LShrConst))),
+             m_CombineOr(m_OneUse(m_LShr(m_Value(Int), m_ConstantInt(LShrAmt))),
                          m_Value(Int))))
     return false;
 
-  const uint64_t ShlAmt = ShlConst->getZExtValue();
-  const uint64_t LShrAmt = LShrConst ? LShrConst->getZExtValue() : 0;
   if (LShrAmt > ShlAmt)
     return false;
   Offset = ShlAmt - LShrAmt;
