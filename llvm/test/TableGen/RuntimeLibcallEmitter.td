@@ -137,6 +137,19 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:   54, // sqrtl
 // CHECK-NEXT:   54, // sqrtl
 // CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
+// CHECK-NEXT:   0,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   5,
+// CHECK-NEXT:   6,
+// CHECK-NEXT:   5,
+// CHECK-NEXT:   5,
+// CHECK-NEXT: };
+// CHECK-EMPTY:
 // CHECK-NEXT: const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::ImplToLibcall[RTLIB::NumLibcallImpls] = {
 // CHECK-NEXT: RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported
 // CHECK-NEXT: RTLIB::MEMCPY, // RTLIB::___memcpy
@@ -162,11 +175,11 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: }
 
 // CHECK: iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::lookupLibcallImplNameImpl(StringRef Name) {
-// CHECK: static constexpr std::pair<uint16_t, uint16_t> HashTableNameToEnum[16] = {
-// CHECK: {2, 9}, // 0x000000705301b8, ___memset
-// CHECK: {0, 0},
-// CHECK: {6, 6}, // 0x0000001417a2af, calloc
-// CHECK: {0, 0},
+// CHECK: static constexpr uint16_t HashTableNameToEnum[16] = {
+// CHECK: 2, // 0x000000705301b8, ___memset
+// CHECK: 0,
+// CHECK: 6, // 0x0000001417a2af, calloc
+// CHECK: 0,
 // CHECK: };
 
 // CHECK: unsigned Idx = (hash(Name) % 8) * 2;
