@@ -1881,9 +1881,8 @@ _mm512_movm_epi16 (__mmask32 __A)
   return (__m512i) __builtin_ia32_cvtmask2w512 (__A);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_broadcastb_epi8 (__m128i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_broadcastb_epi8(__m128i __A) {
   return (__m512i)__builtin_shufflevector((__v16qi) __A, (__v16qi) __A,
                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1923,9 +1922,8 @@ _mm512_maskz_set1_epi16 (__mmask32 __M, short __A)
                                               (__v32hi) _mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_broadcastw_epi16 (__m128i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_broadcastw_epi16(__m128i __A) {
   return (__m512i)__builtin_shufflevector((__v8hi) __A, (__v8hi) __A,
                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);

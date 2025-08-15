@@ -388,11 +388,20 @@ private:
   /// Return GEP-like value offset
   mlir::ArrayAttr getOffset(mlir::Type ty) {
     int64_t offset = value.getLValueOffset().getQuantity();
-    if (offset == 0)
-      return {};
+    cir::CIRDataLayout layout(cgm.getModule());
+    SmallVector<int64_t, 3> idxVec;
+    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
+                                                            idxVec);
 
-    cgm.errorNYI("ConstantLValueEmitter: global view with offset");
-    return {};
+    llvm::SmallVector<mlir::Attribute, 3> indices;
+    for (int64_t i : idxVec) {
+      mlir::IntegerAttr intAttr = cgm.getBuilder().getI32IntegerAttr(i);
+      indices.push_back(intAttr);
+    }
+
+    if (indices.empty())
+      return {};
+    return cgm.getBuilder().getArrayAttr(indices);
   }
 
   /// Apply the value offset to the given constant.
@@ -400,10 +409,11 @@ private:
     // Handle attribute constant LValues.
     if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
       if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
-        if (value.getLValueOffset().getQuantity() == 0)
-          return gv;
-        cgm.errorNYI("ConstantLValue: global view with offset");
-        return {};
+        auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
+        mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+        assert(!gv.getIndices() && "Global view is already indexed");
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
+                                        getOffset(baseTy));
       }
       llvm_unreachable("Unsupported attribute type to offset");
     }

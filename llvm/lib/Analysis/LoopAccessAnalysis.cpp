@@ -2404,12 +2404,13 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
 SmallVector<Instruction *, 4>
 MemoryDepChecker::getInstructionsForAccess(Value *Ptr, bool IsWrite) const {
   MemAccessInfo Access(Ptr, IsWrite);
-  auto &IndexVector = Accesses.find(Access)->second;
-
+  auto I = Accesses.find(Access);
   SmallVector<Instruction *, 4> Insts;
-  transform(IndexVector,
-                 std::back_inserter(Insts),
-                 [&](unsigned Idx) { return this->InstMap[Idx]; });
+  if (I != Accesses.end()) {
+    transform(I->second, std::back_inserter(Insts),
+              [&](unsigned Idx) { return this->InstMap[Idx]; });
+  }
+
   return Insts;
 }
 

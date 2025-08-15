@@ -58,7 +58,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; NO-VP-LABEL: @gather_scatter(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 2
+; NO-VP-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP14]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:

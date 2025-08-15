@@ -663,13 +663,13 @@ define void @fcopysign_fp16() {
 
 define void @fma() {
 ; CHECK-LABEL: 'fma'
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %F32 = call float @llvm.fma.f32(float undef, float undef, float undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2F32 = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4F32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8F32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %F64 = call double @llvm.fma.f64(double undef, double undef, double undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2F64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4F64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = call float @llvm.fma.f32(float undef, float undef, float undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = call double @llvm.fma.f64(double undef, double undef, double undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = call fp128 @llvm.fma.f128(fp128 undef, fp128 undef, fp128 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:20 SizeLat:20 for: %V2F128 = call <2 x fp128> @llvm.fma.v2f128(<2 x fp128> undef, <2 x fp128> undef, <2 x fp128> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
@@ -698,10 +698,10 @@ define void @fma_fp16() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fma_fp16'
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %F16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %V4F16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %V8F16 = call <8 x half> @llvm.fma.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %V16F16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = call half @llvm.fma.f16(half undef, half undef, half undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = call <8 x half> @llvm.fma.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = call half @llvm.fma.f16(half undef, half undef, half undef)
@@ -713,13 +713,13 @@ define void @fma_fp16() {
 
 define void @fmuladd() {
 ; CHECK-LABEL: 'fmuladd'
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %F32 = call float @llvm.fmuladd.f32(float undef, float undef, float undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2F32 = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4F32 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8F32 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %F64 = call double @llvm.fmuladd.f64(double undef, double undef, double undef)
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2F64 = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4F64 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = call float @llvm.fmuladd.f32(float undef, float undef, float undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = call double @llvm.fmuladd.f64(double undef, double undef, double undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:6 SizeLat:2 for: %F128 = call fp128 @llvm.fmuladd.f128(fp128 undef, fp128 undef, fp128 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:2 Lat:6 SizeLat:2 for: %V2F128 = call <2 x fp128> @llvm.fmuladd.v2f128(<2 x fp128> undef, <2 x fp128> undef, <2 x fp128> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
@@ -748,10 +748,10 @@ define void @fmuladd_fp16() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fmuladd_fp16'
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %F16 = call half @llvm.fmuladd.f16(half undef, half undef, half undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %V4F16 = call <4 x half> @llvm.fmuladd.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %V8F16 = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %V16F16 = call <16 x half> @llvm.fmuladd.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = call half @llvm.fmuladd.f16(half undef, half undef, half undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = call <4 x half> @llvm.fmuladd.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = call <16 x half> @llvm.fmuladd.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = call half @llvm.fmuladd.f32(half undef, half undef, half undef)

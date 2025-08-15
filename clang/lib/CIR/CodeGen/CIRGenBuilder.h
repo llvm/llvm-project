@@ -12,6 +12,7 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -400,6 +401,14 @@ public:
   /// pointed to by \p arrayPtr.
   mlir::Value maybeBuildArrayDecay(mlir::Location loc, mlir::Value arrayPtr,
                                    mlir::Type eltTy);
+
+  // Convert byte offset to sequence of high-level indices suitable for
+  // GlobalViewAttr. Ideally we shouldn't deal with low-level offsets at all
+  // but currently some parts of Clang AST, which we don't want to touch just
+  // yet, return them.
+  void computeGlobalViewIndicesFromFlatOffset(
+      int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+      llvm::SmallVectorImpl<int64_t> &indices);
 
   /// Creates a versioned global variable. If the symbol is already taken, an ID
   /// will be appended to the symbol. The returned global must always be queried

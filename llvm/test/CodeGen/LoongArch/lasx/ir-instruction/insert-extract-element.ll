@@ -30,11 +30,23 @@ entry:
 define <8 x i32> @insert_extract_v8i32(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
+; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 7
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr1, 1
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <8 x i32> %a, i32 7
+  %c = insertelement <8 x i32> %a, i32 %b, i32 1
+  ret <8 x i32> %c
+}
+
+
+define <8 x i32> @insert_extract0_v8i32(<8 x i32> %a) nounwind {
+; CHECK-LABEL: insert_extract0_v8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <8 x i32> %a, i32 0
   %c = insertelement <8 x i32> %a, i32 %b, i32 1
   ret <8 x i32> %c
 }
@@ -54,11 +66,22 @@ entry:
 define <4 x i64> @insert_extract_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 1
+; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 3
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr1, 1
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x i64> %a, i32 3
+  %c = insertelement <4 x i64> %a, i64 %b, i32 1
+  ret <4 x i64> %c
+}
+
+define <4 x i64> @insert_extract0_v4i64(<4 x i64> %a) nounwind {
+; CHECK-LABEL: insert_extract0_v4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <4 x i64> %a, i32 0
   %c = insertelement <4 x i64> %a, i64 %b, i32 1
   ret <4 x i64> %c
 }

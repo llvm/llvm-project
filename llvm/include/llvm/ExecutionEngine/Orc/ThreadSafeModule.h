@@ -159,6 +159,14 @@ cloneToContext(const ThreadSafeModule &TSMW, ThreadSafeContext TSCtx,
                GVPredicate ShouldCloneDef = GVPredicate(),
                GVModifier UpdateClonedDefSource = GVModifier());
 
+/// Clone the given module onto the given context.
+/// The caller is responsible for ensuring that the source module and its
+/// LLVMContext will not be concurrently accessed during the clone.
+LLVM_ABI ThreadSafeModule
+cloneExternalModuleToContext(const Module &M, ThreadSafeContext TSCtx,
+                             GVPredicate ShouldCloneDef = GVPredicate(),
+                             GVModifier UpdateClonedDefSource = GVModifier());
+
 /// Clones the given module on to a new context.
 LLVM_ABI ThreadSafeModule cloneToNewContext(
     const ThreadSafeModule &TSMW, GVPredicate ShouldCloneDef = GVPredicate(),

@@ -94,7 +94,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
 
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   OS << enumToStringRef(dxil::ResourceClass(llvm::to_underlying(Type)),
-                        dxbc::getResourceClasses());
+                        dxil::getResourceClasses());
 
   return OS;
 }

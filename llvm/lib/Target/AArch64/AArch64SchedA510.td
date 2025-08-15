@@ -825,7 +825,7 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^[SU]XTB_ZPmZ
                                             "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",

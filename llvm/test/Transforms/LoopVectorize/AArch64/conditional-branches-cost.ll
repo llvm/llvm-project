@@ -702,7 +702,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 2
+; PRED-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 1
 ; PRED-NEXT:    [[TMP8:%.*]] = sub i64 257, [[TMP7]]
 ; PRED-NEXT:    [[TMP9:%.*]] = icmp ugt i64 257, [[TMP7]]
 ; PRED-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0

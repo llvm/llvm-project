@@ -23,9 +23,10 @@ bool MipsCCState::isF128SoftLibCall(const char *CallSym) {
       "__subtf3",      "__trunctfdf2", "__trunctfsf2",  "__unordtf2",
       "ceill",         "copysignl",    "cosl",          "exp2l",
       "expl",          "floorl",       "fmal",          "fmaxl",
-      "fmodl",         "log10l",       "log2l",         "logl",
-      "nearbyintl",    "powl",         "rintl",         "roundl",
-      "sinl",          "sqrtl",        "truncl"};
+      "fmodl",         "frexpl",       "log10l",        "log2l",
+      "logl",          "nearbyintl",   "powl",          "rintl",
+      "roundl",        "sincosl",      "sinl",          "sqrtl",
+      "truncl"};
 
   // Check that LibCalls is sorted alphabetically.
   auto Comp = [](const char *S1, const char *S2) { return strcmp(S1, S2) < 0; };
