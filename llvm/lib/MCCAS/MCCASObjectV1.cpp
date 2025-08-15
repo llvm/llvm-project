@@ -1611,9 +1611,10 @@ Expected<uint64_t> MCAlignFragmentRef::materialize(MCCASReader &Reader,
   return (Count * ValueSize) + FragContentSize;
 }
 
-Expected<MCBoundaryAlignFragmentRef> MCBoundaryAlignFragmentRef::create(
-    MCCASBuilder &MB, const MCBoundaryAlignFragment &F, unsigned FragmentSize,
-    ArrayRef<char> FragmentContents) {
+Expected<MCBoundaryAlignFragmentRef>
+MCBoundaryAlignFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
+                                   unsigned FragmentSize,
+                                   ArrayRef<char> FragmentContents) {
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
