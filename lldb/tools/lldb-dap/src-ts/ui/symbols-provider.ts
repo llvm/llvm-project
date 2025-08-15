@@ -148,8 +148,9 @@ export class SymbolsProvider extends DisposableContext {
         text-overflow: clip !important;
       }
 
-      #symbols-table { 
-        height: 100vh; 
+      #symbols-table {
+        width: 100%;
+        height: 100vh;
       }
     </style>
 </head>

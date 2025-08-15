@@ -10,6 +10,7 @@
 #include "DAPError.h"
 #include "Protocol/DAPTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
@@ -137,11 +138,18 @@ DAPGetModuleSymbolsRequestHandler::Run(
     dap_symbol.isSynthetic = symbol.IsSynthetic();
     dap_symbol.isExternal = symbol.IsExternal();
 
-    dap_symbol.fileAddress = symbol.GetStartAddress().GetFileAddress();
-    dap_symbol.loadAddress =
-        symbol.GetStartAddress().GetLoadAddress(dap.target);
-    dap_symbol.size = symbol.GetSize();
+    lldb::SBAddress start_address = symbol.GetStartAddress();
+    if (start_address.IsValid()) {
+      lldb::addr_t file_address = start_address.GetFileAddress();
+      if (file_address != LLDB_INVALID_ADDRESS)
+        dap_symbol.fileAddress = file_address;
 
+      lldb::addr_t load_address = start_address.GetLoadAddress(dap.target);
+      if (load_address != LLDB_INVALID_ADDRESS)
+        dap_symbol.loadAddress = load_address;
+    }
+
+    dap_symbol.size = symbol.GetSize();
     dap_symbol.name = symbol.GetName();
     symbols.push_back(std::move(dap_symbol));
   }
