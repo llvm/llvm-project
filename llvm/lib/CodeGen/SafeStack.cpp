@@ -262,7 +262,7 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
       return true;
   }
 
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
+  auto Len = MI->getLengthInBytes();
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len) return false;
   return IsAccessSafe(U, Len->getZExtValue(), AllocaPtr, AllocaSize);
