@@ -381,3 +381,33 @@ define ptr @test_21(ptr %p, i32 %i) {
   %arrayidx2 = getelementptr nuw nusw i8, ptr %ptradd, i64 %idx2
   ret ptr %arrayidx2
 }
+
+define ptr @test_rpot(ptr %ptr, i64 %offset1, i64 %offset2) {
+; CHECK-LABEL: define ptr @test_rpot(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[OFFSET1:%.*]], i64 [[OFFSET2:%.*]]) {
+; CHECK-NEXT:  [[A:.*:]]
+; CHECK-NEXT:    br label %[[B:.*]]
+; CHECK:       [[C:.*]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_UCHAR4:%.*]], ptr [[TMP0:%.*]], i64 [[OFFSET2]]
+; CHECK-NEXT:    [[GEP24:%.*]] = getelementptr i8, ptr [[TMP1]], i64 72
+; CHECK-NEXT:    br label %[[D:.*]]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    [[TMP0]] = getelementptr [[STRUCT_UCHAR4]], ptr [[PTR]], i64 [[OFFSET1]]
+; CHECK-NEXT:    br label %[[C]]
+; CHECK:       [[D]]:
+; CHECK-NEXT:    ret ptr [[GEP24]]
+;
+A:
+  br label %B
+C:
+  %offset4 = add i64 %offset2, 10
+  %gep2 = getelementptr %struct.uchar4, ptr %gep1, i64 %offset4
+  br label %D
+B:
+  %offset3 = add i64 %offset1, 8
+  %gep1 = getelementptr %struct.uchar4, ptr %ptr, i64 %offset3
+  br label %C
+D:
+  ret ptr %gep2
+}
+
