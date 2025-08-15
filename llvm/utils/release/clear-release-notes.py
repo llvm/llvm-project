@@ -10,7 +10,7 @@ def process_file(fpath: Path) -> None:
     # ReleaseNotes.rst/.md -> ReleaseNotesTemplate.txt
     template_path = fpath.with_name(f"{fpath.stem}Template.txt")
     fpath.write_text(template_path.read_text(), newline="\n")
-    print(f"{fpath.name} updated.")
+    print(f"{fpath} updated.")
 
 
 if __name__ == "__main__":
