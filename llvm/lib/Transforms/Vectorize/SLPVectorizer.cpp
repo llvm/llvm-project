@@ -4365,7 +4365,10 @@ private:
     } else {
       // Build a map for gathered scalars to the nodes where they are used.
       bool AllConstsOrCasts = true;
-      for (Value *V : VL)
+      for (Value *V : VL) {
+        if (S && S.areInstructionsWithCopyableElements() &&
+            S.isCopyableElement(V))
+          Last->addCopyableElement(V);
         if (!isConstant(V)) {
           auto *I = dyn_cast<CastInst>(V);
           AllConstsOrCasts &= I && I->getType()->isIntegerTy();
@@ -4373,6 +4376,7 @@ private:
               !UserTreeIdx.UserTE->isGather())
             ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
         }
+      }
       if (AllConstsOrCasts)
         CastMaxMinBWSizes =
             std::make_pair(std::numeric_limits<unsigned>::max(), 1);
@@ -20971,11 +20975,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         continue;
       }
       ScheduledBundles.find(I)->getSecond().pop_back();
-      if (!ControlDependentMembers.empty()) {
-        ScheduleBundle Invalid = ScheduleBundle::invalid();
-        calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
-                              ControlDependentMembers);
-      }
+    }
+    if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
+                            ControlDependentMembers);
     }
     return std::nullopt;
   }

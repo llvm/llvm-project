@@ -3723,11 +3723,14 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
+        ":LLVMDialect",
         ":LoopLikeInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -7134,6 +7137,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "WasmTranslationRegistration",
+    srcs = [
+        "lib/Target/Wasm/TranslateFromWasm.cpp",
+        "lib/Target/Wasm/TranslateRegistration.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Target/Wasm/WasmBinaryEncoding.h",
+        "include/mlir/Target/Wasm/WasmImporter.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":TranslateLib",
+        ":WasmSSADialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "TensorOpsTdFiles",
     srcs = [
@@ -7953,6 +7975,7 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":XeGPUDialect",
+        ":XeGPUUtils",
         "//llvm:Support",
     ],
 )
@@ -8998,6 +9021,7 @@ cc_library(
         ":TargetCpp",
         ":TargetSMTLIB",
         ":ToLLVMIRTranslationRegistration",
+        ":WasmTranslationRegistration",
     ],
 )
 
