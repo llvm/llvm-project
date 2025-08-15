@@ -13,7 +13,7 @@ package(default_visibility = ["//visibility:public"])
             "//mlir:mlir-opt",
             "//mlir:mlir-translate",
             "//mlir/test:lit_data",
-        ],
+        ] + glob(["Wasm/inputs/*"]),
     )
     for src in glob([
         "**/*.mlir",
