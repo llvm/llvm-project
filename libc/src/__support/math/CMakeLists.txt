@@ -391,6 +391,35 @@ add_header_library(
 )
 
 add_header_library(
+  cosf16
+  HDRS
+    cosf16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  coshf
+  HDRS
+    coshf.h
+  DEPENDS
+    .sinhfcoshf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   erff
   HDRS
     erff.h
@@ -698,4 +727,23 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.common
+)
+
+add_header_library(
+  sincosf16_utils
+  HDRS
+    sincosf16_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+)
+
+add_header_library(
+  sinhfcoshf_utils
+  HDRS
+    sinhfcoshf_utils.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.FPUtil.multiply_add
 )
