@@ -2409,11 +2409,7 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
 
 void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
                            uint64_t MaxCount) {
-  assert(MaxCount > 0 && "Bad max count");
-  uint64_t Scale = calculateCountScale(MaxCount);
-  SmallVector<unsigned, 4> Weights;
-  for (const auto &ECI : EdgeCounts)
-    Weights.push_back(scaleBranchCount(ECI, Scale));
+  auto Weights = downscaleWeights(EdgeCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
                                            : Weights) {
@@ -2434,7 +2430,7 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
     uint64_t TotalCount =
         std::accumulate(EdgeCounts.begin(), EdgeCounts.end(), (uint64_t)0,
                         [](uint64_t c1, uint64_t c2) { return c1 + c2; });
-    Scale = calculateCountScale(WSum);
+    uint64_t Scale = calculateCountScale(WSum);
     BranchProbability BP(scaleBranchCount(Weights[0], Scale),
                          scaleBranchCount(WSum, Scale));
     std::string BranchProbStr;
