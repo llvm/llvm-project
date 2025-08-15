@@ -4,6 +4,8 @@ import { DebugProtocol } from "@vscode/debugprotocol";
 import { DebugSessionTracker } from "../debug-session-tracker";
 import { DisposableContext } from "../disposable-context";
 
+import { DAPSymbolType } from "..";
+
 export class SymbolsProvider extends DisposableContext {
   constructor(
     private readonly tracker: DebugSessionTracker,
@@ -22,7 +24,7 @@ export class SymbolsProvider extends DisposableContext {
   static async doesServerSupportSymbolsRequest(session: vscode.DebugSession): Promise<boolean> {
     try {
       const dummyArguments = { _dummy: true };
-      const _result = await session.customRequest("dapGetModuleSymbols", dummyArguments);
+      await session.customRequest("dapGetModuleSymbols", dummyArguments);
       return true;
     } catch (_error) {
       return false;
@@ -113,12 +115,11 @@ export class SymbolsProvider extends DisposableContext {
     <meta charset="UTF-8">
     <link href="${tabulatorCssPath}" rel="stylesheet">
     <style>
-      body { font-family: sans-serif; margin: 0; padding: 0; }
-      #table { height: 100vh; }
+      #symbols-table { height: 100vh; }
     </style>
 </head>
 <body>
-    <div id="table"></div>
+    <div id="symbols-table"></div>
     <script src="${tabulatorJsPath}"></script>
     <script src="${symbolsTableScriptPath}"></script>
 </body>
@@ -141,19 +142,6 @@ class ModuleQuickPickItem implements vscode.QuickPickItem {
     return this.module.id.toString();
   }
 }
-
-/// The symbol type we get from the lldb-dap server
-type DAPSymbolType = {
-  userId: number;
-  isDebug: boolean;
-  isSynthetic: boolean;
-  isExternal: boolean;
-  type: string;
-  fileAddress: number;
-  loadAddress?: number;
-  size: number;
-  name: string;
-};
 
 class DAPSymbol {
   constructor(
