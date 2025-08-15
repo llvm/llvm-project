@@ -1757,14 +1757,15 @@ Expected<uint64_t> MCNopsFragmentRef::materialize(MCCASReader &Reader,
 }
 
 Expected<MCOrgFragmentRef>
-MCOrgFragmentRef::create(MCCASBuilder &MB, const MCOrgFragment &F,
+MCOrgFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                          unsigned FragmentSize,
                          ArrayRef<char> FragmentContents) {
+  auto *OrgFrag = cast<MCOrgFragment>(&F);
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
   writeVBR8(FragmentSize, B->Data);
-  writeVBR8((char)F.getValue(), B->Data);
+  writeVBR8((char)OrgFrag->getValue(), B->Data);
   return get(B->build());
 }
 
