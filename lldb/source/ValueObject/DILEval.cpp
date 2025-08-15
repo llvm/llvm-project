@@ -330,40 +330,83 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     return lhs_or_err;
   lldb::ValueObjectSP base = *lhs_or_err;
 
-  // Check to see if 'base' has a synthetic value; if so, try using that.
+  StreamString var_expr_path_strm;
   uint64_t child_idx = node->GetIndex();
-  if (lldb::ValueObjectSP synthetic = base->GetSyntheticValue()) {
-    llvm::Expected<uint32_t> num_children =
-        synthetic->GetNumChildren(child_idx + 1);
-    if (!num_children)
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, toString(num_children.takeError()), node->GetLocation());
-    if (child_idx >= *num_children) {
-      std::string message = llvm::formatv(
-          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
-          base->GetTypeName().AsCString("<invalid type>"),
-          base->GetName().AsCString());
-      return llvm::make_error<DILDiagnosticError>(m_expr, message,
+  lldb::ValueObjectSP child_valobj_sp;
+  bool is_incomplete_array = false;
+  CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
+  base->GetExpressionPath(var_expr_path_strm);
+  if (base_type.IsPointerType()) {
+    child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "failed to use pointer as array for index {0} for "
+          "\"({1}) {2}\"",
+          child_idx, base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      if (base_type.IsPointerToVoid())
+        err_msg = "subscript of pointer to incomplete type 'void'";
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node->GetLocation());
     }
-    if (lldb::ValueObjectSP child_valobj_sp =
-            synthetic->GetChildAtIndex(child_idx))
-      return child_valobj_sp;
+  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array)) {
+    child_valobj_sp = base->GetChildAtIndex(child_idx);
+    if (!child_valobj_sp && (is_incomplete_array || m_use_synthetic))
+      child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation());
+    }
+  } else if (base_type.IsScalarType()) {
+    child_valobj_sp =
+        base->GetSyntheticBitFieldChild(child_idx, child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", child_idx,
+          child_idx, base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
+  } else {
+    lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
+    if (!m_use_synthetic || !synthetic || synthetic == base) {
+      std::string err_msg =
+          llvm::formatv("\"{0}\" is not an array type",
+                        base->GetTypeName().AsCString("<invalid type>"));
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
+    if (static_cast<uint32_t>(child_idx) >=
+        synthetic->GetNumChildrenIgnoringErrors(child_idx + 1)) {
+      std::string err_msg = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
+    child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
   }
 
-  auto base_type = base->GetCompilerType().GetNonReferenceType();
-  if (!base_type.IsPointerType() && !base_type.IsArrayType())
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "subscripted value is not an array or pointer",
-        node->GetLocation());
-  if (base_type.IsPointerToVoid())
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "subscript of pointer to incomplete type 'void'",
-        node->GetLocation());
-
-  if (base_type.IsArrayType()) {
-    if (lldb::ValueObjectSP child_valobj_sp = base->GetChildAtIndex(child_idx))
-      return child_valobj_sp;
+  if (child_valobj_sp) {
+    if (m_use_dynamic != lldb::eNoDynamicValues) {
+      if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
+        child_valobj_sp = std::move(dynamic_sp);
+    }
+    return child_valobj_sp;
   }
 
   int64_t signed_child_idx = node->GetIndex();
