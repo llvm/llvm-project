@@ -87,18 +87,19 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: UNKNOWN_LIBCALL = 8
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT:enum LibcallImpl : unsigned short {
+// CHECK-NEXT:enum class LibcallImpl : unsigned short {
 // CHECK-NEXT:  Unsupported = 0,
-// CHECK-NEXT:  ___memcpy = 1, // ___memcpy
-// CHECK-NEXT:  ___memset = 2, // ___memset
-// CHECK-NEXT:  __ashlsi3 = 3, // __ashlsi3
-// CHECK-NEXT:  __lshrdi3 = 4, // __lshrdi3
+// CHECK-NEXT:  Impl____memcpy = 1, // ___memcpy
+// CHECK-NEXT:  Impl____memset = 2, // ___memset
+// CHECK-NEXT:  Impl___ashlsi3 = 3, // __ashlsi3
+// CHECK-NEXT:  Impl___lshrdi3 = 4, // __lshrdi3
 // CHECK-NEXT:  bzero = 5, // bzero
 // CHECK-NEXT:  calloc = 6, // calloc
 // CHECK-NEXT:  sqrtl_f128 = 7, // sqrtl
 // CHECK-NEXT:  sqrtl_f80 = 8, // sqrtl
-// CHECK-NEXT:  NumLibcallImpls = 9
 // CHECK-NEXT: };
+// CHECK-NEXT: constexpr size_t NumLibcallImpls = 9;
+// CHECK-NEXT: constexpr LibcallImpl Unsupported = LibcallImpl::Unsupported;
 // CHECK-NEXT: } // End namespace RTLIB
 // CHECK-NEXT: } // End namespace llvm
 // CHECK-NEXT: #endif
@@ -152,14 +153,14 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT: const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::ImplToLibcall[RTLIB::NumLibcallImpls] = {
 // CHECK-NEXT: RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported
-// CHECK-NEXT: RTLIB::MEMCPY, // RTLIB::___memcpy
-// CHECK-NEXT: RTLIB::MEMSET, // RTLIB::___memset
-// CHECK-NEXT: RTLIB::SHL_I32, // RTLIB::__ashlsi3
-// CHECK-NEXT: RTLIB::SRL_I64, // RTLIB::__lshrdi3
-// CHECK-NEXT: RTLIB::BZERO, // RTLIB::bzero
-// CHECK-NEXT: RTLIB::CALLOC, // RTLIB::calloc
-// CHECK-NEXT: RTLIB::SQRT_F128, // RTLIB::sqrtl_f128
-// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::sqrtl_f80
+// CHECK-NEXT: RTLIB::MEMCPY, // RTLIB::LibcallImpl::Impl____memcpy
+// CHECK-NEXT: RTLIB::MEMSET, // RTLIB::LibcallImpl::Impl____memset
+// CHECK-NEXT: RTLIB::SHL_I32, // RTLIB::LibcallImpl::Impl___ashlsi3
+// CHECK-NEXT: RTLIB::SRL_I64, // RTLIB::LibcallImpl::Impl___lshrdi3
+// CHECK-NEXT: RTLIB::BZERO, // RTLIB::LibcallImpl::Impl_bzero
+// CHECK-NEXT: RTLIB::CALLOC, // RTLIB::LibcallImpl::Impl_calloc
+// CHECK-NEXT: RTLIB::SQRT_F128, // RTLIB::LibcallImpl::Impl_sqrtl_f128
+// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::LibcallImpl::Impl_sqrtl_f80
 // CHECK-NEXT: };
 
 // CHECK: #ifdef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
@@ -207,22 +208,22 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::blah) {
 // CHECK-NEXT:     setLibcallsImpl({
-// CHECK-NEXT:         {RTLIB::BZERO, RTLIB::bzero}, // bzero
-// CHECK-NEXT:         {RTLIB::CALLOC, RTLIB::calloc}, // calloc
-// CHECK-NEXT:         {RTLIB::SQRT_F128, RTLIB::sqrtl_f128}, // sqrtl
+// CHECK-NEXT:         {RTLIB::BZERO, RTLIB::LibcallImpl::Impl_bzero}, // bzero
+// CHECK-NEXT:         {RTLIB::CALLOC, RTLIB::LibcallImpl::Impl_calloc}, // calloc
+// CHECK-NEXT:         {RTLIB::SQRT_F128, RTLIB::LibcallImpl::Impl_sqrtl_f128}, // sqrtl
 // CHECK-NEXT:     });
 // CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.hasCompilerRT()) {
 // CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:          {RTLIB::SHL_I32, RTLIB::__ashlsi3}, // __ashlsi3
-// CHECK-NEXT:          {RTLIB::SRL_I64, RTLIB::__lshrdi3}, // __lshrdi3
+// CHECK-NEXT:          {RTLIB::SHL_I32, RTLIB::LibcallImpl::Impl___ashlsi3}, // __ashlsi3
+// CHECK-NEXT:          {RTLIB::SRL_I64, RTLIB::LibcallImpl::Impl___lshrdi3}, // __lshrdi3
 // CHECK-NEXT:      });
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
 // CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:          {RTLIB::MEMSET, RTLIB::___memset}, // ___memset
+// CHECK-NEXT:          {RTLIB::MEMSET, RTLIB::LibcallImpl::Impl____memset}, // ___memset
 // CHECK-NEXT:      });
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
@@ -232,9 +233,9 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::buzz) {
 // CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::SHL_I32, RTLIB::__ashlsi3}, // __ashlsi3
-// CHECK-NEXT:        {RTLIB::SQRT_F80, RTLIB::sqrtl_f80}, // sqrtl
-// CHECK-NEXT:        {RTLIB::SRL_I64, RTLIB::__lshrdi3}, // __lshrdi3
+// CHECK-NEXT:        {RTLIB::SHL_I32, RTLIB::LibcallImpl::Impl___ashlsi3}, // __ashlsi3
+// CHECK-NEXT:        {RTLIB::SQRT_F80, RTLIB::LibcallImpl::Impl_sqrtl_f80}, // sqrtl
+// CHECK-NEXT:        {RTLIB::SRL_I64, RTLIB::LibcallImpl::Impl___lshrdi3}, // __lshrdi3
 // CHECK-NEXT:    });
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
@@ -242,13 +243,13 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::foo) {
 // CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::BZERO, RTLIB::bzero}, // bzero
-// CHECK-NEXT:        {RTLIB::SQRT_F128, RTLIB::sqrtl_f128}, // sqrtl
+// CHECK-NEXT:        {RTLIB::BZERO, RTLIB::LibcallImpl::Impl_bzero}, // bzero
+// CHECK-NEXT:        {RTLIB::SQRT_F128, RTLIB::LibcallImpl::Impl_sqrtl_f128}, // sqrtl
 // CHECK-NEXT:    });
 // CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
 // CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:          {RTLIB::MEMSET, RTLIB::___memset}, // ___memset
+// CHECK-NEXT:          {RTLIB::MEMSET, RTLIB::LibcallImpl::Impl____memset}, // ___memset
 // CHECK-NEXT:      });
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
@@ -258,10 +259,10 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::simple) {
 // CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::CALLOC, RTLIB::calloc}, // calloc
-// CHECK-NEXT:        {RTLIB::SHL_I32, RTLIB::__ashlsi3}, // __ashlsi3
-// CHECK-NEXT:        {RTLIB::SQRT_F80, RTLIB::sqrtl_f80}, // sqrtl
-// CHECK-NEXT:        {RTLIB::SRL_I64, RTLIB::__lshrdi3}, // __lshrdi3
+// CHECK-NEXT:        {RTLIB::CALLOC, RTLIB::LibcallImpl::Impl_calloc}, // calloc
+// CHECK-NEXT:        {RTLIB::SHL_I32, RTLIB::LibcallImpl::Impl___ashlsi3}, // __ashlsi3
+// CHECK-NEXT:        {RTLIB::SQRT_F80, RTLIB::LibcallImpl::Impl_sqrtl_f80}, // sqrtl
+// CHECK-NEXT:        {RTLIB::SRL_I64, RTLIB::LibcallImpl::Impl___lshrdi3}, // __lshrdi3
 // CHECK-NEXT:    });
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;

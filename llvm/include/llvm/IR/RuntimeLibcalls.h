@@ -50,7 +50,8 @@ static inline auto libcalls() {
 }
 
 static inline auto libcall_impls() {
-  return enum_seq(static_cast<RTLIB::LibcallImpl>(1), RTLIB::NumLibcallImpls);
+  return enum_seq(static_cast<RTLIB::LibcallImpl>(1),
+                  static_cast<RTLIB::LibcallImpl>(RTLIB::NumLibcallImpls));
 }
 
 /// A simple container for information about the supported runtime calls.
@@ -85,9 +86,10 @@ struct RuntimeLibcallsInfo {
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
     if (CallImpl == RTLIB::Unsupported)
       return StringRef();
-    return StringRef(RuntimeLibcallImplNameTable.getCString(
-                         RuntimeLibcallNameOffsetTable[CallImpl]),
-                     RuntimeLibcallNameSizeTable[CallImpl]);
+    return StringRef(
+        RuntimeLibcallImplNameTable.getCString(
+            RuntimeLibcallNameOffsetTable[static_cast<size_t>(CallImpl)]),
+        RuntimeLibcallNameSizeTable[static_cast<size_t>(CallImpl)]);
   }
 
   /// Return the lowering's selection of implementation call for \p Call
@@ -98,18 +100,18 @@ struct RuntimeLibcallsInfo {
   /// Set the CallingConv that should be used for the specified libcall
   /// implementation
   void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
-    LibcallImplCallingConvs[Call] = CC;
+    LibcallImplCallingConvs[static_cast<size_t>(Call)] = CC;
   }
 
   // FIXME: Remove this wrapper in favor of directly using
   // getLibcallImplCallingConv
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return LibcallImplCallingConvs[LibcallImpls[Call]];
+    return LibcallImplCallingConvs[static_cast<size_t>(LibcallImpls[Call])];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return LibcallImplCallingConvs[Call];
+    return LibcallImplCallingConvs[static_cast<size_t>(Call)];
   }
 
   ArrayRef<RTLIB::LibcallImpl> getLibcallImpls() const {
@@ -130,7 +132,7 @@ struct RuntimeLibcallsInfo {
 
   /// Return the libcall provided by \p Impl
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
-    return ImplToLibcall[Impl];
+    return ImplToLibcall[static_cast<size_t>(Impl)];
   }
 
   /// Check if a function name is a recognized runtime call of any kind. This
@@ -156,7 +158,8 @@ struct RuntimeLibcallsInfo {
     for (RTLIB::LibcallImpl Impl : lookupLibcallImplName(FuncName)) {
       // FIXME: This should not depend on looking up ImplToLibcall, only the
       // list of libcalls for the module.
-      RTLIB::LibcallImpl Recognized = LibcallImpls[ImplToLibcall[Impl]];
+      RTLIB::LibcallImpl Recognized =
+          LibcallImpls[ImplToLibcall[static_cast<size_t>(Impl)]];
       if (Recognized != RTLIB::Unsupported)
         return Recognized;
     }
