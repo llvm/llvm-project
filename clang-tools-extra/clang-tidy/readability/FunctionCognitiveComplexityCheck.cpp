@@ -144,6 +144,8 @@ struct CognitiveComplexity final {
   void account(SourceLocation Loc, unsigned short Nesting, Criteria C);
 };
 
+} // namespace
+
 // All the possible messages that can be output. The choice of the message
 // to use is based of the combination of the CognitiveComplexity::Criteria.
 // It would be nice to have it in CognitiveComplexity struct, but then it is
@@ -163,23 +165,27 @@ static const std::array<const StringRef, 4> Msgs = {{
 }};
 
 // Criteria is a bitset, thus a few helpers are needed.
-CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
-                                        CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria
+operator|(CognitiveComplexity::Criteria LHS,
+          CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
                                                     llvm::to_underlying(RHS));
 }
-CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
-                                        CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria
+operator&(CognitiveComplexity::Criteria LHS,
+          CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
                                                     llvm::to_underlying(RHS));
 }
-CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
-                                          CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria &
+operator|=(CognitiveComplexity::Criteria &LHS,
+           CognitiveComplexity::Criteria RHS) {
   LHS = operator|(LHS, RHS);
   return LHS;
 }
-CognitiveComplexity::Criteria &operator&=(CognitiveComplexity::Criteria &LHS,
-                                          CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria &
+operator&=(CognitiveComplexity::Criteria &LHS,
+           CognitiveComplexity::Criteria RHS) {
   LHS = operator&(LHS, RHS);
   return LHS;
 }
@@ -198,6 +204,8 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
 
   Total += Increase;
 }
+
+namespace {
 
 class FunctionASTVisitor final
     : public RecursiveASTVisitor<FunctionASTVisitor> {

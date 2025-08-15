@@ -59,7 +59,9 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
   return true;
 }
 
-OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
+} // namespace
+
+static OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
   switch (FD->getOverloadedOperator()) {
   default:
     break;
@@ -75,7 +77,7 @@ OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
   llvm_unreachable("Not an overloaded allocation operator");
 }
 
-const char *getOperatorName(OverloadedOperatorKind K) {
+static const char *getOperatorName(OverloadedOperatorKind K) {
   switch (K) {
   default:
     break;
@@ -91,13 +93,14 @@ const char *getOperatorName(OverloadedOperatorKind K) {
   llvm_unreachable("Not an overloaded allocation operator");
 }
 
-bool areCorrespondingOverloads(const FunctionDecl *LHS,
-                               const FunctionDecl *RHS) {
+static bool areCorrespondingOverloads(const FunctionDecl *LHS,
+                                      const FunctionDecl *RHS) {
   return RHS->getOverloadedOperator() == getCorrespondingOverload(LHS);
 }
 
-bool hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
-                                         const CXXRecordDecl *RD = nullptr) {
+static bool
+hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
+                                    const CXXRecordDecl *RD = nullptr) {
   if (RD) {
     // Check the methods in the given class and accessible to derived classes.
     for (const auto *BMD : RD->methods())
@@ -123,8 +126,6 @@ bool hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
 
   return false;
 }
-
-} // anonymous namespace
 
 void NewDeleteOverloadsCheck::registerMatchers(MatchFinder *Finder) {
   // Match all operator new and operator delete overloads (including the array
