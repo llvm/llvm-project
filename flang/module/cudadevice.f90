@@ -654,21 +654,21 @@ implicit none
   end interface
 
   interface __double2loint
-    attributes(device) integer function __double2loint(r) bind(c)
+    attributes(device) integer function __double2loint(r) bind(c, name='__nv_double2loint')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2hiint
-    attributes(device) integer function __double2hiint(r) bind(c)
+    attributes(device) integer function __double2hiint(r) bind(c, name='__nv_double2hiint')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __hiloint2double
-    attributes(device) double precision function __hiloint2double(i, j) bind(c)
+    attributes(device) double precision function __hiloint2double(i, j) bind(c, name='__nv_hiloint2double')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i, j
     end function
