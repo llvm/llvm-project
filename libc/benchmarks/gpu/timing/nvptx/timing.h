@@ -13,9 +13,7 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 

@@ -2,7 +2,6 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
-#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -12,6 +11,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/time/gpu/time_utils.h"
 #include "src/stdio/printf.h"
+#include "src/time/clock.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace benchmarks {
@@ -136,9 +136,11 @@ void print_results(Benchmark *b) {
   LIBC_NAMESPACE::printf(
       "%-24s |%15.0f |%9.0f |%8llu |%8llu |%11llu |%9u |\n",
       b->get_test_name().data(), final_result.cycles,
-      final_result.standard_deviation, (unsigned long long)final_result.min,
-      (unsigned long long)final_result.max,
-      (unsigned long long)final_result.total_iterations, (unsigned)num_threads);
+      final_result.standard_deviation,
+      static_cast<unsigned long long>(final_result.min),
+      static_cast<unsigned long long>(final_result.max),
+      static_cast<unsigned long long>(final_result.total_iterations),
+      static_cast<unsigned>(num_threads));
 }
 
 void print_header() {
