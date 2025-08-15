@@ -1693,9 +1693,9 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     return;
   }
   printNestedNameSpecifier(OS, P);
-  if (getDeclName())
-    OS << *this;
-  else {
+  if (getDeclName()) {
+    printName(OS, P);
+  } else {
     // Give the printName override a chance to pick a different name before we
     // fall back to "(anonymous)".
     SmallString<64> NameBuffer;
@@ -1883,18 +1883,13 @@ bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
 
   // Using declarations can be replaced if they import the same name from the
   // same context.
-  if (const auto *UD = dyn_cast<UsingDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-               cast<UsingDecl>(OldD)->getQualifier());
-  }
-  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UUVD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-                        cast<UnresolvedUsingValueDecl>(OldD)->getQualifier());
-  }
+  if (const auto *UD = dyn_cast<UsingDecl>(this))
+    return UD->getQualifier().getCanonical() ==
+
+           cast<UsingDecl>(OldD)->getQualifier().getCanonical();
+  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this))
+    return UUVD->getQualifier().getCanonical() ==
+           cast<UnresolvedUsingValueDecl>(OldD)->getQualifier().getCanonical();
 
   if (isRedeclarable(getKind())) {
     if (getCanonicalDecl() != OldD->getCanonicalDecl())
@@ -2864,7 +2859,8 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
 bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  if (!Ty ||
+      !Ty->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
     return false;
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List)
@@ -2879,7 +2875,10 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  if (!Ty)
+    return CharUnits::Zero();
+  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  if (!Ty || !RD->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List || List->getNumInits() == 0)
@@ -2889,7 +2888,7 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   if (!InitTy)
     return CharUnits::Zero();
   CharUnits FlexibleArraySize = Ctx.getTypeSizeInChars(InitTy);
-  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Ty->getDecl());
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(RD);
   CharUnits FlexibleArrayOffset =
       Ctx.toCharUnitsFromBits(RL.getFieldOffset(RL.getFieldCount() - 1));
   if (FlexibleArrayOffset + FlexibleArraySize < RL.getSize())
@@ -2991,7 +2990,10 @@ bool ParmVarDecl::isDestroyedInCallee() const {
   // FIXME: isParamDestroyedInCallee() should probably imply
   // isDestructedType()
   const auto *RT = getType()->getAs<RecordType>();
-  if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
+  if (RT &&
+      RT->getOriginalDecl()
+          ->getDefinitionOrSelf()
+          ->isParamDestroyedInCallee() &&
       getType().isDestructedType())
     return true;
 
@@ -3502,7 +3504,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
     const IdentifierInfo *II =
-        T->castAs<EnumType>()->getDecl()->getIdentifier();
+        T->castAs<EnumType>()->getOriginalDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }
@@ -4653,7 +4655,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
     return false;
 
   if (const auto *Record = getType()->getAs<RecordType>())
-    return Record->getDecl()->isAnonymousStructOrUnion();
+    return Record->getOriginalDecl()->isAnonymousStructOrUnion();
 
   return false;
 }
@@ -4713,7 +4715,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   const auto *RT = getType()->getAs<RecordType>();
   if (!RT)
     return false;
-  const RecordDecl *RD = RT->getDecl()->getDefinition();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
   if (!RD) {
     assert(isInvalidDecl() && "valid field has incomplete type");
     return false;
@@ -4836,10 +4838,6 @@ TagDecl *TagDecl::getCanonicalDecl() { return getFirstDecl(); }
 
 void TagDecl::setTypedefNameForAnonDecl(TypedefNameDecl *TDD) {
   TypedefNameDeclOrQualifier = TDD;
-  if (const Type *T = getTypeForDecl()) {
-    (void)T;
-    assert(T->isLinkageValid());
-  }
   assert(isLinkageValid());
 }
 
@@ -4867,25 +4865,16 @@ void TagDecl::completeDefinition() {
 }
 
 TagDecl *TagDecl::getDefinition() const {
-  if (isCompleteDefinition())
+  if (isCompleteDefinition() || isBeingDefined())
     return const_cast<TagDecl *>(this);
-
-  // If it's possible for us to have an out-of-date definition, check now.
-  if (mayHaveOutOfDateDef()) {
-    if (IdentifierInfo *II = getIdentifier()) {
-      if (II->isOutOfDate()) {
-        updateOutOfDate(*II);
-      }
-    }
-  }
 
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
-  for (auto *R : redecls())
-    if (R->isCompleteDefinition())
+  for (TagDecl *R :
+       redecl_range(redecl_iterator(getNextRedeclaration()), redecl_iterator()))
+    if (R->isCompleteDefinition() || R->isBeingDefined())
       return R;
-
   return nullptr;
 }
 
@@ -4919,7 +4908,7 @@ void TagDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
     // is already printed as part of the type.
     PrintingPolicy Copy(Policy);
     Copy.SuppressScope = true;
-    getASTContext().getTagDeclType(this).print(OS, Copy);
+    QualType(getASTContext().getCanonicalTagType(this)).print(OS, Copy);
     return;
   }
   // Otherwise, do the normal printing.
@@ -4963,19 +4952,13 @@ EnumDecl *EnumDecl::Create(ASTContext &C, DeclContext *DC,
                            IdentifierInfo *Id,
                            EnumDecl *PrevDecl, bool IsScoped,
                            bool IsScopedUsingClassTag, bool IsFixed) {
-  auto *Enum = new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl,
-                                    IsScoped, IsScopedUsingClassTag, IsFixed);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  C.getTypeDeclType(Enum, PrevDecl);
-  return Enum;
+  return new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl, IsScoped,
+                              IsScopedUsingClassTag, IsFixed);
 }
 
 EnumDecl *EnumDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  EnumDecl *Enum =
-      new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                           nullptr, nullptr, false, false, false);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return Enum;
+  return new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                              nullptr, nullptr, false, false, false);
 }
 
 SourceRange EnumDecl::getIntegerTypeRange() const {
@@ -5035,7 +5018,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return getDefinitionOrSelf(ED);
+      return ::getDefinitionOrSelf(ED);
     }
   }
 
@@ -5125,21 +5108,15 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                IdentifierInfo *Id, RecordDecl* PrevDecl) {
-  RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
-                                         StartLoc, IdLoc, Id, PrevDecl);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-
-  C.getTypeDeclType(R, PrevDecl);
-  return R;
+  return new (C, DC)
+      RecordDecl(Record, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
 }
 
 RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
                                            GlobalDeclID ID) {
-  RecordDecl *R = new (C, ID)
+  return new (C, ID)
       RecordDecl(Record, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                  SourceLocation(), nullptr, nullptr);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return R;
 }
 
 bool RecordDecl::isLambda() const {
@@ -5163,7 +5140,7 @@ bool RecordDecl::isOrContainsUnion() const {
   if (const RecordDecl *Def = getDefinition()) {
     for (const FieldDecl *FD : Def->fields()) {
       const RecordType *RT = FD->getType()->getAs<RecordType>();
-      if (RT && RT->getDecl()->isOrContainsUnion())
+      if (RT && RT->getOriginalDecl()->isOrContainsUnion())
         return true;
     }
   }
@@ -5295,8 +5272,9 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
       return I;
 
     if (const auto *RT = I->getType()->getAs<RecordType>())
-      if (const FieldDecl *NamedDataMember =
-              RT->getDecl()->findFirstNamedDataMember())
+      if (const FieldDecl *NamedDataMember = RT->getOriginalDecl()
+                                                 ->getDefinitionOrSelf()
+                                                 ->findFirstNamedDataMember())
         return NamedDataMember;
   }
 
@@ -5658,14 +5636,14 @@ void TypedefNameDecl::anchor() {}
 
 TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
   if (auto *TT = getTypeSourceInfo()->getType()->getAs<TagType>()) {
-    auto *OwningTypedef = TT->getDecl()->getTypedefNameForAnonDecl();
+    auto *OwningTypedef = TT->getOriginalDecl()->getTypedefNameForAnonDecl();
     auto *ThisTypedef = this;
     if (AnyRedecl && OwningTypedef) {
       OwningTypedef = OwningTypedef->getCanonicalDecl();
       ThisTypedef = ThisTypedef->getCanonicalDecl();
     }
     if (OwningTypedef == ThisTypedef)
-      return TT->getDecl();
+      return TT->getOriginalDecl()->getDefinitionOrSelf();
   }
 
   return nullptr;
@@ -5674,7 +5652,7 @@ TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
 bool TypedefNameDecl::isTransparentTagSlow() const {
   auto determineIsTransparent = [&]() {
     if (auto *TT = getUnderlyingType()->getAs<TagType>()) {
-      if (auto *TD = TT->getDecl()) {
+      if (auto *TD = TT->getOriginalDecl()) {
         if (TD->getName() != getName())
           return false;
         SourceLocation TTLoc = getLocation();

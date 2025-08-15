@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -147,12 +150,118 @@ struct TestXeGPUUnrollingPatterns
   }
 };
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "test-xegpu-layout-interface"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
+// Test pattern for distributing vector::StepOp from workgroup to subgroup.
+// Validates LayoutTrait interfaces for offset computation abstraction between
+// LayoutAttr and SliceAttr.
+class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
+  using OpConversionPattern<vector::StepOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::StepOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto layoutName = xegpu::getLayoutName(op->getResult(0));
+    auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
+    if (!sliceAttr || sliceAttr.getRank() != 1)
+      return failure();
+
+    std::optional<SmallVector<int64_t>> sgShape = sliceAttr.getSgDataAsInt();
+    if (!sgShape)
+      return failure();
+
+    Location loc = op.getLoc();
+    VectorType type = op.getResult().getType();
+    auto wgShape = type.getShape();
+
+    Value sgId =
+        gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
+    auto maybeOffsets = sliceAttr.getOffsets(rewriter, loc, sgId, wgShape);
+    if (failed(maybeOffsets))
+      return failure();
+
+    VectorType newTy = type.cloneWith(*sgShape, type.getElementType());
+    Value base = vector::StepOp::create(rewriter, loc, newTy);
+    SmallVector<Value> newOps;
+    for (auto offsets : *maybeOffsets) {
+      Value bcast =
+          vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
+      Value add = arith::AddIOp::create(rewriter, loc, base, bcast);
+      newOps.push_back(add);
+    }
+    rewriter.replaceOpWithMultiple(op, {newOps});
+    return success();
+  }
+};
+
+struct TestXeGPULayoutInterface
+    : public PassWrapper<TestXeGPULayoutInterface,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPULayoutInterface)
+
+  StringRef getArgument() const final { return "test-xegpu-layout-interface"; }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU Layout interfaces";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<index::IndexDialect>();
+  }
+
+  TestXeGPULayoutInterface() = default;
+  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+
+    TypeConverter typeConverter;
+    auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                               mlir::ValueRange inputs,
+                               mlir::Location loc) -> mlir::Value {
+      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+          .getResult(0);
+    };
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
+
+    RewritePatternSet patterns(ctx);
+    patterns.add<TestStepOpPattern>(typeConverter, ctx);
+
+    ConversionTarget target(*ctx);
+    auto isLegal = [&](xegpu::SliceAttr layout) -> bool {
+      return !layout || !layout.isWgLayout();
+    };
+
+    target.addDynamicallyLegalOp<vector::StepOp>(
+        [&](vector::StepOp op) -> bool {
+          auto layoutName = xegpu::getLayoutName(op->getResult(0));
+          auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
+          return isLegal(sliceAttr);
+        });
+
+    target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
+
+    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
+  PassRegistration<TestXeGPULayoutInterface>();
 }
 } // namespace test
 } // namespace mlir

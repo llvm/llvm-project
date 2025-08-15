@@ -359,6 +359,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
     return UseCaptureInfo::passthrough();
+  case Instruction::PtrToAddr:
+    // We treat ptrtoaddr as a location-independent capture of the address even
+    // if it is ultimately not used. Continuing recursive analysis after
+    // ptrtoaddr would be possible, but we'd need logic to do that correctly,
+    // which is not the same as the current pointer following logic.
+    return CaptureComponents::Address;
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
