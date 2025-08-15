@@ -495,6 +495,9 @@ endif()
 
 include(AddFlang)
 include(FlangCommon)
+include(GetClangResourceDir)
+
+get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
@@ -575,8 +578,6 @@ endif()
 
 # Put ISO_Fortran_binding.h into the include files of the build area now
 # so that we can run tests before installing
-include(GetClangResourceDir)
-get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
   ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
   ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h COPYONLY)
