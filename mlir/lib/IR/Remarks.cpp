@@ -54,7 +54,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 /// {tripCount=128, reason=too_small}
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   os << '[' << getRemarkTypeString() << "] ";
-  os << getPassName() << ':' << getRemarkName();
+  os << getRemarkName() << ':' << getPassName();
   if (functionName)
     os << " func=" << getFunction() << " ";
 

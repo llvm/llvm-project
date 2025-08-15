@@ -30,6 +30,8 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string categoryVectorizer("Vectorizer");
   std::string categoryRegister("Register");
   std::string categoryUnroll("Unroll");
+  std::string categoryInliner("Inliner");
+  std::string categoryReroller("Reroller");
   std::string myPassname1("myPass1");
   SmallString<64> tmpPathStorage;
   sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
@@ -49,7 +51,7 @@ TEST(Remark, TestOutputOptimizationRemark) {
     mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
-                                        /*failed=*/categoryUnroll};
+                                        /*failed=*/categoryInliner};
 
     LogicalResult isEnabled =
         mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
@@ -69,8 +71,12 @@ TEST(Remark, TestOutputOptimizationRemark) {
         << remark::suggest("increase unroll factor to >=4");
 
     // FAILURE: action attempted but failed
-    remark::failed(loc, categoryUnroll, "MyPass")
+    remark::failed(loc, categoryInliner, "MyPass")
         << remark::reason("failed due to unsupported pattern");
+
+    // FAILURE: Won't show up
+    remark::failed(loc, categoryReroller, "MyPass")
+        << remark::reason("failed due to rerolling pattern");
   }
 
   // Read the file
@@ -79,28 +85,30 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string content = bufferOrErr.get()->getBuffer().str();
 
   EXPECT_THAT(content, HasSubstr("--- !Passed"));
-  EXPECT_THAT(content, HasSubstr("Pass:            Vectorizer"));
-  EXPECT_THAT(content, HasSubstr("Name:            myPass1"));
+  EXPECT_THAT(content, HasSubstr("Pass:            myPass1"));
+  EXPECT_THAT(content, HasSubstr("Name:            Vectorizer"));
   EXPECT_THAT(content, HasSubstr("Remark:          vectorized loop"));
   EXPECT_THAT(content, HasSubstr("tripCount:       '128'"));
 
   EXPECT_THAT(content, HasSubstr("--- !Analysis"));
-  EXPECT_THAT(content, HasSubstr("Pass:            Register"));
+  EXPECT_THAT(content, HasSubstr("Name:            Register"));
   EXPECT_THAT(content, HasSubstr("Remark:          Kernel uses 168 registers"));
 
   EXPECT_THAT(content, HasSubstr("--- !Missed"));
-  EXPECT_THAT(content, HasSubstr("Pass:            Unroll"));
-  EXPECT_THAT(content, HasSubstr("Name:            MyPass"));
+  EXPECT_THAT(content, HasSubstr("Pass:            MyPass"));
+  EXPECT_THAT(content, HasSubstr("Name:            Unroll"));
   EXPECT_THAT(content,
               HasSubstr("Reason:          not profitable at this size"));
   EXPECT_THAT(content,
               HasSubstr("Suggestion:      'increase unroll factor to >=4'"));
 
   EXPECT_THAT(content, HasSubstr("--- !Failure"));
-  EXPECT_THAT(content, HasSubstr("Pass:            Unroll"));
-  EXPECT_THAT(content, HasSubstr("Name:            MyPass"));
+  EXPECT_THAT(content, HasSubstr("Pass:            MyPass"));
+  EXPECT_THAT(content, HasSubstr("Name:            Unroll"));
   EXPECT_THAT(content,
               HasSubstr("Reason:          failed due to unsupported pattern"));
+
+  EXPECT_THAT(content, Not(HasSubstr("Reroller")));
 
   // Also verify document order to avoid false positives.
   size_t iPassed = content.find("--- !Passed");

@@ -59,8 +59,8 @@ namespace mlir::remark::detail {
 class Remark {
 
 public:
-  Remark(RemarkKind remarkKind, DiagnosticSeverity severity,
-         const char *passName, StringRef remarkName, Location loc,
+  Remark(RemarkKind remarkKind, DiagnosticSeverity severity, StringRef passName,
+         StringRef remarkName, Location loc,
          std::optional<StringRef> functionName = std::nullopt)
       : remarkKind(remarkKind), functionName(functionName), loc(loc),
         passName(passName), remarkName(remarkName) {}
@@ -125,12 +125,10 @@ protected:
   std::optional<std::string> functionName;
 
   Location loc;
-  /// Name of the pass that triggers this report.
-  const char *passName;
+  /// Sub category passname e.g., "Unroll" or "UnrollAndJ"
+  StringRef passName;
 
-  /// Textual identifier for the remark (single-word, CamelCase). Can be used
-  /// by external tools reading the output file for optimization remarks to
-  /// identify the remark.
+  /// Remark name, e.g., "LoopOptimizer"
   StringRef remarkName;
 
   /// Args collected via the streaming interface.
@@ -190,8 +188,8 @@ inline Remark &operator<<(Remark &r, const Remark::Arg &kv) {
 template <RemarkKind K, DiagnosticSeverity S>
 class OptRemarkBase final : public Remark {
 public:
-  explicit OptRemarkBase(Location loc, StringRef passName,
-                         StringRef categoryName)
+  explicit OptRemarkBase(Location loc, StringRef categoryName,
+                         StringRef passName)
       : Remark(K, S, passName.data(), categoryName, loc) {}
 };
 
