@@ -942,7 +942,9 @@ public:
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
-struct OverflowBehaviorLocInfo {}; // Nothing.
+struct OverflowBehaviorLocInfo {
+  SourceLocation AttrLoc;
+};
 
 class OverflowBehaviorTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, OverflowBehaviorTypeLoc,
@@ -957,7 +959,13 @@ public:
 
   SourceRange getLocalSourceRange() const;
 
-  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrLoc(loc);
+  }
+
+  SourceLocation getAttrLoc() const { return getLocalData()->AttrLoc; }
+
+  void setAttrLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
 
   QualType getInnerType() const { return getTypePtr()->getUnderlyingType(); }
 };
