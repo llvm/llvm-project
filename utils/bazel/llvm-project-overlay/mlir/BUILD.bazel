@@ -7137,6 +7137,26 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "WasmImport",
+    srcs = [
+        "lib/Target/Wasm/TranslateRegistration.cpp",
+        "lib/Target/Wasm/TranslateFromWasm.cpp",
+        ],
+    hdrs = [
+        "include/mlir/Target/Wasm/WasmBinaryEncoding.h",
+        "include/mlir/Target/Wasm/WasmImporter.h",
+        ],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":WasmSSADialect",
+        ":Support",
+        ":TranslateLib",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "TensorOpsTdFiles",
     srcs = [
@@ -9002,6 +9022,7 @@ cc_library(
         ":TargetCpp",
         ":TargetSMTLIB",
         ":ToLLVMIRTranslationRegistration",
+        ":WasmImport",
     ],
 )
 
