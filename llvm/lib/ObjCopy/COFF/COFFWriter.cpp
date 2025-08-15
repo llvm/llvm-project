@@ -144,6 +144,11 @@ Error COFFWriter::finalizeCFGuardContents() {
         RawIds.size() / 4);
     std::vector<support::ulittle32_t> NewIds;
     for (auto Id : Ids) {
+      if (!SymIdMap.contains(Id))
+        return createStringError(object_error::invalid_symbol_index,
+                                 "section '%s' contains a .symidx (%d) that is "
+                                 "incorrect or was stripped",
+                                 Sec.Name.str().c_str(), Id.value());
       NewIds.push_back(support::ulittle32_t(SymIdMap[Id]));
     }
     ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
