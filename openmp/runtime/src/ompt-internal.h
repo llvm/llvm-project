@@ -57,8 +57,11 @@ typedef struct ompt_callbacks_active_s {
       (info->td_flags.merged_if0 ? ompt_task_mergeable : 0x0)
 
 typedef struct {
-  ompt_frame_t frame;
+  // liboffload only uses task_data and target_data. They must be the first
+  // elements!
   ompt_data_t task_data;
+  ompt_data_t target_data;
+  ompt_frame_t frame;
   struct kmp_taskdata *scheduling_parent;
   int thread_num;
   ompt_dispatch_chunk_t dispatch_chunk;
