@@ -1832,11 +1832,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                   TypeInfo.inferScalarType(L) == TypeInfo.inferScalarType(R) &&
                   vputils::isSingleScalar(L) == vputils::isSingleScalar(R) &&
                   equal(L->operands(), R->operands());
+    if (Result && isa<VPReplicateRecipe>(L))
+      Result = L->getUnderlyingInstr() == R->getUnderlyingInstr();
     assert((!Result || getHashValue(L) == getHashValue(R)) &&
            "Divergent hashes of equal values");
-    return Result && isa<VPReplicateRecipe>(L)
-               ? L->getUnderlyingInstr() == R->getUnderlyingInstr()
-               : Result;
+    return Result;
   }
 };
 } // end anonymous namespace
