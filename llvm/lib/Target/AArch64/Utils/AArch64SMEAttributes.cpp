@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64SMEAttributes.h"
-#include "llvm/CodeGen/TargetLowering.h"
+#include "AArch64ISelLowering.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include <cassert>
@@ -75,7 +75,7 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 }
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
-                                     const TargetLowering &TLI) {
+                                     const AArch64TargetLowering &TLI) {
   RTLIB::LibcallImpl Impl = TLI.getSupportedLibcallImpl(FuncName);
   if (Impl == RTLIB::Unsupported)
     return;
@@ -124,7 +124,7 @@ bool SMECallAttrs::requiresSMChange() const {
   return true;
 }
 
-SMECallAttrs::SMECallAttrs(const CallBase &CB, const TargetLowering *TLI)
+SMECallAttrs::SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI)
     : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
       Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
   if (auto *CalledFunction = CB.getCalledFunction())

@@ -8598,7 +8598,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
 }
 
 static SMECallAttrs
-getSMECallAttrs(const Function &Caller, const TargetLowering &TLI,
+getSMECallAttrs(const Function &Caller, const AArch64TargetLowering &TLI,
                 const TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.CB)
     return SMECallAttrs(*CLI.CB, &TLI);

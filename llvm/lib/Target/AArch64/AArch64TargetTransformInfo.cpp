@@ -220,7 +220,8 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
-static bool isSMEABIRoutineCall(const CallInst &CI, const TargetLowering &TLI) {
+static bool isSMEABIRoutineCall(const CallInst &CI,
+                                const AArch64TargetLowering &TLI) {
   const auto *F = CI.getCalledFunction();
   return F && SMEAttrs(F->getName(), TLI).isSMEABIRoutine();
 }
@@ -229,7 +230,7 @@ static bool isSMEABIRoutineCall(const CallInst &CI, const TargetLowering &TLI) {
 /// lowered using incompatible instructions for the selected mode. This also
 /// returns true if the function F may use or modify ZA state.
 static bool hasPossibleIncompatibleOps(const Function *F,
-                                       const TargetLowering &TLI) {
+                                       const AArch64TargetLowering &TLI) {
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       // Be conservative for now and assume that any call to inline asm or to
