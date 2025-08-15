@@ -847,11 +847,6 @@ def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
                                               "UseWzrToVecMove", "true",
                                               "Move from WZR to insert 0 into vector registers">;
 
-// SVE fcmxx operations sometimes have half the throughput of Neon cmxx.
-def FeatureHalfSVEFCmpThroughput : SubtargetFeature<"half-sve-fcmp-throughput",
-  "HasHalfSVEFCmpThroughput", "false",
-  "SVE FCmp instructions have half the throughput of Neon instructions">;
-
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
