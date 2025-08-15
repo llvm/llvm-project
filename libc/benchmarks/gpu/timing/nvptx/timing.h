@@ -64,7 +64,7 @@ template <typename F, typename T>
   uint64_t stop = gpu::processor_clock();
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
-  volatile T output = result;
+  volatile auto output = result;
 
   // Return the time elapsed.
   return stop - start;
