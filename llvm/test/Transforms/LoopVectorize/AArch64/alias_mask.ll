@@ -21,8 +21,6 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[B4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[C3]], i64 0
@@ -36,7 +34,7 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i8 @llvm.vector.reduce.add.nxv16i8(<vscale x 16 x i8> [[TMP10]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i8 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP8]], 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[N]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ugt i64 [[N]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP17]], i64 [[TMP15]], i64 0
@@ -101,8 +99,6 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[C4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[B3]], i64 0
@@ -116,7 +112,7 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP10]])
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext i8 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP9]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[N]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[N]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 0
@@ -191,8 +187,6 @@ define dso_local void @alias_mask_multiple(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[B7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[A6]], i64 0
@@ -214,7 +208,7 @@ define dso_local void @alias_mask_multiple(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i8 @llvm.vector.reduce.add.nxv16i8(<vscale x 16 x i8> [[TMP16]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP20:%.*]] = mul nuw i64 [[TMP19]], 16
+; CHECK-NEXT:    [[TMP20:%.*]] = shl nuw i64 [[TMP19]], 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 [[N]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ugt i64 [[N]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i64 [[TMP21]], i64 0
@@ -283,8 +277,6 @@ define i32 @alias_mask_multiple_read_after_write(ptr %a, ptr %b, ptr %c, i64 %n)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[B7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[A6]], i64 0
@@ -306,7 +298,7 @@ define i32 @alias_mask_multiple_read_after_write(ptr %a, ptr %b, ptr %c, i64 %n)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP16]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP20:%.*]] = mul nuw i64 [[TMP19]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = shl nuw i64 [[TMP19]], 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 [[N]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ugt i64 [[N]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i64 [[TMP21]], i64 0
