@@ -97,7 +97,7 @@ define i128 @fptosi_sat_f64_to_i128(double %a) nounwind {
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call __unorddf2
 ; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    slti a1, s2, 0
+; RV64I-NEXT:    srli a1, s2, 63
 ; RV64I-NEXT:    sgtz a2, s4
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    addi a3, a1, -1
@@ -207,7 +207,7 @@ define i128 @fptoui_sat_f64_to_i128(double %a) nounwind {
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __gedf2
-; RV64I-NEXT:    slti a0, a0, 0
+; RV64I-NEXT:    srli a0, a0, 63
 ; RV64I-NEXT:    addi s2, a0, -1
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __fixunsdfti
