@@ -1144,6 +1144,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.PenaltyReturnTypeOnItsOwnLine);
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
     IO.mapOptional("PPIndentWidth", Style.PPIndentWidth);
+    IO.mapOptional("PutShortFunctionBodiesOnASingleLine",
+                   Style.PutShortFunctionBodiesOnASingleLine);
     IO.mapOptional("QualifierAlignment", Style.QualifierAlignment);
     // Default Order for Left/Right based Qualifier alignment.
     if (Style.QualifierAlignment == FormatStyle::QAS_Right)
@@ -1643,6 +1645,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.PPIndentWidth = -1;
+  LLVMStyle.PutShortFunctionBodiesOnASingleLine = false;
   LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
   LLVMStyle.ReflowComments = FormatStyle::RCS_Always;
@@ -3827,6 +3830,10 @@ reformat(const FormatStyle &Style, StringRef Code,
     break;
   default:
     break;
+  }
+  if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_None &&
+      Expanded.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always) {
+    Expanded.PutShortFunctionBodiesOnASingleLine = true;
   }
 
   if (Expanded.DisableFormat)

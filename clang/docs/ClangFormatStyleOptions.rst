@@ -5405,6 +5405,25 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _PutShortFunctionBodiesOnASingleLine:
+
+**PutShortFunctionBodiesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <PutShortFunctionBodiesOnASingleLine>`
+  Dependent on the value, function body can be put on a single line.
+  Automatically enabled when
+  `AllowShortFunctionsOnASingleLine` is set to `None` and
+  `AllowShortBlocksOnASingleLine` is set to `Always`.
+
+  .. code-block:: c++
+
+    true:
+    int f()
+    { return 0; }
+
+    false:
+    int f() {
+      return 0;
+    }
+
 .. _QualifierAlignment:
 
 **QualifierAlignment** (``QualifierAlignmentStyle``) :versionbadge:`clang-format 14` :ref:`¶ <QualifierAlignment>`

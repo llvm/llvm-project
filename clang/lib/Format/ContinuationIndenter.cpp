@@ -390,6 +390,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return true;
   }
 
+  // `PutShortFunctionBodiesOnASingleLine = true` will wrap left brace into
+  // a new line, do not break before the left brace.
+  if (Current.is(TT_FunctionLBrace) && !Style.BraceWrapping.AfterFunction &&
+      Style.PutShortFunctionBodiesOnASingleLine) {
+    return false;
+  }
+
   return !State.NoLineBreak && !CurrentState.NoLineBreak;
 }
 
