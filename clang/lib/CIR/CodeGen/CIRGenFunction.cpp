@@ -558,7 +558,6 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
-        fn.erase();
         return nullptr;
       }
     } else {

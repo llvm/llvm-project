@@ -27,12 +27,13 @@ using namespace cir;
 
 mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
     const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
+  mlir::LogicalResult result = mlir::success();
   const Stmt *exprResult = s.getStmtExprResult();
   assert((!lastValue || (lastValue && exprResult)) &&
          "If lastValue is not null then the CompoundStmt must have a "
          "StmtExprResult");
 
-  for (Stmt *curStmt : s.body()) {
+  for (const Stmt *curStmt : s.body()) {
     // We have to special case labels here. They are statements, but when put
     // at the end of a statement expression, they yield the value of their
     // subexpression. Handle this by walking through all labels we encounter,
@@ -66,11 +67,10 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
       }
     } else {
       if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-        return mlir::failure();
+        result = mlir::failure();
     }
   }
-
-  return mlir::success();
+  return result;
 }
 
 mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
