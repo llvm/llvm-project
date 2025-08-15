@@ -46,17 +46,13 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
     "disable-bitcode-version-upgrade", cl::Hidden,
     cl::desc("Disable automatic bitcode upgrade for version mismatch"));
 
-static constexpr StringLiteral PreservedSymbols[] = {
+static const char *PreservedSymbols[] = {
     // There are global variables, so put it here instead of in
     // RuntimeLibcalls.td.
     // TODO: Are there similar such variables?
     "__ssp_canary_word",
     "__stack_chk_guard",
 };
-
-static bool isPreservedGlobalVarName(StringRef Name) {
-  return PreservedSymbols[0] == Name || PreservedSymbols[1] == Name;
-}
 
 namespace {
 
@@ -85,16 +81,12 @@ struct Builder {
   // The StringTableBuilder does not create a copy of any strings added to it,
   // so this provides somewhere to store any strings that we create.
   Builder(SmallVector<char, 0> &Symtab, StringTableBuilder &StrtabBuilder,
-          BumpPtrAllocator &Alloc, const Triple &TT)
-      : Symtab(Symtab), StrtabBuilder(StrtabBuilder), Saver(Alloc), TT(TT),
-        Libcalls(TT) {}
+          BumpPtrAllocator &Alloc)
+      : Symtab(Symtab), StrtabBuilder(StrtabBuilder), Saver(Alloc) {}
 
   DenseMap<const Comdat *, int> ComdatMap;
   Mangler Mang;
-  const Triple &TT;
-
-  // FIXME: This shouldn't be here.
-  RTLIB::RuntimeLibcallsInfo Libcalls;
+  Triple TT;
 
   std::vector<storage::Comdat> Comdats;
   std::vector<storage::Module> Mods;
@@ -105,10 +97,6 @@ struct Builder {
   raw_string_ostream COFFLinkerOptsOS{COFFLinkerOpts};
 
   std::vector<storage::Str> DependentLibraries;
-
-  bool isPreservedLibFuncName(StringRef Name) {
-    return Libcalls.getSupportedLibcallImpl(Name) != RTLIB::Unsupported;
-  }
 
   void setStr(storage::Str &S, StringRef Value) {
     S.Offset = StrtabBuilder.add(Value);
@@ -225,6 +213,19 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
   return P.first->second;
 }
 
+static StringSet<> buildPreservedSymbolsSet(const Triple &TT) {
+  StringSet<> PreservedSymbolSet;
+  PreservedSymbolSet.insert(std::begin(PreservedSymbols),
+                            std::end(PreservedSymbols));
+  // FIXME: Do we need to pass in ABI fields from TargetOptions?
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  for (RTLIB::LibcallImpl Impl : Libcalls.getLibcallImpls()) {
+    if (Impl != RTLIB::Unsupported)
+      PreservedSymbolSet.insert(Libcalls.getLibcallImplName(Impl));
+  }
+  return PreservedSymbolSet;
+}
+
 Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
                          const SmallPtrSet<GlobalValue *, 4> &Used,
                          ModuleSymbolTable::Symbol Msym) {
@@ -278,11 +279,13 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     return Error::success();
   }
 
-  StringRef GVName = GV->getName();
-  setStr(Sym.IRName, GVName);
+  setStr(Sym.IRName, GV->getName());
 
-  if (Used.count(GV) || isPreservedLibFuncName(GVName) ||
-      isPreservedGlobalVarName(GVName))
+  static const StringSet<> PreservedSymbolsSet =
+      buildPreservedSymbolsSet(GV->getParent()->getTargetTriple());
+  bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
+
+  if (Used.count(GV) || IsPreservedSymbol)
     Sym.Flags |= 1 << storage::Symbol::FB_used;
   if (GV->isThreadLocal())
     Sym.Flags |= 1 << storage::Symbol::FB_tls;
@@ -349,6 +352,7 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
   setStr(Hdr.Producer, kExpectedProducerName);
   setStr(Hdr.TargetTriple, IRMods[0]->getTargetTriple().str());
   setStr(Hdr.SourceFileName, IRMods[0]->getSourceFileName());
+  TT = IRMods[0]->getTargetTriple();
 
   for (auto *M : IRMods)
     if (Error Err = addModule(M))
@@ -374,8 +378,7 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
 Error irsymtab::build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
                       StringTableBuilder &StrtabBuilder,
                       BumpPtrAllocator &Alloc) {
-  const Triple &TT = Mods[0]->getTargetTriple();
-  return Builder(Symtab, StrtabBuilder, Alloc, TT).build(Mods);
+  return Builder(Symtab, StrtabBuilder, Alloc).build(Mods);
 }
 
 // Upgrade a vector of bitcode modules created by an old version of LLVM by
