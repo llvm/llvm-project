@@ -17,11 +17,8 @@
 # CHECKR-NEXT:     0x4 R_LARCH_CALL36 foo 0x0
 # CHECKR-NEXT:     0x4 R_LARCH_RELAX - 0x0
 # CHECKR-NEXT:     0x10 R_LARCH_B21 .L0 0x0
-# CHECKR-NEXT:     0x14 R_LARCH_B21 .L1 0x0
 # CHECKR-NEXT:     0x18 R_LARCH_B16 .L0 0x0
-# CHECKR-NEXT:     0x1C R_LARCH_B16 .L1 0x0
 # CHECKR-NEXT:     0x20 R_LARCH_B26 .L0 0x0
-# CHECKR-NEXT:     0x24 R_LARCH_B26 .L1 0x0
 # CHECKR-NEXT:   }
 # CHECKR-NEXT:   Section ({{.*}}) .rela.data {
 # CHECKR-NEXT:     0x0 R_LARCH_64 .L1 0x0
@@ -36,6 +33,10 @@
 
 .L1:
   nop
+## Relocations for branches to .L0 must be reserved and be fixed up by linker
+## when linker relaxation enabled, because of the relaxable call36 instruction.
+## Branches to .L1 can be resolved correctly at compile time, so their
+## relocations can simply be removed.
   bnez $a0, .L0
   beqz $a0, .L1
   beq  $a0, $a1, .L0
