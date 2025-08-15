@@ -21,6 +21,8 @@
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 #include "llvm/TargetParser/Host.h"
 
@@ -89,6 +91,53 @@ TEST_F(InterpreterTest, IncrementalInputTopLevelDecls) {
   auto R2DeclRange = R2->TUPart->decls();
   EXPECT_EQ(1U, DeclsSize(R2->TUPart));
   EXPECT_EQ("var2", DeclToString(*R2DeclRange.begin()));
+}
+
+TEST_F(InterpreterTest, BadIncludeDoesNotCorruptTU) {
+  // Create a temporary header that triggers an error at top level.
+  llvm::SmallString<256> HeaderPath;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("interp-bad-include", "h",
+                                                  HeaderPath));
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(HeaderPath, EC, llvm::sys::fs::OF_Text);
+    ASSERT_FALSE(EC);
+    OS << R"(error_here; // expected-error {{use of undeclared identifier}})";
+  }
+
+  llvm::SmallString<256> HeaderDir = llvm::sys::path::parent_path(HeaderPath);
+  llvm::SmallString<256> HeaderFile = llvm::sys::path::filename(HeaderPath);
+
+  // Set up the interpreter with the include path.
+  using Args = std::vector<const char *>;
+  Args ExtraArgs = {"-I",      HeaderDir.c_str(),
+                    "-Xclang", "-diagnostic-log-file",
+                    "-Xclang", "-"};
+
+  // Create the diagnostic engine with unowned consumer.
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
+  DiagnosticOptions DiagOpts;
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
+
+  auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
+  // This parse should fail because of an undeclared identifier, but should
+  // leave TU intact.
+  auto Err =
+      Interp->Parse("#include \"" + HeaderFile.str().str() + "\"").takeError();
+  using ::testing::HasSubstr;
+  EXPECT_THAT(DiagnosticOutput,
+              HasSubstr("use of undeclared identifier 'error_here'"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  // Inspect the TU, there must not be any TopLevelStmtDecl left.
+  TranslationUnitDecl *TU =
+      Interp->getCompilerInstance()->getASTContext().getTranslationUnitDecl();
+  EXPECT_EQ(0U, DeclsSize(TU));
+
+  // Cleanup temp file.
+  llvm::sys::fs::remove(HeaderPath);
 }
 
 TEST_F(InterpreterTest, Errors) {
