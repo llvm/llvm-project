@@ -59,16 +59,14 @@ define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
 ; RV32XQCIBM-LABEL: sexti1_i32_setcc:
 ; RV32XQCIBM:       # %bb.0:
 ; RV32XQCIBM-NEXT:    srli a0, a0, 31
-; RV32XQCIBM-NEXT:    not a0, a0
-; RV32XQCIBM-NEXT:    qc.ext a0, a0, 1, 0
+; RV32XQCIBM-NEXT:    addi a0, a0, -1
 ; RV32XQCIBM-NEXT:    qc.extu a0, a0, 8, 0
 ; RV32XQCIBM-NEXT:    ret
 ;
 ; RV32XQCIBMZBB-LABEL: sexti1_i32_setcc:
 ; RV32XQCIBMZBB:       # %bb.0:
 ; RV32XQCIBMZBB-NEXT:    srli a0, a0, 31
-; RV32XQCIBMZBB-NEXT:    not a0, a0
-; RV32XQCIBMZBB-NEXT:    qc.ext a0, a0, 1, 0
+; RV32XQCIBMZBB-NEXT:    addi a0, a0, -1
 ; RV32XQCIBMZBB-NEXT:    qc.extu a0, a0, 8, 0
 ; RV32XQCIBMZBB-NEXT:    ret
   %icmp = icmp sgt i32 %a, -1

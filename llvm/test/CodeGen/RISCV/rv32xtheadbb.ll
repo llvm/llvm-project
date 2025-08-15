@@ -326,8 +326,7 @@ define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
 ; RV32XTHEADBB-LABEL: sexti1_i32_setcc:
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    srli a0, a0, 31
-; RV32XTHEADBB-NEXT:    not a0, a0
-; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV32XTHEADBB-NEXT:    zext.b a0, a0
 ; RV32XTHEADBB-NEXT:    ret
   %icmp = icmp sgt i32 %a, -1

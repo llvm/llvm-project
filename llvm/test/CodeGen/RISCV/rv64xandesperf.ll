@@ -282,8 +282,7 @@ define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
 ; CHECK-LABEL: sexti1_i32_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    nds.bfos a0, a0, 0, 0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
   %icmp = icmp sgt i32 %a, -1
@@ -353,8 +352,7 @@ define zeroext i8 @sexti1_i64_setcc(i64 %a) {
 ; CHECK-LABEL: sexti1_i64_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    nds.bfos a0, a0, 0, 0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
   %icmp = icmp sgt i64 %a, -1

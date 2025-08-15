@@ -647,8 +647,7 @@ define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
 ; RV64XTHEADBB-LABEL: sexti1_i32_setcc:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    srli a0, a0, 63
-; RV64XTHEADBB-NEXT:    not a0, a0
-; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NEXT:    zext.b a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %icmp = icmp sgt i32 %a, -1
@@ -699,8 +698,7 @@ define zeroext i8 @sexti1_i64_setcc(i64 %a) {
 ; RV64XTHEADBB-LABEL: sexti1_i64_setcc:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    srli a0, a0, 63
-; RV64XTHEADBB-NEXT:    not a0, a0
-; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NEXT:    zext.b a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %icmp = icmp sgt i64 %a, -1
