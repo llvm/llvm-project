@@ -2889,26 +2889,40 @@ Error MCCASBuilder::createAppleObjCSection() {
   return finalizeSection<AppleObjCSectionRef>();
 }
 
-static ArrayRef<char> getFragmentContents(const MCFragment &Fragment) {
+static void getFragmentContents(const MCFragment &Fragment,
+                                SmallVectorImpl<char> &FragContents) {
   switch (Fragment.getKind()) {
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
   case MCFragment::MCEnumName: {                                               \
-    const MCFragmentName &SF = cast<MCFragmentName>(Fragment);                 \
-    return SF.getContents();                                                   \
+    FragContents.append(Fragment.getContents().begin(),                        \
+                        Fragment.getContents().end());                         \
+    FragContents.append(Fragment.getVarContents().begin(),                     \
+                        Fragment.getVarContents().end());                      \
+    return;                                                                    \
   }
 #define MCFRAGMENT_ENCODED_FRAGMENT_ONLY
 #include "llvm/MCCAS/MCCASObjectV1.def"
   case MCFragment::FT_CVInlineLines: {
     const MCCVInlineLineTableFragment &SF =
         cast<MCCVInlineLineTableFragment>(Fragment);
-    return SF.getContents();
+    FragContents.append(SF.getContents().begin(), SF.getContents().end());
+    FragContents.append(SF.getVarContents().begin(), SF.getVarContents().end());
+    return;
   }
   case MCFragment::FT_LEB: {
-    const MCLEBFragment &SF = cast<MCLEBFragment>(Fragment);
-    return SF.getContents();
+    FragContents.append(Fragment.getContents().begin(),
+                        Fragment.getContents().end());
+    FragContents.append(Fragment.getVarContents().begin(),
+                        Fragment.getVarContents().end());
+    return;
+  }
+  case MCFragment::FT_Align: {
+    FragContents.append(Fragment.getContents().begin(),
+                        Fragment.getContents().end());
+    return;
   }
   default:
-    return ArrayRef<char>();
+    return;
   }
 }
 
@@ -2940,7 +2954,8 @@ partitionFragment(MCAssembler &Asm, SmallVector<char, 0> &Addends,
                   ArrayRef<MachO::any_relocation_info> RelocationBuffer,
                   const MCFragment &Fragment, uint64_t &RelocationBufferIndex,
                   bool IsLittleEndian) {
-  auto FragmentContents = getFragmentContents(Fragment);
+  SmallVector<char, 0> FragmentContents;
+  getFragmentContents(Fragment, FragmentContents);
   /// FragmentIndex: It denotes the index into the FragmentContents that is used
   /// to copy the data that deduplicates in the \p FinalFragmentContents.
   uint64_t FragmentIndex = 0;
