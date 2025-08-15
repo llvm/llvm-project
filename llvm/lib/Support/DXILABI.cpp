@@ -16,6 +16,7 @@
 
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
+
 using namespace llvm;
 
 static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
@@ -25,10 +26,14 @@ static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
     {"Sampler", llvm::dxil::ResourceClass::Sampler},
 };
 
-ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> dxil::getResourceClasses() {
+ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> getResourceClasses() {
   return ArrayRef(ResourceClassNames);
 }
 
 StringRef dxil::getResourceClassName(dxil::ResourceClass RC) {
   return enumToStringRef(RC, getResourceClasses());
+}
+
+StringRef dxil::getResourceClassName(uint8_t RC) {
+  return enumToStringRef(ResourceClass(RC), getResourceClasses());
 }
