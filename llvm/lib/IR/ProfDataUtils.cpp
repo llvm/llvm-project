@@ -270,6 +270,18 @@ void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
+SmallVector<uint32_t> downscaleWeights(ArrayRef<uint64_t> Weights,
+                                       std::optional<uint64_t> KnownMaxCount) {
+  uint64_t MaxCount = KnownMaxCount.has_value() ? KnownMaxCount.value()
+                                                : *llvm::max_element(Weights);
+  assert(MaxCount > 0 && "Bad max count");
+  uint64_t Scale = calculateCountScale(MaxCount);
+  SmallVector<unsigned, 4> DownscaledWeights;
+  for (const auto &ECI : Weights)
+    DownscaledWeights.push_back(scaleBranchCount(ECI, Scale));
+  return DownscaledWeights;
+}
+
 void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
   assert(T != 0 && "Caller should guarantee");
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
