@@ -295,28 +295,6 @@ CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp, bool thro
   return resolver_sp;
 }
 
-static std::unique_ptr<swift::SwiftObjectFileFormat>
-GetObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
-  std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
-  switch (obj_format_type) {
-  case llvm::Triple::MachO:
-    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatMachO>();
-    break;
-  case llvm::Triple::ELF:
-    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatELF>();
-    break;
-  case llvm::Triple::COFF:
-    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
-    break;
-  default:
-    if (Log *log = GetLog(LLDBLog::Types))
-      log->Printf("%s: Could not find out swift reflection section names for "
-                  "object format type.",
-                  __FUNCTION__);
-  }
-  return obj_file_format;
-}
-
 static bool HasReflectionInfo(ObjectFile *obj_file) {
   if (!obj_file)
     return false;
@@ -332,7 +310,7 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
 
   const auto obj_format_type =
       obj_file->GetArchitecture().GetTriple().getObjectFormat();
-  auto obj_file_format_up = GetObjectFileFormat(obj_format_type);
+  auto obj_file_format_up = GetSwiftObjectFileFormat(obj_format_type);
   if (!obj_file_format_up)
     return false;
 
@@ -561,7 +539,7 @@ bool SwiftLanguageRuntime::AddJitObjectFileToReflectionContext(
     llvm::SmallVector<llvm::StringRef, 1> likely_module_names) {
   assert(obj_file.GetType() == ObjectFile::eTypeJIT &&
          "Not a JIT object file!");
-  auto obj_file_format = GetObjectFileFormat(obj_format_type);
+  auto obj_file_format = GetSwiftObjectFileFormat(obj_format_type);
 
   if (!obj_file_format)
     return false;
@@ -607,7 +585,7 @@ std::optional<uint32_t> SwiftLanguageRuntime::AddObjectFileToReflectionContext(
   auto obj_format_type =
       module->GetArchitecture().GetTriple().getObjectFormat();
 
-  auto obj_file_format = GetObjectFileFormat(obj_format_type);
+  auto obj_file_format = GetSwiftObjectFileFormat(obj_format_type);
   if (!obj_file_format)
     return {};
 
