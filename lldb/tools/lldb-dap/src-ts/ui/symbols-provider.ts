@@ -100,7 +100,7 @@ export class SymbolsProvider extends DisposableContext {
       }
     );
 
-    let tabulatorJsFilename = "tabulator_modern.min.css";
+    let tabulatorJsFilename = "tabulator_simple.min.css";
     if (vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast) {
       tabulatorJsFilename = "tabulator_midnight.min.css";
     }
@@ -124,17 +124,19 @@ export class SymbolsProvider extends DisposableContext {
         color: var(--vscode-editor-foreground);
       }
 
-      .tabulator .tabulator-header {
+      .tabulator .tabulator-header .tabulator-col {
         background-color: var(--vscode-editor-background);
         color: var(--vscode-editor-foreground);
       }
 
       .tabulator-row {
         background-color: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
       }
 
-      .tabulator.tabulator-row-even {
-        background-color: var(--vscode-tree-tableOddRowsBackground);
+      .tabulator-row.tabulator-row-even {
+        background-color: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
       }
 
       .tabulator-row.tabulator-selected {
