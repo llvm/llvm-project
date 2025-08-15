@@ -11,9 +11,9 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include "src/errno/libc_errno.h"
 #include "src/sys/auxv/getauxval.h"
 #include <linux/auxvec.h>
 

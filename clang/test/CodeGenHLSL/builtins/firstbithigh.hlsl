@@ -151,3 +151,11 @@ uint3 test_firstbithigh_long3(int64_t3 p0) {
 uint4 test_firstbithigh_long4(int64_t4 p0) {
   return firstbithigh(p0);
 }
+
+// CHECK-LABEL: test_firstbithigh_upcast
+// CHECK: [[FBH:%.*]] = call <4 x i32> @llvm.[[TARGET]].firstbituhigh.v4i32(<4 x i32> %{{.*}})
+// CHECK: [[CONV:%.*]] = zext <4 x i32> [[FBH]] to <4 x i64>
+// CHECK: ret <4 x i64> [[CONV]]
+uint64_t4 test_firstbithigh_upcast(uint4 p0) {
+  return firstbithigh(p0);
+}

@@ -30,8 +30,9 @@ using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "amdgpu-resource-usage"
 
-char llvm::AMDGPUResourceUsageAnalysis::ID = 0;
-char &llvm::AMDGPUResourceUsageAnalysisID = AMDGPUResourceUsageAnalysis::ID;
+char llvm::AMDGPUResourceUsageAnalysisWrapperPass::ID = 0;
+char &llvm::AMDGPUResourceUsageAnalysisID =
+    AMDGPUResourceUsageAnalysisWrapperPass::ID;
 
 // In code object v4 and older, we need to tell the runtime some amount ahead of
 // time if we don't know the true stack size. Assume a smaller number if this is
@@ -47,7 +48,7 @@ static cl::opt<uint32_t> clAssumedStackSizeForDynamicSizeObjects(
              "variable sized objects (in bytes)"),
     cl::Hidden, cl::init(4096));
 
-INITIALIZE_PASS(AMDGPUResourceUsageAnalysis, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUResourceUsageAnalysisWrapperPass, DEBUG_TYPE,
                 "Function register usage analysis", true, true)
 
 static const Function *getCalleeFunction(const MachineOperand &Op) {
@@ -68,7 +69,8 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
   return false;
 }
 
-bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
+    MachineFunction &MF) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
@@ -90,14 +92,40 @@ bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
       AssumedStackSizeForExternalCall = 0;
   }
 
-  ResourceInfo = analyzeResourceUsage(MF, AssumedStackSizeForDynamicSizeObjects,
-                                      AssumedStackSizeForExternalCall);
+  ResourceInfo = AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
+      MF, AssumedStackSizeForDynamicSizeObjects,
+      AssumedStackSizeForExternalCall);
 
   return false;
 }
 
-AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo
-AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
+AnalysisKey AMDGPUResourceUsageAnalysis::Key;
+AMDGPUResourceUsageAnalysis::Result
+AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+
+  // By default, for code object v5 and later, track only the minimum scratch
+  // size
+  uint32_t AssumedStackSizeForDynamicSizeObjects =
+      clAssumedStackSizeForDynamicSizeObjects;
+  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
+          AMDGPU::AMDHSA_COV5 ||
+      STI.getTargetTriple().getOS() == Triple::AMDPAL) {
+    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+      AssumedStackSizeForDynamicSizeObjects = 0;
+    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
+      AssumedStackSizeForExternalCall = 0;
+  }
+
+  return AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
+      MF, AssumedStackSizeForDynamicSizeObjects,
+      AssumedStackSizeForExternalCall);
+}
+
+AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo
+AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
     const MachineFunction &MF, uint32_t AssumedStackSizeForDynamicSizeObjects,
     uint32_t AssumedStackSizeForExternalCall) const {
   SIFunctionResourceInfo Info;
@@ -137,29 +165,91 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   if (MFI->isStackRealigned())
     Info.PrivateSegmentSize += FrameInfo.getMaxAlign().value();
 
-  Info.UsesVCC = MRI.isPhysRegUsed(AMDGPU::VCC);
-
-  Info.NumVGPR = TRI.getNumDefinedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
-  Info.NumExplicitSGPR =
-      TRI.getNumDefinedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
+  Info.UsesVCC =
+      MRI.isPhysRegUsed(AMDGPU::VCC_LO) || MRI.isPhysRegUsed(AMDGPU::VCC_HI);
+  Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass,
+                                                /*IncludeCalls=*/false);
   if (ST.hasMAIInsts())
-    Info.NumAGPR = TRI.getNumDefinedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
+    Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
+                                          /*IncludeCalls=*/false);
 
-  // Preloaded registers are written by the hardware, not defined in the
-  // function body, so they need special handling.
-  if (MFI->isEntryFunction()) {
-    Info.NumExplicitSGPR =
-        std::max<int32_t>(Info.NumExplicitSGPR, MFI->getNumPreloadedSGPRs());
-    Info.NumVGPR = std::max<int32_t>(Info.NumVGPR, MFI->getNumPreloadedVGPRs());
+  // If there are no calls, MachineRegisterInfo can tell us the used register
+  // count easily.
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
+    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
+                                          /*IncludeCalls=*/false);
+    return Info;
   }
 
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall())
-    return Info;
-
+  int32_t MaxVGPR = -1;
   Info.CalleeSegmentSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
+      for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
+
+        if (!MO.isReg())
+          continue;
+
+        Register Reg = MO.getReg();
+        switch (Reg) {
+        case AMDGPU::NoRegister:
+          assert(MI.isDebugInstr() &&
+                 "Instruction uses invalid noreg register");
+          continue;
+
+        case AMDGPU::XNACK_MASK:
+        case AMDGPU::XNACK_MASK_LO:
+        case AMDGPU::XNACK_MASK_HI:
+          llvm_unreachable("xnack_mask registers should not be used");
+
+        case AMDGPU::LDS_DIRECT:
+          llvm_unreachable("lds_direct register should not be used");
+
+        case AMDGPU::TBA:
+        case AMDGPU::TBA_LO:
+        case AMDGPU::TBA_HI:
+        case AMDGPU::TMA:
+        case AMDGPU::TMA_LO:
+        case AMDGPU::TMA_HI:
+          llvm_unreachable("trap handler registers should not be used");
+
+        case AMDGPU::SRC_VCCZ:
+          llvm_unreachable("src_vccz register should not be used");
+
+        case AMDGPU::SRC_EXECZ:
+          llvm_unreachable("src_execz register should not be used");
+
+        case AMDGPU::SRC_SCC:
+          llvm_unreachable("src_scc register should not be used");
+
+        default:
+          break;
+        }
+
+        const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
+        assert((!RC || TRI.isVGPRClass(RC) || TRI.isSGPRClass(RC) ||
+                TRI.isAGPRClass(RC) || AMDGPU::TTMP_32RegClass.contains(Reg) ||
+                AMDGPU::TTMP_64RegClass.contains(Reg) ||
+                AMDGPU::TTMP_128RegClass.contains(Reg) ||
+                AMDGPU::TTMP_256RegClass.contains(Reg) ||
+                AMDGPU::TTMP_512RegClass.contains(Reg)) &&
+               "Unknown register class");
+
+        if (!RC || !TRI.isVGPRClass(RC))
+          continue;
+
+        if (MI.isCall() || MI.isMetaInstruction())
+          continue;
+
+        unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
+        unsigned HWReg = TRI.getHWRegIndex(Reg);
+        int MaxUsed = HWReg + Width - 1;
+        MaxVGPR = std::max(MaxUsed, MaxVGPR);
+      }
+
       if (MI.isCall()) {
         // Pseudo used just to encode the underlying global. Is there a better
         // way to track this?
@@ -218,6 +308,8 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
       }
     }
   }
+
+  Info.NumVGPR = MaxVGPR + 1;
 
   return Info;
 }

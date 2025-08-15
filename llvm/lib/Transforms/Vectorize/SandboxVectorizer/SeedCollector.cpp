@@ -21,12 +21,7 @@ namespace llvm::sandboxir {
 static cl::opt<unsigned> SeedBundleSizeLimit(
     "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
     cl::desc("Limit the size of the seed bundle to cap compilation time."));
-#define LoadSeedsDef "loads"
-#define StoreSeedsDef "stores"
-static cl::opt<std::string> CollectSeeds(
-    "sbvec-collect-seeds", cl::init(LoadSeedsDef "," StoreSeedsDef), cl::Hidden,
-    cl::desc("Collect these seeds. Use empty for none or a comma-separated "
-             "list of '" LoadSeedsDef "' and '" StoreSeedsDef "'."));
+
 static cl::opt<unsigned> SeedGroupsLimit(
     "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
     cl::desc("Limit the number of collected seeds groups in a BB to "
@@ -162,11 +157,10 @@ template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
 template bool isValidMemSeed<LoadInst>(LoadInst *LSI);
 template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
-SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
+SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
+                             bool CollectStores, bool CollectLoads)
     : StoreSeeds(SE), LoadSeeds(SE), Ctx(BB->getContext()) {
 
-  bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
-  bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
   if (!CollectStores && !CollectLoads)
     return;
 

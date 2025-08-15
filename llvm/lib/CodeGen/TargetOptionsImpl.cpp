@@ -39,12 +39,11 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
 
 bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-
-  if (!F.hasFnAttribute("frame-pointer"))
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
     return false;
 
-  StringRef FP = F.getFnAttribute("frame-pointer").getValueAsString();
-  return StringSwitch<bool>(FP)
+  return StringSwitch<bool>(FPAttr.getValueAsString())
       .Cases("all", "non-leaf", "reserved", true)
       .Case("none", false);
 }

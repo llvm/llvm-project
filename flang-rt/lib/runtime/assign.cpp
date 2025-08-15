@@ -63,9 +63,22 @@ static inline RT_API_ATTRS bool MustDeallocateLHS(
     // Distinct shape? Deallocate
     int rank{to.rank()};
     for (int j{0}; j < rank; ++j) {
-      if (to.GetDimension(j).Extent() != from.GetDimension(j).Extent()) {
+      const auto &toDim{to.GetDimension(j)};
+      const auto &fromDim{from.GetDimension(j)};
+      if (toDim.Extent() != fromDim.Extent()) {
         return true;
       }
+      if ((flags & UpdateLHSBounds) &&
+          toDim.LowerBound() != fromDim.LowerBound()) {
+        return true;
+      }
+    }
+  }
+  // Not reallocating; may have to update bounds
+  if (flags & UpdateLHSBounds) {
+    int rank{to.rank()};
+    for (int j{0}; j < rank; ++j) {
+      to.GetDimension(j).SetLowerBound(from.GetDimension(j).LowerBound());
     }
   }
   return false;
@@ -166,24 +179,27 @@ static RT_API_ATTRS bool MayAlias(const Descriptor &x, const Descriptor &y) {
 }
 
 static RT_API_ATTRS void DoScalarDefinedAssignment(const Descriptor &to,
-    const Descriptor &from, const typeInfo::SpecialBinding &special) {
+    const Descriptor &from, const typeInfo::DerivedType &derived,
+    const typeInfo::SpecialBinding &special) {
   bool toIsDesc{special.IsArgDescriptor(0)};
   bool fromIsDesc{special.IsArgDescriptor(1)};
+  const auto *bindings{
+      derived.binding().OffsetElement<const typeInfo::Binding>()};
   if (toIsDesc) {
     if (fromIsDesc) {
-      auto *p{
-          special.GetProc<void (*)(const Descriptor &, const Descriptor &)>()};
+      auto *p{special.GetProc<void (*)(const Descriptor &, const Descriptor &)>(
+          bindings)};
       p(to, from);
     } else {
-      auto *p{special.GetProc<void (*)(const Descriptor &, void *)>()};
+      auto *p{special.GetProc<void (*)(const Descriptor &, void *)>(bindings)};
       p(to, from.raw().base_addr);
     }
   } else {
     if (fromIsDesc) {
-      auto *p{special.GetProc<void (*)(void *, const Descriptor &)>()};
+      auto *p{special.GetProc<void (*)(void *, const Descriptor &)>(bindings)};
       p(to.raw().base_addr, from);
     } else {
-      auto *p{special.GetProc<void (*)(void *, void *)>()};
+      auto *p{special.GetProc<void (*)(void *, void *)>(bindings)};
       p(to.raw().base_addr, from.raw().base_addr);
     }
   }
@@ -201,11 +217,11 @@ static RT_API_ATTRS void DoElementalDefinedAssignment(const Descriptor &to,
   toElementDesc.Establish(derived, nullptr, 0, nullptr, CFI_attribute_pointer);
   fromElementDesc.Establish(
       derived, nullptr, 0, nullptr, CFI_attribute_pointer);
-  for (std::size_t toElements{to.Elements()}; toElements-- > 0;
-       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+  for (std::size_t toElements{to.InlineElements()}; toElements-- > 0;
+      to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     toElementDesc.set_base_addr(to.Element<char>(toAt));
     fromElementDesc.set_base_addr(from.Element<char>(fromAt));
-    DoScalarDefinedAssignment(toElementDesc, fromElementDesc, special);
+    DoScalarDefinedAssignment(toElementDesc, fromElementDesc, derived, special);
   }
 }
 
@@ -244,7 +260,8 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
     Terminator &terminator, int flags, MemmoveFct memmoveFct) {
   WorkQueue workQueue{terminator};
-  if (workQueue.BeginAssign(to, from, flags, memmoveFct) == StatContinue) {
+  if (workQueue.BeginAssign(to, from, flags, memmoveFct, nullptr) ==
+      StatContinue) {
     workQueue.Run();
   }
 }
@@ -262,13 +279,15 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
     if (mustDeallocateLHS) {
       // Convert the LHS into a temporary, then make it look deallocated.
       toDeallocate_ = &tempDescriptor_.descriptor();
-      persist_ = true; // tempDescriptor_ state must outlive child tickets
       std::memcpy(
           reinterpret_cast<void *>(toDeallocate_), &to_, to_.SizeInBytes());
       to_.set_base_addr(nullptr);
       if (toDerived_ && (flags_ & NeedFinalization)) {
-        if (int status{workQueue.BeginFinalize(*toDeallocate_, *toDerived_)};
-            status != StatOk && status != StatContinue) {
+        int status{workQueue.BeginFinalize(*toDeallocate_, *toDerived_)};
+        if (status == StatContinue) {
+          // tempDescriptor_ state must outlive pending child ticket
+          persist_ = true;
+        } else if (status != StatOk) {
           return status;
         }
         flags_ &= ~NeedFinalization;
@@ -287,6 +306,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       if (int stat{ReturnError(
               workQueue.terminator(), newFrom.Allocate(kNoAsyncObject))};
           stat != StatOk) {
+        if (stat == StatContinue) {
+          persist_ = true;
+        }
         return stat;
       }
       if (HasDynamicComponent(*from_)) {
@@ -312,14 +334,14 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
         }
         static constexpr int nestedFlags{MaybeReallocate | PolymorphicLHS};
         if (int status{workQueue.BeginAssign(
-                newFrom, *from_, nestedFlags, memmoveFct_)};
+                newFrom, *from_, nestedFlags, memmoveFct_, nullptr)};
             status != StatOk && status != StatContinue) {
           return status;
         }
       } else {
         ShallowCopy(newFrom, *from_, true, from_->IsContiguous());
       }
-      from_ = &newFrom;
+      from_ = &newFrom; // this is why from_ has to be a pointer
       flags_ &= NeedFinalization | ComponentCanBeDefinedAssignment |
           ExplicitLengthCharacterLHS | CanBeDefinedAssignment;
       toDeallocate_ = &newFrom;
@@ -347,6 +369,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
         return status;
       }
     } else if (!toDerived_->noDestructionNeeded()) {
+      // F'2023 9.7.3.2 p7: "When an intrinsic assignment statement (10.2.1.3)
+      // is executed, any noncoarray allocated allocatable subobject of the
+      // variable is deallocated before the assignment takes place."
       if (int status{
               workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false)};
           status != StatOk && status != StatContinue) {
@@ -381,10 +406,12 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
     }
     const auto *addendum{to_.Addendum()};
     toDerived_ = addendum ? addendum->derivedType() : nullptr;
-    if (toDerived_ && !toDerived_->noInitializationNeeded()) {
-      if (int status{workQueue.BeginInitialize(to_, *toDerived_)};
-          status != StatOk) {
-        return status;
+    if (toDerived_) {
+      if (!toDerived_->noInitializationNeeded()) {
+        if (int status{workQueue.BeginInitialize(to_, *toDerived_)};
+            status != StatOk) {
+          return status;
+        }
       }
     }
   }
@@ -393,16 +420,18 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
   // Note that the aliasing and LHS (re)allocation handling above
   // needs to run even with CanBeDefinedAssignment flag, since
   // Assign() can be invoked recursively for component-wise assignments.
-  if (toDerived_ && (flags_ & CanBeDefinedAssignment)) {
+  // The declared type (if known) must be used for generic resolution
+  // of ASSIGNMENT(=) to a binding, but that binding can be overridden.
+  if (declaredType_ && (flags_ & CanBeDefinedAssignment)) {
     if (to_.rank() == 0) {
-      if (const auto *special{toDerived_->FindSpecialBinding(
+      if (const auto *special{declaredType_->FindSpecialBinding(
               typeInfo::SpecialBinding::Which::ScalarAssignment)}) {
-        DoScalarDefinedAssignment(to_, *from_, *special);
+        DoScalarDefinedAssignment(to_, *from_, *toDerived_, *special);
         done_ = true;
         return StatContinue;
       }
     }
-    if (const auto *special{toDerived_->FindSpecialBinding(
+    if (const auto *special{declaredType_->FindSpecialBinding(
             typeInfo::SpecialBinding::Which::ElementalAssignment)}) {
       DoElementalDefinedAssignment(to_, *from_, *toDerived_, *special);
       done_ = true;
@@ -410,11 +439,14 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
     }
   }
   // Intrinsic assignment
-  std::size_t toElements{to_.Elements()};
-  if (from_->rank() > 0 && toElements != from_->Elements()) {
-    workQueue.terminator().Crash("Assign: mismatching element counts in array "
-                                 "assignment (to %zd, from %zd)",
-        toElements, from_->Elements());
+  std::size_t toElements{to_.InlineElements()};
+  if (from_->rank() > 0) {
+    std::size_t fromElements{from_->InlineElements()};
+    if (toElements != fromElements) {
+      workQueue.terminator().Crash("Assign: mismatching element counts in "
+                                   "array assignment (to %zd, from %zd)",
+          toElements, fromElements);
+    }
   }
   if (to_.type() != from_->type()) {
     workQueue.terminator().Crash(
@@ -483,6 +515,7 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
     }
   }
   if (persist_) {
+    // tempDescriptor_ must outlive pending child ticket(s)
     done_ = true;
     return StatContinue;
   } else {
@@ -508,7 +541,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Begin(
       // allocatable components or defined ASSIGNMENT(=) at any level.
       memmoveFct_(this->instance_.template OffsetElement<char>(),
           this->from_->template OffsetElement<const char *>(),
-          this->instance_.Elements() * elementBytes);
+          this->instance_.InlineElements() * elementBytes);
       return StatOk;
     }
   }
@@ -523,12 +556,12 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Begin(
   // Copy procedure pointer components
   const Descriptor &procPtrDesc{this->derived_.procPtr()};
   bool noDataComponents{this->IsComplete()};
-  if (std::size_t numProcPtrs{procPtrDesc.Elements()}) {
+  if (std::size_t numProcPtrs{procPtrDesc.InlineElements()}) {
     for (std::size_t k{0}; k < numProcPtrs; ++k) {
       const auto &procPtr{
           *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
       // Loop only over elements
-      if (noDataComponents) {
+      if (k > 0) {
         Elementwise::Reset();
       }
       for (; !Elementwise::IsComplete(); Elementwise::Advance()) {
@@ -566,9 +599,10 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
             workQueue.terminator(), this->subscripts_);
         this->component_->CreatePointerDescriptor(fromCompDesc, *this->from_,
             workQueue.terminator(), this->fromSubscripts_);
+        const auto *componentDerived{this->component_->derivedType()};
         this->Advance();
-        if (int status{workQueue.BeginAssign(
-                toCompDesc, fromCompDesc, flags_, memmoveFct_)};
+        if (int status{workQueue.BeginAssign(toCompDesc, fromCompDesc, flags_,
+                memmoveFct_, componentDerived)};
             status != StatOk) {
           return status;
         }
@@ -576,7 +610,8 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         std::size_t componentByteSize{
             this->component_->SizeInBytes(this->instance_)};
         if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
-          std::size_t offset{this->component_->offset()};
+          std::size_t offset{
+              static_cast<std::size_t>(this->component_->offset())};
           char *to{this->instance_.template OffsetElement<char>(offset)};
           const char *from{
               this->from_->template OffsetElement<const char>(offset)};
@@ -592,7 +627,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
               memmoveFct_(to, from, componentByteSize);
             }
           }
-          this->Componentwise::Advance();
+          this->SkipToNextComponent();
         } else {
           memmoveFct_(
               this->instance_.template Element<char>(this->subscripts_) +
@@ -608,7 +643,8 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
-        std::size_t offset{this->component_->offset()};
+        std::size_t offset{
+            static_cast<std::size_t>(this->component_->offset())};
         char *to{this->instance_.template OffsetElement<char>(offset)};
         const char *from{
             this->from_->template OffsetElement<const char>(offset)};
@@ -624,7 +660,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
             memmoveFct_(to, from, componentByteSize);
           }
         }
-        this->Componentwise::Advance();
+        this->SkipToNextComponent();
       } else {
         memmoveFct_(this->instance_.template Element<char>(this->subscripts_) +
                 this->component_->offset(),
@@ -642,15 +678,15 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       const auto *fromDesc{reinterpret_cast<const Descriptor *>(
           this->from_->template Element<char>(this->fromSubscripts_) +
           this->component_->offset())};
+      const auto *componentDerived{this->component_->derivedType()};
       if (toDesc->IsAllocatable() && !fromDesc->IsAllocated()) {
         if (toDesc->IsAllocated()) {
           if (this->phase_ == 0) {
-            this->phase_++;
-            if (const auto *componentDerived{this->component_->derivedType()};
-                componentDerived && !componentDerived->noDestructionNeeded()) {
+            if (componentDerived && !componentDerived->noDestructionNeeded()) {
               if (int status{workQueue.BeginDestroy(
                       *toDesc, *componentDerived, /*finalize=*/false)};
                   status != StatOk) {
+                this->phase_++;
                 return status;
               }
             }
@@ -663,19 +699,21 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         // deallocated before assignment (F'2018 10.2.1.3(13)(1)),
         // unlike a "top-level" assignment to a variable, where
         // deallocation is optional.
-        this->Advance();
         int nestedFlags{flags_};
-        if (this->derived_.noFinalizationNeeded() &&
-            this->derived_.noInitializationNeeded() &&
-            this->derived_.noDestructionNeeded()) {
-          // The actual deallocation may be avoided, if the existing
+        if (!componentDerived ||
+            (componentDerived->noFinalizationNeeded() &&
+                componentDerived->noInitializationNeeded() &&
+                componentDerived->noDestructionNeeded())) {
+          // The actual deallocation might be avoidable when the existing
           // location can be reoccupied.
+          nestedFlags |= MaybeReallocate | UpdateLHSBounds;
         } else {
           // Force LHS deallocation with DeallocateLHS flag.
           nestedFlags |= DeallocateLHS;
         }
-        if (int status{workQueue.BeginAssign(
-                *toDesc, *fromDesc, nestedFlags, memmoveFct_)};
+        this->Advance();
+        if (int status{workQueue.BeginAssign(*toDesc, *fromDesc, nestedFlags,
+                memmoveFct_, componentDerived)};
             status != StatOk) {
           return status;
         }
@@ -701,15 +739,15 @@ RT_API_ATTRS void DoFromSourceAssign(Descriptor &alloc,
     SubscriptValue allocAt[maxRank];
     alloc.GetLowerBounds(allocAt);
     if (allocDerived) {
-      for (std::size_t n{alloc.Elements()}; n-- > 0;
-           alloc.IncrementSubscripts(allocAt)) {
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
         Descriptor allocElement{*Descriptor::Create(*allocDerived,
             reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0)};
         Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
       }
     } else { // intrinsic type
-      for (std::size_t n{alloc.Elements()}; n-- > 0;
-           alloc.IncrementSubscripts(allocAt)) {
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
         memmoveFct(alloc.Element<char>(allocAt), source.raw().base_addr,
             alloc.ElementBytes());
       }

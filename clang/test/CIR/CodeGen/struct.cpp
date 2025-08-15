@@ -27,11 +27,11 @@ void f(void) {
   IncompleteS *p;
 }
 
-// CIR:      cir.func @_Z1fv()
+// CIR:      cir.func{{.*}} @_Z1fv()
 // CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"]
 // CIR-NEXT:   cir.return
 
-// LLVM:      define void @_Z1fv()
+// LLVM:      define{{.*}} void @_Z1fv()
 // LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   ret void
 
@@ -44,14 +44,14 @@ char f2(CompleteS &s) {
   return s.b;
 }
 
-// CIR: cir.func @_Z2f2R9CompleteS(%[[ARG_S:.*]]: !cir.ptr<!rec_CompleteS>{{.*}})
+// CIR: cir.func{{.*}} @_Z2f2R9CompleteS(%[[ARG_S:.*]]: !cir.ptr<!rec_CompleteS>{{.*}})
 // CIR:   %[[S_ADDR:.*]] = cir.alloca !cir.ptr<!rec_CompleteS>, !cir.ptr<!cir.ptr<!rec_CompleteS>>, ["s", init, const]
 // CIR:   cir.store %[[ARG_S]], %[[S_ADDR]]
 // CIR:   %[[S_REF:.*]] = cir.load{{.*}} %[[S_ADDR]]
 // CIR:   %[[S_ADDR2:.*]] = cir.get_member %[[S_REF]][1] {name = "b"}
 // CIR:   %[[S_B:.*]] = cir.load{{.*}} %[[S_ADDR2]]
 
-// LLVM: define i8 @_Z2f2R9CompleteS(ptr %[[ARG_S:.*]])
+// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr %[[ARG_S:.*]])
 // LLVM:   %[[S_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG_S]], ptr %[[S_ADDR]]
 // LLVM:   %[[S_REF:.*]] = load ptr, ptr %[[S_ADDR]], align 8
@@ -79,7 +79,7 @@ void f3() {
   o.i.n;
 }
 
-// CIR: cir.func @_Z2f3v()
+// CIR: cir.func{{.*}} @_Z2f3v()
 // CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o"]
 // CIR:   %[[O_I:.*]] = cir.get_member %[[O]][0] {name = "i"}
 // CIR:   %[[O_I_N:.*]] = cir.get_member %[[O_I]][0] {name = "n"}

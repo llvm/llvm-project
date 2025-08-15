@@ -502,8 +502,7 @@ class LowerTypeTestsModule {
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
   void importTypeTest(CallInst *CI);
-  void importFunction(Function *F, bool isJumpTableCanonical,
-                      std::vector<GlobalAlias *> &AliasesToErase);
+  void importFunction(Function *F, bool isJumpTableCanonical);
 
   BitSetInfo
   buildBitSet(Metadata *TypeId,
@@ -560,6 +559,8 @@ class LowerTypeTestsModule {
   bool isFunctionAnnotation(Value *V) const {
     return FunctionAnnotations.contains(V);
   }
+
+  void maybeReplaceComdat(Function *F, StringRef OriginalName);
 
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
@@ -1082,11 +1083,27 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
   }
 }
 
+void LowerTypeTestsModule::maybeReplaceComdat(Function *F,
+                                              StringRef OriginalName) {
+  // For COFF we should also rename the comdat if this function also
+  // happens to be the key function. Even if the comdat name changes, this
+  // should still be fine since comdat and symbol resolution happens
+  // before LTO, so all symbols which would prevail have been selected.
+  if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+      F->getComdat()->getName() == OriginalName) {
+    Comdat *OldComdat = F->getComdat();
+    Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+    for (GlobalObject &GO : M.global_objects()) {
+      if (GO.getComdat() == OldComdat)
+        GO.setComdat(NewComdat);
+    }
+  }
+}
+
 // ThinLTO backend: the function F has a jump table entry; update this module
 // accordingly. isJumpTableCanonical describes the type of the jump table entry.
-void LowerTypeTestsModule::importFunction(
-    Function *F, bool isJumpTableCanonical,
-    std::vector<GlobalAlias *> &AliasesToErase) {
+void LowerTypeTestsModule::importFunction(Function *F,
+                                          bool isJumpTableCanonical) {
   assert(F->getType()->getAddressSpace() == 0);
 
   GlobalValue::VisibilityTypes Visibility = F->getVisibility();
@@ -1115,23 +1132,24 @@ void LowerTypeTestsModule::importFunction(
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
   } else {
     F->setName(Name + ".cfi");
-    F->setLinkage(GlobalValue::ExternalLinkage);
+    maybeReplaceComdat(F, Name);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
     Visibility = GlobalValue::HiddenVisibility;
 
-    // Delete aliases pointing to this function, they'll be re-created in the
-    // merged output. Don't do it yet though because ScopedSaveAliaseesAndUsed
-    // will want to reset the aliasees first.
+    // Update aliases pointing to this function to also include the ".cfi" suffix,
+    // We expect the jump table entry to either point to the real function or an
+    // alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
+        std::string AliasName = A->getName().str() + ".cfi";
         Function *AliasDecl = Function::Create(
             F->getFunctionType(), GlobalValue::ExternalLinkage,
             F->getAddressSpace(), "", &M);
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
-        AliasesToErase.push_back(A);
+        A->setName(AliasName);
       }
     }
   }
@@ -1507,11 +1525,6 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
-  std::string AsmStr, ConstraintStr;
-  raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
-  SmallVector<Value *, 16> AsmArgs;
-  AsmArgs.reserve(Functions.size() * 2);
-
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 
@@ -1681,8 +1694,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        GlobalValue::PrivateLinkage,
                        M.getDataLayout().getProgramAddressSpace(),
                        ".cfi.jumptable", &M);
+  ArrayType *JumpTableEntryType = ArrayType::get(Int8Ty, EntrySize);
   ArrayType *JumpTableType =
-      ArrayType::get(ArrayType::get(Int8Ty, EntrySize), Functions.size());
+      ArrayType::get(JumpTableEntryType, Functions.size());
   auto JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
@@ -1703,7 +1717,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     if (!IsJumpTableCanonical) {
       GlobalValue::LinkageTypes LT = IsExported ? GlobalValue::ExternalLinkage
                                                 : GlobalValue::InternalLinkage;
-      GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
+      GlobalAlias *JtAlias = GlobalAlias::create(JumpTableEntryType, 0, LT,
                                                  F->getName() + ".cfi_jt",
                                                  CombinedGlobalElemPtr, &M);
       if (IsExported)
@@ -1728,25 +1742,14 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     } else {
       assert(F->getType()->getAddressSpace() == 0);
 
-      GlobalAlias *FAlias = GlobalAlias::create(
-          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
+      GlobalAlias *FAlias =
+          GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
+                              CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
-        // For COFF we should also rename the comdat if this function also
-        // happens to be the key function. Even if the comdat name changes, this
-        // should still be fine since comdat and symbol resolution happens
-        // before LTO, so all symbols which would prevail have been selected.
-        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
-            F->getComdat()->getName() == FAlias->getName()) {
-          Comdat *OldComdat = F->getComdat();
-          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
-          for (GlobalObject &GO : M.global_objects()) {
-            if (GO.getComdat() == OldComdat)
-              GO.setComdat(NewComdat);
-          }
-        }
+        maybeReplaceComdat(F, FAlias->getName());
       }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
@@ -2072,16 +2075,13 @@ bool LowerTypeTestsModule::lower() {
         Decls.push_back(&F);
     }
 
-    std::vector<GlobalAlias *> AliasesToErase;
     {
       ScopedSaveAliaseesAndUsed S(M);
       for (auto *F : Defs)
-        importFunction(F, /*isJumpTableCanonical*/ true, AliasesToErase);
+        importFunction(F, /*isJumpTableCanonical*/ true);
       for (auto *F : Decls)
-        importFunction(F, /*isJumpTableCanonical*/ false, AliasesToErase);
+        importFunction(F, /*isJumpTableCanonical*/ false);
     }
-    for (GlobalAlias *GA : AliasesToErase)
-      GA->eraseFromParent();
 
     return true;
   }
@@ -2132,6 +2132,18 @@ bool LowerTypeTestsModule::lower() {
                 if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
                   AddressTaken.insert(Alias->getAliaseeGUID());
             }
+      auto IsAddressTaken = [&](GlobalValue::GUID GUID) {
+        if (AddressTaken.count(GUID))
+          return true;
+        auto VI = ExportSummary->getValueInfo(GUID);
+        if (!VI)
+          return false;
+        for (auto &I : VI.getSummaryList())
+          if (auto Alias = dyn_cast<AliasSummary>(I.get()))
+            if (AddressTaken.count(Alias->getAliaseeGUID()))
+              return true;
+        return false;
+      };
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
@@ -2148,7 +2160,7 @@ bool LowerTypeTestsModule::lower() {
         // have no live references (and are not exported with cross-DSO CFI.)
         if (!ExportSummary->isGUIDLive(GUID))
           continue;
-        if (!AddressTaken.count(GUID)) {
+        if (!IsAddressTaken(GUID)) {
           if (!CrossDsoCfi || Linkage != CFL_Definition)
             continue;
 
@@ -2217,6 +2229,43 @@ bool LowerTypeTestsModule::lower() {
           for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
+        }
+      }
+    }
+  }
+
+  struct AliasToCreate {
+    Function *Alias;
+    std::string TargetName;
+  };
+  std::vector<AliasToCreate> AliasesToCreate;
+
+  // Parse alias data to replace stand-in function declarations for aliases
+  // with an alias to the intended target.
+  if (ExportSummary) {
+    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
+      for (auto *AliasMD : AliasesMD->operands()) {
+        SmallVector<Function *> Aliases;
+        for (Metadata *MD : AliasMD->operands()) {
+          auto *MDS = dyn_cast<MDString>(MD);
+          if (!MDS)
+            continue;
+          StringRef AliasName = MDS->getString();
+          if (!ExportedFunctions.count(AliasName))
+            continue;
+          auto *AliasF = M.getFunction(AliasName);
+          if (AliasF)
+            Aliases.push_back(AliasF);
+        }
+
+        if (Aliases.empty())
+          continue;
+
+        for (unsigned I = 1; I != Aliases.size(); ++I) {
+          auto *AliasF = Aliases[I];
+          ExportedFunctions.erase(AliasF->getName());
+          AliasesToCreate.push_back(
+              {AliasF, std::string(Aliases[0]->getName())});
         }
       }
     }
@@ -2409,47 +2458,16 @@ bool LowerTypeTestsModule::lower() {
 
   allocateByteArrays();
 
-  // Parse alias data to replace stand-in function declarations for aliases
-  // with an alias to the intended target.
-  if (ExportSummary) {
-    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
-      for (auto *AliasMD : AliasesMD->operands()) {
-        assert(AliasMD->getNumOperands() >= 4);
-        StringRef AliasName =
-            cast<MDString>(AliasMD->getOperand(0))->getString();
-        StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
-
-        if (auto It = ExportedFunctions.find(Aliasee);
-            It == ExportedFunctions.end() ||
-            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
-          continue;
-
-        GlobalValue::VisibilityTypes Visibility =
-            static_cast<GlobalValue::VisibilityTypes>(
-                cast<ConstantAsMetadata>(AliasMD->getOperand(2))
-                    ->getValue()
-                    ->getUniqueInteger()
-                    .getZExtValue());
-        bool Weak =
-            static_cast<bool>(cast<ConstantAsMetadata>(AliasMD->getOperand(3))
-                                  ->getValue()
-                                  ->getUniqueInteger()
-                                  .getZExtValue());
-
-        auto *Alias = GlobalAlias::create("", M.getNamedAlias(Aliasee));
-        Alias->setVisibility(Visibility);
-        if (Weak)
-          Alias->setLinkage(GlobalValue::WeakAnyLinkage);
-
-        if (auto *F = M.getFunction(AliasName)) {
-          Alias->takeName(F);
-          F->replaceAllUsesWith(Alias);
-          F->eraseFromParent();
-        } else {
-          Alias->setName(AliasName);
-        }
-      }
-    }
+  for (auto A : AliasesToCreate) {
+    auto *Target = M.getNamedValue(A.TargetName);
+    if (!isa<GlobalAlias>(Target))
+      continue;
+    auto *AliasGA = GlobalAlias::create("", Target);
+    AliasGA->setVisibility(A.Alias->getVisibility());
+    AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->takeName(A.Alias);
+    A.Alias->replaceAllUsesWith(AliasGA);
+    A.Alias->eraseFromParent();
   }
 
   // Emit .symver directives for exported functions, if they exist.

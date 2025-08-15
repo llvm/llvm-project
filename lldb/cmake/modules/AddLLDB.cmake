@@ -41,7 +41,7 @@ function(add_lldb_library name)
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
     "INSTALL_PREFIX"
-    "EXTRA_CXXFLAGS;LINK_LIBS;CLANG_LIBS"
+    "LINK_LIBS;CLANG_LIBS"
     ${ARGN})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
@@ -129,9 +129,6 @@ function(add_lldb_library name)
   if(NOT LLDB_BUILT_STANDALONE)
     add_dependencies(${name} clang-tablegen-targets)
   endif()
-
-  # Add in any extra C++ compilation flags for this library.
-  target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
 
   if(PARAM_PLUGIN)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)

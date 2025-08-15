@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/async/async_work_group_copy.h>
+#include <clc/opencl/async/async_work_group_strided_copy.h>
 
 #define __CLC_BODY <async_work_group_copy.inc>
 #include <clc/integer/gentype.inc>

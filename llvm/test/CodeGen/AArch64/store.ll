@@ -167,11 +167,16 @@ define void @store_v16i16(<16 x i16> %a, ptr %ptr){
 }
 
 define void @store_v1i32(<1 x i32> %a, ptr %ptr){
-; CHECK-LABEL: store_v1i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: store_v1i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: store_v1i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str s0, [x0]
+; CHECK-GI-NEXT:    ret
     store <1 x i32> %a, ptr %ptr
     ret void
 }

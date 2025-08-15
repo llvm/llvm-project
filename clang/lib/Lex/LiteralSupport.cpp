@@ -1467,7 +1467,7 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
   if (s != PossibleNewDigitStart)
     DigitsBegin = PossibleNewDigitStart;
   else
-    IsSingleZero = (s == ThisTokEnd); // Is the only thing we've seen a 0?
+    IsSingleZero = (s == ThisTokBegin + 1);
 
   if (s == ThisTokEnd)
     return; // Done, simple octal number like 01234

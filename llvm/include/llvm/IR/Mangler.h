@@ -26,7 +26,16 @@ class Triple;
 class Twine;
 class raw_ostream;
 
-constexpr std::string_view HybridPatchableTargetSuffix = "$hp_target";
+// TODO: The weird assignment of HybridPatchableTargetSuffix below is a
+// temporary workaround for a linker failure that is only hit when compiling
+// llvm for arm64ec on windows. The description and context of the issue is at
+// https://github.com/llvm/llvm-project/issues/143575.
+// An upstream MSVC bug is filed at
+// https://developercommunity.visualstudio.com/t/MSVC-Linker-Issue-When-Cross-
+// Compiling-L/10920141.
+constexpr char HybridPatchableTargetSuffixArr[] = "$hp_target";
+constexpr std::string_view HybridPatchableTargetSuffix =
+    HybridPatchableTargetSuffixArr;
 
 class Mangler {
   /// We need to give global values the same name every time they are mangled.

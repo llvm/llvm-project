@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -27,12 +26,13 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
 // This struct represents the cluster information for a machine basic block,
-// which is specifed by a unique ID (`MachineBasicBlock::BBID`).
+// which is specifed by a unique basic block ID.
 struct BBClusterInfo {
   // Basic block ID.
   UniqueBBID BBID;
@@ -50,27 +50,6 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
-};
-
-// Provides DenseMapInfo for UniqueBBID.
-template <> struct DenseMapInfo<UniqueBBID> {
-  static inline UniqueBBID getEmptyKey() {
-    unsigned EmptyKey = DenseMapInfo<unsigned>::getEmptyKey();
-    return UniqueBBID{EmptyKey, EmptyKey};
-  }
-  static inline UniqueBBID getTombstoneKey() {
-    unsigned TombstoneKey = DenseMapInfo<unsigned>::getTombstoneKey();
-    return UniqueBBID{TombstoneKey, TombstoneKey};
-  }
-  static unsigned getHashValue(const UniqueBBID &Val) {
-    std::pair<unsigned, unsigned> PairVal =
-        std::make_pair(Val.BaseID, Val.CloneID);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
-  }
-  static bool isEqual(const UniqueBBID &LHS, const UniqueBBID &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.BaseID, RHS.BaseID) &&
-           DenseMapInfo<unsigned>::isEqual(LHS.CloneID, RHS.CloneID);
-  }
 };
 
 class BasicBlockSectionsProfileReader {

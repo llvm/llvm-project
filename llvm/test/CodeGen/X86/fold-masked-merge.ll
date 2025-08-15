@@ -269,3 +269,27 @@ define i32 @masked_merge_no_transform2(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
   store i32 %and1, ptr %p1
   ret i32 %or
 }
+
+define i32 @pr137641_crash({ i8, i32 } %0) {
+; NOBMI-LABEL: pr137641_crash:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    andl $201, %eax
+; NOBMI-NEXT:    xorl $1, %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: pr137641_crash:
+; BMI:       # %bb.0:
+; BMI-NEXT:    movl %esi, %eax
+; BMI-NEXT:    notl %eax
+; BMI-NEXT:    andl $1, %eax
+; BMI-NEXT:    andl $200, %esi
+; BMI-NEXT:    orl %esi, %eax
+; BMI-NEXT:    retq
+  %asmresult1.i = extractvalue { i8, i32 } %0, 1
+  %not = xor i32 %asmresult1.i, 1
+  %and = and i32 1, %not
+  %and1 = and i32 %asmresult1.i, 200
+  %2 = or i32 %and, %and1
+  ret i32 %2
+}

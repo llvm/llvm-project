@@ -434,7 +434,7 @@ public:
 };
 
 template <class _Mutex>
-class _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) scoped_lock<_Mutex> {
+class _LIBCPP_SCOPED_LOCKABLE scoped_lock<_Mutex> {
 public:
   typedef _Mutex mutex_type;
 
@@ -442,16 +442,15 @@ private:
   mutex_type& __m_;
 
 public:
-  [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(mutex_type& __m) _LIBCPP_ACQUIRE_CAPABILITY(__m)
       : __m_(__m) {
     __m_.lock();
   }
 
-  ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) { __m_.unlock(); }
+  _LIBCPP_RELEASE_CAPABILITY _LIBCPP_HIDE_FROM_ABI ~scoped_lock() { __m_.unlock(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t, mutex_type& __m)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t, mutex_type& __m) _LIBCPP_REQUIRES_CAPABILITY(__m)
       : __m_(__m) {}
 
   scoped_lock(scoped_lock const&)            = delete;
@@ -470,17 +469,14 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI scoped_lock(adopt_lock_t, _MArgs&... __margs) : __t_(__margs...) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~scoped_lock() {
-    typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
-    __unlock_unpack(_Indices{}, __t_);
-  }
+  _LIBCPP_HIDE_FROM_ABI ~scoped_lock() { __unlock_unpack(make_index_sequence<sizeof...(_MArgs)>(), __t_); }
 
   scoped_lock(scoped_lock const&)            = delete;
   scoped_lock& operator=(scoped_lock const&) = delete;
 
 private:
   template <size_t... _Indx>
-  _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
+  _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(index_sequence<_Indx...>, _MutexTuple& __mt) {
     (std::get<_Indx>(__mt).unlock(), ...);
   }
 
@@ -504,6 +500,7 @@ _LIBCPP_POP_MACROS
 #    include <initializer_list>
 #    include <iosfwd>
 #    include <new>
+#    include <optional>
 #    include <stdexcept>
 #    include <system_error>
 #    include <type_traits>

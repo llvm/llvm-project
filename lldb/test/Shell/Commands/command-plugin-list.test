@@ -10,10 +10,10 @@
 # Test plugin list without an argument will list all plugins.
 plugin list
 # CHECK-LABEL: plugin list
-# CHECK: system-runtime
-# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
-# CHECK: instrumentation-runtime
-# CHECK:  [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+# CHECK-DAG: instrumentation-runtime
+# CHECK-DAG:  [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+# CHECK-DAG: system-runtime
+# CHECK-DAG:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
 # Test plugin list works with fully qualified name.
 plugin list system-runtime.systemruntime-macosx

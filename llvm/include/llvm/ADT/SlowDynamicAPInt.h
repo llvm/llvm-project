@@ -62,18 +62,17 @@ public:
   LLVM_ABI SlowDynamicAPInt &operator++();
   LLVM_ABI SlowDynamicAPInt &operator--();
 
-  LLVM_ABI_FRIEND friend SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
-  LLVM_ABI_FRIEND friend SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
-                                                  const SlowDynamicAPInt &RHS);
-  LLVM_ABI_FRIEND friend SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
-                                                   const SlowDynamicAPInt &RHS);
+  LLVM_ABI friend SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
+  LLVM_ABI friend SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
+                                           const SlowDynamicAPInt &RHS);
+  LLVM_ABI friend SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
+                                            const SlowDynamicAPInt &RHS);
   /// The operands must be non-negative for gcd.
-  LLVM_ABI_FRIEND friend SlowDynamicAPInt gcd(const SlowDynamicAPInt &A,
-                                              const SlowDynamicAPInt &B);
+  LLVM_ABI friend SlowDynamicAPInt gcd(const SlowDynamicAPInt &A,
+                                       const SlowDynamicAPInt &B);
 
   /// Overload to compute a hash_code for a SlowDynamicAPInt value.
-  LLVM_ABI_FRIEND friend hash_code
-  hash_value(const SlowDynamicAPInt &X); // NOLINT
+  LLVM_ABI friend hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
 
   // Make DynamicAPInt a friend so it can access Val directly.
   friend DynamicAPInt;

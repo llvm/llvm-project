@@ -243,7 +243,6 @@ define <1 x i32> @abs_v1i32(<1 x i32> %a){
 ;
 ; CHECK-GI-LABEL: abs_v1i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s0
 ; CHECK-GI-NEXT:    cmp w8, #0

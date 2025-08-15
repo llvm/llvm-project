@@ -1750,9 +1750,9 @@ to guard against use of uninitialized memory.
 
 Rather, it is intended for use in "parameter-objects", used to simulate,
 for example, the passing of named parameters.
-The attribute generates a warning when explicit initializers for such
-variables are not provided (this occurs regardless of whether any in-class field
-initializers exist):
+Except inside unevaluated contexts, the attribute generates a warning when
+explicit initializers for such variables are not provided (this occurs
+regardless of whether any in-class field initializers exist):
 
 .. code-block:: c++
 
@@ -2905,9 +2905,12 @@ the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
 Permissible values for this parameter are ``machine``, ``supervisor``,
-``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``rnmi``, ``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
 ``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
 ``machine``.
+
+The ``rnmi`` value is used for resumable non-maskable interrupts. It requires the
+standard Smrnmi extension.
 
 The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
 and are used for Machine-mode Interrupts and Machine-mode Non-maskable
@@ -2934,7 +2937,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
-https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0
 https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
@@ -3640,6 +3643,99 @@ def CFICanonicalJumpTableDocs : Documentation {
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
+  }];
+}
+
+def CFISaltDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "cfi_salt";
+  let Label = "langext-cfi_salt";
+  let Content = [{
+The ``cfi_salt`` attribute specifies a string literal that is used as a salt
+for Control-Flow Integrity (CFI) checks to distinguish between functions with
+the same type signature. This attribute can be applied to function declarations,
+function definitions, and function pointer typedefs.
+
+The attribute prevents function pointers from being replaced with pointers to
+functions that have a compatible type, which can be a CFI bypass vector.
+
+**Syntax:**
+
+* GNU-style: ``__attribute__((cfi_salt("<salt_string>")))``
+* C++11-style: ``[[clang::cfi_salt("<salt_string>")]]``
+
+**Usage:**
+
+The attribute takes a single string literal argument that serves as the salt.
+Functions or function types with different salt values will have different CFI
+hashes, even if they have identical type signatures.
+
+**Motivation:**
+
+In large codebases like the Linux kernel, there are often hundreds of functions
+with identical type signatures that are called indirectly:
+
+.. code-block::
+
+  1662 functions with void (*)(void)
+  1179 functions with int (*)(void)
+   ...
+
+By salting the CFI hashes, you can make CFI more robust by ensuring that
+functions intended for different purposes have distinct CFI identities.
+
+**Type Compatibility:**
+
+* Functions with different salt values are considered to have incompatible types
+* Function pointers with different salt values cannot be assigned to each other
+* All declarations of the same function must use the same salt value
+
+**Example:**
+
+.. code-block:: c
+
+  // Header file - define convenience macros
+  #define __cfi_salt(s) __attribute__((cfi_salt(s)))
+  
+  // Typedef for regular function pointers
+  typedef int (*fptr_t)(void);
+  
+  // Typedef for salted function pointers  
+  typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
+  
+  struct widget_ops {
+    fptr_t init;          // Regular CFI
+    fptr_salted_t exec;   // Salted CFI
+    fptr_t cleanup;       // Regular CFI
+  };
+  
+  // Function implementations
+  static int widget_init(void) { return 0; }
+  static int widget_exec(void) __cfi_salt("pepper") { return 1; }
+  static int widget_cleanup(void) { return 0; }
+  
+  static struct widget_ops ops = {
+    .init = widget_init,      // OK - compatible types
+    .exec = widget_exec,      // OK - both use "pepper" salt
+    .cleanup = widget_cleanup // OK - compatible types
+  };
+  
+  // Using C++11 attribute syntax
+  void secure_callback(void) [[clang::cfi_salt("secure")]];
+  
+  // This would cause a compilation error:
+  // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
+
+**Notes:**
+
+* The salt string can contain non-NULL ASCII characters, including spaces and
+  quotes
+* This attribute only applies to function types; using it on non-function 
+  types will generate a warning
+* All declarations and definitions of the same function must use identical 
+  salt values
+* The attribute affects type compatibility during compilation and CFI hash 
+  generation during code generation
   }];
 }
 
@@ -8252,6 +8348,21 @@ and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
 }
 
+def VkConstantIdDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``vk::constant_id`` attribute specifies the id for a SPIR-V specialization
+constant. The attribute applies to const global scalar variables. The variable must be initialized with a C++11 constexpr.
+In SPIR-V, the
+variable will be replaced with an `OpSpecConstant` with the given id.
+The syntax is:
+
+.. code-block:: text
+
+  ``[[vk::constant_id(<Id>)]] const T Name = <Init>``
+}];
+}
+
 def RootSignatureDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8529,6 +8640,20 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLSV_PositionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_Position`` semantic, when applied to an input parameter in a pixel
+shader, contains the location of the pixel center (x, y) in screen space.
+This semantic can be applied to the parameter, or a field in a struct used
+as an input parameter.
+This attribute is supported as an input in pixel, hull, domain and mesh shaders.
+This attribute is supported as an output in vertex, geometry and domain shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -8746,6 +8871,32 @@ def ReadOnlyPlacementDocs : Documentation {
      ``enforce_read_only_placement`` attribute.
   5. A type ``Q`` inherits from type ``T`` and it does not have the
      ``enforce_read_only_placement`` attribute.
+  }];
+}
+
+def HLSLVkBindingDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``[[vk::binding]]`` attribute allows you to explicitly specify the descriptor
+set and binding for a resource when targeting SPIR-V. This is particularly
+useful when you need different bindings for SPIR-V and DXIL, as the ``register``
+attribute can be used for DXIL-specific bindings.
+
+The attribute takes two integer arguments: the binding and the descriptor set.
+The descriptor set is optional and defaults to 0 if not provided.
+
+.. code-block:: c++
+
+  // A structured buffer with binding 23 in descriptor set 102.
+  [[vk::binding(23, 102)]] StructuredBuffer<float> Buf;
+
+  // A structured buffer with binding 14 in descriptor set 0.
+  [[vk::binding(14)]] StructuredBuffer<float> Buf2;
+
+  // A cbuffer with binding 1 in descriptor set 2.
+  [[vk::binding(1, 2)]] cbuffer MyCBuffer {
+    float4x4 worldViewProj;
+  };
   }];
 }
 
@@ -9388,9 +9539,9 @@ def NonStringDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``nonstring`` attribute can be applied to the declaration of a variable or
-a field whose type is a character array to specify that the character array is
-not intended to behave like a null-terminated string. This will silence
-diagnostics with code like:
+a field whose type is a character pointer or character array to specify that
+the buffer is not intended to behave like a null-terminated string. This will
+silence diagnostics with code like:
 
 .. code-block:: c
 

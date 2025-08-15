@@ -6,7 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/float/definitions.h>
+#include <clc/opencl/as_type.h>
+#include <clc/opencl/math/copysign.h>
+#include <clc/opencl/math/fabs.h>
+#include <clc/opencl/math/nextafter.h>
+#include <clc/opencl/relational/isinf.h>
+#include <clc/opencl/relational/isnan.h>
+#include <clc/opencl/shared/min.h>
+#include <clc/opencl/shared/vstore.h>
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=0
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=1
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=2
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=3
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=4
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=0
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=1
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=2
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=3
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=4
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26
 
 namespace std {
 #if !defined(INVALID_TYPE_IDENTITY_VERSION)

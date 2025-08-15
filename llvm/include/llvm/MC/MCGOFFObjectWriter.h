@@ -10,6 +10,7 @@
 #define LLVM_MC_MCGOFFOBJECTWRITER_H
 
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 
 namespace llvm {
 class MCObjectWriter;
@@ -27,6 +28,25 @@ public:
   static bool classof(const MCObjectTargetWriter *W) {
     return W->getFormat() == Triple::GOFF;
   }
+};
+
+class GOFFObjectWriter : public MCObjectWriter {
+  // The target specific GOFF writer instance.
+  std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
+
+  // The stream used to write the GOFF records.
+  raw_pwrite_stream &OS;
+
+public:
+  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                   raw_pwrite_stream &OS);
+  ~GOFFObjectWriter() override;
+
+  // Implementation of the MCObjectWriter interface.
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override {}
+
+  uint64_t writeObject() override;
 };
 
 /// \brief Construct a new GOFF writer instance.

@@ -78,12 +78,19 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           [](PyPassManager &passManager, bool printBeforeAll,
              bool printAfterAll, bool printModuleScope, bool printAfterChange,
              bool printAfterFailure, std::optional<int64_t> largeElementsLimit,
-             bool enableDebugInfo, bool printGenericOpForm,
+             std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
+             bool printGenericOpForm,
              std::optional<std::string> optionalTreePrintingPath) {
             MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
-            if (largeElementsLimit)
+            if (largeElementsLimit) {
               mlirOpPrintingFlagsElideLargeElementsAttrs(flags,
                                                          *largeElementsLimit);
+              mlirOpPrintingFlagsElideLargeResourceString(flags,
+                                                          *largeElementsLimit);
+            }
+            if (largeResourceLimit)
+              mlirOpPrintingFlagsElideLargeResourceString(flags,
+                                                          *largeResourceLimit);
             if (enableDebugInfo)
               mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/true,
                                                  /*prettyForm=*/false);
@@ -103,6 +110,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "print_module_scope"_a = false, "print_after_change"_a = false,
           "print_after_failure"_a = false,
           "large_elements_limit"_a.none() = nb::none(),
+          "large_resource_limit"_a.none() = nb::none(),
           "enable_debug_info"_a = false, "print_generic_op_form"_a = false,
           "tree_printing_dir_path"_a.none() = nb::none(),
           "Enable IR printing, default as mlir-print-ir-after-all.")
@@ -112,6 +120,12 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             mlirPassManagerEnableVerifier(passManager.get(), enable);
           },
           "enable"_a, "Enable / disable verify-each.")
+      .def(
+          "enable_timing",
+          [](PyPassManager &passManager) {
+            mlirPassManagerEnableTiming(passManager.get());
+          },
+          "Enable pass timing.")
       .def_static(
           "parse",
           [](const std::string &pipeline, DefaultingPyMlirContext context) {

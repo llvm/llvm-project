@@ -304,7 +304,7 @@ bool2 AccessBools() {
   return X.zw;
 }
 
-// CHECK-LABEL: define void {{.*}}BoolSizeMismatch{{.*}}
+// CHECK-LABEL: define hidden void {{.*}}BoolSizeMismatch{{.*}}
 // CHECK: [[B:%.*]] = alloca <4 x i32>, align 16
 // CHECK-NEXT: [[Tmp:%.*]] = alloca <1 x i32>, align 4
 // CHECK-NEXT: store <4 x i32> splat (i32 1), ptr [[B]], align 16

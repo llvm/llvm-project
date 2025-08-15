@@ -201,6 +201,17 @@ define <2 x float> @sqrt_exp_vec(<2 x float> %x) {
   ret <2 x float> %res
 }
 
+define <2 x float> @sqrt_unary_shuffle_ops(<2 x float> %x) {
+; CHECK-LABEL: @sqrt_unary_shuffle_ops(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[A:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R1]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x float> @llvm.sqrt(<2 x float> %a)
+  ret <2 x float> %r
+}
+
 declare i32 @foo(double)
 declare double @sqrt(double) readnone
 declare float @sqrtf(float)

@@ -270,6 +270,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
+  uint16_t NumWaveDispatchSGPRs = 0;
+  uint16_t NumWaveDispatchVGPRs = 0;
   uint32_t HighBitsOf32BitAddress = 0;
 
   // TODO: 10 may be a better default since it's the maximum.
@@ -298,7 +300,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+  bool IsWholeWaveFunction = false;
 
+  unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
@@ -325,6 +329,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
     YamlIO.mapOptional("hasSpilledVGPRs", MFI.HasSpilledVGPRs, false);
+    YamlIO.mapOptional("numWaveDispatchSGPRs", MFI.NumWaveDispatchSGPRs, false);
+    YamlIO.mapOptional("numWaveDispatchVGPRs", MFI.NumWaveDispatchVGPRs, false);
     YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
                        StringValue("$private_rsrc_reg"));
     YamlIO.mapOptional("frameOffsetReg", MFI.FrameOffsetReg,
@@ -352,8 +358,10 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
   }
 };
 
@@ -461,6 +469,9 @@ private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
 
+  unsigned NumWaveDispatchSGPRs = 0;
+  unsigned NumWaveDispatchVGPRs = 0;
+
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
   bool HasNonSpillStackObjects = false;
@@ -468,6 +479,8 @@ private:
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
+
+  unsigned DynamicVGPRBlockSize = 0;
 
   // The size in bytes of the scratch space reserved for the CWSR trap handler
   // to spill some of the dynamic VGPRs.
@@ -560,6 +573,8 @@ private:
   // for actual spilling. A separate set makes the register reserved part and
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
+
+  bool IsWholeWaveFunction = false;
 
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
@@ -665,6 +680,8 @@ public:
   bool isWWMReservedRegister(Register Reg) const {
     return WWMReservedRegs.contains(Reg);
   }
+
+  bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
@@ -820,6 +837,9 @@ public:
     BytesInStackArgArea = Bytes;
   }
 
+  bool isDynamicVGPREnabled() const { return DynamicVGPRBlockSize != 0; }
+  unsigned getDynamicVGPRBlockSize() const { return DynamicVGPRBlockSize; }
+
   // This is only used if we need to save any dynamic VGPRs in scratch.
   unsigned getScratchReservedForDynamicVGPRs() const {
     return ScratchReservedForDynamicVGPRs;
@@ -970,28 +990,21 @@ public:
     return NumUserSGPRs;
   }
 
-  // Get the number of preloaded SGPRs for compute kernels.
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
-  }
-
-  // Get the number of preloaded VGPRs for compute kernels.
-  unsigned getNumPreloadedVGPRs() const {
-    if (hasWorkItemIDZ())
-      return ArgInfo.WorkItemIDZ.getRegister() - AMDGPU::VGPR0 + 1;
-
-    if (hasWorkItemIDY())
-      return ArgInfo.WorkItemIDY.getRegister() - AMDGPU::VGPR0 + 1;
-
-    if (hasWorkItemIDX())
-      return ArgInfo.WorkItemIDX.getRegister() - AMDGPU::VGPR0 + 1;
-
-    return 0;
   }
 
   unsigned getNumKernargPreloadedSGPRs() const {
     return UserSGPRInfo.getNumKernargPreloadSGPRs();
   }
+
+  unsigned getNumWaveDispatchSGPRs() const { return NumWaveDispatchSGPRs; }
+
+  void setNumWaveDispatchSGPRs(unsigned Count) { NumWaveDispatchSGPRs = Count; }
+
+  unsigned getNumWaveDispatchVGPRs() const { return NumWaveDispatchVGPRs; }
+
+  void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
     return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();

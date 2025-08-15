@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -enable-ipra < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -enable-ipra < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; Kernels are not called, so there is no call preserved mask.
 ; GCN-LABEL: {{^}}kernel:
@@ -64,7 +64,7 @@ define void @func_regular_call() #1 {
 ; GCN-NEXT: s_addc_u32 s17,
 ; GCN-NEXT: s_setpc_b64 s[16:17]
 
-; GCN: ; TotalNumSgprs: 18
+; GCN: ; TotalNumSgprs: 32
 ; GCN: ; NumVgprs: 8
 define void @func_tail_call() #1 {
   tail call void @func()

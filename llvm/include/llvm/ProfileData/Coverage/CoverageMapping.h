@@ -31,6 +31,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -492,6 +493,15 @@ public:
   /// ordinal position to actual condition ID. This is done via PosToID[].
   CondState getTVCondition(unsigned TestVectorIndex, unsigned Condition) {
     return TV[TestVectorIndex].first[PosToID[Condition]];
+  }
+
+  /// Return the number of True and False decisions for all executed test
+  /// vectors.
+  std::pair<unsigned, unsigned> getDecisions() const {
+    const unsigned TrueDecisions =
+        llvm::count(llvm::make_second_range(TV), CondState::MCDC_True);
+
+    return {TrueDecisions, TV.size() - TrueDecisions};
   }
 
   /// Return the Result evaluation for an executed test vector.
@@ -991,18 +1001,23 @@ class CoverageMapping {
   // Load coverage records from readers.
   static Error loadFromReaders(
       ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-      IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
+      std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+          &ProfileReader,
+      CoverageMapping &Coverage);
 
   // Load coverage records from file.
   static Error
   loadFromFile(StringRef Filename, StringRef Arch, StringRef CompilationDir,
-               IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
-               bool &DataFound,
+               std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+                   &ProfileReader,
+               CoverageMapping &Coverage, bool &DataFound,
                SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
 
   /// Add a function record corresponding to \p Record.
-  Error loadFunctionRecord(const CoverageMappingRecord &Record,
-                           IndexedInstrProfReader &ProfileReader);
+  Error loadFunctionRecord(
+      const CoverageMappingRecord &Record,
+      const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+          &ProfileReader);
 
   /// Look up the indices for function records which are at least partially
   /// defined in the specified file. This is guaranteed to return a superset of
@@ -1018,15 +1033,16 @@ public:
   /// Load the coverage mapping using the given readers.
   LLVM_ABI static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-       IndexedInstrProfReader &ProfileReader);
+       std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+           &ProfileReader);
 
   /// Load the coverage mapping from the given object files and profile. If
   /// \p Arches is non-empty, it must specify an architecture for each object.
   /// Ignores non-instrumented object files unless all are not instrumented.
   LLVM_ABI static Expected<std::unique_ptr<CoverageMapping>>
-  load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = {},
-       StringRef CompilationDir = "",
+  load(ArrayRef<StringRef> ObjectFilenames,
+       std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
+       ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
 

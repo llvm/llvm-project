@@ -528,10 +528,10 @@ MacroCallReconstructor::createUnwrappedLine(const ReconstructedLine &Line,
       // 1. One level below the current line's level.
       // 2. At the correct level relative to each other.
       unsigned MinChildLevel =
-          std::min_element(N->Children.begin(), N->Children.end(),
-                           [](const auto &E1, const auto &E2) {
-                             return E1->Level < E2->Level;
-                           })
+          llvm::min_element(N->Children,
+                            [](const auto &E1, const auto &E2) {
+                              return E1->Level < E2->Level;
+                            })
               ->get()
               ->Level;
       for (const auto &Child : N->Children) {

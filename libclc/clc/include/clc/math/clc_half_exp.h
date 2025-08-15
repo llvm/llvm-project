@@ -10,12 +10,11 @@
 #define __CLC_MATH_CLC_HALF_EXP_H__
 
 #define __FLOAT_ONLY
-#define __CLC_FUNCTION __clc_half_exp
+#define FUNCTION __clc_half_exp
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
-#undef __FLOAT_ONLY
+#undef FUNCTION
 
 #endif // __CLC_MATH_CLC_HALF_EXP_H__

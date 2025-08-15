@@ -301,17 +301,28 @@ define float @exp10_f32(float %x) {
 }
 
 define <1 x float> @exp10_v1f32(<1 x float> %x) {
-; CHECK-LABEL: exp10_v1f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $d0
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; SDAG-LABEL: exp10_v1f32:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SDAG-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; SDAG-NEXT:    bl exp10f
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $d0
+; SDAG-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: exp10_v1f32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    .cfi_offset w30, -16
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $d0
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
   %r = call <1 x float> @llvm.exp10.v1f32(<1 x float> %x)
   ret <1 x float> %r
 }

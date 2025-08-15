@@ -11,8 +11,8 @@
 ; allow scheduling of other instructions which reduce RP
 
 ; CHECK-LABEL: {{^}}return_72xi32:
-; GFX11-PAL:    NumSgprs: 0
-; GFX11-PAL-GCNTRACKERS:    NumSgprs: 0
+; GFX11-PAL:    NumSgprs: 33
+; GFX11-PAL-GCNTRACKERS:    NumSgprs: 33
 ; GFX11-PAL:    NumVgprs: 64
 ; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
 ; GFX11-PAL:    ScratchSize: 220

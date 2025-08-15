@@ -4,7 +4,7 @@
 
 ; Make sure that .vgpr_count doesn't include the %inactive.vgpr registers.
 ; CHECK-LABEL: _miss_1:
-; CHECK: .vgpr_count:{{.*}}0xa{{$}}
+; CHECK: .vgpr_count: 0xa{{$}}
 
 define amdgpu_cs_chain void @_miss_1(ptr inreg %next.callee, i32 inreg %global.table, i32 inreg %max.outgoing.vgpr.count,
                                     i32 %vcr, { i32 } %system.data,

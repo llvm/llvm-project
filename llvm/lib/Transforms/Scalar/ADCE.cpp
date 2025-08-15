@@ -562,20 +562,7 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
     if (isLive(&I))
       continue;
 
-    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I)) {
-      // Avoid removing a dbg.assign that is linked to instructions because it
-      // holds information about an existing store.
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII))
-        if (!at::getAssignmentInsts(DAI).empty())
-          continue;
-      // Check if the scope of this variable location is alive.
-      if (AliveScopes.count(DII->getDebugLoc()->getScope()))
-        continue;
-
-      // Fallthrough and drop the intrinsic.
-    } else {
-      Changed.ChangedNonDebugInstr = true;
-    }
+    Changed.ChangedNonDebugInstr = true;
 
     // Prepare to delete.
     Worklist.push_back(&I);

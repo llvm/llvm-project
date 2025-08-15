@@ -9,11 +9,11 @@
 #ifndef __CLC_RELATIONAL_CLC_ISNOTEQUAL_H__
 #define __CLC_RELATIONAL_CLC_ISNOTEQUAL_H__
 
-#define __CLC_FUNCTION __clc_isnotequal
+#define FUNCTION __clc_isnotequal
 #define __CLC_BODY <clc/relational/binary_decl.inc>
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_RELATIONAL_CLC_ISNOTEQUAL_H__

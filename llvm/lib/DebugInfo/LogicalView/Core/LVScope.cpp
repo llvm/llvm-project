@@ -263,7 +263,7 @@ bool LVScope::removeElement(LVElement *Element) {
     return Item == Element;
   };
   auto RemoveElement = [Element, Predicate](auto &Container) -> bool {
-    auto Iter = std::remove_if(Container->begin(), Container->end(), Predicate);
+    auto Iter = llvm::remove_if(*Container, Predicate);
     if (Iter != Container->end()) {
       Container->erase(Iter, Container->end());
       Element->resetParent();
@@ -2097,7 +2097,7 @@ Error LVScopeRoot::doPrintMatches(bool Split, raw_ostream &OS,
     print(OS);
 
     for (LVScope *Scope : *Scopes) {
-      getReader().setCompileUnit(const_cast<LVScope *>(Scope));
+      getReader().setCompileUnit(Scope);
 
       // If 'Split', we use the scope name (CU name) as the ouput file; the
       // delimiters in the pathname, must be replaced by a normal character.

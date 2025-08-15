@@ -153,7 +153,7 @@ private:
   bool HadSourceFiles = false;
 
   /// The path to the indexed profile.
-  std::string PGOFilename;
+  std::optional<std::string> PGOFilename;
 
   /// A list of input source files.
   std::vector<std::string> SourceFiles;
@@ -455,10 +455,12 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 }
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
-  for (StringRef ObjectFilename : ObjectFilenames)
-    if (modifiedTimeGT(ObjectFilename, PGOFilename))
-      warning("profile data may be out of date - object is newer",
-              ObjectFilename);
+  if (PGOFilename) {
+    for (StringRef ObjectFilename : ObjectFilenames)
+      if (modifiedTimeGT(ObjectFilename, PGOFilename.value()))
+        warning("profile data may be out of date - object is newer",
+                ObjectFilename);
+  }
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
@@ -668,10 +670,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "dump-collected-paths", cl::Optional, cl::Hidden,
       cl::desc("Show the collected paths to source files"));
 
-  cl::opt<std::string, true> PGOFilename(
-      "instr-profile", cl::Required, cl::location(this->PGOFilename),
+  cl::opt<std::string> PGOFilename(
+      "instr-profile", cl::Optional,
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
+
+  cl::opt<bool> EmptyProfile(
+      "empty-profile", cl::Optional,
+      cl::desc("Use a synthetic profile with no data to generate "
+               "baseline coverage"));
 
   cl::list<std::string> Arches(
       "arch", cl::desc("architectures of the coverage mapping binaries"));
@@ -804,6 +811,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+
+    if (!PGOFilename.empty() == EmptyProfile) {
+      error(
+          "exactly one of -instr-profile and -empty-profile must be specified");
+      return 1;
+    }
+    if (!PGOFilename.empty()) {
+      this->PGOFilename = std::make_optional(PGOFilename.getValue());
+    }
 
     if (!CovFilename.empty())
       ObjectFilenames.emplace_back(CovFilename);
@@ -1116,20 +1132,22 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     }
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
-  }
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
 
-  if (ShowCreatedTime) {
-    auto ModifiedTime = Status.getLastModificationTime();
-    std::string ModifiedTimeStr = to_string(ModifiedTime);
-    size_t found = ModifiedTimeStr.rfind(':');
-    ViewOpts.CreatedTimeStr =
-        (found != std::string::npos)
-            ? "Created: " + ModifiedTimeStr.substr(0, found)
-            : "Created: " + ModifiedTimeStr;
+    if (ShowCreatedTime) {
+      auto ModifiedTime = Status.getLastModificationTime();
+      std::string ModifiedTimeStr = to_string(ModifiedTime);
+      size_t found = ModifiedTimeStr.rfind(':');
+      ViewOpts.CreatedTimeStr =
+          (found != std::string::npos)
+              ? "Created: " + ModifiedTimeStr.substr(0, found)
+              : "Created: " + ModifiedTimeStr;
+    }
   }
 
   auto Coverage = load();
@@ -1238,10 +1256,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1303,10 +1323,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();

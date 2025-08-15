@@ -4,10 +4,12 @@
 define i32 @f(i64 %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    mov x8, #-7378697629483820647 // =0x9999999999999999
 ; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    udiv x10, x9, x8
-; CHECK-NEXT:    msub x0, x10, x8, x9
+; CHECK-NEXT:    mov w10, #10 // =0xa
+; CHECK-NEXT:    eor x8, x8, #0x8000000000000003
+; CHECK-NEXT:    umulh x8, x9, x8
+; CHECK-NEXT:    msub x0, x8, x10, x9
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %2 = trunc i64 %0 to i32

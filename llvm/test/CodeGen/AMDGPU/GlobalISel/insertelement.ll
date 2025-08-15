@@ -6506,3 +6506,47 @@ entry:
   %insert = insertelement <5 x double> %vec, double %val, i32 %idx
   ret <5 x double> %insert
 }
+
+; Found by fuzzer, reduced with llvm-reduce.
+define void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
+; GPRIDX-LABEL: insert_very_small_from_very_large:
+; GPRIDX:       ; %bb.0: ; %bb
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 3, v0
+; GPRIDX-NEXT:    flat_store_byte v[16:17], v0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: insert_very_small_from_very_large:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-NEXT:    flat_store_byte v[16:17], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: insert_very_small_from_very_large:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshrrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b16 v0.l, v0.l, 1
+; GFX11-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-NEXT:    flat_store_b8 v[16:17], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %a = bitcast <32 x i16> %L3 to i512
+  %b = trunc i512 %a to i8
+  %c = trunc i8 %b to i2
+  %d = bitcast i2 %c to <2 x i1>
+  %insert = insertelement <2 x i1> %d, i1 false, i32 0
+  store <2 x i1> %insert, ptr %ptr, align 1
+  ret void
+}

@@ -20,15 +20,15 @@
 #
 # FIXME: Currently the following dependencies are missed.
 #
-# Loop carried edges from SU(4)
-#   Order
-#     SU(3)
 
 # CHECK:      ===== Loop Carried Edges Begin =====
 # CHECK-NEXT:   Loop carried edges from SU(2)
 # CHECK-NEXT:     Order
 # CHECK-NEXT:       SU(3)
 # CHECK-NEXT:       SU(4)
+# CHECK-NEXT:   Loop carried edges from SU(4)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(3)
 # CHECK-NEXT: ===== Loop Carried Edges End =====
 
 --- |
