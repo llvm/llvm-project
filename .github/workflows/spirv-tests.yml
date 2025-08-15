@@ -23,8 +23,6 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/llvm/ci-ubuntu-24.04:latest
-      volumes:
-        - /mnt:/mnt
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Setup ccache
@@ -35,11 +33,13 @@ jobs:
           variant: sccache
       - name: Build and Test
         run: |
-          mkdir /mnt/build
+          mkdir build
           cmake -GNinja \
+            -S llvm \
+            -B build \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DLLVM_TARGETS_TO_BUILD="SPIRV" \
             -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON
-          ninja -C /mnt/build check-llvm-codegen-spirv
+          ninja -C build check-llvm-codegen-spirv
