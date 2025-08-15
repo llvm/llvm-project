@@ -10745,21 +10745,21 @@ static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
 static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
                                 const ExprResult &LHS, const ExprResult &RHS,
                                 BinaryOperatorKind Opc) {
+  if (!LHS.isUsable() || !RHS.isUsable())
+    return;
   const Expr *LHSExpr = LHS.get();
   const Expr *RHSExpr = RHS.get();
-  if (!LHSExpr || !RHSExpr)
-    return;
   const QualType LHSType = LHSExpr->getType();
   const QualType RHSType = RHSExpr->getType();
   const bool LHSIsScoped = LHSType->isScopedEnumeralType();
   const bool RHSIsScoped = RHSType->isScopedEnumeralType();
   if (!LHSIsScoped && !RHSIsScoped)
     return;
+  if (BinaryOperator::isAssignmentOp(Opc) && LHSIsScoped)
+    return;
   if (!LHSIsScoped && !LHSType->isIntegralOrUnscopedEnumerationType())
     return;
   if (!RHSIsScoped && !RHSType->isIntegralOrUnscopedEnumerationType())
-    return;
-  if (BinaryOperator::isAssignmentOp(Opc) && LHSIsScoped)
     return;
   auto DiagnosticHelper = [&S](const Expr *expr, const QualType type) {
     SourceLocation BeginLoc = expr->getBeginLoc();
