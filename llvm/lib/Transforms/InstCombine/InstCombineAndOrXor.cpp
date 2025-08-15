@@ -155,6 +155,26 @@ extractThreeVariablesAndInstructions(Value *Root) {
       }
     }
 
+    // Validation that all collected instructions have operands that will be in
+    // Computed map
+    SmallPtrSet<Value *, 32> ValidOperands(Variables.begin(), Variables.end());
+    ValidOperands.insert(Instructions.begin(), Instructions.end());
+
+    for (Instruction *I : Instructions) {
+      Value *NotV;
+      if (match(I, m_Not(m_Value(NotV)))) {
+        // For NOT operations, only check the variable operand (constant -1 is
+        // handled by pattern matcher)
+        if (!ValidOperands.count(NotV))
+          return {nullptr, nullptr, nullptr, {}};
+      } else {
+        for (Use &U : I->operands()) {
+          if (!ValidOperands.count(U.get()))
+            return {nullptr, nullptr, nullptr, {}};
+        }
+      }
+    }
+
     // Sort variables by instruction order
     llvm::sort(SortedVars, [](Value *A, Value *B) {
       if (auto *IA = dyn_cast<Instruction>(A))
@@ -191,14 +211,8 @@ evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
   for (Instruction *I : Instructions) {
     Value *NotV;
     if (match(I, m_Not(m_Value(NotV)))) {
-      if (!Computed.count(NotV))
-        return std::nullopt;
       Computed[I] = ~Computed.at(NotV); // Bitwise NOT
     } else if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-      if (!Computed.count(BO->getOperand(0)) ||
-          !Computed.count(BO->getOperand(1)))
-        return std::nullopt;
-
       auto &LHS = Computed.at(BO->getOperand(0));
       auto &RHS = Computed.at(BO->getOperand(1));
 
