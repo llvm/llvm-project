@@ -603,8 +603,8 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
         StreamingBuiltinGuard, CallerFeatures);
 
-    if ((SatisfiesSVE && SatisfiesSME) ||
-        (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
+    if (SatisfiesSVE && SatisfiesSME)
+      // Function type is irrelevant for streaming-agnostic builtins.
       return false;
     else if (SatisfiesSVE)
       BuiltinType = SemaARM::ArmNonStreaming;
