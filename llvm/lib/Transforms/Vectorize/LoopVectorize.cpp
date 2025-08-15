@@ -7400,6 +7400,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                          ->getIRBasicBlock());
     for (auto *BB : Blocks)
       LI->removeBlock(BB);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    DeleteDeadBlocks(Blocks, &DTU);
     LI->erase(OrigLoop);
   }
 

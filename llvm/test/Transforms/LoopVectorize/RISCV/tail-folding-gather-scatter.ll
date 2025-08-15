@@ -35,20 +35,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT1:%.*]], [[FOR_BODY1]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[INDEX]], i64 [[INDVARS_IV1]]
-; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX3]], align 8
-; IF-EVL-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[TMP0]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 [[TMP0]]
-; IF-EVL-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX7]], align 4
-; IF-EVL-NEXT:    [[INDVARS_IV_NEXT1]] = add nuw nsw i64 [[INDVARS_IV1]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT1]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    ret void
 ;

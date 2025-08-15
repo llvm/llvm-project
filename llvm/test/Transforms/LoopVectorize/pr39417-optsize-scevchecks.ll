@@ -77,18 +77,6 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[MUL]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_07]]
-; CHECK-NEXT:    store i32 [[TMP22]], ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    ret void
 ;

@@ -19,12 +19,8 @@ define void @_Z3foov() {
 ; CHECK:  vector.body:
 ; CHECK:    br i1 [[TMP4:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:  middle.block:
-; CHECK:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:  scalar.ph:
 ; CHECK:    br label [[FOR_BODY:%.*]]
 ; CHECK:  for.cond.cleanup:
-; CHECK:  for.body:
-; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF3:![0-9]+]]
 ;
 ; CHECK-MASKED-LABEL: @_Z3foov(
 ; CHECK-MASKED:  entry:
@@ -32,14 +28,10 @@ define void @_Z3foov() {
 ; CHECK-MASKED:  vector.ph:
 ; CHECK-MASKED:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MASKED:  vector.body:
-; CHECK-MASKED:    br i1 [[TMP19:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-MASKED:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-MASKED:  middle.block:
-; CHECK-MASKED:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK-MASKED:  scalar.ph:
 ; CHECK-MASKED:    br label [[FOR_BODY:%.*]]
 ; CHECK-MASKED:  for.cond.cleanup:
-; CHECK-MASKED:  for.body:
-; CHECK-MASKED:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF3:![0-9]+]]
 ;
 ; CHECK-SCALABLE-LABEL: @_Z3foov(
 ; CHECK-SCALABLE:  entry:
@@ -88,14 +80,14 @@ define void @_Z3foo2v() {
 ; CHECK:  vector.ph:
 ; CHECK:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:  vector.body:
-; CHECK:    br i1 [[TMP4:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF4:![0-9]+]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:    br i1 [[TMP4:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF3:![0-9]+]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:  middle.block:
 ; CHECK:    br label [[SCALAR_PH:%.*]]
 ; CHECK:  scalar.ph:
 ; CHECK:    br label [[FOR_BODY:%.*]]
 ; CHECK:  for.cond.cleanup:
 ; CHECK:  for.body:
-; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
 ;
 ; CHECK-MASKED-LABEL: @_Z3foo2v(
 ; CHECK-MASKED:  entry:
@@ -103,14 +95,14 @@ define void @_Z3foo2v() {
 ; CHECK-MASKED:  vector.ph:
 ; CHECK-MASKED:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MASKED:  vector.body:
-; CHECK-MASKED:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF4:![0-9]+]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-MASKED:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF3:![0-9]+]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-MASKED:  middle.block:
 ; CHECK-MASKED:    br label [[SCALAR_PH:%.*]]
 ; CHECK-MASKED:  scalar.ph:
 ; CHECK-MASKED:    br label [[FOR_BODY:%.*]]
 ; CHECK-MASKED:  for.cond.cleanup:
 ; CHECK-MASKED:  for.body:
-; CHECK-MASKED:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-MASKED:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
 ;
 ; CHECK-SCALABLE-LABEL: @_Z3foo2v(
 ; CHECK-SCALABLE:  entry:

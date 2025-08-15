@@ -69,20 +69,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i16 [[SCALAR_RECUR]] to i32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[FOR_NEXT]] = load i16, ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    store i32 [[SEXT]], ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1001
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;

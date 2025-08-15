@@ -119,22 +119,7 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR6:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SCALAR_RECUR6]]
-; CHECK-NEXT:    [[MULADD:%.*]] = call float @llvm.fmuladd.f32(float [[SCALAR_RECUR]], float [[NEG]], float 0.000000e+00)
-; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[FOR_1_NEXT]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[FOR_2_NEXT]] = load float, ptr [[B]], align 4
-; CHECK-NEXT:    store float [[MULADD]], ptr [[DST_GEP]], align 4
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

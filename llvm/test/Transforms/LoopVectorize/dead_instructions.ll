@@ -94,20 +94,8 @@ define void @pr47390(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PRIMARY:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[PRIMARY_ADD:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[USE_PRIMARY:%.*]] = phi i32 [ -1, %[[SCALAR_PH]] ], [ [[PRIMARY]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SECONDARY:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[SECONDARY_ADD:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PRIMARY_ADD]] = add i32 [[PRIMARY]], 1
-; CHECK-NEXT:    [[SECONDARY_ADD]] = add i32 [[SECONDARY]], 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[SECONDARY]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SECONDARY]], 5
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]]
 ;
 entry:
   br label %loop

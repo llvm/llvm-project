@@ -21,18 +21,8 @@ define float @s311(float %a_0, float %s311_sum) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[S311_SUM]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED_NEXT]] = fadd float [[A_0]], [[RED]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 1200
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RED_LCSSA:%.*]] = phi float [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[RED_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP6]]
 ;
 entry:
   br label %loop

@@ -362,8 +362,9 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -585,8 +586,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP15]], true
 ; PRED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -609,6 +611,66 @@ exit:
 }
 
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
+; COMMON-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
+; COMMON-SAME: ptr [[DST:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
+; COMMON:       [[VECTOR_PH]]:
+; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMMON:       [[VECTOR_BODY]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; COMMON:       [[PRED_STORE_IF]]:
+; COMMON-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 0
+; COMMON-NEXT:    store i8 0, ptr [[TMP0]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; COMMON:       [[PRED_STORE_CONTINUE]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; COMMON:       [[PRED_STORE_IF1]]:
+; COMMON-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 1
+; COMMON-NEXT:    store i8 1, ptr [[TMP1]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; COMMON:       [[PRED_STORE_CONTINUE2]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; COMMON:       [[PRED_STORE_IF3]]:
+; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 2
+; COMMON-NEXT:    store i8 2, ptr [[TMP2]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; COMMON:       [[PRED_STORE_CONTINUE4]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; COMMON:       [[PRED_STORE_IF5]]:
+; COMMON-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 3
+; COMMON-NEXT:    store i8 3, ptr [[TMP3]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_CONTINUE6]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; COMMON:       [[PRED_STORE_IF7]]:
+; COMMON-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 4
+; COMMON-NEXT:    store i8 4, ptr [[TMP4]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
+; COMMON:       [[PRED_STORE_CONTINUE8]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; COMMON:       [[PRED_STORE_IF9]]:
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 5
+; COMMON-NEXT:    store i8 5, ptr [[TMP5]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
+; COMMON:       [[PRED_STORE_CONTINUE10]]:
+; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; COMMON:       [[PRED_STORE_IF11]]:
+; COMMON-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 6
+; COMMON-NEXT:    store i8 6, ptr [[TMP6]], align 1
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
+; COMMON:       [[PRED_STORE_CONTINUE12]]:
+; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[EXIT1:.*]]
+; COMMON:       [[PRED_STORE_IF13]]:
+; COMMON-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 7
+; COMMON-NEXT:    store i8 7, ptr [[TMP7]], align 1
+; COMMON-NEXT:    br label %[[EXIT1]]
+; COMMON:       [[EXIT1]]:
+; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; COMMON:       [[MIDDLE_BLOCK]]:
+; COMMON-NEXT:    br label %[[EXIT:.*]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -807,7 +869,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; DEFAULT-NEXT:    [[TMP80:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP80]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP80]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -998,6 +1060,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP84:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; PRED-NEXT:    [[TMP85:%.*]] = xor i1 [[TMP84]], true
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
+; PRED-NEXT:    br i1 [[TMP85]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
 ; PRED:       [[SCALAR_PH]]:
@@ -1055,7 +1118,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
@@ -1103,9 +1166,11 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
+; PRED-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -1228,7 +1293,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    store <vscale x 4 x i8> [[TMP23]], ptr [[TMP24]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -1290,6 +1355,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP11]])
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; PRED-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
+; PRED-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
 ; PRED:       [[SCALAR_PH]]:

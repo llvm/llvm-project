@@ -39,22 +39,6 @@ define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
-; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, float } @foo(float [[IN_VAL]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[IV]]
-; CHECK-NEXT:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[OUT_B]], i64 [[IV]]
-; CHECK-NEXT:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -114,22 +98,6 @@ define void @struct_return_f64_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[IV]]
-; CHECK-NEXT:    [[IN_VAL:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { double, double } @bar(double [[IN_VAL]]) #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[OUT_A]], i64 [[IV]]
-; CHECK-NEXT:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, ptr [[OUT_B]], i64 [[IV]]
-; CHECK-NEXT:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -213,7 +181,7 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, float } @foo(float [[IN_VAL]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, float } @foo(float [[IN_VAL]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
 ; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[IV]]

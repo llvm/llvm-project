@@ -30,19 +30,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH1:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET:%.*]] = mul nuw nsw i64 [[I]], 8
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; CHECK-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[SCALAR_PH]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -91,20 +79,7 @@ define void @single_constant_stride_int_iv(ptr %p) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[OFFSET_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; CHECK-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; CHECK-NEXT:    [[OFFSET_NEXT]] = add nuw nsw i64 [[OFFSET]], 64
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -152,19 +127,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH1:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[P]], [[SCALAR_PH1]] ], [ [[PTR_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; CHECK-NEXT:    store i32 [[Y0]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[SCALAR_PH]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
