@@ -1261,17 +1261,21 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       actual.isArray() && arg.mustBeMadeContiguous() &&
       (passingPolymorphicToNonPolymorphic ||
        !isSimplyContiguous(*arg.entity, foldingContext));
-  bool mustDoCopyOut = arg.mayBeModifiedByCall();
+  bool mustDoCopyOut = mustDoCopyIn && arg.mayBeModifiedByCall();
   if constexpr (Fortran::lower::CallerInterface::PassedEntity::isCaller) {
     bool newMustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
     bool newMustDoCopyOut = arg.entity->GetMayNeedCopyOut();
-    LLVM_DEBUG(llvm::dbgs() << "copyinout: CALLER " <<
+#if 1
+    llvm::dbgs() << "copyinout: CALLER " <<
         "copy-in: old=" << mustDoCopyIn << ", new=" << newMustDoCopyIn <<
         "| copy-out: old=" << mustDoCopyOut << ", new=" << newMustDoCopyOut <<
-        "\n");
+        "\n";
+#endif
   } else {
-    LLVM_DEBUG(llvm::dbgs() << "copyinout: CALLEE " <<
-        "copy-in=" << mustDoCopyIn << ", copy-out=" << mustDoCopyOut << "\n");
+#if 1
+    llvm::dbgs() << "copyinout: CALLEE " <<
+        "copy-in=" << mustDoCopyIn << ", copy-out=" << mustDoCopyOut << "\n";
+#endif
   }
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
