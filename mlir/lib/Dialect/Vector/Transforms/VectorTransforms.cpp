@@ -939,7 +939,7 @@ public:
 
     Value zero = arith::ConstantOp::create(rewriter, loc, elemType,
                                            rewriter.getZeroAttr(elemType));
-    Value res = SplatOp::create(rewriter, loc, castDstType, zero);
+    Value res = BroadcastOp::create(rewriter, loc, castDstType, zero);
 
     SmallVector<int64_t> sliceShape = {castDstLastDim};
     SmallVector<int64_t> strides = {1};
@@ -965,6 +965,45 @@ private:
   std::function<bool(BitCastOp)> controlFn;
 };
 
+static bool haveSameShapeAndScaling(Type t, Type u) {
+  auto tVec = dyn_cast<VectorType>(t);
+  auto uVec = dyn_cast<VectorType>(u);
+  if (!tVec) {
+    return !uVec;
+  }
+  if (!uVec) {
+    return false;
+  }
+  return tVec.getShape() == uVec.getShape() &&
+         tVec.getScalableDims() == uVec.getScalableDims();
+}
+
+/// If `type` is shaped, clone it with `newElementType`. Otherwise,
+/// return `newElementType`.
+static Type cloneOrReplace(Type type, Type newElementType) {
+  if (auto shapedType = dyn_cast<ShapedType>(type)) {
+    return shapedType.clone(newElementType);
+  }
+  return newElementType;
+}
+
+/// If `value` is the result of a splat or broadcast operation, return the input
+/// of the splat/broadcast operation.
+static Value getBroadcastLikeSource(Value value) {
+
+  Operation *op = value.getDefiningOp();
+  if (!op)
+    return {};
+
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
+    return broadcast.getSource();
+
+  if (auto splat = dyn_cast<vector::SplatOp>(op))
+    return splat.getInput();
+
+  return {};
+}
+
 /// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
 ///
 /// Example:
@@ -988,16 +1027,14 @@ struct ReorderElementwiseOpsOnBroadcast final
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1)
       return failure();
-    if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
+    auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
+    if (!resultType)
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return rewriter.notifyMatchFailure(
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (op->getResults()[0].getType() != op->getOperand(0).getType())
-      return rewriter.notifyMatchFailure(op,
-                                         "result and operand type mismatch");
     if (isa<vector::FMAOp>(op)) {
       return rewriter.notifyMatchFailure(
           op,
@@ -1005,40 +1042,38 @@ struct ReorderElementwiseOpsOnBroadcast final
           "might be a scalar");
     }
 
+    Type resultElemType = resultType.getElementType();
+
     // Get the type of the first non-constant operand
-    Operation *firstBroadcastOrSplat = nullptr;
+    Value splatSource;
     for (Value operand : op->getOperands()) {
       Operation *definingOp = operand.getDefiningOp();
       if (!definingOp)
         return failure();
       if (definingOp->hasTrait<OpTrait::ConstantLike>())
         continue;
-      if (!isa<vector::BroadcastOp, vector::SplatOp>(*definingOp))
-        return failure();
-      firstBroadcastOrSplat = definingOp;
+      splatSource = getBroadcastLikeSource(operand);
       break;
     }
-    if (!firstBroadcastOrSplat)
+    if (!splatSource)
       return failure();
-    Type firstBroadcastOrSplatType =
-        firstBroadcastOrSplat->getOperand(0).getType();
+    Type unbroadcastResultType =
+        cloneOrReplace(splatSource.getType(), resultElemType);
 
-    // Make sure that all operands are broadcast from identical types:
+    // Make sure that all operands are broadcast from identically-shaped types:
     //  * scalar (`vector.broadcast` + `vector.splat`), or
     //  * vector (`vector.broadcast`).
     // Otherwise the re-ordering wouldn't be safe.
-    if (!llvm::all_of(
-            op->getOperands(), [&firstBroadcastOrSplatType](Value val) {
-              if (auto bcastOp = val.getDefiningOp<vector::BroadcastOp>())
-                return (bcastOp.getOperand().getType() ==
-                        firstBroadcastOrSplatType);
-              if (auto splatOp = val.getDefiningOp<vector::SplatOp>())
-                return (splatOp.getOperand().getType() ==
-                        firstBroadcastOrSplatType);
-              SplatElementsAttr splatConst;
-              return matchPattern(val, m_Constant(&splatConst));
-            })) {
-      return failure();
+    if (!llvm::all_of(op->getOperands(), [splatSource](Value val) {
+          if (auto source = getBroadcastLikeSource(val))
+            return haveSameShapeAndScaling(source.getType(),
+                                           splatSource.getType());
+          SplatElementsAttr splatConst;
+          return matchPattern(val, m_Constant(&splatConst));
+        })) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "not all operands are constants or broadcasts from the same type");
     }
 
     // Collect the source values before broadcasting
@@ -1048,15 +1083,16 @@ struct ReorderElementwiseOpsOnBroadcast final
       SplatElementsAttr splatConst;
       if (matchPattern(operand, m_Constant(&splatConst))) {
         Attribute newConst;
-        if (auto shapedTy = dyn_cast<ShapedType>(firstBroadcastOrSplatType)) {
-          newConst = splatConst.resizeSplat(shapedTy);
+        Type elementType = getElementTypeOrSelf(operand.getType());
+        Type newType = cloneOrReplace(unbroadcastResultType, elementType);
+        if (auto newTypeShaped = dyn_cast<ShapedType>(newType)) {
+          newConst = splatConst.resizeSplat(newTypeShaped);
         } else {
           newConst = splatConst.getSplatValue<Attribute>();
         }
         Operation *newConstOp =
             operand.getDefiningOp()->getDialect()->materializeConstant(
-                rewriter, newConst, firstBroadcastOrSplatType,
-                operand.getLoc());
+                rewriter, newConst, newType, operand.getLoc());
         srcValues.push_back(newConstOp->getResult(0));
       } else {
         srcValues.push_back(operand.getDefiningOp()->getOperand(0));
@@ -1066,12 +1102,11 @@ struct ReorderElementwiseOpsOnBroadcast final
     // Create the "elementwise" Op
     Operation *elementwiseOp =
         rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        firstBroadcastOrSplatType, op->getAttrs());
+                        unbroadcastResultType, op->getAttrs());
 
     // Replace the original Op with the elementwise Op
-    auto vectorType = op->getResultTypes()[0];
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        op, vectorType, elementwiseOp->getResults());
+        op, resultType, elementwiseOp->getResults());
 
     return success();
   }
@@ -1267,15 +1302,17 @@ public:
       return rewriter.notifyMatchFailure(
           op, "only 1-element vectors are supported");
 
-    Operation *splat = op.getValueToStore().getDefiningOp();
-    if (!isa_and_present<vector::BroadcastOp, vector::SplatOp>(splat))
-      return rewriter.notifyMatchFailure(op, "neither a splat nor a broadcast");
+    Value toStore = op.getValueToStore();
+    Value source = getBroadcastLikeSource(toStore);
+    if (!source)
+      return rewriter.notifyMatchFailure(
+          op, "value to store is not from a broadcast");
 
     // Checking for single use so we can remove splat.
+    Operation *splat = toStore.getDefiningOp();
     if (!splat->hasOneUse())
       return rewriter.notifyMatchFailure(op, "expected single op use");
 
-    Value source = splat->getOperand(0);
     Value base = op.getBase();
     ValueRange indices = op.getIndices();
 
@@ -1325,13 +1362,13 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   // Add in an offset if requested.
   if (off) {
     Value o = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, *off);
-    Value ov = vector::SplatOp::create(rewriter, loc, indices.getType(), o);
+    Value ov = vector::BroadcastOp::create(rewriter, loc, indices.getType(), o);
     indices = arith::AddIOp::create(rewriter, loc, ov, indices);
   }
   // Construct the vector comparison.
   Value bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds =
-      vector::SplatOp::create(rewriter, loc, indices.getType(), bound);
+      vector::BroadcastOp::create(rewriter, loc, indices.getType(), bound);
   return arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                indices, bounds);
 }

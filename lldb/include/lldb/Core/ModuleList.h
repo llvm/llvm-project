@@ -352,6 +352,14 @@ public:
   // UUID values is very efficient and accurate.
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 
+  /// Find a module by LLDB-specific unique identifier.
+  ///
+  /// \param[in] uid The UID of the module assigned to it on construction.
+  ///
+  /// \returns ModuleSP of module with \c uid. Returns nullptr if no such
+  /// module could be found.
+  lldb::ModuleSP FindModule(lldb::user_id_t uid) const;
+
   /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 

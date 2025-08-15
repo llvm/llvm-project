@@ -502,9 +502,6 @@ private:
   /// entries).
   void imputeFallThroughs();
 
-  /// Register profiled functions for lite mode.
-  void registerProfiledFunctions();
-
   /// Debugging dump methods
   void dump() const;
   void dump(const PerfBranchSample &Sample) const;

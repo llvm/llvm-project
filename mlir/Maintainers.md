@@ -27,6 +27,42 @@ dialects, build system and language bindings.
   [@joker-eph](https://github.com/joker-eph) (GitHub),
   mehdi_amini (Discourse)
 
+### Code
+
+#### Standalone subcategories
+* Core tooling (ODS, DRR, PDLL, LSP) (core)
+* CMake ([christopherbate](https://github.com/christopherbate))
+* Dialect Conversion ([matthias-springer](https://github.com/matthias-springer), [zero9178](https://github.com/zero9178))
+* Python Bindings ([makslevental](https://github.com/makslevental), [rolfmorel](https://github.com/rolfmorel))
+
+### Dialects
+
+#### Code Structure Dialects
+* Builtin Dialect (core)
+* ‘func’ Dialect (core)
+* ‘scf’ Dialect (core)
+* ‘cf’ Dialect (core)
+* ‘index’ Dialect (core)
+* ‘ptr’ Dialect ([fabianmcg](https://github.com/fabianmcg))
+
+#### Basic Compute Dialects
+* ‘arith’ Dialect (core)
+* ‘math’ Dialect (core)
+* Rewrite System Dialects (core)
+* Transform Dialect ([martin-luecke](https://github.com/martin-luecke), [ftynse](https://github.com/ftynse), [rolfmorel](https://github.com/rolfmorel))
+* ‘pdl_interp’ Dialect ([jpienaar](https://github.com/jpienaar))
+* ‘pdl’ Dialect ([jpienaar](https://github.com/jpienaar))
+
+#### Accessory Dialects
+* ‘affine’ Dialect ([ftynse](https://github.com/ftynse))
+* ‘dlti’ Dialect ([rolfmorel](https://github.com/rolfmorel))
+* ‘irdl’ Dialect ([math-fehr](https://github.com/math-fehr), [moxinilian](https://github.com/moxinilian))
+* ‘shape’ Dialect ([jpienaar](https://github.com/jpienaar))
+* ‘smt’ Dialect ([fabianschuiki](https://github.com/fabianschuiki), [maerhart](https://github.com/maerhart))
+* ‘ub’ Dialect ([Hardcode84](https://github.com/Hardcode84))
+* ‘complex’ Dialect (core)
+* ‘async’ Dialect (unmaintained)
+
 ## Egress
 
 MLIR components pertaining to egress flows from MLIR, in particular to LLVM IR.
@@ -61,3 +97,24 @@ particular for machine learning compilers.
   andrzej.warzynski@arm.com (email),
   [@banach-space](https://github.com/banach-space) (GitHub),
   banach-space (Discourse)
+
+### Dialects
+
+The `tensor` maintainer refers to the people working in the tensor compiler category, with the point-of-contact being the maintainers above.
+These are key MLIR dialects that will never become _unmaintained_.
+Named maintainers, if available, should be contacted first, as they're more active in those areas.
+
+#### Linear Algebra Dialects
+* ‘linalg’ Dialect (tensor)
+* Tensor Operator Set Architecture (TOSA) Dialect ([@sjarus](https://github.com/sjarus))
+
+#### Type Dialects
+* ‘tensor’ Dialect (tensor)
+* ‘memref’ Dialect (tensor)
+* ‘vector’ Dialect (tensor + [@dcaballe](https://github.com/dcaballe), [@Groverkss](https://github.com/Groverkss))
+* ‘sparse_tensor’ Dialect ([@aartbik](https://github.com/aartbik), [@matthias-springer](https://github.com/matthias-springer))
+
+#### Accessory Dialects
+* ‘bufferization’ Dialect (tensor, [@matthias-springer](https://github.com/matthias-springer))
+* ‘ml_program’ Dialect ([@jpienaar](https://github.com/jpienaar))
+* ‘quant’ Dialect (unmaintained)

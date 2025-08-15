@@ -759,7 +759,9 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
+``__builtin_elementwise_min``, and ``__builtin_elementwise_abs`` 
+can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -859,6 +861,15 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                left by z, and the most significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+
+T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                right by z, and the least significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
 ============================================== ====================================================================== =========================================
 
 
@@ -1704,11 +1715,40 @@ Variadic Friends                              __cpp_variadic_friend            C
 Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
+``_Complex`` (N693)                                                            C99           C89, C++
+``_Bool`` (N815)                                                               C99           C89
+Variable-length arrays (N683)                                                  C99           C89, C++
+Flexible array members                                                         C99           C89, C++
+static and type quals in arrays                                                C99           C89
+``long long`` (N601)                                                           C99           C89
+Hexadecimal floating constants (N308)                                          C99           C89
+Compound literals (N716)                                                       C99           C89, C++
+``//`` comments (N644)                                                         C99           C89
+Mixed declarations and code (N740)                                             C99           C89
+Variadic macros (N707)                                                         C99           C89
+Empty macro arguments (N570)                                                   C99           C89
+Trailing comma in enum declaration                                             C99           C89
+Implicit ``return 0`` in ``main``                                              C99           C89
+``__func__`` (N611)                                                            C99           C89
+``_Generic`` (N1441)                                                           C11           C89, C++
+``_Static_assert`` (N1330)                                                     C11           C89, C++
+``_Atomic`` (N1485)                                                            C11           C89, C++
+``_Thread_local`` (N1364)                                                      C11           C89, C++
 Array & element qualification (N2607)                                          C23           C89
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
+Enum with fixed underlying type (N3030)                                        C23           C89
+``#warning`` (N2686)                                                           C23           C89
+``_BitInt`` (N3035)                                                            C23           C89, C++
+Binary literals (N2549)                                                        C23           C89
+Unnamed parameters in a function definition                                    C23           C89
+Free positioning of labels (N2508)                                             C23           C89
+``#elifdef`` (N2645)                                                           C23           C89
+``__has_include`` (N2799)                                                      C23           C89
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
+``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
+``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
@@ -2018,7 +2058,7 @@ even if there is no valid ``std::tuple_element`` specialization or suitable
 Blocks
 ======
 
-The syntax and high level language feature description is in
+The syntax and high-level language feature description is in
 :doc:`BlockLanguageSpec<BlockLanguageSpec>`. Implementation and ABI details for
 the clang implementation are in :doc:`Block-ABI-Apple<Block-ABI-Apple>`.
 
@@ -2088,7 +2128,7 @@ producing an object with the following member functions
   constexpr size_t size() const;
 
 such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
-This mechanism follow the same rules as ``static_assert`` messages in
+This mechanism follows the same rules as ``static_assert`` messages in
 C++26, see ``[dcl.pre]/p12``.
 
 Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
@@ -2335,7 +2375,7 @@ Objective-C Autosynthesis of Properties
 
 Clang provides support for autosynthesis of declared properties.  Using this
 feature, clang provides default synthesis of those properties not declared
-@dynamic and not having user provided backing getter and setter methods.
+@dynamic and not having user-provided backing getter and setter methods.
 ``__has_feature(objc_default_synthesize_properties)`` checks for availability
 of this feature in version of clang being used.
 
@@ -2349,7 +2389,7 @@ In Objective-C, functions and methods are generally assumed to follow the
 <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
-to allow these exceptions to be documented. This are used by ARC and the
+to allow these exceptions to be documented. These are used by ARC and the
 `static analyzer <https://clang-analyzer.llvm.org>`_ Some exceptions may be
 better described using the ``objc_method_family`` attribute instead.
 
@@ -2575,7 +2615,7 @@ Such functionality is not conformant and does not guarantee to compile
 correctly in any circumstances. It can be used if:
 
 - the kernel source does not contain call expressions to (member-) function
-  pointers, or virtual functions. For example this extension can be used in
+  pointers, or virtual functions. For example, this extension can be used in
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
@@ -2613,7 +2653,7 @@ functions with variadic prototypes do not get generated in binary e.g. the
 variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
-This extensions can also be used when the kernel code is intended for targets
+This extension can also be used when the kernel code is intended for targets
 supporting the variadic arguments e.g. majority of CPU targets.
 
 **Example of Use**:
@@ -2702,7 +2742,7 @@ address space qualifiers, therefore, other type qualifiers such as
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 
-Clang allows use of atomic functions from the OpenCL 1.x standards
+Clang allows the use of atomic functions from the OpenCL 1.x standards
 with the generic address space pointer in C++ for OpenCL mode.
 
 This is a non-portable feature and might not be supported by all
@@ -2833,7 +2873,7 @@ to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
 argument is the source WebAssembly table. The third argument is the
 destination index from where the copy starts, the fourth argument is the
-source index from there the copy starts, and the fifth and last argument
+source index from where the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 
 .. code-block:: c++
@@ -3133,7 +3173,7 @@ Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
 ------------------------------------
 
 ``__builtin_call_with_static_chain`` is used to perform a static call while
-setting updating the static chain register.
+updating the static chain register.
 
 **Syntax**:
 
@@ -3245,7 +3285,7 @@ Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
 features specified in string argument. It returns a positive integer if all
 features are supported and 0 otherwise. Feature names are target specific. On
-AArch64 features are combined using ``+`` like this
+AArch64, features are combined using ``+`` like this
 ``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
 If a feature name is not supported, Clang will issue a warning and replace
 builtin by the constant 0.
@@ -3465,7 +3505,7 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 **Description**:
 
 The '``__builtin_bitreverse``' family of builtins is used to reverse
-the bitpattern of an integer value; for example ``0b10110110`` becomes
+the bitpattern of an integer value; for example, ``0b10110110`` becomes
 ``0b01101101``. These builtins can be used within constant expressions.
 
 ``__builtin_rotateleft``
@@ -3970,7 +4010,7 @@ the debugging experience.
 
 ``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
-``assert`` like checks which can be safely removed by optimizer.
+``assert`` like checks which can be safely removed by the optimizer.
 
 **Syntax**:
 

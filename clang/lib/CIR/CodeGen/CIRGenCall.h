@@ -46,6 +46,7 @@ class CIRGenCallee {
   enum class SpecialKind : uintptr_t {
     Invalid,
     Builtin,
+    PseudoDestructor,
 
     Last = Builtin,
   };
@@ -54,12 +55,16 @@ class CIRGenCallee {
     const clang::FunctionDecl *decl;
     unsigned id;
   };
+  struct PseudoDestructorInfoStorage {
+    const clang::CXXPseudoDestructorExpr *expr;
+  };
 
   SpecialKind kindOrFunctionPtr;
 
   union {
     CIRGenCalleeInfo abstractInfo;
     BuiltinInfoStorage builtinInfo;
+    PseudoDestructorInfoStorage pseudoDestructorInfo;
   };
 
   explicit CIRGenCallee(SpecialKind kind) : kindOrFunctionPtr(kind) {}
@@ -96,6 +101,22 @@ public:
     result.builtinInfo.decl = builtinDecl;
     result.builtinInfo.id = builtinID;
     return result;
+  }
+
+  static CIRGenCallee
+  forPseudoDestructor(const clang::CXXPseudoDestructorExpr *expr) {
+    CIRGenCallee result(SpecialKind::PseudoDestructor);
+    result.pseudoDestructorInfo.expr = expr;
+    return result;
+  }
+
+  bool isPseudoDestructor() const {
+    return kindOrFunctionPtr == SpecialKind::PseudoDestructor;
+  }
+
+  const CXXPseudoDestructorExpr *getPseudoDestructorExpr() const {
+    assert(isPseudoDestructor());
+    return pseudoDestructorInfo.expr;
   }
 
   bool isOrdinary() const {
@@ -137,7 +158,7 @@ private:
 
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
-  mutable bool isUsed;
+  [[maybe_unused]] mutable bool isUsed;
 
 public:
   clang::QualType ty;
