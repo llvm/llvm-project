@@ -1727,7 +1727,7 @@ void PGOUseFunc::setBranchWeights() {
     }
 
     if (MaxCount)
-      setProfMetadata(M, TI, EdgeCounts, MaxCount);
+      setProfMetadata(TI, EdgeCounts, MaxCount);
     else {
       // A zero MaxCount can come about when we have a BB with a positive
       // count, and whose successor blocks all have 0 count. This can happen
@@ -1801,7 +1801,7 @@ void SelectInstVisitor::annotateOneSelectInst(SelectInst &SI) {
   SCounts[1] = (TotalCount > SCounts[0] ? TotalCount - SCounts[0] : 0);
   uint64_t MaxCount = std::max(SCounts[0], SCounts[1]);
   if (MaxCount)
-    setProfMetadata(F.getParent(), &SI, SCounts, MaxCount);
+    setProfMetadata(&SI, SCounts, MaxCount);
 }
 
 void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
@@ -2407,8 +2407,8 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
   return SimpleNodeName;
 }
 
-void llvm::setProfMetadata(Module *M, Instruction *TI,
-                           ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount) {
+void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+                           uint64_t MaxCount) {
   assert(MaxCount > 0 && "Bad max count");
   uint64_t Scale = calculateCountScale(MaxCount);
   SmallVector<unsigned, 4> Weights;
