@@ -20796,6 +20796,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                         << BB->getName() << "\n");
       calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP,
                             ControlDependentMembers);
+    } else if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/!ReSchedule, SLP,
+                            ControlDependentMembers);
     }
 
     if (ReSchedule) {
@@ -20891,6 +20895,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       }
     }
     ScheduledBundlesList.pop_back();
+    SmallVector<ScheduleData *> ControlDependentMembers;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;
@@ -20930,11 +20935,20 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I))
+        if (ScheduleData *OpSD = getScheduleData(I)) {
           OpSD->clearDirectDependencies();
+          if (RegionHasStackSave ||
+              !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+            ControlDependentMembers.push_back(OpSD);
+        }
         continue;
       }
       ScheduledBundles.find(I)->getSecond().pop_back();
+      if (!ControlDependentMembers.empty()) {
+        ScheduleBundle Invalid = ScheduleBundle::invalid();
+        calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
+                              ControlDependentMembers);
+      }
     }
     return std::nullopt;
   }
@@ -21304,7 +21318,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     }
   };
 
-  WorkList.push_back(Bundle.getBundle().front());
+  assert((Bundle || !ControlDeps.empty()) &&
+         "expected at least one instruction to schedule");
+  if (Bundle)
+    WorkList.push_back(Bundle.getBundle().front());
   WorkList.append(ControlDeps.begin(), ControlDeps.end());
   SmallPtrSet<ScheduleBundle *, 16> Visited;
   while (!WorkList.empty()) {
