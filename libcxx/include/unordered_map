@@ -1046,10 +1046,11 @@ public:
 #  endif
 
   _LIBCPP_HIDE_FROM_ABI explicit unordered_map(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI unordered_map(const unordered_map& __u);
+  _LIBCPP_HIDE_FROM_ABI unordered_map(const unordered_map& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_map(const unordered_map& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_map(unordered_map&& __u) _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_map(unordered_map&& __u)
+      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_map(unordered_map&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_map(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI
@@ -1099,24 +1100,10 @@ public:
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
   }
 
-  _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(const unordered_map& __u) {
-#  ifndef _LIBCPP_CXX03_LANG
-    __table_ = __u.__table_;
-#  else
-    if (this != std::addressof(__u)) {
-      __table_.clear();
-      __table_.hash_function()   = __u.__table_.hash_function();
-      __table_.key_eq()          = __u.__table_.key_eq();
-      __table_.max_load_factor() = __u.__table_.max_load_factor();
-      __table_.__copy_assign_alloc(__u.__table_);
-      insert(__u.begin(), __u.end());
-    }
-#  endif
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(const unordered_map& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(unordered_map&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
+      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -1564,12 +1551,6 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(const unordered_map& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(const unordered_map& __u, const allocator_type& __a)
     : __table_(__u.__table_, typename __table::allocator_type(__a)) {
   __table_.__rehash_unique(__u.bucket_count());
@@ -1577,11 +1558,6 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(const unordered_ma
 }
 
 #  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(unordered_map&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(std::move(__u.__table_)) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(unordered_map&& __u, const allocator_type& __a)
@@ -1616,14 +1592,6 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql, typename __table::allocator_type(__a)) {
   __table_.__rehash_unique(__n);
   insert(__il.begin(), __il.end());
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>&
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_map&& __u)
-    _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
-  __table_ = std::move(__u.__table_);
-  return *this;
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1852,11 +1820,11 @@ public:
 #  endif
 
   _LIBCPP_HIDE_FROM_ABI explicit unordered_multimap(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI unordered_multimap(const unordered_multimap& __u);
+  _LIBCPP_HIDE_FROM_ABI unordered_multimap(const unordered_multimap& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(const unordered_multimap& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(unordered_multimap&& __u)
-      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(unordered_multimap&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(
@@ -1906,24 +1874,10 @@ public:
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
   }
 
-  _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(const unordered_multimap& __u) {
-#  ifndef _LIBCPP_CXX03_LANG
-    __table_ = __u.__table_;
-#  else
-    if (this != std::addressof(__u)) {
-      __table_.clear();
-      __table_.hash_function()   = __u.__table_.hash_function();
-      __table_.key_eq()          = __u.__table_.key_eq();
-      __table_.max_load_factor() = __u.__table_.max_load_factor();
-      __table_.__copy_assign_alloc(__u.__table_);
-      insert(__u.begin(), __u.end());
-    }
-#  endif
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(const unordered_multimap& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(unordered_multimap&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
+      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -2316,13 +2270,6 @@ inline unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(c
     : __table_(typename __table::allocator_type(__a)) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(const unordered_multimap& __u)
-    : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     const unordered_multimap& __u, const allocator_type& __a)
     : __table_(__u.__table_, typename __table::allocator_type(__a)) {
@@ -2331,11 +2278,6 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 }
 
 #  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(unordered_multimap&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(std::move(__u.__table_)) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
@@ -2371,14 +2313,6 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql, typename __table::allocator_type(__a)) {
   __table_.__rehash_multi(__n);
   insert(__il.begin(), __il.end());
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>&
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_multimap&& __u)
-    _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
-  __table_ = std::move(__u.__table_);
-  return *this;
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
