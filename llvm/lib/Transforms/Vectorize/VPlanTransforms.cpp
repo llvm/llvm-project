@@ -1497,6 +1497,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // The vector loop region only executes once. If possible, completely remove
   // the region, otherwise replace the terminator controlling the latch with
   // (BranchOnCond true).
+  // TODO: Support all widen induction recipes (e.g.,
+  // VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
         if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
