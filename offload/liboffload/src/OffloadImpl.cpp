@@ -130,17 +130,28 @@ struct ol_platform_impl_t {
 
 struct ol_queue_impl_t {
   ol_queue_impl_t(__tgt_async_info *AsyncInfo, ol_device_handle_t Device)
-      : AsyncInfo(AsyncInfo), Device(Device) {}
+      : AsyncInfo(AsyncInfo), Device(Device), Id(IdCounter++) {}
   __tgt_async_info *AsyncInfo;
   ol_device_handle_t Device;
+  // A unique identifier for the queue
+  size_t Id;
+  static std::atomic<size_t> IdCounter;
 };
+std::atomic<size_t> ol_queue_impl_t::IdCounter;
 
 struct ol_event_impl_t {
-  ol_event_impl_t(void *EventInfo, ol_queue_handle_t Queue)
-      : EventInfo(EventInfo), Queue(Queue) {}
+  ol_event_impl_t(void *EventInfo, ol_device_handle_t Device,
+                  ol_queue_handle_t Queue)
+      : EventInfo(EventInfo), Device(Device), QueueId(Queue->Id), Queue(Queue) {
+  }
   // EventInfo may be null, in which case the event should be considered always
   // complete
   void *EventInfo;
+  ol_device_handle_t Device;
+  size_t QueueId;
+  // Events may outlive the queue - don't assume this is always valid
+  // It is provided only to implement OL_EVENT_INFO_QUEUE. Use QueueId to check
+  // for queue equality instead
   ol_queue_handle_t Queue;
 };
 
@@ -699,7 +710,7 @@ Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
                            "olWaitEvents asked to wait on a NULL event");
 
     // Do nothing if the event is for this queue or the event is always complete
-    if (Event->Queue == Queue || !Event->EventInfo)
+    if (Event->QueueId == Queue->Id || !Event->EventInfo)
       continue;
 
     if (auto Err = Device->waitEvent(Event->EventInfo, Queue->AsyncInfo))
@@ -747,7 +758,7 @@ Error olSyncEvent_impl(ol_event_handle_t Event) {
   if (!Event->EventInfo)
     return Plugin::success();
 
-  if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
+  if (auto Res = Event->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
   return Error::success();
@@ -755,7 +766,7 @@ Error olSyncEvent_impl(ol_event_handle_t Event) {
 
 Error olDestroyEvent_impl(ol_event_handle_t Event) {
   if (Event->EventInfo)
-    if (auto Res = Event->Queue->Device->Device->destroyEvent(Event->EventInfo))
+    if (auto Res = Event->Device->Device->destroyEvent(Event->EventInfo))
       return Res;
 
   return olDestroy(Event);
@@ -806,7 +817,7 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
   if (auto Err = Pending.takeError())
     return Err;
 
-  *EventOut = new ol_event_impl_t(nullptr, Queue);
+  *EventOut = new ol_event_impl_t(nullptr, Queue->Device, Queue);
   if (!*Pending)
     // Queue is empty, don't record an event and consider the event always
     // complete
