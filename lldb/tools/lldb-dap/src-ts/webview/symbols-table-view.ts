@@ -51,12 +51,15 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     { title: "Size", field: "size", sorter: "number", formatter: get_tabulator_hexa_formatter(8) },
 ]
 
+const vscode = acquireVsCodeApi();
+const previousState: any = vscode.getState();
+
 declare const Tabulator: any; // HACK: real definition comes from tabulator.min.js
 const SYMBOLS_TABLE = new Tabulator("#symbols-table", {
     height: "100vh",
     columns: SYMBOL_TABLE_COLUMNS,
     layout: "fitColumns",
-    data: [],
+    data: previousState?.symbols || [],
 });
 
 function updateSymbolsTable(symbols: DAPSymbolType[]) {
@@ -67,6 +70,7 @@ window.addEventListener("message", (event: MessageEvent<any>) => {
     const message = event.data;
     switch (message.command) {
         case "updateSymbols":
+            vscode.setState({ symbols: message.symbols });
             updateSymbolsTable(message.symbols);
             break;
     }
