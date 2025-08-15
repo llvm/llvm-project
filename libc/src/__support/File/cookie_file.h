@@ -19,21 +19,24 @@ class CookieFile : public LIBC_NAMESPACE::File {
   void *cookie;
   cookie_io_functions_t ops;
 
-  static FileIOResult cookie_write(File *f, const void *data, size_t size);
-  static FileIOResult cookie_read(File *f, void *data, size_t size);
-  static ErrorOr<off_t> cookie_seek(File *f, off_t offset, int whence);
-  static int cookie_close(File *f);
+  LIBC_INLINE static FileIOResult cookie_write(File *f, const void *data,
+                                               size_t size);
+  LIBC_INLINE static FileIOResult cookie_read(File *f, void *data, size_t size);
+  LIBC_INLINE static ErrorOr<off_t> cookie_seek(File *f, off_t offset,
+                                                int whence);
+  LIBC_INLINE static int cookie_close(File *f);
 
 public:
-  CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
-             size_t bufsize, int buffer_mode, File::ModeFlags mode)
+  LIBC_INLINE CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
+                         size_t bufsize, int buffer_mode, File::ModeFlags mode)
       : File(&cookie_write, &cookie_read, &CookieFile::cookie_seek,
              &cookie_close, buffer, bufsize, buffer_mode,
              true /* File owns buffer */, mode),
         cookie(c), ops(cops) {}
 };
 
-FileIOResult CookieFile::cookie_write(File *f, const void *data, size_t size) {
+LIBC_INLINE FileIOResult CookieFile::cookie_write(File *f, const void *data,
+                                                  size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.write == nullptr)
     return 0;
@@ -41,7 +44,8 @@ FileIOResult CookieFile::cookie_write(File *f, const void *data, size_t size) {
       cookie_file->cookie, reinterpret_cast<const char *>(data), size));
 }
 
-FileIOResult CookieFile::cookie_read(File *f, void *data, size_t size) {
+LIBC_INLINE FileIOResult CookieFile::cookie_read(File *f, void *data,
+                                                 size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.read == nullptr)
     return 0;
@@ -49,7 +53,8 @@ FileIOResult CookieFile::cookie_read(File *f, void *data, size_t size) {
       cookie_file->cookie, reinterpret_cast<char *>(data), size));
 }
 
-ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
+LIBC_INLINE ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset,
+                                                   int whence) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.seek == nullptr) {
     return Error(EINVAL);
@@ -61,7 +66,7 @@ ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
   return -1;
 }
 
-int CookieFile::cookie_close(File *f) {
+LIBC_INLINE int CookieFile::cookie_close(File *f) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.close == nullptr)
     return 0;
