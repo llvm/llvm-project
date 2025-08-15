@@ -1446,7 +1446,7 @@ public:
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
-          value.getLoc(), value, addr,
+          value.getLoc(), value, addr, /*isVolatile=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
