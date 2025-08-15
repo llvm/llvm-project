@@ -34,11 +34,11 @@ __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred _
 
   // We are in a single segment, so we might not be at the beginning or end
   if (__sfirst == __slast)
-    return _Traits::__compose(__sfirst, __pred(_Traits::__local(__first), _Traits::__local(__last), __proj));
+    return _Traits::__compose(__sfirst, __pred(_Traits::__local_it(__first), _Traits::__local_it(__last), __proj));
 
   { // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
     auto __llast = _Traits::__end(__sfirst);
-    auto __liter = __pred(_Traits::__local(__first), __llast, __proj);
+    auto __liter = __pred(_Traits::__local_it(__first), __llast, __proj);
     if (__liter != __llast)
       return _Traits::__compose(__sfirst, __liter);
   }
@@ -54,7 +54,7 @@ __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred _
   }
 
   // Iterate over the last segment
-  return _Traits::__compose(__sfirst, __pred(_Traits::__begin(__sfirst), _Traits::__local(__last), __proj));
+  return _Traits::__compose(__sfirst, __pred(_Traits::__begin(__sfirst), _Traits::__local_it(__last), __proj));
 }
 
 _LIBCPP_END_NAMESPACE_STD

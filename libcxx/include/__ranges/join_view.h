@@ -392,7 +392,7 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
     return __segment_iterator(__iter.__outer_, __iter.__parent_);
   }
 
-  static constexpr _LIBCPP_HIDE_FROM_ABI __local_iterator __local(_JoinViewIterator __iter) {
+  static constexpr _LIBCPP_HIDE_FROM_ABI __local_iterator __local_it(_JoinViewIterator __iter) {
     if (ranges::empty(__iter.__parent_->__base_))
       return {};
     if (!__iter.__inner_.has_value())

@@ -58,11 +58,11 @@ struct __constrained_weekday {
 //  Sun<=25  last Sunday on or before the 25th
 using __on = variant<day, weekday_last, __constrained_weekday>;
 
-enum class __clock { __local, __standard, __universal };
+enum class __clock { __local_tm, __standard_tm, __universal_tm };
 
 struct __at {
   seconds __time{0};
-  __tz::__clock __clock{__tz::__clock::__local};
+  __tz::__clock __clock{__tz::__clock::__local_tm};
 };
 
 struct __save {
@@ -107,7 +107,7 @@ struct __continuation {
   year __year = chrono::year::min();
   month __in{January};
   __tz::__on __on{chrono::day{1}};
-  __tz::__at __at{chrono::seconds{0}, __tz::__clock::__local};
+  __tz::__at __at{chrono::seconds{0}, __tz::__clock::__local_tm};
 };
 
 } // namespace chrono::__tz

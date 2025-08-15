@@ -194,7 +194,7 @@ __format(const __tz::__continuation& __continuation, const string& __letters, se
 
 [[nodiscard]] static seconds __at_to_sys_seconds(const __tz::__continuation& __continuation) {
   switch (__continuation.__at.__clock) {
-  case __tz::__clock::__local:
+  case __tz::__clock::__local_tm:
     return __continuation.__at.__time - __continuation.__stdoff -
            std::visit(
                [](const auto& __value) {
@@ -214,10 +214,10 @@ __format(const __tz::__continuation& __continuation, const string& __letters, se
                },
                __continuation.__rules);
 
-  case __tz::__clock::__universal:
+  case __tz::__clock::__universal_tm:
     return __continuation.__at.__time;
 
-  case __tz::__clock::__standard:
+  case __tz::__clock::__standard_tm:
     return __continuation.__at.__time - __continuation.__stdoff;
   }
   std::__libcpp_unreachable();
@@ -266,7 +266,7 @@ public:
             // However SAVE can be negative, which would add a value to maximum
             // leading to undefined behaviour. In practice this often results in
             // an overflow to a very small value.
-            __until_ != sys_seconds::max() && __continuation.__at.__clock == __tz::__clock::__local} {}
+            __until_ != sys_seconds::max() && __continuation.__at.__clock == __tz::__clock::__local_tm} {}
 
   // Gives the unadjusted until value, this is useful when the SAVE is not known
   // at all.
@@ -284,7 +284,7 @@ private:
 
 [[nodiscard]] static seconds __at_to_seconds(seconds __stdoff, const __tz::__rule& __rule) {
   switch (__rule.__at.__clock) {
-  case __tz::__clock::__local:
+  case __tz::__clock::__local_tm:
     // Local time and standard time behave the same. This is not
     // correct. Local time needs to adjust for the current saved time.
     // To know the saved time the rules need to be known and sorted.
@@ -292,10 +292,10 @@ private:
     // saving of the local time later.
     return __rule.__at.__time - __stdoff;
 
-  case __tz::__clock::__universal:
+  case __tz::__clock::__universal_tm:
     return __rule.__at.__time;
 
-  case __tz::__clock::__standard:
+  case __tz::__clock::__standard_tm:
     return __rule.__at.__time - __stdoff;
   }
   std::__libcpp_unreachable();
@@ -396,13 +396,13 @@ __get_rules(const __tz::__rules_storage_type& __rules_db, const string& __rule_n
 
 [[nodiscard]] static seconds __at_to_seconds(seconds __stdoff, seconds __save, const __tz::__rule& __rule) {
   switch (__rule.__at.__clock) {
-  case __tz::__clock::__local:
+  case __tz::__clock::__local_tm:
     return __rule.__at.__time - __stdoff - __save;
 
-  case __tz::__clock::__universal:
+  case __tz::__clock::__universal_tm:
     return __rule.__at.__time;
 
-  case __tz::__clock::__standard:
+  case __tz::__clock::__standard_tm:
     return __rule.__at.__time - __stdoff;
   }
   std::__libcpp_unreachable();

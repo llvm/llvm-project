@@ -85,7 +85,7 @@ struct __move_impl {
     if (__first == __last)
       return std::make_pair(std::move(__first), std::move(__result));
 
-    auto __local_first      = _Traits::__local(__result);
+    auto __local_first      = _Traits::__local_it(__result);
     auto __segment_iterator = _Traits::__segment(__result);
     while (true) {
       auto __local_last = _Traits::__end(__segment_iterator);

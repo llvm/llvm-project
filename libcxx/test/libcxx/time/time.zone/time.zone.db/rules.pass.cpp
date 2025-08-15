@@ -479,35 +479,35 @@ R a 0 1 - Ja Su>=31 - 2s -
   assert(result.rules[0].second.size() == 10);
 
   assert(result.rules[0].second[0].__at.__time == std::chrono::hours(2));
-  assert(result.rules[0].second[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(result.rules[0].second[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(result.rules[0].second[1].__at.__time == std::chrono::hours(2));
-  assert(result.rules[0].second[1].__at.__clock == std::chrono::__tz::__clock::__standard);
+  assert(result.rules[0].second[1].__at.__clock == std::chrono::__tz::__clock::__standard_tm);
 
   assert(result.rules[0].second[2].__at.__time ==
          std::chrono::hours(1) + std::chrono::minutes(28) + std::chrono::seconds(14));
-  assert(result.rules[0].second[2].__at.__clock == std::chrono::__tz::__clock::__universal);
+  assert(result.rules[0].second[2].__at.__clock == std::chrono::__tz::__clock::__universal_tm);
 
   assert(result.rules[0].second[3].__at.__time == std::chrono::minutes(19) + std::chrono::seconds(32));
-  assert(result.rules[0].second[3].__at.__clock == std::chrono::__tz::__clock::__universal);
+  assert(result.rules[0].second[3].__at.__clock == std::chrono::__tz::__clock::__universal_tm);
 
   assert(result.rules[0].second[4].__at.__time == std::chrono::hours(12));
-  assert(result.rules[0].second[4].__at.__clock == std::chrono::__tz::__clock::__universal);
+  assert(result.rules[0].second[4].__at.__clock == std::chrono::__tz::__clock::__universal_tm);
 
   assert(result.rules[0].second[5].__at.__time == std::chrono::hours(15));
-  assert(result.rules[0].second[5].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(result.rules[0].second[5].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(result.rules[0].second[6].__at.__time == std::chrono::hours(24));
-  assert(result.rules[0].second[6].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(result.rules[0].second[6].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(result.rules[0].second[7].__at.__time == std::chrono::hours(260));
-  assert(result.rules[0].second[7].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(result.rules[0].second[7].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(result.rules[0].second[8].__at.__time == -(std::chrono::hours(2) + std::chrono::minutes(30)));
-  assert(result.rules[0].second[8].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(result.rules[0].second[8].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(result.rules[0].second[9].__at.__time == std::chrono::hours(0)); // The man page expresses it in hours
-  assert(result.rules[0].second[9].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(result.rules[0].second[9].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 }
 
 static void test_save() {

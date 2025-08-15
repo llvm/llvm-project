@@ -178,12 +178,12 @@ struct __copy_backward_impl {
     auto __slast  = _Traits::__segment(__last);
     if (__sfirst == __slast) {
       auto __iters =
-          std::__copy_backward<_AlgPolicy>(_Traits::__local(__first), _Traits::__local(__last), std::move(__result));
+          std::__copy_backward<_AlgPolicy>(_Traits::__local_it(__first), _Traits::__local_it(__last), std::move(__result));
       return std::make_pair(__last, __iters.second);
     }
 
     __result =
-        std::__copy_backward<_AlgPolicy>(_Traits::__begin(__slast), _Traits::__local(__last), std::move(__result))
+        std::__copy_backward<_AlgPolicy>(_Traits::__begin(__slast), _Traits::__local_it(__last), std::move(__result))
             .second;
     --__slast;
     while (__sfirst != __slast) {
@@ -192,7 +192,7 @@ struct __copy_backward_impl {
               .second;
       --__slast;
     }
-    __result = std::__copy_backward<_AlgPolicy>(_Traits::__local(__first), _Traits::__end(__slast), std::move(__result))
+    __result = std::__copy_backward<_AlgPolicy>(_Traits::__local_it(__first), _Traits::__end(__slast), std::move(__result))
                    .second;
     return std::make_pair(__last, std::move(__result));
   }
@@ -212,7 +212,7 @@ struct __copy_backward_impl {
     if (__first == __last)
       return std::make_pair(__first, __result);
 
-    auto __local_last = _Traits::__local(__result);
+    auto __local_last = _Traits::__local_it(__result);
     while (true) {
       using _DiffT = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
 
