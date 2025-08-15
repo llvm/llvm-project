@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================================
 Clang |release| |ReleaseNotesTitle|
 ===========================================
@@ -70,12 +73,16 @@ ABI Changes in This Version
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
+- How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
+  ElaboratedTypes. The value becomes unused, and all the existing users should
+  expect the former underlying type to be reported instead.
 
 What's New in Clang |release|?
 ==============================
@@ -109,16 +116,23 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
+
+- ``__builtin_elementwise_abs`` can now be used in constant expression.
+
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
-- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for 
-  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display 
-  the reason for trapping if the trap is reached. The string is currently encoded in the debug 
-  info as an artificial frame that claims to be inlined at the trap location. The function used 
-  for the artificial frame is an artificial function whose name encodes the reason for trapping. 
-  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future. 
-  This feature is enabled by default but can be disabled by compiling with 
+- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for
+  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display
+  the reason for trapping if the trap is reached. The string is currently encoded in the debug
+  info as an artificial frame that claims to be inlined at the trap location. The function used
+  for the artificial frame is an artificial function whose name encodes the reason for trapping.
+  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future.
+  This feature is enabled by default but can be disabled by compiling with
   ``-fno-sanitize-annotate-debug-info-traps``.
+
+- ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
+  now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -143,8 +157,23 @@ Improvements to Clang's diagnostics
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
-- Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
+- Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
+
+- Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
+  diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
+  "format specifies type 'unsigned int' but the argument has type 'int' [-Wformat]"
+  "signedness of format specifier 'u' is incompatible with 'c' [-Wformat]"
+  This was misleading, because even though -Wformat is required in order to emit the diagnostics,
+  the warning flag the user needs to concerned with here is -Wformat-signedness, which is also
+  required and is not enabled by default. With the change you'll now see:
+  "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
+  "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
+  and the API-visible diagnostic id will be appropriate.
+  
+- Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
+  potential misaligned members get processed before they can get discarded.
+  (#GH144729)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -172,6 +201,9 @@ Bug Fixes to Attribute Support
 
 - ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
   (#GH141504)
+- Fixes some late parsed attributes, when applied to function definitions, not being parsed
+  in function try blocks, and some situations where parsing of the function body
+  is skipped, such as error recovery and code completion. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 
@@ -184,9 +216,16 @@ Bug Fixes to C++ Support
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
   casts that are guaranteed to fail (#GH137518).
+- Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
+- Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
+- Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
+- Fixed ElaboratedTypes appearing within NestedNameSpecifier, which was not a
+  legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
+- Fix comment lexing of special command names (#GH152943)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -227,6 +266,9 @@ RISC-V Support
 - Add support for `__attribute__((interrupt("rnmi")))` to be used with the `Smrnmi` extension.
   With this the `Smrnmi` extension is fully supported.
 
+- Add `-march=unset` to clear any previous `-march=` value. This ISA string will
+  be computed from `-mcpu` or the platform default.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -256,6 +298,8 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Removed elaboratedType matchers, and related nested name specifier changes,
+  following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
 
@@ -280,8 +324,9 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
-- Fixed a crash in the static analyzer that when the expression in an 
+- Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
+- Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 
 Improvements
 ^^^^^^^^^^^^
@@ -296,12 +341,14 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Exposed `clang_getCursorLanguage` via `Cursor.language`.
 
 OpenMP Support
 --------------
 - Added parsing and semantic analysis support for the ``need_device_addr``
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
+- Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 
 Improvements
 ^^^^^^^^^^^^

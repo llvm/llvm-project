@@ -69,7 +69,7 @@ public:
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
     StackSize = State.getStackSize();
 
     static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,

@@ -1063,6 +1063,20 @@ private:
   /// Indicate to spread data transfers across all available SDMAs
   bool UseMultipleSdmaEngines;
 
+  /// Wrapper function for implementing host callbacks
+  static void CallbackWrapper(AMDGPUSignalTy *InputSignal,
+                              AMDGPUSignalTy *OutputSignal,
+                              void (*Callback)(void *), void *UserData) {
+    // The wait call will not error in this context.
+    if (InputSignal)
+      if (auto Err = InputSignal->wait())
+        reportFatalInternalError(std::move(Err));
+
+    Callback(UserData);
+
+    OutputSignal->signal();
+  }
+
   /// Return the current number of asynchronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -1493,6 +1507,31 @@ public:
     return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
                                    SrcAgent, CopySize, 0, nullptr,
                                    OutputSignal->get());
+  }
+
+  Error pushHostCallback(void (*Callback)(void *), void *UserData) {
+    // Retrieve an available signal for the operation's output.
+    AMDGPUSignalTy *OutputSignal = nullptr;
+    if (auto Err = SignalManager.getResource(OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    AMDGPUSignalTy *InputSignal;
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+
+      // Consume stream slot and compute dependencies.
+      InputSignal = consume(OutputSignal).second;
+    }
+
+    // "Leaking" the thread here is consistent with other work added to the
+    // queue. The input and output signals will remain valid until the output is
+    // signaled.
+    std::thread(CallbackWrapper, InputSignal, OutputSignal, Callback, UserData)
+        .detach();
+
+    return Plugin::success();
   }
 
   /// Synchronize with the stream. The current thread waits until all operations
@@ -2552,6 +2591,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     return Plugin::success();
   }
+
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfo, Stream))
+      return Err;
+
+    return Stream->pushHostCallback(Callback, UserData);
+  };
 
   /// Create an event.
   Error createEventImpl(void **EventPtrStorage) override {

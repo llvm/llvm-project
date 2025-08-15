@@ -1166,7 +1166,8 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
 }
 
 //===----------------------------------------------------------------------===//
-//  SSrc_* Operands with an SGPR or a 32-bit immediate
+//  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
+//  if supported by target.
 //===----------------------------------------------------------------------===//
 
 class SrcRegOrImm9<RegisterClass regClass, string operandType>
