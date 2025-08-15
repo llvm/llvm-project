@@ -812,6 +812,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
          "indexing of array subsets it not supported yet");
 
   // get the resource array type
+  ASTContext &AST = ArrayDecl->getASTContext();
   const Type *ResArrayTy = ArrayDecl->getType().getTypePtr();
   assert(ResArrayTy->isHLSLResourceRecordArray() &&
          "expected array of resource classes");
@@ -821,16 +822,13 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // dimensional array). The index is calculated as a sum of all indices
   // multiplied by the total size of the array at that level.
   Value *Index = nullptr;
-  Value *Multiplier = nullptr;
   const ArraySubscriptExpr *ASE = ArraySubsExpr;
   while (ASE != nullptr) {
     Value *SubIndex = CGF.EmitScalarExpr(ASE->getIdx());
     if (const auto *ArrayTy =
             dyn_cast<ConstantArrayType>(ASE->getType().getTypePtr())) {
-      Value *SubMultiplier =
-          llvm::ConstantInt::get(CGM.IntTy, ArrayTy->getSExtSize());
-      Multiplier = Multiplier ? CGF.Builder.CreateMul(Multiplier, SubMultiplier)
-                              : SubMultiplier;
+      Value *Multiplier = llvm::ConstantInt::get(
+          CGM.IntTy, AST.getConstantArrayElementCount(ArrayTy));
       SubIndex = CGF.Builder.CreateMul(SubIndex, Multiplier);
     }
 
@@ -838,9 +836,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
     ASE = dyn_cast<ArraySubscriptExpr>(ASE->getBase()->IgnoreParenImpCasts());
   }
 
-  // find binding info for the resource array
-  // (for implicit binding an HLSLResourceBindingAttr should have been added by
-  // SemaHLSL)
+  // find binding info for the resource array (for implicit binding
+  // an HLSLResourceBindingAttr should have been added by SemaHLSL)
   QualType ResourceTy = ArraySubsExpr->getType();
   HLSLVkBindingAttr *VkBinding = ArrayDecl->getAttr<HLSLVkBindingAttr>();
   HLSLResourceBindingAttr *RBA = ArrayDecl->getAttr<HLSLResourceBindingAttr>();
@@ -848,17 +845,16 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
 
   // lookup the resource class constructor based on the resource type and
   // binding
-  ASTContext &AST = ArrayDecl->getASTContext();
   CXXConstructorDecl *CD = findResourceConstructorDecl(
       AST, ResourceTy, VkBinding || RBA->hasRegisterSlot());
 
   // create a temporary variable for the resource class instance (we need to
   // return an LValue)
   RawAddress TmpVar = CGF.CreateMemTemp(ResourceTy);
-  if (CGF.EmitLifetimeStart(TmpVar.getPointer())) {
+  if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
         NormalEHLifetimeMarker, TmpVar);
-  }
+
   AggValueSlot ValueSlot = AggValueSlot::forAddr(
       TmpVar, Qualifiers(), AggValueSlot::IsDestructed_t(true),
       AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
