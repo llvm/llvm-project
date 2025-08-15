@@ -1979,7 +1979,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   }
 
   // Drop 'noexcept' if not present in target type.
-  if (FromFPT) {
+  if (FromFPT && ToFPT) {
     if (FromFPT->isNothrow() && !ToFPT->isNothrow()) {
       FromFn = cast<FunctionType>(
           Context.getFunctionTypeWithExceptionSpec(QualType(FromFPT, 0),
