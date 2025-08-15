@@ -81,6 +81,8 @@ RUN curl -L 'https://github.com/mozilla/sccache/releases/download/v0.10.0/sccach
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
+ENV CC=clang
+ENV CXX=clang++
 
 # Create a new user to avoid test failures related to a lack of expected
 # permissions issues in some tests. Set the user id to 1001 as that is the
