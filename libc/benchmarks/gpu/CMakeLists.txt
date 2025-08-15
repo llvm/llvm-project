@@ -50,6 +50,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.fixedvector
     libc.src.__support.GPU.utils

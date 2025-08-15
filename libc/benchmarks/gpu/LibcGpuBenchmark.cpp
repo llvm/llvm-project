@@ -5,6 +5,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
@@ -134,7 +135,7 @@ void print_results(Benchmark *b) {
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
   LIBC_NAMESPACE::printf(
-      "%-24s |%15.0f |%9.0f |%8llu |%8llu |%11llu |%9u |\n",
+      "%-24s |%15.0f |%9.0f |%8llu |%8llu |%15llu |%9u |\n",
       b->get_test_name().data(), final_result.cycles,
       final_result.standard_deviation,
       static_cast<unsigned long long>(final_result.min),
@@ -149,7 +150,7 @@ void print_header() {
                          benchmarks[0]->get_suite_name().data());
   LIBC_NAMESPACE::printf("%s", RESET);
   cpp::string titles = "Benchmark                |  Cycles (Mean) |   Stddev | "
-                       "    Min |     Max | Iterations |  Threads |\n";
+                       "    Min |     Max |     Iterations |  Threads |\n";
   LIBC_NAMESPACE::printf(titles.data());
 
   cpp::string separator(titles.size(), '-');
@@ -228,7 +229,8 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
         change_ratio < options.epsilon)
       break;
 
-    iterations = static_cast<uint32_t>(iterations * options.scaling_factor);
+    iterations = static_cast<uint32_t>(
+        fputil::ceil(iterations * options.scaling_factor));
   }
 
   const auto &estimator = rep.get_estimator();
