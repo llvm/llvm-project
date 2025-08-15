@@ -43,7 +43,7 @@ class TestCase(TestBase):
         subalphabets = [alphabet[i:] for i in range(27)]
 
         self.expect(
-            "v substrings",
+            "v -A -- substrings",
             substrs=[
                 f'[{i}] = "{substring}"'
                 for i, substring in enumerate(subalphabets)
