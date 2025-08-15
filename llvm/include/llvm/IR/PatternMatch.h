@@ -1016,7 +1016,7 @@ struct bind_const_intval_ty {
     const APInt *ConstInt;
     if (!apint_match(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
-    if (ConstInt->ugt(UINT64_MAX))
+    if (ConstInt->getActiveBits() > 64)
       return false;
     VR = ConstInt->getZExtValue();
     return true;
