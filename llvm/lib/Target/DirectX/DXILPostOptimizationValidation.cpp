@@ -118,9 +118,8 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
-static void
-reportInvalidHandleTyError(Module &M, Twine Type,
-                               ResourceInfo::ResourceBinding Binding) {
+static void reportInvalidHandleTyError(Module &M, Twine Type,
+                                       ResourceInfo::ResourceBinding Binding) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
   OS << "resource " << Type << " at register (space=" << Binding.Space
@@ -129,7 +128,7 @@ reportInvalidHandleTyError(Module &M, Twine Type,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void 
+static void
 reportOverlappingRegisters(Module &M,
                            const llvm::hlsl::BindingInfoBuilder::Binding &R1,
                            const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
