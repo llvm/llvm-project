@@ -382,3 +382,13 @@ void CIRGenFunction::emitVAStartEnd(mlir::Value argValue, bool isStart) {
   else
     cir::VAEndOp::create(builder, argValue.getLoc(), argValue);
 }
+
+// FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. We
+// need to decide how to handle va_arg target-specific codegen.
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve, Address &vaListAddr) {
+  assert(!cir::MissingFeatures::msabi());
+  mlir::Location loc = cgm.getLoc(ve->getExprLoc());
+  mlir::Type type = convertType(ve->getType());
+  mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
+  return cir::VAArgOp::create(builder, loc, type, vaList);
+}

@@ -1424,6 +1424,17 @@ public:
   /// \param isStart If \c true, emits \c cir.va.start, otherwise \c cir.va.end.
   void emitVAStartEnd(mlir::Value argValue, bool isStart);
 
+  /// Generate code to get an argument from the passed in pointer
+  /// and update it accordingly.
+  ///
+  /// \param ve The \c VAArgExpr for which to generate code.
+  ///
+  /// \param vaListAddr Receives a reference to the \c va_list as emitted by
+  /// either \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \returns SSA value with the argument.
+  mlir::Value emitVAArg(VAArgExpr *ve, Address &vaListAddr);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
