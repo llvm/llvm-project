@@ -31,6 +31,7 @@
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
     "@types/vscode": "1.75.0",
+    "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
     "esbuild": "^0.25.9",
