@@ -1035,35 +1035,36 @@ Error WasmObjectFile::parseCodeMetadataSection(StringRef Name,
   const auto HintTypeName = Name.substr(14 /* "code_metadata." */);
   if (HintTypeName == "branch_hint") {
     return parseBranchHintSection(Ctx);
-  } else {
-    return make_error<GenericBinaryError>(
-        "invalid code metadata section: " + Name, object_error::parse_failed);
   }
+  dbgs() << "invalid code metadata section: " << Name
+         << "; ignoring section.\n";
+  return Error::success(); // Ignore unknown code metadata sections.
 }
 
 Error WasmObjectFile::parseBranchHintSection(ReadContext &Ctx) {
   const uint32_t NumFuncs = readVaruint32(Ctx);
   BranchHints.reserve(NumFuncs);
   for (size_t i = 0; i < NumFuncs; ++i) {
-    wasm::WasmCodeMetadataFuncEntry<wasm::WasmCodeMetadataBranchHint> FuncEntry;
+    wasm::WasmFunctionBranchHints FuncEntry;
     FuncEntry.FuncIdx = readVaruint32(Ctx);
     const uint32_t NumHints = readVaruint32(Ctx);
     for (size_t j = 0; j < NumHints; ++j) {
-      wasm::WasmCodeMetadataItemEntry<wasm::WasmCodeMetadataBranchHint> Hint;
+      wasm::WasmBranchHint Hint;
       Hint.Offset = readVaruint32(Ctx);
       Hint.Size = readVaruint32(Ctx);
       uint8_t Data = readUint8(Ctx);
-      if (Data > 0x1)
-        return make_error<GenericBinaryError>("invalid branch hint data",
-                                              object_error::parse_failed);
+      if (Data > 0x1) {
+        dbgs() << "invalid branch hint data; hint out of range [0; 1]; "
+                  "ignoring metadata.code.branch_hint section.\n";
+      }
       Hint.Data = static_cast<wasm::WasmCodeMetadataBranchHint>(Data);
       FuncEntry.Hints.push_back(Hint);
     }
-    BranchHints.push_back(std::move(FuncEntry));
+    BranchHints.emplace_back(std::move(FuncEntry));
   }
-  if (Ctx.Ptr != Ctx.End)
-    return make_error<GenericBinaryError>(
-        "branch hint section ended prematurely", object_error::parse_failed);
+  if (Ctx.Ptr != Ctx.End) {
+    dbgs() << "branch hint section ended prematurely; ignoring section.\n";
+  }
   return Error::success();
 }
 

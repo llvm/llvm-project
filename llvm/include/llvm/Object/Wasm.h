@@ -142,8 +142,7 @@ public:
   ArrayRef<wasm::WasmFeatureEntry> getTargetFeatures() const {
     return TargetFeatures;
   }
-  ArrayRef<wasm::WasmCodeMetadataFuncEntry<wasm::WasmCodeMetadataBranchHint>>
-  getBranchHints() const {
+  ArrayRef<wasm::WasmFunctionBranchHints> getBranchHints() const {
     return BranchHints;
   }
   ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
@@ -287,8 +286,7 @@ private:
   wasm::WasmDylinkInfo DylinkInfo;
   wasm::WasmProducerInfo ProducerInfo;
   std::vector<wasm::WasmFeatureEntry> TargetFeatures;
-  std::vector<wasm::WasmCodeMetadataFuncEntry<wasm::WasmCodeMetadataBranchHint>>
-      BranchHints;
+  std::vector<wasm::WasmFunctionBranchHints> BranchHints;
   std::vector<wasm::WasmSignature> Signatures;
   std::vector<wasm::WasmTable> Tables;
   std::vector<wasm::WasmLimits> Memories;

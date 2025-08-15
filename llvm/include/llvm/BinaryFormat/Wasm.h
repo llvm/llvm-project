@@ -535,6 +535,10 @@ enum class WasmCodeMetadataBranchHint : uint8_t {
   LIKELY = 0x1,
 };
 
+using WasmFunctionBranchHints =
+    WasmCodeMetadataFuncEntry<WasmCodeMetadataBranchHint>;
+using WasmBranchHint = WasmCodeMetadataItemEntry<WasmCodeMetadataBranchHint>;
+
 // Useful comparison operators
 inline bool operator==(const WasmSignature &LHS, const WasmSignature &RHS) {
   return LHS.State == RHS.State && LHS.Returns == RHS.Returns &&

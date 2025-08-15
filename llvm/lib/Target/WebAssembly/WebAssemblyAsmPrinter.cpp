@@ -479,7 +479,10 @@ void WebAssemblyAsmPrinter::emitBranchHintSection() const {
     // handling by target streamer for reloc)
     OutStreamer->emitULEB128IntValue(BHR.Hints.size());
     for (const auto &[instrSym, hint] : BHR.Hints) {
-      assert(hint == 0 || hint == 1);
+      assert(static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
+                 wasm::WasmCodeMetadataBranchHint::LIKELY ||
+             static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
+                 wasm::WasmCodeMetadataBranchHint::UNLIKELY);
       // offset from function start
       OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
           instrSym, WebAssembly::S_DEBUG_REF, OutContext));
@@ -756,20 +759,19 @@ void WebAssemblyAsmPrinter::recordBranchHint(const MachineInstr *MI) {
 
   MCSymbol *BrIfSym = OutContext.createTempSymbol();
   OutStreamer->emitLabel(BrIfSym);
-  constexpr uint8_t HintLikely = 0x01;
-  constexpr uint8_t HintUnlikely = 0x00;
   const uint32_t D = BranchProbability::getOne().getDenominator();
   uint8_t HintValue;
   if (Prob > BranchProbability::getRaw(ThresholdProbHigh * D))
-    HintValue = HintLikely;
+    HintValue = static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::LIKELY);
   else if (Prob <= BranchProbability::getRaw(ThresholdProbLow * D))
-    HintValue = HintUnlikely;
+    HintValue =
+        static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::UNLIKELY);
   else
     return; // Don't emit branch hint between thresholds
 
   // we know that we only emit branch hints for internal functions,
   // therefore we can directly cast and don't need getMCSymbolForFunction
-  MCSymbol *FuncSym = cast<MCSymbolWasm>(getSymbol(&MF->getFunction()));
+  MCSymbol *FuncSym = getSymbol(&MF->getFunction());
   const uint32_t LocalFuncIdx = MF->getFunctionNumber();
   if (BranchHints.size() <= LocalFuncIdx) {
     BranchHints.resize(LocalFuncIdx + 1);

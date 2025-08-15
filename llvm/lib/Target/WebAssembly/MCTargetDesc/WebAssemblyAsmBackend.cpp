@@ -86,6 +86,7 @@ std::pair<bool, bool> WebAssemblyAsmBackend::relaxLEB128(MCFragment &LF,
       return std::make_pair(true, false);
     }
   }
+  assert(LF.getVarFixups().empty());
   // currently, this is only used for leb128 encoded function indices
   // that require relocations
   LF.setVarFixups(MCFixup::create(0, &Expr, WebAssembly::fixup_uleb128_i32));

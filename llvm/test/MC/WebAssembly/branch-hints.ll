@@ -1,9 +1,13 @@
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=asm %s -mattr=+branch-hinting -o - | FileCheck --check-prefixes=ASM-CHECK %s
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=asm %s -mattr=-branch-hinting -o - | FileCheck --check-prefixes=ASM-NCHECK %s
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=asm %s -o - | FileCheck --check-prefixes=ASM-NCHECK %s
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %s -mattr=+branch-hinting -o - | obj2yaml | FileCheck --check-prefixes=YAML-CHECK %s
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %s -mattr=-branch-hinting -o - | obj2yaml | FileCheck --check-prefixes=YAML-NCHECK %s
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %s -o - | obj2yaml | FileCheck --check-prefixes=YAML-NCHECK %s
+# RUN: rm -rf %t; split-file %s %t
+
+; check ll -> asm
+; RUN: llc -mcpu=mvp -filetype=asm %t/1.ll -mattr=+branch-hinting -o - | FileCheck --check-prefixes=ASM-CHECK %s
+; RUN: llc -mcpu=mvp -filetype=asm %t/1.ll -mattr=-branch-hinting -o - | FileCheck --check-prefixes=ASM-NCHECK %s
+; RUN: llc -mcpu=mvp -filetype=asm %t/1.ll -o - | FileCheck --check-prefixes=ASM-NCHECK %s
+
+; check asm -> obj -> yaml
+; RUN: llvm-mc -mcpu=mvp -triple=wasm32-unknown-unknown -filetype=obj %t/1-bh.S -o - | obj2yaml | FileCheck --check-prefixes=YAML-CHECK %s
+; RUN: llvm-mc -mcpu=mvp -triple=wasm32-unknown-unknown -filetype=obj %t/1-no-bh.S -o - | obj2yaml | FileCheck --check-prefixes=YAML-NCHECK %s
 
 ; This test checks that branch weight metadata (!prof) is correctly lowered to
 ; the WebAssembly branch hint custom section.
@@ -69,18 +73,6 @@
 
 ; YAML-CHECK:        - Type:            CUSTOM
 ; YAML-CHECK-NEXT:     Name:            linking
-; YAML-CHECK-NEXT:     Version:         2
-; YAML-CHECK-NEXT:     SymbolTable:
-; YAML-CHECK-NEXT:       - Index:           0
-; YAML-CHECK-NEXT:         Kind:            FUNCTION
-; YAML-CHECK-NEXT:         Name:            test_unlikely_likely_branch
-; YAML-CHECK-NEXT:         Flags:           [  ]
-; YAML-CHECK-NEXT:         Function:        0
-; YAML-CHECK-NEXT:       - Index:           1
-; YAML-CHECK-NEXT:         Kind:            FUNCTION
-; YAML-CHECK-NEXT:         Name:            test_likely_branch
-; YAML-CHECK-NEXT:         Flags:           [  ]
-; YAML-CHECK-NEXT:         Function:        1
 
 ; YAML-CHECK:        - Type:            CUSTOM
 ; YAML-CHECK-NEXT:     Name:            target_features
@@ -91,6 +83,7 @@
 ; YAML-NCHECK-NOT:     Name:            metadata.code.branch_hint
 ; YAML-NCHECK-NOT:     Name:            branch-hinting
 
+#--- 1.ll
 target triple = "wasm32-unknown-unknown"
 
 define i32 @test_unlikely_likely_branch(i32 %a) {
@@ -120,3 +113,126 @@ if.else:
 ; the resulting branch hint is actually reversed, since llvm-br is turned into br_unless, inverting branch probs
 !0 = !{!"branch_weights", i32 2000, i32 1}
 !1 = !{!"branch_weights", i32 1, i32 2000}
+
+#--- 1-no-bh.S
+# Assembly generated based on 1.ll and
+# `llc -mcpu=mvp -filetype=asm ./1.ll -o 1bh.S -mattr=+branch-hinting`
+# `llc -mcpu=mvp -filetype=asm ./1.ll -o 1-no-bh.S -mattr=-branch-hinting`
+	.file	"1.ll"
+	.functype	test_unlikely_likely_branch (i32) -> (i32)
+	.functype	test_likely_branch (i32) -> (i32)
+	.section	.text.test_unlikely_likely_branch,"",@
+	.globl	test_unlikely_likely_branch     # -- Begin function test_unlikely_likely_branch
+	.type	test_unlikely_likely_branch,@function
+test_unlikely_likely_branch:            # @test_unlikely_likely_branch
+	.functype	test_unlikely_likely_branch (i32) -> (i32)
+# %bb.0:                                # %entry
+	block
+	block
+	local.get	0
+	br_if   	0                               # 0: down to label1
+# %bb.1:                                # %if.then
+	local.get	0
+	i32.const	1
+	i32.ne
+	br_if   	1                               # 1: down to label0
+.LBB0_2:                                # %ret1
+	end_block                               # label1:
+	i32.const	2
+	return
+.LBB0_3:                                # %ret2
+	end_block                               # label0:
+	i32.const	1
+                                        # fallthrough-return
+	end_function
+                                        # -- End function
+	.section	.text.test_likely_branch,"",@
+	.globl	test_likely_branch              # -- Begin function test_likely_branch
+	.type	test_likely_branch,@function
+test_likely_branch:                     # @test_likely_branch
+	.functype	test_likely_branch (i32) -> (i32)
+# %bb.0:                                # %entry
+	block
+	local.get	0
+	br_if   	0                               # 0: down to label2
+# %bb.1:                                # %if.then
+	i32.const	1
+	return
+.LBB1_2:                                # %if.else
+	end_block                               # label2:
+	i32.const	2
+                                        # fallthrough-return
+	end_function
+                                        # -- End function
+#--- 1-bh.S
+	.file	"1.ll"
+	.functype	test_unlikely_likely_branch (i32) -> (i32)
+	.functype	test_likely_branch (i32) -> (i32)
+	.section	.text.test_unlikely_likely_branch,"",@
+	.globl	test_unlikely_likely_branch     # -- Begin function test_unlikely_likely_branch
+	.type	test_unlikely_likely_branch,@function
+test_unlikely_likely_branch:            # @test_unlikely_likely_branch
+	.functype	test_unlikely_likely_branch (i32) -> (i32)
+# %bb.0:                                # %entry
+	block
+	block
+	local.get	0
+.Ltmp0:
+	br_if   	0                               # 0: down to label1
+# %bb.1:                                # %if.then
+	local.get	0
+	i32.const	1
+	i32.ne
+.Ltmp1:
+	br_if   	1                               # 1: down to label0
+.LBB0_2:                                # %ret1
+	end_block                               # label1:
+	i32.const	2
+	return
+.LBB0_3:                                # %ret2
+	end_block                               # label0:
+	i32.const	1
+                                        # fallthrough-return
+	end_function
+                                        # -- End function
+	.section	.text.test_likely_branch,"",@
+	.globl	test_likely_branch              # -- Begin function test_likely_branch
+	.type	test_likely_branch,@function
+test_likely_branch:                     # @test_likely_branch
+	.functype	test_likely_branch (i32) -> (i32)
+# %bb.0:                                # %entry
+	block
+	local.get	0
+.Ltmp2:
+	br_if   	0                               # 0: down to label2
+# %bb.1:                                # %if.then
+	i32.const	1
+	return
+.LBB1_2:                                # %if.else
+	end_block                               # label2:
+	i32.const	2
+                                        # fallthrough-return
+	end_function
+                                        # -- End function
+	.section	.custom_section.target_features,"",@
+	.int8	1
+	.int8	43
+	.int8	14
+	.ascii	"branch-hinting"
+	.section	.text.test_likely_branch,"",@
+	.section	.custom_section.metadata.code.branch_hint,"",@
+	.int8	2
+	.uleb128 test_unlikely_likely_branch@FUNCINDEX
+	.int8	2
+	.uleb128 .Ltmp0@DEBUGREF
+	.int8	1
+	.int8	0
+	.uleb128 .Ltmp1@DEBUGREF
+	.int8	1
+	.int8	1
+	.uleb128 test_likely_branch@FUNCINDEX
+	.int8	1
+	.uleb128 .Ltmp2@DEBUGREF
+	.int8	1
+	.int8	1
+	.section	.text.test_likely_branch,"",@
