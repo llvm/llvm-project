@@ -8,7 +8,7 @@
 Using HIPCC
 ******************************************
 
-To use the newly built the ``hipcc`` and ``hipconfig`` executables from the build folder use ``./`` in front of the executable name.
+To use the newly built ``hipcc`` and ``hipconfig`` executables from the build folder use ``./`` in front of the executable name.
 For example:
 
 .. code-block:: shell
