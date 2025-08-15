@@ -119,8 +119,9 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP3:%.*]] = shl i32 [[EVL_BASED_IV]], 1
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVE_EVL:%.*]] = shl nuw nsw i32 [[TMP1]], 1
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]])
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 32 x i8> @llvm.vp.load.nxv32i8.p0(ptr align 1 [[TMP5]], <vscale x 32 x i1> [[INTERLEAVED_MASK]], i32 [[TMP1]])
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 32 x i8> @llvm.vp.load.nxv32i8.p0(ptr align 1 [[TMP5]], <vscale x 32 x i1> [[INTERLEAVED_MASK]], i32 [[INTERLEAVE_EVL]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_VP_LOAD]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
@@ -128,9 +129,10 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP3]] to i64
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP9]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP11:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP8]]
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]])
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVE_EVL3:%.*]] = shl nuw nsw i32 [[TMP1]], 1
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_MASK4:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP11]])
-; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP10]], <vscale x 32 x i1> [[INTERLEAVED_MASK3]], i32 [[TMP1]])
+; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP10]], <vscale x 32 x i1> [[INTERLEAVED_MASK4]], i32 [[INTERLEAVE_EVL3]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
 ; PREDICATED_DATA-WITH-EVL:       middle.block:
@@ -294,8 +296,9 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP3:%.*]] = shl i32 [[EVL_BASED_IV]], 2
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVE_EVL:%.*]] = shl nuw nsw i32 [[TMP1]], 2
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]])
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr align 1 [[TMP5]], <vscale x 64 x i1> [[INTERLEAVED_MASK]], i32 [[TMP1]])
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr align 1 [[TMP5]], <vscale x 64 x i1> [[INTERLEAVED_MASK]], i32 [[INTERLEAVE_EVL]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> [[WIDE_VP_LOAD]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
@@ -307,9 +310,10 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP13:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP12]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP3]] to i64
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP14]]
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]])
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVE_EVL3:%.*]] = shl nuw nsw i32 [[TMP1]], 2
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_MASK4:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP2]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]], <vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP13]])
-; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP15]], <vscale x 64 x i1> [[INTERLEAVED_MASK3]], i32 [[TMP1]])
+; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP15]], <vscale x 64 x i1> [[INTERLEAVED_MASK4]], i32 [[INTERLEAVE_EVL3]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
 ; PREDICATED_DATA-WITH-EVL:       middle.block:
