@@ -471,6 +471,20 @@ implicit none
    end function
   end interface
 
+  interface int_as_float
+    attributes(device) real function __int_as_float(i) bind(c, name='__nv_int_as_float')
+      !dir$ ignore_tkr (d) i
+      integer, value :: i
+    end function
+  end interface
+
+  interface float_as_int
+    attributes(device) integer function __float_as_int(i) bind(c, name='__nv_float_as_int')
+      !dir$ ignore_tkr (d) i
+      real, value :: i
+    end function
+  end interface
+
   interface __float2half_rn
     attributes(device) real(2) function __float2half_rn(r) bind(c, name='__nv_float2half_rn')
       !dir$ ignore_tkr (d) r
@@ -668,21 +682,21 @@ implicit none
   end interface
 
   interface __double2loint
-    attributes(device) integer function __double2loint(r) bind(c)
+    attributes(device) integer function __double2loint(r) bind(c, name='__nv_double2loint')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2hiint
-    attributes(device) integer function __double2hiint(r) bind(c)
+    attributes(device) integer function __double2hiint(r) bind(c, name='__nv_double2hiint')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __hiloint2double
-    attributes(device) double precision function __hiloint2double(i, j) bind(c)
+    attributes(device) double precision function __hiloint2double(i, j) bind(c, name='__nv_hiloint2double')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i, j
     end function
