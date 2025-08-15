@@ -793,12 +793,48 @@ static bool canWidenCallReturnType(Type *Ty) {
 }
 
 bool LoopVectorizationLegality::canVectorizeInstrs() {
-  BasicBlock *Header = TheLoop->getHeader();
+  bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  bool Result = true;
 
   // For each block in the loop.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for hazards.
     for (Instruction &I : *BB) {
+      Result &= canVectorizeInstr(I);
+      if (!DoExtraAnalysis && !Result)
+        return false;
+    }
+  }
+
+  if (!PrimaryInduction) {
+    if (Inductions.empty()) {
+      reportVectorizationFailure("Did not find one integer induction var",
+          "loop induction variable could not be identified",
+          "NoInductionVariable", ORE, TheLoop);
+      return false;
+    }
+    if (!WidestIndTy) {
+      reportVectorizationFailure("Did not find one integer induction var",
+          "integer loop induction variable could not be identified",
+          "NoIntegerInductionVariable", ORE, TheLoop);
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
+  }
+
+  // Now we know the widest induction type, check if our found induction
+  // is the same size. If it's not, unset it here and InnerLoopVectorizer
+  // will create another.
+  if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
+    PrimaryInduction = nullptr;
+
+  return Result;
+}
+
+bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
+  BasicBlock *BB = I.getParent();
+  BasicBlock *Header = TheLoop->getHeader();
+
       if (auto *Phi = dyn_cast<PHINode>(&I)) {
         Type *PhiTy = Phi->getType();
         // Check that this PHI type is allowed.
@@ -820,7 +856,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // legalization for reduction, induction and fixed order
           // recurrences.
           AllowedExit.insert(&I);
-          continue;
+          return true;
         }
 
         // We only allow if-converted PHIs with exactly two incoming values.
@@ -837,7 +873,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
           Reductions[Phi] = RedDes;
-          continue;
+          return true;
         }
 
         // We prevent matching non-constant strided pointer IVS to preserve
@@ -871,13 +907,13 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             !IsDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           Requirements->addExactFPMathInst(ID.getExactFPMathInst());
-          continue;
+          return true;
         }
 
         if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
           AllowedExit.insert(Phi);
           FixedOrderRecurrences.insert(Phi);
-          continue;
+          return true;
         }
 
         // As a last resort, coerce the PHI to a AddRec expression
@@ -885,7 +921,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
             !IsDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
-          continue;
+          return true;
         }
 
         reportVectorizationFailure("Found an unidentified PHI",
@@ -1036,36 +1072,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // outside the loop.
         if (PSE.getPredicate().isAlwaysTrue()) {
           AllowedExit.insert(&I);
-          continue;
+          return true;
         }
         reportVectorizationFailure("Value cannot be used outside the loop",
                                    "ValueUsedOutsideLoop", ORE, TheLoop, &I);
         return false;
       }
-    } // next instr.
-  }
-
-  if (!PrimaryInduction) {
-    if (Inductions.empty()) {
-      reportVectorizationFailure("Did not find one integer induction var",
-          "loop induction variable could not be identified",
-          "NoInductionVariable", ORE, TheLoop);
-      return false;
-    }
-    if (!WidestIndTy) {
-      reportVectorizationFailure("Did not find one integer induction var",
-          "integer loop induction variable could not be identified",
-          "NoIntegerInductionVariable", ORE, TheLoop);
-      return false;
-    }
-    LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
-  }
-
-  // Now we know the widest induction type, check if our found induction
-  // is the same size. If it's not, unset it here and InnerLoopVectorizer
-  // will create another.
-  if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
-    PrimaryInduction = nullptr;
 
   return true;
 }
