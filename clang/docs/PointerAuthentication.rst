@@ -483,7 +483,9 @@ rules of C++:
 - A type may also be **illegal to copy**. Types that are illegal to copy are
   always non-trivial to copy.
 
-- A type may also be **address-sensitive**.
+- A type may also be **address-sensitive**. This includes types that use self
+  referencing pointers, data protected by address diversified pointer
+  authentication, or other similar concepts.
 
 - A type qualified with a ``ptrauth`` qualifier or implicit authentication
   schema that requires address diversity is non-trivial to copy and
@@ -834,15 +836,15 @@ the following example of a hand-rolled "v-table":
   };
 
 The weakness in this design is that by lacking any context specific
-discriminator, means an attacker can substiture any of these fields with any
-other correctly signed function pointer. Similarly the lack of address diversity
-allows an attacker to replace the functions in one type's "v-table" with those
-of another. This can be mitigated by overriding the default authentication
-schema with a more specific signing schema for each purpose.  For instance, in
-this example, the ``__ptrauth`` qualifier can be used with a different constant
-discriminator for each field.  Since there's no particular reason it's important
-for this v-table to be copyable with ``memcpy``, the functions can also be
-signed with address diversity:
+discriminator, this means an attacker can substitute any of these fields with
+any other function pointer signed with the default schema. Similarly the lack of
+address diversity allows an attacker to replace the functions in one type's
+"v-table" with those of another. This can be mitigated by overriding the default
+authentication schema with a more specific signing schema for each purpose.  For
+instance, in this example, the ``__ptrauth`` qualifier can be used with a
+different constant discriminator for each field.  Since there's no particular
+reason it's important for this v-table to be copyable with ``memcpy``, the
+functions can also be signed with address diversity:
 
 .. code-block:: c
 
@@ -1191,7 +1193,10 @@ Clang makes a modest set of guarantees in this area:
 
   - it takes the address of a global variable or function, or
 
-  - it is a load from a gl-value of ``__ptrauth``-qualified type.
+  - it is a load from a gl-value of ``__ptrauth``-qualified type, or
+
+  - it is a load from read-only memory that has been initialized from a safely
+    derived source, such as the `data const` section of a binary or library.
 
 - If a value that is safely derived is assigned to a ``__ptrauth``-qualified
   object, including by initialization, then the value will be directly signed as
@@ -1331,9 +1336,9 @@ is almost entirely reserved for this purpose.
 Global offset tables
 ~~~~~~~~~~~~~~~~~~~~
 
-The global offset table (GOT) is not language ABI, but it is a common
-implementation technique for dynamic linking which deserves special discussion
-here.
+The global offset table (GOT) is not part of the language ABI, but it is a
+common implementation technique for dynamic linking which deserves special
+discussion here.
 
 Whenever possible, signed pointers should be materialized directly in code
 rather than via the GOT, e.g. using an ``adrp+add+pac`` sequence on ARMv8.3.
@@ -1398,8 +1403,10 @@ create :ref:`signing oracles<Signing Oracles>`.
 On arm64e the `dlsym` function is used to resolve a symbol at runtime. If the
 resolved symbol is a function or other code pointer the returned pointer is
 signed using the default function signing schema described in
-`C function pointers`_. If the resolved symbol is not a code pointer it is
+:ref:`C function pointers<C function abi>`. If the resolved symbol is not a code pointer it is
 returned as an unsigned pointer.
+
+.. _C function abi:
 
 C function pointers
 ~~~~~~~~~~~~~~~~~~~
