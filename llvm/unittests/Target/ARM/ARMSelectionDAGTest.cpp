@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "ARMISelLowering.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -89,7 +96,7 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VORRIMM) {
   SDValue EncSD = DAG->getTargetConstant(Encoded, DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VORRIMM, DL, VT, LHS, EncSD);
 
-  APInt DemandedElts(/*numBits=*/2, /*val=*/3);
+  APInt DemandedElts = APInt::getAllOnes(2);
 
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
 
@@ -105,15 +112,14 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM) {
   SDLoc DL;
   EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 32), 2);
 
-  APInt AllOnes(32, 0);
-  AllOnes.setAllBits();
+  APInt AllOnes = APInt::getAllOnes(32);
   SDValue LHS = DAG->getConstant(AllOnes, DL, VT);
 
   unsigned Encoded = 0xF0;
   SDValue EncSD = DAG->getTargetConstant(Encoded, DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VBICIMM, DL, VT, LHS, EncSD);
 
-  APInt DemandedElts(2, 3);
+  APInt DemandedElts = APInt::getAllOnes(2);
 
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
 
