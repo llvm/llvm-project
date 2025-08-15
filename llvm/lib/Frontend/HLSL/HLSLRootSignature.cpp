@@ -94,7 +94,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
 }
 
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
-  OS << dxil::getResourceClassName(llvm::to_underlying(Type));
+  OS << dxil::getResourceClassName(
+      dxil::ResourceClass(llvm::to_underlying(Type)));
   return OS;
 }
 
