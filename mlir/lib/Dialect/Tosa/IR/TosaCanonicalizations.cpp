@@ -638,10 +638,12 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
       }
     }
 
-    auto newMode =
-        (opNanMode != clampNanMode) ? tosa::NanPropagationMode::IGNORE : opNanMode;
+    auto newMode = (opNanMode != clampNanMode)
+                       ? tosa::NanPropagationMode::IGNORE
+                       : opNanMode;
 
-    auto newModeAttr = NanPropagationModeAttr::get(rewriter.getContext(), newMode);
+    auto newModeAttr =
+        NanPropagationModeAttr::get(rewriter.getContext(), newMode);
 
     rewriter.replaceOpWithNewOp<tosa::ClampOp>(
         op, op.getType(), clampOp.getInput(), newMinValAttr, newMaxValAttr,
