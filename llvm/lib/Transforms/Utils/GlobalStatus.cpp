@@ -61,6 +61,45 @@ bool llvm::isSafeToDestroyConstant(const Constant *C) {
   return true;
 }
 
+static bool
+maybePointerToDifferentObjectRecursive(Value *V,
+                                       SmallPtrSetImpl<Value *> &Visited) {
+  if (!Visited.insert(V).second)
+    return false;
+
+  if (Visited.size() > 32)
+    return true;
+
+  // PtrToInt may be used to construct a pointer to a different object. Loads
+  // and calls may return a pointer for a different object.
+  if (isa<PtrToIntInst, LoadInst, CallInst>(V))
+    return true;
+
+  if (auto *CE = dyn_cast<ConstantExpr>(V)) {
+    if (CE->getOpcode() == Instruction::PtrToInt)
+      return true;
+
+    for (auto &Op : CE->operands()) {
+      if (maybePointerToDifferentObjectRecursive(Op.get(), Visited))
+        return true;
+    }
+    return false;
+  }
+
+  if (auto *U = dyn_cast<User>(V)) {
+    for (auto &Op : U->operands()) {
+      if (maybePointerToDifferentObjectRecursive(Op.get(), Visited))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool maybePointerToDifferentObject(Value *V) {
+  SmallPtrSet<Value *, 32> Visited;
+  return maybePointerToDifferentObjectRecursive(V, Visited);
+}
+
 static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
                              SmallPtrSetImpl<const Value *> &VisitedUsers) {
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
@@ -158,6 +197,12 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
             return true;
       } else if (isa<CmpInst>(I)) {
         GS.IsCompared = true;
+
+        if (VisitedUsers.insert(I).second) {
+          for (Value *Op : I->operands())
+            if (Op != V && maybePointerToDifferentObject(Op))
+              return true;
+        }
       } else if (const MemTransferInst *MTI = dyn_cast<MemTransferInst>(I)) {
         if (MTI->isVolatile())
           return true;

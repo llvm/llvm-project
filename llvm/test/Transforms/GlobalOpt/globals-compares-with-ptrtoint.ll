@@ -17,12 +17,10 @@
 
 ;.
 ; CHECK: @A = internal global i64 0
-; CHECK: @B = internal constant i64 0
+; CHECK: @B = internal global i64 0
 ; CHECK: @C = internal global i64 0
-; CHECK: @D = internal constant i64 0
+; CHECK: @D = internal global i64 0
 ; CHECK: @G = internal global i64 0
-; CHECK: @H = internal constant i64 0
-; CHECK: @J = internal constant [2 x ptr] zeroinitializer
 ;.
 define i64 @A_and_B_cmp_ptrtoint_constant_expr() {
 ; CHECK-LABEL: define i64 @A_and_B_cmp_ptrtoint_constant_expr() local_unnamed_addr {
@@ -34,7 +32,8 @@ define i64 @A_and_B_cmp_ptrtoint_constant_expr() {
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr @B, align 4
+; CHECK-NEXT:    ret i64 [[L]]
 ;
   %cmp = icmp eq ptr inttoptr (i64 add (i64 ptrtoint (ptr @A to i64), i64 8) to ptr) , @B
   br i1 %cmp, label %then, label %else
@@ -61,7 +60,8 @@ define i64 @G_and_H_cmp_ptrtoint_constant_expr_cmp_ops_swapped() {
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr @H, align 4
+; CHECK-NEXT:    ret i64 [[L]]
 ;
   %cmp = icmp eq ptr inttoptr (i64 add (i64 ptrtoint (ptr @G to i64), i64 8) to ptr) , @H
   br i1 %cmp, label %then, label %else
@@ -91,7 +91,8 @@ define i64 @C_and_D_cmp_ptr_load() {
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr @D, align 4
+; CHECK-NEXT:    ret i64 [[L]]
 ;
   %p = alloca ptr
   store ptr inttoptr (i64 add (i64 ptrtoint (ptr @C to i64), i64 8) to ptr), ptr %p
@@ -124,7 +125,8 @@ define i64 @D_and_E_cmp_ptrtoint_constant_expr() {
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr @B, align 4
+; CHECK-NEXT:    ret i64 [[L]]
 ;
   %ptr2int = ptrtoint ptr @A to i64
   %add = add i64 %ptr2int, 8
