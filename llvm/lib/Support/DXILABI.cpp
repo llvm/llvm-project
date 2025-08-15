@@ -16,7 +16,6 @@
 
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
-
 using namespace llvm;
 
 static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
