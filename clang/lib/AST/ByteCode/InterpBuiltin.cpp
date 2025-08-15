@@ -2338,7 +2338,7 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
       llvm_unreachable("Wrong builtin ID");
     }
 
-    pushInteger(S, APSInt(Result, !LHS.isSigned()), Call->getType());
+    pushInteger(S, APSInt(std::move(Result), !LHS.isSigned()), Call->getType());
     return true;
   }
 
