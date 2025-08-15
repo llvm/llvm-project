@@ -730,9 +730,9 @@ public:
                    {tensor, lvlCoords, values, filled, added, count},
                    EmitCInterface::On);
     Operation *parent = getTop(op);
+    rewriter.setInsertionPointAfter(parent);
     rewriter.replaceOp(op, adaptor.getTensor());
     // Deallocate the buffers on exit of the loop nest.
-    rewriter.setInsertionPointAfter(parent);
     memref::DeallocOp::create(rewriter, loc, values);
     memref::DeallocOp::create(rewriter, loc, filled);
     memref::DeallocOp::create(rewriter, loc, added);

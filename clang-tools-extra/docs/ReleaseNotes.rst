@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ====================================================
 Extra Clang Tools |release| |ReleaseNotesTitle|
 ====================================================
@@ -108,6 +111,9 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` by adding a new option
   `enable-check-profile` to enable per-check timing profiles and print a
   report based on all analyzed files.
+
+- Improved documentation of the `-line-filter` command-line flag of
+  :program:`clang-tidy` and :program:`run-clang-tidy.py`.
 
 New checks
 ^^^^^^^^^^

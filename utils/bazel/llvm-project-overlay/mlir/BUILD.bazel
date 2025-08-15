@@ -8,6 +8,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//llvm:targets.bzl", "llvm_targets")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -3722,11 +3723,14 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
+        ":LLVMDialect",
         ":LoopLikeInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -5509,6 +5513,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -7132,6 +7137,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "WasmTranslationRegistration",
+    srcs = [
+        "lib/Target/Wasm/TranslateFromWasm.cpp",
+        "lib/Target/Wasm/TranslateRegistration.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Target/Wasm/WasmBinaryEncoding.h",
+        "include/mlir/Target/Wasm/WasmImporter.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":TranslateLib",
+        ":WasmSSADialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "TensorOpsTdFiles",
     srcs = [
@@ -7951,6 +7975,7 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":XeGPUDialect",
+        ":XeGPUUtils",
         "//llvm:Support",
     ],
 )
@@ -8037,6 +8062,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -8995,6 +9021,7 @@ cc_library(
         ":TargetCpp",
         ":TargetSMTLIB",
         ":ToLLVMIRTranslationRegistration",
+        ":WasmTranslationRegistration",
     ],
 )
 
@@ -9103,6 +9130,7 @@ cc_library(
         ":X86VectorDialect",
         ":XeGPUDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
     ],
 )
 
@@ -9197,6 +9225,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorTransformOps",
         ":XeVMToLLVM",
+        ":XeVMToLLVMIRTranslation",
     ],
 )
 
@@ -13815,6 +13844,34 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMTarget",
+    srcs = ["lib/Target/LLVM/XeVM/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/XeVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ExecutionEngineUtils",
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        ":XeVMToLLVMIRTranslation",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:config",
+    ] + ([
+        "//llvm:SPIRVCodeGen",
+        "//llvm:SPIRVUtilsAndDesc",
+    ] if "SPIRV" in llvm_targets else []),
 )
 
 cc_library(

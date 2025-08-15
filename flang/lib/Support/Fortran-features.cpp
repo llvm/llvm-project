@@ -147,6 +147,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::UseAssociationIntoSameNameSubprogram);
   warnUsage_.set(UsageWarning::HostAssociatedIntentOutInSpecExpr);
   warnUsage_.set(UsageWarning::NonVolatilePointerToVolatile);
+  warnUsage_.set(UsageWarning::RealConstantWidening);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
