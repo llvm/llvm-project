@@ -120,7 +120,7 @@ void Thread::Destroy() {
 }
 
 void Thread::StartSwitchFiber(uptr bottom, uptr size) {
-  if (atomic_load(&stack_switching_, memory_order_relaxed)) {
+  if (atomic_load(&stack_switching_, memory_order_acquire)) {
     Report("ERROR: starting fiber switch while in fiber switch\n");
     Die();
   }
@@ -131,7 +131,7 @@ void Thread::StartSwitchFiber(uptr bottom, uptr size) {
 }
 
 void Thread::FinishSwitchFiber(uptr *bottom_old, uptr *size_old) {
-  if (!atomic_load(&stack_switching_, memory_order_relaxed)) {
+  if (!atomic_load(&stack_switching_, memory_order_acquire)) {
     Report("ERROR: finishing a fiber switch that has not started\n");
     Die();
   }
@@ -154,8 +154,7 @@ inline Thread::StackBounds Thread::GetStackBounds() const {
       return {0, 0};
     return {stack_bottom_, stack_top_};
   }
-  char local;
-  const uptr cur_stack = (uptr)&local;
+  const uptr cur_stack = (uptr)__builtin_frame_address(0);
   // Note: need to check next stack first, because FinishSwitchFiber
   // may be in process of overwriting stack_top_/bottom_. But in such case
   // we are already on the next stack.
@@ -286,28 +285,20 @@ using namespace __hwasan;
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_start_switch_fiber(void **unused, const void *bottom,
+void __sanitizer_start_switch_fiber(void **, const void *bottom,
                                     uptr size) {
-  // this is just a placeholder which make the interface same as ASan
-  (void)unused;
-  auto *t = GetCurrentThread();
-  if (!t) {
+  if (auto *t = GetCurrentThread())
+    t->StartSwitchFiber((uptr)bottom, size);
+  else
     VReport(1, "__hwasan_start_switch_fiber called from unknown thread\n");
-    return;
-  }
-  t->StartSwitchFiber((uptr)bottom, size);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_finish_switch_fiber(void *unused, const void **bottom_old,
+void __sanitizer_finish_switch_fiber(void *, const void **bottom_old,
                                      uptr *size_old) {
-  // this is just a placeholder which make the interface same as ASan
-  (void)unused;
-  auto *t = GetCurrentThread();
-  if (!t) {
+  if (auto *t = GetCurrentThread())
+    t->FinishSwitchFiber((uptr *)bottom_old, size_old);
+  else
     VReport(1, "__hwasan_finish_switch_fiber called from unknown thread\n");
-    return;
-  }
-  t->FinishSwitchFiber((uptr *)bottom_old, size_old);
 }
 }
