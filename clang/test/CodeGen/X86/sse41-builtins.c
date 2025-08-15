@@ -344,6 +344,7 @@ __m128i test_mm_mul_epi32(__m128i x, __m128i y) {
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_epi32(x, y);
 }
+TEST_CONSTEXPR(match_v4si(_mm_mul_epi32((__m128i)(__v8hi){+1, -2, +3, -4, +5, -6, +7, -8}, (__m128i)(__v8hi){-16, -14, +12, +10, -8, +6, -4, +2}), 1245168, 26, 5439448, -42));
 
 __m128i test_mm_mullo_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_mullo_epi32
