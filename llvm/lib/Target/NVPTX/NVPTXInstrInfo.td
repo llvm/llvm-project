@@ -1522,7 +1522,8 @@ let hasSideEffects = false in {
               [(set t.Ty:$dst, t.ImmNode:$src)]>;
 
   // We don't want to set isAsCheapAsAMove to true for these instructions as
-  // this would prevent CSE and resulted in regressions.
+  // this would prevent CSE and resulted in regressions (see discussion after
+  // PR-145581 in llvm-project).
   class MovSymInst<RegTyInfo t> :
     BasicNVPTXInst<(outs t.RC:$dst), (ins Operand<t.Ty>:$src),
                    "mov.b" # t.Size>;
