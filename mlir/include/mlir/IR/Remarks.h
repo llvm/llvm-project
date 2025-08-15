@@ -25,20 +25,30 @@
 #include "mlir/IR/Value.h"
 
 namespace mlir::remark {
-/// Define an the set of categories to accept.
-/// By default none are, the provided regex matches against
-/// the category names for each kind of remark.
+/// Define an the set of categories to accept. By default none are, the provided
+/// regex matches against the category names for each kind of remark.
 struct RemarkCategories {
   std::optional<std::string> passed, missed, analysis, failed;
 };
 
-/// Defines different remark kinds that can be used to categorize remarks.
+/// Categories describe the outcome of an optimization, not the mechanics of
+/// emitting/serializing remarks.
 enum class RemarkKind {
   OptimizationRemarkUnknown = 0,
-  OptimizationRemarkPassed,   // Optimization remark that was passed.
-  OptimizationRemarkMissed,   // Optimization remark that was missed.
-  OptimizationRemarkFailure,  // Optimization failure remark.
-  OptimizationRemarkAnalysis, // Analysis remark that does not indicate a pass.
+
+  /// An optimization was applied.
+  OptimizationRemarkPassed,
+
+  /// A profitable optimization opportunity was found but not applied.
+  OptimizationRemarkMissed,
+
+  /// The compiler attempted the optimization but failed (e.g., legality
+  /// checks, or better opportunites).
+  OptimizationRemarkFailure,
+
+  /// Informational context (e.g., analysis numbers) without a pass/fail
+  /// outcome.
+  OptimizationRemarkAnalysis,
 };
 } // namespace mlir::remark
 
@@ -284,7 +294,7 @@ private:
   /// reported.
   std::optional<llvm::Regex> missFilter;
   /// The category for passed optimization remarks.
-  std::optional<llvm::Regex> passFilter;
+  std::optional<llvm::Regex> passedFilter;
   /// The category for analysis remarks.
   std::optional<llvm::Regex> analysisFilter;
   /// The category for failed optimization remarks.
@@ -312,10 +322,10 @@ private:
 
   /// Return true if any type of remarks are enabled for this pass.
   bool isAnyRemarkEnabled(StringRef categoryName) const {
-    return (isMissedOptRemarkEnabled(categoryName) ||
-            isPassedOptRemarkEnabled(categoryName) ||
-            isFailedOptRemarkEnabled(categoryName) ||
-            isAnalysisOptRemarkEnabled(categoryName));
+    return isMissedOptRemarkEnabled(categoryName) ||
+           isPassedOptRemarkEnabled(categoryName) ||
+           isFailedOptRemarkEnabled(categoryName) ||
+           isAnalysisOptRemarkEnabled(categoryName);
   }
 
   /// Emit a remark using the given maker function, which should return
@@ -384,14 +394,22 @@ inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
 
 namespace mlir::remark {
 
+/// Create a Reason with llvm::formatv formatting.
 template <class... Ts>
 inline detail::LazyTextBuild reason(const char *fmt, Ts &&...ts) {
   return {"Reason", [=] { return llvm::formatv(fmt, ts...).str(); }};
 }
 
+/// Create a Suggestion with llvm::formatv formatting.
 template <class... Ts>
 inline detail::LazyTextBuild suggest(const char *fmt, Ts &&...ts) {
   return {"Suggestion", [=] { return llvm::formatv(fmt, ts...).str(); }};
+}
+
+/// Create a Remark with llvm::formatv formatting.
+template <class... Ts>
+inline detail::LazyTextBuild add(const char *fmt, Ts &&...ts) {
+  return {"Remark", [=] { return llvm::formatv(fmt, ts...).str(); }};
 }
 
 template <class V>
@@ -435,13 +453,12 @@ inline detail::InFlightRemark analysis(Location loc, StringRef cat,
 }
 
 /// Setup remarks for the context. This function will enable the remark engine
-/// and set the streamer to be used for optimization remarks.
-/// The remark categories are used to filter the remarks that will be emitted
-/// by the remark engine. If a category is not specified, it will not be
-/// emitted. If `printAsEmitRemarks` is true, the remarks will be printed as
-/// mlir::emitRemarks.
-/// 'streamer' must inherit from MLIRRemarkStreamerBase and will be used to
-/// stream the remarks.
+/// and set the streamer to be used for optimization remarks. The remark
+/// categories are used to filter the remarks that will be emitted by the remark
+/// engine. If a category is not specified, it will not be emitted. If
+/// `printAsEmitRemarks` is true, the remarks will be printed as
+/// mlir::emitRemarks. 'streamer' must inherit from MLIRRemarkStreamerBase and
+/// will be used to stream the remarks.
 LogicalResult enableOptimizationRemarks(
     MLIRContext &ctx,
     std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,

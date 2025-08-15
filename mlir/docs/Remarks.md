@@ -64,7 +64,7 @@ Optimization/transformation succeeded.
 Optimization/transformation didn’t apply — ideally with actionable feedback.
 
 ```c++
-[Missed] Unroll: {Reason=tripCount=4 < threshold=256, Suggestion=increase unroll to 128}
+[Missed] Unroll: {Reason=tripCount is 4 smaller than the threshold=256, Suggestion=Reduce threshold to 4}
 ```
 
 #### 3. **Failure**
@@ -80,8 +80,7 @@ $ your-compiler -use-max-register=100 mycode.xyz
 ```
 
 ```c++
-[Failed]  { Limiting to use-max-register=100 failed;
-            ; it now uses 104 registers for better performance ... }
+[Failed]  {Remark=Limiting to use-max-register=100 failed; it now uses 104 registers for better performance ... }
 ```
 
 #### 4. **Analysis**

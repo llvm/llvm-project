@@ -165,7 +165,7 @@ bool RemarkEngine::isMissedOptRemarkEnabled(StringRef categoryName) const {
 }
 
 bool RemarkEngine::isPassedOptRemarkEnabled(StringRef categoryName) const {
-  return passFilter && passFilter->match(categoryName);
+  return passedFilter && passedFilter->match(categoryName);
 }
 
 bool RemarkEngine::isAnalysisOptRemarkEnabled(StringRef categoryName) const {
@@ -235,7 +235,7 @@ RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
                            const RemarkCategories &cats)
     : printAsEmitRemarks(printAsEmitRemarks) {
   if (cats.passed)
-    passFilter = llvm::Regex(cats.passed.value());
+    passedFilter = llvm::Regex(cats.passed.value());
   if (cats.missed)
     missFilter = llvm::Regex(cats.missed.value());
   if (cats.analysis)
