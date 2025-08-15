@@ -1116,16 +1116,16 @@ class AllMemSizesMatch<list<string> names> :
 
 def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
       AllMemSizesMatch<["source", "mem_desc"]>]>  {
-  let summary = "Create a matrix descriptor.";
+  let summary = "Create a memory descriptor.";
   let description = [{
-    Creates a matrix descriptor from a shared local memory (SLM) buffer.
-    The resulting matrix descriptor has to have the same size as the underlying
-    shared local memory.
+    Creates a memory descriptor from a shared local memory (SLM) buffer, and xegpu
+    specific memory layout. The resulting memory descriptor has to have the same size
+    as the underlying shared local memory.
 
     Arguments:
      - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
     Results:
-     - `mem_desc` : the matrix descriptor.
+     - `mem_desc` : the memory descriptor.
   }];
   let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
@@ -1148,10 +1148,10 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
 
   let description = [{
     This operation reads a block of data from shared local memory (SLM)
-    using the provided matrix descriptor.
+    using the provided memory descriptor.
 
     Arguments:
-     - `mem_desc`: the matrix descriptor identifying the SLM region.
+     - `mem_desc`: the memory descriptor identifying the SLM region.
      - `offsets`: the coordinates within the matrix to read from.
      - `layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
@@ -1190,7 +1190,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     identified by `mem_desc`.
 
     Arguments:
-     - `mem_desc`: the matrix descriptor specifying the SLM region.
+     - `mem_desc`: the memory descriptor specifying the SLM region.
      - `offsets`: the coordinates within the matrix where the data will be written.
      - `data`: the values to be stored in the matrix.
      - `layout`: [optional] An attribute for guiding distributions among
@@ -1213,16 +1213,16 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
 def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
           [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
   let description = [{
-    Creates a subview of a matrix descriptor. The resulting matrix descriptor can have
+    Creates a subview of a memory descriptor. The resulting memory descriptor can have
     a lower rank than the source; in this case, the result dimensions correspond to the
-    higher-order dimensions of the source matrix descriptor.
+    higher-order dimensions of the source memory descriptor.
 
     Arguments:
-     - `src` : a matrix descriptor.
+     - `src` : a memory descriptor.
      - `offsets` : the coordinates within the matrix the subview will be created from.
 
     Results:
-    - `res` : a matrix descriptor with smaller size.
+    - `res` : a memory descriptor with smaller size.
 
   }];
   let arguments = (ins XeGPU_MemDesc:$src,

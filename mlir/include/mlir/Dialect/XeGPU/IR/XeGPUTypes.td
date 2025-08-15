@@ -210,14 +210,14 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
 
     Examples:
     ```mlir
-    // A matrix of data stored in column-major order.
+    // A block of data stored in column-major order.
     !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128]>>
 
-    // A matrix of data stored in a blocked layout. Elements within the same block
+    // A block of data stored in a blocked layout. Elements within the same block
     // are stored contiguously in memory. Blocks are stored in row-major order.
     !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<block = [8, 8]>>
 
-    // A matrix of data stored in column-major order with blocked layout.
+    // A block of data stored in column-major order with blocked layout.
     !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [8, 8]>>
     ```
   }];
