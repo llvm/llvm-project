@@ -2329,7 +2329,7 @@ int32_t GenericPluginTy::data_fence(int32_t DeviceId,
                                     __tgt_async_info *AsyncInfo) {
   auto Err = getDevice(DeviceId).dataFence(AsyncInfo);
   if (Err) {
-    REPORT("Failure to place data fence on device %d: %s\n", DeviceId,
+    REPORT("failure to place data fence on device %d: %s\n", DeviceId,
            toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }
