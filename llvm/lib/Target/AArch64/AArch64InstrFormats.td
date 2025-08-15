@@ -36,7 +36,12 @@ def DestructiveBinary             : DestructiveInstTypeEnum<5>;
 def DestructiveBinaryComm         : DestructiveInstTypeEnum<6>;
 def DestructiveBinaryCommWithRev  : DestructiveInstTypeEnum<7>;
 def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
-def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<9>;
+
+// 3 inputs unpredicated (reg1, reg2, imm).
+// Can be MOVPRFX'd iff reg1 == reg2.
+def Destructive2xRegImmUnpred     : DestructiveInstTypeEnum<9>;
+
+def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<10>;
 
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
@@ -7362,7 +7367,9 @@ multiclass SIMDDifferentThreeVectorBD<bit U, bits<4> opc, string asm,
       [(set (v8i16 V128:$Rd), (OpNode (v8i8 V64:$Rn), (v8i8 V64:$Rm)))]>;
   def v16i8  : BaseSIMDDifferentThreeVector<U, 0b001, opc,
                                             V128, V128, V128,
-                                            asm#"2", ".8h", ".16b", ".16b", []>;
+                                            asm#"2", ".8h", ".16b", ".16b",
+      [(set (v8i16 V128:$Rd), (OpNode (v8i8 (extract_high_v16i8 (v16i8 V128:$Rn))),
+                                      (v8i8 (extract_high_v16i8 (v16i8 V128:$Rm)))))]>;
   let Predicates = [HasAES] in {
     def v1i64  : BaseSIMDDifferentThreeVector<U, 0b110, opc,
                                               V128, V64, V64,
@@ -7374,10 +7381,6 @@ multiclass SIMDDifferentThreeVectorBD<bit U, bits<4> opc, string asm,
         [(set (v16i8 V128:$Rd), (OpNode (extract_high_v2i64 (v2i64 V128:$Rn)),
                                         (extract_high_v2i64 (v2i64 V128:$Rm))))]>;
   }
-
-  def : Pat<(v8i16 (OpNode (v8i8 (extract_high_v16i8 (v16i8 V128:$Rn))),
-                          (v8i8 (extract_high_v16i8 (v16i8 V128:$Rm))))),
-      (!cast<Instruction>(NAME#"v16i8") V128:$Rn, V128:$Rm)>;
 }
 
 multiclass SIMDLongThreeVectorHS<bit U, bits<4> opc, string asm,
@@ -7402,6 +7405,7 @@ multiclass SIMDLongThreeVectorHS<bit U, bits<4> opc, string asm,
                                       (extract_high_v4i32 (v4i32 V128:$Rm))))]>;
 }
 
+let isCommutable = 1 in
 multiclass SIMDLongThreeVectorBHSabdl<bit U, bits<4> opc, string asm,
                                   SDPatternOperator OpNode = null_frag> {
   def v8i8_v8i16   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
@@ -7483,6 +7487,7 @@ multiclass SIMDLongThreeVectorTiedBHSabal<bit U, bits<4> opc,
                                     (extract_high_v4i32 (v4i32 V128:$Rm)))))))]>;
 }
 
+let isCommutable = 1 in
 multiclass SIMDLongThreeVectorBHS<bit U, bits<4> opc, string asm,
                                   SDPatternOperator OpNode = null_frag> {
   def v8i8_v8i16   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
