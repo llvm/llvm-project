@@ -3349,14 +3349,14 @@ ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
 
 void MallocChecker::checkPostCall(const CallEvent &Call,
                                   CheckerContext &C) const {
-  // Keep existing post-call handlers
+  // Handle existing post-call handlers first
   if (const auto *PostFN = PostFnMap.lookup(Call)) {
     (*PostFN)(this, C.getState(), Call, C);
+    return; // Post-handler already called addTransition, we're done
   }
 
-  // Handle all smart pointer related processing
+  // Handle smart pointer related processing only if no post-handler was called
   ProgramStateRef State = handleSmartPointerRelatedCalls(Call, C, C.getState());
-
   C.addTransition(State);
 }
 

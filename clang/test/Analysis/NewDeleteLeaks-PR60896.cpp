@@ -144,6 +144,26 @@ void test_mixed_direct_constructor() {
   int x = *raw2; // expected-warning {{Potential leak of memory pointed to by 'raw2'}} expected-note {{Potential leak of memory pointed to by 'raw2'}}
 }
 
+// Test 7: Multiple memory owning arguments - demonstrates addTransition API usage
+void addMultipleOwningArgs(
+  unique_ptr<int> ptr1,
+  unique_ptr<int> ptr2, 
+  unique_ptr<int> ptr3
+) {
+  // All unique_ptr destructors will be called when arguments go out of scope
+  // This tests handling of multiple smart pointer parameters in a single call
+}
+
+void test_multiple_memory_owning_arguments() {
+  // No warning should be emitted - all memory is properly managed by unique_ptr
+  // This test specifically exercises the addTransition API with multiple owning arguments
+  addMultipleOwningArgs(
+    make_unique<int>(1),
+    make_unique<int>(2), 
+    make_unique<int>(3)
+  );
+}
+
 } // namespace unique_ptr_tests
 
 //===----------------------------------------------------------------------===//
