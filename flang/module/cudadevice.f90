@@ -583,6 +583,20 @@ implicit none
     end function
   end interface
 
+  interface double_as_longlong
+    attributes(device) integer(8) function __double_as_longlong(i) bind(c, name='__nv_double_as_longlong')
+      !dir$ ignore_tkr (d) i
+      real(8), value :: i
+    end function
+  end interface
+
+  interface longlong_as_double
+    attributes(device) real(8) function __longlong_as_double(i) bind(c, name='__nv_longlong_as_double')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
   interface __double2int_rd
     attributes(device) integer function __double2int_rd(r) bind(c, name='__nv_double2int_rd')
       !dir$ ignore_tkr (d) r
