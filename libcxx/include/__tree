@@ -563,7 +563,7 @@ public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
   union {
-  __node_value_type __value_;
+    __node_value_type __value_;
   };
 
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
