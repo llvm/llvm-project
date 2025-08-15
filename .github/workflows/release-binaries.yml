@@ -251,6 +251,8 @@ jobs:
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
             -DCMAKE_OBJECT_PATH_MAX=450 \
+            -DBOOTSTRAP_CMAKE_OBJECT_PATH_MAX=450 \
+            -DBOOTSTRAP_BOOTSTRAP_CMAKE_OBJECT_PATH_MAX=450 \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build Unix
