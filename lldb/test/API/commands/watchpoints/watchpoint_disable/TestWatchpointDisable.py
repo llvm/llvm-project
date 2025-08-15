@@ -6,22 +6,35 @@ import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbplatform, lldbplatformutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class TestWatchpointSetEnable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_disable_works(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_harwdare_watchpoint_disable_works(self):
         """Set a watchpoint, disable it, and make sure it doesn't get hit."""
         self.build()
-        self.do_test(False)
+        self.do_test(False, WatchpointType.WRITE, lldb.eWatchpointModeHardware)
 
-    def test_disable_enable_works(self):
+    def test_software_watchpoint_disable_works(self):
         """Set a watchpoint, disable it, and make sure it doesn't get hit."""
         self.build()
-        self.do_test(True)
+        self.do_test(False, WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
 
-    def do_test(self, test_enable):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_harwdare_watchpoint_disable_enable_works(self):
+        """Set a watchpoint, disable it, and make sure it doesn't get hit."""
+        self.build()
+        self.do_test(True, WatchpointType.WRITE, lldb.eWatchpointModeHardware)
+
+    def test_software_watchpoint_disable_enable_works(self):
+        """Set a watchpoint, disable it, and make sure it doesn't get hit."""
+        self.build()
+        self.do_test(True, WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_test(self, test_enable, wp_type, wp_mode):
         """Set a watchpoint, disable it and make sure it doesn't get hit."""
 
         main_file_spec = lldb.SBFileSpec("main.c")
@@ -52,7 +65,8 @@ class TestWatchpointSetEnable(TestBase):
 
         ret_val = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand(
-            "watchpoint set variable -w write global_var", ret_val
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global_var",
+            ret_val,
         )
         self.assertTrue(
             ret_val.Succeeded(), "Watchpoint set variable did not return success."

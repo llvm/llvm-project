@@ -10,6 +10,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class UnalignedWatchpointTestCase(TestBase):
@@ -32,7 +33,17 @@ class UnalignedWatchpointTestCase(TestBase):
     # older debugservers will return the base address of the doubleword
     # which lldb doesn't understand, and will stop executing without a
     # proper stop reason.
-    def test_unaligned_watchpoint(self):
+    def test_unaligned_hw_watchpoint(self):
+        self.do_unaligned_watchpoint(
+            WatchpointType.MODIFY, lldb.eWatchpointModeHardware
+        )
+
+    def test_unaligned_sw_watchpoint(self):
+        self.do_unaligned_watchpoint(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_unaligned_watchpoint(self, wp_type, wp_mode):
         """Test a watchpoint that is handled by two hardware watchpoint registers."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
@@ -47,9 +58,9 @@ class UnalignedWatchpointTestCase(TestBase):
         a_bytebuf_6 = frame.GetValueForVariablePath("a.bytebuf[6]")
         a_bytebuf_6_addr = a_bytebuf_6.GetAddress().GetLoadAddress(target)
         err = lldb.SBError()
-        wp_opts = lldb.SBWatchpointOptions()
-        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
-        wp = target.WatchpointCreateByAddress(a_bytebuf_6_addr, 4, wp_opts, err)
+        wp = set_watchpoint_by_address(
+            target, a_bytebuf_6_addr, 4, wp_type, wp_mode, err
+        )
         self.assertTrue(err.Success())
         self.assertTrue(wp.IsEnabled())
         self.assertEqual(wp.GetWatchSize(), 4)

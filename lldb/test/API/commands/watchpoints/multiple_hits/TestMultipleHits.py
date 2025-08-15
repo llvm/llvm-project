@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class MultipleHitsTestCase(TestBase):
@@ -17,8 +18,15 @@ class MultipleHitsTestCase(TestBase):
         oslist=["linux"],
         archs=["arm$", "aarch64", "powerpc64le"],
     )
+    @expectedFailureAll(archs="^riscv.*")
     @skipIfwatchOS
-    def test(self):
+    def test_hw_watchpoint(self):
+        self.do_test(WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware)
+
+    def test_sw_watchpoint(self):
+        self.do_test(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_test(self, wp_type, wp_mode):
         self.build()
         target = self.createTestTarget()
 
@@ -42,7 +50,7 @@ class MultipleHitsTestCase(TestBase):
             self.assertTrue(member and member.IsValid(), "member is valid")
 
             error = lldb.SBError()
-            watch = member.Watch(True, True, True, error)
+            watch = set_watchpoint_at_value(member, wp_type, wp_mode, error)
             self.assertSuccess(error)
 
         process.Continue()
