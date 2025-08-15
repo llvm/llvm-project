@@ -938,7 +938,7 @@ TEST(CompletionTest, IncludeInsertionRespectsQuotedAngledConfig) {
   {
     Config C;
     C.Style.AngledHeaders.push_back(
-        [](auto header) { return header == "bar.h"; });
+        [](auto header) { return header.contains("bar.h"); });
     WithContextValue WithCfg(Config::Key, std::move(C));
     Results = completions(TU, Test.point(), {Sym});
     EXPECT_THAT(Results.Completions,
@@ -947,7 +947,7 @@ TEST(CompletionTest, IncludeInsertionRespectsQuotedAngledConfig) {
   {
     Config C;
     C.Style.QuotedHeaders.push_back(
-        [](auto header) { return header == "bar.h"; });
+        [](auto header) { return header.contains("bar.h"); });
     WithContextValue WithCfg(Config::Key, std::move(C));
     Results = completions(TU, Test.point(), {Sym});
     EXPECT_THAT(Results.Completions,

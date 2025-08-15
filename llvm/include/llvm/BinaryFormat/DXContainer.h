@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
@@ -212,6 +213,39 @@ inline bool isValidParameterType(uint32_t V) {
 enum class ShaderVisibility : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+inline dxil::ResourceClass
+toResourceClass(dxbc::DescriptorRangeType RangeType) {
+  using namespace dxbc;
+  switch (RangeType) {
+  case DescriptorRangeType::SRV:
+    return dxil::ResourceClass::SRV;
+  case DescriptorRangeType::UAV:
+    return dxil::ResourceClass::UAV;
+  case DescriptorRangeType::CBV:
+    return dxil::ResourceClass::CBuffer;
+  case DescriptorRangeType::Sampler:
+    return dxil::ResourceClass::Sampler;
+  }
+  llvm_unreachable("Unknown DescriptorRangeType");
+}
+
+inline dxil::ResourceClass toResourceClass(dxbc::RootParameterType Type) {
+  using namespace dxbc;
+  switch (Type) {
+  case RootParameterType::Constants32Bit:
+    return dxil::ResourceClass::CBuffer;
+  case RootParameterType::SRV:
+    return dxil::ResourceClass::SRV;
+  case RootParameterType::UAV:
+    return dxil::ResourceClass::UAV;
+  case RootParameterType::CBV:
+    return dxil::ResourceClass::CBuffer;
+  case dxbc::RootParameterType::DescriptorTable:
+    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
+  }
+  llvm_unreachable("Unknown RootParameterType");
+}
 
 LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 

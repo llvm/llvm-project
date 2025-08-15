@@ -18,6 +18,7 @@
 #define LLVM_SUPPORT_DXILABI_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
 
 namespace llvm {
@@ -100,7 +101,9 @@ enum class SamplerFeedbackType : uint32_t {
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
-StringRef getResourceClassName(ResourceClass RC);
+LLVM_ABI ArrayRef<EnumEntry<ResourceClass>> getResourceClasses();
+
+LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
 
 } // namespace dxil
 } // namespace llvm

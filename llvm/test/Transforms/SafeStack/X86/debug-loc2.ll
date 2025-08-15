@@ -43,12 +43,12 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare void @capture(ptr) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

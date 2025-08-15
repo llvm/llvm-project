@@ -45,6 +45,10 @@ s_rfe_i64 s[2:3]
 s_rfe_b64 s[2:3]
 // GFX1250: s_rfe_i64 s[2:3]                        ; encoding: [0x02,0x4a,0x80,0xbe]
 
+s_get_shader_cycles_u64 s[2:3]
+// GFX1250: s_get_shader_cycles_u64 s[2:3]          ; encoding: [0x00,0x06,0x82,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_barrier_signal -3
 // GFX1250: s_barrier_signal -3                     ; encoding: [0xc3,0x4e,0x80,0xbe]
 
