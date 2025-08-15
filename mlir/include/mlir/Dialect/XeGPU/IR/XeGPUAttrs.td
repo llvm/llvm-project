@@ -538,7 +538,6 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
   let parameters = (ins "DictionaryAttr": $attrs);
   let hasCustomAssemblyFormat = 1;
 
-
   let extraClassDeclaration = [{
     /// Get a specific attribute by name
     Attribute getAttr(StringRef name) const {

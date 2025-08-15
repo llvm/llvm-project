@@ -787,8 +787,15 @@ func.func @load_mem_desc_mismatch_element_type(%arg0: !xegpu.mem_desc<16x64xf16>
 
 // -----
 func.func @load_mem_desc_invalid_result_size(%arg0: !xegpu.mem_desc<16x64xf16>) {
-  // expected-error@+1 {{result shape must not exceed matrix desc shape}}
+  // expected-error@+1 {{result shape must not exceed mem_desc shape}}
   %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> vector<32x16xf16>
+  return
+}
+
+// -----
+func.func @load_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>) {
+  // expected-error@+1 {{mem_desc must be 2D}}
+  %data = xegpu.load_matrix %arg0[16]: !xegpu.mem_desc<64xf16> -> vector<16xf16>
   return
 }
 
@@ -801,8 +808,15 @@ func.func @store_mem_desc_mismatch_element_type(%arg0: !xegpu.mem_desc<16x64xf16
 
 // -----
 func.func @store_mem_desc_invalid_data_size(%arg0: !xegpu.mem_desc<16x64xf16>, %arg1: vector<32x32xf16>) {
-  // expected-error@+1 {{data shape must not exceed matrix desc shape}}
+  // expected-error@+1 {{data shape must not exceed mem_desc shape}}
   xegpu.store_matrix %arg1, %arg0[8, 8] : vector<32x32xf16>, !xegpu.mem_desc<16x64xf16>
+  return
+}
+
+// -----
+func.func @store_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>, %arg1: vector<32xf16>) {
+  // expected-error@+1 {{mem_desc must be 2D.}}
+  xegpu.store_matrix %arg1, %arg0[32] : vector<32xf16>, !xegpu.mem_desc<64xf16>
   return
 }
 

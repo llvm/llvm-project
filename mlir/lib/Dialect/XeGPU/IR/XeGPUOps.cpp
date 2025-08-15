@@ -942,23 +942,29 @@ void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // XeGPU_LoadMatrixOp
 //===----------------------------------------------------------------------===//
 void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
-                         TypedValue<MemDescType> matrixDesc,
+                         TypedValue<MemDescType> memDesc,
                          llvm::ArrayRef<OpFoldResult> offsets,
                          LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  build(builder, state, res, matrixDesc, dynamicOffsets, staticOffsetsAttr,
+  build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
         layout);
 }
 
 LogicalResult LoadMatrixOp::verify() {
-  ArrayRef<int64_t> valueShape = getRes().getType().getShape();
-  ArrayRef<int64_t> mdescShape = getMemDesc().getType().getShape();
+  VectorType resTy = getRes().getType();
+  MemDescType mdescTy = getMemDesc().getType();
+
+  if (mdescTy.getRank() != 2)
+    return emitOpError("mem_desc must be 2D.");
+
+  ArrayRef<int64_t> valueShape = resTy.getShape();
+  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
   if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("result shape must not exceed matrix desc shape.");
+    return emitOpError("result shape must not exceed mem_desc shape.");
   return success();
 }
 
@@ -966,23 +972,29 @@ LogicalResult LoadMatrixOp::verify() {
 // XeGPU_StoreMatrixOp
 //===----------------------------------------------------------------------===//
 void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
-                          TypedValue<MemDescType> matrixDesc,
+                          TypedValue<MemDescType> memDesc,
                           llvm::ArrayRef<OpFoldResult> offsets,
                           LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  build(builder, state, data, matrixDesc, dynamicOffsets, staticOffsetsAttr,
+  build(builder, state, data, memDesc, dynamicOffsets, staticOffsetsAttr,
         layout);
 }
 
 LogicalResult StoreMatrixOp::verify() {
-  ArrayRef<int64_t> dataShape = getData().getType().getShape();
-  ArrayRef<int64_t> mdescShape = getMemDesc().getType().getShape();
+  VectorType dataTy = getData().getType();
+  MemDescType mdescTy = getMemDesc().getType();
+
+  if (mdescTy.getRank() != 2)
+    return emitOpError("mem_desc must be 2D.");
+
+  ArrayRef<int64_t> dataShape = dataTy.getShape();
+  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
   if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("data shape must not exceed matrix desc shape.");
+    return emitOpError("data shape must not exceed mem_desc shape.");
 
   return success();
 }
