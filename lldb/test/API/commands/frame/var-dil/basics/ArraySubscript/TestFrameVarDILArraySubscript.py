@@ -69,17 +69,18 @@ class TestFrameVarDILArraySubscript(TestBase):
             substrs=["expected 'r_square', got: <'.'"],
         )
 
-        # Base should be a "pointer to T" and index should be of an integral type.
-        self.expect(
-            "frame var 'idx_1[0]'",
-            error=True,
-            substrs=["subscripted value is not an array or pointer"],
-        )
+        # Test accessing bits in scalar types.
+        self.expect_var_path("idx_1[0]", value="1")
+        self.expect_var_path("idx_1[1]", value="0")
+
+        # Bit adcess not valid for a reference.
         self.expect(
             "frame var 'idx_1_ref[0]'",
             error=True,
-            substrs=["subscripted value is not an array or pointer"],
+            substrs=["bitfield range 0-0 is not valid"],
         )
+
+        # Base should be a "pointer to T" and index should be of an integral type.
         self.expect(
             "frame var 'int_arr[int_ptr]'",
             error=True,
@@ -105,6 +106,8 @@ class TestFrameVarDILArraySubscript(TestBase):
         )
 
         self.runCmd("settings set target.experimental.use-DIL true")
+        self.runCmd("script from myArraySynthProvider import *")
+        self.runCmd("type synth add -l myArraySynthProvider myArray")
 
         # Test synthetic value subscription
         self.expect_var_path("vector[1]", value="2")
@@ -112,4 +115,8 @@ class TestFrameVarDILArraySubscript(TestBase):
             "frame var 'vector[100]'",
             error=True,
             substrs=["array index 100 is not valid"],
+        )
+        self.expect(
+            "frame var 'ma_ptr[0]'",
+            substrs=["(myArray) ma_ptr[0] = ([0] = 7, [1] = 8, [2] = 9, [3] = 10)"],
         )
