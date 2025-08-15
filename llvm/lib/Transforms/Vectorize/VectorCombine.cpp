@@ -1805,10 +1805,6 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // erased in the correct order.
   Worklist.push(LI);
 
-  LLVMContext &ctx = LI->getContext();
-  unsigned aliasScopeKind = ctx.getMDKindID("alias.scope");
-  unsigned noAliasKind = ctx.getMDKindID("noalias");
-
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
@@ -1829,12 +1825,12 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
         LI->getAlign(), VecTy->getElementType(), Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
 
-    if (MDNode *aliasScope = LI->getMetadata(aliasScopeKind)) {
-      NewLoad->setMetadata(aliasScopeKind, aliasScope);
+    if (MDNode *aliasScope = LI->getMetadata(LLVMContext::MD_alias_scope)) {
+      NewLoad->setMetadata(LLVMContext::MD_alias_scope, aliasScope);
     }
 
-    if (MDNode *noAlias = LI->getMetadata(noAliasKind)) {
-      NewLoad->setMetadata(noAliasKind, noAlias);
+    if (MDNode *noAlias = LI->getMetadata(LLVMContext::MD_noalias)) {
+      NewLoad->setMetadata(LLVMContext::MD_noalias, noAlias);
     }
 
     replaceValue(*EI, *NewLoad);
