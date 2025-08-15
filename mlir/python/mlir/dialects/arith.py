@@ -5,8 +5,10 @@
 from ._arith_ops_gen import *
 from ._arith_ops_gen import _Dialect
 from ._arith_enum_gen import *
+from ..util import is_integer_type, is_index_type, is_float_type
 from array import array as _array
 from typing import overload
+
 
 try:
     from ..ir import *
@@ -19,26 +21,6 @@ try:
     from typing import Any, List, Union
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
-
-
-def _isa(obj: Any, cls: type):
-    try:
-        cls(obj)
-    except ValueError:
-        return False
-    return True
-
-
-def _is_any_of(obj: Any, classes: List[type]):
-    return any(_isa(obj, cls) for cls in classes)
-
-
-def _is_integer_like_type(type: Type):
-    return _is_any_of(type, [IntegerType, IndexType])
-
-
-def _is_float_type(type: Type):
-    return _is_any_of(type, [BF16Type, F16Type, F32Type, F64Type])
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -96,9 +78,9 @@ class ConstantOp(ConstantOp):
 
     @property
     def literal_value(self) -> Union[int, float]:
-        if _is_integer_like_type(self.type):
+        if is_integer_type(self.type) or is_index_type(self.type):
             return IntegerAttr(self.value).value
-        elif _is_float_type(self.type):
+        elif is_float_type(self.type):
             return FloatAttr(self.value).value
         else:
             raise ValueError("only integer and float constants have literal values")
@@ -108,3 +90,19 @@ def constant(
     result: Type, value: Union[int, float, Attribute, _array], *, loc=None, ip=None
 ) -> Value:
     return _get_op_result_or_op_results(ConstantOp(result, value, loc=loc, ip=ip))
+
+
+def index_cast(
+    in_: Value,
+    to: Type = None,
+    *,
+    out: Type = None,
+    loc: Location = None,
+    ip: InsertionPoint = None,
+) -> Value:
+    if bool(to) != bool(out):
+        raise ValueError("either `to` or `out` must be set but not both")
+    res_type = out or to
+    if res_type is None:
+        res_type = IndexType.get()
+    return _get_op_result_or_op_results(IndexCastOp(res_type, in_, loc=loc, ip=ip))
