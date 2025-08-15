@@ -126,3 +126,16 @@ float3 test_pow_uint64_t3(uint64_t3 p0, uint64_t3 p1) { return pow(p0, p1); }
 // CHECK: [[POW:%.*]] = call [[FLOATATTRS]] noundef <4 x float> @llvm.pow.v4f32(<4 x float> [[CONV0]], <4 x float> [[CONV1]])
 // CHECK: ret <4 x float> [[POW]]
 float4 test_pow_uint64_t4(uint64_t4 p0, uint64_t4 p1) { return pow(p0, p1); }
+
+// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_pow_float2_mismatch1
+// CHECK: [[CONV0:%.*]] = insertelement <2 x float> poison, float {{.*}}, i64 0
+// CHECK: [[CONV1:%.*]] = shufflevector <2 x float> [[CONV0]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK: [[POW:%.*]] = call [[FLOATATTRS]] noundef <2 x float> @llvm.pow.v2f32(<2 x float> {{.*}}, <2 x float> [[CONV1]])
+// CHECK: ret <2 x float> [[POW]]
+float2 test_pow_float2_mismatch1(float2 p0, float p1) { return pow(p0, p1); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_pow_float2_mismatch2
+// CHECK: [[CONV0:%.*]] = insertelement <2 x float> poison, float {{.*}}, i64 0
+// CHECK: [[CONV1:%.*]] = shufflevector <2 x float> [[CONV0]], <2 x float> poison, <2 x i32> zeroinitializer
+// CHECK: [[POW:%.*]] = call [[FLOATATTRS]] noundef <2 x float> @llvm.pow.v2f32(<2 x float> [[CONV1]], <2 x float> {{.*}})
+// CHECK: ret <2 x float> [[POW]]
+float2 test_pow_float2_mismatch2(float2 p0, float p1) { return pow(p1, p0); }
