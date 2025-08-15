@@ -844,25 +844,38 @@ struct WarpOpDeadResult : public WarpDistributionPattern {
     newResultTypes.reserve(warpOp->getNumResults());
     SmallVector<Value> newYieldValues;
     newYieldValues.reserve(warpOp->getNumResults());
+    // Keeps track of yielded values to their first position in new yield
+    // operands by the new `WarpOp`.
     DenseMap<Value, int64_t> dedupYieldOperandPositionMap;
+    // Keeps track of the original result to its new position in the new
+    // `WarpOp` results.
     DenseMap<OpResult, int64_t> dedupResultPositionMap;
+
     auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
 
     // Some values may be yielded multiple times and correspond to multiple
     // results. Deduplicating occurs by taking each result with its matching
     // yielded value, and:
-    //   1. recording the unique first position at which the value is yielded.
-    //   2. recording for the result, the first position at which the dedup'ed
-    //      value is yielded.
+    //   1. recording the unique first position at which the value is yielded in
+    //      new yielded operands.
+    //   2. recording for a used result, the first position at which the
+    //      dedup'ed value is yielded.
     //   3. skipping from the new result types / new yielded values any result
     //      that has no use or whose yielded value has already been seen.
     for (OpResult result : warpOp.getResults()) {
+      // If result has no use, maps do not need to be updated.
+      if (result.use_empty())
+        continue;
       Value yieldOperand = yield.getOperand(result.getResultNumber());
-      auto it = dedupYieldOperandPositionMap.insert(
+      // Check if this yielded value has already been seen.
+      bool notFound;
+      DenseMap<Value, int64_t>::iterator it;
+      std::tie(it, notFound) = dedupYieldOperandPositionMap.insert(
           std::make_pair(yieldOperand, newResultTypes.size()));
-      dedupResultPositionMap.insert(std::make_pair(result, it.first->second));
-      if (result.use_empty() || !it.second)
+      dedupResultPositionMap.insert(std::make_pair(result, it->second));
+      // If the yielded value has already been seen, no need to add it again.
+      if (!notFound)
         continue;
       newResultTypes.push_back(result.getType());
       newYieldValues.push_back(yieldOperand);
