@@ -47,8 +47,8 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    assert(!cir::MissingFeatures::labelOp());
-
+    if (isa<cir::LabelOp>(dest->front()))
+      return failure();
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
         dest->getSinglePredecessor() == block) {
