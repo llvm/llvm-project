@@ -1016,6 +1016,16 @@ uint32_t InstructionList::GetMaxOpcocdeByteSize() const {
   return max_inst_size;
 }
 
+size_t InstructionList::GetTotalByteSize() const {
+  size_t total_byte_size = 0;
+  collection::const_iterator pos, end;
+  for (pos = m_instructions.begin(), end = m_instructions.end(); pos != end;
+       ++pos) {
+    total_byte_size += (*pos)->GetOpcode().GetByteSize();
+  }
+  return total_byte_size;
+}
+
 InstructionSP InstructionList::GetInstructionAtIndex(size_t idx) const {
   InstructionSP inst_sp;
   if (idx < m_instructions.size())

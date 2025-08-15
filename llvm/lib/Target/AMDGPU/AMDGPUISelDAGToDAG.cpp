@@ -76,6 +76,40 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
   return false;
 }
 
+static SDValue createVOP3PSrc32FromLo16(SDValue Lo, SDValue Src,
+                                        llvm::SelectionDAG *CurDAG,
+                                        const GCNSubtarget *Subtarget) {
+  if (!Subtarget->useRealTrue16Insts()) {
+    return Lo;
+  }
+
+  SDValue NewSrc;
+  SDLoc SL(Lo);
+
+  if (Lo->isDivergent()) {
+    SDValue Undef = SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
+                                                   SL, Lo.getValueType()),
+                            0);
+    const SDValue Ops[] = {
+        CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, SL, MVT::i32), Lo,
+        CurDAG->getTargetConstant(AMDGPU::lo16, SL, MVT::i16), Undef,
+        CurDAG->getTargetConstant(AMDGPU::hi16, SL, MVT::i16)};
+
+    NewSrc = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
+                                            Src.getValueType(), Ops),
+                     0);
+  } else {
+    // the S_MOV is needed since the Lo could still be a VGPR16.
+    // With S_MOV, isel insert a "sgpr32 = copy vgpr16" and we reply on
+    // the fixvgpr2sgprcopy pass to legalize it
+    NewSrc = SDValue(
+        CurDAG->getMachineNode(AMDGPU::S_MOV_B32, SL, Src.getValueType(), Lo),
+        0);
+  }
+
+  return NewSrc;
+}
+
 // Look through operations that obscure just looking at the low 16-bits of the
 // same register.
 static SDValue stripExtractLoElt(SDValue In) {
@@ -3212,6 +3246,44 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  if (Mods != SISrcMods::NONE)
+    return true;
+
+  // Convert various sign-bit masks on integers to src mods. Currently disabled
+  // for 16-bit types as the codegen replaces the operand without adding a
+  // srcmod. This is intentionally finding the cases where we are performing
+  // float neg and abs on int types, the goal is not to obtain two's complement
+  // neg or abs. Limit converison to select operands via the nonCanonalizing
+  // pattern.
+  // TODO: Add 16-bit support.
+  if (IsCanonicalizing)
+    return true;
+
+  unsigned Opc = Src->getOpcode();
+  EVT VT = Src.getValueType();
+  if ((Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR) ||
+      (VT != MVT::i32 && VT != MVT::i64))
+    return true;
+
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1));
+  if (!CRHS)
+    return true;
+
+  // Recognise (xor a, 0x80000000) as NEG SrcMod.
+  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
+  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
+  if (Opc == ISD::XOR && CRHS->getAPIntValue().isSignMask()) {
+    Mods |= SISrcMods::NEG;
+    Src = Src.getOperand(0);
+  } else if (Opc == ISD::AND && AllowAbs &&
+             CRHS->getAPIntValue().isMaxSignedValue()) {
+    Mods |= SISrcMods::ABS;
+    Src = Src.getOperand(0);
+  } else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
+    Mods |= SISrcMods::ABS | SISrcMods::NEG;
+    Src = Src.getOperand(0);
+  }
+
   return true;
 }
 
@@ -3374,8 +3446,10 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       // Really a scalar input. Just select from the low half of the register to
       // avoid packing.
 
-      if (VecSize == 32 || VecSize == Lo.getValueSizeInBits()) {
+      if (VecSize == Lo.getValueSizeInBits()) {
         Src = Lo;
+      } else if (VecSize == 32) {
+        Src = createVOP3PSrc32FromLo16(Lo, Src, CurDAG, Subtarget);
       } else {
         assert(Lo.getValueSizeInBits() == 32 && VecSize == 64);
 
@@ -3447,63 +3521,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
                                             SDValue &SrcMods) const {
   return SelectVOP3PMods(In, Src, SrcMods, true);
-}
-
-// Select neg_lo from the i1 immediate operand.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // 1 promotes packed values to signed, 0 treats them as unsigned.
-  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcSign = C->getZExtValue();
-  if (SrcSign == 1)
-    Mods ^= SISrcMods::NEG;
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is
-// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
-// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegs(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // 1 promotes packed values to signed, 0 treats them as unsigned.
-  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcSign = C->getZExtValue();
-  if (SrcSign == 1)
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-// Select neg, abs, or both neg and abs from the i16 immediate operans.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcMod = C->getZExtValue();
-  switch (SrcMod) {
-  default: // Any other value will be silently ignored (considered as 0).
-    break;
-  case 1:
-    Mods ^= SISrcMods::NEG;
-    break;
-  case 2:
-    Mods ^= SISrcMods::ABS;
-    break;
-  case 3:
-    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
-    break;
-  }
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,

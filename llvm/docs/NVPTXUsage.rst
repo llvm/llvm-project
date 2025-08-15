@@ -971,6 +971,10 @@ Syntax:
   declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
   declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
   
+  declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)  
+  
   declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
   declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
 
@@ -983,7 +987,10 @@ The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
 correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
 The '``prefetch.*``' instructions bring the cache line containing the
 specified address in global or local memory address space into the 
-specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
+specified cache level (L1 or L2). If the '``.tensormap``' qualifier is specified then the 
+prefetch instruction brings the cache line containing the specified address in the 
+'``.const``' or '``.param memory``' state space for subsequent use by the '``cp.async.bulk.tensor``' 
+instruction. The '`prefetchu.*``' instruction brings the cache line 
 containing the specified generic address into the specified uniform cache level.
 If no address space is specified, it is assumed to be generic address. The intrinsic 
 uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.

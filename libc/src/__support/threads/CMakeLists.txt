@@ -42,6 +42,14 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
       .mutex
       libc.src.__support.CPP.mutex
   )
+elseif(NOT (LIBC_CONF_THREAD_MODE STREQUAL LIBC_THREAD_MODE_PLATFORM))
+  add_header_library(
+    mutex
+  HDRS
+    mutex.h
+  DEPENDS
+    .mutex_common
+  )
 endif()
 
 add_header_library(

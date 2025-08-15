@@ -25,11 +25,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-transfer-opt"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 
@@ -88,8 +86,7 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
 /// transfer_write is dead if all reads that can be reached from the potentially
 /// dead transfer_write are dominated by the overwriting transfer_write.
 void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
-  LLVM_DEBUG(DBGS() << "Candidate for dead store: " << *write.getOperation()
-                    << "\n");
+  LDBG() << "Candidate for dead store: " << *write.getOperation();
   llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
   Value source = memref::skipViewLikeOps(cast<MemrefValue>(write.getBase()));
@@ -150,13 +147,12 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
         !isReachable(writeAncestor, accessAncestor))
       continue;
     if (!dominators.dominates(firstOverwriteCandidate, accessAncestor)) {
-      LLVM_DEBUG(DBGS() << "Store may not be dead due to op: "
-                        << *accessAncestor << "\n");
+      LDBG() << "Store may not be dead due to op: " << *accessAncestor;
       return;
     }
   }
-  LLVM_DEBUG(DBGS() << "Found dead store: " << *write.getOperation()
-                    << " overwritten by: " << *firstOverwriteCandidate << "\n");
+  LDBG() << "Found dead store: " << *write.getOperation()
+         << " overwritten by: " << *firstOverwriteCandidate;
   opToErase.push_back(write.getOperation());
 }
 
@@ -174,8 +170,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
 void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
   if (read.hasOutOfBoundsDim())
     return;
-  LLVM_DEBUG(DBGS() << "Candidate for Forwarding: " << *read.getOperation()
-                    << "\n");
+  LDBG() << "Candidate for Forwarding: " << *read.getOperation();
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
   Value source = memref::skipViewLikeOps(cast<MemrefValue>(read.getBase()));
@@ -230,14 +225,13 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     if (writeAncestor == nullptr || !isReachable(writeAncestor, readAncestor))
       continue;
     if (!postDominators.postDominates(lastwrite, write)) {
-      LLVM_DEBUG(DBGS() << "Fail to do write to read forwarding due to op: "
-                        << *write << "\n");
+      LDBG() << "Fail to do write to read forwarding due to op: " << *write;
       return;
     }
   }
 
-  LLVM_DEBUG(DBGS() << "Forward value from " << *lastwrite.getOperation()
-                    << " to: " << *read.getOperation() << "\n");
+  LDBG() << "Forward value from " << *lastwrite.getOperation()
+         << " to: " << *read.getOperation();
   read.replaceAllUsesWith(lastwrite.getVector());
   opToErase.push_back(read.getOperation());
 }

@@ -36,7 +36,7 @@ public:
   static bool originalEVTTypeIsVectorFloat(EVT Ty);
   static bool originalTypeIsVectorFloat(const Type *Ty);
 
-  void PreAnalyzeCallOperand(const Type *ArgTy, bool IsFixed, const char *Func);
+  void PreAnalyzeCallOperand(const Type *ArgTy, const char *Func);
 
   void PreAnalyzeFormalArgument(const Type *ArgTy, ISD::ArgFlagsTy Flags);
   void PreAnalyzeReturnValue(EVT ArgVT);
@@ -86,10 +86,6 @@ private:
   /// vector.
   SmallVector<bool, 4> OriginalRetWasFloatVector;
 
-  /// Records whether the value was a fixed argument.
-  /// See ISD::OutputArg::IsFixed,
-  SmallVector<bool, 4> CallOperandIsFixed;
-
   // Used to handle MIPS16-specific calling convention tweaks.
   // FIXME: This should probably be a fully fledged calling convention.
   SpecialCallingConvType SpecialCallingConv;
@@ -106,7 +102,6 @@ public:
     OriginalArgWasF128.clear();
     OriginalArgWasFloat.clear();
     OriginalArgWasFloatVector.clear();
-    CallOperandIsFixed.clear();
     PreAnalyzeCallOperands(Outs, FuncArgs, Func);
   }
 
@@ -213,7 +208,6 @@ public:
   bool WasOriginalRetVectorFloat(unsigned ValNo) const {
     return OriginalRetWasFloatVector[ValNo];
   }
-  bool IsCallOperandFixed(unsigned ValNo) { return CallOperandIsFixed[ValNo]; }
   SpecialCallingConvType getSpecialCallingConv() { return SpecialCallingConv; }
 };
 }

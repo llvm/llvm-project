@@ -1422,6 +1422,21 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
+// Clang specific/exclusive options for OpenACC.
+def openacc_macro_override
+    : Separate<["-"], "fexperimental-openacc-macro-override">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<f_Group>,
+      HelpText<"Overrides the _OPENACC macro value for experimental testing "
+               "during OpenACC support development">;
+def openacc_macro_override_EQ
+    : Joined<["-"], "fexperimental-openacc-macro-override=">,
+      Alias<openacc_macro_override>;
+
+// End Clang specific/exclusive options for OpenACC.
+
+def libclc_lib_EQ : Joined<["--"], "libclc-lib=">, Group<opencl_Group>,
+  HelpText<"Namespec of libclc OpenCL bitcode library to link">;
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -3716,14 +3731,20 @@ def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
 def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
   Visibility<[ClangOption, CC1Option]>;
-def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
+def fopenmp_simd : Flag<["-"], "fopenmp-simd">,
+                   Group<f_Group>,
+                   Flags<[NoArgumentUnused]>,
+                   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                   HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
 def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the experimental OpenMP-IR-Builder codegen path.">;
-def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>;
+def fno_openmp_simd
+    : Flag<["-"], "fno-openmp-simd">,
+      Group<f_Group>,
+      Flags<[NoArgumentUnused]>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not emit code for any OpenMP constructs.">;
 def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>,
@@ -4525,6 +4546,7 @@ defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening",
 defm ptrauth_objc_isa : OptInCC1FFlag<"ptrauth-objc-isa", "Enable signing and authentication of Objective-C object's 'isa' field">;
 defm ptrauth_objc_interface_sel : OptInCC1FFlag<"ptrauth-objc-interface-sel", "Enable signing and authentication of Objective-C object's 'SEL' fields">;
 defm ptrauth_objc_class_ro : OptInCC1FFlag<"ptrauth-objc-class-ro", "Enable signing and authentication for ObjC class_ro pointers">;
+defm ptrauth_block_descriptor_pointers : OptInCC1FFlag<"ptrauth-block-descriptor-pointers", "Enable signing and authentication of block descriptors">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5312,6 +5334,8 @@ def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Grou
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
 def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
+def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
+def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
@@ -5572,7 +5596,8 @@ def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Grou
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
-def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
+def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>,
+  HelpText<"Generate implicit floating point or vector instructions">;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;

@@ -25,11 +25,13 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 class BasicBlock;
+class CallBase;
+class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
 class OpenMPIRBuilder;
@@ -306,10 +308,16 @@ public:
                             /*recordInsertions=*/false);
   }
 
-  /// Translates parameter attributes of a call and adds them to the returned
-  /// AttrBuilder. Returns failure if any of the translations failed.
-  FailureOr<llvm::AttrBuilder> convertParameterAttrs(mlir::Location loc,
-                                                     DictionaryAttr paramAttrs);
+  /// Converts argument and result attributes from `attrsOp` to LLVM IR
+  /// attributes on the `call` instruction. Returns failure if conversion fails.
+  /// The `immArgPositions` parameter is only relevant for intrinsics. It
+  /// specifies the positions of immediate arguments, which do not have
+  /// associated argument attributes in MLIR and should be skipped during
+  /// attribute mapping.
+  LogicalResult
+  convertArgAndResultAttrs(ArgAndResultAttrsOpInterface attrsOp,
+                           llvm::CallBase *call,
+                           ArrayRef<unsigned> immArgPositions = {});
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
@@ -388,6 +396,11 @@ private:
   LogicalResult
   convertDialectAttributes(Operation *op,
                            ArrayRef<llvm::Instruction *> instructions);
+
+  /// Translates parameter attributes of a call and adds them to the returned
+  /// AttrBuilder. Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(mlir::Location loc,
+                                                     DictionaryAttr paramAttrs);
 
   /// Translates parameter attributes of a function and adds them to the
   /// returned AttrBuilder. Returns failure if any of the translations failed.

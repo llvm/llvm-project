@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-pc-linux-gnu %s \
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-pc-linux-gnu %s -fdebug-compilation-dir=%S \
 // RUN:     -dwarf-version=5 -main-file-name debug-info-function-context.cpp  -o - | FileCheck %s
 
 struct C {
