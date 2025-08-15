@@ -1160,17 +1160,28 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 65536;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 327680;
   return 0;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". For gfx10 in CU mode this is the CU, which contains
+  // workgroup must share".
+
+  // GFX12.5 only supports CU mode, which contains four SIMDs.
+  if (isGFX1250(*STI)) {
+    assert(STI->getFeatureBits().test(FeatureCuMode));
+    return 4;
+  }
+
+  // For gfx10 in CU mode the functional block is the CU, which contains
   // two SIMDs.
   if (isGFX10Plus(*STI) && STI->getFeatureBits().test(FeatureCuMode))
     return 2;
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP contains
-  // two CUs, so a total of four SIMDs.
+
+  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
+  // contains two CUs, so a total of four SIMDs.
   return 4;
 }
 
@@ -1546,6 +1557,42 @@ bool isReadOnlySegment(const GlobalValue *GV) {
 
 bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
+}
+
+static bool isValidRegPrefix(char C) {
+  return C == 'v' || C == 's' || C == 'a';
+}
+
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint) {
+  StringRef RegName = Constraint;
+  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
+    return {};
+
+  char Kind = RegName.front();
+  if (!isValidRegPrefix(Kind))
+    return {};
+
+  RegName = RegName.drop_front();
+  if (RegName.consume_front("[")) {
+    unsigned Idx, End;
+    bool Failed = RegName.consumeInteger(10, Idx);
+    Failed |= !RegName.consume_front(":");
+    Failed |= RegName.consumeInteger(10, End);
+    Failed |= !RegName.consume_back("]");
+    if (!Failed) {
+      unsigned NumRegs = End - Idx + 1;
+      if (NumRegs > 1)
+        return {Kind, Idx, NumRegs};
+    }
+  } else {
+    unsigned Idx;
+    bool Failed = RegName.getAsInteger(10, Idx);
+    if (!Failed)
+      return {Kind, Idx, 1};
+  }
+
+  return {};
 }
 
 std::pair<unsigned, unsigned>
@@ -2442,6 +2489,12 @@ bool isGFX1250(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
 }
 
+bool supportsWGP(const MCSubtargetInfo &STI) {
+  if (isGFX1250(STI))
+    return false;
+  return isGFX10Plus(STI);
+}
+
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
 
 bool isNotGFX10Plus(const MCSubtargetInfo &STI) {
@@ -2618,6 +2671,8 @@ bool isInlineValue(unsigned Reg) {
   case AMDGPU::SRC_PRIVATE_BASE:
   case AMDGPU::SRC_PRIVATE_LIMIT_LO:
   case AMDGPU::SRC_PRIVATE_LIMIT:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_LO:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_HI:
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return true;
   case AMDGPU::SRC_VCCZ:
@@ -3271,13 +3326,53 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
   return false;
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+bool isDPALU_DPP32BitOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MUL_LO_U32_e64:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1250:
+  case AMDGPU::V_MUL_HI_U32_e64:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1250:
+  case AMDGPU::V_MUL_HI_I32_e64:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1250:
+  case AMDGPU::V_MAD_U32_e64:
+  case AMDGPU::V_MAD_U32_e64_dpp:
+  case AMDGPU::V_MAD_U32_e64_dpp_gfx1250:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
+    return false;
+
+  if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
+    return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
+
   return hasAny64BitVGPROperands(OpDesc);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  // Currently this is 128 for all subtargets
-  return 128;
+  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256
+                                                                        : 128;
+}
+
+bool isPackedFP32Inst(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_F32_gfx12:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F32_gfx12:
+  case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMA_F32_gfx12:
+    return true;
+  default:
+    return false;
+  }
 }
 
 } // namespace AMDGPU

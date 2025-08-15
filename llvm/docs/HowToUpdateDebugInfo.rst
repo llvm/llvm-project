@@ -499,7 +499,7 @@ a JSON file as follows:
   $ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -pass-to-test sample.ll
 
 and then use the ``llvm/utils/llvm-original-di-preservation.py`` script
-to generate an HTML page with the issues reported in a more human readable form
+to generate an HTML page with the issues reported in a more human-readable form
 as follows:
 
 .. code-block:: bash

@@ -293,3 +293,183 @@ entry:
   %p2 = getelementptr <vscale x 4 x i32>, ptr %p1, i64 %index
   ret ptr %p2
 }
+
+define ptr @test_all_nuw(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_nuw(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr nuw i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr nuw i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_partial_nuw1(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_partial_nuw1(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_partial_nuw2(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_partial_nuw2(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr nuw i8, ptr %base, i64 1
+  %index = add i64 %a, 2
+  %p2 = getelementptr nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_partial_nuw3(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_partial_nuw3(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr nuw i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_nuw_disjoint(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_nuw_disjoint(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr nuw i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr nuw i8, ptr %base, i64 1
+  %index = or disjoint i64 %a, 2
+  %p2 = getelementptr nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_inbounds_nuw(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_inbounds_nuw(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr inbounds nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_partial_inbounds1(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_partial_inbounds1(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr nuw i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr nuw i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr inbounds nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_partial_inbounds2(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_partial_inbounds2(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr nuw i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_inbounds_partial_nuw1(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_inbounds_partial_nuw1(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 7
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr inbounds i8, ptr %base, i64 -1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr inbounds nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_inbounds_partial_nuw2(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_inbounds_partial_nuw2(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %base, i64 1
+  %index = add nuw i64 %a, 2
+  %p2 = getelementptr inbounds i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_inbounds_partial_nuw3(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_inbounds_partial_nuw3(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %base, i64 1
+  %index = add i64 %a, 2
+  %p2 = getelementptr inbounds nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}
+
+define ptr @test_all_nusw_nuw(ptr %base, i64 %a) {
+; CHECK-LABEL: define ptr @test_all_nusw_nuw(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 9
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr nuw i32, ptr [[TMP0]], i64 [[A]]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %p1 = getelementptr nusw nuw i8, ptr %base, i64 1
+  %index = add nsw nuw i64 %a, 2
+  %p2 = getelementptr nusw nuw i32, ptr %p1, i64 %index
+  ret ptr %p2
+}

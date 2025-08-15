@@ -48,7 +48,6 @@ add_libc_unittest(
   SRCS
     getcpu_test.cpp
   DEPENDS
-    libc.include.sched
     libc.src.errno.errno
     libc.src.sched.getcpu
     libc.test.UnitTest.ErrnoCheckingTest
@@ -61,7 +60,8 @@ add_libc_unittest(
   SRCS
     param_and_scheduler_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
+    libc.hdr.types.struct_sched_param
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
@@ -79,6 +79,7 @@ add_libc_unittest(
   SRCS
     sched_rr_get_interval_test.cpp
   DEPENDS
+    libc.hdr.sched_macros
     libc.hdr.types.struct_timespec
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler

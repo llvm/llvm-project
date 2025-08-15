@@ -297,7 +297,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     return Plugin::success();
   }
 
@@ -319,6 +320,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "initDeviceInfoImpl not supported");
   }
 
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    Callback(UserData);
+    return Plugin::success();
+  };
+
   /// This plugin does not support the event API. Do nothing without failing.
   Error createEventImpl(void **EventPtrStorage) override {
     *EventPtrStorage = nullptr;
@@ -332,6 +339,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error waitEventImpl(void *EventPtr,
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
+  }
+  Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
+    return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 

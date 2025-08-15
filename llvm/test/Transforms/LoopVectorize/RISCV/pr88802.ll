@@ -7,14 +7,6 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH1:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 9, [[TMP2]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[A]], i64 0
@@ -32,7 +24,7 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[FOR_COND]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = sub i32 9, [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 9, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
@@ -48,16 +40,16 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = trunc <vscale x 2 x i32> [[TMP16]] to <vscale x 2 x i8>
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> [[TMP17]], <vscale x 2 x ptr> align 1 [[BROADCAST_SPLAT4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP11]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT8]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], 9
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_COND]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT1:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH1]] ], [ [[ADD:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH1]] ], [ [[ADD:%.*]], [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[ADD]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i32 [[IV]], 2
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 48

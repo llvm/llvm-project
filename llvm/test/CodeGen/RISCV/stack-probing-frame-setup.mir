@@ -63,8 +63,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: v, type: variable-sized, offset: 0, alignment: 1, stack-id: default,

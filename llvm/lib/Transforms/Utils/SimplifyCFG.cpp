@@ -3321,12 +3321,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign :
+         at::getDVRAssignmentMarkers(SpeculatedStore))
       if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
         DbgAssign->replaceVariableLocationOp(OrigV, S);
-    };
-    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
-    for_each(at::getDVRAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -6641,16 +6639,20 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
   }
   case ArrayKind: {
     Type *IndexTy = DL.getIndexType(Array->getType());
+    auto *ArrayTy = cast<ArrayType>(Array->getValueType());
 
-    if (Index->getType() != IndexTy)
+    if (Index->getType() != IndexTy) {
+      unsigned OldBitWidth = Index->getType()->getIntegerBitWidth();
       Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+      if (auto *Zext = dyn_cast<ZExtInst>(Index))
+        Zext->setNonNeg(
+            isUIntN(OldBitWidth - 1, ArrayTy->getNumElements() - 1));
+    }
 
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
-    Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
-                                           GEPIndices, "switch.gep");
-    return Builder.CreateLoad(
-        cast<ArrayType>(Array->getValueType())->getElementType(), GEP,
-        "switch.load");
+    Value *GEP =
+        Builder.CreateInBoundsGEP(ArrayTy, Array, GEPIndices, "switch.gep");
+    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
   }
   }
   llvm_unreachable("Unknown lookup table kind!");

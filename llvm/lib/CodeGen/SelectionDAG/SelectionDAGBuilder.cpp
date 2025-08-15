@@ -2211,9 +2211,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(),
                         MVT::Other, Chains);
   } else if (I.getNumOperands() != 0) {
-    SmallVector<EVT, 4> ValueVTs;
-    ComputeValueVTs(TLI, DL, I.getOperand(0)->getType(), ValueVTs);
-    unsigned NumValues = ValueVTs.size();
+    SmallVector<Type *, 4> Types;
+    ComputeValueTypes(DL, I.getOperand(0)->getType(), Types);
+    unsigned NumValues = Types.size();
     if (NumValues) {
       SDValue RetOp = getValue(I.getOperand(0));
 
@@ -2233,7 +2233,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
       bool RetInReg = F->getAttributes().hasRetAttr(Attribute::InReg);
 
       for (unsigned j = 0; j != NumValues; ++j) {
-        EVT VT = ValueVTs[j];
+        EVT VT = TLI.getValueType(DL, Types[j]);
 
         if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger())
           VT = TLI.getTypeForExtReturn(Context, VT, ExtendKind);
@@ -2275,7 +2275,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
         for (unsigned i = 0; i < NumParts; ++i) {
           Outs.push_back(ISD::OutputArg(Flags,
                                         Parts[i].getValueType().getSimpleVT(),
-                                        VT, /*isfixed=*/true, 0, 0));
+                                        VT, Types[j], 0, 0));
           OutVals.push_back(Parts[i]);
         }
       }
@@ -2291,9 +2291,10 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     assert(SwiftError.getFunctionArg() && "Need a swift error argument");
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     Flags.setSwiftError();
-    Outs.push_back(ISD::OutputArg(
-        Flags, /*vt=*/TLI.getPointerTy(DL), /*argvt=*/EVT(TLI.getPointerTy(DL)),
-        /*isfixed=*/true, /*origidx=*/1, /*partOffs=*/0));
+    Outs.push_back(ISD::OutputArg(Flags, /*vt=*/TLI.getPointerTy(DL),
+                                  /*argvt=*/EVT(TLI.getPointerTy(DL)),
+                                  PointerType::getUnqual(*DAG.getContext()),
+                                  /*origidx=*/1, /*partOffs=*/0));
     // Create SDNode for the swifterror virtual register.
     OutVals.push_back(
         DAG.getRegister(SwiftError.getOrCreateVRegUseAt(
@@ -3976,6 +3977,11 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
+}
+
+void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
+  // FIXME: this is not correct for pointers with addr width != pointer width
+  visitPtrToInt(I);
 }
 
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
@@ -7598,7 +7604,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const AllocaInst *LifetimeObject = cast<AllocaInst>(I.getArgOperand(1));
+    const AllocaInst *LifetimeObject = dyn_cast<AllocaInst>(I.getArgOperand(0));
+    if (!LifetimeObject)
+      return;
 
     // First check that the Alloca is static, otherwise it won't have a
     // valid frame index.
@@ -7980,6 +7988,43 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
            "Should've lowered as tail call");
 
     HasTailCall = true;
+    return;
+  }
+  case Intrinsic::amdgcn_call_whole_wave: {
+    TargetLowering::ArgListTy Args;
+
+    // The first argument is the callee. Skip it when assembling the call args.
+    TargetLowering::ArgListEntry Arg;
+    for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
+      Arg.Node = getValue(I.getArgOperand(Idx));
+      Arg.Ty = I.getArgOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+
+    SDValue ConvControlToken;
+    if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+      auto *Token = Bundle->Inputs[0].get();
+      ConvControlToken = getValue(Token);
+    }
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(getRoot())
+        .setCallee(CallingConv::AMDGPU_Gfx_WholeWave, I.getType(),
+                   getValue(I.getArgOperand(0)), std::move(Args))
+        .setTailCall(false)
+        .setIsPreallocated(
+            I.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
+        .setConvergent(I.isConvergent())
+        .setConvergenceControlToken(ConvControlToken);
+    CLI.CB = &I;
+
+    std::pair<SDValue, SDValue> Result =
+        lowerInvokable(CLI, /*EHPadBB=*/nullptr);
+
+    if (Result.first.getNode())
+      setValue(&I, Result.first);
     return;
   }
   case Intrinsic::ptrmask: {
@@ -8440,6 +8485,34 @@ void SelectionDAGBuilder::visitVPLoad(
   setValue(&VPIntrin, LD);
 }
 
+void SelectionDAGBuilder::visitVPLoadFF(
+    const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+    const SmallVectorImpl<SDValue> &OpValues) {
+  assert(OpValues.size() == 3 && "Unexpected number of operands");
+  SDLoc DL = getCurSDLoc();
+  Value *PtrOperand = VPIntrin.getArgOperand(0);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  SDValue LD;
+  // Do not serialize variable-length loads of constant memory with
+  // anything.
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+  LD = DAG.getLoadFFVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
+                       MMO);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, EVLVT, LD.getValue(1));
+  if (AddToChain)
+    PendingLoads.push_back(LD.getValue(2));
+  setValue(&VPIntrin, DAG.getMergeValues({LD.getValue(0), Trunc}, DL));
+}
+
 void SelectionDAGBuilder::visitVPGather(
     const VPIntrinsic &VPIntrin, EVT VT,
     const SmallVectorImpl<SDValue> &OpValues) {
@@ -8672,6 +8745,9 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   }
   case ISD::VP_LOAD:
     visitVPLoad(VPIntrin, ValueVTs[0], OpValues);
+    break;
+  case ISD::VP_LOAD_FF:
+    visitVPLoadFF(VPIntrin, ValueVTs[0], ValueVTs[1], OpValues);
     break;
   case ISD::VP_GATHER:
     visitVPGather(VPIntrin, ValueVTs[0], OpValues);
@@ -9058,7 +9134,7 @@ bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallInst &I) {
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForMemcmp(
       DAG, getCurSDLoc(), DAG.getRoot(), getValue(LHS), getValue(RHS),
-      getValue(Size), MachinePointerInfo(LHS), MachinePointerInfo(RHS));
+      getValue(Size), &I);
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, true);
     PendingLoads.push_back(Res.second);
@@ -10942,26 +11018,35 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
 /// migrated to using LowerCall, this hook should be integrated into SDISel.
 std::pair<SDValue, SDValue>
 TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
+  LLVMContext &Context = CLI.RetTy->getContext();
+
   // Handle the incoming return values from the call.
   CLI.Ins.clear();
-  SmallVector<EVT, 4> RetTys;
+  SmallVector<Type *, 4> RetOrigTys;
   SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
-  ComputeValueVTs(*this, DL, CLI.RetTy, RetTys, &Offsets);
+  ComputeValueTypes(DL, CLI.RetTy, RetOrigTys, &Offsets);
+
+  SmallVector<EVT, 4> RetTys;
+  for (Type *Ty : RetOrigTys)
+    RetTys.push_back(getValueType(DL, Ty));
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
+    SmallVector<Type *, 4> OldRetOrigTys;
     SmallVector<EVT, 4> OldRetTys;
     SmallVector<TypeSize, 4> OldOffsets;
+    RetOrigTys.swap(OldRetOrigTys);
     RetTys.swap(OldRetTys);
     Offsets.swap(OldOffsets);
 
     for (size_t i = 0, e = OldRetTys.size(); i != e; ++i) {
       EVT RetVT = OldRetTys[i];
       uint64_t Offset = OldOffsets[i];
-      MVT RegisterVT = getRegisterType(CLI.RetTy->getContext(), RetVT);
-      unsigned NumRegs = getNumRegisters(CLI.RetTy->getContext(), RetVT);
+      MVT RegisterVT = getRegisterType(Context, RetVT);
+      unsigned NumRegs = getNumRegisters(Context, RetVT);
       unsigned RegisterVTByteSZ = RegisterVT.getSizeInBits() / 8;
+      RetOrigTys.append(NumRegs, OldRetOrigTys[i]);
       RetTys.append(NumRegs, RegisterVT);
       for (unsigned j = 0; j != NumRegs; ++j)
         Offsets.push_back(TypeSize::getFixed(Offset + j * RegisterVTByteSZ));
@@ -10973,7 +11058,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   bool CanLowerReturn =
       this->CanLowerReturn(CLI.CallConv, CLI.DAG.getMachineFunction(),
-                           CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
+                           CLI.IsVarArg, Outs, Context, CLI.RetTy);
 
   SDValue DemoteStackSlot;
   int DemoteStackIdx = -100;
@@ -10986,8 +11071,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     DemoteStackIdx =
         MF.getFrameInfo().CreateStackObject(TySize, Alignment, false);
-    Type *StackSlotPtrType =
-        PointerType::get(CLI.RetTy->getContext(), DL.getAllocaAddrSpace());
+    Type *StackSlotPtrType = PointerType::get(Context, DL.getAllocaAddrSpace());
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getFrameIndexTy(DL));
     ArgListEntry Entry;
@@ -11009,7 +11093,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;
     CLI.getArgs()[0].IndirectType = CLI.RetTy;
-    CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
+    CLI.RetTy = Type::getVoidTy(Context);
 
     // sret demotion isn't compatible with tail-calls, since the sret argument
     // points into the callers stack frame.
@@ -11025,28 +11109,24 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           Flags.setInConsecutiveRegsLast();
       }
       EVT VT = RetTys[I];
-      MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                     CLI.CallConv, VT);
-      unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
-                                                       CLI.CallConv, VT);
+      MVT RegisterVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
+      unsigned NumRegs =
+          getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
-        ISD::InputArg MyFlags;
-        MyFlags.Flags = Flags;
-        MyFlags.VT = RegisterVT;
-        MyFlags.ArgVT = VT;
-        MyFlags.Used = CLI.IsReturnValueUsed;
+        ISD::InputArg Ret(Flags, RegisterVT, VT, RetOrigTys[I],
+                          CLI.IsReturnValueUsed, ISD::InputArg::NoArgIndex, 0);
         if (CLI.RetTy->isPointerTy()) {
-          MyFlags.Flags.setPointer();
-          MyFlags.Flags.setPointerAddrSpace(
+          Ret.Flags.setPointer();
+          Ret.Flags.setPointerAddrSpace(
               cast<PointerType>(CLI.RetTy)->getAddressSpace());
         }
         if (CLI.RetSExt)
-          MyFlags.Flags.setSExt();
+          Ret.Flags.setSExt();
         if (CLI.RetZExt)
-          MyFlags.Flags.setZExt();
+          Ret.Flags.setZExt();
         if (CLI.IsInReg)
-          MyFlags.Flags.setInReg();
-        CLI.Ins.push_back(MyFlags);
+          Ret.Flags.setInReg();
+        CLI.Ins.push_back(Ret);
       }
     }
   }
@@ -11056,11 +11136,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (supportSwiftError()) {
     for (const ArgListEntry &Arg : Args) {
       if (Arg.IsSwiftError) {
-        ISD::InputArg MyFlags;
-        MyFlags.VT = getPointerTy(DL);
-        MyFlags.ArgVT = EVT(getPointerTy(DL));
-        MyFlags.Flags.setSwiftError();
-        CLI.Ins.push_back(MyFlags);
+        ISD::ArgFlagsTy Flags;
+        Flags.setSwiftError();
+        ISD::InputArg Ret(Flags, getPointerTy(DL), EVT(getPointerTy(DL)),
+                          PointerType::getUnqual(Context),
+                          /*Used=*/true, ISD::InputArg::NoArgIndex, 0);
+        CLI.Ins.push_back(Ret);
       }
     }
   }
@@ -11069,18 +11150,18 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   CLI.Outs.clear();
   CLI.OutVals.clear();
   for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-    SmallVector<EVT, 4> ValueVTs;
-    ComputeValueVTs(*this, DL, Args[i].Ty, ValueVTs);
+    SmallVector<Type *, 4> ArgTys;
+    ComputeValueTypes(DL, Args[i].Ty, ArgTys);
     // FIXME: Split arguments if CLI.IsPostTypeLegalization
     Type *FinalType = Args[i].Ty;
     if (Args[i].IsByVal)
       FinalType = Args[i].IndirectType;
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg, DL);
-    for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
+    for (unsigned Value = 0, NumValues = ArgTys.size(); Value != NumValues;
          ++Value) {
-      EVT VT = ValueVTs[Value];
-      Type *ArgTy = VT.getTypeForEVT(CLI.RetTy->getContext());
+      Type *ArgTy = ArgTys[Value];
+      EVT VT = getValueType(DL, ArgTy);
       SDValue Op = SDValue(Args[i].Node.getNode(),
                            Args[i].Node.getResNo() + Value);
       ISD::ArgFlagsTy Flags;
@@ -11091,10 +11172,11 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       const Align OriginalAlignment(getABIAlignmentForCallingConv(ArgTy, DL));
       Flags.setOrigAlign(OriginalAlignment);
 
-      if (Args[i].Ty->isPointerTy()) {
+      if (i >= CLI.NumFixedArgs)
+        Flags.setVarArg();
+      if (ArgTy->isPointerTy()) {
         Flags.setPointer();
-        Flags.setPointerAddrSpace(
-            cast<PointerType>(Args[i].Ty)->getAddressSpace());
+        Flags.setPointerAddrSpace(cast<PointerType>(ArgTy)->getAddressSpace());
       }
       if (Args[i].IsZExt)
         Flags.setZExt();
@@ -11168,10 +11250,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       if (NeedsRegBlock)
         Flags.setInConsecutiveRegs();
 
-      MVT PartVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                 CLI.CallConv, VT);
-      unsigned NumParts = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
-                                                        CLI.CallConv, VT);
+      MVT PartVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
+      unsigned NumParts =
+          getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
       SmallVector<SDValue, 4> Parts(NumParts);
       ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
@@ -11213,8 +11294,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(
-            Flags, Parts[j].getValueType().getSimpleVT(), VT,
-            i < CLI.NumFixedArgs, i,
+            Flags, Parts[j].getValueType().getSimpleVT(), VT, ArgTy, i,
             j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
@@ -11302,10 +11382,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
     for (EVT VT : RetTys) {
-      MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                     CLI.CallConv, VT);
-      unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
-                                                       CLI.CallConv, VT);
+      MVT RegisterVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
+      unsigned NumRegs =
+          getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
 
       ReturnValues.push_back(getCopyFromParts(
           CLI.DAG, CLI.DL, &InVals[CurReg], NumRegs, RegisterVT, VT, nullptr,
@@ -11592,7 +11671,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     ISD::ArgFlagsTy Flags;
     Flags.setSRet();
     MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVT);
-    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, true,
+    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, F.getReturnType(), true,
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
@@ -11607,8 +11686,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   // Set up the incoming argument description vector.
   for (const Argument &Arg : F.args()) {
     unsigned ArgNo = Arg.getArgNo();
-    SmallVector<EVT, 4> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
+    SmallVector<Type *, 4> Types;
+    ComputeValueTypes(DAG.getDataLayout(), Arg.getType(), Types);
     bool isArgValueUsed = !Arg.use_empty();
     unsigned PartBase = 0;
     Type *FinalType = Arg.getType();
@@ -11616,17 +11695,15 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       FinalType = Arg.getParamByValType();
     bool NeedsRegBlock = TLI->functionArgumentNeedsConsecutiveRegisters(
         FinalType, F.getCallingConv(), F.isVarArg(), DL);
-    for (unsigned Value = 0, NumValues = ValueVTs.size();
-         Value != NumValues; ++Value) {
-      EVT VT = ValueVTs[Value];
-      Type *ArgTy = VT.getTypeForEVT(*DAG.getContext());
+    for (unsigned Value = 0, NumValues = Types.size(); Value != NumValues;
+         ++Value) {
+      Type *ArgTy = Types[Value];
+      EVT VT = TLI->getValueType(DL, ArgTy);
       ISD::ArgFlagsTy Flags;
 
-
-      if (Arg.getType()->isPointerTy()) {
+      if (ArgTy->isPointerTy()) {
         Flags.setPointer();
-        Flags.setPointerAddrSpace(
-            cast<PointerType>(Arg.getType())->getAddressSpace());
+        Flags.setPointerAddrSpace(cast<PointerType>(ArgTy)->getAddressSpace());
       }
       if (Arg.hasAttribute(Attribute::ZExt))
         Flags.setZExt();
@@ -11730,7 +11807,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // are responsible for handling scalable vector arguments and
         // return values.
         ISD::InputArg MyFlags(
-            Flags, RegisterVT, VT, isArgValueUsed, ArgNo,
+            Flags, RegisterVT, VT, ArgTy, isArgValueUsed, ArgNo,
             PartBase + i * RegisterVT.getStoreSize().getKnownMinValue());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
@@ -12704,17 +12781,22 @@ static Register FollowCopyChain(MachineRegisterInfo &MRI, Register Reg) {
   assert(MI->getOpcode() == TargetOpcode::COPY &&
          "start of copy chain MUST be COPY");
   Reg = MI->getOperand(1).getReg();
+
+  // If the copied register in the first copy must be virtual.
+  assert(Reg.isVirtual() && "expected COPY of virtual register");
   MI = MRI.def_begin(Reg)->getParent();
+
   // There may be an optional second copy.
   if (MI->getOpcode() == TargetOpcode::COPY) {
     assert(Reg.isVirtual() && "expected COPY of virtual register");
     Reg = MI->getOperand(1).getReg();
     assert(Reg.isPhysical() && "expected COPY of physical register");
-    MI = MRI.def_begin(Reg)->getParent();
+  } else {
+    // The start of the chain must be an INLINEASM_BR.
+    assert(MI->getOpcode() == TargetOpcode::INLINEASM_BR &&
+           "end of copy chain MUST be INLINEASM_BR");
   }
-  // The start of the chain must be an INLINEASM_BR.
-  assert(MI->getOpcode() == TargetOpcode::INLINEASM_BR &&
-         "end of copy chain MUST be INLINEASM_BR");
+
   return Reg;
 }
 
