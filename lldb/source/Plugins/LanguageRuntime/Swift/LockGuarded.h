@@ -23,6 +23,8 @@ template <typename Resource> struct LockGuarded {
       : m_resource(resource), m_lock(mutex, std::adopt_lock) {}
 
   LockGuarded() = default;
+  LockGuarded(const LockGuarded &) = delete;
+  LockGuarded &operator=(const LockGuarded &) = delete;
 
   Resource *operator->() const { return m_resource; }
 

@@ -224,6 +224,12 @@ bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode
   return SetPropertyAtIndex(idx, mode);
 }
 
+bool ModuleListProperties::GetSwiftPreferSerializedBridgingHeader() const {
+  const uint32_t idx = ePropertySwiftPreferSerializedBridgingHeader;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 FileSpec ModuleListProperties::GetSwiftMetadataCachePath() const {
   return m_collection_sp
       ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertySwiftMetadataCachePath)

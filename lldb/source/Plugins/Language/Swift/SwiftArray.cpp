@@ -14,7 +14,9 @@
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
+#include "lldb/Core/Address.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -23,6 +25,7 @@
 // FIXME: we should not need this
 #include "Plugins/Language/ObjC/Cocoa.h"
 #include "lldb/lldb-enumerations.h"
+#include "swift/Demangling/Demangler.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -459,6 +462,41 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
 
     lldb::addr_t storage_location =
         buffer_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+
+    lldb_private::Address addr = Address();
+    addr.SetLoadAddress(storage_location, exe_ctx.GetTargetPtr());
+
+    // If the storage_location points to a swiftEmptyArrayStorage symbol, return
+    // a SwiftArrayEmptyBufferHandler.
+    if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
+      auto mangledName = symbol->GetMangled().GetMangledName().GetStringRef();
+      using namespace ::swift::Demangle;
+      Demangler dem;
+      NodePointer node = dem.demangleSymbol(mangledName);
+      if (node && swift_demangle::NodeAtPath(node, Node::Kind::Global)) {
+        auto *class_node = swift_demangle::ChildAtPath(
+            node,
+            {Node::Kind::TypeMetadata, Node::Kind::Type, Node::Kind::Class});
+        if (class_node && class_node->getNumChildren() == 2) {
+          auto *module_node = class_node->getFirstChild();
+          auto *ident_node = class_node->getLastChild();
+          if (module_node->getKind() == Node::Kind::Module &&
+              module_node->hasText() &&
+              ident_node->getKind() == Node::Kind::Identifier &&
+              ident_node->hasText()) {
+            auto module_name = module_node->getText();
+            auto class_name = ident_node->getText();
+            if (module_name == ::swift::STDLIB_NAME &&
+                class_name == "__EmptyArrayStorage") {
+              CompilerType elem_type(
+                  valobj.GetCompilerType().GetArrayElementType(exe_scope));
+              return std::unique_ptr<SwiftArrayBufferHandler>(
+                  new SwiftArrayEmptyBufferHandler(elem_type));
+            }
+          }
+        }
+      }
+    }
 
     if (storage_location != LLDB_INVALID_ADDRESS) {
       ProcessSP process_sp(valobj.GetProcessSP());

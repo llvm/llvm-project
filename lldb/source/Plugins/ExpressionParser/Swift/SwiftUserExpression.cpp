@@ -840,9 +840,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (!persistent_state)
     return error("could not start parsing (no persistent data)");
 
-  SourceModule module_info;
-  module_info.path.emplace_back("Swift");
-  auto module_decl_or_err = m_swift_ast_ctx->GetModule(module_info);
+  auto module_decl_or_err = m_swift_ast_ctx->ImportStdlib();
   if (!module_decl_or_err)
     return error("could not load Swift Standard Library",
                  llvm::toString(module_decl_or_err.takeError()).c_str());

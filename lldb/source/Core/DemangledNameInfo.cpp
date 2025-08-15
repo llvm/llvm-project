@@ -92,6 +92,14 @@ void TrackingOutputBuffer::finalizeStart() {
   if (NameInfo.BasenameRange.second == 0)
     NameInfo.BasenameRange.second = getCurrentPosition();
 
+  // There is something between the basename and the start of the function
+  // arguments. Assume those are template arguments (which *should* be true for
+  // C++ demangled names, but this assumption may change in the future, in
+  // which case this needs to be adjusted).
+  if (NameInfo.BasenameRange.second != NameInfo.ArgumentsRange.first)
+    NameInfo.TemplateArgumentsRange = {NameInfo.BasenameRange.second,
+                                       NameInfo.ArgumentsRange.first};
+
   assert(!shouldTrack());
   assert(canFinalize());
 }

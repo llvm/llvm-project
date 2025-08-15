@@ -917,14 +917,15 @@ public:
         // Remove any bogus child tasks.
         // Very rarely, the child tasks include a bogus task which has an
         // invalid task id of 0.
-        llvm::erase_if(tasks, [&](auto task_ptr) {
-          if (auto task_info =
-                  expectedToOptional(m_reflection_ctx->asyncTaskInfo(task_ptr)))
-            return task_info->id == 0;
-          // Don't filter children with errors here. Let these tasks reach the
-          // formatter's existing error handling.
-          return false;
-        });
+        if (auto reflection_ctx = GetReflectionContext())
+          llvm::erase_if(tasks, [&](auto task_ptr) {
+            if (auto task_info =
+                    expectedToOptional(reflection_ctx->asyncTaskInfo(task_ptr)))
+              return task_info->id == 0;
+            // Don't filter children with errors here. Let these tasks reach the
+            // formatter's existing error handling.
+            return false;
+          });
 
         std::string mangled_typename =
             mangledTypenameForTasksTuple(tasks.size());
@@ -970,15 +971,14 @@ public:
   }
 
   lldb::ChildCacheState Update() override {
-    if (auto *runtime = SwiftLanguageRuntime::Get(m_backend.GetProcessSP())) {
-      m_reflection_ctx = runtime->GetReflectionContext();
+    if (auto reflection_ctx = GetReflectionContext()) {
       ValueObjectSP task_obj_sp = m_backend.GetChildMemberWithName("_task");
       if (!task_obj_sp)
         return ChildCacheState::eRefetch;
       m_task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
       if (m_task_ptr != LLDB_INVALID_ADDRESS) {
         llvm::Expected<ReflectionContextInterface::AsyncTaskInfo> task_info =
-            m_reflection_ctx->asyncTaskInfo(m_task_ptr);
+            reflection_ctx->asyncTaskInfo(m_task_ptr);
         if (auto err = task_info.takeError()) {
           LLDB_LOG_ERROR(
               GetLog(LLDBLog::DataFormatters | LLDBLog::Types), std::move(err),
@@ -1011,7 +1011,12 @@ public:
   }
 
 private:
-  ThreadSafeReflectionContext m_reflection_ctx;
+  ThreadSafeReflectionContext GetReflectionContext() {
+    if (auto *runtime = SwiftLanguageRuntime::Get(m_backend.GetProcessSP()))
+      return runtime->GetReflectionContext();
+    return {};
+  }
+
   TypeSystemSwiftTypeRef *m_ts = nullptr;
   addr_t m_task_ptr = LLDB_INVALID_ADDRESS;
   ReflectionContextInterface::AsyncTaskInfo m_task_info;

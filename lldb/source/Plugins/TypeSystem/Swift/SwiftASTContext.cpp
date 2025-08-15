@@ -3502,6 +3502,8 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
     if (FileSystem::Instance().Exists(clang_dir_spec))
       clang_importer_options.OverrideResourceDir = clang_dir_spec.GetPath();
     clang_importer_options.DebuggerSupport = true;
+    clang_importer_options.PreferSerializedBridgingHeader =
+        props.GetSwiftPreferSerializedBridgingHeader();
 
     clang_importer_options.DisableSourceImport =
         !props.GetUseSwiftClangImporter();
@@ -3901,6 +3903,54 @@ void SwiftASTContext::CacheModule(std::string module_name,
   m_swift_module_cache.insert({module_name, *module});
 }
 
+/// An RAII object to install a progress report callback.
+SwiftASTContext::ModuleImportProgressRAII::ModuleImportProgressRAII(
+    SwiftASTContext &ctx, std::string category)
+    : m_ts(ctx.shared_from_this()), m_progress(category) {
+  if (!m_ts)
+    return;
+  ThreadSafeASTContext ast = ctx.GetASTContext();
+  if (!ast)
+    return;
+  ast->SetPreModuleImportCallback(
+      [&](llvm::StringRef name, swift::ASTContext::ModuleImportKind kind) {
+        switch (kind) {
+        case swift::ASTContext::Module:
+          m_progress.Increment(1, name.str());
+          break;
+        case swift::ASTContext::Overlay:
+          m_progress.Increment(1, name.str() + " (overlay)");
+          break;
+        case swift::ASTContext::BridgingHeader: {
+          // Module imports generate remarks, which are logged, but bridging
+          // headers don't.
+          auto &m_description = ctx.GetDescription();
+          HEALTH_LOG_PRINTF("Compiling bridging header: %s",
+                            name.str().c_str());
+          m_progress.Increment(1, "Compiling bridging header: " + name.str());
+          break;
+        }
+        }
+      });
+}
+
+SwiftASTContext::ModuleImportProgressRAII::~ModuleImportProgressRAII() {
+  if (!m_ts)
+    return;
+  ThreadSafeASTContext ast =
+      llvm::cast<SwiftASTContext>(m_ts.get())->GetASTContext();
+  if (!ast)
+    return;
+  ast->SetPreModuleImportCallback(
+      [](llvm::StringRef, swift::ASTContext::ModuleImportKind) {});
+}
+
+std::unique_ptr<SwiftASTContext::ModuleImportProgressRAII>
+SwiftASTContext::GetModuleImportProgressRAII(std::string category) {
+  return std::make_unique<SwiftASTContext::ModuleImportProgressRAII>(*this,
+                                                                     category);
+}
+
 llvm::Expected<swift::ModuleDecl &>
 SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
   if (cached)
@@ -3940,36 +3990,6 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
   // Create a diagnostic consumer for the diagnostics produced by the import.
   auto import_diags = getScopedDiagnosticConsumer();
 
-  // Report progress on module importing by using a callback function in
-  // swift::ASTContext.
-  std::unique_ptr<Progress> progress;
-  ast->SetPreModuleImportCallback(
-      [&progress](llvm::StringRef module_name,
-                  swift::ASTContext::ModuleImportKind kind) {
-        if (!progress)
-          progress = std::make_unique<Progress>("Importing Swift modules");
-        switch (kind) {
-        case swift::ASTContext::Module:
-          progress->Increment(1, module_name.str());
-          break;
-        case swift::ASTContext::Overlay:
-          progress->Increment(1, module_name.str() + " (overlay)");
-          break;
-        case swift::ASTContext::BridgingHeader:
-          progress->Increment(1, "Compiling bridging header: " +
-                                     module_name.str());
-          break;
-        }
-      });
-
-  // Clear the callback function on scope exit to prevent an out-of-scope access
-  // of the progress local variable
-  auto on_exit = llvm::make_scope_exit([&]() {
-    ast->SetPreModuleImportCallback(
-        [](llvm::StringRef module_name,
-           swift::ASTContext::ModuleImportKind kind) {});
-  });
-
   swift::ModuleDecl *module_decl = ast->getModuleByName(module_name);
 
   // Error handling.
@@ -3994,6 +4014,13 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
 
   m_swift_module_cache.insert({module_name, *module_decl});
   return *module_decl;
+}
+
+llvm::Expected<swift::ModuleDecl &>
+SwiftASTContext::ImportStdlib() {
+  SourceModule module_info;
+  module_info.path.emplace_back(swift::STDLIB_NAME);
+  return GetModule(module_info);
 }
 
 llvm::Expected<swift::ModuleDecl &>
@@ -4550,15 +4577,9 @@ void SwiftASTContext::ImportSectionModules(
     Module &module, const std::vector<std::string> &module_names) {
   VALID_OR_RETURN();
 
-  Progress progress("Loading Swift module dependencies",
-                    module.GetFileSpec().GetFilename().GetString(),
-                    module_names.size());
-
-  size_t completion = 0;
+  auto module_import_progress_raii =
+      GetModuleImportProgressRAII("Importing Swift section modules");
   for (const std::string &module_name : module_names) {
-    // We have to increment the completion value even if we can't get the module
-    // object to stay in-sync with the total progress reporting.
-    progress.Increment(++completion, module_name);
     SourceModule module_info;
     module_info.path.push_back(ConstString(module_name));
     auto module_or_err = GetModule(module_info);
@@ -9158,9 +9179,6 @@ bool SwiftASTContextForExpressions::CacheUserImports(
 
   auto src_file_imports = source_file.getImports();
 
-  Progress progress("Importing modules used in expression");
-  size_t completion = 0;
-
   /// Find all explicit imports in the expression.
   struct UserImportFinder : public swift::ASTWalker {
     llvm::SmallDenseSet<swift::ModuleDecl*, 1> imports;
@@ -9176,9 +9194,6 @@ bool SwiftASTContextForExpressions::CacheUserImports(
   source_file.walk(import_finder);
   
   for (const auto &attributed_import : src_file_imports) {
-    progress.Increment(
-        ++completion,
-        attributed_import.module.importedModule->getModuleFilename().str());
     swift::ModuleDecl *module = attributed_import.module.importedModule;
     if (module && import_finder.imports.count(module)) {
       std::string module_name;
@@ -9278,7 +9293,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
 
   // Import the Swift standard library and its dependencies.
   SourceModule swift_module;
-  swift_module.path.emplace_back("Swift");
+  swift_module.path.emplace_back(swift::STDLIB_NAME);
   auto *stdlib = LoadOneModule(swift_module, *this, process_sp,
                                /*import_dylibs=*/true, error);
   if (!stdlib)
@@ -9295,13 +9310,11 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     return true;
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
-  
-  std::string category = "Importing Swift module dependencies for ";
+  std::string category = "Importing dependencies for ";
   category += compile_unit->GetPrimaryFile().GetFilename().GetString();
-  Progress progress(category, "", cu_imports.size());
-  size_t completion = 0;
+  auto module_import_progress_raii = GetModuleImportProgressRAII(category);
+ 
   for (const SourceModule &module : cu_imports) {
-    progress.Increment(++completion, llvm::join(module.path, "."));
     // When building the Swift stdlib with debug info these will
     // show up in "Swift.o", but we already imported them and
     // manually importing them will fail.
