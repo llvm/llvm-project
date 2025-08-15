@@ -131,7 +131,8 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv("/// @brief {0}\n", Enum.getDesc());
   OS << formatv("typedef enum {0} {{\n", Enum.getName());
 
-  uint32_t EtorVal = 0;
+  // Bitfields start from 1, other enums from 0
+  uint32_t EtorVal = Enum.isBitField();
   for (const auto &EnumVal : Enum.getValues()) {
     if (Enum.isTyped()) {
       OS << MakeComment(
@@ -141,7 +142,12 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
       OS << MakeComment(EnumVal.getDesc());
     }
     OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(),
-                  EnumVal.getName(), EtorVal++);
+                  EnumVal.getName(), EtorVal);
+    if (Enum.isBitField()) {
+      EtorVal <<= 1u;
+    } else {
+      ++EtorVal;
+    }
   }
 
   // Add last_element/force uint32 val
