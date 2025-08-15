@@ -9,7 +9,7 @@ function get_tabulator_hexa_formatter(padding: number): (cell: CellComponent) =>
 }
 
 const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
-    { title: "User ID", field: "userId", sorter: "number" },
+    { title: "User ID", field: "userId", sorter: "number", widthShrink: 2 },
     {
         title: "Name",
         field: "name",
@@ -20,6 +20,7 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     {
         title: "DSX",
         hozAlign: "center",
+        widthShrink: 2,
         formatter: (cell: CellComponent) => {
             const rowData = cell.getRow().getData();
             let label = "";
@@ -58,7 +59,7 @@ declare const Tabulator: any; // HACK: real definition comes from tabulator.min.
 const SYMBOLS_TABLE = new Tabulator("#symbols-table", {
     height: "100vh",
     columns: SYMBOL_TABLE_COLUMNS,
-    layout: "fitColumns",
+    layout: "fitDataFill",
     data: previousState?.symbols || [],
 });
 

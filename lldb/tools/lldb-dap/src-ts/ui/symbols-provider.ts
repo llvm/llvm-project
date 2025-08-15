@@ -144,6 +144,10 @@ export class SymbolsProvider extends DisposableContext {
         color: var(--vscode-editor-foreground);
       }
 
+      .tabulator-cell {
+        text-overflow: clip !important;
+      }
+
       #symbols-table { 
         height: 100vh; 
       }
