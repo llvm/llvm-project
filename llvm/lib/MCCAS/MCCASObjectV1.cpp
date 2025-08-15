@@ -1776,7 +1776,7 @@ MCSymbolIdFragmentRef::materialize(MCCASReader &Reader,
 
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
   Expected<MCFragmentName##Ref> MCFragmentName##Ref::create(                   \
-      MCCASBuilder &MB, const MCFragmentName &F, unsigned FragmentSize,        \
+      MCCASBuilder &MB, const MCFragment &F, unsigned FragmentSize,            \
       ArrayRef<char> FragmentContents) {                                       \
     Expected<Builder> B = Builder::startNode(MB.Schema, KindString);           \
     if (!B)                                                                    \
@@ -1849,8 +1849,7 @@ Error MCCASBuilder::buildFragment(const MCFragment &F, unsigned Size,
   switch (F.getKind()) {
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
   case MCFragment::MCEnumName: {                                               \
-    const MCFragmentName &SF = cast<MCFragmentName>(F);                        \
-    auto FN = MCFragmentName##Ref::create(*this, SF, Size, FragmentContents);  \
+    auto FN = MCFragmentName##Ref::create(*this, F, Size, FragmentContents);   \
     if (!FN)                                                                   \
       return FN.takeError();                                                   \
     addNode(*FN);                                                              \
