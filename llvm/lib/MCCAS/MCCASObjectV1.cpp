@@ -1720,14 +1720,15 @@ Expected<uint64_t> MCLEBFragmentRef::materialize(MCCASReader &Reader,
 }
 
 Expected<MCNopsFragmentRef>
-MCNopsFragmentRef::create(MCCASBuilder &MB, const MCNopsFragment &F,
+MCNopsFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                           unsigned FragmentSize,
                           ArrayRef<char> FragmentContents) {
+  auto *NopsFrag = dyn_cast<MCNopsFragment>(&F);
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
-  int64_t NumBytes = F.getNumBytes();
-  int64_t ControlledNopLength = F.getControlledNopLength();
+  int64_t NumBytes = NopsFrag->getNumBytes();
+  int64_t ControlledNopLength = NopsFrag->getControlledNopLength();
   int64_t MaximumNopLength =
       MB.Asm.getBackend().getMaximumNopSize(*F.getSubtargetInfo());
   if (ControlledNopLength > MaximumNopLength)
