@@ -650,3 +650,20 @@ struct InitFromBindingDecl {
   }
 };
 } // namespace GH82970
+
+namespace inherited_members {
+
+struct A {
+  int m;
+};
+
+struct B : A {
+  B() { m = 0; }
+};
+
+template <class T>
+struct C : A {
+  C() { m = 0; }
+};
+
+} // namespace inherited_members
