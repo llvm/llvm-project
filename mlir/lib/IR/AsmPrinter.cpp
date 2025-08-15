@@ -558,6 +558,9 @@ public:
     }
   }
 
+  /// Returns the alias name.
+  StringRef getAliasName() const { return name; }
+
   /// Returns true if this is a type alias.
   bool isTypeAlias() const { return isType; }
 
@@ -1139,6 +1142,17 @@ void AliasInitializer::initializeAliases(
 void AliasInitializer::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
     llvm::MapVector<const void *, SymbolAlias> &attrTypeToAlias) {
+  // Pre-populate the alias list with the user-provided aliases.
+  for (auto &it : attrTypeToAlias) {
+    SymbolAlias &symbolAlias = it.second;
+    InProgressAliasInfo info(symbolAlias.getAliasName());
+    info.isType = symbolAlias.isTypeAlias();
+    info.canBeDeferred = symbolAlias.canBeDeferred();
+    info.aliasDepth = 0;
+    aliases.insert({it.first, info});
+  }
+  attrTypeToAlias.clear();
+
   // Use a dummy printer when walking the IR so that we can collect the
   // attributes/types that will actually be used during printing when
   // considering aliases.
@@ -1272,6 +1286,9 @@ public:
     printAliases(p, newLine, /*isDeferred=*/true);
   }
 
+  /// Add an alias for the given symbol. All aliases are non-deferred.
+  void addAlias(const void *symbol, bool isType, StringRef alias);
+
 private:
   /// Print all of the referenced aliases that support the provided resolution
   /// behavior.
@@ -1285,6 +1302,14 @@ private:
   llvm::BumpPtrAllocator aliasAllocator;
 };
 } // namespace
+
+void AliasState::addAlias(const void *symbol, bool isType, StringRef alias) {
+  StringRef name = alias.copy(aliasAllocator);
+  // We don't know if this alias is unique. Set suffix index to 0 and defer
+  // conflict resolution to aliases initialization.
+  attrTypeToAlias.insert(
+      {symbol, SymbolAlias(name, 0, isType, /*isDeferrable=*/false)});
+}
 
 void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
@@ -2092,6 +2117,15 @@ AsmState::AsmState(MLIRContext *ctx, const OpPrintingFlags &printerFlags,
     attachFallbackResourcePrinter(*map);
 }
 AsmState::~AsmState() = default;
+
+void AsmState::addAlias(Attribute attr, StringRef alias) {
+  impl->getAliasState().addAlias(attr.getAsOpaquePointer(), /*isType=*/false,
+                                 alias);
+}
+void AsmState::addAlias(Type type, StringRef alias) {
+  impl->getAliasState().addAlias(type.getAsOpaquePointer(), /*isType=*/true,
+                                 alias);
+}
 
 const OpPrintingFlags &AsmState::getPrinterFlags() const {
   return impl->getPrinterFlags();
