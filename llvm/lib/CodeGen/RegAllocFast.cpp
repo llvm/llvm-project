@@ -478,7 +478,7 @@ int RegAllocFastImpl::getStackSpaceFor(Register VirtReg) {
   const MachineFunction &MF = MRI->getMF();
   auto &ST = MF.getSubtarget();
   Align CurrentAlign = ST.getFrameLowering()->getStackAlign();
-  if (Alignment > CurrentAlign && !ST.getRegisterInfo()->canRealignStack(MF))
+  if (Alignment > CurrentAlign && !TRI->canRealignStack(MF))
     Alignment = CurrentAlign;
 
   int FrameIdx = MFI->CreateSpillStackObject(Size, Alignment);
