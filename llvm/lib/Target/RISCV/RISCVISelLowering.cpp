@@ -16660,6 +16660,13 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(RISCVISD::SLLW, SDLoc(N), VT, Src.getOperand(0),
                        Src.getOperand(1));
 
+  // Fold (sext_inreg (xor (setcc), -1), i1) -> (add (setcc), -1)
+  if (Opc == ISD::XOR && SrcVT == MVT::i1 &&
+      isAllOnesConstant(Src.getOperand(1)) &&
+      Src.getOperand(0).getOpcode() == ISD::SETCC)
+    return DAG.getNode(ISD::ADD, SDLoc(N), VT, Src.getOperand(0),
+                       DAG.getAllOnesConstant(SDLoc(N), VT));
+
   return SDValue();
 }
 
