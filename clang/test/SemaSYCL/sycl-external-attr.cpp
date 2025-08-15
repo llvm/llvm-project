@@ -29,6 +29,12 @@ template<typename>
 [[clang::sycl_external]] void func6() {}
 template void func6<S6>();
 
+// FIXME: C++23 [temp.expl.spec]p12 states:
+//   ... Similarly, attributes appearing in the declaration of a template
+//   have no effect on an explicit specialization of that template.
+// Clang currently instantiates and propagates attributes from a function
+// template to its explicit specializations resulting in the following
+// spurious error.
 // expected-error@+3{{'clang::sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S7 {}; }
 template<typename>
@@ -126,6 +132,7 @@ public:
 
   [[clang::sycl_external]] virtual void bar() = 0;
 };
+[[clang::sycl_external]] void B::bar() {}
 
 [[clang::sycl_external]] constexpr int square(int x);
 
