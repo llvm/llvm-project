@@ -69,6 +69,7 @@ jobs:
     steps:
     - name: Check long paths
       run: |
+        Get-ChildItem -Path "C:\" -Recurse -Include "cmake.exe"
         Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled'
         New-Item -Path "C:\actions-runner\llvm-project\llvm-project\build\tools\clang\stage2-instrumented-bins\tools\clang\stage2-bins\tools\mlir\tools\mlir-linalg-ods-gen\CMakeFiles\mlir-linalg-ods-yaml-gen.dir\C_\actions-runner\llvm-project\llvm-project\llvm\resources\windows_version_resource.rc.res" -ItemType File -Force
     # It's good practice to use setup-python, but this is also required on macos-14
