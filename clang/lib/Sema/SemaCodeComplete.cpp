@@ -1428,6 +1428,16 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
 
   AdjustResultPriorityForDecl(R);
 
+  if (isa<FieldDecl>(R.Declaration)) {
+    // If result is a member in the context of an explicit-object member
+    // function, drop it because it must be accessed through the object
+    // parameter
+    if (auto *MethodDecl = dyn_cast<CXXMethodDecl>(CurContext);
+        MethodDecl && MethodDecl->isExplicitObjectMemberFunction()) {
+      return;
+    }
+  }
+
   if (HasObjectTypeQualifiers)
     if (const auto *Method = dyn_cast<CXXMethodDecl>(R.Declaration))
       if (Method->isInstance()) {

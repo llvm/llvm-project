@@ -4473,6 +4473,45 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
                                   snippetSuffix(""))));
   }
 }
+
+TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
+  Annotations Code(R"cpp(
+    struct A {
+      int member {};
+
+      void foo(this A& self) {
+        // Should not offer `member` here, since it needs to be 
+        // referenced as `self.member`.
+        mem$c1^;
+        self.mem$c2^;
+      }
+    };
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  CodeCompleteOptions Opts{};
+
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c1"),
+                               Preamble.get(), Inputs, Opts);
+
+    EXPECT_THAT(Result.Completions, ElementsAre());
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c2"),
+                               Preamble.get(), Inputs, Opts);
+
+    EXPECT_THAT(Result.Completions, ElementsAre(named("member")));
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
