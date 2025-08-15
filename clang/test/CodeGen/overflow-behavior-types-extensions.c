@@ -18,6 +18,12 @@ int generic_selection_test_obtmatch(w_int x) {
   return _Generic(x, w_int: 1, nw_int: 2, default: 3);
 }
 
+// CHECK-LABEL: define {{.*}} @generic_selection_test_obt_nomatch
+int generic_selection_test_obt_nomatch(w_int x) {
+  // CHECK: ret i32 3
+  return _Generic(x, int: 1, char: 2, default: 3);
+}
+
 // CHECK-LABEL: define {{.*}} @signed_bitint_test
 void signed_bitint_test(_BitInt(4) __nowrap a, _BitInt(8) __nowrap b, _BitInt(99) __wrap c) {
   // CHECK: call { i4, i1 } @llvm.sadd.with.overflow.i4(i4
