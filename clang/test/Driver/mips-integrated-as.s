@@ -58,9 +58,7 @@
 // NAN-DEFAULT-NOT: "-target-feature" "{{[-+]}}nan2008"
 
 // RUN: %clang --target=mips-linux-gnu -### -fintegrated-as -c %s -mnan=legacy 2>&1 | \
-// RUN:   FileCheck -check-prefix=NAN-LEGACY %s
-// NAN-LEGACY: -cc1as
-// NAN-LEGACY: "-target-feature" "-nan2008"
+// RUN:   FileCheck -check-prefix=NAN-2008 %s
 
 // RUN: %clang --target=mips-linux-gnu -march=mips32r6 -### -fintegrated-as -c %s -mnan=2008 2>&1 | \
 // RUN:   FileCheck -check-prefix=NAN-2008 %s

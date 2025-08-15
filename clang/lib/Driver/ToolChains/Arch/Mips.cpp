@@ -301,10 +301,13 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
         D.Diag(diag::warn_target_unsupported_nan2008) << CPUName;
       }
     } else if (Val == "legacy") {
-      if (mips::getIEEE754Standard(CPUName) & mips::Legacy)
-        Features.push_back("-nan2008");
-      else {
+      if (mips::getIEEE754Standard(CPUName) & mips::Std2008) {
         Features.push_back("+nan2008");
+        HasNaN2008Opt = true;
+        D.Diag(diag::warn_target_unsupported_convertnanlegacytonan2008)
+            << CPUName;
+      } else {
+        Features.push_back("-nan2008");
         D.Diag(diag::warn_target_unsupported_nanlegacy) << CPUName;
       }
     } else

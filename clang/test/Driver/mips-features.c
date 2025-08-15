@@ -227,11 +227,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ABSLEGACYNAN2008 %s
 // CHECK-ABSLEGACYNAN2008: "-target-feature" "+nan2008" "-target-feature" "-abs2008"
 //
-// -mnan=legacy
+// -mnan=2008
 // RUN: %clang --target=mips-linux-gnu -march=mips32r3 -### -c %s \
 // RUN:     -mnan=2008 -mnan=legacy 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NANLEGACY %s
-// CHECK-NANLEGACY: "-target-feature" "-nan2008"
+// RUN:   | FileCheck --check-prefix=CHECK-NAN2008 %s
 //
 // -mabs=2008 on pre R2
 // RUN: %clang --target=mips-linux-gnu -march=mips32 -### -c %s \
