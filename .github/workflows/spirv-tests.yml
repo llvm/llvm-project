@@ -37,6 +37,7 @@ jobs:
           cmake -GNinja \
             -S llvm \
             -B build \
+            -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
