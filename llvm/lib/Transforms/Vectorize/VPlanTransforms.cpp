@@ -1812,10 +1812,13 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static unsigned getHashValue(const VPSingleDefRecipe *Def) {
     const VPlan *Plan = Def->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
-    return hash_combine(Def->getVPDefID(), getOpcodeOrIntrinsicID(Def),
-                        TypeInfo.inferScalarType(Def),
-                        vputils::isSingleScalar(Def),
-                        hash_combine_range(Def->operands()));
+    hash_code Result = hash_combine(
+        Def->getVPDefID(), getOpcodeOrIntrinsicID(Def),
+        TypeInfo.inferScalarType(Def), vputils::isSingleScalar(Def),
+        hash_combine_range(Def->operands()));
+    return isa<VPReplicateRecipe>(Def)
+               ? hash_combine(Result, Def->getUnderlyingInstr())
+               : Result;
   }
 
   /// Check equality of underlying data of \p L and \p R.
@@ -1831,7 +1834,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                   equal(L->operands(), R->operands());
     assert((!Result || getHashValue(L) == getHashValue(R)) &&
            "Divergent hashes of equal values");
-    return Result;
+    return Result && isa<VPReplicateRecipe>(L)
+               ? L->getUnderlyingInstr() == R->getUnderlyingInstr()
+               : Result;
   }
 };
 } // end anonymous namespace
