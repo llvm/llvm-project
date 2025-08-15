@@ -66,7 +66,7 @@ struct ol_device_impl_t {
   ///
   /// Queues may be added to the outstanding queue list by olDestroyQueue if
   /// they are destroyed but not completed.
-  std::optional<__tgt_async_info *> GetOutstandingQueue() {
+  __tgt_async_info *getOutstandingQueue() {
     // Not locking the `size()` access is fine here - In the worst case we
     // either miss a queue that exists or loop through an empty array after
     // taking the lock. Both are sub-optimal but not that bad.
@@ -85,14 +85,14 @@ struct ol_device_impl_t {
         }
       }
     }
-    return std::nullopt;
+    return nullptr;
   }
 
   /// Complete all pending work for this device and perform any needed cleanup.
   ///
   /// After calling this function, no liboffload functions should be called with
   /// this device handle.
-  llvm::Error Destroy() {
+  llvm::Error destroy() {
     llvm::Error Result = Plugin::success();
     for (auto Q : OutstandingQueues)
       if (auto Err = Device->synchronize(Q, /*Release=*/true))
@@ -115,10 +115,10 @@ struct ol_platform_impl_t {
   ///
   /// After calling this function, no liboffload functions should be called with
   /// this platform handle.
-  llvm::Error Destroy() {
+  llvm::Error destroy() {
     llvm::Error Result = Plugin::success();
     for (auto &D : Devices)
-      if (auto Err = D->Destroy())
+      if (auto Err = D->destroy())
         Result = llvm::joinErrors(std::move(Result), std::move(Err));
 
     if (auto Res = Plugin->deinit())
@@ -307,7 +307,7 @@ Error olShutDown_impl() {
     if (!P.Plugin || !P.Plugin->is_initialized())
       continue;
 
-    if (auto Res = P.Destroy())
+    if (auto Res = P.destroy())
       Result = llvm::joinErrors(std::move(Result), std::move(Res));
   }
 
@@ -634,14 +634,14 @@ Error olMemFree_impl(void *Address) {
 Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
   auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
 
-  auto OutstandingQueue = Device->GetOutstandingQueue();
+  auto OutstandingQueue = Device->getOutstandingQueue();
   if (OutstandingQueue) {
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(*OutstandingQueue, /*Release=*/false))
+            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
       return Err;
-    CreatedQueue->AsyncInfo = *OutstandingQueue;
+    CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err =
                  Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo))) {
     return Err;
