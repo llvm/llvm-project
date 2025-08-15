@@ -1549,6 +1549,7 @@ bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250(const MCSubtargetInfo &STI);
+bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
@@ -1709,6 +1710,8 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
+LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset);
@@ -1748,15 +1751,22 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegalDPALU_DPPControl(unsigned DC) {
-  return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
+  if (isGFX12(ST))
+    return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
+  if (isGFX90A(ST))
+    return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+  return false;
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
 
+/// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
+bool isDPALU_DPP32BitOpc(unsigned Opc);
+
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

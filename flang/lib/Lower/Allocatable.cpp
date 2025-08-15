@@ -13,9 +13,9 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/Cuda.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
@@ -445,10 +445,14 @@ private:
                                        /*mustBeHeap=*/true);
   }
 
-  void postAllocationAction(const Allocation &alloc) {
+  void postAllocationAction(const Allocation &alloc,
+                            const fir::MutableBoxValue &box) {
     if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
       Fortran::lower::attachDeclarePostAllocAction(converter, builder,
                                                    alloc.getSymbol());
+    if (Fortran::semantics::HasCUDAComponent(alloc.getSymbol()))
+      Fortran::lower::initializeDeviceComponentAllocator(
+          converter, alloc.getSymbol(), box);
   }
 
   void setPinnedToFalse() {
@@ -466,7 +470,9 @@ private:
 
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
-    bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
+    bool isCudaAllocate =
+        Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
+        Fortran::semantics::HasCUDAComponent(alloc.getSymbol());
     bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
@@ -475,11 +481,11 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
     if (inlineAllocation &&
-        ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
+        ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
       // Pointers must use PointerAllocate so that their deallocations
       // can be validated.
       genInlinedAllocation(alloc, box);
-      postAllocationAction(alloc);
+      postAllocationAction(alloc, box);
       setPinnedToFalse();
       return;
     }
@@ -494,7 +500,7 @@ private:
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (!isCudaSymbol) {
+    if (!isCudaAllocate) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
@@ -502,7 +508,7 @@ private:
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-    postAllocationAction(alloc);
+    postAllocationAction(alloc, box);
     errorManager.assignStat(builder, loc, stat);
   }
 
@@ -645,7 +651,7 @@ private:
       setPinnedToFalse();
     }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-    postAllocationAction(alloc);
+    postAllocationAction(alloc, box);
     errorManager.assignStat(builder, loc, stat);
   }
 
@@ -771,10 +777,11 @@ private:
 
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
-    return builder
-        .create<cuf::AllocateOp>(
-            loc, retTy, box.getAddr(), errmsg, stream, pinned, source, cudaAttr,
-            errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+
+    return cuf::AllocateOp::create(
+               builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
+               source, cudaAttr,
+               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -840,10 +847,9 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
 
   // Keep return type the same as a standard AllocatableAllocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
-  return builder
-      .create<cuf::DeallocateOp>(
-          loc, retTy, box.getAddr(), errmsg, cudaAttr,
-          errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+  return cuf::DeallocateOp::create(
+             builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
+             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 

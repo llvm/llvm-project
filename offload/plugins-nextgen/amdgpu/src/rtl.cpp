@@ -1063,6 +1063,20 @@ private:
   /// Indicate to spread data transfers across all available SDMAs
   bool UseMultipleSdmaEngines;
 
+  /// Wrapper function for implementing host callbacks
+  static void CallbackWrapper(AMDGPUSignalTy *InputSignal,
+                              AMDGPUSignalTy *OutputSignal,
+                              void (*Callback)(void *), void *UserData) {
+    // The wait call will not error in this context.
+    if (InputSignal)
+      if (auto Err = InputSignal->wait())
+        reportFatalInternalError(std::move(Err));
+
+    Callback(UserData);
+
+    OutputSignal->signal();
+  }
+
   /// Return the current number of asynchronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -1493,6 +1507,31 @@ public:
     return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
                                    SrcAgent, CopySize, 0, nullptr,
                                    OutputSignal->get());
+  }
+
+  Error pushHostCallback(void (*Callback)(void *), void *UserData) {
+    // Retrieve an available signal for the operation's output.
+    AMDGPUSignalTy *OutputSignal = nullptr;
+    if (auto Err = SignalManager.getResource(OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    AMDGPUSignalTy *InputSignal;
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+
+      // Consume stream slot and compute dependencies.
+      InputSignal = consume(OutputSignal).second;
+    }
+
+    // "Leaking" the thread here is consistent with other work added to the
+    // queue. The input and output signals will remain valid until the output is
+    // signaled.
+    std::thread(CallbackWrapper, InputSignal, OutputSignal, Callback, UserData)
+        .detach();
+
+    return Plugin::success();
   }
 
   /// Synchronize with the stream. The current thread waits until all operations
@@ -2232,16 +2271,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper,
                   AMDGPUStreamTy *&Stream) {
-    // Get the stream (if any) from the async info.
-    Stream = AsyncInfoWrapper.getQueueAs<AMDGPUStreamTy *>();
-    if (!Stream) {
-      // There was no stream; get an idle one.
-      if (auto Err = AMDGPUStreamManager.getResource(Stream))
-        return Err;
-
-      // Modify the async info's stream.
-      AsyncInfoWrapper.setQueueAs<AMDGPUStreamTy *>(Stream);
-    }
+    auto WrapperStream =
+        AsyncInfoWrapper.getOrInitQueue<AMDGPUStreamTy *>(AMDGPUStreamManager);
+    if (!WrapperStream)
+      return WrapperStream.takeError();
+    Stream = *WrapperStream;
     return Plugin::success();
   }
 
@@ -2296,7 +2330,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Synchronize current thread with the pending operations on the async info.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     AMDGPUStreamTy *Stream =
         reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
     assert(Stream && "Invalid stream");
@@ -2307,8 +2342,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    AsyncInfo.Queue = nullptr;
-    return AMDGPUStreamManager.returnResource(Stream);
+    if (ReleaseQueue) {
+      AsyncInfo.Queue = nullptr;
+      return AMDGPUStreamManager.returnResource(Stream);
+    }
+    return Plugin::success();
   }
 
   /// Query for the completion of the pending operations on the async info.
@@ -2554,6 +2592,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfo, Stream))
+      return Err;
+
+    return Stream->pushHostCallback(Callback, UserData);
+  };
+
   /// Create an event.
   Error createEventImpl(void **EventPtrStorage) override {
     AMDGPUEventTy **Event = reinterpret_cast<AMDGPUEventTy **>(EventPtrStorage);
@@ -2589,6 +2636,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     return Event->wait(*Stream);
+  }
+
+  Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
+    auto Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
+    if (!Stream)
+      return false;
+
+    auto Query = Stream->query();
+    if (Query)
+      return !*Query;
+    return Query.takeError();
   }
 
   /// Synchronize the current thread with the event.
@@ -2943,6 +3001,40 @@ private:
       return Plugin::success();
     }
     return Plugin::success();
+  }
+
+  bool checkIfCoarseGrainMemoryNearOrAbove64GB() {
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      if (!Pool->isGlobal() || !Pool->isCoarseGrained())
+        continue;
+      uint64_t Value;
+      hsa_status_t Status =
+          Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, Value);
+      if (Status != HSA_STATUS_SUCCESS)
+        continue;
+      constexpr uint64_t Almost64Gig = 0xFF0000000;
+      if (Value >= Almost64Gig)
+        return true;
+    }
+    return false; // CoarseGrain pool w/ 64GB or more capacity not found
+  }
+
+  size_t getMemoryManagerSizeThreshold() override {
+    // Targeting high memory capacity GPUs such as
+    // data center GPUs.
+    if (checkIfCoarseGrainMemoryNearOrAbove64GB()) {
+      // Set GenericDeviceTy::MemoryManager's Threshold to 3GiB,
+      // if threshold is not already set by ENV var
+      // LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD.
+      // This MemoryManager is used for omp_target_alloc(), OpenMP
+      // (non-usm) map clause, etc.
+      //
+      // Ideally, this kind of pooling is best performed at
+      // a common level (e.g, user side of HSA) between OpenMP and HIP
+      // but that feature does not exist (yet).
+      return 3ul * 1024 * 1024 * 1024 /* 3 GiB */;
+    }
+    return 0;
   }
 
   /// Envar for controlling the number of HSA queues per device. High number of

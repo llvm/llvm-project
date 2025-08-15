@@ -17,6 +17,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
+#include "CIRGenVTables.h"
 #include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
@@ -86,9 +87,14 @@ private:
 
   CIRGenTypes genTypes;
 
+  /// Holds information about C++ vtables.
+  CIRGenVTables vtables;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
+
+  llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -113,6 +119,9 @@ public:
   /// -------
 
   mlir::Operation *lastGlobalOp = nullptr;
+
+  /// Tell the consumer that this variable has been instantiated.
+  void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
 
@@ -155,6 +164,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return the mlir::GlobalViewAttr for the address of the given global.
+  cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
+
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);
@@ -167,6 +179,14 @@ public:
   /// contribute to the function attributes and calling convention.
   void constructAttributeList(CIRGenCalleeInfo calleeInfo,
                               mlir::NamedAttrList &attrs);
+
+  /// Will return a global variable of the given type. If a variable with a
+  /// different type already exists then a new variable with the right type
+  /// will be created and all uses of the old variable will be replaced with a
+  /// bitcast to the new variable.
+  cir::GlobalOp createOrReplaceCXXRuntimeVariable(
+      mlir::Location loc, llvm::StringRef name, mlir::Type ty,
+      cir::GlobalLinkageKind linkage, clang::CharUnits alignment);
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -212,6 +232,16 @@ public:
       clang::GlobalDecl gd, const CIRGenFunctionInfo *fnInfo = nullptr,
       cir::FuncType fnType = nullptr, bool dontDefer = false,
       ForDefinition_t isForDefinition = NotForDefinition);
+
+  mlir::Type getVTableComponentType();
+  CIRGenVTables &getVTables() { return vtables; }
+
+  ItaniumVTableContext &getItaniumVTableContext() {
+    return vtables.getItaniumVTableContext();
+  }
+  const ItaniumVTableContext &getItaniumVTableContext() const {
+    return vtables.getItaniumVTableContext();
+  }
 
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually
@@ -355,8 +385,8 @@ public:
   static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
       clang::VisibilityAttr::VisibilityType visibility);
   cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
-  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
+  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
                                                     bool isConstantVariable);

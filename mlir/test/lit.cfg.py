@@ -224,6 +224,9 @@ if config.enable_cuda_runner:
 if config.enable_sycl_runner:
     tools.extend([add_runtime("mlir_sycl_runtime")])
 
+if config.enable_levelzero_runner:
+    tools.extend([add_runtime("mlir_levelzero_runtime")])
+
 if config.enable_spirv_cpu_runner:
     tools.extend([add_runtime("mlir_spirv_cpu_runtime")])
 
@@ -375,3 +378,6 @@ if config.run_rocm_tests:
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
+
+if sys.version_info >= (3, 11):
+    config.available_features.add("python-ge-311")

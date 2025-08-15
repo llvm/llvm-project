@@ -51,7 +51,9 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
 
   MVT PtrVT = MVT::i32;
 
-  setBooleanContents(ZeroOrOneBooleanContent);
+  // This is based on M68k SetCC (scc) setting the destination byte to all 1s.
+  // See also getSetCCResultType().
+  setBooleanContents(ZeroOrNegativeOneBooleanContent);
 
   auto *RegInfo = Subtarget.getRegisterInfo();
   setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
@@ -1454,10 +1456,7 @@ SDValue M68kTargetLowering::getTLSGetAddr(GlobalAddressSDNode *GA,
   PointerType *PtrTy = PointerType::get(*DAG.getContext(), 0);
 
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Arg;
-  Entry.Ty = PtrTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Arg, PtrTy);
   return LowerExternalSymbolCall(DAG, SDLoc(GA), "__tls_get_addr",
                                  std::move(Args));
 }
