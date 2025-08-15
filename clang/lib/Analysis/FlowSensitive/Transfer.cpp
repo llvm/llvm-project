@@ -287,7 +287,7 @@ public:
     }
   }
 
-  void VisitImplicitCastExpr(const ImplicitCastExpr *S) {
+  void VisitCastExpr(const CastExpr *S) {
     const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
@@ -324,10 +324,10 @@ public:
       // modeling is added, then update this code to create a fresh location and
       // value.
     case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase:
+    case CK_BaseToDerived:
     case CK_ConstructorConversion:
     case CK_UserDefinedConversion:
-      // FIXME: Add tests that excercise CK_UncheckedDerivedToBase,
-      // CK_ConstructorConversion, and CK_UserDefinedConversion.
     case CK_NoOp: {
       // FIXME: Consider making `Environment::getStorageLocation` skip noop
       // expressions (this and other similar expressions in the file) instead
@@ -682,15 +682,6 @@ public:
     assert(SubExpr != nullptr);
 
     propagateValue(*SubExpr, *S, Env);
-  }
-
-  void VisitCXXStaticCastExpr(const CXXStaticCastExpr *S) {
-    if (S->getCastKind() == CK_NoOp) {
-      const Expr *SubExpr = S->getSubExpr();
-      assert(SubExpr != nullptr);
-
-      propagateValueOrStorageLocation(*SubExpr, *S, Env);
-    }
   }
 
   void VisitConditionalOperator(const ConditionalOperator *S) {
