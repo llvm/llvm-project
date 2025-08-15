@@ -1525,7 +1525,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SANITIZE_HWADDRESS__");
   if (LangOpts.Sanitize.has(SanitizerKind::Thread))
     Builder.defineMacro("__SANITIZE_THREAD__");
-  
+
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
     const llvm::Triple &Triple = TI.getTriple();
