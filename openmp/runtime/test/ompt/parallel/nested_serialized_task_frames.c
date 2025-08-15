@@ -6,8 +6,7 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
 #pragma omp parallel num_threads(1)
   {
     // region 0

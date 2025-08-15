@@ -9,23 +9,22 @@
 #include <omp.h>
 #include <unistd.h>
 
-int main()
-{
-  int condition=0;
+int main() {
+  int condition = 0;
   omp_set_nested(1);
   print_frame(0);
 
-  #pragma omp parallel num_threads(4)
+#pragma omp parallel num_threads(4)
   {
     print_frame_from_outlined_fn(1);
     print_ids(0);
     print_ids(1);
     print_frame(0);
 
-    //get all implicit task events before starting nested:
-    #pragma omp barrier
-    
-    #pragma omp parallel num_threads(4)
+// get all implicit task events before starting nested:
+#pragma omp barrier
+
+#pragma omp parallel num_threads(4)
     {
       print_frame_from_outlined_fn(1);
       print_ids(0);
@@ -33,8 +32,8 @@ int main()
       print_ids(2);
       print_frame(0);
       OMPT_SIGNAL(condition);
-      OMPT_WAIT(condition,16);
-      #pragma omp barrier
+      OMPT_WAIT(condition, 16);
+#pragma omp barrier
       print_fuzzy_address(1);
       print_ids(0);
     }

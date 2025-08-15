@@ -14,7 +14,8 @@ int main() {
   int i;
 #pragma omp teams num_teams(4) thread_limit(1)
 #pragma omp distribute dist_schedule(static, WORK_SIZE / 4)
-  for (i = 0; i < WORK_SIZE; i++) {}
+  for (i = 0; i < WORK_SIZE; i++) {
+  }
 
   return 0;
 }

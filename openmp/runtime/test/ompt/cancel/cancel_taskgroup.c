@@ -7,57 +7,56 @@
 // clang-format on
 
 #include "callback.h"
-#include <unistd.h>  
+#include <unistd.h>
 #include <stdio.h>
 
-int main()
-{
-  int condition=0;
-  #pragma omp parallel num_threads(2)
+int main() {
+  int condition = 0;
+#pragma omp parallel num_threads(2)
   {}
 
   print_frame(0);
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
-      #pragma omp taskgroup
+#pragma omp taskgroup
       {
-        #pragma omp task shared(condition)
+#pragma omp task shared(condition)
         {
           printf("start execute task 1\n");
           OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-          #pragma omp cancellation point taskgroup
+          OMPT_WAIT(condition, 2);
+#pragma omp cancellation point taskgroup
           printf("end execute task 1\n");
         }
-        #pragma omp task shared(condition)
+#pragma omp task shared(condition)
         {
           printf("start execute task 2\n");
           OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-          #pragma omp cancellation point taskgroup
+          OMPT_WAIT(condition, 2);
+#pragma omp cancellation point taskgroup
           printf("end execute task 2\n");
         }
-      #pragma omp task shared(condition)
+#pragma omp task shared(condition)
         {
           printf("start execute task 3\n");
           OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-          #pragma omp cancellation point taskgroup
+          OMPT_WAIT(condition, 2);
+#pragma omp cancellation point taskgroup
           printf("end execute task 3\n");
         }
-      #pragma omp task if(0) shared(condition)
+#pragma omp task if (0) shared(condition)
         {
           printf("start execute task 4\n");
-          OMPT_WAIT(condition,1);
-          #pragma omp cancel taskgroup
+          OMPT_WAIT(condition, 1);
+#pragma omp cancel taskgroup
           printf("end execute task 4\n");
         }
         OMPT_SIGNAL(condition);
       }
     }
-    #pragma omp barrier
+#pragma omp barrier
   }
 
   // clang-format off

@@ -27,7 +27,7 @@ int main() {
 #pragma omp task depend(out : x)
       { x++; }
       print_fuzzy_address(1);
-      #pragma omp taskwait depend(in: x)
+#pragma omp taskwait depend(in : x)
       print_fuzzy_address(2);
     }
   }

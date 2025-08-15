@@ -6,23 +6,22 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   omp_nest_lock_t nest_lock;
   omp_init_nest_lock(&nest_lock);
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
       omp_set_nest_lock(&nest_lock);
       print_fuzzy_address(1);
     }
-    #pragma omp barrier
-    omp_test_nest_lock(&nest_lock); //should fail for non-master
+#pragma omp barrier
+    omp_test_nest_lock(&nest_lock); // should fail for non-master
     print_fuzzy_address(2);
-    #pragma omp barrier
-    #pragma omp master
+#pragma omp barrier
+#pragma omp master
     {
       omp_unset_nest_lock(&nest_lock);
       print_fuzzy_address(3);

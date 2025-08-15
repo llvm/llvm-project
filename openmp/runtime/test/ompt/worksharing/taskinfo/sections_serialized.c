@@ -6,8 +6,7 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
 #pragma omp parallel sections num_threads(1)
   {
 #pragma omp section

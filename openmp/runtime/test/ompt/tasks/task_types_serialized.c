@@ -9,77 +9,78 @@
 __attribute__ ((noinline)) // workaround for bug in icc
 void print_task_type(int id)
 {
-  #pragma omp critical
+#pragma omp critical
   {
     int task_type;
-    char buffer[2048];
-    ompt_get_task_info(0, &task_type, NULL, NULL, NULL, NULL);
-    format_task_type(task_type, buffer);
-    printf("%" PRIu64 ": id=%d task_type=%s=%d\n", ompt_get_thread_data()->value, id, buffer, task_type);
-  }
-};
+char buffer[2048];
+ompt_get_task_info(0, &task_type, NULL, NULL, NULL, NULL);
+format_task_type(task_type, buffer);
+printf("%" PRIu64 ": id=%d task_type=%s=%d\n", ompt_get_thread_data()->value,
+       id, buffer, task_type);
+}
+}
+;
 
-int main()
-{
-  //initial task
+int main() {
+  // initial task
   print_task_type(0);
 
   int x;
-  //implicit task
-  #pragma omp parallel num_threads(1)
+// implicit task
+#pragma omp parallel num_threads(1)
   {
     print_task_type(1);
     x++;
   }
 
-  #pragma omp parallel num_threads(1)
-  #pragma omp master
+#pragma omp parallel num_threads(1)
+#pragma omp master
   {
-    //explicit task
-    #pragma omp task
+// explicit task
+#pragma omp task
     {
       print_task_type(2);
       x++;
     }
 
-    //explicit task with undeferred
-    #pragma omp task if(0)
+// explicit task with undeferred
+#pragma omp task if (0)
     {
       print_task_type(3);
       x++;
     }
 
-    //explicit task with untied
-    #pragma omp task untied
+// explicit task with untied
+#pragma omp task untied
     {
       print_task_type(4);
       x++;
     }
 
-    //explicit task with final
-    #pragma omp task final(1)
+// explicit task with final
+#pragma omp task final(1)
     {
       print_task_type(5);
       x++;
-      //nested explicit task with final and undeferred
-      #pragma omp task
+// nested explicit task with final and undeferred
+#pragma omp task
       {
         print_task_type(6);
         x++;
       }
     }
 
-/*
-    //TODO:not working
-    //explicit task with mergeable
-    #pragma omp task mergeable
-    {
-      print_task_type(7);
-      x++;
-    }
-*/
+    /*
+        //TODO:not working
+        //explicit task with mergeable
+        #pragma omp task mergeable
+        {
+          print_task_type(7);
+          x++;
+        }
+    */
 
-    //TODO: merged task
+    // TODO: merged task
   }
 
   // clang-format off

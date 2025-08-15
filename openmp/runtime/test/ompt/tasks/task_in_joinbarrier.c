@@ -4,23 +4,22 @@
 // clang-format on
 #define TEST_NEED_PRINT_FRAME_FROM_OUTLINED_FN
 #include "callback.h"
-#include <omp.h> 
+#include <omp.h>
 
-int main()
-{
-  int condition=0;
+int main() {
+  int condition = 0;
   omp_set_nested(0);
   print_frame(0);
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
     print_frame_from_outlined_fn(1);
     print_ids(0);
     print_ids(1);
     print_frame(0);
-    #pragma omp master
+#pragma omp master
     {
       print_ids(0);
-      #pragma omp task shared(condition)
+#pragma omp task shared(condition)
       {
         OMPT_SIGNAL(condition);
         print_frame(1);
@@ -28,7 +27,7 @@ int main()
         print_ids(1);
         print_ids(2);
       }
-      OMPT_WAIT(condition,1);
+      OMPT_WAIT(condition, 1);
       print_ids(0);
     }
     print_ids(0);

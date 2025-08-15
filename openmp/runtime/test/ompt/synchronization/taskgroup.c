@@ -5,23 +5,22 @@
 // clang-format on
 
 #include "callback.h"
-#include <unistd.h>  
+#include <unistd.h>
 #include <stdio.h>
 
-int main()
-{
-  int condition=0;
-  int x=0;
-  #pragma omp parallel num_threads(2)
+int main() {
+  int condition = 0;
+  int x = 0;
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
-      #pragma omp taskgroup
+#pragma omp taskgroup
       {
         print_current_address(1);
-        #pragma omp task
+#pragma omp task
         {
-          #pragma omp atomic
+#pragma omp atomic
           x++;
         }
       }

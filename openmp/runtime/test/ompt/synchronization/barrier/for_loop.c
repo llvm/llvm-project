@@ -6,17 +6,15 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
-  int y[] = {0,1,2,3};
+int main() {
+  int y[] = {0, 1, 2, 3};
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    //implicit barrier at end of for loop
+    // implicit barrier at end of for loop
     int i;
-    #pragma omp for
-    for (i = 0; i < 4; i++)
-    {
+#pragma omp for
+    for (i = 0; i < 4; i++) {
       y[i]++;
     }
     print_current_address();

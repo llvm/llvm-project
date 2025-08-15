@@ -6,9 +6,8 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
-  #pragma omp ordered
+int main() {
+#pragma omp ordered
   {
     print_current_address(1);
     print_ids(0);

@@ -6,8 +6,7 @@
 #define USE_PRIVATE_TOOL 1
 #include "callback.h"
 
-__attribute__((noinline))
-int foo(int x) {
+__attribute__((noinline)) int foo(int x) {
 #pragma omp parallel num_threads(2)
   {
 #pragma omp atomic
@@ -16,8 +15,7 @@ int foo(int x) {
   return x;
 }
 
-__attribute__((noinline))
-int bar(int x) {
+__attribute__((noinline)) int bar(int x) {
 #pragma omp parallel num_threads(2)
   {
 #pragma omp critical
@@ -50,9 +48,8 @@ int main() {
   // clang-format on
 }
 
-static void on_ompt_callback_thread_begin(
-    ompt_thread_t thread_type,
-    ompt_data_t *thread_data) {
+static void on_ompt_callback_thread_begin(ompt_thread_t thread_type,
+                                          ompt_data_t *thread_data) {
   if (thread_data->ptr)
     printf("%s\n", "0: thread_data initially not null");
   thread_data->value = ompt_get_unique_id();

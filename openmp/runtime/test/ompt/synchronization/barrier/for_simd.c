@@ -7,14 +7,12 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
-  int y[] = {0,1,2,3};
+int main() {
+  int y[] = {0, 1, 2, 3};
 
   int i;
-  #pragma omp for simd
-  for (i = 0; i < 4; i++)
-  {
+#pragma omp for simd
+  for (i = 0; i < 4; i++) {
     y[i]++;
   }
 

@@ -6,19 +6,18 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp atomic
+#pragma omp atomic
     x++;
 
-    #pragma omp barrier
+#pragma omp barrier
     print_current_address();
 
-    #pragma omp atomic
+#pragma omp atomic
     x++;
   }
 

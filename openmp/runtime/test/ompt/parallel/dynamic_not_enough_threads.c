@@ -4,11 +4,10 @@
 // clang-format on
 #include "callback.h"
 
-int main()
-{
+int main() {
   omp_set_dynamic(1);
 
-  #pragma omp parallel num_threads(4)
+#pragma omp parallel num_threads(4)
   {
     print_ids(0);
     print_ids(1);

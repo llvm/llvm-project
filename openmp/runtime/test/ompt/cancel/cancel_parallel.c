@@ -9,19 +9,21 @@
 #include "omp.h"
 
 int main() {
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
     if (omp_get_thread_num() == 0) {
       print_fuzzy_address_blocks(get_ompt_label_address(1));
-      #pragma omp cancel parallel
+#pragma omp cancel parallel
       define_ompt_label(1);
-      // We cannot print at this location because the parallel region is cancelled!
+      // We cannot print at this location because the parallel region is
+      // cancelled!
     } else {
       delay(100);
       print_fuzzy_address_blocks(get_ompt_label_address(2));
-      #pragma omp cancellation point parallel
+#pragma omp cancellation point parallel
       define_ompt_label(2);
-      // We cannot print at this location because the parallel region is cancelled!
+      // We cannot print at this location because the parallel region is
+      // cancelled!
     }
   }
 

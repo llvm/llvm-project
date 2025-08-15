@@ -6,8 +6,7 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   omp_lock_t lock;
   omp_init_lock(&lock);
   print_fuzzy_address(1);

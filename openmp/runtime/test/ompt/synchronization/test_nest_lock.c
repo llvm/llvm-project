@@ -6,8 +6,7 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   omp_nest_lock_t nest_lock;
   omp_init_nest_lock(&nest_lock);
 

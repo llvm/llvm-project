@@ -8,21 +8,21 @@
 #define SCHED_OUTPUT STR(SCHEDULE)
 #endif
 
-/* With the combined parallel-for construct (base.h), the return-addresses are hard to compare.
-   With the separate parallel and for-nowait construct, the addresses become more predictable,
-   but the begin of the for-loop still generates additional code, so the offset of loop-begin 
-   to the label is >4 Byte.
+/* With the combined parallel-for construct (base.h), the return-addresses are
+   hard to compare. With the separate parallel and for-nowait construct, the
+   addresses become more predictable, but the begin of the for-loop still
+   generates additional code, so the offset of loop-begin to the label is >4
+   Byte.
 */
 
-int main()
-{
+int main() {
   unsigned int i;
   printf("0: Schedule: " SCHED_OUTPUT "\n");
 
 #pragma omp parallel num_threads(4)
   {
     print_current_address(0);
-    #pragma omp for schedule(SCHEDULE) nowait
+#pragma omp for schedule(SCHEDULE) nowait
     for (i = 0; i < 64; i++) {
       print_fuzzy_address(1);
     }

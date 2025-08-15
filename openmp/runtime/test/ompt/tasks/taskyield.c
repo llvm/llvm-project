@@ -6,30 +6,29 @@
 // clang-format on
 
 #include "callback.h"
-#include <omp.h>   
+#include <omp.h>
 #include <unistd.h>
 
-int main()
-{
-  int condition=0, x=0;
-  #pragma omp parallel num_threads(2)
+int main() {
+  int condition = 0, x = 0;
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
-        #pragma omp task shared(condition)
-        {
-          OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-        }
-        OMPT_WAIT(condition,1);
-        #pragma omp task shared(x)
-        {
-          x++;
-        }
-        printf("%" PRIu64 ": before yield\n", ompt_get_thread_data()->value);
-        #pragma omp taskyield
-        printf("%" PRIu64 ": after yield\n", ompt_get_thread_data()->value);
+#pragma omp task shared(condition)
+      {
         OMPT_SIGNAL(condition);
+        OMPT_WAIT(condition, 2);
+      }
+      OMPT_WAIT(condition, 1);
+#pragma omp task shared(x)
+      {
+        x++;
+      }
+      printf("%" PRIu64 ": before yield\n", ompt_get_thread_data()->value);
+#pragma omp taskyield
+      printf("%" PRIu64 ": after yield\n", ompt_get_thread_data()->value);
+      OMPT_SIGNAL(condition);
     }
   }
 

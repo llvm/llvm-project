@@ -8,45 +8,40 @@
 #include "callback.h"
 #include <unistd.h>
 
-int main()
-{
-  int condition=0;
-  #pragma omp parallel num_threads(2)
+int main() {
+  int condition = 0;
+#pragma omp parallel num_threads(2)
   {
     int x = 0;
     int i;
-    #pragma omp for
-    for(i = 0; i < 2; i++)
-    {
-      if(i == 0)
-      {
+#pragma omp for
+    for (i = 0; i < 2; i++) {
+      if (i == 0) {
         x++;
         OMPT_SIGNAL(condition);
-        #pragma omp cancel for
-      }
-      else
-      {
+#pragma omp cancel for
+      } else {
         x++;
-        OMPT_WAIT(condition,1);
+        OMPT_WAIT(condition, 1);
         delay(10000);
-        #pragma omp cancellation point for
+#pragma omp cancellation point for
       }
     }
   }
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp sections
+#pragma omp sections
     {
-      #pragma omp section
+#pragma omp section
       {
         OMPT_SIGNAL(condition);
-        #pragma omp cancel sections
+#pragma omp cancel sections
       }
-      #pragma omp section
+#pragma omp section
       {
-        OMPT_WAIT(condition,2);
+        OMPT_WAIT(condition, 2);
         delay(10000);
-        #pragma omp cancellation point sections
+#pragma omp cancellation point sections
       }
     }
   }

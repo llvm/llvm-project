@@ -7,16 +7,15 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   omp_set_nested(1);
   omp_set_max_active_levels(1);
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
     print_ids(0);
     print_ids(1);
-    #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
     {
       print_ids(0);
       print_ids(1);

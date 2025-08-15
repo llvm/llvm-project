@@ -5,14 +5,14 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
-  //need to use an OpenMP construct so that OMPT will be initialized
-  #pragma omp parallel num_threads(1)
-    print_ids(0);
+int main() {
+// need to use an OpenMP construct so that OMPT will be initialized
+#pragma omp parallel num_threads(1)
+  print_ids(0);
 
   omp_lock_t lock;
-  printf("%" PRIu64 ": &lock: %" PRIu64 "\n", ompt_get_thread_data()->value, (ompt_wait_id_t)(uintptr_t) &lock);
+  printf("%" PRIu64 ": &lock: %" PRIu64 "\n", ompt_get_thread_data()->value,
+         (ompt_wait_id_t)(uintptr_t)&lock);
   omp_init_lock(&lock);
   print_fuzzy_address(1);
   omp_set_lock(&lock);

@@ -25,14 +25,16 @@ int main() {
 #pragma omp task if (t)
       {
         if (creator_frame == get_frame_address(0)) {
-          printf("Assume this code was inlined which the compiler is allowed to do:\n");
+          printf("Assume this code was inlined which the compiler is allowed "
+                 "to do:\n");
           print_frame(0);
         } else if (creator_frame == get_frame_address(1)) {
           printf("Assume this code was called from the application:\n");
           print_frame(1);
         } else {
           // The exit frame must be our parent!
-          printf("Assume this code was not inlined, exit frame must be our parent:\n");
+          printf("Assume this code was not inlined, exit frame must be our "
+                 "parent:\n");
           print_frame_from_outlined_fn(1);
         }
         print_ids(0);

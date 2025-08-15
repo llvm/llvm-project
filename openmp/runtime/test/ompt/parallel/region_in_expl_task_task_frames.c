@@ -6,13 +6,12 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
 #pragma omp parallel num_threads(2)
   {
     if (omp_get_thread_num() == 0) {
       // region 0
-#pragma omp task if(0)
+#pragma omp task if (0)
       {
         // explicit task immediately executed by the initial master thread
 #pragma omp parallel num_threads(2)

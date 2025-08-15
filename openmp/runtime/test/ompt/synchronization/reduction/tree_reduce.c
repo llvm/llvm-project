@@ -23,7 +23,6 @@ int main() {
     a = b = sum += i;
   }
 
-
   printf("%i\n", sum);
   // clang-format off
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]

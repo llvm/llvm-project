@@ -9,15 +9,14 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
-  #pragma omp parallel sections num_threads(2)
+int main() {
+#pragma omp parallel sections num_threads(2)
   {
-    #pragma omp section
+#pragma omp section
     {
       printf("%lu: section 1\n", ompt_get_thread_data()->value);
     }
-    #pragma omp section
+#pragma omp section
     {
       printf("%lu: section 2\n", ompt_get_thread_data()->value);
     }

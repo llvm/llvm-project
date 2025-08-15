@@ -5,25 +5,24 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    //implicit barrier after sections with nowait but with lastprivates
-    //implicit barrier at end of sections
-    #pragma omp sections
+// implicit barrier after sections with nowait but with lastprivates
+// implicit barrier at end of sections
+#pragma omp sections
     {
-      #pragma omp section 
+#pragma omp section
       {
-        #pragma omp atomic
+#pragma omp atomic
         x++;
       }
-      
-      #pragma omp section 
+
+#pragma omp section
       {
-        #pragma omp atomic
+#pragma omp atomic
         x++;
       }
     }

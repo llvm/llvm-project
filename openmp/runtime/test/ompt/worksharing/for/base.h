@@ -8,8 +8,7 @@
 #define SCHED_OUTPUT STR(SCHEDULE)
 #endif
 
-int main()
-{
+int main() {
   unsigned int i;
   printf("0: Schedule: " SCHED_OUTPUT "\n");
 

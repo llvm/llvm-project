@@ -18,7 +18,8 @@ int main() {
     int wait_id = 0;
     int team_size = omp_get_num_threads();
 #pragma omp for schedule(static, WORK_SIZE / 4)
-    for (i = 0; i < WORK_SIZE; i++) {}
+    for (i = 0; i < WORK_SIZE; i++) {
+    }
 
 #pragma omp for schedule(dynamic)
     for (i = 0; i < WORK_SIZE; i++) {

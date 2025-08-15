@@ -6,8 +6,7 @@
 #include "omp_testsuite.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   go_parallel_nthreads(1);
   ompt_set_callback(ompt_callback_parallel_begin, NULL);
   go_parallel_nthreads(1);

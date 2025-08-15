@@ -5,14 +5,13 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
 
-  //implicit barrier at end of a parallel region
-  #pragma omp parallel num_threads(2)
+// implicit barrier at end of a parallel region
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp atomic
+#pragma omp atomic
     x++;
   }
   print_fuzzy_address();

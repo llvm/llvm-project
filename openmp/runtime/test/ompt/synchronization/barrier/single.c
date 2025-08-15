@@ -6,20 +6,19 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    //implicit barrier at end of single
-    #pragma omp single
+// implicit barrier at end of single
+#pragma omp single
     {
       x++;
     }
     print_fuzzy_address();
-    //critical section to avoid merge of two barriers into one
-    #pragma omp critical
+// critical section to avoid merge of two barriers into one
+#pragma omp critical
     {
       x++;
     }

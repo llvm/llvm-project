@@ -8,12 +8,11 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp single
+#pragma omp single
     {
       printf("%" PRIu64 ": in single\n", ompt_get_thread_data()->value);
       x++;

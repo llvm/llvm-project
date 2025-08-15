@@ -7,9 +7,8 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
-  #pragma omp parallel num_threads(1)
+int main() {
+#pragma omp parallel num_threads(1)
   {
     print_frame_from_outlined_fn(1);
     print_frame(0);

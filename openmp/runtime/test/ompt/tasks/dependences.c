@@ -11,7 +11,7 @@
 
 int main() {
   int x = 0;
-  int condition=0;
+  int condition = 0;
 #pragma omp parallel num_threads(2)
   {
 #pragma omp master
@@ -22,7 +22,7 @@ int main() {
 #pragma omp task depend(out : x) shared(condition)
       {
         x++;
-        OMPT_WAIT(condition,1);
+        OMPT_WAIT(condition, 1);
       }
       print_fuzzy_address(1);
       print_ids(0);

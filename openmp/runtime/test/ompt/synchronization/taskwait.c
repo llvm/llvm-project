@@ -6,18 +6,17 @@
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
-      #pragma omp task
+#pragma omp task
       {
         x++;
       }
-      #pragma omp taskwait
+#pragma omp taskwait
       print_current_address(1);
     }
   }
