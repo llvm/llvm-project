@@ -25,10 +25,10 @@ TEST_F(NumericLiteralCaseTest, Prefix) {
   EXPECT_EQ(Style.NumericLiteralCase.ExponentLetter, FormatStyle::NLCS_Leave);
   EXPECT_EQ(Style.NumericLiteralCase.Suffix, FormatStyle::NLCS_Leave);
 
-  const StringRef Bin0{"b = 0b0'10'010uL;"};
-  const StringRef Bin1{"b = 0B010'010Ul;"};
-  const StringRef Hex0{"b = 0xdead'BEEFuL;"};
-  const StringRef Hex1{"b = 0Xdead'BEEFUl;"};
+  constexpr StringRef Bin0{"b = 0b0'10'010uL;"};
+  constexpr StringRef Bin1{"b = 0B010'010Ul;"};
+  constexpr StringRef Hex0{"b = 0xdead'BEEFuL;"};
+  constexpr StringRef Hex1{"b = 0Xdead'BEEFUl;"};
   verifyFormat(Bin0, Style);
   verifyFormat(Bin1, Style);
   verifyFormat(Hex0, Style);
@@ -52,18 +52,18 @@ TEST_F(NumericLiteralCaseTest, Prefix) {
 TEST_F(NumericLiteralCaseTest, HexDigit) {
   FormatStyle Style = getLLVMStyle();
 
-  const StringRef A{"a = 0xaBc0'123fuL;"};
-  const StringRef B{"b = 0XaBc0'123FUl;"};
-  const StringRef C{"c = 0xa'Bc.0p12'3f32;"};
-  const StringRef D{"d = 0xa'Bc.0P12'3F128;"};
-  const StringRef E{"e = 0b0011'00Ull;"};
-  const StringRef F{"f = 0B0100'000zu;"};
-  const StringRef G{"g = 0.123e-19f;"};
-  const StringRef H{"h = 0.12'3E-19F16;"};
-  const StringRef I{"i = 0x.0000aBcp12'3F128;"};
-  const StringRef J{"j = 0xaa1'fP12'3F128;"};
-  const StringRef K{"k = 0x0;"};
-  const StringRef L{"l = 0xA;"};
+  constexpr StringRef A{"a = 0xaBc0'123fuL;"};
+  constexpr StringRef B{"b = 0XaBc0'123FUl;"};
+  constexpr StringRef C{"c = 0xa'Bc.0p12'3f32;"};
+  constexpr StringRef D{"d = 0xa'Bc.0P12'3F128;"};
+  constexpr StringRef E{"e = 0b0011'00Ull;"};
+  constexpr StringRef F{"f = 0B0100'000zu;"};
+  constexpr StringRef G{"g = 0.123e-19f;"};
+  constexpr StringRef H{"h = 0.12'3E-19F16;"};
+  constexpr StringRef I{"i = 0x.0000aBcp12'3F128;"};
+  constexpr StringRef J{"j = 0xaa1'fP12'3F128;"};
+  constexpr StringRef K{"k = 0x0;"};
+  constexpr StringRef L{"l = 0xA;"};
 
   verifyFormat(A, Style);
   verifyFormat(B, Style);
@@ -104,13 +104,13 @@ TEST_F(NumericLiteralCaseTest, HexDigit) {
 TEST_F(NumericLiteralCaseTest, ExponentLetter) {
   FormatStyle Style = getLLVMStyle();
 
-  const StringRef A{"a = .0'01e-19f;"};
-  const StringRef B{"b = .00'1E2F;"};
-  const StringRef C{"c = 10'2.e99;"};
-  const StringRef D{"d = 123.456E-1;"};
-  const StringRef E{"e = 0x12abEe3.456p-10'0;"};
-  const StringRef F{"f = 0x.deEfP23;"};
-  const StringRef G{"g = 0xe0E1.p-1;"};
+  constexpr StringRef A{"a = .0'01e-19f;"};
+  constexpr StringRef B{"b = .00'1E2F;"};
+  constexpr StringRef C{"c = 10'2.e99;"};
+  constexpr StringRef D{"d = 123.456E-1;"};
+  constexpr StringRef E{"e = 0x12abEe3.456p-10'0;"};
+  constexpr StringRef F{"f = 0x.deEfP23;"};
+  constexpr StringRef G{"g = 0xe0E1.p-1;"};
 
   verifyFormat(A, Style);
   verifyFormat(B, Style);
@@ -142,14 +142,14 @@ TEST_F(NumericLiteralCaseTest, ExponentLetter) {
 TEST_F(NumericLiteralCaseTest, IntegerSuffix) {
   FormatStyle Style = getLLVMStyle();
 
-  const StringRef A{"a = 102u;"};
-  const StringRef B{"b = 0177U;"};
-  const StringRef C{"c = 0b101'111llU;"};
-  const StringRef D{"d = 0xdead'BeefuZ;"};
-  const StringRef E{"e = 3lU;"};
-  const StringRef F{"f = 1zu;"};
-  const StringRef G{"g = 0uLL;"};
-  const StringRef H{"h = 10'233'213'0101uLL;"};
+  constexpr StringRef A{"a = 102u;"};
+  constexpr StringRef B{"b = 0177U;"};
+  constexpr StringRef C{"c = 0b101'111llU;"};
+  constexpr StringRef D{"d = 0xdead'BeefuZ;"};
+  constexpr StringRef E{"e = 3lU;"};
+  constexpr StringRef F{"f = 1zu;"};
+  constexpr StringRef G{"g = 0uLL;"};
+  constexpr StringRef H{"h = 10'233'213'0101uLL;"};
 
   verifyFormat(A, Style);
   verifyFormat(B, Style);
@@ -232,27 +232,27 @@ TEST_F(NumericLiteralCaseTest, CppStandardAndUserDefinedLiteralsAreUntouched) {
 
   // C++ user-defined suffixes begin with '_' or are reserved for the standard
   // library.
-  const StringRef UDLiterals{"a = 12.if;\n"
-                             "b = -3i;\n"
-                             "c = 100'01il;\n"
-                             "d = 100'0.12il;\n"
-                             "e = 12h;\n"
-                             "f = 0XABE12h;\n"
-                             "g = 0XFA03min;\n"
-                             "h = 0X12B4Ds;\n"
-                             "i = 20.13E-1ms;\n"
-                             "j = 20.13E-1us;\n"
-                             "k = 20.13E-1ns;\n"
-                             "l = 20.13E-1y;\n"
-                             "m = 20.13E-1d;\n"
-                             "n = 20.13E-1d;\n"
-                             "o = 1d;\n"
-                             "p = 102_ffl_lzlz;\n"
-                             "q = 10.2_l;\n"
-                             "r = 0XABDE.0'1P-23_f;\n"
-                             "s = 102_foo_bar;\n"
-                             "t = 123.456_felfz_ballpen;\n"
-                             "u = 0XBEAD1_spacebar;\n"};
+  constexpr StringRef UDLiterals{"a = 12.if;\n"
+                                 "b = -3i;\n"
+                                 "c = 100'01il;\n"
+                                 "d = 100'0.12il;\n"
+                                 "e = 12h;\n"
+                                 "f = 0XABE12h;\n"
+                                 "g = 0XFA03min;\n"
+                                 "h = 0X12B4Ds;\n"
+                                 "i = 20.13E-1ms;\n"
+                                 "j = 20.13E-1us;\n"
+                                 "k = 20.13E-1ns;\n"
+                                 "l = 20.13E-1y;\n"
+                                 "m = 20.13E-1d;\n"
+                                 "n = 20.13E-1d;\n"
+                                 "o = 1d;\n"
+                                 "p = 102_ffl_lzlz;\n"
+                                 "q = 10.2_l;\n"
+                                 "r = 0XABDE.0'1P-23_f;\n"
+                                 "s = 102_foo_bar;\n"
+                                 "t = 123.456_felfz_ballpen;\n"
+                                 "u = 0XBEAD1_spacebar;"};
 
   verifyFormat(UDLiterals, Style);
   Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
@@ -266,18 +266,18 @@ TEST_F(NumericLiteralCaseTest, FixRanges) {
   Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Lower;
   Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
 
-  const StringRef CodeBlock{"a = 0xFea3duLL;\n"
-                            "b = 0X.aEbp-12f;\n"
-                            "c = 0uLL;\n"
-                            "// clang-format off\n"
-                            "e = 0xBeAdu;\n"
-                            "// clang-format on\n"
-                            "g = 0xabCDu;\n"
-                            "h = 0b010uL;\n"
-                            "// clang-format off\n"
-                            "i = 0B1010'000Zu;\n"
-                            "// clang-format on\n"
-                            "k = 0XaBuL;\n"};
+  constexpr StringRef CodeBlock{"a = 0xFea3duLL;\n"
+                                "b = 0X.aEbp-12f;\n"
+                                "c = 0uLL;\n"
+                                "// clang-format off\n"
+                                "e = 0xBeAdu;\n"
+                                "// clang-format on\n"
+                                "g = 0xabCDu;\n"
+                                "h = 0b010uL;\n"
+                                "// clang-format off\n"
+                                "i = 0B1010'000Zu;\n"
+                                "// clang-format on\n"
+                                "k = 0XaBuL;"};
 
   verifyFormat("a = 0xfea3dull;\n"
                "b = 0x.aebp-12f;\n"
@@ -290,21 +290,21 @@ TEST_F(NumericLiteralCaseTest, FixRanges) {
                "// clang-format off\n"
                "i = 0B1010'000Zu;\n"
                "// clang-format on\n"
-               "k = 0xabul;\n",
+               "k = 0xabul;",
                CodeBlock, Style);
 }
 
 TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
   FormatStyle Style = getLLVMStyle();
 
-  const StringRef CodeBlock{"a = 0xFea_3dl;\n"
-                            "b = 0123_345;\n"
-                            "c = 0b11____00lU;\n"
-                            "d = 0XB_e_A_du;\n"
-                            "e = 123_456.333__456e-10f;\n"
-                            "f = .1_0E-10D;\n"
-                            "g = 1_0.F;\n"
-                            "h = 0B1_0;\n"};
+  constexpr StringRef CodeBlock{"a = 0xFea_3dl;\n"
+                                "b = 0123_345;\n"
+                                "c = 0b11____00lU;\n"
+                                "d = 0XB_e_A_du;\n"
+                                "e = 123_456.333__456e-10f;\n"
+                                "f = .1_0E-10D;\n"
+                                "g = 1_0.F;\n"
+                                "h = 0B1_0;"};
   auto TestUnderscore = [&](auto Language) {
     Style.Language = Language;
     Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Lower;
@@ -318,7 +318,7 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
                  "e = 123_456.333__456e-10F;\n"
                  "f = .1_0e-10D;\n"
                  "g = 1_0.F;\n"
-                 "h = 0b1_0;\n",
+                 "h = 0b1_0;",
                  CodeBlock, Style);
 
     Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Upper;
@@ -333,7 +333,7 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
                  "e = 123_456.333__456E-10f;\n"
                  "f = .1_0E-10d;\n"
                  "g = 1_0.f;\n"
-                 "h = 0B1_0;\n",
+                 "h = 0B1_0;",
                  CodeBlock, Style);
   };
 
