@@ -2635,7 +2635,7 @@ Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
 
   SmallVector<DebugStrRef, 0> DebugStringRefs;
   ArrayRef<char> DebugStrData =
-      cast<MCDataFragment>(*DwarfSections.Str->begin()).getContents();
+      cast<MCFragment>(*DwarfSections.Str->begin()).getContents();
   StringRef S(DebugStrData.data(), DebugStrData.size());
   if (auto E = createStringSection(S, [&](StringRef S) -> Error {
         auto Sym = DebugStrRef::create(*this, S);
