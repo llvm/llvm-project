@@ -1175,11 +1175,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
                                         ->getBaseElementTypeUnsafe()
                                         ->getAs<clang::RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *classDecl =
-        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
-    if (!classDecl->hasTrivialDestructor())
-      referenceTemporaryDtor =
-          classDecl->getDefinitionOrSelf()->getDestructor();
+    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+            rt->getOriginalDecl()->getDefinitionOrSelf())) {
+      if (!classDecl->hasTrivialDestructor())
+        referenceTemporaryDtor = classDecl->getDestructor();
+    }
   }
 
   if (!referenceTemporaryDtor)
