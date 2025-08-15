@@ -6485,7 +6485,7 @@ void ELFDumper<ELFT>::printSFrameHeader(
   if (Expected<ArrayRef<uint8_t>> Aux = Parser.getAuxHeader())
     W.printHexList("Auxiliary header", *Aux);
   else
-    reportWarning(Aux.takeError(), FileName);
+    reportUniqueWarning(Aux.takeError());
 }
 
 template <typename ELFT>
@@ -6494,7 +6494,7 @@ void ELFDumper<ELFT>::printSFrameFDEs(
     ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab) {
   typename SFrameParser<ELFT::Endianness>::FDERange FDEs;
   if (Error Err = Parser.fdes().moveInto(FDEs)) {
-    reportWarning(std::move(Err), FileName);
+    reportUniqueWarning(std::move(Err));
     return;
   }
 
@@ -6560,7 +6560,7 @@ void ELFDumper<ELFT>::printSFrameFDEs(
         W.printList("Extra Offsets", Offs);
     }
     if (Err)
-      reportWarning(std::move(Err), FileName);
+      reportUniqueWarning(std::move(Err));
   }
 }
 
@@ -6578,14 +6578,13 @@ uint64_t ELFDumper<ELFT>::getAndPrintSFrameFDEStartAddress(
     W.printHex("PC", Address);
   } else if (std::next(Reloc) != Relocations.end() &&
              std::next(Reloc)->Offset == Offset) {
-    reportWarning(createError(formatv(
-                      "more than one relocation at offset {0:x+}", Offset)),
-                  FileName);
+    reportUniqueWarning(
+        formatv("more than one relocation at offset {0:x+}", Offset));
     W.printHex("PC", Address);
   } else if (Expected<RelSymbol<ELFT>> RelSym =
                  getRelocationTarget(*Reloc, RelocSymTab);
              !RelSym) {
-    reportWarning(RelSym.takeError(), FileName);
+    reportUniqueWarning(RelSym.takeError());
     W.printHex("PC", Address);
   } else {
     // Exactly one relocation at the given offset. Print it.
@@ -6614,16 +6613,15 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
 
     StringRef SectionContent;
     if (Error Err = Section.getContents().moveInto(SectionContent)) {
-      reportWarning(std::move(Err), FileName);
+      reportUniqueWarning(std::move(Err));
       continue;
     }
 
     Expected<object::SFrameParser<E>> Parser = object::SFrameParser<E>::create(
         arrayRefFromStringRef(SectionContent), Section.getAddress());
     if (!Parser) {
-      reportWarning(createError("invalid sframe section: " +
-                                toString(Parser.takeError())),
-                    FileName);
+      reportUniqueWarning("invalid sframe section: " +
+                          toString(Parser.takeError()));
       continue;
     }
 
@@ -6632,7 +6630,7 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
     if (Error Err = Obj.getSectionAndRelocations(
                            [&](const Elf_Shdr &S) { return &S == ELFSection; })
                         .moveInto(RelocationMap)) {
-      reportWarning(std::move(Err), FileName);
+      reportUniqueWarning(std::move(Err));
     }
 
     std::vector<Relocation<ELFT>> Relocations;

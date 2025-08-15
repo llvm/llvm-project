@@ -91,4 +91,3 @@ Symbols:
 #  CHECK-NEXT:      PC: 0xAD0030
 #       CHECK:    FuncDescEntry [2] {
 #  CHECK-NEXT:{{.*}}: warning: '[[FILE]]': unable to read an entry with index 4747 from SHT_SYMTAB section with index {{[0-9]*}}: can't read an entry at 0x{{[0-9a-f]*}}: it goes past the end of the section (0x30)
-
