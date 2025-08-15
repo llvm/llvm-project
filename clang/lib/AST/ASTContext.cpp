@@ -3797,12 +3797,6 @@ ASTContext::adjustType(QualType Orig,
                                    adjustType(OB->getUnderlyingType(), Adjust));
   }
 
-  case Type::Elaborated: {
-    const auto *ET = cast<ElaboratedType>(Orig);
-    return getElaboratedType(ET->getKeyword(), ET->getQualifier(),
-                             adjustType(ET->getNamedType(), Adjust));
-  }
-
   case Type::Paren:
     return getParenType(
         adjustType(cast<ParenType>(Orig)->getInnerType(), Adjust));

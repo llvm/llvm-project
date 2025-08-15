@@ -144,11 +144,12 @@ value truncation, the ``-Wconstant-conversion`` warning behavior depends on
 the **destination type**:
 
 * **Destination is wrapping type**
-  (``__attribute__((overflow_behavior(wrap)))``): No warning is issued because
-  truncation with wrapping behavior is expected and well-defined.
+  (``__attribute__((overflow_behavior(wrap)))``): No warning is issued
+  regardless of compiler flags because truncation with wrapping behavior is
+  expected and well-defined.
 
-* **Destination is non-wrapping or standard type**: Warning is issued if the
-  constant value would be truncated.
+* **Destination is non-wrapping or standard type**: Warnings are issued based
+  on compiler flags.
 
 .. code-block:: c++
 
@@ -164,6 +165,38 @@ the **destination type**:
 This rule ensures that explicit use of wrapping types suppresses warnings
 only when the destination is intended to wrap, while preserving warnings
 for potentially unintended truncation to standard or non-wrapping types.
+
+See below for more details specifically regarding implicit conversions due to
+assignment.
+
+Implicit Conversions Due to Assignment
+--------------------------------------
+
+Like with the basic integral types in C and C++, types on the right-hand side
+of an assignment may be implicitly converted to match the left-hand side.
+
+All built-in integral types can be implicitly converted to an overflow behavior
+version.
+
+.. code-block:: c++
+
+  char x = 1;
+  int __attribute__((overflow_behavior(wrap))) a = x; // x converted to int __attribute__((overflow_behavior(wrap)))
+
+When assigning one overflow behavior type to another, the left-hand side's type
+is always used - just like with traditional integer types.
+
+.. code-block:: c++
+
+  long __attribute__((overflow_behavior(wrap))) x = __LONG_MAX__;
+  int __attribute__((overflow_behavior(no_wrap))) a = x; // x converted to int __attribute__((overflow_behavior(no_wrap)))
+
+For the purposes of truncation warnings from UBSAN or ``-Wconversion``, the
+left-hand side's overflow behavior determines the instrumentation and
+reporting. For example, the code above would cause a ``-Wshorten-64-to-32``
+warning. Swapping the overflow behavior kinds in the above example would not
+result in a warning diagnostic as the left-hand side would be ``wraps`` which
+silences any truncation warnings.
 
 C++ Narrowing Conversions
 -------------------------
@@ -207,8 +240,8 @@ The destination type also determines UBSan's
 ``__attribute__((overflow_behavior(wrap)))`` destinations suppress these UBSan
 checks since truncation is expected and well-defined for wrapping types.
 
-C++ Template and Overload Resolution
--------------------------------------
+C++ Overload Resolution
+-----------------------
 
 For the purposes of C++ overload set formation, promotions or conversions to
 and from overflow behavior types are of the same rank as normal integer
@@ -255,6 +288,62 @@ certain contexts.
 
 Overflow behavior types may also be used as template parameters and used within
 C ``_Generic`` expressions.
+
+C _Generic Expressions
+----------------------
+
+Overflow behavior types may be used within C ``_Generic`` expressions.
+
+Overflow behavior types do not match against their underlying types within C
+``_Generic`` expressions. This means that an OBT will not be considered
+equivalent to its base type for generic selection purposes. OBTs will match
+against exact types considering bitwidth, signedness and overflow
+behavior kind.
+
+.. code-block:: c++
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrap_int;
+
+  int foo(wrap_int x) {
+    return _Generic(x, int: 1, char: 2, default: 3); // returns 3
+  }
+
+  int bar(wrap_int x) {
+    return _Generic(x, wrap_int: 1, int: 2, default: 3); // returns 1
+  }
+
+
+C++ Template Specializations
+-----------------------------
+
+Like with ``_Generic``, each OBT is treated as a distinct type for template
+specialization purposes, enabling precise type-based template selection.
+
+.. code-block:: c++
+
+  template<typename T>
+  struct TypeProcessor {
+    static constexpr int value = 0; // default case
+  };
+
+  template<>
+  struct TypeProcessor<int> {
+    static constexpr int value = 1; // int specialization
+  };
+
+  template<>
+  struct TypeProcessor<int __attribute__((overflow_behavior(wrap)))> {
+    static constexpr int value = 2; // __wrap int specialization
+  };
+
+  template<>
+  struct TypeProcessor<int __attribute__((overflow_behavior(no_wrap)))> {
+    static constexpr int value = 3; // __no_wrap int specialization
+  };
+
+When no exact template specialization exists for an OBT, it falls back to the
+default template rather than matching the underlying type specialization,
+maintaining type safety and avoiding unexpected behavior.
 
 Interaction with Command-Line Flags and Sanitizer Special Case Lists
 ====================================================================
