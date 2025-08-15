@@ -2209,7 +2209,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
                                                   : TargetOpcode::LIFETIME_END;
 
-    const AllocaInst *AI = dyn_cast<AllocaInst>(CI.getArgOperand(1));
+    const AllocaInst *AI = dyn_cast<AllocaInst>(CI.getArgOperand(0));
     if (!AI || !AI->isStaticAlloca())
       return true;
 
@@ -2786,11 +2786,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  diagnoseDontCall(CI);
-
   Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
-  if (!F || ID == Intrinsic::not_intrinsic)
-    return translateCallBase(CI, MIRBuilder);
+  if (!F || ID == Intrinsic::not_intrinsic) {
+    if (translateCallBase(CI, MIRBuilder)) {
+      diagnoseDontCall(CI);
+      return true;
+    }
+    return false;
+  }
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 

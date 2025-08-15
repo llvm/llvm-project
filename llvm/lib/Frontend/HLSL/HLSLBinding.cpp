@@ -67,9 +67,13 @@ BindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
 }
 
 bool BindingInfo::RegisterSpace::isBound(BindingRange B) {
-  for (BindingRange &R : FreeRanges) {
-    if (B.LowerBound >= R.LowerBound && B.LowerBound < R.UpperBound &&
-        B.UpperBound > R.LowerBound && B.UpperBound <= R.UpperBound)
+  BindingRange *It = llvm::lower_bound(
+      FreeRanges, B.LowerBound,
+      [](const BindingRange &R, uint32_t Val) { return R.UpperBound <= Val; });
+
+  if (It != FreeRanges.end()) {
+    // Check if B is fully contained in the found range
+    if (B.LowerBound >= It->LowerBound && B.UpperBound <= It->UpperBound)
       return false;
   }
   return true;
@@ -92,7 +96,7 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   // remove duplicates
   Binding *NewEnd = llvm::unique(Bindings);
   if (NewEnd != Bindings.end())
-    Bindings.erase(NewEnd);
+    Bindings.erase(NewEnd, Bindings.end());
 
   BindingInfo Info;
 

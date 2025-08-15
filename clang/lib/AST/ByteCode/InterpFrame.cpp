@@ -133,6 +133,11 @@ static bool shouldSkipInBacktrace(const Function *F) {
       MD && MD->getParent()->isAnonymousStructOrUnion())
     return true;
 
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
+      Ctor && Ctor->isDefaulted() && Ctor->isTrivial() &&
+      Ctor->isCopyOrMoveConstructor() && Ctor->inits().empty())
+    return true;
+
   return false;
 }
 
@@ -164,7 +169,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
       print(OS, This, S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getRecordType(M->getParent())));
+                S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
     }
   }
@@ -224,6 +229,10 @@ const FunctionDecl *InterpFrame::getCallee() const {
 Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   assert(Offset < Func->getFrameSize() && "Invalid local offset.");
   return Pointer(localBlock(Offset));
+}
+
+Block *InterpFrame::getLocalBlock(unsigned Offset) const {
+  return localBlock(Offset);
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {

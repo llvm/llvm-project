@@ -105,22 +105,21 @@ public:
     return false;
   }
 
-  QualType
-  RebuildTemplateSpecializationType(TemplateName Template,
-                                    SourceLocation TemplateNameLoc,
-                                    TemplateArgumentListInfo &TemplateArgs) {
+  QualType RebuildTemplateSpecializationType(
+      ElaboratedTypeKeyword Keyword, TemplateName Template,
+      SourceLocation TemplateNameLoc, TemplateArgumentListInfo &TemplateArgs) {
     if (!OuterInstantiationArgs ||
         !isa_and_present<TypeAliasTemplateDecl>(Template.getAsTemplateDecl()))
-      return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
-                                                     TemplateArgs);
+      return Base::RebuildTemplateSpecializationType(
+          Keyword, Template, TemplateNameLoc, TemplateArgs);
 
     auto *TATD = cast<TypeAliasTemplateDecl>(Template.getAsTemplateDecl());
     auto *Pattern = TATD;
     while (Pattern->getInstantiatedFromMemberTemplate())
       Pattern = Pattern->getInstantiatedFromMemberTemplate();
     if (!mightReferToOuterTemplateParameters(Pattern->getTemplatedDecl()))
-      return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
-                                                     TemplateArgs);
+      return Base::RebuildTemplateSpecializationType(
+          Keyword, Template, TemplateNameLoc, TemplateArgs);
 
     Decl *NewD =
         TypedefNameInstantiator->InstantiateTypeAliasTemplateDecl(TATD);
@@ -131,13 +130,14 @@ public:
     MaterializedTypedefs.push_back(NewTATD->getTemplatedDecl());
 
     return Base::RebuildTemplateSpecializationType(
-        TemplateName(NewTATD), TemplateNameLoc, TemplateArgs);
+        Keyword, TemplateName(NewTATD), TemplateNameLoc, TemplateArgs);
   }
 
   QualType TransformTypedefType(TypeLocBuilder &TLB, TypedefTypeLoc TL) {
     ASTContext &Context = SemaRef.getASTContext();
-    TypedefNameDecl *OrigDecl = TL.getTypedefNameDecl();
+    TypedefNameDecl *OrigDecl = TL.getDecl();
     TypedefNameDecl *Decl = OrigDecl;
+    const TypedefType *T = TL.getTypePtr();
     // Transform the underlying type of the typedef and clone the Decl only if
     // the typedef has a dependent context.
     bool InDependentContext = OrigDecl->getDeclContext()->isDependentContext();
@@ -155,7 +155,7 @@ public:
     //     };
     //   };
     if (OuterInstantiationArgs && InDependentContext &&
-        TL.getTypePtr()->isInstantiationDependentType()) {
+        T->isInstantiationDependentType()) {
       Decl = cast_if_present<TypedefNameDecl>(
           TypedefNameInstantiator->InstantiateTypedefNameDecl(
               OrigDecl, /*IsTypeAlias=*/isa<TypeAliasDecl>(OrigDecl)));
@@ -180,10 +180,17 @@ public:
       MaterializedTypedefs.push_back(Decl);
     }
 
-    QualType TDTy = Context.getTypedefType(Decl);
-    TypedefTypeLoc TypedefTL = TLB.push<TypedefTypeLoc>(TDTy);
-    TypedefTL.setNameLoc(TL.getNameLoc());
+    NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+    if (QualifierLoc) {
+      QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(QualifierLoc);
+      if (!QualifierLoc)
+        return QualType();
+    }
 
+    QualType TDTy = Context.getTypedefType(
+        T->getKeyword(), QualifierLoc.getNestedNameSpecifier(), Decl);
+    TLB.push<TypedefTypeLoc>(TDTy).set(TL.getElaboratedKeywordLoc(),
+                                       QualifierLoc, TL.getNameLoc());
     return TDTy;
   }
 };
@@ -327,7 +334,7 @@ struct ConvertConstructorToDeductionGuideTransform {
   DeclarationName DeductionGuideName =
       SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(Template);
 
-  QualType DeducedType = SemaRef.Context.getTypeDeclType(Primary);
+  QualType DeducedType = SemaRef.Context.getCanonicalTagType(Primary);
 
   // Index adjustment to apply to convert depth-1 template parameters into
   // depth-0 template parameters.
@@ -593,7 +600,10 @@ private:
     // context of the template), so implicit deduction guides can never collide
     // with explicit ones.
     QualType ReturnType = DeducedType;
-    TLB.pushTypeSpec(ReturnType).setNameLoc(Primary->getLocation());
+    auto TTL = TLB.push<TagTypeLoc>(ReturnType);
+    TTL.setElaboratedKeywordLoc(SourceLocation());
+    TTL.setQualifierLoc(NestedNameSpecifierLoc());
+    TTL.setNameLoc(Primary->getLocation());
 
     // Resolving a wording defect, we also inherit the variadicness of the
     // constructor.
@@ -954,7 +964,8 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
-              TemplateName(AliasTemplate), /*DeducedType=*/QualType(),
+              ElaboratedTypeKeyword::None, TemplateName(AliasTemplate),
+              /*DeducedType=*/QualType(),
               /*IsDependent=*/true),
           AliasTemplate->getLocation()), // template specialization type whose
                                          // arguments will be deduced.
@@ -970,10 +981,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
 getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
-  // Unwrap the sugared ElaboratedType.
-  auto RhsType = AliasTemplate->getTemplatedDecl()
-                     ->getUnderlyingType()
-                     .getSingleStepDesugaredType(SemaRef.Context);
+  auto RhsType = AliasTemplate->getTemplatedDecl()->getUnderlyingType();
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
   if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
@@ -1048,12 +1056,11 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // The (trailing) return type of the deduction guide.
   const TemplateSpecializationType *FReturnType =
       RType->getAs<TemplateSpecializationType>();
-  if (const auto *InjectedCNT = RType->getAs<InjectedClassNameType>())
+  if (const auto *ICNT = RType->getAs<InjectedClassNameType>())
     // implicitly-generated deduction guide.
-    FReturnType = InjectedCNT->getInjectedTST();
-  else if (const auto *ET = RType->getAs<ElaboratedType>())
-    // explicit deduction guide.
-    FReturnType = ET->getNamedType()->getAsNonAliasTemplateSpecializationType();
+    FReturnType = cast<TemplateSpecializationType>(
+        ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+            SemaRef.Context));
   assert(FReturnType && "expected to see a return type");
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.

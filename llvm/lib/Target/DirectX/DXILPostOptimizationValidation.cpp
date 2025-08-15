@@ -13,14 +13,12 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
@@ -66,9 +64,7 @@ static void reportOverlappingError(Module &M, ResourceInfo R1,
 }
 
 static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
-  if (DRM.empty())
-    return;
-
+  bool ErrorFound = false;
   for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
@@ -80,15 +76,19 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
       while (RI != ResList.end() &&
              PrevRI->getBinding().overlapsWith(RI->getBinding())) {
         reportOverlappingError(M, *PrevRI, *RI);
+        ErrorFound = true;
         RI++;
       }
       PrevRI = CurrentRI;
     }
   }
+  assert(ErrorFound && "this function should be called only when if "
+                       "DXILResourceBindingInfo::hasOverlapingBinding() is "
+                       "true, yet no overlapping binding was found");
 }
 
 static void
-reportInvalidHandleTyBoundInRs(Module &M, Twine Type,
+reportInvalidHandleTyError(Module &M, Twine Type,
                                ResourceInfo::ResourceBinding Binding) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
@@ -98,18 +98,18 @@ reportInvalidHandleTyBoundInRs(Module &M, Twine Type,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void reportOverlappingRegisters(
-    Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &Reported,
-    const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping) {
+static void 
+reportOverlappingRegisters(Module &M,
+                           const llvm::hlsl::BindingInfoBuilder::Binding &R1,
+                           const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
   SmallString<128> Message;
-  raw_svector_ostream OS(Message);
-  OS << "register " << getResourceClassName(Reported.RC)
-     << " (space=" << Reported.Space << ", register=" << Reported.LowerBound
-     << ")" << " is overlapping with" << " register "
-     << getResourceClassName(Overlaping.RC) << " (space=" << Overlaping.Space
-     << ", register=" << Overlaping.LowerBound << ")"
-     << ", verify your root signature definition.";
 
+  raw_svector_ostream OS(Message);
+  OS << "resource " << getResourceClassName(R1.RC) << " (space=" << R1.Space
+     << ", registers=[" << R1.LowerBound << ", " << R1.UpperBound
+     << "]) overlaps with resource " << getResourceClassName(R2.RC)
+     << " (space=" << R2.Space << ", registers=[" << R2.LowerBound << ", "
+     << R2.UpperBound << "])";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -125,7 +125,7 @@ reportRegNotBound(Module &M, ResourceClass Class,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void reportInvalidHandleTy(
+static void checkInvalidHandleTy(
     Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
     const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
         &Resources) {
@@ -138,7 +138,7 @@ static void reportInvalidHandleTy(
         auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
 
         if (TypedBuffer != nullptr || Texture != nullptr)
-          reportInvalidHandleTyBoundInRs(M, Res->getName(), Res->getBinding());
+          reportInvalidHandleTyError(M, Res->getName(), Res->getBinding());
       }
     }
   }
@@ -213,7 +213,7 @@ static void validateRootSignatureBindings(Module &M,
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
-  SmallVector<char> IDs;
+
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     dxbc::ShaderVisibility ParamVisibility =
         static_cast<dxbc::ShaderVisibility>(ParamInfo.Header.ShaderVisibility);
@@ -228,7 +228,7 @@ static void validateRootSignatureBindings(Module &M,
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister, Const.ShaderRegister,
-                           &IDs.emplace_back());
+                           &ParamInfo);
       break;
     }
 
@@ -237,11 +237,10 @@ static void validateRootSignatureBindings(Module &M,
     case dxbc::RootParameterType::CBV: {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
-      Builder.trackBinding(
-          hlsl::rootsig::toResourceClass(static_cast<dxbc::RootParameterType>(
-              ParamInfo.Header.ParameterType)),
-          Desc.RegisterSpace, Desc.ShaderRegister, Desc.ShaderRegister,
-          &IDs.emplace_back());
+      Builder.trackBinding(hlsl::rootsig::toResourceClass(static_cast<dxbc::RootParameterType>(
+                               ParamInfo.Header.ParameterType)),
+                           Desc.RegisterSpace, Desc.ShaderRegister,
+                           Desc.ShaderRegister, &ParamInfo);
 
       break;
     }
@@ -258,7 +257,7 @@ static void validateRootSignatureBindings(Module &M,
             hlsl::rootsig::toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
             Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
-            &IDs.emplace_back());
+            &ParamInfo);
       }
       break;
     }
@@ -267,20 +266,15 @@ static void validateRootSignatureBindings(Module &M,
 
   for (const dxbc::RTS0::v1::StaticSampler &S : RSD.StaticSamplers)
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
-                         S.ShaderRegister, S.ShaderRegister,
-                         &IDs.emplace_back());
-  bool HasOverlap = false;
+                         S.ShaderRegister, S.ShaderRegister, &S);
+
   hlsl::BindingInfo Info = Builder.calculateBindingInfo(
-      [&M, &HasOverlap](
-          const llvm::hlsl::BindingInfoBuilder &Builder,
-          const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-        HasOverlap = true;
+      [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
+           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
         const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-  // Next checks require that the root signature definition is valid.
-  if (!HasOverlap) {
     SmallVector<ResourceInfo::ResourceBinding> RDs =
         getRootDescriptorsBindingInfo(RSD, Visibility);
     for (const auto &ResList :
@@ -296,13 +290,13 @@ static void validateRootSignatureBindings(Module &M,
         if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
           reportRegNotBound(M, ResList.first, ResBinding);
       }
-      reportInvalidHandleTy(M, RDs, ResList.second);
-    }
+      checkInvalidHandleTy(M, RDs, ResList.second);
   }
 }
 
-mcdxbc::RootSignatureDesc *getRootSignature(RootSignatureBindingInfo &RSBI,
-                                            dxil::ModuleMetadataInfo &MMI) {
+static mcdxbc::RootSignatureDesc *
+getRootSignature(RootSignatureBindingInfo &RSBI,
+                 dxil::ModuleMetadataInfo &MMI) {
   if (MMI.EntryPropertyVec.size() == 0)
     return nullptr;
   return RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
