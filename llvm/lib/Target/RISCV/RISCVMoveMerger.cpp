@@ -137,6 +137,11 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
     NextI = next_nodbg(NextI, E);
   DebugLoc DL = I->getDebugLoc();
 
+  // Make a copy so we can update the kill flag in the MoveFromAToS case. The
+  // copied operand needs to be scoped outside the if since we make a pointer
+  // to it.
+  MachineOperand PairedSource = *PairedRegs.Source;
+
   // The order of S-reg depends on which instruction holds A0, instead of
   // the order of register pair.
   // e,g.
@@ -147,8 +152,15 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //   mv a1, s1    =>  cm.mva01s s2,s1
   bool StartWithX10 = ARegInFirstPair == RISCV::X10;
   if (isMoveFromAToS(Opcode)) {
-    Sreg1 = StartWithX10 ? FirstPair.Source : PairedRegs.Source;
-    Sreg2 = StartWithX10 ? PairedRegs.Source : FirstPair.Source;
+    // We are moving one of the copies earlier so its kill flag may become
+    // invalid. Clear the copied kill flag if there are any reads of the
+    // register between the new location and the old location.
+    for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
+      if (It->readsRegister(PairedSource.getReg(), TRI))
+        PairedSource.setIsKill(false);
+
+    Sreg1 = StartWithX10 ? FirstPair.Source : &PairedSource;
+    Sreg2 = StartWithX10 ? &PairedSource : FirstPair.Source;
   } else {
     Sreg1 = StartWithX10 ? FirstPair.Destination : PairedRegs.Destination;
     Sreg2 = StartWithX10 ? PairedRegs.Destination : FirstPair.Destination;

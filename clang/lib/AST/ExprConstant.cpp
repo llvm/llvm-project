@@ -11639,6 +11639,29 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case Builtin::BI__builtin_elementwise_abs: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APValue CurrentEle = Source.getVectorElt(EltNum);
+      APValue Val = DestEltTy->isFloatingType()
+                        ? APValue(llvm::abs(CurrentEle.getFloat()))
+                        : APValue(APSInt(
+                              CurrentEle.getInt().abs(),
+                              DestEltTy->isUnsignedIntegerOrEnumerationType()));
+      ResultElements.push_back(Val);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case clang::X86::BI__builtin_ia32_pmulhuw128:
@@ -13385,6 +13408,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     int Operand = E->getArg(0)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     Operand = Info.Ctx.getTargetInfo().getEHDataRegisterNumber(Operand);
     return Success(Operand, E);
+  }
+
+  case Builtin::BI__builtin_elementwise_abs: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    return Success(Val.abs(), E);
   }
 
   case Builtin::BI__builtin_expect:
@@ -15878,6 +15909,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return Error(E);
     return true;
 
+  case Builtin::BI__builtin_elementwise_abs:
   case Builtin::BI__builtin_fabs:
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:
