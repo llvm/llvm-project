@@ -22,6 +22,8 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
@@ -1651,20 +1653,19 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() {
 
-  std::set<llvm::StringRef> labels;
-  std::set<llvm::StringRef> gotos;
+  llvm::SmallSet<llvm::StringRef, 16> labels;
+  llvm::SmallSet<llvm::StringRef, 16> gotos;
 
   getOperation()->walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
-      labels.emplace(lab.getLabel());
+      labels.insert(lab.getLabel());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
-      gotos.emplace(goTo.getLabel());
+      gotos.insert(goTo.getLabel());
     }
   });
 
-  std::vector<llvm::StringRef> mismatched;
-  std::set_difference(gotos.begin(), gotos.end(), labels.begin(), labels.end(),
-                      std::back_inserter(mismatched));
+  llvm::SmallSet<llvm::StringRef, 16> mismatched =
+      llvm::set_difference(gotos, labels);
 
   if (!mismatched.empty())
     return emitOpError() << "goto/label mismatch";

@@ -436,15 +436,14 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
-  // FIXME: LLVM codegen inserts emit stop point here for debug info
+  // FIXME: LLVM codegen inserts emit a stop point here for debug info
   // sake when the insertion point is available, but doesn't do
   // anything special when there isn't. We haven't implemented debug
   // info support just yet, look at this again once we have it.
-  if (!builder.getInsertionBlock())
-    cgm.errorNYI(s.getSourceRange(), "NYI");
+  assert(!cir::MissingFeatures::generateDebugInfo());
 
-  builder.create<cir::GotoOp>(getLoc(s.getSourceRange()),
-                              s.getLabel()->getName());
+  cir::GotoOp::create(builder, getLoc(s.getSourceRange()),
+                      s.getLabel()->getName());
 
   // A goto marks the end of a block, create a new one for codegen after
   // emitGotoStmt can resume building in that block.
