@@ -975,6 +975,10 @@ public:
     Not,
     SLPLoad,
     SLPStore,
+    // Creates an active lane mask used by predicated vector operations in
+    // the loop. Elements in the mask are active if the corrosponding element
+    // in the source (first op) are less than the counter, starting at index
+    // (second op). The size of the mask is VF * Multiplier (UF, third op).
     ActiveLaneMask,
     ExplicitVectorLength,
     CalculateTripCountMinusVF,
@@ -1999,7 +2003,7 @@ public:
     return getOperand(1);
   }
 
-  // Update the incoming value from the loop backedge.
+  /// Update the incoming value from the loop backedge.
   void setBackedgeValue(VPValue *V) { setOperand(1, V); }
 
   /// Returns the backedge value as a recipe. The backedge value is guaranteed

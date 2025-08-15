@@ -39,7 +39,9 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
-extern cl::opt<bool> EnableWideActiveLaneMask;
+cl::opt<bool> EnableWideActiveLaneMask(
+    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+    cl::desc("Enable use of wide get active lane mask instructions"));
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -1469,21 +1471,31 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
 
-static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
+/// Try to replace multiple active lane masks used for control flow with
+/// a single, wide active lane mask instruction followed by multiple
+/// extract subvector intrinsics. This applies to the active lane mask
+/// instructions both in the loop and in the preheader.
+/// Incoming values of all ActiveLaneMaskPHIs are updated to use the
+/// new extracts from the first active lane mask, which has it's last
+/// operand (multiplier) set to UF.
+static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
+                                       unsigned UF) {
+  if (!EnableWideActiveLaneMask || !VF.isVector() || UF == 1)
+    return false;
+
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
 
   using namespace llvm::VPlanPatternMatch;
-  if (!EnableWideActiveLaneMask || !VF.isVector() || UF == 1 ||
-      !match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
+  if (!match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                        m_VPValue(), m_VPValue(), m_VPValue())))))
     return false;
 
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   LLVMContext &Ctx = Plan.getContext();
 
-  auto extractFromALM = [&](VPInstruction *ALM,
+  auto ExtractFromALM = [&](VPInstruction *ALM,
                             SmallVectorImpl<VPValue *> &Extracts) {
     DebugLoc DL = ALM->getDebugLoc();
     for (unsigned Part = 0; Part < UF; ++Part) {
@@ -1537,12 +1549,12 @@ static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
 
   // Create UF x extract vectors and insert into preheader.
   SmallVector<VPValue *> EntryExtracts(UF);
-  extractFromALM(EntryALM, EntryExtracts);
+  ExtractFromALM(EntryALM, EntryExtracts);
 
   // Create UF x extract vectors and insert before the loop compare & branch,
   // updating the compare to use the first extract.
   SmallVector<VPValue *> LoopExtracts(UF);
-  extractFromALM(LoopALM, LoopExtracts);
+  ExtractFromALM(LoopALM, LoopExtracts);
   VPInstruction *Not = cast<VPInstruction>(Term->getOperand(0));
   Not->setOperand(0, LoopExtracts[0]);
 
@@ -1646,7 +1658,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
-  bool MadeChange = useWideActiveLaneMask(Plan, BestVF, BestUF);
+  bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
