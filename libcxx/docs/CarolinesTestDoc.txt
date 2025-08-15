@@ -1,6 +1,8 @@
 This is a nonsense document, created for the sole purpose of
 triggering libcxx premerge testing (so I can test metrics collection).
 
-
 This is NOT intended to ever be reviewed or merged or committed. If it gets
 accidentally committed, please remove it asap.
+
+Sample text.
+
