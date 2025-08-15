@@ -666,6 +666,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd: {
+    // Given a fma or fmuladd, cost it the same as a fmul instruction which are
+    // usually the same for costs. TODO: Add fp16 and bf16 expansion costs.
+    Type *EltTy = RetTy->getScalarType();
+    if (EltTy->isFloatTy() || EltTy->isDoubleTy() ||
+        (EltTy->isHalfTy() && ST->hasFullFP16()))
+      return getArithmeticInstrCost(Instruction::FMul, RetTy, CostKind);
+    break;
+  }
   case Intrinsic::stepvector: {
     InstructionCost Cost = 1; // Cost of the `index' instruction
     auto LT = getTypeLegalizationCost(RetTy);
@@ -4337,7 +4347,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
 InstructionCost
 AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                          const SCEV *Ptr) const {
+                                          const SCEV *Ptr,
+                                          TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting

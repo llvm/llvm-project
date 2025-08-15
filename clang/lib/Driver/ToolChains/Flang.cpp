@@ -937,6 +937,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -952,6 +954,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << A->getValue();
       break;
     }
+  } else {
+    Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                    options::OPT_fno_openmp_simd);
   }
 
   // Pass the path to compiler resource files.

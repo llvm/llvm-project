@@ -1796,8 +1796,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     ScalarizedCost +=
         TTI.getMemoryOpCost(Instruction::Load, VecTy->getElementType(),
                             Align(1), LI->getPointerAddressSpace(), CostKind);
-    ScalarizedCost +=
-        TTI.getAddressComputationCost(LI->getPointerOperandType());
+    ScalarizedCost += TTI.getAddressComputationCost(LI->getPointerOperandType(),
+                                                    nullptr, nullptr, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << I

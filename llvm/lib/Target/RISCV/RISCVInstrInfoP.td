@@ -139,6 +139,16 @@ class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
   let Inst{24-20} = uf;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPBinaryScalar_rr<bits<3> f, bits<2> w, bits<3> funct3, string opcodestr>
+    : RVInstRBase<funct3, OPC_OP_IMM_32, (outs GPR:$rd),
+                  (ins GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
+  let Inst{31} = 0b1;
+  let Inst{30-28} = f;
+  let Inst{27} = 0b1;
+  let Inst{26-25} = w;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -199,6 +209,34 @@ let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : PLUI_i<0b1111001, "plui.w">;
 
 let Predicates = [HasStdExtP] in {
+  def PSLL_HS   : RVPBinaryScalar_rr<0b000, 0b00, 0b010, "psll.hs">;
+  def PSLL_BS   : RVPBinaryScalar_rr<0b000, 0b10, 0b010, "psll.bs">;
+
+  def PADD_HS   : RVPBinaryScalar_rr<0b001, 0b00, 0b010, "padd.hs">;
+  def PADD_BS   : RVPBinaryScalar_rr<0b001, 0b10, 0b010, "padd.bs">;
+
+  def PSSHA_HS  : RVPBinaryScalar_rr<0b110, 0b00, 0b010, "pssha.hs">;
+
+  def PSSHAR_HS : RVPBinaryScalar_rr<0b111, 0b00, 0b010, "psshar.hs">;
+} // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  def SSHA      : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "ssha">;
+
+  def SSHAR     : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "sshar">;
+} // Predicates = [HasStdExtP, IsRV32]
+let Predicates = [HasStdExtP, IsRV64] in {
+  def PSLL_WS   : RVPBinaryScalar_rr<0b000, 0b01, 0b010, "psll.ws">;
+
+  def PADD_WS   : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
+
+  def PSSHA_WS  : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
+  def SHA       : RVPBinaryScalar_rr<0b110, 0b11, 0b010, "sha">;
+
+  def PSSHAR_WS : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "psshar.ws">;
+  def SHAR      : RVPBinaryScalar_rr<0b111, 0b11, 0b010, "shar">;
+} // Predicates = [HasStdExtP, IsRV64]
+
+let Predicates = [HasStdExtP] in {
   def PSRLI_B    : RVPShiftB_ri<0b000, 0b100, "psrli.b">;
   def PSRLI_H    : RVPShiftH_ri<0b000, 0b100, "psrli.h">;
 
@@ -230,4 +268,27 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w">;
   def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati">;
+} // Predicates = [HasStdExtP, IsRV64]
+
+let Predicates = [HasStdExtP] in {
+  def PSRL_HS     : RVPBinaryScalar_rr<0b000, 0b00, 0b100, "psrl.hs">;
+  def PSRL_BS     : RVPBinaryScalar_rr<0b000, 0b10, 0b100, "psrl.bs">;
+
+  def PREDSUM_HS  : RVPBinaryScalar_rr<0b001, 0b00, 0b100, "predsum.hs">;
+  def PREDSUM_BS  : RVPBinaryScalar_rr<0b001, 0b10, 0b100, "predsum.bs">;
+
+  def PREDSUMU_HS : RVPBinaryScalar_rr<0b011, 0b00, 0b100, "predsumu.hs">;
+  def PREDSUMU_BS : RVPBinaryScalar_rr<0b011, 0b10, 0b100, "predsumu.bs">;
+
+  def PSRA_HS     : RVPBinaryScalar_rr<0b100, 0b00, 0b100, "psra.hs">;
+  def PSRA_BS     : RVPBinaryScalar_rr<0b100, 0b10, 0b100, "psra.bs">;
+} // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV64] in {
+  def PSRL_WS     : RVPBinaryScalar_rr<0b000, 0b01, 0b100, "psrl.ws">;
+
+  def PREDSUM_WS  : RVPBinaryScalar_rr<0b001, 0b01, 0b100, "predsum.ws">;
+
+  def PREDSUMU_WS : RVPBinaryScalar_rr<0b011, 0b01, 0b100, "predsumu.ws">;
+
+  def PSRA_WS     : RVPBinaryScalar_rr<0b100, 0b01, 0b100, "psra.ws">;
 } // Predicates = [HasStdExtP, IsRV64]

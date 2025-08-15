@@ -2989,9 +2989,8 @@ _mm256_stream_load_si256(const void *__V)
 /// \param __X
 ///    A 128-bit vector of [4 x float] whose low element will be broadcast.
 /// \returns A 128-bit vector of [4 x float] containing the result.
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_broadcastss_ps(__m128 __X)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastss_ps(__m128 __X) {
   return (__m128)__builtin_shufflevector((__v4sf)__X, (__v4sf)__X, 0, 0, 0, 0);
 }
 
@@ -3006,9 +3005,8 @@ _mm_broadcastss_ps(__m128 __X)
 /// \param __a
 ///    A 128-bit vector of [2 x double] whose low element will be broadcast.
 /// \returns A 128-bit vector of [2 x double] containing the result.
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_broadcastsd_pd(__m128d __a)
-{
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastsd_pd(__m128d __a) {
   return __builtin_shufflevector((__v2df)__a, (__v2df)__a, 0, 0);
 }
 
@@ -3023,9 +3021,8 @@ _mm_broadcastsd_pd(__m128d __a)
 /// \param __X
 ///    A 128-bit vector of [4 x float] whose low element will be broadcast.
 /// \returns A 256-bit vector of [8 x float] containing the result.
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
-_mm256_broadcastss_ps(__m128 __X)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastss_ps(__m128 __X) {
   return (__m256)__builtin_shufflevector((__v4sf)__X, (__v4sf)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -3040,9 +3037,8 @@ _mm256_broadcastss_ps(__m128 __X)
 /// \param __X
 ///    A 128-bit vector of [2 x double] whose low element will be broadcast.
 /// \returns A 256-bit vector of [4 x double] containing the result.
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
-_mm256_broadcastsd_pd(__m128d __X)
-{
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastsd_pd(__m128d __X) {
   return (__m256d)__builtin_shufflevector((__v2df)__X, (__v2df)__X, 0, 0, 0, 0);
 }
 
@@ -3056,9 +3052,8 @@ _mm256_broadcastsd_pd(__m128d __X)
 /// \param __X
 ///    A 128-bit integer vector to be broadcast.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastsi128_si256(__m128i __X)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastsi128_si256(__m128i __X) {
   return (__m256i)__builtin_shufflevector((__v2di)__X, (__v2di)__X, 0, 1, 0, 1);
 }
 
@@ -3148,9 +3143,8 @@ _mm256_broadcastsi128_si256(__m128i __X)
 /// \param __X
 ///    A 128-bit integer vector whose low byte will be broadcast.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastb_epi8(__m128i __X)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastb_epi8(__m128i __X) {
   return (__m256i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -3164,9 +3158,8 @@ _mm256_broadcastb_epi8(__m128i __X)
 /// \param __X
 ///    A 128-bit vector of [8 x i16] whose low element will be broadcast.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastw_epi16(__m128i __X)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastw_epi16(__m128i __X) {
   return (__m256i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -3180,9 +3173,8 @@ _mm256_broadcastw_epi16(__m128i __X)
 /// \param __X
 ///    A 128-bit vector of [4 x i32] whose low element will be broadcast.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastd_epi32(__m128i __X)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastd_epi32(__m128i __X) {
   return (__m256i)__builtin_shufflevector((__v4si)__X, (__v4si)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -3196,9 +3188,8 @@ _mm256_broadcastd_epi32(__m128i __X)
 /// \param __X
 ///    A 128-bit vector of [2 x i64] whose low element will be broadcast.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcastq_epi64(__m128i __X)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcastq_epi64(__m128i __X) {
   return (__m256i)__builtin_shufflevector((__v2di)__X, (__v2di)__X, 0, 0, 0, 0);
 }
 
@@ -3212,9 +3203,8 @@ _mm256_broadcastq_epi64(__m128i __X)
 /// \param __X
 ///    A 128-bit integer vector whose low byte will be broadcast.
 /// \returns A 128-bit integer vector containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_broadcastb_epi8(__m128i __X)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastb_epi8(__m128i __X) {
   return (__m128i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -3228,9 +3218,8 @@ _mm_broadcastb_epi8(__m128i __X)
 /// \param __X
 ///    A 128-bit vector of [8 x i16] whose low element will be broadcast.
 /// \returns A 128-bit vector of [8 x i16] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_broadcastw_epi16(__m128i __X)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastw_epi16(__m128i __X) {
   return (__m128i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
@@ -3244,9 +3233,8 @@ _mm_broadcastw_epi16(__m128i __X)
 /// \param __X
 ///    A 128-bit vector of [4 x i32] whose low element will be broadcast.
 /// \returns A 128-bit vector of [4 x i32] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_broadcastd_epi32(__m128i __X)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastd_epi32(__m128i __X) {
   return (__m128i)__builtin_shufflevector((__v4si)__X, (__v4si)__X, 0, 0, 0, 0);
 }
 
@@ -3260,9 +3248,8 @@ _mm_broadcastd_epi32(__m128i __X)
 /// \param __X
 ///    A 128-bit vector of [2 x i64] whose low element will be broadcast.
 /// \returns A 128-bit vector of [2 x i64] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_broadcastq_epi64(__m128i __X)
-{
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_broadcastq_epi64(__m128i __X) {
   return (__m128i)__builtin_shufflevector((__v2di)__X, (__v2di)__X, 0, 0);
 }
 

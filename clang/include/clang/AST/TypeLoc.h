@@ -2519,6 +2519,15 @@ public:
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
 
+  SourceRange getLocalSourceRange() const {
+    SourceLocation BeginLoc = getElaboratedKeywordLoc();
+    if (BeginLoc.isInvalid())
+      BeginLoc = getQualifierLoc().getBeginLoc();
+    if (BeginLoc.isInvalid())
+      BeginLoc = getNameLoc();
+    return {BeginLoc, getNameLoc()};
+  }
+
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
 };
 

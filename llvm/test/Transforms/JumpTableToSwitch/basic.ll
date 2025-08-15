@@ -4,11 +4,11 @@
 
 @func_array = constant [2 x ptr] [ptr @func0, ptr @func1]
 
-define i32 @func0() {
+define i32 @func0() !guid !0 {
   ret i32 1
 }
 
-define i32 @func1() {
+define i32 @func1() !guid !1 {
   ret i32 2
 }
 
@@ -42,7 +42,7 @@ define i32 @function_with_jump_table(i32 %index) {
 ;
   %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
   %func_ptr = load ptr, ptr %gep
-  %result = call i32 %func_ptr()
+  %result = call i32 %func_ptr(), !prof !2
   ret i32 %result
 }
 
@@ -226,3 +226,6 @@ define i32 @function_with_jump_table_addrspace_42(i32 %index) addrspace(42) {
   ret i32 %result
 }
 
+!0 = !{i64 5678}
+!1 = !{i64 5555}
+!2 = !{!"VP", i32 0, i64 25, i64 5678, i64 20, i64 5555, i64 5}

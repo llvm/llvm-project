@@ -457,6 +457,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVTableAddrPointOpLowering
+    : public mlir::OpConversionPattern<cir::VTableAddrPointOp> {
+public:
+  using mlir::OpConversionPattern<cir::VTableAddrPointOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VTableAddrPointOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:
@@ -654,6 +664,23 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::FAbsOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMInlineAsmOpLowering
+    : public mlir::OpConversionPattern<cir::InlineAsmOp> {
+  mlir::DataLayout const &dataLayout;
+
+public:
+  CIRToLLVMInlineAsmOpLowering(const mlir::TypeConverter &typeConverter,
+                               mlir::MLIRContext *context,
+                               mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+
+  using mlir::OpConversionPattern<cir::InlineAsmOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::InlineAsmOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

@@ -120,7 +120,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; NO-VP-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]], ptr [[ADDR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-VP-OUTLOOP-NEXT:  entry:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-OUTLOOP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-OUTLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; NO-VP-OUTLOOP:       vector.memcheck:
@@ -173,7 +173,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; NO-VP-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]], ptr [[ADDR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-VP-INLOOP-NEXT:  entry:
 ; NO-VP-INLOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; NO-VP-INLOOP:       vector.memcheck:
