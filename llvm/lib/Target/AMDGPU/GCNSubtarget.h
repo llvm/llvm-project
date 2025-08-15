@@ -1821,6 +1821,12 @@ public:
   bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
     return getGeneration() == GFX12;
   }
+
+  // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
+  // read.
+  bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
 };
 
 class GCNUserSGPRUsageInfo {
