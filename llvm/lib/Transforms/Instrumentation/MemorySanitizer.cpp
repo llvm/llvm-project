@@ -3237,6 +3237,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
   ///       by this handler. See horizontalReduce().
+  ///
+  /// TODO: permutation intrinsics are also often incorrectly matched.
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
@@ -5629,7 +5631,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     // The following intrinsics are auto-upgraded:
     //   llvm.x86.sse2.pshuf.d(<4 x i32>, i8)
-    //   llvm.x86.sse2.pshufh.w(<8 x i16>, i8)
+    //   llvm.x86.sse2.gpshufh.w(<8 x i16>, i8)
     //   llvm.x86.sse2.pshufl.w(<8 x i16>, i8)
     case Intrinsic::x86_avx2_pshuf_b:
     case Intrinsic::x86_sse_pshuf_w:
