@@ -170,6 +170,9 @@ Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using
   `-fms-compatibility`) with modules. (#GH38400)
+- Make the pointer parameter to `__builtin_assume_aligned` undergo conversions
+  like any normal argument. This means that integer to pointer conversions are now 
+  allowed, and passing function pointers is now diagnosed.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
