@@ -9,6 +9,8 @@
 #include "FeatureModule.h"
 #include "support/Logger.h"
 
+LLVM_INSTANTIATE_REGISTRY(clang::clangd::FeatureModuleRegistry)
+
 namespace clang {
 namespace clangd {
 
