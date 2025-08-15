@@ -1262,9 +1262,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       (passingPolymorphicToNonPolymorphic ||
        !isSimplyContiguous(*arg.entity, foldingContext));
   bool mustDoCopyOut = mustDoCopyIn && arg.mayBeModifiedByCall();
+  bool newMustDoCopyIn = false;
+  bool newMustDoCopyOut = false;
   if constexpr (Fortran::lower::CallerInterface::PassedEntity::isCaller) {
-    bool newMustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
-    bool newMustDoCopyOut = arg.entity->GetMayNeedCopyOut();
+    newMustDoCopyIn = arg.entity->GetMayNeedCopyIn();
+    newMustDoCopyOut = arg.entity->GetMayNeedCopyOut();
 #if 1
     llvm::dbgs() << "copyinout: CALLER " <<
         "copy-in: old=" << mustDoCopyIn << ", new=" << newMustDoCopyIn <<
@@ -1277,6 +1279,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         "copy-in=" << mustDoCopyIn << ", copy-out=" << mustDoCopyOut << "\n";
 #endif
   }
+  mustDoCopyIn = newMustDoCopyIn;
+  mustDoCopyOut = newMustDoCopyOut;
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
