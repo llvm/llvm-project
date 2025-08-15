@@ -78,3 +78,93 @@ exit:
   %exit.phi = phi i32 [%A4.phi, %A5], [%Z, %C]
   ret void
 }
+
+define void @nested_callbr(i1 %PredB3, i1 %PredB4, i1 %PredA4, i1 %PredA3, i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @nested_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[A1:%.*]]
+; CHECK:       A1:
+; CHECK-NEXT:    br label [[B1:%.*]]
+; CHECK:       B1:
+; CHECK-NEXT:    br label [[B2:%.*]]
+; CHECK:       B2:
+; CHECK-NEXT:    [[X_INC:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    br label [[B3:%.*]]
+; CHECK:       B3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB3:%.*]])
+; CHECK-NEXT:            to label [[B4:%.*]] [label %B3.target.A3]
+; CHECK:       B4:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB4:%.*]])
+; CHECK-NEXT:            to label [[B1]] [label %B4.target.A2]
+; CHECK:       A2:
+; CHECK-NEXT:    br label [[A4:%.*]]
+; CHECK:       A3:
+; CHECK-NEXT:    br label [[A4]]
+; CHECK:       A4:
+; CHECK-NEXT:    [[A4_PHI:%.*]] = phi i32 [ [[Y:%.*]], [[A3:%.*]] ], [ [[X_INC_MOVED:%.*]], [[A2:%.*]] ]
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA4:%.*]])
+; CHECK-NEXT:            to label [[A4_TARGET_C:%.*]] [label %A5]
+; CHECK:       A5:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA3:%.*]])
+; CHECK-NEXT:            to label [[A5_TARGET_EXIT:%.*]] [label %A1]
+; CHECK:       C:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[EXIT_PHI:%.*]] = phi i32 [ [[Z:%.*]], [[C:%.*]] ], [ [[EXIT_PHI_MOVED:%.*]], [[LOOP_EXIT_GUARD:%.*]] ]
+; CHECK-NEXT:    ret void
+; CHECK:       A4.target.C:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       A5.target.exit:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[EXIT_PHI_MOVED]] = phi i32 [ poison, [[A4_TARGET_C]] ], [ [[A4_PHI]], [[A5_TARGET_EXIT]] ]
+; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[A4_TARGET_C]] ], [ false, [[A5_TARGET_EXIT]] ]
+; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[EXIT]]
+; CHECK:       B3.target.A3:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD1:%.*]]
+; CHECK:       B4.target.A2:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD1]]
+; CHECK:       loop.exit.guard1:
+; CHECK-NEXT:    [[X_INC_MOVED]] = phi i32 [ [[X_INC]], [[B3_TARGET_A3:%.*]] ], [ [[X_INC]], [[B4_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A3:%.*]] = phi i1 [ true, [[B3_TARGET_A3]] ], [ false, [[B4_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A3]], label [[A3]], label [[A2]]
+;
+entry:
+  br label %A1
+
+A1:
+  br label %B1
+
+B1:
+  br label %B2
+
+B2:
+  %X.inc = add i32 %X, 1
+  br label %B3
+
+B3:
+  callbr void asm "", "r,!i"(i1 %PredB3) to label %B4 [label %A3]
+
+B4:
+  callbr void asm "", "r,!i"(i1 %PredB4) to label %B1 [label %A2]
+
+A2:
+  br label %A4
+
+A3:
+  br label %A4
+
+A4:
+  %A4.phi = phi i32 [%Y, %A3], [%X.inc, %A2]
+  callbr void asm "", "r,!i"(i1 %PredA4) to label %C [label %A5]
+
+A5:
+  callbr void asm "", "r,!i"(i1 %PredA3) to label %exit [label %A1]
+
+C:
+  br label %exit
+
+exit:
+  %exit.phi = phi i32 [%A4.phi, %A5], [%Z, %C]
+  ret void
+}
