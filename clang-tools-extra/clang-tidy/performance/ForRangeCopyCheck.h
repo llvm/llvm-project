@@ -39,8 +39,16 @@ private:
                                        const CXXForRangeStmt &ForRange,
                                        ASTContext &Context);
 
+  // Checks if the loop variable is copied and then subsequently mutated
+  // in the body of the loop. If so it suggests the copy was unintentional,
+  // or, that the copy would be more clear if done inside the body of the loop.
+  bool copiedLoopVarIsMutated(const VarDecl &LoopVar,
+                              const CXXForRangeStmt &ForRange,
+                              ASTContext &Context);
+
   const bool WarnOnAllAutoCopies;
   const std::vector<StringRef> AllowedTypes;
+  const bool WarnOnModificationOfCopiedLoopVariable;
 };
 
 } // namespace clang::tidy::performance

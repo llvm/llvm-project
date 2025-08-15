@@ -22,11 +22,15 @@ namespace clang::tidy::performance {
 ForRangeCopyCheck::ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", false)),
+      WarnOnModificationOfCopiedLoopVariable(
+          Options.get("WarnOnModificationOfCopiedLoopVariable", false)),
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
 void ForRangeCopyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnAllAutoCopies", WarnOnAllAutoCopies);
+  Options.store(Opts, "WarnOnModificationOfCopiedLoopVariable",
+                WarnOnModificationOfCopiedLoopVariable);
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
 }
@@ -64,9 +68,11 @@ void ForRangeCopyCheck::check(const MatchFinder::MatchResult &Result) {
   // Ignore code in macros since we can't place the fixes correctly.
   if (Var->getBeginLoc().isMacroID())
     return;
+  const auto *ForRange = Result.Nodes.getNodeAs<CXXForRangeStmt>("forRange");
+  if (copiedLoopVarIsMutated(*Var, *ForRange, *Result.Context))
+    return;
   if (handleConstValueCopy(*Var, *Result.Context))
     return;
-  const auto *ForRange = Result.Nodes.getNodeAs<CXXForRangeStmt>("forRange");
   handleCopyIsOnlyConstReferenced(*Var, *ForRange, *Result.Context);
 }
 
@@ -79,6 +85,7 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
   } else if (!LoopVar.getType().isConstQualified()) {
     return false;
   }
+
   std::optional<bool> Expensive =
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (!Expensive || !*Expensive)
@@ -105,6 +112,27 @@ static bool isReferenced(const VarDecl &LoopVar, const Stmt &Stmt,
               .empty();
 }
 
+bool ForRangeCopyCheck::copiedLoopVarIsMutated(const VarDecl &LoopVar,
+                                               const CXXForRangeStmt &ForRange,
+                                               ASTContext &Context) {
+  // If it's copied and mutated, there's a high chance that's a bug.
+  if (WarnOnModificationOfCopiedLoopVariable) {
+    if (ExprMutationAnalyzer(*ForRange.getBody(), Context)
+            .isMutated(&LoopVar)) {
+      auto Diag =
+          diag(LoopVar.getLocation(), "loop variable is copied and then "
+                                      "modified, which is likely a bug; you "
+                                      "probably want to modify the underlying "
+                                      "object and not this copy. If you "
+                                      "*did* intend to modify this copy, "
+                                      "please use an explicit copy inside the "
+                                      "body of the loop");
+      return true;
+    }
+  }
+  return false;
+}
+
 bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     const VarDecl &LoopVar, const CXXForRangeStmt &ForRange,
     ASTContext &Context) {
@@ -112,6 +140,7 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive)
     return false;
+
   // We omit the case where the loop variable is not used in the loop body. E.g.
   //
   // for (auto _ : benchmark_state) {
@@ -130,7 +159,6 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
             LoopVar, Context, Qualifiers::Const))
       Diag << *Fix << utils::fixit::changeVarDeclToReference(LoopVar, Context);
-
     return true;
   }
   return false;

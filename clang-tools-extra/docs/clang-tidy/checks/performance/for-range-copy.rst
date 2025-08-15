@@ -18,6 +18,12 @@ following heuristic is employed:
    invoked on it, or it is used as const reference or value argument in
    constructors or function calls.
 
+There is an additional option to warn any time a loop variable is copied in each
+iteration and subsequently modified in the body of the loop. This is likely to
+be a bug, since the user may believe they are modifying the underlying value
+instead of a copy, and a user that truly intends to modify a copy may do so by
+performing the copy explicitly inside the body of the loop.
+
 Options
 -------
 
@@ -25,6 +31,12 @@ Options
 
    When `true`, warns on any use of ``auto`` as the type of the range-based for
    loop variable. Default is `false`.
+
+.. option:: WarnOnModificationOfCopiedLoopVariable
+
+   When `true`, warns when the loop variable is copied and subsequently
+   modified. This is likely to be a bug. Moving the copy to an explicit copy
+   inside of the loop will suppress the warning. Default is `false`.
 
 .. option:: AllowedTypes
 
