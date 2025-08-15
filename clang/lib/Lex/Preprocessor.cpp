@@ -1705,7 +1705,7 @@ void TrivialPPDirectiveTracer::setSeenNoTrivialPPDirective() {
 void TrivialPPDirectiveTracer::LexedFileChanged(
     FileID FID, LexedFileChangeReason Reason,
     SrcMgr::CharacteristicKind FileType, FileID PrevFID, SourceLocation Loc) {
-  InMainFile = FID == PP.getSourceManager().getMainFileID();
+  InMainFile = (FID == PP.getSourceManager().getMainFileID());
 }
 
 void TrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
