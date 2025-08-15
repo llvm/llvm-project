@@ -1776,13 +1776,14 @@ Expected<uint64_t> MCOrgFragmentRef::materialize(MCCASReader &Reader,
 }
 
 Expected<MCSymbolIdFragmentRef>
-MCSymbolIdFragmentRef::create(MCCASBuilder &MB, const MCSymbolIdFragment &F,
+MCSymbolIdFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                               unsigned FragmentSize,
                               ArrayRef<char> FragmentContents) {
+  auto *SymbolIDFrag = cast<MCSymbolIdFragment>(&F);
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
-  writeVBR8(F.getSymbol()->getIndex(), B->Data);
+  writeVBR8(SymbolIDFrag->getSymbol()->getIndex(), B->Data);
   return get(B->build());
 }
 
