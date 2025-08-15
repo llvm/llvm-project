@@ -502,8 +502,10 @@ public:
     SmallVector<int, 8> PtrToPartitions(N);
     for (unsigned I = 0; I < N; ++I) {
       Value *Ptr = RtPtrCheck->Pointers[I].PointerValue;
-      auto Instructions =
-          LAI.getInstructionsForAccess(Ptr, RtPtrCheck->Pointers[I].IsWritePtr);
+      auto Instructions = LAI.getInstructionsForAccess(Ptr, /* IsWrite */ true);
+      auto ReadInstructions =
+          LAI.getInstructionsForAccess(Ptr, /* IsWrite */ false);
+      Instructions.append(ReadInstructions.begin(), ReadInstructions.end());
 
       int &Partition = PtrToPartitions[I];
       // First set it to uninitialized.

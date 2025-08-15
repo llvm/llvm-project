@@ -493,10 +493,10 @@ define { fp128, i32 } @test_frexp_fp128_i32(fp128 %a) nounwind {
 ; SOFT-FLOAT-64:       # %bb.0:
 ; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, -16
 ; SOFT-FLOAT-64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    dmfc1 $4, $f12
-; SOFT-FLOAT-64-NEXT:    dmfc1 $5, $f13
 ; SOFT-FLOAT-64-NEXT:    jal frexpl
 ; SOFT-FLOAT-64-NEXT:    daddiu $6, $sp, 4
+; SOFT-FLOAT-64-NEXT:    dmfc1 $2, $f0
+; SOFT-FLOAT-64-NEXT:    dmfc1 $3, $f2
 ; SOFT-FLOAT-64-NEXT:    lw $4, 4($sp)
 ; SOFT-FLOAT-64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
@@ -597,39 +597,39 @@ define { <2 x fp128>, <2 x i32> } @test_frexp_v2fp128_v2i32(<2 x fp128> %a) noun
 ; SOFT-FLOAT-64-LABEL: test_frexp_v2fp128_v2i32:
 ; SOFT-FLOAT-64:       # %bb.0:
 ; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, -64
-; SOFT-FLOAT-64-NEXT:    sd $ra, 56($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $20, 48($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $19, 40($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sdc1 $f25, 56($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sdc1 $f24, 48($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $ra, 40($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    sd $18, 32($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    sd $17, 24($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    sd $16, 16($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    move $16, $6
 ; SOFT-FLOAT-64-NEXT:    move $17, $5
 ; SOFT-FLOAT-64-NEXT:    move $18, $4
-; SOFT-FLOAT-64-NEXT:    daddiu $6, $sp, 12
-; SOFT-FLOAT-64-NEXT:    move $4, $7
+; SOFT-FLOAT-64-NEXT:    dmtc1 $7, $f12
+; SOFT-FLOAT-64-NEXT:    dmtc1 $8, $f13
 ; SOFT-FLOAT-64-NEXT:    jal frexpl
-; SOFT-FLOAT-64-NEXT:    move $5, $8
-; SOFT-FLOAT-64-NEXT:    move $19, $2
-; SOFT-FLOAT-64-NEXT:    move $20, $3
+; SOFT-FLOAT-64-NEXT:    daddiu $6, $sp, 12
+; SOFT-FLOAT-64-NEXT:    mov.d $f24, $f0
+; SOFT-FLOAT-64-NEXT:    mov.d $f25, $f2
+; SOFT-FLOAT-64-NEXT:    dmtc1 $17, $f12
+; SOFT-FLOAT-64-NEXT:    dmtc1 $16, $f13
 ; SOFT-FLOAT-64-NEXT:    daddiu $6, $sp, 8
 ; SOFT-FLOAT-64-NEXT:    lw $1, 12($sp)
-; SOFT-FLOAT-64-NEXT:    sw $1, 36($18)
-; SOFT-FLOAT-64-NEXT:    move $4, $17
 ; SOFT-FLOAT-64-NEXT:    jal frexpl
-; SOFT-FLOAT-64-NEXT:    move $5, $16
+; SOFT-FLOAT-64-NEXT:    sw $1, 36($18)
 ; SOFT-FLOAT-64-NEXT:    lw $1, 8($sp)
 ; SOFT-FLOAT-64-NEXT:    sw $1, 32($18)
-; SOFT-FLOAT-64-NEXT:    sd $20, 24($18)
-; SOFT-FLOAT-64-NEXT:    sd $19, 16($18)
-; SOFT-FLOAT-64-NEXT:    sd $3, 8($18)
-; SOFT-FLOAT-64-NEXT:    sd $2, 0($18)
+; SOFT-FLOAT-64-NEXT:    sdc1 $f25, 24($18)
+; SOFT-FLOAT-64-NEXT:    sdc1 $f24, 16($18)
+; SOFT-FLOAT-64-NEXT:    sdc1 $f2, 8($18)
+; SOFT-FLOAT-64-NEXT:    sdc1 $f0, 0($18)
 ; SOFT-FLOAT-64-NEXT:    ld $16, 16($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    ld $17, 24($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    ld $18, 32($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $19, 40($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $20, 48($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $ra, 56($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ldc1 $f24, 48($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ldc1 $f25, 56($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
 ; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, 64
   %result = call { <2 x fp128>, <2 x i32> } @llvm.frexp.v2fp128.v2i32(<2 x fp128> %a)

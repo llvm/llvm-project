@@ -1060,6 +1060,10 @@ public:
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
   }
+
+  mlir::Value VisitAtomicExpr(AtomicExpr *e) {
+    return cgf.emitAtomicExpr(e).getValue();
+  }
 };
 
 LValue ScalarExprEmitter::emitCompoundAssignLValue(

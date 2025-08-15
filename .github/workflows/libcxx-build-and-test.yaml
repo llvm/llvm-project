@@ -36,7 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-runners
+    runs-on: llvm-premerge-libcxx-next-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -47,14 +47,14 @@ jobs:
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-21' ]
-        cxx: [ 'clang++-21' ]
+        cc: [  'clang-22' ]
+        cxx: [ 'clang++-22' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-15'
             cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -73,7 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-runners
+    runs-on: llvm-premerge-libcxx-next-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -86,20 +86,20 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-21' ]
-        cxx: [ 'clang++-21' ]
+        cc: [ 'clang-22' ]
+        cxx: [ 'clang++-22' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-15'
             cxx: 'g++-15'
           - config: 'generic-cxx26'
+            cc: 'clang-21'
+            cxx: 'clang++-21'
+          - config: 'generic-cxx26'
             cc: 'clang-20'
             cxx: 'clang++-20'
-          - config: 'generic-cxx26'
-            cc: 'clang-19'
-            cxx: 'clang++-19'
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -148,27 +148,27 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'llvm-premerge-libcxx-runners' ]
+        machine: [ 'llvm-premerge-libcxx-next-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: llvm-premerge-libcxx-runners
+          machine: llvm-premerge-libcxx-next-runners
         - config: 'generic-asan'
-          machine: llvm-premerge-libcxx-runners
+          machine: llvm-premerge-libcxx-next-runners
         - config: 'generic-tsan'
-          machine: llvm-premerge-libcxx-runners
+          machine: llvm-premerge-libcxx-next-runners
         - config: 'generic-ubsan'
-          machine: llvm-premerge-libcxx-runners
+          machine: llvm-premerge-libcxx-next-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: llvm-premerge-libcxx-runners
+          machine: llvm-premerge-libcxx-next-runners
     runs-on: ${{ matrix.machine }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-21
-          CXX: clang++-21
+          CC: clang-22
+          CXX: clang++-22
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -211,7 +211,7 @@ jobs:
           os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
@@ -252,7 +252,7 @@ jobs:
         - { config: mingw-dll-i686, mingw: true }
         - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
         run: |
           choco install -y ninja

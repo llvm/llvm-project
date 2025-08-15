@@ -112,6 +112,11 @@ def GenericLoopConversionPass
   ];
 }
 
+def SimdOnlyPass : Pass<"omp-simd-only", "mlir::ModuleOp"> {
+  let summary = "Filters out non-simd OpenMP constructs";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def AutomapToTargetDataPass
     : Pass<"omp-automap-to-target-data", "::mlir::ModuleOp"> {
   let summary = "Insert OpenMP target data operations for AUTOMAP variables";
