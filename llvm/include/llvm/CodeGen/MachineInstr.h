@@ -1428,8 +1428,10 @@ public:
     return getOpcode() == TargetOpcode::BUNDLE;
   }
 
-  bool isCopy() const {
-    return getOpcode() == TargetOpcode::COPY;
+  bool isCopy() const { return getOpcode() == TargetOpcode::COPY; }
+
+  bool isCopyLanemask() const {
+    return getOpcode() == TargetOpcode::COPY_LANEMASK;
   }
 
   bool isFullCopy() const {
@@ -1465,6 +1467,7 @@ public:
     case TargetOpcode::PHI:
     case TargetOpcode::G_PHI:
     case TargetOpcode::COPY:
+    case TargetOpcode::COPY_LANEMASK:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:
     case TargetOpcode::REG_SEQUENCE:

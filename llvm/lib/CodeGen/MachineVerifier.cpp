@@ -2414,6 +2414,37 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::COPY_LANEMASK: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    const MachineOperand &LaneMaskOp = MI->getOperand(2);
+    const Register SrcReg = SrcOp.getReg();
+    const Register DstReg = DstOp.getReg();
+    const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
+    LaneBitmask SrcMaxLanemask = LaneBitmask::getAll();
+
+    if (DstOp.getSubReg())
+      report("COPY_LANEMASK must use no sub-register index.", &DstOp, 0);
+
+    if (SrcOp.getSubReg())
+      report("COPY_LANEMASK must use no sub-register index.", &SrcOp, 1);
+
+    if (SrcReg.isVirtual()) {
+      SrcMaxLanemask = MRI->getMaxLaneMaskForVReg(SrcReg);
+    }
+
+    if (LaneMask.none())
+      report("COPY_LANEMASK copies no lanes.", MI);
+
+    // In case of Src as virtual register, all lanes active implies the max
+    // lanemask bits active for that register class, else all bits would be set.
+    if (LaneMask.all() || (SrcMaxLanemask == LaneMask))
+      report(
+          "COPY should be instead of COPY_LANEMASK, as all lanes are copied.",
+          MI);
+
+    break;
+  }
   case TargetOpcode::STATEPOINT: {
     StatepointOpers SO(MI);
     if (!MI->getOperand(SO.getIDPos()).isImm() ||
