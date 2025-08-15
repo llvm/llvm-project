@@ -1905,8 +1905,12 @@ Error MCDataFragmentMerger::tryMerge(const MCFragment &F, unsigned Size,
   bool IsSameAtom = Builder.getCurrentAtom() == F.getAtom();
   bool Oversized = CurrentSize + Size > MCDataMergeThreshold;
   // TODO: Try merge align fragment?
-  bool IsMergeableFragment =
-      isa<MCEncodedFragment>(F) || isa<MCAlignFragment>(F);
+  bool IsMergeableFragment = F.getKind() == MCFragment::FT_Relaxable ||
+                             F.getKind() == MCFragment::FT_Data ||
+                             F.getKind() == MCFragment::FT_Dwarf ||
+                             F.getKind() == MCFragment::FT_DwarfFrame ||
+                             F.getKind() == MCFragment::FT_Align;
+
   // If not the same atom, flush merge candidate and return false.
   if (!IsSameAtom || !IsMergeableFragment || Oversized) {
     if (auto E = emitMergedFragments())
