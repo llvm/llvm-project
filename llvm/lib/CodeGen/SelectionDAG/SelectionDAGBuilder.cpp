@@ -8912,7 +8912,7 @@ bool SelectionDAGBuilder::canTailCall(const CallBase &CB) const {
 
   // Avoid emitting tail calls in functions with the disable-tail-calls
   // attribute.
-  auto *Caller = CB.getParent()->getParent();
+  const Function *Caller = CB.getParent()->getParent();
   if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
           "true" &&
       !isMustTailCall)
