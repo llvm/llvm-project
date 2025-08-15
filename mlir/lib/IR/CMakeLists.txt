@@ -31,6 +31,7 @@ add_mlir_library(MLIRIR
   OperationSupport.cpp
   PatternLoggingListener.cpp
   PatternMatch.cpp
+  QuantizationInterface.cpp  
   Region.cpp
   RegionKindInterface.cpp
   SymbolTable.cpp
@@ -62,11 +63,12 @@ add_mlir_library(MLIRIR
   MLIRCastInterfacesIncGen
   MLIRDataLayoutInterfacesIncGen
   MLIROpAsmInterfaceIncGen
+  MLIRQuantizationInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
-
+  
   LINK_LIBS PUBLIC
   MLIRSupport
   )
