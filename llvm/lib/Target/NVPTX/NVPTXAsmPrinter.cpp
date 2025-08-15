@@ -459,14 +459,15 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
 
     if (BlocksAreClusters) {
       LLVMContext &Ctx = F.getContext();
-      if (ReqNTID.empty() || ClusterDim.empty()) {
-        Ctx.emitError(
-            "blocksareclusters requires reqntid and cluster_dim attributes");
-      } else if (STI->getPTXVersion() < 90) {
-        Ctx.emitError("blocksareclusters requires PTX version >= 9.0");
-      } else {
+      if (ReqNTID.empty() || ClusterDim.empty())
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F,
+            "blocksareclusters requires reqntid and cluster_dim attributes"));
+      else if (STI->getPTXVersion() < 90)
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires PTX version >= 9.0"));
+      else
         O << ".blocksareclusters\n";
-      }
     }
 
     if (const auto Maxclusterrank = getMaxClusterRank(F))
