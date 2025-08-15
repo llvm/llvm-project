@@ -420,10 +420,10 @@ TEST(CPlusPlusLanguage, MatchesCxx) {
 
   EXPECT_TRUE(CPlusPlusLang != nullptr);
 
-  Mangled itaniumSymbol("_ZFoo");
+  Mangled itaniumSymbol("_Z3Foo");
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumSymbol));
-  Mangled itaniumExtensionSymbol("___ZBar");
+  Mangled itaniumExtensionSymbol("___Z3Bar_block_invoke");
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumExtensionSymbol));
-  Mangled msvcSymbol("?Baz");
+  Mangled msvcSymbol("??x@@3AH");
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(msvcSymbol));
 }
