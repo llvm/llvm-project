@@ -24,7 +24,7 @@ class TestRichDisassembler(TestBase):
         self.assertEqual(process.GetState(), lldb.eStateStopped)
 
         # Run the CLI command and read output from self.res
-        self.runCmd("disassemble --rich -f", check=True)
+        self.runCmd("disassemble --variable -f", check=True)
         out = self.res.GetOutput()
         print(out)
 

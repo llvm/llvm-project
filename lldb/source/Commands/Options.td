@@ -361,7 +361,7 @@ let Command = "disassemble" in {
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
     Desc<"Force disassembly of large functions.">;
-  def disassemble_options_rich : Option<"rich", "R">,
+  def disassemble_options_rich : Option<"variable", "v">,
     Desc<"Enable rich disassembly annotations for this invocation.">;
 }
 

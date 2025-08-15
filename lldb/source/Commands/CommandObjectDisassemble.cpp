@@ -154,7 +154,7 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     }
   } break;
 
-  case 'R': //< --rich
+  case 'v': //< --rich variable annotations
     enable_rich_annotations = true;
     break;
 
