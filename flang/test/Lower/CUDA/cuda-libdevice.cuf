@@ -83,9 +83,17 @@ attributes(global) subroutine test_log()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_log
-! CHECK: %{{.*}} = fir.call @__nv_logf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_log2f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_log10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_logf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_log2f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_log10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+
+attributes(global) subroutine test_sincosf()
+  real :: r, s, c
+  call __sincosf(r, s, c)
+end subroutine
+
+! CHECK-LABEL: _QPtest_sincosf
+! CHECK: fir.call @__nv_fast_sincosf(%{{.*}}, %{{.*}}#0, %{{.*}}#0) proc_attrs<bind_c> fastmath<contract> : (f32, !fir.ref<f32>, !fir.ref<f32>) -> () 
 
 attributes(global) subroutine test_sinf()
   real :: res
@@ -94,7 +102,7 @@ attributes(global) subroutine test_sinf()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_sinf
-! CHECK: %{{.*}} = fir.call @__nv_sinf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_sinf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_tanf()
   real :: res
@@ -103,7 +111,7 @@ attributes(global) subroutine test_tanf()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_tanf
-! CHECK: %{{.*}} = fir.call @__nv_tanf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_tanf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_exp()
   real :: res
@@ -113,8 +121,8 @@ attributes(global) subroutine test_exp()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_exp
-! CHECK: %{{.*}} = fir.call @__nv_expf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_exp10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_expf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_exp10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
 
 attributes(global) subroutine test_double2ll_rX()
   integer(8) :: res
