@@ -263,6 +263,7 @@ static bool isUniformShape(Value *V) {
     case llvm::Instruction::FPExt:
       return true;
     case llvm::Instruction::AddrSpaceCast:
+    case CastInst::PtrToAddr:
     case CastInst::PtrToInt:
     case CastInst::IntToPtr:
       return false;

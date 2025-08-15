@@ -691,12 +691,12 @@ public:
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
-    return __comp_(__x, __y.__get_value().first);
+    return __comp_(__x, __y.first);
   }
 
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
-    return __comp_(__x.__get_value().first, __y);
+    return __comp_(__x.first, __y);
   }
 #  endif
 };

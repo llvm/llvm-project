@@ -153,7 +153,7 @@ body:             |
     %2:vgpr(s32) = COPY $vgpr3
     %3:vgpr(<2 x s32>) = G_BUILD_VECTOR %1, %2
     %4:vgpr(s64) = G_CONSTANT i64 4
-    %5:vgpr(p0) = G_PTR_ADD %0, %4
+    %5:vgpr(p0) = inbounds G_PTR_ADD %0, %4
     %6:vgpr(s32) = G_AMDGPU_ATOMIC_CMPXCHG %5, %3 :: (load store seq_cst (s32), addrspace 0)
     $vgpr0 = COPY %6
 
@@ -305,7 +305,7 @@ body:             |
     %2:vgpr(s64) = COPY $vgpr4_vgpr5
     %3:vgpr(<2 x s64>) = G_BUILD_VECTOR %1, %2
     %4:vgpr(s64) = G_CONSTANT i64 4
-    %5:vgpr(p0) = G_PTR_ADD %0, %4
+    %5:vgpr(p0) = inbounds G_PTR_ADD %0, %4
     %6:vgpr(s64) = G_AMDGPU_ATOMIC_CMPXCHG %5, %3 :: (load store seq_cst (s64), addrspace 0)
     $vgpr0_vgpr1 = COPY %6
 
@@ -406,7 +406,7 @@ body:             |
     %2:vgpr(s32) = COPY $vgpr3
     %3:vgpr(<2 x s32>) = G_BUILD_VECTOR %1, %2
     %4:vgpr(s64) = G_CONSTANT i64 -4
-    %5:vgpr(p0) = G_PTR_ADD %0, %4
+    %5:vgpr(p0) = inbounds G_PTR_ADD %0, %4
     %6:vgpr(s32) = G_AMDGPU_ATOMIC_CMPXCHG %5, %3 :: (load store seq_cst (s32), addrspace 0)
     $vgpr0 = COPY %6
 

@@ -44,6 +44,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMAssumeAlignedOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeAlignedOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeAlignedOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeAlignedOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMAssumeSepStorageOpLowering
     : public mlir::OpConversionPattern<cir::AssumeSepStorageOp> {
 public:
@@ -447,6 +457,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVTableAddrPointOpLowering
+    : public mlir::OpConversionPattern<cir::VTableAddrPointOp> {
+public:
+  using mlir::OpConversionPattern<cir::VTableAddrPointOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VTableAddrPointOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:
@@ -635,6 +655,32 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::GetBitfieldOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMFAbsOpLowering : public mlir::OpConversionPattern<cir::FAbsOp> {
+public:
+  using mlir::OpConversionPattern<cir::FAbsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::FAbsOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMInlineAsmOpLowering
+    : public mlir::OpConversionPattern<cir::InlineAsmOp> {
+  mlir::DataLayout const &dataLayout;
+
+public:
+  CIRToLLVMInlineAsmOpLowering(const mlir::TypeConverter &typeConverter,
+                               mlir::MLIRContext *context,
+                               mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+
+  using mlir::OpConversionPattern<cir::InlineAsmOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::InlineAsmOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

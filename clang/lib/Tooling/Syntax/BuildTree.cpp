@@ -918,97 +918,91 @@ public:
     return true;
   }
 
-  // FIXME: Fix `NestedNameSpecifierLoc::getLocalSourceRange` for the
-  // `DependentTemplateSpecializationType` case.
-  /// Given a nested-name-specifier return the range for the last name
-  /// specifier.
-  ///
-  /// e.g. `std::T::template X<U>::` => `template X<U>::`
-  SourceRange getLocalSourceRange(const NestedNameSpecifierLoc &NNSLoc) {
-    auto SR = NNSLoc.getLocalSourceRange();
-
-    // The method `NestedNameSpecifierLoc::getLocalSourceRange` *should*
-    // return the desired `SourceRange`, but there is a corner case. For a
-    // `DependentTemplateSpecializationType` this method returns its
-    // qualifiers as well, in other words in the example above this method
-    // returns `T::template X<U>::` instead of only `template X<U>::`
-    if (auto TL = NNSLoc.getTypeLoc()) {
-      if (auto DependentTL =
-              TL.getAs<DependentTemplateSpecializationTypeLoc>()) {
-        // The 'template' keyword is always present in dependent template
-        // specializations. Except in the case of incorrect code
-        // TODO: Treat the case of incorrect code.
-        SR.setBegin(DependentTL.getTemplateKeywordLoc());
-      }
-    }
-
-    return SR;
+  syntax::NameSpecifier *buildIdentifier(SourceRange SR,
+                                         bool DropBack = false) {
+    auto NameSpecifierTokens = Builder.getRange(SR).drop_back(DropBack);
+    assert(NameSpecifierTokens.size() == 1);
+    Builder.markChildToken(NameSpecifierTokens.begin(),
+                           syntax::NodeRole::Unknown);
+    auto *NS = new (allocator()) syntax::IdentifierNameSpecifier;
+    Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+    return NS;
   }
 
-  syntax::NodeKind getNameSpecifierKind(const NestedNameSpecifier &NNS) {
-    switch (NNS.getKind()) {
-    case NestedNameSpecifier::Global:
-      return syntax::NodeKind::GlobalNameSpecifier;
-    case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::Identifier:
-      return syntax::NodeKind::IdentifierNameSpecifier;
-    case NestedNameSpecifier::TypeSpec: {
-      const auto *NNSType = NNS.getAsType();
-      assert(NNSType);
-      if (isa<DecltypeType>(NNSType))
-        return syntax::NodeKind::DecltypeNameSpecifier;
-      if (isa<TemplateSpecializationType, DependentTemplateSpecializationType>(
-              NNSType))
-        return syntax::NodeKind::SimpleTemplateNameSpecifier;
-      return syntax::NodeKind::IdentifierNameSpecifier;
-    }
-    default:
-      // FIXME: Support Microsoft's __super
-      llvm::report_fatal_error("We don't yet support the __super specifier",
-                               true);
-    }
+  syntax::NameSpecifier *buildSimpleTemplateName(SourceRange SR) {
+    auto NameSpecifierTokens = Builder.getRange(SR);
+    // TODO: Build `SimpleTemplateNameSpecifier` children and implement
+    // accessors to them.
+    // Be aware, we cannot do that simply by calling `TraverseTypeLoc`,
+    // some `TypeLoc`s have inside them the previous name specifier and
+    // we want to treat them independently.
+    auto *NS = new (allocator()) syntax::SimpleTemplateNameSpecifier;
+    Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+    return NS;
   }
 
   syntax::NameSpecifier *
   buildNameSpecifier(const NestedNameSpecifierLoc &NNSLoc) {
     assert(NNSLoc.hasQualifier());
-    auto NameSpecifierTokens =
-        Builder.getRange(getLocalSourceRange(NNSLoc)).drop_back();
-    switch (getNameSpecifierKind(*NNSLoc.getNestedNameSpecifier())) {
-    case syntax::NodeKind::GlobalNameSpecifier:
+    switch (NNSLoc.getNestedNameSpecifier().getKind()) {
+    case NestedNameSpecifier::Kind::Global:
       return new (allocator()) syntax::GlobalNameSpecifier;
-    case syntax::NodeKind::IdentifierNameSpecifier: {
-      assert(NameSpecifierTokens.size() == 1);
-      Builder.markChildToken(NameSpecifierTokens.begin(),
-                             syntax::NodeRole::Unknown);
-      auto *NS = new (allocator()) syntax::IdentifierNameSpecifier;
-      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
-      return NS;
-    }
-    case syntax::NodeKind::SimpleTemplateNameSpecifier: {
-      // TODO: Build `SimpleTemplateNameSpecifier` children and implement
-      // accessors to them.
-      // Be aware, we cannot do that simply by calling `TraverseTypeLoc`,
-      // some `TypeLoc`s have inside them the previous name specifier and
-      // we want to treat them independently.
-      auto *NS = new (allocator()) syntax::SimpleTemplateNameSpecifier;
-      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
-      return NS;
-    }
-    case syntax::NodeKind::DecltypeNameSpecifier: {
-      const auto TL = NNSLoc.getTypeLoc().castAs<DecltypeTypeLoc>();
-      if (!RecursiveASTVisitor::TraverseDecltypeTypeLoc(TL))
-        return nullptr;
-      auto *NS = new (allocator()) syntax::DecltypeNameSpecifier;
-      // TODO: Implement accessor to `DecltypeNameSpecifier` inner
-      // `DecltypeTypeLoc`.
-      // For that add mapping from `TypeLoc` to `syntax::Node*` then:
-      // Builder.markChild(TypeLoc, syntax::NodeRole);
-      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
-      return NS;
+
+    case NestedNameSpecifier::Kind::Namespace:
+      return buildIdentifier(NNSLoc.getLocalSourceRange(), /*DropBack=*/true);
+
+    case NestedNameSpecifier::Kind::Type: {
+      TypeLoc TL = NNSLoc.castAsTypeLoc();
+      switch (TL.getTypeLocClass()) {
+      case TypeLoc::Record:
+      case TypeLoc::InjectedClassName:
+      case TypeLoc::Enum:
+        return buildIdentifier(TL.castAs<TagTypeLoc>().getNameLoc());
+      case TypeLoc::Typedef:
+        return buildIdentifier(TL.castAs<TypedefTypeLoc>().getNameLoc());
+      case TypeLoc::UnresolvedUsing:
+        return buildIdentifier(
+            TL.castAs<UnresolvedUsingTypeLoc>().getNameLoc());
+      case TypeLoc::Using:
+        return buildIdentifier(TL.castAs<UsingTypeLoc>().getNameLoc());
+      case TypeLoc::DependentName:
+        return buildIdentifier(TL.castAs<DependentNameTypeLoc>().getNameLoc());
+      case TypeLoc::TemplateSpecialization: {
+        auto TST = TL.castAs<TemplateSpecializationTypeLoc>();
+        SourceLocation BeginLoc = TST.getTemplateKeywordLoc();
+        if (BeginLoc.isInvalid())
+          BeginLoc = TST.getTemplateNameLoc();
+        return buildSimpleTemplateName({BeginLoc, TST.getEndLoc()});
+      }
+      case TypeLoc::DependentTemplateSpecialization: {
+        auto DT = TL.castAs<DependentTemplateSpecializationTypeLoc>();
+        SourceLocation BeginLoc = DT.getTemplateKeywordLoc();
+        if (BeginLoc.isInvalid())
+          BeginLoc = DT.getTemplateNameLoc();
+        return buildSimpleTemplateName({BeginLoc, DT.getEndLoc()});
+      }
+      case TypeLoc::Decltype: {
+        const auto DTL = TL.castAs<DecltypeTypeLoc>();
+        if (!RecursiveASTVisitor::TraverseDecltypeTypeLoc(
+                DTL, /*TraverseQualifier=*/true))
+          return nullptr;
+        auto *NS = new (allocator()) syntax::DecltypeNameSpecifier;
+        // TODO: Implement accessor to `DecltypeNameSpecifier` inner
+        // `DecltypeTypeLoc`.
+        // For that add mapping from `TypeLoc` to `syntax::Node*` then:
+        // Builder.markChild(TypeLoc, syntax::NodeRole);
+        Builder.foldNode(Builder.getRange(DTL.getLocalSourceRange()), NS,
+                         nullptr);
+        return NS;
+      }
+      default:
+        return buildIdentifier(TL.getLocalSourceRange());
+      }
     }
     default:
-      llvm_unreachable("getChildKind() does not return this value");
+      // FIXME: Support Microsoft's __super
+      llvm::report_fatal_error("We don't yet support the __super specifier",
+                               true);
     }
   }
 
@@ -1019,12 +1013,16 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) {
     if (!QualifierLoc)
       return true;
-    for (auto It = QualifierLoc; It; It = It.getPrefix()) {
+    for (auto It = QualifierLoc; It; /**/) {
       auto *NS = buildNameSpecifier(It);
       if (!NS)
         return false;
       Builder.markChild(NS, syntax::NodeRole::ListElement);
       Builder.markChildToken(It.getEndLoc(), syntax::NodeRole::ListDelimiter);
+      if (TypeLoc TL = It.getAsTypeLoc())
+        It = TL.getPrefix();
+      else
+        It = It.getAsNamespaceAndPrefix().Prefix;
     }
     Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()),
                      new (allocator()) syntax::NestedNameSpecifier,
@@ -1328,7 +1326,7 @@ public:
 
   // FIXME: Deleting the `TraverseParenTypeLoc` override doesn't change test
   // results. Find test coverage or remove it.
-  bool TraverseParenTypeLoc(ParenTypeLoc L) {
+  bool TraverseParenTypeLoc(ParenTypeLoc L, bool TraverseQualifier) {
     // We reverse order of traversal to get the proper syntax structure.
     if (!WalkUpFromParenTypeLoc(L))
       return false;
@@ -1391,7 +1389,8 @@ public:
     return WalkUpFromFunctionTypeLoc(L);
   }
 
-  bool TraverseMemberPointerTypeLoc(MemberPointerTypeLoc L) {
+  bool TraverseMemberPointerTypeLoc(MemberPointerTypeLoc L,
+                                    bool TraverseQualifier) {
     // In the source code "void (Y::*mp)()" `MemberPointerTypeLoc` corresponds
     // to "Y::*" but it points to a `ParenTypeLoc` that corresponds to
     // "(Y::*mp)" We thus reverse the order of traversal to get the proper
