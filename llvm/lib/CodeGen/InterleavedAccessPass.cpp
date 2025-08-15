@@ -601,6 +601,21 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
     }
   }
 
+  // Masks that are assembled from bitwise AND.
+  if (auto *AndOp = dyn_cast<BinaryOperator>(WideMask);
+      AndOp && AndOp->getOpcode() == Instruction::And) {
+    auto [MaskLHS, GapMaskLHS] =
+        getMask(AndOp->getOperand(0), Factor, LeafValueEC);
+    auto [MaskRHS, GapMaskRHS] =
+        getMask(AndOp->getOperand(1), Factor, LeafValueEC);
+    if (!MaskLHS || !MaskRHS)
+      return {nullptr, GapMask};
+    // Using IRBuilder here so that any trivial constants could be folded right
+    // away.
+    return {IRBuilder<>(AndOp).CreateAnd(MaskLHS, MaskRHS),
+            GapMaskLHS & GapMaskRHS};
+  }
+
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
     if (auto *Splat = ConstMask->getSplatValue())
       // All-ones or all-zeros mask.

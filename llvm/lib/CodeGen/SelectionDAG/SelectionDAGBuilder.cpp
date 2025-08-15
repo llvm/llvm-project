@@ -7990,6 +7990,43 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     HasTailCall = true;
     return;
   }
+  case Intrinsic::amdgcn_call_whole_wave: {
+    TargetLowering::ArgListTy Args;
+
+    // The first argument is the callee. Skip it when assembling the call args.
+    TargetLowering::ArgListEntry Arg;
+    for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
+      Arg.Node = getValue(I.getArgOperand(Idx));
+      Arg.Ty = I.getArgOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+
+    SDValue ConvControlToken;
+    if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+      auto *Token = Bundle->Inputs[0].get();
+      ConvControlToken = getValue(Token);
+    }
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(getRoot())
+        .setCallee(CallingConv::AMDGPU_Gfx_WholeWave, I.getType(),
+                   getValue(I.getArgOperand(0)), std::move(Args))
+        .setTailCall(false)
+        .setIsPreallocated(
+            I.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
+        .setConvergent(I.isConvergent())
+        .setConvergenceControlToken(ConvControlToken);
+    CLI.CB = &I;
+
+    std::pair<SDValue, SDValue> Result =
+        lowerInvokable(CLI, /*EHPadBB=*/nullptr);
+
+    if (Result.first.getNode())
+      setValue(&I, Result.first);
+    return;
+  }
   case Intrinsic::ptrmask: {
     SDValue Ptr = getValue(I.getOperand(0));
     SDValue Mask = getValue(I.getOperand(1));
@@ -10981,6 +11018,8 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
 /// migrated to using LowerCall, this hook should be integrated into SDISel.
 std::pair<SDValue, SDValue>
 TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
+  LLVMContext &Context = CLI.RetTy->getContext();
+
   // Handle the incoming return values from the call.
   CLI.Ins.clear();
   SmallVector<Type *, 4> RetOrigTys;
@@ -11004,8 +11043,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     for (size_t i = 0, e = OldRetTys.size(); i != e; ++i) {
       EVT RetVT = OldRetTys[i];
       uint64_t Offset = OldOffsets[i];
-      MVT RegisterVT = getRegisterType(CLI.RetTy->getContext(), RetVT);
-      unsigned NumRegs = getNumRegisters(CLI.RetTy->getContext(), RetVT);
+      MVT RegisterVT = getRegisterType(Context, RetVT);
+      unsigned NumRegs = getNumRegisters(Context, RetVT);
       unsigned RegisterVTByteSZ = RegisterVT.getSizeInBits() / 8;
       RetOrigTys.append(NumRegs, OldRetOrigTys[i]);
       RetTys.append(NumRegs, RegisterVT);
@@ -11019,7 +11058,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   bool CanLowerReturn =
       this->CanLowerReturn(CLI.CallConv, CLI.DAG.getMachineFunction(),
-                           CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
+                           CLI.IsVarArg, Outs, Context, CLI.RetTy);
 
   SDValue DemoteStackSlot;
   int DemoteStackIdx = -100;
@@ -11032,8 +11071,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     DemoteStackIdx =
         MF.getFrameInfo().CreateStackObject(TySize, Alignment, false);
-    Type *StackSlotPtrType =
-        PointerType::get(CLI.RetTy->getContext(), DL.getAllocaAddrSpace());
+    Type *StackSlotPtrType = PointerType::get(Context, DL.getAllocaAddrSpace());
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getFrameIndexTy(DL));
     ArgListEntry Entry;
@@ -11055,7 +11093,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;
     CLI.getArgs()[0].IndirectType = CLI.RetTy;
-    CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
+    CLI.RetTy = Type::getVoidTy(Context);
 
     // sret demotion isn't compatible with tail-calls, since the sret argument
     // points into the callers stack frame.
@@ -11071,10 +11109,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           Flags.setInConsecutiveRegsLast();
       }
       EVT VT = RetTys[I];
-      MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                     CLI.CallConv, VT);
-      unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
-                                                       CLI.CallConv, VT);
+      MVT RegisterVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
+      unsigned NumRegs =
+          getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
         ISD::InputArg Ret(Flags, RegisterVT, VT, RetOrigTys[I],
                           CLI.IsReturnValueUsed, ISD::InputArg::NoArgIndex, 0);
@@ -11102,7 +11139,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         ISD::ArgFlagsTy Flags;
         Flags.setSwiftError();
         ISD::InputArg Ret(Flags, getPointerTy(DL), EVT(getPointerTy(DL)),
-                          PointerType::getUnqual(CLI.RetTy->getContext()),
+                          PointerType::getUnqual(Context),
                           /*Used=*/true, ISD::InputArg::NoArgIndex, 0);
         CLI.Ins.push_back(Ret);
       }
@@ -11213,10 +11250,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       if (NeedsRegBlock)
         Flags.setInConsecutiveRegs();
 
-      MVT PartVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                 CLI.CallConv, VT);
-      unsigned NumParts = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
-                                                        CLI.CallConv, VT);
+      MVT PartVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
+      unsigned NumParts =
+          getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
       SmallVector<SDValue, 4> Parts(NumParts);
       ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
@@ -11346,10 +11382,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
     for (EVT VT : RetTys) {
-      MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                     CLI.CallConv, VT);
-      unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
-                                                       CLI.CallConv, VT);
+      MVT RegisterVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
+      unsigned NumRegs =
+          getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
 
       ReturnValues.push_back(getCopyFromParts(
           CLI.DAG, CLI.DL, &InVals[CurReg], NumRegs, RegisterVT, VT, nullptr,
