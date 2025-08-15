@@ -2633,19 +2633,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
   fixNonInductionPHIs(State);
 
-  // After vectorization, the exit blocks of the original loop will have
-  // additional predecessors. Invalidate SCEVs for the exit phis in case SE
-  // looked through single-entry phis.
-  SmallVector<BasicBlock *> ExitBlocks;
-  OrigLoop->getExitBlocks(ExitBlocks);
-  for (BasicBlock *Exit : ExitBlocks)
-    for (PHINode &PN : Exit->phis())
-      PSE.getSE()->forgetLcssaPhiWithNewPredecessor(OrigLoop, &PN);
-
-  // Forget the original basic block.
-  PSE.getSE()->forgetLoop(OrigLoop);
-  PSE.getSE()->forgetBlockAndLoopDispositions();
-
   // Don't apply optimizations below when no (vector) loop remains, as they all
   // require one at the moment.
   VPBasicBlock *HeaderVPBB =
@@ -7350,6 +7337,21 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
          "final VPlan is invalid");
+
+  // After vectorization, the exit blocks of the original loop will have
+  // additional predecessors. Invalidate SCEVs for the exit phis in case SE
+  // looked through single-entry phis.
+  ScalarEvolution &SE = *PSE.getSE();
+  for (VPIRBasicBlock *Exit : BestVPlan.getExitBlocks()) {
+    if (Exit->getNumPredecessors() == 0)
+      continue;
+    for (VPRecipeBase &PhiR : Exit->phis())
+      SE.forgetLcssaPhiWithNewPredecessor(
+          OrigLoop, cast<PHINode>(&cast<VPIRPhi>(PhiR).getInstruction()));
+  }
+  // Forget the original loop and block dispositions.
+  SE.forgetLoop(OrigLoop);
+  SE.forgetBlockAndLoopDispositions();
 
   ILV.printDebugTracesAtStart();
 
