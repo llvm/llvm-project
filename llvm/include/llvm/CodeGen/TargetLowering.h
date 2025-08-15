@@ -327,7 +327,7 @@ public:
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
           IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
-    ArgListEntry(Value *Val, SDValue Node = SDValue())
+    explicit ArgListEntry(Value *Val, SDValue Node = SDValue())
         : ArgListEntry(Val, Node, Val->getType()) {}
 
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
