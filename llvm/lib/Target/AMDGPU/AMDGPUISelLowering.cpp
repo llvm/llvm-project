@@ -4077,13 +4077,15 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
 // legal the vector legaliser only partially scalarises the
 // vector operations and the and is not elided. This function
 // scalarises the AND for this optimisation case.
-static SDValue getShiftForReduction(unsigned ShiftOpc, SDValue LHS, SDValue RHS,
-                                    SelectionDAG &DAG) {
-  assert(
-      (ShiftOpc == ISD::SRA || ShiftOpc == ISD::SRL || ShiftOpc == ISD::SHL) &&
-      "Expected shift Opcode.");
+static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
+  assert((N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL ||
+          N->getOpcode() == ISD::SHL) &&
+         "Expected shift Opcode.");
 
-  SDLoc SL = SDLoc(RHS);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDLoc SL = SDLoc(N);
   if (RHS->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
 
@@ -4091,8 +4093,8 @@ static SDValue getShiftForReduction(unsigned ShiftOpc, SDValue LHS, SDValue RHS,
   if (VAND->getOpcode() != ISD::AND)
     return SDValue();
 
-  ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
-  if (!CRRHS)
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
+  if (!CRHS)
     return SDValue();
 
   SDValue LHSAND = VAND.getOperand(0);
@@ -4105,19 +4107,29 @@ static SDValue getShiftForReduction(unsigned ShiftOpc, SDValue LHS, SDValue RHS,
   if (!CANDL || !CANDR || RHSAND->getConstantOperandVal(0) != 0x1f ||
       RHSAND->getConstantOperandVal(1) != 0x1f)
     return SDValue();
+
   // Get the non-const AND operands and produce scalar AND
   const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
   const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, Zero);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
   SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
-  SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
-  SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
   uint64_t AndIndex = RHS->getConstantOperandVal(1);
-  if (AndIndex == 0 || AndIndex == 1)
-    return DAG.getNode(ShiftOpc, SL, MVT::i32, Trunc,
-                       AndIndex == 0 ? LoAnd : HiAnd, RHS->getFlags());
+
+  if (AndIndex == 0) {
+    SDValue Lo =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, Zero);
+    SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+    return DAG.getNode(N->getOpcode(), SL, MVT::i32, Trunc, LoAnd,
+                       RHS->getFlags());
+  }
+
+  if (AndIndex == 1) {
+    SDValue Hi =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+    SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+    return DAG.getNode(N->getOpcode(), SL, MVT::i32, Trunc, HiAnd,
+                       RHS->getFlags());
+  }
 
   return SDValue();
 }
@@ -4131,8 +4143,8 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
 
-  if (SDValue SS = getShiftForReduction(ISD::SHL, LHS, RHS, DAG))
-    return SS;
+  if (SDValue R = getShiftForReduction(N, DAG))
+    return R;
 
   unsigned RHSVal;
   if (CRHS) {
@@ -4234,7 +4246,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
 
-  if (SDValue SS = getShiftForReduction(ISD::SRA, LHS, RHS, DAG))
+  if (SDValue SS = getShiftForReduction(N, DAG))
     return SS;
 
   if (VT.getScalarType() != MVT::i64)
@@ -4339,7 +4351,7 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SDLoc SL(N);
   unsigned RHSVal;
 
-  if (SDValue SS = getShiftForReduction(ISD::SRL, LHS, RHS, DAG))
+  if (SDValue SS = getShiftForReduction(N, DAG))
     return SS;
 
   if (CRHS) {
