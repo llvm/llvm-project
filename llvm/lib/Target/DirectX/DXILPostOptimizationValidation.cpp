@@ -326,24 +326,24 @@ static bool validateRootSignatureBindings(Module &M,
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
   bool HasBindings = false;
-    SmallVector<ResourceInfo::ResourceBinding> RDs =
-        getRootDescriptorsBindingInfo(RSD, Visibility);
-    for (const auto &ResList :
-         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
-          std::make_pair(ResourceClass::UAV, DRM.uavs()),
-          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
-          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
-      for (auto Res : ResList.second) {
-        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
-        llvm::hlsl::BindingInfo::BindingRange ResRange(
-            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
+  SmallVector<ResourceInfo::ResourceBinding> RDs =
+      getRootDescriptorsBindingInfo(RSD, Visibility);
+  for (const auto &ResList :
+       {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+        std::make_pair(ResourceClass::UAV, DRM.uavs()),
+        std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+        std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+    for (auto Res : ResList.second) {
+      llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+      llvm::hlsl::BindingInfo::BindingRange ResRange(
+          ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
-        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
-          reportRegNotBound(M, ResList.first, ResBinding);
-        else
-          HasBindings = true;
-      }
-      checkInvalidHandleTy(M, RDs, ResList.second);
+      if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
+        reportRegNotBound(M, ResList.first, ResBinding);
+      else
+        HasBindings = true;
+    }
+    checkInvalidHandleTy(M, RDs, ResList.second);
   }
   return HasBindings;
 }

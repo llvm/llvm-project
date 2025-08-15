@@ -13,5 +13,5 @@ attributes #0 = { noinline nounwind "exp-shader"="cs" "hlsl.numthreads"="1,2,1" 
 !0 = !{ptr @CSMain, !1, i32 2}
 !1 = !{!2, !3, !4}
 !2 = !{!"RootConstants", i32 0, i32 2, i32 0, i32 4}
-!3 = !{ !"RootFlags", i32 294 } ; 32 = deny_pixel/hull/vertex/amplification_shader_root_access
+!3 = !{ !"RootFlags", i32 294 } ; 294 = deny_pixel/hull/vertex/amplification_shader_root_access
 !4 = !{ !"RootSRV", i32 0, i32 1, i32 0, i32 0 }
