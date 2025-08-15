@@ -1095,8 +1095,8 @@ prepareAndFilterRanges(const SmallVectorImpl<CharSourceRange> &Ranges,
 
     unsigned StartColumn = SM.getExpansionColumnNumber(Begin);
     unsigned EndColumn = SM.getExpansionColumnNumber(End);
-    assert(StartColumn && "StartColumn has a value of 0");
-    assert(EndColumn && "EndColumn has a value of 0");
+    assert(StartColumn && "StartColumn must be valid, 0 is invalid");
+    assert(EndColumn && "EndColumn must be valid, 0 is invalid");
     if (R.isTokenRange())
       EndColumn += Lexer::MeasureTokenLength(End, SM, LangOpts);
 
