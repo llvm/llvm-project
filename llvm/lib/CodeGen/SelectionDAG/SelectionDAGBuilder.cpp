@@ -6726,6 +6726,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(!VT.isFloatingPoint() &&
            "Float point type not supported yet fallback implementation");
 
+    Type *CurrType = VT.getTypeForEVT(*Context);
+    if (CurrType->isPointerTy()) {
+      unsigned AS = CurrType->getPointerAddressSpace();
+      if (DAG.getDataLayout().isNonIntegralAddressSpace(AS)) {
+        report_fatal_error(
+            "llvm.ct.select: non-integral pointers are not supported");
+      }
+    }
+
     setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
     return;
   }
