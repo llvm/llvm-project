@@ -2332,9 +2332,9 @@ libc_support_library(
     hdrs = ["src/__support/math/cbrtf.h"],
     deps = [
         ":__support_fputil_double_double",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_fenv_impl",
         ":__support_fputil_dyadic_float",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_polyeval",
         ":__support_integer_literals",
     ],
 )
@@ -2343,8 +2343,8 @@ libc_support_library(
     name = "__support_math_cos",
     hdrs = ["src/__support/math/cos.h"],
     deps = [
-        ":__support_fputil_multiply_add",
         ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_range_reduction_double",
@@ -2368,10 +2368,10 @@ libc_support_library(
     name = "__support_math_cosf16",
     hdrs = ["src/__support/math/cosf16.h"],
     deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_fenv_impl",
         ":__support_fputil_cast",
         ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_math_sincosf16_utils",
         ":errno",
@@ -2718,8 +2718,8 @@ libc_support_library(
     name = "__support_math_sinhfcoshf_utils",
     hdrs = ["src/__support/math/sinhfcoshf_utils.h"],
     deps = [
-        ":__support_math_exp10f_utils",
         ":__support_fputil_multiply_add",
+        ":__support_math_exp10f_utils",
     ],
 )
 
