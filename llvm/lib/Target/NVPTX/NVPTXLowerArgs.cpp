@@ -515,10 +515,14 @@ void copyByValParam(Function &F, Argument &Arg) {
       Arg.getParamAlign().value_or(DL.getPrefTypeAlign(StructType)));
   Arg.replaceAllUsesWith(AllocA);
 
-  Value *ArgInParam =
+  CallInst *ArgInParam =
       IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
                           {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
                           &Arg, {}, Arg.getName());
+
+  if (MaybeAlign ParamAlign = Arg.getParamAlign())
+    ArgInParam->addRetAttr(
+        Attribute::getWithAlignment(ArgInParam->getContext(), *ParamAlign));
 
   // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
   // addrspacecast preserves alignment.  Since params are constant, this load
@@ -549,9 +553,13 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
     SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
 
     IRBuilder<> IRB(&*FirstInst);
-    Value *ArgInParamAS = IRB.CreateIntrinsic(
+    CallInst *ArgInParamAS = IRB.CreateIntrinsic(
         Intrinsic::nvvm_internal_addrspace_wrap,
         {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()}, {Arg});
+
+    if (MaybeAlign ParamAlign = Arg->getParamAlign())
+      ArgInParamAS->addRetAttr(
+          Attribute::getWithAlignment(ArgInParamAS->getContext(), *ParamAlign));
 
     for (Use *U : UsesToUpdate)
       convertToParamAS(U, ArgInParamAS, HasCvtaParam, IsGridConstant);
@@ -585,6 +593,10 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
         IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
                             {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()},
                             Arg, {}, Arg->getName() + ".param");
+
+    if (MaybeAlign ParamAlign = Arg->getParamAlign())
+      ParamSpaceArg->addRetAttr(
+          Attribute::getWithAlignment(ParamSpaceArg->getContext(), *ParamAlign));
 
     // Cast param address to generic address space.
     Value *GenericArg = IRB.CreateAddrSpaceCast(
