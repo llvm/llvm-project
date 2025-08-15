@@ -598,6 +598,17 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static inline Floating abs(InterpState &S, const Floating &In) {
+  if (!In.isNegative())
+    return In;
+
+  Floating Output = S.allocFloat(In.getSemantics());
+  APFloat New = In.getAPFloat();
+  New.changeSign();
+  Output.copy(New);
+  return Output;
+}
+
 // The C standard says "fabs raises no floating-point exceptions,
 // even if x is a signaling NaN. The returned value is independent of
 // the current rounding direction mode."  Therefore constant folding can
@@ -606,16 +617,7 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame) {
   const Floating &Val = S.Stk.pop<Floating>();
-  APFloat F = Val.getAPFloat();
-  if (!F.isNegative()) {
-    S.Stk.push<Floating>(Val);
-    return true;
-  }
-
-  Floating Result = S.allocFloat(Val.getSemantics());
-  F.changeSign();
-  Result.copy(F);
-  S.Stk.push<Floating>(Result);
+  S.Stk.push<Floating>(abs(S, Val));
   return true;
 }
 
@@ -1682,6 +1684,57 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
     }
     pushInteger(S, Result.toAPSInt(), Call->getType());
   });
+
+  return true;
+}
+
+static bool interp__builtin_elementwise_abs(InterpState &S, CodePtr OpPC,
+                                            const InterpFrame *Frame,
+                                            const CallExpr *Call,
+                                            unsigned BuiltinID) {
+  assert(Call->getNumArgs() == 1);
+  QualType Ty = Call->getArg(0)->getType();
+  if (Ty->isIntegerType()) {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    APSInt Val = popToAPSInt(S.Stk, ArgT);
+
+    pushInteger(S, Val.abs(), Call->getType());
+    return true;
+  }
+
+  if (Ty->isFloatingType()) {
+    Floating Val = S.Stk.pop<Floating>();
+    Floating Result = abs(S, Val);
+    S.Stk.push<Floating>(Result);
+    return true;
+  }
+
+  // Otherwise, the argument must be a vector.
+  assert(Call->getArg(0)->getType()->isVectorType());
+  const Pointer &Arg = S.Stk.pop<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+  // we can either have a vector of integer or a vector of floating point
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (ElemType->isIntegerType()) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = T::from(static_cast<T>(
+            APSInt(Arg.elem<T>(I).toAPSInt().abs(),
+                   ElemType->isUnsignedIntegerOrEnumerationType())));
+      });
+    } else {
+      Floating Val = Arg.elem<Floating>(I);
+      Dst.elem<Floating>(I) = abs(S, Val);
+    }
+  }
+  Dst.initializeAllElements();
 
   return true;
 }
@@ -2773,6 +2826,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_bitreverse:
     return interp__builtin_elementwise_popcount(S, OpPC, Frame, Call,
                                                 BuiltinID);
+
+  case Builtin::BI__builtin_elementwise_abs:
+    return interp__builtin_elementwise_abs(S, OpPC, Frame, Call, BuiltinID);
 
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemcpy:
