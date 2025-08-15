@@ -182,37 +182,25 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
-  TargetLowering::ArgListEntry DstEntry;
-  DstEntry.Ty = PointerType::getUnqual(*DAG.getContext());
-  DstEntry.Node = Dst;
   TargetLowering::ArgListTy Args;
-  Args.push_back(DstEntry);
+  Args.emplace_back(Dst, PointerType::getUnqual(*DAG.getContext()));
 
   RTLIB::Libcall NewLC;
   switch (LC) {
   case RTLIB::MEMCPY: {
     NewLC = RTLIB::SC_MEMCPY;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMMOVE: {
     NewLC = RTLIB::SC_MEMMOVE;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMSET: {
     NewLC = RTLIB::SC_MEMSET;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
-    Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    Args.emplace_back(DAG.getZExtOrTrunc(Src, DL, MVT::i32),
+                      Type::getInt32Ty(*DAG.getContext()));
     break;
   }
   default:
@@ -221,10 +209,7 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
 
   EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
   SDValue Symbol = DAG.getExternalSymbol(TLI->getLibcallName(NewLC), PointerVT);
-  TargetLowering::ArgListEntry SizeEntry;
-  SizeEntry.Node = Size;
-  SizeEntry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-  Args.push_back(SizeEntry);
+  Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
