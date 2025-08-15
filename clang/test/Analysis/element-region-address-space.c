@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
-// RUN:   -analyzer-checker=core,unix -verify %s
+// RUN:   -Wno-incompatible-library-redeclaration \
+// RUN:   -analyzer-checker=core,unix.cstring.BadSizeArg -verify %s
 
 // expected-no-diagnostics
 //
@@ -17,10 +18,10 @@ memcpy(ADDRESS_SPACE_64BITS void *,
        ADDRESS_SPACE_32BITS const void *,
        long unsigned int);
 
-typedef struct {
-  char m[1];
-} k;
+ADDRESS_SPACE_64BITS struct {
+  char m[16];
+} n;
 
-void l(ADDRESS_SPACE_32BITS char *p, ADDRESS_SPACE_64BITS k *n) {
-  memcpy(&n->m[0], p, 4);
+void avoid_cstring_checker_crash(ADDRESS_SPACE_32BITS char *p) {
+  memcpy(&n.m[0], p, 4); // no-crash
 }
