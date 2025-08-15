@@ -1703,7 +1703,7 @@ Expected<uint64_t> MCFillFragmentRef::materialize(MCCASReader &Reader,
 }
 
 Expected<MCLEBFragmentRef>
-MCLEBFragmentRef::create(MCCASBuilder &MB, const MCLEBFragment &F,
+MCLEBFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                          unsigned FragmentSize,
                          ArrayRef<char> FragmentContents) {
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
