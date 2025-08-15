@@ -15,6 +15,7 @@
 #include "SIPostRABundler.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -151,7 +152,12 @@ bool SIPostRABundler::run(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     bool HasIGLPInstrs = llvm::any_of(MBB.instrs(), [](MachineInstr &MI) {
       unsigned Opc = MI.getOpcode();
-      return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+      // Bypass a MBB with SCHED_BARRIER as well to make it honored.
+      // If SCHED_BARRIER is embedded between memory operations in a bundle,
+      // that SCHED_BARRIER is not picked up by IGLPmutation in post mi
+      // scheduler phase.
+      return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT ||
+             Opc == AMDGPU::SCHED_BARRIER;
     });
 
     // Don't cluster with IGLP instructions.
@@ -179,20 +185,20 @@ bool SIPostRABundler::run(MachineFunction &MF) {
         Next = std::next(I);
 
         assert(BundleEnd != I);
-        if (!canBundle(*BundleEnd, *I)) {
-          // Do not allow even meta instructions (e.g. SCHED_BARRIER) bundled
-          // between memory operations.
-          // SCHED_BARRIERs are added by users for a finer control over schedule
-          // than bundling.
-          // Examples of meta instructions: WAVE_BARRIER, SCHED_{GROUP_}BARRIER,
-          // IGLP_OPT, amdgcn.unreachable.
+        if (canBundle(*BundleEnd, *I)) {
+          BundleEnd = I;
+          if (I->getNumExplicitDefs() != 0)
+            Defs.insert(I->defs().begin()->getReg());
+          ++ClauseLength;
+        } else if (!!I->isMetaInstruction()) {
+          // Allow meta instructions in between bundle candidates, but do not
+          // start or end a bundle on one.
+          //
+          // TODO: It may be better to move meta instructions like dbg_value
+          // after the bundle. We're relying on the memory legalizer to unbundle
+          // these.
           break;
         }
-
-        BundleEnd = I;
-        if (I->getNumExplicitDefs() != 0)
-          Defs.insert(I->defs().begin()->getReg());
-        ++ClauseLength;
       }
 
       Next = std::next(BundleEnd);
