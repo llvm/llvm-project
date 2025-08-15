@@ -2,7 +2,7 @@
 
 using namespace llvm;
 
-namespace lldb_dap::protocol {
+namespace lldb_dap::protocol::dap {
 
 bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
               llvm::json::Path P) {
@@ -33,7 +33,7 @@ llvm::json::Value toJSON(const SourceLLDBData &SLD) {
   return result;
 }
 
-bool fromJSON(const llvm::json::Value &Params, DAPSymbol &DS,
+bool fromJSON(const llvm::json::Value &Params, Symbol &DS,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("userId", DS.userId) && O.map("isDebug", DS.isDebug) &&
@@ -44,7 +44,7 @@ bool fromJSON(const llvm::json::Value &Params, DAPSymbol &DS,
          O.map("size", DS.size) && O.map("name", DS.name);
 }
 
-llvm::json::Value toJSON(const DAPSymbol &DS) {
+llvm::json::Value toJSON(const Symbol &DS) {
   json::Object result{
       {"userId", DS.userId},
       {"isDebug", DS.isDebug},
@@ -60,4 +60,4 @@ llvm::json::Value toJSON(const DAPSymbol &DS) {
   return result;
 }
 
-} // namespace lldb_dap::protocol
+} // namespace lldb_dap::protocol::dap
