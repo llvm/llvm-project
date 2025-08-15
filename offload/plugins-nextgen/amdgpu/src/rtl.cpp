@@ -2537,6 +2537,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           getAgent(), (uint64_t)Size);
   }
 
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     // TODO: Implement this function.

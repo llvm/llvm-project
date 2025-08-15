@@ -295,6 +295,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "dataExchangeImpl not supported");
   }
 
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
