@@ -123,7 +123,7 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
