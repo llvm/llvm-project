@@ -3099,7 +3099,7 @@ public:
   bool setDeserializedSafeBufferOptOutMap(
       const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
 
-  /// Whether seen pp-directives which may change the preprocessing state.
+  /// Whether we've seen pp-directives which may have changed the preprocessing state.
   bool hasSeenNoTrivialPPDirective() const;
 
 private:
