@@ -10811,9 +10811,9 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
     return QualType();
 
   if (compType.isNull() || !compType->isArithmeticType()) {
-    InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-    return QualType();
+    return ResultTy;
   }
   if (IsDiv) {
     DetectPrecisionLossInComplexDivision(*this, RHS.get()->getType(), Loc);
@@ -10878,10 +10878,10 @@ QualType Sema::CheckRemainderOperands(
   if (compType.isNull() ||
       (!compType->isIntegerType() &&
        !(getLangOpts().HLSL && compType->isFloatingType()))) {
-    InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(*this, Loc, LHS, RHS,
                         IsCompAssign ? BO_RemAssign : BO_Rem);
-    return QualType();
+    return ResultTy;
   }
   DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, false /* IsDiv */);
   return compType;
@@ -11238,9 +11238,9 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
     } else if (PExp->getType()->isObjCObjectPointerType()) {
       isObjCPointer = true;
     } else {
-      InvalidOperands(Loc, LHS, RHS);
+      QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
       diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-      return QualType();
+      return ResultTy;
     }
   }
   assert(PExp->getType()->isAnyPointerType());
@@ -11443,9 +11443,9 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
     }
   }
 
-  InvalidOperands(Loc, LHS, RHS);
+  QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
   diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-  return QualType();
+  return ResultTy;
 }
 
 static bool isScopedEnumerationType(QualType T) {
@@ -11794,9 +11794,9 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
   if ((!LHSType->isFixedPointOrIntegerType() &&
        !LHSType->hasIntegerRepresentation()) ||
       !RHSType->hasIntegerRepresentation()) {
-    InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-    return QualType();
+    return ResultTy;
   }
 
   // C++0x: Don't allow scoped enums. FIXME: Use something better than
@@ -12364,9 +12364,9 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
   if (Type.isNull()) {
-    S.InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = S.InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(S, Loc, LHS, RHS, BO_Cmp);
-    return QualType();
+    return ResultTy;
   }
 
   std::optional<ComparisonCategoryType> CCT =
@@ -12400,9 +12400,9 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
   if (Type.isNull()) {
-    S.InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = S.InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(S, Loc, LHS, RHS, Opc);
-    return QualType();
+    return ResultTy;
   }
   assert(Type->isArithmeticType() || Type->isEnumeralType());
 
@@ -13413,9 +13413,9 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (!compType.isNull() && compType->isIntegralOrUnscopedEnumerationType())
     return compType;
-  InvalidOperands(Loc, LHS, RHS);
+  QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
   diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-  return QualType();
+  return ResultTy;
 }
 
 // C99 6.5.[13,14]
@@ -13518,17 +13518,17 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // The operands are both contextually converted to type bool.
   ExprResult LHSRes = PerformContextuallyConvertToBool(LHS.get());
   if (LHSRes.isInvalid()) {
-    InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-    return QualType();
+    return ResultTy;
   }
   LHS = LHSRes;
 
   ExprResult RHSRes = PerformContextuallyConvertToBool(RHS.get());
   if (RHSRes.isInvalid()) {
-    InvalidOperands(Loc, LHS, RHS);
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
     diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
-    return QualType();
+    return ResultTy;
   }
   RHS = RHSRes;
 
