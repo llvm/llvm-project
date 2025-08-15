@@ -50,7 +50,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
-#include "clang/Lex/TrivialDirectiveTracer.h"
+#include "clang/Lex/TrivialPPDirectiveTracer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -576,7 +576,7 @@ void Preprocessor::EnterMainSourceFile() {
     // export module M; // error: module declaration must occur
     //                  //        at the start of the translation unit.
     if (getLangOpts().CPlusPlusModules) {
-      auto Tracer = std::make_unique<TrivialDirectiveTracer>(*this);
+      auto Tracer = std::make_unique<TrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
       addPPCallbacks(std::move(Tracer));
       std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
@@ -943,7 +943,7 @@ void Preprocessor::Lex(Token &Result) {
       break;
     case tok::kw_export:
       if (hasSeenNoTrivialPPDirective())
-        Result.setFlag(Token::SeenNoTrivialPPDirective);
+        Result.setFlag(Token::HasSeenNoTrivialPPDirective);
       TrackGMFState.handleExport();
       StdCXXImportSeqState.handleExport();
       ModuleDeclState.handleExport();
@@ -973,7 +973,7 @@ void Preprocessor::Lex(Token &Result) {
           break;
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
           if (hasSeenNoTrivialPPDirective())
-            Result.setFlag(Token::SeenNoTrivialPPDirective);
+            Result.setFlag(Token::HasSeenNoTrivialPPDirective);
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
           break;
@@ -1689,36 +1689,30 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   return nullptr;
 }
 
-/// Whether allow C++ module directive.
 bool Preprocessor::hasSeenNoTrivialPPDirective() const {
   return DirTracer && DirTracer->hasSeenNoTrivialPPDirective();
 }
 
-bool TrivialDirectiveTracer::hasSeenNoTrivialPPDirective() const {
+bool TrivialPPDirectiveTracer::hasSeenNoTrivialPPDirective() const {
   return SeenNoTrivialPPDirective;
 }
 
-void TrivialDirectiveTracer::setSeenNoTrivialPPDirective(bool Val) {
-  if (InMainFile && !SeenNoTrivialPPDirective && Val)
-    SeenNoTrivialPPDirective = Val;
+void TrivialPPDirectiveTracer::setSeenNoTrivialPPDirective() {
+  if (InMainFile && !SeenNoTrivialPPDirective)
+    SeenNoTrivialPPDirective = true;
 }
 
-void TrivialDirectiveTracer::FileChanged(SourceLocation Loc,
-                                         FileChangeReason Reason,
-                                         SrcMgr::CharacteristicKind FileType,
-                                         FileID PrevFID) {
-  setSeenNoTrivialPPDirective(false);
-}
-
-void TrivialDirectiveTracer::LexedFileChanged(
+void TrivialPPDirectiveTracer::LexedFileChanged(
     FileID FID, LexedFileChangeReason Reason,
     SrcMgr::CharacteristicKind FileType, FileID PrevFID, SourceLocation Loc) {
   InMainFile = FID == PP.getSourceManager().getMainFileID();
 }
 
-void TrivialDirectiveTracer::MacroExpands(const Token &MacroNameTok,
-                                          const MacroDefinition &MD,
-                                          SourceRange Range,
-                                          const MacroArgs *Args) {
-  setSeenNoTrivialPPDirective(!MD.getMacroInfo()->isBuiltinMacro());
+void TrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
+                                            const MacroDefinition &MD,
+                                            SourceRange Range,
+                                            const MacroArgs *Args) {
+  // FIXME: Does only enable builtin macro expansion make sense?
+  if (!MD.getMacroInfo()->isBuiltinMacro())
+    setSeenNoTrivialPPDirective();
 }

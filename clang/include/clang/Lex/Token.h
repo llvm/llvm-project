@@ -89,7 +89,8 @@ public:
     IsReinjected = 0x800,        // A phase 4 token that was produced before and
                           // re-added, e.g. via EnterTokenStream. Annotation
                           // tokens are *not* reinjected.
-    SeenNoTrivialPPDirective = 0x1000,
+    HasSeenNoTrivialPPDirective =
+        0x1000, // Seen any 'no-trivial' pp-directives before current position.
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -320,7 +321,7 @@ public:
   bool isEditorPlaceholder() const { return getFlag(IsEditorPlaceholder); }
 
   bool hasSeenNoTrivialPPDirective() const {
-    return getFlag(SeenNoTrivialPPDirective);
+    return getFlag(HasSeenNoTrivialPPDirective);
   }
 };
 

@@ -1,4 +1,4 @@
-//===--- TrivialDirectiveTracer.h -------------------------------*- C++ -*-===//
+//===--- TrivialPPDirectiveTracer.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,38 +6,68 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the TrivialDirectiveTracer interface.
+//  This file defines the TrivialPPDirectiveTracer interface.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LEX_TRIVIAL_DIRECTIVE_TRACER_H
-#define LLVM_CLANG_LEX_TRIVIAL_DIRECTIVE_TRACER_H
+#ifndef LLVM_CLANG_LEX_TRIVIAL_PPDIRECTIVE_TRACER_H
+#define LLVM_CLANG_LEX_TRIVIAL_PPDIRECTIVE_TRACER_H
 
 #include "clang/Lex/PPCallbacks.h"
 
 namespace clang {
 class Preprocessor;
 
-class TrivialDirectiveTracer : public PPCallbacks {
+/// Consider the following code:
+///
+/// # 1 __FILE__ 1 3
+/// export module a;
+///
+/// According to the wording in
+/// [P1857R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p1857r3.html):
+///
+///   A module directive may only appear as the first preprocessing tokens in a
+///   file (excluding the global module fragment.)
+///
+/// and the wording in
+/// [[cpp.pre]](https://eel.is/c++draft/cpp.pre#nt:module-file):
+///   module-file:
+///     pp-global-module-fragment[opt] pp-module group[opt]
+///     pp-private-module-fragment[opt]
+///
+/// `#` is the first pp-token in the translation unit, and it was rejected by
+/// clang, but they really should be exempted from this rule. The goal is to not
+/// allow any preprocessor conditionals or most state changes, but these don't
+/// fit that.
+///
+/// State change would mean most semantically observable preprocessor state,
+/// particularly anything that is order dependent. Global flags like being a
+/// system header/module shouldn't matter.
+///
+/// We should exempt a brunch of directives, even though it violates the current
+/// standard wording.
+///
+/// This class used to trace 'no-trivial' pp-directives in main file, which may
+/// change the preprocessing state.
+///
+/// FIXME: Once the wording of the standard is revised, we need to follow the
+/// wording of the standard. Currently this is just a workaround
+class TrivialPPDirectiveTracer : public PPCallbacks {
   Preprocessor &PP;
+
+  /// Whether preprocessing main file. We only focus on the main file.
   bool InMainFile = true;
+
+  /// Whether one or more conditional, include or other 'no-trivial'
+  /// pp-directives has seen before.
   bool SeenNoTrivialPPDirective = false;
 
-  void setSeenNoTrivialPPDirective(bool Val);
+  void setSeenNoTrivialPPDirective();
 
 public:
-  TrivialDirectiveTracer(Preprocessor &P) : PP(P) {}
+  TrivialPPDirectiveTracer(Preprocessor &P) : PP(P) {}
 
   bool hasSeenNoTrivialPPDirective() const;
-
-  /// Callback invoked whenever a source file is entered or exited.
-  ///
-  /// \param Loc Indicates the new location.
-  /// \param PrevFID the file that was exited if \p Reason is ExitFile or the
-  /// the file before the new one entered for \p Reason EnterFile.
-  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
-                   SrcMgr::CharacteristicKind FileType,
-                   FileID PrevFID = FileID()) override;
 
   /// Callback invoked whenever the \p Lexer moves to a different file for
   /// lexing. Unlike \p FileChanged line number directives and other related
@@ -75,7 +105,7 @@ public:
   void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
                       OptionalFileEntryRef File,
                       const LexEmbedParametersResult &Params) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Callback invoked whenever an inclusion directive of
@@ -128,7 +158,7 @@ public:
                           StringRef RelativePath, const Module *SuggestedModule,
                           bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Callback invoked whenever there was an explicit module-import
@@ -143,125 +173,17 @@ public:
   ///
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Callback invoked when the end of the main file is reached.
   ///
   /// No subsequent callbacks will be made.
-  void EndOfMainFile() override { setSeenNoTrivialPPDirective(true); }
-
-  /// Callback invoked when a \#ident or \#sccs directive is read.
-  /// \param Loc The location of the directive.
-  /// \param str The text of the directive.
-  ///
-  void Ident(SourceLocation Loc, StringRef str) override {
-    setSeenNoTrivialPPDirective(false);
-  }
+  void EndOfMainFile() override { setSeenNoTrivialPPDirective(); }
 
   /// Callback invoked when start reading any pragma directive.
   void PragmaDirective(SourceLocation Loc,
                        PragmaIntroducerKind Introducer) override {}
-
-  /// Callback invoked when a \#pragma comment directive is read.
-  void PragmaComment(SourceLocation Loc, const IdentifierInfo *Kind,
-                     StringRef Str) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma mark comment is read.
-  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma detect_mismatch directive is
-  /// read.
-  void PragmaDetectMismatch(SourceLocation Loc, StringRef Name,
-                            StringRef Value) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma clang __debug directive is read.
-  /// \param Loc The location of the debug directive.
-  /// \param DebugType The identifier following __debug.
-  void PragmaDebug(SourceLocation Loc, StringRef DebugType) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma message directive is read.
-  /// \param Loc The location of the message directive.
-  /// \param Namespace The namespace of the message directive.
-  /// \param Kind The type of the message directive.
-  /// \param Str The text of the message directive.
-  void PragmaMessage(SourceLocation Loc, StringRef Namespace,
-                     PragmaMessageKind Kind, StringRef Str) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma gcc diagnostic push directive
-  /// is read.
-  void PragmaDiagnosticPush(SourceLocation Loc, StringRef Namespace) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma gcc diagnostic pop directive
-  /// is read.
-  void PragmaDiagnosticPop(SourceLocation Loc, StringRef Namespace) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma gcc diagnostic directive is read.
-  void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
-                        diag::Severity mapping, StringRef Str) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Called when an OpenCL extension is either disabled or
-  /// enabled with a pragma.
-  void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
-                             SourceLocation StateLoc, unsigned State) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma warning directive is read.
-  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
-                     ArrayRef<int> Ids) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma warning(push) directive is read.
-  void PragmaWarningPush(SourceLocation Loc, int Level) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma warning(pop) directive is read.
-  void PragmaWarningPop(SourceLocation Loc) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma execution_character_set(push) directive
-  /// is read.
-  void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma execution_character_set(pop) directive
-  /// is read.
-  void PragmaExecCharsetPop(SourceLocation Loc) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma clang assume_nonnull begin directive
-  /// is read.
-  void PragmaAssumeNonNullBegin(SourceLocation Loc) override {
-    setSeenNoTrivialPPDirective(false);
-  }
-
-  /// Callback invoked when a \#pragma clang assume_nonnull end directive
-  /// is read.
-  void PragmaAssumeNonNullEnd(SourceLocation Loc) override {
-    setSeenNoTrivialPPDirective(false);
-  }
 
   /// Called by Preprocessor::HandleMacroExpandedIdentifier when a
   /// macro invocation is found.
@@ -271,7 +193,7 @@ public:
   /// Hook called whenever a macro definition is seen.
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever a macro \#undef is seen.
@@ -282,14 +204,14 @@ public:
   /// MD is released immediately following this callback.
   void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD,
                       const MacroDirective *Undef) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever the 'defined' operator is seen.
   /// \param MD The MacroDirective if the name was a macro, null otherwise.
   void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
                SourceRange Range) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#if is seen.
@@ -300,7 +222,7 @@ public:
   // FIXME: better to pass in a list (or tree!) of Tokens.
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#elif is seen.
@@ -311,7 +233,7 @@ public:
   // FIXME: better to pass in a list (or tree!) of Tokens.
   void Elif(SourceLocation Loc, SourceRange ConditionRange,
             ConditionValueKind ConditionValue, SourceLocation IfLoc) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#ifdef is seen.
@@ -320,7 +242,7 @@ public:
   /// \param MD The MacroDefinition if the name was a macro, null otherwise.
   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
              const MacroDefinition &MD) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#elifdef branch is taken.
@@ -329,7 +251,7 @@ public:
   /// \param MD The MacroDefinition if the name was a macro, null otherwise.
   void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
                const MacroDefinition &MD) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
   /// Hook called whenever an \#elifdef is skipped.
   /// \param Loc the source location of the directive.
@@ -338,7 +260,7 @@ public:
   // FIXME: better to pass in a list (or tree!) of Tokens.
   void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
                SourceLocation IfLoc) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#ifndef is seen.
@@ -347,7 +269,7 @@ public:
   /// \param MD The MacroDefiniton if the name was a macro, null otherwise.
   void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
               const MacroDefinition &MD) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#elifndef branch is taken.
@@ -356,7 +278,7 @@ public:
   /// \param MD The MacroDefinition if the name was a macro, null otherwise.
   void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
                 const MacroDefinition &MD) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
   /// Hook called whenever an \#elifndef is skipped.
   /// \param Loc the source location of the directive.
@@ -365,24 +287,24 @@ public:
   // FIXME: better to pass in a list (or tree!) of Tokens.
   void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
                 SourceLocation IfLoc) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#else is seen.
   /// \param Loc the source location of the directive.
   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
   void Else(SourceLocation Loc, SourceLocation IfLoc) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 
   /// Hook called whenever an \#endif is seen.
   /// \param Loc the source location of the directive.
   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
   void Endif(SourceLocation Loc, SourceLocation IfLoc) override {
-    setSeenNoTrivialPPDirective(true);
+    setSeenNoTrivialPPDirective();
   }
 };
 
 } // namespace clang
 
-#endif // LLVM_CLANG_LEX_TRIVIAL_DIRECTIVE_TRACER_H
+#endif // LLVM_CLANG_LEX_TRIVIAL_PPDIRECTIVE_TRACER_H
