@@ -595,8 +595,8 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
                             Arg, {}, Arg->getName() + ".param");
 
     if (MaybeAlign ParamAlign = Arg->getParamAlign())
-      ParamSpaceArg->addRetAttr(
-          Attribute::getWithAlignment(ParamSpaceArg->getContext(), *ParamAlign));
+      ParamSpaceArg->addRetAttr(Attribute::getWithAlignment(
+          ParamSpaceArg->getContext(), *ParamAlign));
 
     // Cast param address to generic address space.
     Value *GenericArg = IRB.CreateAddrSpaceCast(
