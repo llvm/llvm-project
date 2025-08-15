@@ -2679,7 +2679,32 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   return V;
 }
 
-static Value *mergeTwoVectors(Value *V0, Value *V1, IRBuilder<> &Builder) {
+/// This function takes two vector values and combines them into a single vector
+/// by concatenating their elements. The function handles:
+///
+/// 1. Element type mismatch: If either vector's element type differs from
+///    NewAIEltType, the function bitcasts the vector to use NewAIEltType while
+///    preserving the total bit width (adjusting the number of elements
+///    accordingly).
+///
+/// 2. Size mismatch: After transforming the vectors to have the desired element
+///    type, if the two vectors have different numbers of elements, the smaller
+///    vector is extended with poison values to match the size of the larger
+///    vector before concatenation.
+///
+/// 3. Concatenation: The vectors are merged using a shuffle operation that
+///    places all elements of V0 first, followed by all elements of V1.
+///
+/// \param V0 The first vector to merge (must be a vector type)
+/// \param V1 The second vector to merge (must be a vector type)
+/// \param DL The data layout for size calculations
+/// \param NewAIEltTy The desired element type for the result vector
+/// \param Builder IRBuilder for creating new instructions
+/// \return A new vector containing all elements from V0 followed by all
+/// elements from V1
+static Value *mergeTwoVectors(Value *V0, Value *V1, const DataLayout &DL,
+                              Type *NewAIEltTy,
+                              IRBuilder<> &Builder) {
   assert(V0->getType()->isVectorTy() && V1->getType()->isVectorTy() &&
          "Can not merge two non-vector values");
 
@@ -2689,8 +2714,28 @@ static Value *mergeTwoVectors(Value *V0, Value *V1, IRBuilder<> &Builder) {
   auto *VecType0 = cast<FixedVectorType>(V0->getType());
   auto *VecType1 = cast<FixedVectorType>(V1->getType());
 
-  assert(VecType0->getElementType() == VecType1->getElementType() &&
-         "Can not merge two vectors with different element types");
+  // If V0/V1 element types are different from NewAllocaElementType,
+  // we need to introduce bitcasts before merging them
+  auto BitcastIfNeeded = [&](Value *&V, FixedVectorType *&VecType,
+                             const char *DebugName) {
+    Type *EltType = VecType->getElementType();
+    if (EltType != NewAIEltTy) {
+      // Calculate new number of elements to maintain same bit width
+      unsigned TotalBits =
+          VecType->getNumElements() * DL.getTypeSizeInBits(EltType);
+      unsigned NewNumElts =
+          TotalBits / DL.getTypeSizeInBits(NewAIEltTy);
+
+      auto *NewVecType = FixedVectorType::get(NewAIEltTy, NewNumElts);
+      V = Builder.CreateBitCast(V, NewVecType);
+      VecType = NewVecType;
+      LLVM_DEBUG(dbgs() << "    bitcast " << DebugName << ": " << *V << "\n");
+    }
+  };
+
+  BitcastIfNeeded(V0, VecType0, "V0");
+  BitcastIfNeeded(V1, VecType1, "V1");
+
   unsigned NumElts0 = VecType0->getNumElements();
   unsigned NumElts1 = VecType1->getNumElements();
 
@@ -2923,24 +2968,19 @@ public:
       uint64_t BeginOffset;
       uint64_t EndOffset;
       Value *StoredValue;
-      TypeSize StoredTypeSize = TypeSize::getZero();
-
-      StoreInfo(StoreInst *SI, uint64_t Begin, uint64_t End, Value *Val,
-                TypeSize StoredTypeSize)
-          : Store(SI), BeginOffset(Begin), EndOffset(End), StoredValue(Val),
-            StoredTypeSize(StoredTypeSize) {}
+      StoreInfo(StoreInst *SI, uint64_t Begin, uint64_t End, Value *Val)
+          : Store(SI), BeginOffset(Begin), EndOffset(End), StoredValue(Val) {}
     };
 
     SmallVector<StoreInfo, 4> StoreInfos;
 
     // The alloca must be a fixed vector type
-    auto *AllocatedTy = NewAI.getAllocatedType();
-    if (!isa<FixedVectorType>(AllocatedTy))
+    Type *AllocatedEltTy = nullptr;
+    if (auto *FixedVecTy = dyn_cast<FixedVectorType>(NewAI.getAllocatedType()))
+      AllocatedEltTy = FixedVecTy->getElementType();
+    else
       return std::nullopt;
 
-    Slice *LoadSlice = nullptr;
-    Type *LoadElementType = nullptr;
-    Type *StoreElementType = nullptr;
     for (Slice &S : P) {
       auto *User = cast<Instruction>(S.getUse()->getUser());
       if (auto *LI = dyn_cast<LoadInst>(User)) {
@@ -2957,27 +2997,20 @@ public:
         if (DL.getTypeSizeInBits(FixedVecTy) !=
             DL.getTypeSizeInBits(NewAI.getAllocatedType()))
           return std::nullopt;
-        LoadElementType = FixedVecTy->getElementType();
         TheLoad = LI;
-        LoadSlice = &S;
       } else if (auto *SI = dyn_cast<StoreInst>(User)) {
-        // The store needs to be a fixed vector type
-        // All the stores should have the same element type
+        // The stored value should be a fixed vector type
         Type *StoredValueType = SI->getValueOperand()->getType();
-        Type *CurrentElementType = nullptr;
-        TypeSize StoredTypeSize = TypeSize::getZero();
-        if (auto *FixedVecTy = dyn_cast<FixedVectorType>(StoredValueType)) {
-          // Fixed vector type - use its element type
-          CurrentElementType = FixedVecTy->getElementType();
-          StoredTypeSize = DL.getTypeSizeInBits(FixedVecTy);
-        } else
+        if (!isa<FixedVectorType>(StoredValueType))
           return std::nullopt;
-        // Check element type consistency across all stores
-        if (StoreElementType && StoreElementType != CurrentElementType)
+        
+        // The total number of stored bits should be the multiple of the new
+        // alloca element type size
+        if (DL.getTypeSizeInBits(StoredValueType) %
+            DL.getTypeSizeInBits(AllocatedEltTy) != 0)
           return std::nullopt;
-        StoreElementType = CurrentElementType;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
-                                SI->getValueOperand(), StoredTypeSize);
+                                SI->getValueOperand());
       } else {
         // If we have instructions other than load and store, we cannot do the
         // tree structured merge
@@ -2992,16 +3025,6 @@ public:
     if (StoreInfos.size() < 2)
       return std::nullopt;
 
-    // The load and store element types should be the same
-    if (LoadElementType != StoreElementType)
-      return std::nullopt;
-
-    // The load should cover the whole alloca
-    // TODO: maybe we can relax this constraint
-    if (!LoadSlice || LoadSlice->beginOffset() != NewAllocaBeginOffset ||
-        LoadSlice->endOffset() != NewAllocaEndOffset)
-      return std::nullopt;
-
     // Stores should not overlap and should cover the whole alloca
     // Sort by begin offset
     llvm::sort(StoreInfos, [](const StoreInfo &A, const StoreInfo &B) {
@@ -3011,7 +3034,6 @@ public:
     // Check for overlaps and coverage
     uint64_t ExpectedStart = NewAllocaBeginOffset;
     TypeSize TotalStoreBits = TypeSize::getZero();
-    Instruction *PrevStore = nullptr;
     for (auto &StoreInfo : StoreInfos) {
       uint64_t BeginOff = StoreInfo.BeginOffset;
       uint64_t EndOff = StoreInfo.EndOffset;
@@ -3021,8 +3043,8 @@ public:
         return std::nullopt;
 
       ExpectedStart = EndOff;
-      TotalStoreBits += StoreInfo.StoredTypeSize;
-      PrevStore = StoreInfo.Store;
+      TotalStoreBits +=
+          DL.getTypeSizeInBits(StoreInfo.Store->getValueOperand()->getType());
     }
     // Check that stores cover the entire alloca
     // We need check both the end offset and the total store bits
@@ -3070,7 +3092,7 @@ public:
         VecElements.pop();
         Value *V1 = VecElements.front();
         VecElements.pop();
-        Value *Merged = mergeTwoVectors(V0, V1, Builder);
+        Value *Merged = mergeTwoVectors(V0, V1, DL, AllocatedEltTy, Builder);
         LLVM_DEBUG(dbgs() << "    shufflevector: " << *Merged << "\n");
         VecElements.push(Merged);
       }

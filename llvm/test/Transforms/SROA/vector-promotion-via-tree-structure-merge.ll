@@ -287,6 +287,60 @@ entry:
   ret <7 x float> %result
 }
 
+; Load and store with different element type
+define <4 x double> @load_store_different_element_type(<2 x i32> %a, <2 x float> %b, <2 x float> %c, <2 x i32> %d) {
+; CHECK-LABEL: define <4 x double> @load_store_different_element_type(
+; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]], <2 x i32> [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <1 x double>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[B]] to <1 x double>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x double> [[TMP0]], <1 x double> [[TMP1]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[C]] to <1 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[D]] to <1 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <1 x double> [[TMP3]], <1 x double> [[TMP4]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[TMP6]]
+;
+; DEBUG-LABEL: define <4 x double> @load_store_different_element_type(
+; DEBUG-SAME: <2 x i32> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]], <2 x i32> [[D:%.*]]) !dbg [[DBG117:![0-9]+]] {
+; DEBUG-NEXT:  [[ENTRY:.*:]]
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META119:![0-9]+]], !DIExpression(), [[META125:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META119]], !DIExpression(), [[META125]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META120:![0-9]+]], !DIExpression(), [[META126:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META121:![0-9]+]], !DIExpression(), [[META127:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META122:![0-9]+]], !DIExpression(), [[META128:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META123:![0-9]+]], !DIExpression(), [[META129:![0-9]+]])
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <1 x double>, !dbg [[DBG130:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[B]] to <1 x double>, !dbg [[DBG130]]
+; DEBUG-NEXT:    [[TMP2:%.*]] = shufflevector <1 x double> [[TMP0]], <1 x double> [[TMP1]], <2 x i32> <i32 0, i32 1>, !dbg [[DBG130]]
+; DEBUG-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[C]] to <1 x double>, !dbg [[DBG130]]
+; DEBUG-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[D]] to <1 x double>, !dbg [[DBG130]]
+; DEBUG-NEXT:    [[TMP5:%.*]] = shufflevector <1 x double> [[TMP3]], <1 x double> [[TMP4]], <2 x i32> <i32 0, i32 1>, !dbg [[DBG130]]
+; DEBUG-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG130]]
+; DEBUG-NEXT:      #dbg_value(<4 x double> [[TMP6]], [[META124:![0-9]+]], !DIExpression(), [[META131:![0-9]+]])
+; DEBUG-NEXT:    ret <4 x double> [[TMP6]], !dbg [[DBG132:![0-9]+]]
+;
+entry:
+  %alloca = alloca <8 x float>
+
+  ; Store the vectors at different offsets
+  %ptr0 = getelementptr inbounds <8 x float>, ptr %alloca, i32 0, i32 0
+  store <2 x i32> %a, ptr %ptr0
+
+  %ptr1 = getelementptr inbounds <8 x float>, ptr %alloca, i32 0, i32 2
+  store <2 x float> %b, ptr %ptr1
+
+  %ptr2 = getelementptr inbounds <8 x float>, ptr %alloca, i32 0, i32 4
+  store <2 x float> %c, ptr %ptr2
+
+  %ptr3 = getelementptr inbounds <8 x float>, ptr %alloca, i32 0, i32 6
+  store <2 x i32> %d, ptr %ptr3
+
+  ; Load the complete vector
+  %result = load <4 x double>, ptr %alloca
+  ret <4 x double> %result
+}
+
 ;.
 ; DEBUG: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; DEBUG: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
@@ -402,6 +456,22 @@ entry:
 ; DEBUG: [[DBG114]] = !DILocation(line: 72, column: 1, scope: [[DBG103]])
 ; DEBUG: [[META115]] = !DILocation(line: 73, column: 1, scope: [[DBG103]])
 ; DEBUG: [[DBG116]] = !DILocation(line: 74, column: 1, scope: [[DBG103]])
+; DEBUG: [[DBG117]] = distinct !DISubprogram(name: "load_store_different_element_type", linkageName: "load_store_different_element_type", scope: null, file: [[META1]], line: 75, type: [[META6]], scopeLine: 75, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META118:![0-9]+]])
+; DEBUG: [[META118]] = !{[[META119]], [[META120]], [[META121]], [[META122]], [[META123]], [[META124]]}
+; DEBUG: [[META119]] = !DILocalVariable(name: "41", scope: [[DBG117]], file: [[META1]], line: 75, type: [[META10]])
+; DEBUG: [[META120]] = !DILocalVariable(name: "42", scope: [[DBG117]], file: [[META1]], line: 76, type: [[META10]])
+; DEBUG: [[META121]] = !DILocalVariable(name: "43", scope: [[DBG117]], file: [[META1]], line: 78, type: [[META10]])
+; DEBUG: [[META122]] = !DILocalVariable(name: "44", scope: [[DBG117]], file: [[META1]], line: 80, type: [[META10]])
+; DEBUG: [[META123]] = !DILocalVariable(name: "45", scope: [[DBG117]], file: [[META1]], line: 82, type: [[META10]])
+; DEBUG: [[META124]] = !DILocalVariable(name: "46", scope: [[DBG117]], file: [[META1]], line: 84, type: [[META16]])
+; DEBUG: [[META125]] = !DILocation(line: 75, column: 1, scope: [[DBG117]])
+; DEBUG: [[META126]] = !DILocation(line: 76, column: 1, scope: [[DBG117]])
+; DEBUG: [[META127]] = !DILocation(line: 78, column: 1, scope: [[DBG117]])
+; DEBUG: [[META128]] = !DILocation(line: 80, column: 1, scope: [[DBG117]])
+; DEBUG: [[META129]] = !DILocation(line: 82, column: 1, scope: [[DBG117]])
+; DEBUG: [[DBG130]] = !DILocation(line: 83, column: 1, scope: [[DBG117]])
+; DEBUG: [[META131]] = !DILocation(line: 84, column: 1, scope: [[DBG117]])
+; DEBUG: [[DBG132]] = !DILocation(line: 85, column: 1, scope: [[DBG117]])
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-MODIFY-CFG: {{.*}}
