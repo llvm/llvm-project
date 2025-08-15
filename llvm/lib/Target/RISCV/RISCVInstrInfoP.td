@@ -158,6 +158,17 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
   let Inst{26-25} = w;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
+    : RVInstRBase<funct3, OPC_OP_32, (outs GPR:$rd_wb),
+                  (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
+  let Inst{31} = 0b1;
+  let Inst{30-27} = f;
+  let Inst{26-25} = w;
+
+  let Constraints = "$rd = $rd_wb";
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -383,37 +394,37 @@ let Predicates = [HasStdExtP] in {
 
   def PMUL_H_B01   : RVPBinary_rr<0b0010, 0b00, 0b001, "pmul.h.b01">;
 
-  def MVM          : RVPBinary_rr<0b0101, 0b00, 0b001, "mvm">;
-  def MVMN         : RVPBinary_rr<0b0101, 0b01, 0b001, "mvmn">;
-  def MERGE        : RVPBinary_rr<0b0101, 0b10, 0b001, "merge">;
-  def SRX          : RVPBinary_rr<0b0101, 0b11, 0b001, "srx">;
+  def MVM          : RVPTernary_rrr<0b0101, 0b00, 0b001, "mvm">;
+  def MVMN         : RVPTernary_rrr<0b0101, 0b01, 0b001, "mvmn">;
+  def MERGE        : RVPTernary_rrr<0b0101, 0b10, 0b001, "merge">;
+  def SRX          : RVPTernary_rrr<0b0101, 0b11, 0b001, "srx">;
 
   def PMULU_H_B01  : RVPBinary_rr<0b0110, 0b00, 0b001, "pmulu.h.b01">;
   def PDIFSUMU_B   : RVPBinary_rr<0b0110, 0b10, 0b001, "pdifsumu.b">;
 
-  def PDIFSUMAU_B  : RVPBinary_rr<0b0111, 0b10, 0b001, "pdifsumau.b">;
+  def PDIFSUMAU_B  : RVPTernary_rrr<0b0111, 0b10, 0b001, "pdifsumau.b">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MUL_H01      : RVPBinary_rr<0b0010, 0b01, 0b001, "mul.h01">;
 
-  def MACC_H01     : RVPBinary_rr<0b0011, 0b01, 0b001, "macc.h01">;
+  def MACC_H01     : RVPTernary_rrr<0b0011, 0b01, 0b001, "macc.h01">;
 
   def MULU_H01     : RVPBinary_rr<0b0110, 0b01, 0b001, "mulu.h01">;
 
-  def MACCU_H01    : RVPBinary_rr<0b0111, 0b01, 0b001, "maccu.h01">;
+  def MACCU_H01    : RVPTernary_rrr<0b0111, 0b01, 0b001, "maccu.h01">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PMUL_W_H01   : RVPBinary_rr<0b0010, 0b01, 0b001, "pmul.w.h01">;
   def MUL_W01      : RVPBinary_rr<0b0010, 0b11, 0b001, "mul.w01">;
 
-  def PMACC_W_H01  : RVPBinary_rr<0b0011, 0b01, 0b001, "pmacc.w.h01">;
-  def MACC_W01     : RVPBinary_rr<0b0011, 0b11, 0b001, "macc.w01">;
+  def PMACC_W_H01  : RVPTernary_rrr<0b0011, 0b01, 0b001, "pmacc.w.h01">;
+  def MACC_W01     : RVPTernary_rrr<0b0011, 0b11, 0b001, "macc.w01">;
 
   def PMULU_W_H01  : RVPBinary_rr<0b0110, 0b01, 0b001, "pmulu.w.h01">;
   def MULU_W01     : RVPBinary_rr<0b0110, 0b11, 0b001, "mulu.w01">;
 
-  def PMACCU_W_H01 : RVPBinary_rr<0b0111, 0b01, 0b001, "pmaccu.w.h01">;
-  def MACCU_W01    : RVPBinary_rr<0b0111, 0b11, 0b001, "maccu.w01">;
+  def PMACCU_W_H01 : RVPTernary_rrr<0b0111, 0b01, 0b001, "pmaccu.w.h01">;
+  def MACCU_W01    : RVPTernary_rrr<0b0111, 0b11, 0b001, "maccu.w01">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 // Note the spec has a 3-bit f field in bits 30:28 with 0 in bit 27.
@@ -458,64 +469,64 @@ let Predicates = [HasStdExtP] in {
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MUL_H00       : RVPBinary_rr<0b0000, 0b01, 0b011, "mul.h00">;
 
-  def MACC_H00      : RVPBinary_rr<0b0001, 0b01, 0b011, "macc.h00">;
+  def MACC_H00      : RVPTernary_rrr<0b0001, 0b01, 0b011, "macc.h00">;
 
   def MUL_H11       : RVPBinary_rr<0b0010, 0b01, 0b011, "mul.h11">;
 
-  def MACC_H11      : RVPBinary_rr<0b0011, 0b01, 0b011, "macc.h11">;
+  def MACC_H11      : RVPTernary_rrr<0b0011, 0b01, 0b011, "macc.h11">;
 
   def MULU_H00      : RVPBinary_rr<0b0100, 0b01, 0b011, "mulu.h00">;
 
-  def MACCU_H00     : RVPBinary_rr<0b0101, 0b01, 0b011, "maccu.h00">;
+  def MACCU_H00     : RVPTernary_rrr<0b0101, 0b01, 0b011, "maccu.h00">;
 
   def MULU_H11      : RVPBinary_rr<0b0110, 0b01, 0b011, "mulu.h11">;
 
-  def MACCU_H11     : RVPBinary_rr<0b0111, 0b01, 0b011, "maccu.h11">;
+  def MACCU_H11     : RVPTernary_rrr<0b0111, 0b01, 0b011, "maccu.h11">;
 
   def MULSU_H00     : RVPBinary_rr<0b1100, 0b01, 0b011, "mulsu.h00">;
 
-  def MACCSU_H00    : RVPBinary_rr<0b1101, 0b01, 0b011, "maccsu.h00">;
+  def MACCSU_H00    : RVPTernary_rrr<0b1101, 0b01, 0b011, "maccsu.h00">;
 
   def MULSU_H11     : RVPBinary_rr<0b1110, 0b01, 0b011, "mulsu.h11">;
 
-  def MACCSU_H11    : RVPBinary_rr<0b1111, 0b01, 0b011, "maccsu.h11">;
+  def MACCSU_H11    : RVPTernary_rrr<0b1111, 0b01, 0b011, "maccsu.h11">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PMUL_W_H00    : RVPBinary_rr<0b0000, 0b01, 0b011, "pmul.w.h00">;
   def MUL_W00       : RVPBinary_rr<0b0000, 0b11, 0b011, "mul.w00">;
 
-  def PMACC_W_H00   : RVPBinary_rr<0b0001, 0b01, 0b011, "pmacc.w.h00">;
-  def MACC_W00      : RVPBinary_rr<0b0001, 0b11, 0b011, "macc.w00">;
+  def PMACC_W_H00   : RVPTernary_rrr<0b0001, 0b01, 0b011, "pmacc.w.h00">;
+  def MACC_W00      : RVPTernary_rrr<0b0001, 0b11, 0b011, "macc.w00">;
 
   def PMUL_W_H11    : RVPBinary_rr<0b0010, 0b01, 0b011, "pmul.w.h11">;
   def MUL_W11       : RVPBinary_rr<0b0010, 0b11, 0b011, "mul.w11">;
 
-  def PMACC_W_H11   : RVPBinary_rr<0b0011, 0b01, 0b011, "pmacc.w.h11">;
-  def MACC_W11      : RVPBinary_rr<0b0011, 0b11, 0b011, "macc.w11">;
+  def PMACC_W_H11   : RVPTernary_rrr<0b0011, 0b01, 0b011, "pmacc.w.h11">;
+  def MACC_W11      : RVPTernary_rrr<0b0011, 0b11, 0b011, "macc.w11">;
 
   def PMULU_W_H00   : RVPBinary_rr<0b0100, 0b01, 0b011, "pmulu.w.h00">;
   def MULU_W00      : RVPBinary_rr<0b0100, 0b11, 0b011, "mulu.w00">;
 
-  def PMACCU_W_H00  : RVPBinary_rr<0b0101, 0b01, 0b011, "pmaccu.w.h00">;
-  def MACCU_W00     : RVPBinary_rr<0b0101, 0b11, 0b011, "maccu.w00">;
+  def PMACCU_W_H00  : RVPTernary_rrr<0b0101, 0b01, 0b011, "pmaccu.w.h00">;
+  def MACCU_W00     : RVPTernary_rrr<0b0101, 0b11, 0b011, "maccu.w00">;
 
   def PMULU_W_H11   : RVPBinary_rr<0b0110, 0b01, 0b011, "pmulu.w.h11">;
   def MULU_W11      : RVPBinary_rr<0b0110, 0b11, 0b011, "mulu.w11">;
 
-  def PMACCU_W_H11  : RVPBinary_rr<0b0111, 0b01, 0b011, "pmaccu.w.h11">;
-  def MACCU_W11     : RVPBinary_rr<0b0111, 0b11, 0b011, "maccu.w11">;
+  def PMACCU_W_H11  : RVPTernary_rrr<0b0111, 0b01, 0b011, "pmaccu.w.h11">;
+  def MACCU_W11     : RVPTernary_rrr<0b0111, 0b11, 0b011, "maccu.w11">;
 
   def PMULSU_W_H00  : RVPBinary_rr<0b1100, 0b01, 0b011, "pmulsu.w.h00">;
   def MULSU_W00     : RVPBinary_rr<0b1100, 0b11, 0b011, "mulsu.w00">;
 
-  def PMACCSU_W_H00 : RVPBinary_rr<0b1101, 0b01, 0b011, "pmaccsu.w.h00">;
-  def MACCSU_W00    : RVPBinary_rr<0b1101, 0b11, 0b011, "maccsu.w00">;
+  def PMACCSU_W_H00 : RVPTernary_rrr<0b1101, 0b01, 0b011, "pmaccsu.w.h00">;
+  def MACCSU_W00    : RVPTernary_rrr<0b1101, 0b11, 0b011, "maccsu.w00">;
 
   def PMULSU_W_H11  : RVPBinary_rr<0b1110, 0b01, 0b011, "pmulsu.w.h11">;
   def MULSU_W11     : RVPBinary_rr<0b1110, 0b11, 0b011, "mulsu.w11">;
 
-  def PMACCSU_W_H11 : RVPBinary_rr<0b1111, 0b01, 0b011, "pmaccsu.w.h11">;
-  def MACCSU_W11    : RVPBinary_rr<0b1111, 0b11, 0b011, "maccsu.w11">;
+  def PMACCSU_W_H11 : RVPTernary_rrr<0b1111, 0b01, 0b011, "pmaccsu.w.h11">;
+  def MACCSU_W11    : RVPTernary_rrr<0b1111, 0b11, 0b011, "maccsu.w11">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 // Note the spec has a 3-bit f field in bits 30:28 with 0 in bit 27.
