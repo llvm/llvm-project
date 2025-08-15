@@ -15,6 +15,7 @@
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -160,8 +161,7 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      dxil::getResourceClassName(dxil::ResourceClass(Clause.Type));
+  StringRef ResName = dxil::getResourceClassName(Clause.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),
