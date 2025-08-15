@@ -1202,6 +1202,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixRequiredExportPriority(MI);
   if (ST.requiresWaitIdleBeforeGetReg())
     fixGetRegWaitIdle(MI);
+  if (ST.hasDsAtomicAsyncBarrierArriveB64PipeBug())
+    fixDsAtomicAsyncBarrierArriveB64(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
@@ -3449,5 +3451,20 @@ bool GCNHazardRecognizer::fixGetRegWaitIdle(MachineInstr *MI) {
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(0);
+  return true;
+}
+
+bool GCNHazardRecognizer::fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI) {
+  if (MI->getOpcode() != AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64)
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0xFFE3);
+  BuildMI(*MI->getParent(), std::next(MI->getIterator()), MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0xFFE3);
+
   return true;
 }
