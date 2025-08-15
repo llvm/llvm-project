@@ -61,14 +61,15 @@ protected:
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
-  std::unique_ptr<Preprocessor>
-  getPreprocessor(const char *source, Language Lang) {
+  std::unique_ptr<Preprocessor> getPreprocessor(const char *source,
+                                                Language Lang) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
     std::vector<std::string> Includes;
-    LangOptions::setLangDefaults(LangOpts, Lang, Target->getTriple(), Includes, LangStandard::lang_cxx20);
+    LangOptions::setLangDefaults(LangOpts, Lang, Target->getTriple(), Includes,
+                                 LangStandard::lang_cxx20);
     LangOpts.CPlusPlusModules = true;
     if (Lang != Language::CXX) {
       LangOpts.Modules = true;
@@ -112,7 +113,8 @@ export module foo;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)0);
@@ -129,7 +131,8 @@ module foo;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)0);
@@ -146,7 +149,8 @@ module foo:part;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)0);
@@ -163,7 +167,8 @@ export module foo:part;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)0);
@@ -180,7 +185,8 @@ export module foo.dot:part.dot;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)0);
@@ -197,7 +203,8 @@ TEST_F(ModuleDeclStateTest, NotModule) {
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)0);
@@ -221,7 +228,8 @@ import :another;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {true, true};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)2);
@@ -246,7 +254,8 @@ import :another;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {true, true};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)2);
@@ -270,7 +279,8 @@ import :another;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {true};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)1);
@@ -286,7 +296,8 @@ TEST_F(ModuleDeclStateTest, ImportAClangNamedModule) {
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::ObjCXX);
 
   std::initializer_list<bool> ImportKinds = {false};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)1);
@@ -306,7 +317,8 @@ import M2;
   std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::ObjCXX);
 
   std::initializer_list<bool> ImportKinds = {false, true, false, true};
-  auto Callback = std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
+  auto Callback =
+      std::make_unique<CheckNamedModuleImportingCB>(*PP, ImportKinds);
   CheckNamedModuleImportingCB *CallbackPtr = Callback.get();
   preprocess(*PP, std::move(Callback));
   EXPECT_EQ(CallbackPtr->importNamedModuleNum(), (size_t)4);
