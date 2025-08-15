@@ -9,16 +9,13 @@
 #ifndef LLVM_LIBC_TYPES__BARRIER_TYPE_H
 #define LLVM_LIBC_TYPES__BARRIER_TYPE_H
 
-#include "src/__support/threads/CndVar.h"
-#include "src/__support/threads/mutex.h"
-
 typedef struct __attribute__((aligned(8 /* alignof (Barrier) */))) {
   unsigned expected;
   unsigned waiting;
   bool blocking;
-  char entering[sizeof(LIBC_NAMESPACE::CndVar)];
-  char exiting[sizeof(LIBC_NAMESPACE::CndVar)];
-  char mutex[sizeof(LIBC_NAMESPACE::Mutex)];
+  char entering[24 /* sizeof (CndVar) */];
+  char exiting[24 /* sizeof (CndVar) */];
+  char mutex[24 /* sizeof (Mutex) */];
 } __barrier_type;
 
 #endif // LLVM_LIBC_TYPES__BARRIER_TYPE_H
