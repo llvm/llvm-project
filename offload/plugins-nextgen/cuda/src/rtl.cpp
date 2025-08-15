@@ -856,6 +856,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// Initialize the device info for interoperability purposes.
   Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
     assert(Context && "Context is null");

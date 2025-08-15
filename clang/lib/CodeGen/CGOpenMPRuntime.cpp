@@ -28,6 +28,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -6765,12 +6766,249 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
+// Utility to safely compare expression locations for deterministic ordering.
+// This function asserts that both expressions have valid source locations.
+static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
+  // Assert that neither LHS nor RHS can be null
+  assert(LHS && "LHS expression cannot be null");
+  assert(RHS && "RHS expression cannot be null");
+
+  // Get source locations
+  SourceLocation LocLHS = LHS->getExprLoc();
+  SourceLocation LocRHS = RHS->getExprLoc();
+
+  // Assert that we have valid source locations
+  assert(LocLHS.isValid() && "LHS expression must have valid source location");
+  assert(LocRHS.isValid() && "RHS expression must have valid source location");
+
+  // Compare source locations for deterministic ordering
+  bool result = LocLHS < LocRHS;
+  return result;
+}
+
 // Utility to handle information from clauses associated with a given
 // construct that use mappable expressions (e.g. 'map' clause, 'to' clause).
 // It provides a convenient interface to obtain the information and generate
 // code for that information.
 class MappableExprsHandler {
 public:
+  // Custom comparator for attach-pointer expressions that compares them by
+  // complexity (i.e. their component-depth) first, then semantically.
+  struct AttachPtrExprComparator {
+    const MappableExprsHandler *Handler;
+    // Cache of previous comparison results.
+    mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
+        CachedComparisonResults;
+
+    AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
+
+    bool operator()(const Expr *LHS, const Expr *RHS) const {
+      if (LHS == RHS)
+        return false;
+
+      // First, compare by complexity (depth)
+      auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
+      auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+
+      std::optional<size_t> DepthLHS =
+          (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
+                                                               : std::nullopt;
+      std::optional<size_t> DepthRHS =
+          (ItRHS != Handler->AttachPtrComponentDepthMap.end()) ? ItRHS->second
+                                                               : std::nullopt;
+
+      // std::nullopt (no attach pointer) has lowest complexity
+      if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
+        // Both have same complexity, now check semantic equality
+        if (areEqual(LHS, RHS))
+          return false;
+        // Different semantically, compare by location
+        return compareExprLocs(LHS, RHS);
+      }
+      if (!DepthLHS.has_value())
+        return true; // LHS has lower complexity
+      if (!DepthRHS.has_value())
+        return false; // RHS has lower complexity
+
+      // Both have values, compare by depth (lower depth = lower complexity)
+      if (DepthLHS.value() != DepthRHS.value())
+        return DepthLHS.value() < DepthRHS.value();
+
+      // Same complexity, now check semantic equality
+      if (areEqual(LHS, RHS))
+        return false;
+      // Different semantically, compare by location
+      return compareExprLocs(LHS, RHS);
+    }
+
+  public:
+    bool areEqual(const Expr *LHS, const Expr *RHS) const {
+      // Check cache first for faster lookup
+      auto CachedResultIt = CachedComparisonResults.find({LHS, RHS});
+      if (CachedResultIt != CachedComparisonResults.end())
+        return CachedResultIt->second;
+
+      bool ComparisonResult = areSemanticallyEqual(LHS, RHS);
+
+      // Cache the result for future lookups (both orders since semantic
+      // equality is commutative)
+      CachedComparisonResults[{LHS, RHS}] = ComparisonResult;
+      CachedComparisonResults[{RHS, LHS}] = ComparisonResult;
+      return ComparisonResult;
+    }
+
+  private:
+    // Helper function to compare attach-pointer expressions semantically.
+    // This function handles various expression types that can be part of an
+    // attach-pointer.
+    bool areSemanticallyEqual(const Expr *LHS, const Expr *RHS) const {
+      if (LHS == RHS)
+        return true;
+
+      // If only one is null, they aren't equal
+      if (!LHS || !RHS)
+        return false;
+
+      ASTContext &Ctx = Handler->CGF.getContext();
+      // Strip away parentheses and no-op casts to get to the core expression
+      LHS = LHS->IgnoreParenNoopCasts(Ctx);
+      RHS = RHS->IgnoreParenNoopCasts(Ctx);
+
+      // Direct pointer comparison of the underlying expressions
+      if (LHS == RHS)
+        return true;
+
+      // Check if the expression classes match
+      if (LHS->getStmtClass() != RHS->getStmtClass())
+        return false;
+
+      // Handle DeclRefExpr (variable references)
+      if (const auto *LD = dyn_cast<DeclRefExpr>(LHS)) {
+        const auto *RD = dyn_cast<DeclRefExpr>(RHS);
+        if (!RD)
+          return false;
+        return LD->getDecl()->getCanonicalDecl() ==
+               RD->getDecl()->getCanonicalDecl();
+      }
+
+      // Handle ArraySubscriptExpr (array indexing like a[i])
+      if (const auto *LA = dyn_cast<ArraySubscriptExpr>(LHS)) {
+        const auto *RA = dyn_cast<ArraySubscriptExpr>(RHS);
+        if (!RA)
+          return false;
+        return areSemanticallyEqual(LA->getBase(), RA->getBase()) &&
+               areSemanticallyEqual(LA->getIdx(), RA->getIdx());
+      }
+
+      // Handle MemberExpr (member access like s.m or p->m)
+      if (const auto *LM = dyn_cast<MemberExpr>(LHS)) {
+        const auto *RM = dyn_cast<MemberExpr>(RHS);
+        if (!RM)
+          return false;
+        if (LM->getMemberDecl()->getCanonicalDecl() !=
+            RM->getMemberDecl()->getCanonicalDecl())
+          return false;
+        return areSemanticallyEqual(LM->getBase(), RM->getBase());
+      }
+
+      // Handle UnaryOperator (unary operations like *p, &x, etc.)
+      if (const auto *LU = dyn_cast<UnaryOperator>(LHS)) {
+        const auto *RU = dyn_cast<UnaryOperator>(RHS);
+        if (!RU)
+          return false;
+        if (LU->getOpcode() != RU->getOpcode())
+          return false;
+        return areSemanticallyEqual(LU->getSubExpr(), RU->getSubExpr());
+      }
+
+      // Handle BinaryOperator (binary operations like p + offset)
+      if (const auto *LB = dyn_cast<BinaryOperator>(LHS)) {
+        const auto *RB = dyn_cast<BinaryOperator>(RHS);
+        if (!RB)
+          return false;
+        if (LB->getOpcode() != RB->getOpcode())
+          return false;
+        return areSemanticallyEqual(LB->getLHS(), RB->getLHS()) &&
+               areSemanticallyEqual(LB->getRHS(), RB->getRHS());
+      }
+
+      // Handle ArraySectionExpr (array sections like a[0:1])
+      // Attach pointers should not contain array-sections, but currently we
+      // don't emit an error.
+      if (const auto *LAS = dyn_cast<ArraySectionExpr>(LHS)) {
+        const auto *RAS = dyn_cast<ArraySectionExpr>(RHS);
+        if (!RAS)
+          return false;
+        return areSemanticallyEqual(LAS->getBase(), RAS->getBase()) &&
+               areSemanticallyEqual(LAS->getLowerBound(),
+                                    RAS->getLowerBound()) &&
+               areSemanticallyEqual(LAS->getLength(), RAS->getLength());
+      }
+
+      // Handle CastExpr (explicit casts)
+      if (const auto *LC = dyn_cast<CastExpr>(LHS)) {
+        const auto *RC = dyn_cast<CastExpr>(RHS);
+        if (!RC)
+          return false;
+        if (LC->getCastKind() != RC->getCastKind())
+          return false;
+        return areSemanticallyEqual(LC->getSubExpr(), RC->getSubExpr());
+      }
+
+      // Handle CXXThisExpr (this pointer)
+      if (isa<CXXThisExpr>(LHS) && isa<CXXThisExpr>(RHS))
+        return true;
+
+      // Handle IntegerLiteral (integer constants)
+      if (const auto *LI = dyn_cast<IntegerLiteral>(LHS)) {
+        const auto *RI = dyn_cast<IntegerLiteral>(RHS);
+        if (!RI)
+          return false;
+        return LI->getValue() == RI->getValue();
+      }
+
+      // Handle CharacterLiteral (character constants)
+      if (const auto *LC = dyn_cast<CharacterLiteral>(LHS)) {
+        const auto *RC = dyn_cast<CharacterLiteral>(RHS);
+        if (!RC)
+          return false;
+        return LC->getValue() == RC->getValue();
+      }
+
+      // Handle FloatingLiteral (floating point constants)
+      if (const auto *LF = dyn_cast<FloatingLiteral>(LHS)) {
+        const auto *RF = dyn_cast<FloatingLiteral>(RHS);
+        if (!RF)
+          return false;
+        // Use bitwise comparison for floating point literals
+        return LF->getValue().bitwiseIsEqual(RF->getValue());
+      }
+
+      // Handle StringLiteral (string constants)
+      if (const auto *LS = dyn_cast<StringLiteral>(LHS)) {
+        const auto *RS = dyn_cast<StringLiteral>(RHS);
+        if (!RS)
+          return false;
+        return LS->getString() == RS->getString();
+      }
+
+      // Handle CXXNullPtrLiteralExpr (nullptr)
+      if (isa<CXXNullPtrLiteralExpr>(LHS) && isa<CXXNullPtrLiteralExpr>(RHS))
+        return true;
+
+      // Handle CXXBoolLiteralExpr (true/false)
+      if (const auto *LB = dyn_cast<CXXBoolLiteralExpr>(LHS)) {
+        const auto *RB = dyn_cast<CXXBoolLiteralExpr>(RHS);
+        if (!RB)
+          return false;
+        return LB->getValue() == RB->getValue();
+      }
+
+      // Fallback for other forms - use the existing comparison method
+      return Expr::isSameComparisonOperand(LHS, RHS);
+    }
+  };
+
   /// Get the offset of the OMP_MAP_MEMBER_OF field.
   static unsigned getFlagMemberOffset() {
     unsigned Offset = 0;
@@ -6846,7 +7084,41 @@ public:
     Address LB = Address::invalid();
     bool IsArraySection = false;
     bool HasCompleteRecord = false;
+    // ATTACH information for delayed processing
+    Address AttachPtrAddr = Address::invalid();
+    Address AttachPteeAddr = Address::invalid();
+    const ValueDecl *AttachPtrDecl = nullptr;
+    const Expr *AttachMapExpr = nullptr;
   };
+
+  /// Check if there's any component list where the attach pointer expression
+  /// matches the given captured variable.
+  bool hasAttachEntryForCapturedVar(const ValueDecl *VD) const {
+    for (const auto &AttachEntry : AttachPtrExprMap) {
+      if (AttachEntry.second) {
+        // Check if the attach pointer expression is a DeclRefExpr that
+        // references the captured variable
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(AttachEntry.second)) {
+          if (DRE->getDecl() == VD) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Get the previously-cached attach pointer for a component list, if-any.
+  const Expr *getAttachPtrExpr(
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components)
+      const {
+    auto It = AttachPtrExprMap.find(Components);
+    if (It != AttachPtrExprMap.end()) {
+      return It->second;
+    }
+
+    return nullptr;
+  }
 
 private:
   /// Kind that defines how a device pointer has to be returned.
@@ -6919,6 +7191,17 @@ private:
 
   /// Map between lambda declarations and their map type.
   llvm::DenseMap<const ValueDecl *, const OMPMapClause *> LambdasMap;
+
+  /// Map from component lists to their attach pointer expressions.
+  mutable llvm::DenseMap<
+      OMPClauseMappableExprCommon::MappableExprComponentListRef, const Expr *>
+      AttachPtrExprMap;
+
+  /// Map from attach pointer expressions to their component depth.
+  /// nullptr key has std::nullopt depth. This can be used to order attach-ptr
+  /// expressions with increasing/decreasing depth.
+  mutable llvm::DenseMap<const Expr *, std::optional<size_t>>
+      AttachPtrComponentDepthMap;
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
@@ -7087,6 +7370,34 @@ private:
     return ConstLength.getSExtValue() != 1;
   }
 
+  /// Utility function to add an ATTACH entry to the CombinedInfo structure.
+  /// Generates an ATTACH entry: &pointer, &pointer[idx], sizeof(pointer),
+  /// ATTACH
+  void addAttachEntry(CodeGenFunction &CGF, MapCombinedInfoTy &CombinedInfo,
+                      Address AttachBaseAddr, Address AttachFirstElemAddr,
+                      const ValueDecl *BaseDecl, const Expr *MapExpr) const {
+
+    // Size is the size of the pointer itself - use pointer size, not BaseDecl
+    // size
+    llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
+        llvm::ConstantInt::get(
+            CGF.CGM.SizeTy,
+            CGF.getContext().getTypeSize(
+                CGF.getContext().getPointerType(CGF.getContext().VoidTy)) /
+                8),
+        CGF.Int64Ty, /*isSigned=*/true);
+
+    CombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
+    CombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
+    CombinedInfo.DevicePtrDecls.push_back(nullptr);
+    CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+    CombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
+    CombinedInfo.Sizes.push_back(PointerSize);
+    CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    CombinedInfo.Mappers.push_back(nullptr);
+    CombinedInfo.NonContigInfo.Dims.push_back(1);
+  }
+
   /// A helper class to copy structures with overlapped elements, i.e. those
   /// which have mappings of both "s" and "s.mem".  Consecutive elements that
   /// are not explicitly copied have mapping nodes synthesized for them,
@@ -7207,8 +7518,8 @@ private:
       const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
-          OverlappedElements = {},
-      bool AreBothBasePtrAndPteeMapped = false) const {
+          OverlappedElements = {}) const {
+
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
     // base pointer, section pointer, size, flags
@@ -7247,9 +7558,12 @@ private:
     // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
     //
     // map(p[1:24])
-    // &p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM | PTR_AND_OBJ
-    // in unified shared memory mode or for local pointers
     // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM
+    // &p, &p[1], sizeof(p), ATTACH
+    //
+    // map((22])p)
+    // p, p, 22*sizeof(float), TARGET_PARAM | TO | FROM
+    // &p, p, sizeof(float*), ATTACH
     //
     // map((*a)[0:3])
     // &(*a), &(*a), sizeof(pointer), TARGET_PARAM | TO | FROM
@@ -7319,12 +7633,15 @@ private:
     //
     // map(ps->i)
     // ps, &(ps->i), sizeof(int), TARGET_PARAM | TO | FROM
+    // &ps, &(ps->i), sizeof(ps), ATTACH
     //
     // map(ps->s.f)
     // ps, &(ps->s.f[0]), 50*sizeof(float), TARGET_PARAM | TO | FROM
+    // &ps, &(ps->s.f[0]), sizeof(ps), ATTACH
     //
     // map(from: ps->p)
     // ps, &(ps->p), sizeof(double*), TARGET_PARAM | FROM
+    // &ps, &(ps->p), sizeof(ps), ATTACH
     //
     // map(to: ps->p[:22])
     // ps, &(ps->p), sizeof(double*), TARGET_PARAM
@@ -7333,6 +7650,7 @@ private:
     //
     // map(ps->ps)
     // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM | TO | FROM
+    // &ps, &(ps->ps), sizeof(ps), ATTACH
     //
     // map(from: ps->ps->s.i)
     // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM
@@ -7386,8 +7704,9 @@ private:
     //     of arguments, hence MEMBER_OF(4)
     //
     // map(p, p[:100])
-    // ===> map(p[:100])
-    // &p, &p[0], 100*sizeof(float), TARGET_PARAM | PTR_AND_OBJ | TO | FROM
+    // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
+    // &p[0], &p[0], 100*sizeof(float), TO | FROM
+    // &p, &p[0], sizeof(float*), ATTACH
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
@@ -7406,14 +7725,31 @@ private:
     bool IsExpressionFirstInfo = true;
     bool FirstPointerInComplexData = false;
     Address BP = Address::invalid();
+    Address FinalLowestElem = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    if (AreBothBasePtrAndPteeMapped && std::next(I) == CE)
-      return;
-    if (isa<MemberExpr>(AssocExpr)) {
+    // Get the pointer-attachment base-pointer for the given list, if any.
+    const Expr *AttachPtrExpr = getAttachPtrExpr(Components);
+    Address AttachPtrAddr = getAttachPtrAddr(AttachPtrExpr, CGF);
+    Address AttachPteeBaseAddr =
+        !AttachPtrAddr.isValid()
+            ? Address::invalid()
+            : CGF.EmitLoadOfPointer(
+                  AttachPtrAddr,
+                  CGF.getContext().VoidPtrTy.castAs<PointerType>());
+
+    bool HasAttachPtr = AttachPtrExpr != nullptr;
+    bool FirstComponentIsForAttachPtr = AssocExpr == AttachPtrExpr;
+    bool SeenAttachPtr = FirstComponentIsForAttachPtr;
+
+    if (FirstComponentIsForAttachPtr) {
+      // No need to process AttachPtr here. It will be processed at the end
+      // after we have computed the pointee's address.
+      ++I;
+    } else if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
       BP = CGF.LoadCXXThisAddress();
@@ -7455,9 +7791,8 @@ private:
         // can be associated with the combined storage if shared memory mode is
         // active or the base declaration is not global variable.
         const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
-        if (!AreBothBasePtrAndPteeMapped &&
-            (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
-             !VD || VD->hasLocalStorage()))
+        if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+            !VD || VD->hasLocalStorage() || HasAttachPtr)
           BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
         else
           FirstPointerInComplexData = true;
@@ -7544,7 +7879,28 @@ private:
       }
     }
 
+    bool SeemFirstNonBinOpExprAfterAttachPtr = false;
     for (; I != CE; ++I) {
+      // If we have a valid attach-ptr, we skip processing all components until
+      // after the attach-ptr.
+      if (HasAttachPtr && !SeenAttachPtr) {
+        SeenAttachPtr |= I->getAssociatedExpression() == AttachPtrExpr;
+        continue;
+      }
+
+      // After finding the attach pointer, skip binary-ops, to skip past
+      // expressions like (p + 10), for a map like map(*(p + 10)), where p is
+      // the attach-ptr.
+      if (HasAttachPtr && !SeemFirstNonBinOpExprAfterAttachPtr) {
+        const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
+        if (BO)
+          continue;
+
+        // Found the first non-binary-operator component after attach
+        SeemFirstNonBinOpExprAfterAttachPtr = true;
+        BP = AttachPteeBaseAddr;
+      }
+
       // If the current component is member of a struct (parent struct) mark it.
       if (!EncounteredME) {
         EncounteredME = dyn_cast<MemberExpr>(I->getAssociatedExpression());
@@ -7666,6 +8022,11 @@ private:
                   .getAddress();
         }
 
+        // Save the final LowestElem, to use it as the pointee in attach maps,
+        // if emitted.
+        if (Next == CE)
+          FinalLowestElem = LowestElem;
+
         // If this component is a pointer inside the base struct then we don't
         // need to create any entry for it - it will be combined with the object
         // it is pointing to into a single PTR_AND_OBJ entry.
@@ -7768,13 +8129,11 @@ private:
           // same expression except for the first one. We also need to signal
           // this map is the first one that relates with the current capture
           // (there is a set of entries for each capture).
-          OpenMPOffloadMappingFlags Flags =
-              getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
-                             !IsExpressionFirstInfo || RequiresReference ||
-                                 FirstPointerInComplexData || IsMemberReference,
-                             AreBothBasePtrAndPteeMapped ||
-                                 (IsCaptureFirstInfo && !RequiresReference),
-                             IsNonContiguous);
+          OpenMPOffloadMappingFlags Flags = getMapTypeBits(
+              MapType, MapModifiers, MotionModifiers, IsImplicit,
+              !IsExpressionFirstInfo || RequiresReference ||
+                  FirstPointerInComplexData || IsMemberReference,
+              IsCaptureFirstInfo && !RequiresReference, IsNonContiguous);
 
           if (!IsExpressionFirstInfo || IsMemberReference) {
             // If we have a PTR_AND_OBJ pair where the OBJ is a pointer as well,
@@ -7865,6 +8224,27 @@ private:
     // record.
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
+
+    // Add ATTACH entries for pointer-attachment: delay if PartialStruct is
+    // being populated, otherwise add immediately.
+    if (shouldEmitAttachEntry(AttachPtrExpr, BaseDecl, CGF, CurDir)) {
+      Address AttachPteeBeginAddr = FinalLowestElem;
+
+      if (PartialStruct.Base.isValid()) {
+        // We're populating PartialStruct, delay ATTACH entry addition until
+        // after emitCombinedEntry.
+        PartialStruct.AttachPtrAddr = AttachPtrAddr;
+        PartialStruct.AttachPteeAddr = AttachPteeBeginAddr;
+        PartialStruct.AttachPtrDecl = BaseDecl;
+        PartialStruct.AttachMapExpr = MapExpr;
+      } else if (IsMappingWholeStruct) {
+        addAttachEntry(CGF, StructBaseCombinedInfo, AttachPtrAddr,
+                       AttachPteeBeginAddr, BaseDecl, MapExpr);
+      } else {
+        addAttachEntry(CGF, CombinedInfo, AttachPtrAddr, AttachPteeBeginAddr,
+                       BaseDecl, MapExpr);
+      }
+    }
 
     if (!IsNonContiguous)
       return;
@@ -8139,6 +8519,207 @@ private:
     }
   }
 
+  /// Returns the address corresponding to \p PointerExpr.
+  static Address getAttachPtrAddr(const Expr *PointerExpr,
+                                  CodeGenFunction &CGF) {
+    Address AttachPtrAddr = Address::invalid();
+    if (!PointerExpr)
+      return AttachPtrAddr;
+
+    if (auto *DRE = dyn_cast<DeclRefExpr>(PointerExpr)) {
+      // If the pointer is a variable, we can use its address directly.
+      AttachPtrAddr = CGF.EmitLValue(DRE).getAddress();
+    } else if (auto *OASE = dyn_cast<ArraySectionExpr>(PointerExpr)) {
+      AttachPtrAddr =
+          CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
+    } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(PointerExpr)) {
+      AttachPtrAddr = CGF.EmitLValue(ASE).getAddress();
+    } else if (auto *ME = dyn_cast<MemberExpr>(PointerExpr)) {
+      AttachPtrAddr = CGF.EmitMemberExpr(ME).getAddress();
+    } else if (auto *UO = dyn_cast<UnaryOperator>(PointerExpr)) {
+      if (UO->getOpcode() == UO_Deref)
+        AttachPtrAddr = CGF.EmitLValue(UO).getAddress();
+    }
+    assert(AttachPtrAddr.isValid() &&
+           "Failed to get address for attach pointer expression");
+    return AttachPtrAddr;
+  }
+
+  /// Returns whether an attach entry should be emitted for a map on
+  /// \p MapBaseDecl on the directive \p CurDir.
+  static bool
+  shouldEmitAttachEntry(const Expr *PointerExpr, const ValueDecl *MapBaseDecl,
+                        CodeGenFunction &CGF,
+                        llvm::PointerUnion<const OMPExecutableDirective *,
+                                           const OMPDeclareMapperDecl *>
+                            CurDir) {
+    if (!PointerExpr)
+      return false;
+
+    // Pointer attachment is needed at map-entering time or for declare
+    // mappers.
+    if (!isa<const OMPDeclareMapperDecl *>(CurDir) &&
+        !isOpenMPTargetMapEnteringDirective(
+            cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()))
+      return false;
+
+    return true;
+  }
+
+  /// Get the type of an element of a ComponentList Expr \p Exp.
+  ///
+  /// For something like the following:
+  /// ```c
+  ///  int *p, **p;
+  /// ```
+  /// The types for the following Exprs would be:
+  ///   Expr     | Type
+  ///   ---------|-----------
+  ///   p        | int *
+  ///   *p       | int
+  ///   p[0]     | int
+  ///   p[0:1]   | int
+  ///   pp       | int **
+  ///   pp[0]    | int *
+  ///   pp[0:1]  | int *
+  static QualType getComponentExprElementType(const Expr *Exp) {
+    assert(!isa<OMPArrayShapingExpr>(Exp) &&
+           "Cannot get element-type from array-shaping expr.");
+
+    // Unless we are handling array-section expressions, including
+    // array-subscripts, derefs, we can rely on getType.
+    if (!isa<ArraySectionExpr>(Exp))
+      return Exp->getType().getNonReferenceType().getCanonicalType();
+
+    // For array-sections, we need to find the type of one element of
+    // the section.
+    const auto *OASE = cast<ArraySectionExpr>(Exp);
+
+    QualType BaseType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+
+    QualType ElemTy;
+    if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
+      ElemTy = ATy->getElementType();
+    else
+      ElemTy = BaseType->getPointeeType();
+
+    ElemTy = ElemTy.getNonReferenceType().getCanonicalType();
+    return ElemTy;
+  }
+
+  /// Traverse the list of Components to find the first pointer expression,
+  /// which should be the attachable-base-pointer for the current
+  /// component-list.
+  ///
+  /// For example, given the following:
+  /// ```c
+  /// struct S {
+  ///   int a;
+  ///   int b[10];
+  ///   int *p;
+  /// }
+  /// S s, *ps, **pps, *(pas[10]);
+  /// ```
+  /// The base-pointers for the following map operands would be:
+  ///   map list-item   | attach base-pointer
+  ///   ----------------|---------------------
+  ///   s               | N/A
+  ///   s.a             | N/A
+  ///   s.p             | N/A
+  ///   ps              | N/A
+  ///   ps->p           | ps
+  ///   ps[1]           | ps
+  ///   *(ps + 1)       | ps
+  ///   (ps + 1)[1]     | ps
+  ///   ps[1:10]        | ps
+  ///   ps->b[10]       | ps
+  ///   ps->p[10]       | ps->p
+  ///   pps[1][2]       | pps[1]
+  ///   pps[1:1][2]     | pps[1:1]
+  ///   pps[1]->p       | pps[1]
+  ///   pps[1]->p[10]   | pps[1]
+  ///   pas[1]          | N/A
+  ///   pas[1][2]       | pas[1]
+  /// Returns a pair of the attach pointer expression and its depth in the
+  /// component list.
+  /// TODO: This may need to be updated to handle ref_ptr/ptee cases for byref
+  /// map operands.
+  static std::pair<const Expr *, std::optional<size_t>> findAttachPtrExpr(
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
+
+    // If we only have a single component, we have a map like "map(p)", which
+    // cannot have a base-pointer.
+    if (Components.size() < 2)
+      return {nullptr, std::nullopt};
+
+    // To find the attach base-pointer, we start with the second component,
+    // stripping away one component at a time, until we reach a pointer Expr
+    // (that is not a binary operator). The first such pointer should be the
+    // attach base-pointer for the component list.
+    for (size_t I = 1; I < Components.size(); ++I) {
+      const Expr *CurExpr = Components[I].getAssociatedExpression();
+      if (!CurExpr)
+        break;
+
+      // If CurExpr is something like `p + 10`, we need to ignore it, since
+      // we are looking for `p`.
+      if (isa<BinaryOperator>(CurExpr))
+        continue;
+
+      // Keep going until we reach an Expr of pointer type.
+      QualType CurType = getComponentExprElementType(CurExpr);
+      if (!CurType->isPointerType())
+        continue;
+
+      // We have found a pointer Expr. This must be the attach pointer.
+      return {CurExpr, Components.size() - I};
+    }
+
+    return {nullptr, std::nullopt};
+  }
+
+  /// Group component lists by their AttachPtrExpr and return them sorted by
+  /// complexity. Complexity is determined by the depth of the AttachPtrExpr in
+  /// the component list. Lower depth = lower complexity. nullptr (no attach
+  /// pointer) has lowest complexity.
+  SmallVector<const Expr *, 8> getAttachPtrExprsSortedByComplexity() const {
+    SmallVector<const Expr *, 8> SortedAttachPtrs;
+
+    // Collect all unique AttachPtrExprs from the map
+    for (const auto &Entry : AttachPtrComponentDepthMap)
+      SortedAttachPtrs.push_back(Entry.first);
+
+    // Sort by complexity (nullptr first, then by increasing complexity) using
+    // stable_sort
+    llvm::stable_sort(SortedAttachPtrs, [this](const Expr *A, const Expr *B) {
+      // Use cached component depth values
+      auto ItA = AttachPtrComponentDepthMap.find(A);
+      auto ItB = AttachPtrComponentDepthMap.find(B);
+
+      // std::nullopt (no attach pointer) has lowest complexity
+      std::optional<size_t> DepthA = (ItA != AttachPtrComponentDepthMap.end())
+                                         ? ItA->second
+                                         : std::nullopt;
+      std::optional<size_t> DepthB = (ItB != AttachPtrComponentDepthMap.end())
+                                         ? ItB->second
+                                         : std::nullopt;
+
+      // If both are nullopt, they're equal
+      if (!DepthA.has_value() && !DepthB.has_value())
+        return false;
+      // If only A is nullopt, A comes first (lower complexity)
+      if (!DepthA.has_value())
+        return true;
+      // If only B is nullopt, B comes first (lower complexity)
+      if (!DepthB.has_value())
+        return false;
+      // Both have values, compare by depth (lower depth = lower complexity)
+      return DepthA.value() < DepthB.value();
+    });
+
+    return SortedAttachPtrs;
+  }
+
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted mappable expressions (all included in \a
   /// CombinedInfo). Also, for each item that relates with a device pointer, a
@@ -8293,8 +8874,10 @@ private:
           }
         };
 
-    auto &&IsMapInfoExist = [&Info](CodeGenFunction &CGF, const ValueDecl *VD,
-                                    const Expr *IE, bool IsDevAddr) -> bool {
+    auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF,
+                                          const ValueDecl *VD, const Expr *IE,
+                                          const Expr *DesiredAttachPtrExpr,
+                                          bool IsDevAddr) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
       // return true.
@@ -8305,30 +8888,42 @@ private:
       if (It != Info.end()) {
         bool Found = false;
         for (auto &Data : It->second) {
-          auto *CI = llvm::find_if(Data, [VD](const MapInfo &MI) {
-            return MI.Components.back().getAssociatedDeclaration() == VD;
+          MapInfo *CI = nullptr;
+          // We potentially have multiple maps for the same decl. We need to
+          // only consider those for which the attach-ptr matches the desired
+          // attach-ptr. If found, return the first such map.
+          auto *It = llvm::find_if(Data, [&](const MapInfo &MI) {
+            if (MI.Components.back().getAssociatedDeclaration() != VD)
+              return false;
+
+            // Debug: Print what we're checking against
+            const Expr *MapAttachPtr = getAttachPtrExpr(MI.Components);
+            bool Match = AttachPtrExprComparator(this).areEqual(
+                MapAttachPtr, DesiredAttachPtrExpr);
+            return Match;
           });
-          // If we found a map entry, signal that the pointer has to be
-          // returned and move on to the next declaration. Exclude cases where
-          // the base pointer is mapped as array subscript, array section or
-          // array shaping. The base address is passed as a pointer to base in
-          // this case and cannot be used as a base for use_device_ptr list
-          // item.
-          if (CI != Data.end()) {
+
+          if (It != Data.end())
+            CI = &*It;
+
+          if (CI) {
             if (IsDevAddr) {
-              CI->ForDeviceAddr = IsDevAddr;
+              CI->ForDeviceAddr = true;
               CI->ReturnDevicePointer = true;
               Found = true;
               break;
             } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
+              const Expr *AttachPtrExpr = getAttachPtrExpr(CI->Components);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
                   isa<MemberExpr>(IE) ||
                   !VD->getType().getNonReferenceType()->isPointerType() ||
                   PrevCI == CI->Components.rend() ||
                   isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
-                  VarD->hasLocalStorage()) {
+                  VarD->hasLocalStorage() ||
+                  (isa_and_nonnull<DeclRefExpr>(AttachPtrExpr) &&
+                   VD == cast<DeclRefExpr>(AttachPtrExpr)->getDecl())) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
                 Found = true;
@@ -8360,7 +8955,14 @@ private:
         const ValueDecl *VD = Components.back().getAssociatedDeclaration();
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = Components.back().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, /*IsDevAddr=*/false))
+        // For use_device_ptr, we match an existing map clause if its attach-ptr
+        // is same as the use_device_ptr operand. e.g.
+        //   map(p[1]) use_device_ptr(p)     // match
+        //   map(ps->a) use_device_ptr(ps)   // match
+        //   map(p) use_device_ptr(p)        // no match
+        const Expr *UDPFirstExpr = Components.front().getAssociatedExpression();
+        if (IsMapInfoExist(CGF, VD, IE, /*DesiredAttachPtrExpr=*/UDPFirstExpr,
+                           /*IsDevAddr=*/false))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
                    /*IsDevAddr=*/false);
@@ -8382,7 +8984,29 @@ private:
           continue;
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = std::get<1>(L).back().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, /*IsDevAddr=*/true))
+        if (const auto *ASE_IE = dyn_cast_or_null<ArraySubscriptExpr>(
+                IE->IgnoreParenImpCasts())) {
+          const Expr *BaseIE = ASE_IE->getBase()->IgnoreParenImpCasts();
+          if (!isa<DeclRefExpr>(BaseIE)) {
+            llvm::errs() << "error: use_device_addr expects base-pointer to be "
+                            "an identifier (e.g., xpp or xpp[1]); got: ";
+            IE->dump();
+          }
+        }
+        // For use_device_addr, we match an existing map clause if its attach-ptr
+        // is same as the attach-ptr of the use_device_addr clause. e.g.
+        //   map(p) use_device_addr(p)         // match
+        //   map(p[1]) use_device_addr(p[0])   // match
+        //   map(ps->a) use_device_addr(ps->b) // match
+        //   map(p) use_device_addr(p[0])      // no match
+        //   map(pp) use_device_addr(pp[0][0]) // no match
+        // FIXME: getAttachPtrExpr does not work on use_device_addr, since
+        // the component-list only contains one component. We need to move
+        // attach-ptr calculation to the Sema phase.
+        const Expr *UDAAttachPtrExpr = getAttachPtrExpr(Components);
+        if (IsMapInfoExist(CGF, VD, IE,
+                           /*DesiredAttachPtrExpr=*/UDAAttachPtrExpr,
+                           /*IsDevAddr=*/true))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
                    /*IsDevAddr=*/true);
@@ -8390,56 +9014,64 @@ private:
     }
 
     for (const auto &Data : Info) {
-      StructRangeInfoTy PartialStruct;
-      // Current struct information:
       MapCombinedInfoTy CurInfo;
-      // Current struct base information:
-      MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
-      bool HasMapBasePtr = false;
-      bool HasMapArraySec = false;
-      if (VD && VD->getType()->isAnyPointerType()) {
-        for (const auto &M : Data.second) {
-          HasMapBasePtr = any_of(M, [](const MapInfo &L) {
-            return isa_and_present<DeclRefExpr>(L.VarRef);
-          });
-          HasMapArraySec = any_of(M, [](const MapInfo &L) {
-            return isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(
-                L.VarRef);
-          });
-          if (HasMapBasePtr && HasMapArraySec)
-            break;
-        }
-      }
+      // Group component lists by their AttachPtrExpr and process them in order
+      // of increasing complexity (nullptr first, then simple expressions like
+      // p, then more complex ones like p[0], etc.)
+      //
+      // This is similar to how generateInfoForCaptureFromClauseInfo handles
+      // grouping for target constructs.
+      std::map<const Expr *, SmallVector<MapInfo, 8>, AttachPtrExprComparator>
+          AttachPtrGroups{AttachPtrExprComparator(this)};
+
+      // Collect all MapInfo entries and group them by AttachPtrExpr
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
                  "Not expecting declaration with no component lists.");
 
+          const Expr *AttachPtrExpr = getAttachPtrExpr(L.Components);
+          AttachPtrGroups[AttachPtrExpr].push_back(L);
+        }
+      }
+
+      // Process each group in order of their attach-pointers increasing
+      // complexity.
+      for (const auto &Entry : AttachPtrGroups) {
+        const SmallVector<MapInfo, 8> &GroupLists = Entry.second;
+        if (GroupLists.empty())
+          continue;
+
+        StructRangeInfoTy PartialStruct;
+        MapCombinedInfoTy GroupCurInfo;
+        // Current group's struct base information:
+        MapCombinedInfoTy GroupStructBaseCurInfo;
+        for (const MapInfo &L : GroupLists) {
           // Remember the current base pointer index.
-          unsigned CurrentBasePointersIdx = CurInfo.BasePointers.size();
+          unsigned CurrentBasePointersIdx = GroupCurInfo.BasePointers.size();
           unsigned StructBasePointersIdx =
-              StructBaseCurInfo.BasePointers.size();
-          CurInfo.NonContigInfo.IsNonContiguous =
+              GroupStructBaseCurInfo.BasePointers.size();
+
+          GroupCurInfo.NonContigInfo.IsNonContiguous =
               L.Components.back().isNonContiguous();
           generateInfoForComponentList(
               L.MapType, L.MapModifiers, L.MotionModifiers, L.Components,
-              CurInfo, StructBaseCurInfo, PartialStruct,
+              GroupCurInfo, GroupStructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
-              L.VarRef, /*OverlappedElements*/ {},
-              HasMapBasePtr && HasMapArraySec);
+              L.VarRef, /*OverlappedElements*/ {});
 
           // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
           if (L.ReturnDevicePointer) {
-            // Check whether a value was added to either CurInfo or
-            // StructBaseCurInfo and error if no value was added to either of
-            // them:
-            assert((CurrentBasePointersIdx < CurInfo.BasePointers.size() ||
+            // Check whether a value was added to either GroupCurInfo or
+            // GroupStructBaseCurInfo and error if no value was added to either
+            // of them:
+            assert((CurrentBasePointersIdx < GroupCurInfo.BasePointers.size() ||
                     StructBasePointersIdx <
-                        StructBaseCurInfo.BasePointers.size()) &&
+                        GroupStructBaseCurInfo.BasePointers.size()) &&
                    "Unexpected number of mapped base pointers.");
 
             // Choose a base pointer index which is always valid:
@@ -8448,29 +9080,48 @@ private:
             assert(RelevantVD &&
                    "No relevant declaration related with device pointer??");
 
-            // If StructBaseCurInfo has been updated this iteration then work on
-            // the first new entry added to it i.e. make sure that when multiple
-            // values are added to any of the lists, the first value added is
-            // being modified by the assignments below (not the last value
-            // added).
-            if (StructBasePointersIdx < StructBaseCurInfo.BasePointers.size()) {
-              StructBaseCurInfo.DevicePtrDecls[StructBasePointersIdx] =
+            // If GroupStructBaseCurInfo has been updated this iteration then
+            // work on the first new entry added to it i.e. make sure that when
+            // multiple values are added to any of the lists, the first value
+            // added is being modified by the assignments below (not the last
+            // value added).
+            if (StructBasePointersIdx <
+                GroupStructBaseCurInfo.BasePointers.size()) {
+              GroupStructBaseCurInfo.DevicePtrDecls[StructBasePointersIdx] =
                   RelevantVD;
-              StructBaseCurInfo.DevicePointers[StructBasePointersIdx] =
+              GroupStructBaseCurInfo.DevicePointers[StructBasePointersIdx] =
                   L.ForDeviceAddr ? DeviceInfoTy::Address
                                   : DeviceInfoTy::Pointer;
-              StructBaseCurInfo.Types[StructBasePointersIdx] |=
+              GroupStructBaseCurInfo.Types[StructBasePointersIdx] |=
                   OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
             } else {
-              CurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
-              CurInfo.DevicePointers[CurrentBasePointersIdx] =
+              GroupCurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
+              GroupCurInfo.DevicePointers[CurrentBasePointersIdx] =
                   L.ForDeviceAddr ? DeviceInfoTy::Address
                                   : DeviceInfoTy::Pointer;
-              CurInfo.Types[CurrentBasePointersIdx] |=
+              GroupCurInfo.Types[CurrentBasePointersIdx] |=
                   OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
             }
           }
         }
+
+        // If there is an entry in PartialStruct it means we have a struct with
+        // individual members mapped. Emit an extra combined entry.
+        MapCombinedInfoTy AttachCombinedInfo;
+        if (PartialStruct.Base.isValid()) {
+          CurInfo.append(PartialStruct.PreliminaryMapData);
+          emitCombinedEntry(
+              CurInfo, AttachCombinedInfo, GroupCurInfo.Types, PartialStruct,
+              /*IsMapThis*/ !VD, OMPBuilder, VD,
+              /*OffsetForMemberOfFlag=*/0, /*NotTargetParam=*/true);
+        }
+
+        // Append this group's results to the overall CurInfo in the correct
+        // order: combined-entry -> individual-field-entries -> attach-entry
+        // First append struct base info, then component info
+        CurInfo.append(GroupStructBaseCurInfo);
+        CurInfo.append(GroupCurInfo);
+        CurInfo.append(AttachCombinedInfo);
       }
 
       // Append any pending zero-length pointers which are struct members and
@@ -8516,23 +9167,8 @@ private:
         }
       }
 
-      // Unify entries in one list making sure the struct mapping precedes the
-      // individual fields:
-      MapCombinedInfoTy UnionCurInfo;
-      UnionCurInfo.append(StructBaseCurInfo);
-      UnionCurInfo.append(CurInfo);
-
-      // If there is an entry in PartialStruct it means we have a struct with
-      // individual members mapped. Emit an extra combined entry.
-      if (PartialStruct.Base.isValid()) {
-        UnionCurInfo.NonContigInfo.Dims.push_back(0);
-        // Emit a combined entry:
-        emitCombinedEntry(CombinedInfo, UnionCurInfo.Types, PartialStruct,
-                          /*IsMapThis*/ !VD, OMPBuilder, VD);
-      }
-
       // We need to append the results of this capture to what we already have.
-      CombinedInfo.append(UnionCurInfo);
+      CombinedInfo.append(CurInfo);
     }
     // Append data for use_device_ptr clauses.
     CombinedInfo.append(UseDeviceDataCombinedInfo);
@@ -8582,6 +9218,35 @@ public:
           LambdasMap.try_emplace(std::get<0>(L), C);
       }
     }
+
+    auto cacheAttachPtrExprsForClauseComponents = [this](const auto *C) {
+      for (auto L : C->component_lists()) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<1>(L);
+        if (!Components.empty()) {
+          auto [AttachPtrExpr, Depth] = findAttachPtrExpr(Components);
+          AttachPtrExprMap[Components] = AttachPtrExpr;
+          AttachPtrComponentDepthMap[AttachPtrExpr] = Depth;
+        }
+      }
+    };
+
+    // Populate the AttachPtrExprMap for all component lists from map-related
+    // clauses.
+    for (const auto *C : Dir.getClausesOfKind<OMPMapClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPToClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPFromClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPUseDevicePtrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPUseDeviceAddrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
+    for (const auto *C : Dir.getClausesOfKind<OMPHasDeviceAddrClause>())
+      cacheAttachPtrExprsForClauseComponents(C);
   }
 
   /// Constructor for the declare mapper directive.
@@ -8591,18 +9256,29 @@ public:
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
   /// individual struct members.
+  /// AttachCombinedInfo will be populated with ATTACH entries if
+  /// \p PartialStruct contains attach base-pointer information.
   void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
+                         MapCombinedInfoTy &AttachCombinedInfo,
                          MapFlagsArrayTy &CurTypes,
                          const StructRangeInfoTy &PartialStruct, bool IsMapThis,
-                         llvm::OpenMPIRBuilder &OMPBuilder,
-                         const ValueDecl *VD = nullptr,
-                         unsigned OffsetForMemberOfFlag = 0,
-                         bool NotTargetParams = true) const {
+                         llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD,
+                         unsigned OffsetForMemberOfFlag,
+                         bool NotTargetParams) const {
     if (CurTypes.size() == 1 &&
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
          OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) &&
-        !PartialStruct.IsArraySection)
+        !PartialStruct.IsArraySection) {
+      // Even if we are not creating a combined-entry, we need to process any
+      // previously delayed ATTACH entries.
+      if (PartialStruct.AttachPtrAddr.isValid() &&
+          PartialStruct.AttachPteeAddr.isValid())
+        addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachPtrAddr,
+                       PartialStruct.AttachPteeAddr,
+                       PartialStruct.AttachPtrDecl,
+                       PartialStruct.AttachMapExpr);
       return;
+    }
     Address LBAddr = PartialStruct.LowestElem.second;
     Address HBAddr = PartialStruct.HighestElem.second;
     if (PartialStruct.HasCompleteRecord) {
@@ -8683,11 +9359,25 @@ public:
 
     // All other current entries will be MEMBER_OF the combined entry
     // (except for PTR_AND_OBJ entries which do not have a placeholder value
-    // 0xFFFF in the MEMBER_OF field).
+    // 0xFFFF in the MEMBER_OF field, or ATTACH entries since they are expected
+    // to be handled by themselves, after all other maps).
     OpenMPOffloadMappingFlags MemberOfFlag = OMPBuilder.getMemberOfFlag(
         OffsetForMemberOfFlag + CombinedInfo.BasePointers.size() - 1);
     for (auto &M : CurTypes)
       OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
+
+    // When we are emitting a combined entry. If there were any pending
+    // attachments to be done, we do them to the begin address of the combined
+    // entry. Note that this means only one attachment per combined-entry will
+    // be done. So, for instance, if we have:
+    //   S *ps;
+    //   ... map(ps->a, ps->b)
+    // We won't emit separate ATTACH entries for the two list items, just one.
+    if (PartialStruct.AttachPtrAddr.isValid() &&
+        PartialStruct.AttachPteeAddr.isValid())
+      addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachPtrAddr,
+                     LBAddr, PartialStruct.AttachPtrDecl,
+                     PartialStruct.AttachMapExpr);
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -8828,10 +9518,69 @@ public:
     }
   }
 
+  /// Populate component lists for non-lambda captured variables from map,
+  /// is_device_ptr and has_device_addr clause info.
+  void populateComponentListsForNonLambdaCaptureFromClauses(
+      const ValueDecl *VD, MapDataArrayTy &DeclComponentLists) const {
+    if (VD && LambdasMap.count(VD))
+      return;
+
+    // For member fields list in is_device_ptr, store it in
+    // DeclComponentLists for generating components info.
+    static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
+    auto It = DevPointersMap.find(VD);
+    if (It != DevPointersMap.end())
+      for (const auto &MCL : It->second)
+        DeclComponentLists.emplace_back(MCL, OMPC_MAP_to, Unknown,
+                                        /*IsImpicit = */ true, nullptr,
+                                        nullptr);
+    auto I = HasDevAddrsMap.find(VD);
+    if (I != HasDevAddrsMap.end())
+      for (const auto &MCL : I->second)
+        DeclComponentLists.emplace_back(MCL, OMPC_MAP_tofrom, Unknown,
+                                        /*IsImpicit = */ true, nullptr,
+                                        nullptr);
+    assert(isa<const OMPExecutableDirective *>(CurDir) &&
+           "Expect a executable directive");
+    const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
+    for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {
+      const auto *EI = C->getVarRefs().begin();
+      for (const auto L : C->decl_component_lists(VD)) {
+        const ValueDecl *VDecl, *Mapper;
+        // The Expression is not correct if the mapping is implicit
+        const Expr *E = (C->getMapLoc().isValid()) ? *EI : nullptr;
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
+        std::tie(VDecl, Components, Mapper) = L;
+        assert(VDecl == VD && "We got information for the wrong declaration??");
+        assert(!Components.empty() &&
+               "Not expecting declaration with no component lists.");
+        DeclComponentLists.emplace_back(Components, C->getMapType(),
+                                        C->getMapTypeModifiers(),
+                                        C->isImplicit(), Mapper, E);
+        ++EI;
+      }
+    }
+    llvm::stable_sort(DeclComponentLists, [](const MapData &LHS,
+                                             const MapData &RHS) {
+      ArrayRef<OpenMPMapModifierKind> MapModifiers = std::get<2>(LHS);
+      OpenMPMapClauseKind MapType = std::get<1>(RHS);
+      bool HasPresent =
+          llvm::is_contained(MapModifiers, clang::OMPC_MAP_MODIFIER_present);
+      bool HasAllocs = MapType == OMPC_MAP_alloc;
+      MapModifiers = std::get<2>(RHS);
+      MapType = std::get<1>(LHS);
+      bool HasPresentR =
+          llvm::is_contained(MapModifiers, clang::OMPC_MAP_MODIFIER_present);
+      bool HasAllocsR = MapType == OMPC_MAP_alloc;
+      return (HasPresent && !HasPresentR) || (HasAllocs && !HasAllocsR);
+    });
+  }
+
   /// For a capture that has an associated clause, generate the base pointers,
   /// section pointers, sizes, map types, and mappers (all included in
   /// \a CurCaptureVarInfo).
   void generateInfoForCaptureFromClauseInfo(
+      const MapDataArrayTy &DeclComponentListsFromClauses,
       const CapturedStmt::Capture *Cap, llvm::Value *Arg,
       MapCombinedInfoTy &CurCaptureVarInfo, llvm::OpenMPIRBuilder &OMPBuilder,
       unsigned OffsetForMemberOfFlag) const {
@@ -8867,99 +9616,84 @@ public:
       return;
     }
 
-    MapDataArrayTy DeclComponentLists;
-    // For member fields list in is_device_ptr, store it in
-    // DeclComponentLists for generating components info.
-    static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
-    auto It = DevPointersMap.find(VD);
-    if (It != DevPointersMap.end())
-      for (const auto &MCL : It->second)
-        DeclComponentLists.emplace_back(MCL, OMPC_MAP_to, Unknown,
-                                        /*IsImpicit = */ true, nullptr,
-                                        nullptr);
-    auto I = HasDevAddrsMap.find(VD);
-    if (I != HasDevAddrsMap.end())
-      for (const auto &MCL : I->second)
-        DeclComponentLists.emplace_back(MCL, OMPC_MAP_tofrom, Unknown,
-                                        /*IsImpicit = */ true, nullptr,
-                                        nullptr);
-    assert(isa<const OMPExecutableDirective *>(CurDir) &&
-           "Expect a executable directive");
-    const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
-    bool HasMapBasePtr = false;
-    bool HasMapArraySec = false;
-    for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {
-      const auto *EI = C->getVarRefs().begin();
-      for (const auto L : C->decl_component_lists(VD)) {
-        const ValueDecl *VDecl, *Mapper;
-        // The Expression is not correct if the mapping is implicit
-        const Expr *E = (C->getMapLoc().isValid()) ? *EI : nullptr;
-        OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
-        std::tie(VDecl, Components, Mapper) = L;
-        assert(VDecl == VD && "We got information for the wrong declaration??");
-        assert(!Components.empty() &&
-               "Not expecting declaration with no component lists.");
-        if (VD && E && VD->getType()->isAnyPointerType() && isa<DeclRefExpr>(E))
-          HasMapBasePtr = true;
-        if (VD && E && VD->getType()->isAnyPointerType() &&
-            (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
-          HasMapArraySec = true;
-        DeclComponentLists.emplace_back(Components, C->getMapType(),
-                                        C->getMapTypeModifiers(),
-                                        C->isImplicit(), Mapper, E);
-        ++EI;
-      }
-    }
-    llvm::stable_sort(DeclComponentLists, [](const MapData &LHS,
-                                             const MapData &RHS) {
-      ArrayRef<OpenMPMapModifierKind> MapModifiers = std::get<2>(LHS);
-      OpenMPMapClauseKind MapType = std::get<1>(RHS);
-      bool HasPresent =
-          llvm::is_contained(MapModifiers, clang::OMPC_MAP_MODIFIER_present);
-      bool HasAllocs = MapType == OMPC_MAP_alloc;
-      MapModifiers = std::get<2>(RHS);
-      MapType = std::get<1>(LHS);
-      bool HasPresentR =
-          llvm::is_contained(MapModifiers, clang::OMPC_MAP_MODIFIER_present);
-      bool HasAllocsR = MapType == OMPC_MAP_alloc;
-      return (HasPresent && !HasPresentR) || (HasAllocs && !HasAllocsR);
-    });
-
     auto GenerateInfoForComponentLists =
-        [&](ArrayRef<MapData> DeclComponentLists,
+        [&](ArrayRef<MapData> DeclComponentListsFromClauses,
             bool IsEligibleForTargetParamFlag) {
           MapCombinedInfoTy CurInfoForComponentLists;
           StructRangeInfoTy PartialStruct;
 
-          if (DeclComponentLists.empty())
+          if (DeclComponentListsFromClauses.empty())
             return;
 
           generateInfoForCaptureFromComponentLists(
-              VD, DeclComponentLists, CurInfoForComponentLists, PartialStruct,
-              IsEligibleForTargetParamFlag,
-              /*AreBothBasePtrAndPteeMapped=*/HasMapBasePtr && HasMapArraySec);
+              VD, DeclComponentListsFromClauses, CurInfoForComponentLists,
+              PartialStruct, IsEligibleForTargetParamFlag);
 
           // If there is an entry in PartialStruct it means we have a
           // struct with individual members mapped. Emit an extra combined
           // entry.
+          MapCombinedInfoTy AttachCombinedInfo;
           if (PartialStruct.Base.isValid()) {
             CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
             emitCombinedEntry(
-                CurCaptureVarInfo, CurInfoForComponentLists.Types,
-                PartialStruct, Cap->capturesThis(), OMPBuilder, nullptr,
-                OffsetForMemberOfFlag,
+                CurCaptureVarInfo, AttachCombinedInfo,
+                CurInfoForComponentLists.Types, PartialStruct,
+                Cap->capturesThis(), OMPBuilder, nullptr, OffsetForMemberOfFlag,
                 /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
           }
 
-          // Return if we didn't add any entries.
-          if (CurInfoForComponentLists.BasePointers.empty())
-            return;
-
+          // We do the appends to get the entries in the following order:
+          // combined-entry -> individual-field-entries -> attach-entry
           CurCaptureVarInfo.append(CurInfoForComponentLists);
+          CurCaptureVarInfo.append(AttachCombinedInfo);
         };
 
-    GenerateInfoForComponentLists(DeclComponentLists,
-                                  /*IsEligibleForTargetParamFlag=*/true);
+    // Group component lists by their AttachPtrExpr and process them in order
+    // of increasing complexity (nullptr first, then simple expressions like p,
+    // then more complex ones like p[0], etc.)
+    //
+    // Example: The map clauses below should be handled grouped together based
+    // on their attachable-base-pointers:
+    //   map-clause                | attachable-base-pointer
+    //   --------------------------+------------------------
+    //   map(p, ps)                | nullptr
+    //   map(p[0])                 | p
+    //   map(p[0]->b, p[0]->c)     | p[0]
+    //   map(ps->d, ps->e, ps->pt) | ps
+    //   map(ps->pt->d, ps->pt->e) | ps->pt
+
+    // Group component lists by their AttachPtrExpr
+    std::map<const Expr *, MapDataArrayTy, AttachPtrExprComparator>
+        AttachPtrGroups{AttachPtrExprComparator(this)};
+
+    for (const MapData &L : DeclComponentListsFromClauses) {
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+          std::get<0>(L);
+      const Expr *AttachPtrExpr = getAttachPtrExpr(Components);
+      AttachPtrGroups[AttachPtrExpr].push_back(L);
+    }
+
+    // Sort AttachPtrExprs by complexity and process each group
+    bool NoDefaultMappingDoneForVD = CurCaptureVarInfo.BasePointers.empty();
+    bool FirstGroupProcessed = false;
+
+    // Process each group in order of their attach-pointers increasing
+    // complexity.
+    for (const auto &Entry : AttachPtrGroups) {
+      const Expr *AttachPtr = Entry.first;
+      const MapDataArrayTy &GroupLists = AttachPtrGroups[AttachPtr];
+      if (GroupLists.empty())
+        continue;
+
+      // Determine if this group of component-lists is eligible for TARGET_PARAM
+      // flag. Only the first group processed should be eligible, and only if no
+      // default mapping was done.
+      bool IsEligibleForTargetParamFlag =
+          !FirstGroupProcessed && NoDefaultMappingDoneForVD;
+
+      GenerateInfoForComponentLists(GroupLists, IsEligibleForTargetParamFlag);
+      FirstGroupProcessed = true;
+    }
   }
 
   /// Generate the base pointers, section pointers, sizes, map types, and
@@ -8968,8 +9702,7 @@ public:
   void generateInfoForCaptureFromComponentLists(
       const ValueDecl *VD, ArrayRef<MapData> DeclComponentLists,
       MapCombinedInfoTy &CurComponentListInfo, StructRangeInfoTy &PartialStruct,
-      bool IsListEligibleForTargetParamFlag,
-      bool AreBothBasePtrAndPteeMapped = false) const {
+      bool IsListEligibleForTargetParamFlag) const {
     // Find overlapping elements (including the offset from the base element).
     llvm::SmallDenseMap<
         const MapData *,
@@ -9016,12 +9749,23 @@ public:
           // etc.), it is not an overlapping.
           // Same, if one component is a base and another component is a
           // dereferenced pointer memberexpr with the same base.
+          // Check if both component lists share the same attach pointer
+          // This allows struct member access through pointers when they
+          // belong to the same struct, including nested cases like ps->qs->x
+          const Expr *AttachPtr1 = getAttachPtrExpr(Components);
+          const Expr *AttachPtr2 = getAttachPtrExpr(Components1);
           if (!isa<MemberExpr>(It->getAssociatedExpression()) ||
               (std::prev(It)->getAssociatedDeclaration() &&
                std::prev(It)
                    ->getAssociatedDeclaration()
                    ->getType()
-                   ->isPointerType()) ||
+                   ->isPointerType()) || /*&&
+               // Check if both component lists share the same attach pointer
+               // This allows struct member access through pointers when they
+               // belong to the same struct, including nested cases like ps->qs->x
+               !(AttachPtr1 &&
+                 AttachPtr2 &&
+                 AttachPtr1 == AttachPtr2)) ||*/
               (It->getAssociatedDeclaration() &&
                It->getAssociatedDeclaration()->getType()->isPointerType() &&
                std::next(It) != CE && std::next(It) != SE))
@@ -9131,7 +9875,7 @@ public:
             StructBaseCombinedInfo, PartialStruct, AddTargetParamFlag,
             IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
             /*ForDeviceAddr=*/false, VD, VarRef,
-            /*OverlappedElements*/ {}, AreBothBasePtrAndPteeMapped);
+            /*OverlappedElements*/ {});
       AddTargetParamFlag = false;
     }
   }
@@ -9629,19 +10373,60 @@ static void genMapInfoForCaptures(
                               OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
       CurInfo.Mappers.push_back(nullptr);
     } else {
+      const ValueDecl *CapturedVD =
+          CI->capturesThis() ? nullptr
+                             : CI->getCapturedVar()->getCanonicalDecl();
+      bool HasEntryWithCVAsAttachPtr = false;
+      if (CapturedVD)
+        HasEntryWithCVAsAttachPtr =
+            MEHandler.hasAttachEntryForCapturedVar(CapturedVD);
+
+      // Populate component lists for the captured variable from clauses.
+      MappableExprsHandler::MapDataArrayTy DeclComponentLists;
+      MEHandler.populateComponentListsForNonLambdaCaptureFromClauses(
+          CapturedVD, DeclComponentLists);
+
+      // Map clauses on a target construct must either have a base pointer, or a
+      // base-variable. So, if we don't have a base-pointer, that means that it
+      // must have a base-variable, like map(s), map(s.x) etc. In such cases, we
+      // do not need to handle default map generation for s.
+      bool HasEntryWithoutAttachPtr = false;
+      bool AttachPtrIsMemberOfThis = false;
+      for (const auto &MapData : DeclComponentLists) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<0>(MapData);
+        const Expr *AttachPtr = MEHandler.getAttachPtrExpr(Components);
+        if (!AttachPtr) {
+          HasEntryWithoutAttachPtr = true;
+          break;
+        }
+        // Check if the attach pointer is a member expression (this->member)
+        if (CI->capturesThis() && isa<MemberExpr>(AttachPtr)) {
+          const auto *ME = cast<MemberExpr>(AttachPtr);
+          if (ME->isImplicitCXXThis() ||
+              isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
+            AttachPtrIsMemberOfThis = true;
+          }
+        }
+      }
+
+      // Generate default map info first if there's no direct map with CV as
+      // the base-variable, or attach pointer.
+      if (DeclComponentLists.empty() ||
+          (!HasEntryWithCVAsAttachPtr && !HasEntryWithoutAttachPtr &&
+           !AttachPtrIsMemberOfThis))
+        MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
+
       // If we have any information in the map clause, we use it, otherwise we
       // just do a default mapping.
       MEHandler.generateInfoForCaptureFromClauseInfo(
-          CI, *CV, CurInfo, OMPBuilder,
+          DeclComponentLists, CI, *CV, CurInfo, OMPBuilder,
           /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size());
 
       if (!CI->capturesThis())
         MappedVarSet.insert(CI->getCapturedVar());
       else
         MappedVarSet.insert(nullptr);
-
-      if (CurInfo.BasePointers.empty())
-        MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
 
       // Generate correct mapping for variables captured by reference in
       // lambdas.
