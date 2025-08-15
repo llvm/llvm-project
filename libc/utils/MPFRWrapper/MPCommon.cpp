@@ -107,7 +107,7 @@ MPFRNumber MPFRNumber::asinh() const {
 
 MPFRNumber MPFRNumber::asinpi() const {
   MPFRNumber result(*this);
-#if 0 && (MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0))
+#if (MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0))
   mpfr_asinpi(result.value, value, mpfr_rounding);
   return result;
 #else
