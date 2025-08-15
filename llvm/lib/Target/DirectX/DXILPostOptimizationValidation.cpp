@@ -19,7 +19,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DXILABI.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 

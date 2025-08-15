@@ -1,5 +1,5 @@
-; RUN: opt -S -passes='dxil-post-optimization-validation' %s 2>&1 
-; expected-no-diagnostics
+; RUN: opt -S -passes='dxil-post-optimization-validation' %s 
+; Valid scenario where shader stage is not blocked from accessing root bindings
 target triple = "dxil-pc-shadermodel6.6-geometry"
 
 define void @CSMain() #0 {
@@ -11,5 +11,6 @@ attributes #0 = { noinline nounwind "exp-shader"="cs" "hlsl.numthreads"="1,2,1" 
 !dx.rootsignatures = !{!0}
 
 !0 = !{ptr @CSMain, !1, i32 2}
-!1 = !{!2}
+!1 = !{!2, !3}
 !2 = !{ !"RootFlags", i32 294 } ; 32 = deny_pixel/hull/vertex/amplification_shader_root_access
+!3 = !{ !"RootCBV", i32 0, i32 1, i32 0, i32 0 }

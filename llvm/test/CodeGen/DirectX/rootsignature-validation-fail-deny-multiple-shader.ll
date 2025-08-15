@@ -1,5 +1,4 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' %s 2>&1 | FileCheck %s
-
 ; CHECK: error: Shader has root bindings but root signature uses a DENY flag to disallow root binding access to the shader stage.
 target triple = "dxil-pc-shadermodel6.6-pixel"
 
