@@ -225,7 +225,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
            "switch coroutine should not return any values");
     // coro.end doesn't immediately end the coroutine in the main function
     // in this lowering, because we need to deallocate the coroutine.
-    if (!InResume)
+    if (!InResume || !End->user_empty())
       return;
     Builder.CreateRetVoid();
     break;
