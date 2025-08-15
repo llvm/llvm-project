@@ -1503,7 +1503,7 @@ For landingpad based exception model, it is expected that frontend uses the
 
     ehcleanup:
       call void @llvm.coro.end(ptr null, i1 true, token none)
-      %InResumePart = call i1 @llvm.coro.where()
+      %InResumePart = call i1 @llvm.coro.is_in_resume()
       br i1 %InResumePart, label %eh.resume, label %cleanup.cont
 
     cleanup.cont:
@@ -1516,8 +1516,8 @@ For landingpad based exception model, it is expected that frontend uses the
       %lpad.val29 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1
       resume { ptr, i32 } %lpad.val29
 
-The `CoroSpit` pass replaces `coro.where` with ``True`` in the resume functions,
-thus leading to immediate unwind to the caller, whereas in start function it
+The `CoroSpit` pass replaces `coro.is_in_resume` with ``True`` in the resume functions,
+thus leading to immediate unwind to the caller, whereas in ramp function it
 is replaced with ``False``, thus allowing to proceed to the rest of the cleanup
 code that is only needed during initial invocation of the coroutine.
 
@@ -2118,17 +2118,17 @@ Example:
       %hdl.result = ... ; get address of returned coroutine handle
       ret ptr %hdl.result
 
-'llvm.coro.where' Intrinsic
+'llvm.coro.is_in_resume' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.where()
+  declare i1 @llvm.coro.is_in_resume()
 
 Overview:
 """""""""
 
-The '``llvm.coro.where``' intrinsic returns a bool value that marks coroutine resume
-part and start part.
+The '``llvm.coro.is_in_resume``' intrinsic returns a bool value that marks coroutine resume
+function and ramp function.
 
 Arguments:
 """"""""""
@@ -2138,9 +2138,9 @@ None
 Semantics:
 """"""""""
 
-The `CoroSpit` pass replaces `coro.where` with ``True`` in the resume functions,
-whereas in start function it is replaced with ``False``, thus allowing the frontend
-separate resume part and start part.
+The `CoroSpit` pass replaces `coro.is_in_resume` with ``True`` in the resume functions,
+whereas in ramp function it is replaced with ``False``, thus allowing the frontend
+separate resume function and ramp function.
 
 Coroutine Transformation Passes
 ===============================

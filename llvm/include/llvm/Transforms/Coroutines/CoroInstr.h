@@ -428,12 +428,12 @@ public:
   }
 };
 
-/// This represents the llvm.coro.where instruction.
-class CoroWhereInst : public IntrinsicInst {
+/// This represents the llvm.coro.is_in_resume instruction.
+class CoroIsInResumeInst : public IntrinsicInst {
 public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::coro_where;
+    return I->getIntrinsicID() == Intrinsic::coro_is_in_resume;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

@@ -558,12 +558,12 @@ void coro::BaseCloner::replaceCoroEnds() {
   }
 }
 
-void coro::BaseCloner::replaceCoroWhere() {
+void coro::BaseCloner::replaceCoroIsInResume() {
   auto &Ctx = OrigF.getContext();
-  for (auto *CW : Shape.CoroWheres) {
-    auto *NewCW = cast<CoroWhereInst>(VMap[CW]);
-    NewCW->replaceAllUsesWith(ConstantInt::getTrue(Ctx));
-    NewCW->eraseFromParent();
+  for (auto *II : Shape.CoroIsInResumeInsts) {
+    auto *NewII = cast<CoroIsInResumeInst>(VMap[II]);
+    NewII->replaceAllUsesWith(ConstantInt::getTrue(Ctx));
+    NewII->eraseFromParent();
   }
 }
 
@@ -1082,7 +1082,7 @@ void coro::BaseCloner::create() {
   // Remove coro.end intrinsics.
   replaceCoroEnds();
 
-  replaceCoroWhere();
+  replaceCoroIsInResume();
 
   // Salvage debug info that points into the coroutine frame.
   salvageDebugInfo();
@@ -1963,11 +1963,11 @@ static void removeCoroEndsFromRampFunction(const coro::Shape &Shape) {
   }
 }
 
-static void removeCoroWhereFromRampFunction(const coro::Shape &Shape) {
-  for (auto *CW : Shape.CoroWheres) {
-    auto &Ctx = CW->getContext();
-    CW->replaceAllUsesWith(ConstantInt::getFalse(Ctx));
-    CW->eraseFromParent();
+static void removeCoroIsInResumeFromRampFunction(const coro::Shape &Shape) {
+  for (auto *II : Shape.CoroIsInResumeInsts) {
+    auto &Ctx = II->getContext();
+    II->replaceAllUsesWith(ConstantInt::getFalse(Ctx));
+    II->eraseFromParent();
   }
 }
 
@@ -2032,7 +2032,7 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
 
   removeCoroEndsFromRampFunction(Shape);
-  removeCoroWhereFromRampFunction(Shape);
+  removeCoroIsInResumeFromRampFunction(Shape);
 
   if (shouldCreateNoAllocVariant)
     SwitchCoroutineSplitter::createNoAllocVariant(F, Shape, Clones);
