@@ -38,12 +38,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
+#include <string>
 
 namespace llvm {
 class BasicBlock;
@@ -635,6 +637,14 @@ public:
   /// attribute can be added. \p HasConstantCond indicates whether the branch
   /// condition is a known constant.
   bool checkIfLoopMustProgress(const Expr *, bool HasEmptyBody);
+
+  std::string BuildSanitizerTrapMessage(SanitizerHandler Handler,
+                                        QualType LhsTy, QualType OpType,
+                                        bool IsLeftShift = false,
+                                        bool isSigned = false,
+                                        std::string ReasonStr = "",
+                                        bool IsDivideByZero = false,
+                                        bool IsTruncation = false);
 
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
@@ -5273,7 +5283,7 @@ public:
   EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>>
                 Checked,
             SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
-            ArrayRef<llvm::Value *> DynamicArgs);
+            ArrayRef<llvm::Value *> DynamicArgs, std::string TrapMessage = "");
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
@@ -5289,7 +5299,7 @@ public:
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
-                     bool NoMerge = false);
+                     bool NoMerge = false, std::string TrapMesage = "");
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.

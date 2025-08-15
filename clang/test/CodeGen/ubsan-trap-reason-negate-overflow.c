@@ -9,4 +9,4 @@ int negate_overflow() {
 // CHECK-LABEL: @negate_overflow
 // CHECK: call void @llvm.ubsantrap(i8 13) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Integer negation overflowed"
+// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Integer negation overflow on type 'int'"

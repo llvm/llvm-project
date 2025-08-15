@@ -31,6 +31,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -284,7 +285,7 @@ public:
 
   void EmitBinOpCheck(
       ArrayRef<std::pair<Value *, SanitizerKind::SanitizerOrdinal>> Checks,
-      const BinOpInfo &Info);
+      const BinOpInfo &Info, std::string TrapMessage = "");
 
   Value *EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     return CGF.EmitLoadOfLValue(LV, Loc).getScalarVal();
@@ -1058,8 +1059,12 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
   llvm::Constant *StaticArgs[] = {CGF.EmitCheckSourceLocation(Loc),
                                   CGF.EmitCheckTypeDescriptor(OrigSrcType),
                                   CGF.EmitCheckTypeDescriptor(DstType)};
+  std::string Msg =
+      CGF.BuildSanitizerTrapMessage(SanitizerHandler::FloatCastOverflow,
+                                    OrigSrcType, DstType, {}, {}, {}, {});
+
   CGF.EmitCheck(std::make_pair(Check, CheckOrdinal), CheckHandler, StaticArgs,
-                OrigSrc);
+                OrigSrc, Msg);
 }
 
 // Should be called within CodeGenFunction::SanitizerScope RAII scope.
@@ -1172,7 +1177,11 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
       llvm::ConstantInt::get(Builder.getInt8Ty(), Check.first),
       llvm::ConstantInt::get(Builder.getInt32Ty(), 0)};
 
-  CGF.EmitCheck(Check.second, CheckHandler, StaticArgs, {Src, Dst});
+  std::string Msg = CGF.BuildSanitizerTrapMessage(
+      SanitizerHandler::ImplicitConversion, SrcType, DstType, {},
+      (SrcSigned || DstSigned), {}, {}, true);
+
+  CGF.EmitCheck(Check.second, CheckHandler, StaticArgs, {Src, Dst}, Msg);
 }
 
 static llvm::Value *EmitIsNegativeTestHelper(Value *V, QualType VType,
@@ -1327,8 +1336,11 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
       CGF.EmitCheckTypeDescriptor(DstType),
       llvm::ConstantInt::get(Builder.getInt8Ty(), CheckKind),
       llvm::ConstantInt::get(Builder.getInt32Ty(), 0)};
+  std::string Msg = CGF.BuildSanitizerTrapMessage(
+      SanitizerHandler::ImplicitConversion, SrcType, DstType, {},
+      (SrcSigned || DstSigned), {}, {}, false);
   // EmitCheck() will 'and' all the checks together.
-  CGF.EmitCheck(Checks, CheckHandler, StaticArgs, {Src, Dst});
+  CGF.EmitCheck(Checks, CheckHandler, StaticArgs, {Src, Dst}, Msg);
 }
 
 // Should be called within CodeGenFunction::SanitizerScope RAII scope.
@@ -1808,7 +1820,7 @@ Value *ScalarExprEmitter::EmitNullValue(QualType Ty) {
 /// are \c true.
 void ScalarExprEmitter::EmitBinOpCheck(
     ArrayRef<std::pair<Value *, SanitizerKind::SanitizerOrdinal>> Checks,
-    const BinOpInfo &Info) {
+    const BinOpInfo &Info, std::string TrapMessage) {
   assert(CGF.IsSanitizerScope);
   SanitizerHandler Check;
   SmallVector<llvm::Constant *, 4> StaticData;
@@ -1824,6 +1836,8 @@ void ScalarExprEmitter::EmitBinOpCheck(
     Check = SanitizerHandler::NegateOverflow;
     StaticData.push_back(CGF.EmitCheckTypeDescriptor(UO->getType()));
     DynamicData.push_back(Info.RHS);
+    TrapMessage = CGF.BuildSanitizerTrapMessage(Check, UO->getType(), {}, false,
+                                                true, {}, {}, {});
   } else {
     if (BinaryOperator::isShiftOp(Opcode)) {
       // Shift LHS negative or too large, or RHS out of bounds.
@@ -1851,7 +1865,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
     DynamicData.push_back(Info.RHS);
   }
 
-  CGF.EmitCheck(Checks, Check, StaticData, DynamicData);
+  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, TrapMessage);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3969,8 +3983,10 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     const BinOpInfo &Ops, llvm::Value *Zero, bool isDiv) {
   SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 2>
       Checks;
+  std::string ReasonStr;
 
   if (CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero)) {
+    ReasonStr = "Division by zero";
     Checks.push_back(std::make_pair(Builder.CreateICmpNE(Ops.RHS, Zero),
                                     SanitizerKind::SO_IntegerDivideByZero));
   }
@@ -3991,10 +4007,18 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     llvm::Value *NotOverflow = Builder.CreateOr(LHSCmp, RHSCmp, "or");
     Checks.push_back(
         std::make_pair(NotOverflow, SanitizerKind::SO_SignedIntegerOverflow));
+    if (!ReasonStr.empty()) {
+      ReasonStr += " or signed integer division overflow";
+    } else {
+      ReasonStr = "Signed integer division overflow";
+    }
   }
 
-  if (Checks.size() > 0)
-    EmitBinOpCheck(Checks, Ops);
+  if (Checks.size() > 0) {
+    std::string Msg = CGF.BuildSanitizerTrapMessage(
+        SanitizerHandler::DivremOverflow, Ops.Ty, {}, {}, {}, ReasonStr, {});
+    EmitBinOpCheck(Checks, Ops, Msg);
+  }
 }
 
 Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
@@ -4132,7 +4156,9 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
       SanitizerKind::SanitizerOrdinal Ordinal =
           isSigned ? SanitizerKind::SO_SignedIntegerOverflow
                    : SanitizerKind::SO_UnsignedIntegerOverflow;
-      EmitBinOpCheck(std::make_pair(NotOverflow, Ordinal), Ops);
+      std::string Msg = CGF.BuildSanitizerTrapMessage(OverflowKind, Ops.Ty, {},
+                                                      {}, isSigned, {}, {});
+      EmitBinOpCheck(std::make_pair(NotOverflow, Ordinal), Ops, Msg);
     } else
       CGF.EmitTrapCheck(Builder.CreateNot(overflow), OverflowKind);
     return result;
@@ -4774,6 +4800,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shl.mask");
   else if ((SanitizeBase || SanitizeExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
+    std::string Msg = CGF.BuildSanitizerTrapMessage(
+        SanitizerHandler::ShiftOutOfBounds, Ops.Ty, {}, true, {}, {}, {});
     SmallVector<SanitizerKind::SanitizerOrdinal, 3> Ordinals;
     if (SanitizeSignedBase)
       Ordinals.push_back(SanitizerKind::SO_ShiftBase);
@@ -4832,7 +4860,7 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
     }
 
     assert(!Checks.empty());
-    EmitBinOpCheck(Checks, Ops);
+    EmitBinOpCheck(Checks, Ops, Msg);
   }
 
   return Builder.CreateShl(Ops.LHS, RHS, "shl");
@@ -4859,7 +4887,10 @@ Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
     bool RHSIsSigned = Ops.rhsHasSignedIntegerRepresentation();
     llvm::Value *Valid = Builder.CreateICmpULE(
         Ops.RHS, GetMaximumShiftAmount(Ops.LHS, Ops.RHS, RHSIsSigned));
-    EmitBinOpCheck(std::make_pair(Valid, SanitizerKind::SO_ShiftExponent), Ops);
+    std::string Msg = CGF.BuildSanitizerTrapMessage(
+        SanitizerHandler::ShiftOutOfBounds, Ops.Ty, {}, false, {}, {}, {});
+    EmitBinOpCheck(std::make_pair(Valid, SanitizerKind::SO_ShiftExponent), Ops,
+                   Msg);
   }
 
   if (Ops.Ty->hasUnsignedIntegerRepresentation())
