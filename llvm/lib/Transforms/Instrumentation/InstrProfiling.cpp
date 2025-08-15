@@ -1875,6 +1875,12 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   maybeSetComdat(Data, Fn, CntsVarName);
 
+  if (TT.isOSBinFormatXCOFF()) {
+    Data->setMetadata(
+        LLVMContext::MD_pgo_associated,
+        MDNode::get(M.getContext(), ValueAsMetadata::get(PD.RegionCounters)));
+  }
+
   PD.DataVar = Data;
 
   // Mark the data variable as used so that it isn't stripped out.
