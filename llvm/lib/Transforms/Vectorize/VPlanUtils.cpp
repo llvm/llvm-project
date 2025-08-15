@@ -138,3 +138,110 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   });
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }
+
+std::optional<VPValue *>
+vputils::getRecipesForUncountedExit(VPlan &Plan,
+                                    SmallVectorImpl<VPRecipeBase *> &Recipes,
+                                    SmallVectorImpl<VPRecipeBase *> &GEPs) {
+  using namespace llvm::VPlanPatternMatch;
+  // Given a vplan like the following (just including the recipes contributing
+  // to loop control exiting here, not the actual work), we're looking to match
+  // the recipes contributing to the uncounted exit condition comparison
+  // (here, vp<%4>) back to the canonical induction for the vector body so that
+  // we can copy them to a preheader and rotate the address in the loop to the
+  // next vector iteration.
+  //
+  // VPlan ' for UF>=1' {
+  // Live-in vp<%0> = VF
+  // Live-in ir<64> = original trip-count
+  //
+  // entry:
+  // Successor(s): preheader, vector.ph
+  //
+  // vector.ph:
+  // Successor(s): vector loop
+  //
+  // <x1> vector loop: {
+  //   vector.body:
+  //     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>
+  //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
+  //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
+  //     WIDEN ir<%ee.load> = load ir<%ee.addr>
+  //     WIDEN vp<%4> = icmp eq ir<%ee.load>, ir<0>
+  //     EMIT vp<%5> = any-of vp<%4>
+  //     EMIT vp<%6> = add vp<%2>, vp<%0>
+  //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
+  //     EMIT vp<%8> = or vp<%5>, vp<%7>
+  //     EMIT branch-on-cond vp<%8>
+  //   No successors
+  // }
+  // Successor(s): middle.block
+  //
+  // middle.block:
+  // Successor(s): preheader
+  //
+  // preheader:
+  // No successors
+  // }
+
+  // Find the uncounted loop exit condition.
+  auto *Region = Plan.getVectorLoopRegion();
+  VPValue *UncountedCondition = nullptr;
+  if (!match(
+          Region->getExitingBasicBlock()->getTerminator(),
+          m_BranchOnCond(m_OneUse(m_c_BinaryOr(
+              m_OneUse(m_AnyOf(m_VPValue(UncountedCondition))), m_VPValue())))))
+    return std::nullopt;
+
+  SmallVector<VPValue *, 4> Worklist;
+  SmallVector<VPWidenLoadRecipe *, 1> Loads;
+  Worklist.push_back(UncountedCondition);
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+
+    // Any value defined outside the loop does not need to be copied.
+    if (V->isDefinedOutsideLoopRegions())
+      continue;
+
+    // FIXME: Remove the single user restriction; it's here because we're
+    //        starting with the simplest set of loops we can, and multiple
+    //        users means needing to add PHI nodes in the transform.
+    if (V->getNumUsers() > 1)
+      return std::nullopt;
+
+    // Walk back through recipes until we find at least one load from memory.
+    if (auto *Cmp = dyn_cast<VPWidenRecipe>(V)) {
+      if (Cmp->getOpcode() != Instruction::ICmp)
+        return std::nullopt;
+      Worklist.push_back(Cmp->getOperand(0));
+      Worklist.push_back(Cmp->getOperand(1));
+      Recipes.push_back(Cmp);
+    } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
+      // Reject masked loads for the time being; they make the exit condition
+      // more complex.
+      if (Load->isMasked())
+        return std::nullopt;
+      Loads.push_back(Load);
+    } else
+      return std::nullopt;
+  }
+
+  // Check the loads for exact patterns; for now we only support a contiguous
+  // load based directly on the canonical IV with a step of 1.
+  for (VPWidenLoadRecipe *Load : Loads) {
+    Recipes.push_back(Load);
+    VPValue *GEP = Load->getAddr();
+
+    if (!match(GEP, m_GetElementPtr(
+                        m_LoopInvVPValue(),
+                        m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                        m_SpecificInt(1),
+                                        m_Specific(&Plan.getVF())))))
+      return std::nullopt;
+
+    Recipes.push_back(GEP->getDefiningRecipe());
+    GEPs.push_back(GEP->getDefiningRecipe());
+  }
+
+  return UncountedCondition;
+}
