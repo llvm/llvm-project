@@ -84,8 +84,11 @@ define i32 @test3_already_optimal(i32 %x, i32 %y, i32 %z) {
   %not = xor i32 %xor, -1
   ret i32 %not
 }
-; Negative Tests
-; Test with non-bitwise operation (should not transform - add/sub not supported)
+
+; ==============================
+;       Negative Tests
+; ==============================
+
 define i32 @negative_non_bitwise_add(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @negative_non_bitwise_add(
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
@@ -96,7 +99,6 @@ define i32 @negative_non_bitwise_add(i32 %x, i32 %y, i32 %z) {
   %add2 = add i32 %add1, %z
   ret i32 %add2
 }
-; Test with only 2 variables (should not transform - needs exactly 3 variables)
 define i32 @negative_two_variables(i32 %x, i32 %y) {
 ; CHECK-LABEL: @negative_two_variables(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
@@ -107,7 +109,6 @@ define i32 @negative_two_variables(i32 %x, i32 %y) {
   %not = xor i32 %and, -1
   ret i32 %not
 }
-; Test with 4 variables (should not transform - needs exactly 3 variables)
 define i32 @negative_four_variables(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @negative_four_variables(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
@@ -120,7 +121,6 @@ define i32 @negative_four_variables(i32 %x, i32 %y, i32 %z, i32 %w) {
   %or = or i32 %and1, %and2
   ret i32 %or
 }
-; Test with simple 2-level expression (should not transform - not complex enough)
 define i32 @negative_simple_expression(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @negative_simple_expression(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
@@ -131,7 +131,6 @@ define i32 @negative_simple_expression(i32 %x, i32 %y, i32 %z) {
   %or = or i32 %and, %z
   ret i32 %or
 }
-; Test with instructions in different basic blocks (should not transform)
 define i32 @negative_different_basic_blocks(i32 %x, i32 %y, i32 %z, i1 %cond) {
 ; CHECK-LABEL: @negative_different_basic_blocks(
 ; CHECK-NEXT:  entry:
@@ -151,4 +150,135 @@ if.true:
   ret i32 %and2
 if.false:
   ret i32 %and1
+}
+define i32 @negative_two_vars_one_const(i32 %x, i32 %y) {
+; CHECK-LABEL: @negative_two_vars_one_const(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], 42
+; CHECK-NEXT:    [[AND3_DEMORGAN:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND3_DEMORGAN]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND2]], [[AND3]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and1 = and i32 %x, %y
+  %and2 = and i32 %and1, 42
+  %not_x = xor i32 %x, -1
+  %not_y = xor i32 %y, -1
+  %and3 = and i32 %not_x, %not_y
+  %or = or i32 %and2, %and3
+  ret i32 %or
+}
+
+define i32 @negative_one_var_two_consts(i32 %x) {
+; CHECK-LABEL: @negative_one_var_two_consts(
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[NOT_X:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[NOT_X]], 3
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND2]], [[AND3]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and1 = and i32 %x, 15
+  %and2 = and i32 %and1, 7
+  %not_x = xor i32 %x, -1
+  %and3 = and i32 %not_x, 3
+  %or = or i32 %and2, %and3
+  ret i32 %or
+}
+
+define i32 @negative_const_pattern_match(i32 %x, i32 %y) {
+; CHECK-LABEL: @negative_const_pattern_match(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 255
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR]], [[X:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[XOR]], -1
+; CHECK-NEXT:    ret i32 [[NOT]]
+;
+  %or = or i32 %y, 255
+  %xor = xor i32 %or, %x
+  %not = xor i32 %xor, -1
+  ret i32 %not
+}
+
+define i32 @negative_mixed_vars_consts(i32 %x, i32 %y) {
+; CHECK-LABEL: @negative_mixed_vars_consts(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], 96
+; CHECK-NEXT:    [[NOT_X:%.*]] = and i32 [[X]], 170
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[NOT_X]], 170
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[AND2]], [[AND3]]
+; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[Y]], 204
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[AND4]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %and1 = and i32 %x, %y
+  %and2 = and i32 %and1, 96
+  %not_x = xor i32 %x, -1
+  %and3 = and i32 %not_x, 170
+  %or1 = or i32 %and2, %and3
+  %and4 = and i32 %y, 204
+  %xor = xor i32 %or1, %and4
+  ret i32 %xor
+}
+
+define i32 @negative_const_blocks_extraction(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @negative_const_blocks_extraction(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], 24
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[AND3]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %and1 = and i32 %x, 42
+  %and2 = and i32 %y, %z
+  %or1 = or i32 %and1, %and2
+  %and3 = and i32 %x, 24
+  %xor = xor i32 %or1, %and3
+  ret i32 %xor
+}
+
+; ==============================
+;       Multi-use Tests
+; ==============================
+declare void @use(i32)
+define i32 @multi_use_not(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @multi_use_not(
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i32 [[NOT1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[TMP1]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[AND2]]
+;
+  %not1 = xor i32 %x, -1
+  call void @use(i32 %not1)
+  %and1 = and i32 %not1, %y
+  %and2 = and i32 %and1, %z
+  ret i32 %and2
+}
+define i32 @multi_use_binop(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @multi_use_binop(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[AND1]])
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[AND2]]
+;
+  %and1 = and i32 %x, %y
+  call void @use(i32 %and1)
+  %and2 = and i32 %and1, %z
+  ret i32 %and2
+}
+define i32 @multi_use_multiple(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @multi_use_multiple(
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[NOT1]])
+; CHECK-NEXT:    call void @use(i32 [[AND1]])
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[AND2]]
+;
+  %not1 = xor i32 %x, -1
+  %and1 = and i32 %not1, %y
+  call void @use(i32 %not1)
+  call void @use(i32 %and1)
+  %and2 = and i32 %and1, %z
+  ret i32 %and2
 }
