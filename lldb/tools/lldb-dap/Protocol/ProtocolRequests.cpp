@@ -598,14 +598,14 @@ json::Value toJSON(const WriteMemoryResponseBody &WMR) {
   return result;
 }
 
-bool fromJSON(const llvm::json::Value &Params,
-              DAPGetModuleSymbolsArguments &Args, llvm::json::Path P) {
+bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
+              llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.mapOptional("moduleId", Args.moduleId) &&
          O.mapOptional("moduleName", Args.moduleName);
 }
 
-llvm::json::Value toJSON(const DAPGetModuleSymbolsResponseBody &DGMSR) {
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
   json::Object result;
   result.insert({"symbols", DGMSR.symbols});
   return result;
