@@ -213,3 +213,75 @@ void test() {
 }
 
 } // namespace multiple_owning_args_PR60896
+
+//===----------------------------------------------------------------------===//
+// Check that we DO report leaks for raw pointers in mixed ownership scenarios
+//===----------------------------------------------------------------------===//
+namespace mixed_ownership_PR60896 {
+
+// Custom unique_ptr implementation for testing
+template <typename T>
+struct unique_ptr {
+  T* ptr;
+  unique_ptr(T* p) : ptr(p) {}
+  ~unique_ptr() { delete ptr; }
+  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
+  T* get() const { return ptr; }
+};
+
+template <typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+
+struct MixedOwnership {
+  unique_ptr<int> smart_ptr;  // Should NOT leak (smart pointer managed)
+  int *raw_ptr;               // Should leak (raw pointer)
+
+  MixedOwnership() : smart_ptr(make_unique<int>(1)), raw_ptr(new int(42)) {} // expected-note {{Memory is allocated}}
+};
+
+void consume(MixedOwnership obj) {
+  // The unique_ptr destructor will be called when obj goes out of scope
+  // But raw_ptr will leak!
+}
+
+void test_mixed_ownership() {
+  // This should report a leak for raw_ptr but not for smart_ptr
+  consume(MixedOwnership()); // expected-note {{Calling default constructor for 'MixedOwnership'}} expected-note {{Returning from default constructor for 'MixedOwnership'}}
+} // expected-warning {{Potential memory leak}} expected-note {{Potential memory leak}}
+
+} // namespace mixed_ownership_PR60896
+
+//===----------------------------------------------------------------------===//
+// Check that we handle direct smart pointer constructor calls correctly
+//===----------------------------------------------------------------------===//
+namespace direct_constructor_PR60896 {
+
+// Custom unique_ptr implementation for testing
+template <typename T>
+struct unique_ptr {
+  T* ptr;
+  unique_ptr(T* p) : ptr(p) {}
+  ~unique_ptr() { delete ptr; }
+  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
+  T* get() const { return ptr; }
+};
+
+void test_direct_constructor() {
+  // Direct constructor call - should not leak
+  int* raw_ptr = new int(42);
+  unique_ptr<int> smart(raw_ptr); // This should escape the raw_ptr symbol
+  // No leak should be reported here since smart pointer takes ownership
+}
+
+void test_mixed_direct_constructor() {
+  int* raw1 = new int(1); 
+  int* raw2 = new int(2); // expected-note {{Memory is allocated}}
+  
+  unique_ptr<int> smart(raw1); // This should escape raw1
+  // raw2 should leak since it's not managed by any smart pointer
+  int x = *raw2; // expected-warning {{Potential leak of memory pointed to by 'raw2'}} expected-note {{Potential leak of memory pointed to by 'raw2'}}
+}
+
+} // namespace direct_constructor_PR60896
