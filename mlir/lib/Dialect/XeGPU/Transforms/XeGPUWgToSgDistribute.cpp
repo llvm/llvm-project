@@ -296,13 +296,14 @@ struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
   }
 };
 
-// Utility function to compute distributed offsets for subgroup operations.
+// Utility function to compute global offsets for subgroup operations.
 // Returns a vector of new offsets for each subgroup, given the original op's
 // offsets and subgroup relative offsets.
-static SmallVector<SmallVector<OpFoldResult>> computeDistributedOffsets(
-    Operation *op, ArrayRef<SmallVector<Value>> sgOffsetsList,
-    ArrayRef<OpFoldResult> wgOffsets, ConversionPatternRewriter &rewriter) {
-  SmallVector<SmallVector<OpFoldResult>> distributedOffsets;
+static SmallVector<SmallVector<OpFoldResult>>
+computeGlobalOffsets(Operation *op, ArrayRef<SmallVector<Value>> sgOffsetsList,
+                     ArrayRef<OpFoldResult> wgOffsets,
+                     ConversionPatternRewriter &rewriter) {
+  SmallVector<SmallVector<OpFoldResult>> globalOffsets;
   Location loc = op->getLoc();
   for (const auto &sgOffsets : sgOffsetsList) {
     SmallVector<OpFoldResult> newOffsets;
@@ -314,9 +315,9 @@ static SmallVector<SmallVector<OpFoldResult>> computeDistributedOffsets(
           getValueOrCreateConstantIndexOp(rewriter, loc, wgOffsets[idx]));
       newOffsets.push_back(add);
     }
-    distributedOffsets.push_back(std::move(newOffsets));
+    globalOffsets.push_back(std::move(newOffsets));
   }
-  return distributedOffsets;
+  return globalOffsets;
 }
 
 // Utility function to get sgShape, sgOffsetList for a given
@@ -408,12 +409,12 @@ struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
     SmallVector<OpFoldResult> wgOffsets = getWgOffsets(op, rewriter);
 
     // Calculate the global offsets
-    auto distributedOffsets =
-        computeDistributedOffsets(op, sgOffsetList, wgOffsets, rewriter);
+    auto globalOffsets =
+        computeGlobalOffsets(op, sgOffsetList, wgOffsets, rewriter);
 
     SmallVector<Value> newLoadOps;
     for (auto [offsets, tdesc] :
-         llvm::zip(distributedOffsets, adaptor.getTensorDesc())) {
+         llvm::zip(globalOffsets, adaptor.getTensorDesc())) {
       VectorType newResTy = VectorType::get(
           sgShape,
           dyn_cast<xegpu::TensorDescType>(tdesc.getType()).getElementType());
@@ -449,11 +450,11 @@ struct WgToSgStoreNdOpWithOffset
     SmallVector<OpFoldResult> wgOffsets = getWgOffsets(op, rewriter);
 
     // Calculate the global offsets
-    auto distributedOffsets =
-        computeDistributedOffsets(op, sgOffsetList, wgOffsets, rewriter);
+    auto globalOffsets =
+        computeGlobalOffsets(op, sgOffsetList, wgOffsets, rewriter);
 
     for (auto [offsets, tdesc, value] : llvm::zip(
-             distributedOffsets, adaptor.getTensorDesc(), adaptor.getValue())) {
+             globalOffsets, adaptor.getTensorDesc(), adaptor.getValue())) {
       rewriter.create<xegpu::StoreNdOp>(op.getLoc(), value, tdesc, offsets,
                                         op.getL1HintAttr(), op.getL2HintAttr(),
                                         op.getL3HintAttr());
@@ -483,11 +484,11 @@ struct WgToSgPrefetchNdOpWithOffset
     SmallVector<OpFoldResult> wgOffsets = getWgOffsets(op, rewriter);
 
     // calculate the global offsets
-    auto distributedOffsets =
-        computeDistributedOffsets(op, sgOffsetList, wgOffsets, rewriter);
+    auto globalOffsets =
+        computeGlobalOffsets(op, sgOffsetList, wgOffsets, rewriter);
 
     for (auto [offsets, tdesc] :
-         llvm::zip(distributedOffsets, adaptor.getTensorDesc())) {
+         llvm::zip(globalOffsets, adaptor.getTensorDesc())) {
       rewriter.create<xegpu::PrefetchNdOp>(
           op.getLoc(), tdesc, offsets, op.getL1HintAttr(), op.getL2HintAttr(),
           op.getL3HintAttr());
