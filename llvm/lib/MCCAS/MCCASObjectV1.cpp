@@ -1633,9 +1633,10 @@ MCBoundaryAlignFragmentRef::materialize(MCCASReader &Reader,
   return getData().size();
 }
 
-Expected<MCCVInlineLineTableFragmentRef> MCCVInlineLineTableFragmentRef::create(
-    MCCASBuilder &MB, const MCCVInlineLineTableFragment &F,
-    unsigned FragmentSize, ArrayRef<char> FragmentContents) {
+Expected<MCCVInlineLineTableFragmentRef>
+MCCVInlineLineTableFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
+                                       unsigned FragmentSize,
+                                       ArrayRef<char> FragmentContents) {
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
