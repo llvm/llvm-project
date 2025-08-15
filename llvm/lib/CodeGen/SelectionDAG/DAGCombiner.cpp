@@ -13492,6 +13492,27 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   ISD::CondCode CC = cast<CondCodeSDNode>(N4)->get();
   SDLoc DL(N);
 
+  // Peek through freeze if it has one use, following the same pattern as SETCC
+  // optimization. This is safe for comparisons that are not "always true" or
+  // "always false" when the operand is poison.
+  if (N0->getOpcode() == ISD::FREEZE && N0.hasOneUse()) {
+    // Check if this comparison could be "always true" or "always false" when
+    // the operand is poison, which would make peeking through freeze unsafe.
+    ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+    if (!N1C || !IsAlwaysTrueOrFalseForFreeze(CC, N1C)) {
+      N0 = N0->getOperand(0);
+    }
+  }
+  if (N1->getOpcode() == ISD::FREEZE && N1.hasOneUse()) {
+    // Check if this comparison could be "always true" or "always false" when
+    // the operand is poison, which would make peeking through freeze unsafe.
+    ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
+    if (!N0C ||
+        !IsAlwaysTrueOrFalseForFreeze(ISD::getSetCCSwappedOperands(CC), N0C)) {
+      N1 = N1->getOperand(0);
+    }
+  }
+
   // fold select_cc lhs, rhs, x, x, cc -> x
   if (N2 == N3)
     return N2;
@@ -13543,6 +13564,46 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   SDLoc DL(N);
+
+  // Is 'X Cond C' always true or false?
+  auto IsAlwaysTrueOrFalse = [](ISD::CondCode Cond, ConstantSDNode *C) {
+    bool False = (Cond == ISD::SETULT && C->isZero()) ||
+                 (Cond == ISD::SETLT && C->isMinSignedValue()) ||
+                 (Cond == ISD::SETUGT && C->isAllOnes()) ||
+                 (Cond == ISD::SETGT && C->isMaxSignedValue());
+    bool True = (Cond == ISD::SETULE && C->isAllOnes()) ||
+                (Cond == ISD::SETLE && C->isMaxSignedValue()) ||
+                (Cond == ISD::SETUGE && C->isZero()) ||
+                (Cond == ISD::SETGE && C->isMinSignedValue());
+    return True || False;
+  };
+
+  // Peek through freeze if it has one use. This is safe for comparisons that
+  // are not "always true" or "always false" when the operand is poison. Unsafe
+  // cases include:
+  // - X < 0 (SETULT), X >= 0 (SETUGE) - always false/true when X is poison
+  // - X < MIN_SIGNED (SETLT), X >= MIN_SIGNED (SETGE) - always false/true when
+  // X is poison
+  // - X > MAX_UNSIGNED (SETUGT), X <= MAX_UNSIGNED (SETULE) - always false/true
+  // when X is poison
+  // - X > MAX_SIGNED (SETGT), X <= MAX_SIGNED (SETLE) - always false/true when
+  // X is poison
+  if (N0->getOpcode() == ISD::FREEZE && N0.hasOneUse()) {
+    // Check if this comparison could be "always true" or "always false" when
+    // the operand is poison, which would make peeking through freeze unsafe.
+    ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+    if (!N1C || !IsAlwaysTrueOrFalse(Cond, N1C)) {
+      N0 = N0->getOperand(0);
+    }
+  }
+  if (N1->getOpcode() == ISD::FREEZE && N1.hasOneUse()) {
+    // Check if this comparison could be "always true" or "always false" when
+    // the operand is poison, which would make peeking through freeze unsafe.
+    ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
+    if (!N0C || !IsAlwaysTrueOrFalse(ISD::getSetCCSwappedOperands(Cond), N0C)) {
+      N1 = N1->getOperand(0);
+    }
+  }
 
   if (SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC)) {
     // If we prefer to have a setcc, and we don't, we'll try our best to
@@ -19285,56 +19346,6 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   if (N1->getOpcode() == ISD::FREEZE && N1.hasOneUse()) {
     return DAG.getNode(ISD::BRCOND, SDLoc(N), MVT::Other, Chain,
                        N1->getOperand(0), N2, N->getFlags());
-  }
-
-  // Variant of the previous fold where there is a SETCC in between:
-  //   BRCOND(SETCC(FREEZE(X), CONST, Cond))
-  // =>
-  //   BRCOND(FREEZE(SETCC(X, CONST, Cond)))
-  // =>
-  //   BRCOND(SETCC(X, CONST, Cond))
-  // This is correct if FREEZE(X) has one use and SETCC(FREEZE(X), CONST, Cond)
-  // isn't equivalent to true or false.
-  // For example, SETCC(FREEZE(X), -128, SETULT) cannot be folded to
-  // FREEZE(SETCC(X, -128, SETULT)) because X can be poison.
-  if (N1->getOpcode() == ISD::SETCC && N1.hasOneUse()) {
-    SDValue S0 = N1->getOperand(0), S1 = N1->getOperand(1);
-    ISD::CondCode Cond = cast<CondCodeSDNode>(N1->getOperand(2))->get();
-    ConstantSDNode *S0C = dyn_cast<ConstantSDNode>(S0);
-    ConstantSDNode *S1C = dyn_cast<ConstantSDNode>(S1);
-    bool Updated = false;
-
-    // Is 'X Cond C' always true or false?
-    auto IsAlwaysTrueOrFalse = [](ISD::CondCode Cond, ConstantSDNode *C) {
-      bool False = (Cond == ISD::SETULT && C->isZero()) ||
-                   (Cond == ISD::SETLT && C->isMinSignedValue()) ||
-                   (Cond == ISD::SETUGT && C->isAllOnes()) ||
-                   (Cond == ISD::SETGT && C->isMaxSignedValue());
-      bool True = (Cond == ISD::SETULE && C->isAllOnes()) ||
-                  (Cond == ISD::SETLE && C->isMaxSignedValue()) ||
-                  (Cond == ISD::SETUGE && C->isZero()) ||
-                  (Cond == ISD::SETGE && C->isMinSignedValue());
-      return True || False;
-    };
-
-    if (S0->getOpcode() == ISD::FREEZE && S0.hasOneUse() && S1C) {
-      if (!IsAlwaysTrueOrFalse(Cond, S1C)) {
-        S0 = S0->getOperand(0);
-        Updated = true;
-      }
-    }
-    if (S1->getOpcode() == ISD::FREEZE && S1.hasOneUse() && S0C) {
-      if (!IsAlwaysTrueOrFalse(ISD::getSetCCSwappedOperands(Cond), S0C)) {
-        S1 = S1->getOperand(0);
-        Updated = true;
-      }
-    }
-
-    if (Updated)
-      return DAG.getNode(
-          ISD::BRCOND, SDLoc(N), MVT::Other, Chain,
-          DAG.getSetCC(SDLoc(N1), N1->getValueType(0), S0, S1, Cond), N2,
-          N->getFlags());
   }
 
   // If N is a constant we could fold this into a fallthrough or unconditional

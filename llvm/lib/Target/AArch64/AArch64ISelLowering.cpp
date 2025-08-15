@@ -3604,19 +3604,25 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     Opcode = AArch64ISD::ADDS;
     LHS = LHS.getOperand(1);
   } else if (isNullConstant(RHS) && !isUnsignedIntSetCC(CC)) {
-    if (LHS.getOpcode() == ISD::AND) {
+    SDValue AndOp = LHS;
+    // Peek through freeze to find AND operation
+    if (LHS.getOpcode() == ISD::FREEZE && LHS.hasOneUse()) {
+      AndOp = LHS.getOperand(0);
+    }
+
+    if (AndOp.getOpcode() == ISD::AND) {
       // Similarly, (CMP (and X, Y), 0) can be implemented with a TST
       // (a.k.a. ANDS) except that the flags are only guaranteed to work for one
       // of the signed comparisons.
       const SDValue ANDSNode =
           DAG.getNode(AArch64ISD::ANDS, DL, DAG.getVTList(VT, FlagsVT),
-                      LHS.getOperand(0), LHS.getOperand(1));
-      // Replace all users of (and X, Y) with newly generated (ands X, Y)
-      DAG.ReplaceAllUsesWith(LHS, ANDSNode);
+                      AndOp.getOperand(0), AndOp.getOperand(1));
+      // Replace all users of the AND operation with newly generated (ands X, Y)
+      DAG.ReplaceAllUsesWith(AndOp, ANDSNode);
       return ANDSNode.getValue(1);
-    } else if (LHS.getOpcode() == AArch64ISD::ANDS) {
+    } else if (AndOp.getOpcode() == AArch64ISD::ANDS) {
       // Use result of ANDS
-      return LHS.getValue(1);
+      return AndOp.getValue(1);
     }
   }
 
