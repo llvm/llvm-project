@@ -27,4 +27,6 @@ jobs:
         run: |
           sudo curl -L https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 -o /usr/bin/buildifier
           sudo chmod +x /usr/bin/buildifier
+      - name: Run Buildifier
+        run: |
           buildifier --mode=check $(find ./utils/bazel -name *BUILD*)
