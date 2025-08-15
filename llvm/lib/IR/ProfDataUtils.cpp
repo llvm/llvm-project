@@ -276,7 +276,7 @@ SmallVector<uint32_t> downscaleWeights(ArrayRef<uint64_t> Weights,
                                                 : *llvm::max_element(Weights);
   assert(MaxCount > 0 && "Bad max count");
   uint64_t Scale = calculateCountScale(MaxCount);
-  SmallVector<unsigned, 4> DownscaledWeights;
+  SmallVector<unsigned> DownscaledWeights;
   for (const auto &ECI : Weights)
     DownscaledWeights.push_back(scaleBranchCount(ECI, Scale));
   return DownscaledWeights;
