@@ -111,13 +111,11 @@ public:
 };
 
 struct BenchmarkResult {
-  uint64_t cycles = 0;
+  uint64_t total_iterations = 0;
+  double cycles = 0;
   double standard_deviation = 0;
   uint64_t min = UINT64_MAX;
   uint64_t max = 0;
-  uint32_t samples = 0;
-  uint32_t total_iterations = 0;
-  clock_t total_time = 0;
 };
 
 struct BenchmarkTarget {
