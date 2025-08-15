@@ -1400,21 +1400,23 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
-        sym.has<Fortran::semantics::UseDetails>()) {
-      if (!shallowLookupSymbol(sym) &&
-          !GetSymbolDSA(sym).test(
-              Fortran::semantics::Symbol::Flag::OmpShared)) {
-        // Do concurrent loop variables are not mapped yet since they are local
-        // to the Do concurrent scope (same for OpenMP loops).
-        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
-        builder->setInsertionPointToStart(builder->getAllocaBlock());
-        mlir::Type tempTy = genType(sym);
-        mlir::Value temp =
-            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
-        bindIfNewSymbol(sym, temp);
-        builder->restoreInsertionPoint(insPt);
-      }
+    if (!shallowLookupSymbol(sym) &&
+        (isUnordered ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+      // Do concurrent loop variables are not mapped yet since they are
+      // local to the Do concurrent scope (same for OpenMP loops).
+      mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(builder->getAllocaBlock());
+      mlir::Type tempTy = genType(sym);
+      mlir::Value temp =
+          builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+      bindIfNewSymbol(sym, temp);
+      builder->restoreInsertionPoint(insPt);
     }
     auto entry = lookupSymbol(sym);
     (void)entry;
