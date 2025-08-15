@@ -594,15 +594,15 @@ public:
   llvm::Error Run(const protocol::CancelArguments &args) const override;
 };
 
-class DAPGetModuleSymbolsRequestHandler
+class ModuleSymbolsRequestHandler
     : public RequestHandler<
-          protocol::DAPGetModuleSymbolsArguments,
-          llvm::Expected<protocol::DAPGetModuleSymbolsResponseBody>> {
+          protocol::ModuleSymbolsArguments,
+          llvm::Expected<protocol::ModuleSymbolsResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
-  static llvm::StringLiteral GetCommand() { return "dapGetModuleSymbols"; }
-  llvm::Expected<protocol::DAPGetModuleSymbolsResponseBody>
-  Run(const protocol::DAPGetModuleSymbolsArguments &args) const override;
+  static llvm::StringLiteral GetCommand() { return "moduleSymbols"; }
+  llvm::Expected<protocol::ModuleSymbolsResponseBody>
+  Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
 /// A request used in testing to get the details on all breakpoints that are

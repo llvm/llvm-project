@@ -87,15 +87,9 @@ static std::string SymbolTypeToString(lldb::SymbolType symbol_type) {
   llvm_unreachable("unhandled symbol type.");
 }
 
-/// Modules can be retrieved from the debug adapter with this request which can
-/// either return all modules or a range of modules to support paging.
-///
-/// Clients should only call this request if the corresponding capability
-/// `supportsModulesRequest` is true.
-llvm::Expected<DAPGetModuleSymbolsResponseBody>
-DAPGetModuleSymbolsRequestHandler::Run(
-    const DAPGetModuleSymbolsArguments &args) const {
-  DAPGetModuleSymbolsResponseBody response;
+llvm::Expected<ModuleSymbolsResponseBody>
+ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
+  ModuleSymbolsResponseBody response;
 
   lldb::SBModuleSpec module_spec;
   if (args.moduleId) {

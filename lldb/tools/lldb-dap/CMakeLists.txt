@@ -36,7 +36,6 @@ add_lldb_library(lldbDAP
   Handler/CompletionsHandler.cpp
   Handler/ConfigurationDoneRequestHandler.cpp
   Handler/ContinueRequestHandler.cpp
-  Handler/DAPGetModuleSymbolsRequestHandler.cpp
   Handler/DataBreakpointInfoRequestHandler.cpp
   Handler/DisassembleRequestHandler.cpp
   Handler/DisconnectRequestHandler.cpp
@@ -46,6 +45,7 @@ add_lldb_library(lldbDAP
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp
