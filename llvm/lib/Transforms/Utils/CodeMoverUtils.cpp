@@ -398,7 +398,7 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   // Check if I has any output/flow/anti dependences with instructions from \p
   // StartInst to \p EndInst.
   if (llvm::any_of(InstsToCheck, [&DI, &I](Instruction *CurInst) {
-        auto DepResult = DI->depends(&I, CurInst, true);
+        auto DepResult = DI->depends(&I, CurInst);
         if (DepResult && (DepResult->isOutput() || DepResult->isFlow() ||
                           DepResult->isAnti()))
           return true;
@@ -427,7 +427,7 @@ void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                           DependenceInfo &DI) {
   for (Instruction &I :
        llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(FromBB)))) {
-    Instruction *MovePos = ToBB.getFirstNonPHIOrDbg();
+    BasicBlock::iterator MovePos = ToBB.getFirstNonPHIOrDbg();
 
     if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
       I.moveBeforePreserving(MovePos);
@@ -442,7 +442,7 @@ void llvm::moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
   while (FromBB.size() > 1) {
     Instruction &I = FromBB.front();
     if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
-      I.moveBeforePreserving(MovePos);
+      I.moveBeforePreserving(MovePos->getIterator());
   }
 }
 
@@ -464,8 +464,7 @@ bool llvm::nonStrictlyPostDominate(const BasicBlock *ThisBlock,
   SmallPtrSet<const BasicBlock *, 8> Visited;
   WorkList.push_back(ThisBlock);
   while (!WorkList.empty()) {
-    const BasicBlock *CurBlock = WorkList.back();
-    WorkList.pop_back();
+    const BasicBlock *CurBlock = WorkList.pop_back_val();
     Visited.insert(CurBlock);
     if (PDT->dominates(CurBlock, OtherBlock))
       return true;

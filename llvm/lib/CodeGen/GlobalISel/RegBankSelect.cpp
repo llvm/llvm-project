@@ -69,8 +69,8 @@ INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 
-RegBankSelect::RegBankSelect(char &PassID, Mode RunningMode)
-    : MachineFunctionPass(PassID), OptMode(RunningMode) {
+RegBankSelect::RegBankSelect(Mode RunningMode)
+    : MachineFunctionPass(ID), OptMode(RunningMode) {
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)
@@ -733,8 +733,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
 
 bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');

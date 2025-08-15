@@ -27,7 +27,7 @@ class TestTrivialABI(TestBase):
     # fixed for SysV-x86_64 ABI, but not Windows-x86_64
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr36870")
     @expectedFailureAll(
-        archs=["arm", "aarch64"],
+        archs=["arm$", "aarch64"],
         oslist=["freebsd", "linux"],
         bugnumber="llvm.org/pr44161",
     )

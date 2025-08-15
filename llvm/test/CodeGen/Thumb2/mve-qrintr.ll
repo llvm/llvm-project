@@ -1536,7 +1536,8 @@ while.body:                                       ; preds = %while.body.lr.ph, %
   %0 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %N.addr.013)
   %1 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %s1.addr.014, i32 4, <4 x i1> %0, <4 x float> zeroinitializer)
   %2 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %s2, i32 4, <4 x i1> %0, <4 x float> zeroinitializer)
-  %3 = tail call fast <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float> %1, <4 x float> %2, <4 x float> %.splat, <4 x i1> %0)
+  %3 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %1, <4 x float> %2, <4 x float> %.splat)
+  %4 = select <4 x i1> %0, <4 x float> %3, <4 x float> %1
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %3, ptr %s1.addr.014, i32 4, <4 x i1> %0)
   %add.ptr = getelementptr inbounds float, ptr %s1.addr.014, i32 4
   %sub = add nsw i32 %N.addr.013, -4

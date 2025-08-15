@@ -31,6 +31,9 @@ module m
     !$cuf kernel do <<<1, (2, 3), stream = 1>>>
     do j = 1, 10
     end do
+    !$cuf kernel do
+    do j = 1, 10
+    end do
     !$cuf kernel do <<<*, *>>> reduce(+:x,y) reduce(*:z)
     do j = 1, 10
       x = x + a(j)
@@ -40,6 +43,7 @@ module m
     call globalsub<<<1, 2>>>
     call globalsub<<<1, 2, 3>>>
     call globalsub<<<1, 2, 3, 4>>>
+    call globalsub<<<*,5>>>
     allocate(pa(32), pinned = isPinned)
   end subroutine
 end module

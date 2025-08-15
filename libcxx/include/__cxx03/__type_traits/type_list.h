@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_TYPE_LIST_H
-#define _LIBCPP___TYPE_TRAITS_TYPE_LIST_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_TYPE_LIST_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_TYPE_LIST_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -39,4 +39,4 @@ struct __find_first<__type_list<_Hp, _Tp>, _Size, false> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_TYPE_LIST_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_TYPE_LIST_H

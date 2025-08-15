@@ -14,6 +14,7 @@
 // a customization point) rather than plain `swap` (which might not work with certain valid iterators).
 
 #include <algorithm>
+#include <numeric>
 
 #include <array>
 #include <concepts>
@@ -28,22 +29,22 @@
 #include "test_macros.h"
 
 // (in, ...)
-template <class Func, std::ranges::range Input, class ...Args>
-constexpr void test(Func&& func, Input& in, Args&& ...args) {
+template <class Func, std::ranges::range Input, class... Args>
+constexpr void test(Func&& func, Input& in, Args&&... args) {
   (void)func(in.begin(), in.end(), std::forward<Args>(args)...);
   (void)func(in, std::forward<Args>(args)...);
 }
 
 // (in1, in2, ...)
-template <class Func, std::ranges::range Range1, std::ranges::range Range2, class ...Args>
-constexpr void test(Func&& func, Range1& r1, Range2& r2, Args&& ...args) {
+template <class Func, std::ranges::range Range1, std::ranges::range Range2, class... Args>
+constexpr void test(Func&& func, Range1& r1, Range2& r2, Args&&... args) {
   (void)func(r1.begin(), r1.end(), r2.begin(), r2.end(), std::forward<Args>(args)...);
   (void)func(r1, r2, std::forward<Args>(args)...);
 }
 
 // (in, mid, ...)
-template <class Func, std::ranges::range Input, class ...Args>
-constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&& ...args) {
+template <class Func, std::ranges::range Input, class... Args>
+constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&&... args) {
   (void)func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
   (void)func(in, mid, std::forward<Args>(args)...);
 }
@@ -68,9 +69,9 @@ constexpr void run_tests() {
   Proxy<T&> x{num};
   int count = 1;
 
-  auto unary_pred = [](const Proxy<T&>&) { return true; };
+  auto unary_pred  = [](const Proxy<T&>&) { return true; };
   auto binary_func = [](const Proxy<T>&, const Proxy<T>&) -> Proxy<T> { return Proxy<T>(T()); };
-  auto gen = [] { return Proxy<T>(T{42}); };
+  auto gen         = [] { return Proxy<T>(T{42}); };
 
   test(std::ranges::any_of, in, unary_pred);
   test(std::ranges::all_of, in, unary_pred);
@@ -106,6 +107,11 @@ constexpr void run_tests() {
   test(std::ranges::search, in, in2);
   test(std::ranges::search_n, in, count, x);
   test(std::ranges::find_end, in, in2);
+#if TEST_STD_VER >= 23
+  if constexpr (std::weakly_incrementable<T>) {
+    test(std::ranges::iota, in, x);
+  }
+#endif
   test(std::ranges::is_partitioned, in, unary_pred);
   test(std::ranges::is_sorted, in);
   test(std::ranges::is_sorted_until, in);
@@ -167,15 +173,18 @@ constexpr void run_tests() {
   }
   test(std::ranges::unique, in);
   test(std::ranges::partition, in, unary_pred);
-  if (!std::is_constant_evaluated())
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     test(std::ranges::stable_partition, in, unary_pred);
+  }
   test(std::ranges::sort, in);
-  if (!std::is_constant_evaluated())
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     test(std::ranges::stable_sort, in);
+  }
   test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
-  if (!std::is_constant_evaluated())
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     test_mid(std::ranges::inplace_merge, in, mid);
+  }
   test(std::ranges::make_heap, in);
   test(std::ranges::push_heap, in);
   test(std::ranges::pop_heap, in);

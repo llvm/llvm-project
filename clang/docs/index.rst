@@ -22,6 +22,7 @@ Using Clang as a Compiler
    ClangCommandLineReference
    AttributeReference
    DiagnosticsReference
+   WarningSuppressionMappings
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
@@ -34,11 +35,13 @@ Using Clang as a Compiler
    UndefinedBehaviorSanitizer
    DataFlowSanitizer
    LeakSanitizer
+   TypeSanitizer
    RealtimeSanitizer
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
    BoundsSafety
+   BoundsSafetyAdoptionGuide
    BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
@@ -58,6 +61,7 @@ Using Clang as a Compiler
    APINotes
    DebuggingCoroutines
    AMDGPUSupport
+   CXXTypeAwareAllocators
    CommandGuide/index
    FAQ
 
@@ -93,12 +97,12 @@ Using Clang Tools
    ClangCheck
    ClangFormat
    ClangFormatStyleOptions
-   ClangFormattedStatus
    ClangLinkerWrapper
    ClangNVLinkWrapper
    ClangOffloadBundler
    ClangOffloadPackager
    ClangRepl
+   ClangSYCLLinker
 
 Design Documents
 ================
@@ -113,6 +117,7 @@ Design Documents
    OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags
+   ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
 

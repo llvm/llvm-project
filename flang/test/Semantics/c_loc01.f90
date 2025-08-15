@@ -14,7 +14,7 @@ module m
     type(c_ptr) cp
     type(c_funptr) cfp
     real notATarget
-    !PORTABILITY: Procedure pointer 'pptr' should not have an ELEMENTAL intrinsic as its interface
+    !PORTABILITY: Procedure pointer 'pptr' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
     procedure(sin), pointer :: pptr
     real, target :: arr(3)
     type(hasLen(1)), target :: clen
@@ -41,16 +41,16 @@ module m
     cp = c_loc(nclen)
     !ERROR: C_LOC() argument may not be zero-length character
     cp = c_loc(ch(2:1))
-    !WARNING: C_LOC() argument has non-interoperable character length
+    !WARNING: C_LOC() argument has non-interoperable character length [-Wcharacter-interoperability]
     cp = c_loc(ch)
-    !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind
+    !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind [-Winteroperability]
     cp = c_loc(unicode)
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
     cp = c_loc(p2ch) ! ok
-    !ERROR: PRIVATE name '__address' is only accessible within module '__fortran_builtins'
+    !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cp = c_ptr(0)
-    !ERROR: PRIVATE name '__address' is only accessible within module '__fortran_builtins'
+    !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cfp = c_funptr(0)
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types TYPE(c_ptr) and TYPE(c_funptr)
     cp = cfp

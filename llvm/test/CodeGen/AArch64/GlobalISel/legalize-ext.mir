@@ -49,8 +49,7 @@ body:             |
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s64) = G_FPEXT [[TRUNC12]](s32)
     ; CHECK-NEXT: $x0 = COPY [[FPEXT]](s64)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C3]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[C3]](s32)
     ; CHECK-NEXT: $w0 = COPY [[C3]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)

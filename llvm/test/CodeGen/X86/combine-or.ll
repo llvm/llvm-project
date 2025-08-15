@@ -222,9 +222,8 @@ define i64 @PR89533(<64 x i8> %a0) {
 ; SSE-NEXT:    orl %eax, %edx
 ; SSE-NEXT:    shlq $32, %rdx
 ; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    bsfq %rdx, %rcx
 ; SSE-NEXT:    movl $64, %eax
-; SSE-NEXT:    cmovneq %rcx, %rax
+; SSE-NEXT:    rep bsfq %rdx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR89533:
@@ -250,15 +249,14 @@ define i64 @PR89533(<64 x i8> %a0) {
 ; AVX1-NEXT:    orl %eax, %edx
 ; AVX1-NEXT:    shlq $32, %rdx
 ; AVX1-NEXT:    orq %rcx, %rdx
-; AVX1-NEXT:    bsfq %rdx, %rcx
 ; AVX1-NEXT:    movl $64, %eax
-; AVX1-NEXT:    cmovneq %rcx, %rax
+; AVX1-NEXT:    rep bsfq %rdx, %rax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR89533:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95]
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm0

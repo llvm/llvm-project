@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <future>
 #include <thread>
@@ -65,7 +66,7 @@ using DeferredRuntimeFnMap = std::unordered_map<
     FunctionPairKeyHash, FunctionPairKeyEqual>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
-class ELFNixPlatform : public Platform {
+class LLVM_ABI ELFNixPlatform : public Platform {
 public:
   /// Try to create a ELFNixPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
@@ -138,6 +139,11 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
+  /// Returns a list of aliases required to enable lazy compilation via the
+  /// ORC runtime.
+  static ArrayRef<std::pair<const char *, const char *>>
+  standardLazyCompilationAliases();
+
 private:
   // Data needed for bootstrap only.
   struct BootstrapInfo {
@@ -151,6 +157,7 @@ private:
         RuntimeFunction *func1, RuntimeFunction *func2,
         const shared::WrapperFunctionCall::ArgDataBufferType &arg1,
         const shared::WrapperFunctionCall::ArgDataBufferType &arg2) {
+      std::lock_guard<std::mutex> Lock(Mutex);
       auto &argList = DeferredRTFnMap[std::make_pair(func1, func2)];
       argList.emplace_back(arg1, arg2);
     }
@@ -159,7 +166,7 @@ private:
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
-  class ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
+  class LLVM_ABI ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
   public:
     ELFNixPlatformPlugin(ELFNixPlatform &MP) : MP(MP) {}
 

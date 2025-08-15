@@ -12,12 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCHazardRecognizers.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
-#include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
@@ -26,11 +22,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -42,9 +34,7 @@ namespace {
   // copies into subregister copies with other restrictions.
   struct PPCVSXCopy : public MachineFunctionPass {
     static char ID;
-    PPCVSXCopy() : MachineFunctionPass(ID) {
-      initializePPCVSXCopyPass(*PassRegistry::getPassRegistry());
-    }
+    PPCVSXCopy() : MachineFunctionPass(ID) {}
 
     const TargetInstrInfo *TII;
 
@@ -159,7 +149,7 @@ public:
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
-}
+  } // end anonymous namespace
 
 INITIALIZE_PASS(PPCVSXCopy, DEBUG_TYPE,
                 "PowerPC VSX Copy Legalization", false, false)

@@ -17,6 +17,7 @@
 #define LLVM_CODEGEN_MACHINEVALUETYPE_H
 
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -65,10 +66,10 @@ namespace llvm {
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
     /// Support for debugging, callable in GDB: VT.dump()
-    void dump() const;
+    LLVM_ABI void dump() const;
 
     /// Implement operator<<.
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
 
     /// Return true if this is a valid simple valuetype.
     bool isValid() const {
@@ -124,7 +125,7 @@ namespace llvm {
 
     /// Return true if this is a custom target type that has a scalable size.
     bool isScalableTargetExtVT() const {
-      return SimpleTy == MVT::aarch64svcount;
+      return SimpleTy == MVT::aarch64svcount || isRISCVVectorTuple();
     }
 
     /// Return true if the type is a scalable type.
@@ -308,7 +309,8 @@ namespace llvm {
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
+    TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td.    \
+                                                    */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -320,7 +322,7 @@ namespace llvm {
         llvm_unreachable("Value type is non-standard value, Other.");
       case iPTR:
         llvm_unreachable("Value type size is target-dependent. Ask TLI.");
-      case iPTRAny:
+      case pAny:
       case iAny:
       case fAny:
       case vAny:
@@ -508,11 +510,11 @@ namespace llvm {
     /// otherwise they are invalid.
     /// NB: This includes pointer types, which require a DataLayout to convert
     /// to a concrete value type.
-    static MVT getVT(Type *Ty, bool HandleUnknown = false);
+    LLVM_ABI static MVT getVT(Type *Ty, bool HandleUnknown = false);
 
     /// Returns an APFloat semantics tag appropriate for the value type. If this
     /// is a vector type, the element semantics are returned.
-    const fltSemantics &getFltSemantics() const;
+    LLVM_ABI const fltSemantics &getFltSemantics() const;
 
   public:
     /// SimpleValueType Iteration

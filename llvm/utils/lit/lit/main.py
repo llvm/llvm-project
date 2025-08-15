@@ -42,6 +42,7 @@ def main(builtin_params={}):
         config_prefix=opts.configPrefix,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
+        maxRetriesPerTest=opts.maxRetriesPerTest,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -137,6 +138,10 @@ def main(builtin_params={}):
     print_results(discovered_tests, elapsed, opts)
 
     tests_for_report = selected_tests if opts.shard else discovered_tests
+    if opts.report_failures_only:
+        # Only report tests that failed.
+        tests_for_report = [t for t in tests_for_report if t.isFailure()]
+
     for report in opts.reports:
         report.write_results(tests_for_report, elapsed)
 
@@ -235,6 +240,8 @@ def mark_xfail(selected_tests, opts):
             t.xfails += "*"
         if test_file in opts.xfail_not or test_full_name in opts.xfail_not:
             t.xfail_not = True
+        if opts.exclude_xfail:
+            t.exclude_xfail = True
 
 
 def mark_excluded(discovered_tests, selected_tests):

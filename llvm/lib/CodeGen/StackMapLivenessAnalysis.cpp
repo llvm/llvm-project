@@ -62,8 +62,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   /// Calculate the liveness information for the given machine function.
@@ -106,8 +105,6 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
   if (!EnablePatchPointLiveness)
     return false;
 
-  LLVM_DEBUG(dbgs() << "********** COMPUTING STACKMAP LIVENESS: "
-                    << MF.getName() << " **********\n");
   TRI = MF.getSubtarget().getRegisterInfo();
   ++NumStackMapFuncVisited;
 
@@ -121,6 +118,8 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
 
 /// Performs the actual liveness calculation for the function.
 bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** COMPUTING STACKMAP LIVENESS: "
+                    << MF.getName() << " **********\n");
   bool HasChanged = false;
   // For all basic blocks in the function.
   for (auto &MBB : MF) {

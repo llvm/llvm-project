@@ -9,9 +9,10 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_GNU_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_GNU_H
 
-#include "Cuda.h"
-#include "LazyDetector.h"
-#include "ROCm.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
+#include "clang/Driver/SyclInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include <set>
@@ -288,6 +289,7 @@ protected:
   GCCInstallationDetector GCCInstallation;
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
+  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
 
 public:
   Generic_GCC(const Driver &D, const llvm::Triple &Triple,
@@ -335,6 +337,9 @@ protected:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
+
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
 
   virtual void
   addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

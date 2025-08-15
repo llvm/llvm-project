@@ -9,8 +9,8 @@ public:
 
 // Warning is in a weird position because the body of the constructor is
 // missing. Specify which field is being assigned.
-class C { // expected-warning{{Value assigned to field 'y' in implicit constructor is garbage or undefined}}
-          // expected-note@-1{{Value assigned to field 'y' in implicit constructor is garbage or undefined}}
+class C { // expected-warning{{Value assigned to field 'y' in implicit constructor is uninitialized}}
+          // expected-note@-1{{Value assigned to field 'y' in implicit constructor is uninitialized}}
   int x, y;
   S s;
 
@@ -34,8 +34,8 @@ public:
   // It is not necessary to specify which field is being assigned to.
   C(const C &c):
     x(c.x),
-    y(c.y) // expected-warning{{Assigned value is garbage or undefined}}
-           // expected-note@-1{{Assigned value is garbage or undefined}}
+    y(c.y) // expected-warning{{Assigned value is uninitialized}}
+           // expected-note@-1{{Assigned value is uninitialized}}
   {}
 };
 
@@ -53,8 +53,8 @@ public:
   S(const S &) {}
 };
 
-class C { // expected-warning{{Value assigned to field 'y' in implicit constructor is garbage or undefined}}
-          // expected-note@-1{{Value assigned to field 'y' in implicit constructor is garbage or undefined}}
+class C { // expected-warning{{Value assigned to field 'y' in implicit constructor is uninitialized}}
+          // expected-note@-1{{Value assigned to field 'y' in implicit constructor is uninitialized}}
   int x, y;
   S s;
 

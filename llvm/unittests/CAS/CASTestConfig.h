@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "gtest/gtest.h"
 
@@ -15,7 +14,6 @@
 
 struct CASTestingEnv {
   std::unique_ptr<llvm::cas::ObjectStore> CAS;
-  std::unique_ptr<llvm::cas::ActionCache> Cache;
 };
 
 class CASTest
@@ -26,10 +24,6 @@ protected:
   std::unique_ptr<llvm::cas::ObjectStore> createObjectStore() {
     auto TD = GetParam()(++(*NextCASIndex));
     return std::move(TD.CAS);
-  }
-  std::unique_ptr<llvm::cas::ActionCache> createActionCache() {
-    auto TD = GetParam()(++(*NextCASIndex));
-    return std::move(TD.Cache);
   }
   void SetUp() { NextCASIndex = 0; }
   void TearDown() { NextCASIndex = std::nullopt; }

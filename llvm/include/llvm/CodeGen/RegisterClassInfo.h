@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
@@ -49,6 +50,8 @@ class RegisterClassInfo {
   // entry is valid when its tag matches.
   unsigned Tag = 0;
 
+  bool Reverse = false;
+
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
@@ -72,7 +75,7 @@ class RegisterClassInfo {
   ArrayRef<uint8_t> RegCosts;
 
   // Compute all information about RC.
-  void compute(const TargetRegisterClass *RC) const;
+  LLVM_ABI void compute(const TargetRegisterClass *RC) const;
 
   // Return an up-to-date RCInfo for RC.
   const RCInfo &get(const TargetRegisterClass *RC) const {
@@ -83,11 +86,13 @@ class RegisterClassInfo {
   }
 
 public:
-  RegisterClassInfo();
+  LLVM_ABI RegisterClassInfo();
 
-  /// runOnFunction - Prepare to answer questions about MF. This must be called
+  /// runOnFunction - Prepare to answer questions about MF. Rev indicates to
+  /// use reversed raw order when compute register order. This must be called
   /// before any other methods are used.
-  void runOnMachineFunction(const MachineFunction &MF);
+  LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
+                                     bool Rev = false);
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
@@ -117,8 +122,8 @@ public:
   /// CalleeSavedAliases.
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
     MCRegister CSR;
-    for (MCRegUnitIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
-      CSR = CalleeSavedAliases[*UI];
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      CSR = CalleeSavedAliases[Unit];
       if (CSR)
         break;
     }
@@ -150,7 +155,7 @@ public:
   }
 
 protected:
-  unsigned computePSetLimit(unsigned Idx) const;
+  LLVM_ABI unsigned computePSetLimit(unsigned Idx) const;
 };
 
 } // end namespace llvm

@@ -7,7 +7,7 @@ end subroutine func
 
 ! CHECK-NOFASTMATH-LABEL: define void @func_() local_unnamed_addr
 ! CHECK-NOFASTMATH-SAME: #[[ATTRS:[0-9]+]]
-! CHECK-NOT fp-math"=
+! CHECK-NOT: fp-math"=
 
 ! CHECK-OFAST-LABEL: define void @func_() local_unnamed_addr
 ! CHECK-OFAST-SAME: #[[ATTRS:[0-9]+]]

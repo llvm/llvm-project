@@ -2,15 +2,27 @@
 # LLVM generates correct PTX for them.
 
 # RUN: %python %s > %t.ll
-# RUN: llc < %t.ll -march=nvptx -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P32 %t.ll
-# RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P64 %t.ll
-# RUN: %if ptxas && !ptxas-12.0 %{ llc < %t.ll -march=nvptx -mcpu=sm_30 | %ptxas-verify %}
-# RUN: %if ptxas %{ llc < %t.ll -march=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
+# RUN: llc < %t.ll -mtriple=nvptx -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P32 %t.ll
+# RUN: llc < %t.ll -mtriple=nvptx64 -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P64 %t.ll
+# RUN: %if ptxas && !ptxas-12.0 %{ llc < %t.ll -mtriple=nvptx -mcpu=sm_30 | %ptxas-verify %}
+# RUN: %if ptxas %{ llc < %t.ll -mtriple=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
 
 from __future__ import print_function
 
 from itertools import product
 from string import Template
+
+
+llvm_type_to_ptx_load_type = {
+    "i8": "b8",
+    "i16": "b16",
+    "i32": "b32",
+    "i64": "b64",
+    "half": "b16",
+    "<2 x half>": "b32",
+    "float": "b32",
+    "double": "b64",
+}
 
 llvm_type_to_ptx_type = {
     "i8": "u8",
@@ -30,8 +42,8 @@ llvm_type_to_ptx_reg = {
     "i64": "rd",
     "half": "rs",
     "<2 x half>": "r",
-    "float": "f",
-    "double": "fd",
+    "float": "r",
+    "double": "rd",
 }
 
 addrspace_id = {
@@ -48,8 +60,8 @@ def gen_load_tests():
     load_template = """
 define ${type} @${testname}(${type} addrspace(${asid})* %ptr) {
 ; CHECK: ${testname}
-; CHECK_P32: ld${_volatile}${_volatile_as}.${ptx_type} %${ptx_reg}{{[0-9]+}}, [%r{{[0-9]+}}]
-; CHECK_P64: ld${_volatile}${_volatile_as}.${ptx_type} %${ptx_reg}{{[0-9]+}}, [%rd{{[0-9]+}}]
+; CHECK_P32: ld${_volatile}${_volatile_as}.${ptx_load_type} %${ptx_reg}{{[0-9]+}}, [%r{{[0-9]+}}]
+; CHECK_P64: ld${_volatile}${_volatile_as}.${ptx_load_type} %${ptx_reg}{{[0-9]+}}, [%rd{{[0-9]+}}]
 ; CHECK: ret
   %p = ${generic_ptr}
   %a = load ${volatile} ${type}, ${type}* %p
@@ -81,6 +93,7 @@ define ${type} @${testname}(${type} addrspace(${asid})* %ptr) {
             "_space": space,
             "ptx_reg": llvm_type_to_ptx_reg[op_type],
             "ptx_type": llvm_type_to_ptx_type[op_type],
+            "ptx_load_type": llvm_type_to_ptx_load_type[op_type],
             "asid": addrspace_id[space],
         }
 

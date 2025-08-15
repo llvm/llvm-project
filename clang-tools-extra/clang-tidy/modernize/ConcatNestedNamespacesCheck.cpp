@@ -12,7 +12,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
-#include <algorithm>
 #include <optional>
 
 namespace clang::tidy::modernize {

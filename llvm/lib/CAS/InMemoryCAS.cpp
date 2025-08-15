@@ -13,6 +13,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ThreadSafeAllocator.h"
+#include "llvm/Support/TrailingObjects.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -32,6 +33,7 @@ using InMemoryIndexT =
 /// their hash.
 using InMemoryIndexValueT = InMemoryIndexT::value_type;
 
+/// Builtin InMemory CAS that stores CAS object in the memory.
 class InMemoryObject {
 public:
   enum class Kind {
@@ -69,12 +71,12 @@ private:
   static_assert(((int)Kind::Max >> NumKindBits) == 0, "Kind will be truncated");
 
 public:
-  inline ArrayRef<char> getData() const;
+  ArrayRef<char> getData() const;
 
-  inline ArrayRef<const InMemoryObject *> getRefs() const;
+  ArrayRef<const InMemoryObject *> getRefs() const;
 };
 
-class InMemoryRefObject : public InMemoryObject {
+class InMemoryRefObject final : public InMemoryObject {
 public:
   static constexpr Kind KindValue = Kind::RefNode;
   static bool classof(const InMemoryObject *O) {
@@ -107,7 +109,10 @@ private:
   ArrayRef<char> Data;
 };
 
-class InMemoryInlineObject : public InMemoryObject {
+class InMemoryInlineObject final
+    : public InMemoryObject,
+      public TrailingObjects<InMemoryInlineObject, const InMemoryObject *,
+                             char> {
 public:
   static constexpr Kind KindValue = Kind::InlineNode;
   static bool classof(const InMemoryObject *O) {
@@ -116,15 +121,12 @@ public:
 
   ArrayRef<const InMemoryObject *> getRefs() const { return getRefsImpl(); }
   ArrayRef<const InMemoryObject *> getRefsImpl() const {
-    return ArrayRef(reinterpret_cast<const InMemoryObject *const *>(this + 1),
-                    NumRefs);
+    return ArrayRef(getTrailingObjects<const InMemoryObject *>(), NumRefs);
   }
 
   ArrayRef<char> getData() const { return getDataImpl(); }
   ArrayRef<char> getDataImpl() const {
-    ArrayRef<const InMemoryObject *> Refs = getRefs();
-    return ArrayRef(reinterpret_cast<const char *>(Refs.data() + Refs.size()),
-                    DataSize);
+    return ArrayRef(getTrailingObjects<char>(), DataSize);
   }
 
   static InMemoryInlineObject &
@@ -134,6 +136,10 @@ public:
     void *Mem = Allocate(sizeof(InMemoryInlineObject) +
                          sizeof(uintptr_t) * Refs.size() + Data.size() + 1);
     return *new (Mem) InMemoryInlineObject(I, Refs, Data);
+  }
+
+  size_t numTrailingObjects(OverloadToken<const InMemoryObject *>) const {
+    return NumRefs;
   }
 
 private:
@@ -274,7 +280,7 @@ InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
     return Objects.Allocate(Size, alignof(InMemoryObject));
   };
   auto Generator = [&]() -> const InMemoryObject * {
-    return &InMemoryRefObject::create(Allocator, I, std::nullopt, Data);
+    return &InMemoryRefObject::create(Allocator, I, {}, Data);
   };
   const InMemoryObject &Node =
       cast<InMemoryObject>(I.Data.loadOrGenerate(Generator));

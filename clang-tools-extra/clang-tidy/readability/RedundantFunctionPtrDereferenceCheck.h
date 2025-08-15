@@ -19,7 +19,8 @@ namespace clang::tidy::readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-function-ptr-dereference.html
 class RedundantFunctionPtrDereferenceCheck : public ClangTidyCheck {
 public:
-  RedundantFunctionPtrDereferenceCheck(StringRef Name, ClangTidyContext *Context)
+  RedundantFunctionPtrDereferenceCheck(StringRef Name,
+                                       ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

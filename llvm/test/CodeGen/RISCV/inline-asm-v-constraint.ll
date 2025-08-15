@@ -45,6 +45,7 @@ define <vscale x 1 x i8> @constraint_vd(<vscale x 1 x i8> %0, <vscale x 1 x i8> 
 define <vscale x 1 x i1> @constraint_vm(<vscale x 1 x i1> %0, <vscale x 1 x i1> %1) nounwind {
 ; RV32I-LABEL: constraint_vm:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32I-NEXT:    vmv1r.v v9, v0
 ; RV32I-NEXT:    vmv1r.v v0, v8
 ; RV32I-NEXT:    #APP
@@ -54,6 +55,7 @@ define <vscale x 1 x i1> @constraint_vm(<vscale x 1 x i1> %0, <vscale x 1 x i1> 
 ;
 ; RV64I-LABEL: constraint_vm:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64I-NEXT:    vmv1r.v v9, v0
 ; RV64I-NEXT:    vmv1r.v v0, v8
 ; RV64I-NEXT:    #APP

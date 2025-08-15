@@ -11,7 +11,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -441,6 +441,9 @@ bool COFFMasmParser::parseDirectiveOption(StringRef Directive, SMLoc Loc) {
 ///          statements
 ///      label "endproc"
 bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
+  if (!getStreamer().getCurrentFragment())
+    return Error(getTok().getLoc(), "expected section directive");
+
   StringRef Label;
   if (getParser().parseIdentifier(Label))
     return Error(Loc, "expected identifier for procedure");
@@ -457,7 +460,8 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       nextLoc = getTok().getLoc();
     }
   }
-  MCSymbolCOFF *Sym = cast<MCSymbolCOFF>(getContext().getOrCreateSymbol(Label));
+  auto *Sym =
+      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Label));
 
   // Define symbol as simple external function
   Sym->setExternal(true);

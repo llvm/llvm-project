@@ -160,6 +160,7 @@ clang_tidy_library(
         ":readability",
         ":utils",
         "//clang:tooling",
+        "//clang:transformer",
     ],
 )
 
@@ -265,6 +266,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
+        ":bugprone",
         ":lib",
         ":misc",
         ":modernize",
@@ -278,10 +280,10 @@ clang_tidy_library(
 clang_tidy_library(
     name = "bugprone",
     deps = [
-        ":cppcoreguidelines",
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -368,6 +370,7 @@ cc_library(
         ":utils",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

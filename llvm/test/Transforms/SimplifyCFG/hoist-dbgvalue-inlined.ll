@@ -1,5 +1,4 @@
 ; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S < %s | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S < %s | FileCheck %s
 ; Verify that we don't crash due an invalid !dbg location on the hoisted llvm.dbg.value
 
 define i64 @caller(ptr %ptr, i64 %flag) !dbg !10 {

@@ -20,7 +20,7 @@
 ; CHECK:       str     x28, [sp, #24]
 ; CHECK:       stp     x29, x30, [sp, #32]
 ; CHECK:       add     x29, sp, #32
-; CHECK:       sub     sp, sp, #624
+; CHECK:       sub     sp, sp, #608
 ; CHECK:       mov     x19, sp
 ; CHECK:       mov     x0, #-2
 ; CHECK:       stur    x0, [x29, #16]
@@ -51,7 +51,7 @@
 ; CHECK:       str     x21, [sp, #16]
 ; CHECK:       str     x28, [sp, #24]
 ; CHECK:       stp     x29, x30, [sp, #32]
-; CHECK:       add     x20, x19, #12
+; CHECK:       add     x20, x19, #0
 
 ; Check that there are no further stack updates.
 ; CHECK-NOT:   sub     sp, sp
@@ -76,11 +76,11 @@
 ; CHECK-LABEL:        "$cppxdata$?func@@YAHXZ":
 ; CHECK-NEXT:         .word   429065506               // MagicNumber
 ; CHECK-NEXT:         .word   2                       // MaxState
-; CHECK-NEXT:         .word   ("$stateUnwindMap$?func@@YAHXZ")@IMGREL // UnwindMap
+; CHECK-NEXT:         .word   "$stateUnwindMap$?func@@YAHXZ"@IMGREL // UnwindMap
 ; CHECK-NEXT:         .word   1                       // NumTryBlocks
-; CHECK-NEXT:         .word   ("$tryMap$?func@@YAHXZ")@IMGREL // TryBlockMap
+; CHECK-NEXT:         .word   "$tryMap$?func@@YAHXZ"@IMGREL // TryBlockMap
 ; CHECK-NEXT:         .word   4                       // IPMapEntries
-; CHECK-NEXT:         .word   ("$ip2state$?func@@YAHXZ")@IMGREL // IPToStateXData
+; CHECK-NEXT:         .word   "$ip2state$?func@@YAHXZ"@IMGREL // IPToStateXData
 ; CHECK-NEXT:         .word   -16                     // UnwindHelp
 
 ; UNWIND: Function: ?func@@YAHXZ (0x0)

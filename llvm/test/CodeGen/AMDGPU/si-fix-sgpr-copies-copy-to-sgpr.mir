@@ -26,7 +26,8 @@ body:             |
     ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 killed [[S_MOV_B32_2]], [[V_XOR_B32_e64_]], implicit $exec
-    ; CHECK-NEXT: $sgpr0 = V_READFIRSTLANE_B32 [[V_AND_B32_e64_]], implicit $exec
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[V_AND_B32_e64_]], implicit $exec
+    ; CHECK-NEXT: $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG $sgpr0
     %0:sgpr_32 = COPY $sgpr0
     %2:sreg_32 = S_MOV_B32 16

@@ -13,13 +13,13 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 #define FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 
-#include "flang/Common/default-kinds.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Support/default-kinds.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -33,32 +33,6 @@ inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
   return mlir::cast<mlir::IntegerAttr>(cop.getValue())
       .getValue()
       .getSExtValue();
-}
-
-// Reconstruct binding tables for dynamic dispatch.
-using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
-using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
-
-inline void buildBindingTables(BindingTables &bindingTables,
-                               mlir::ModuleOp mod) {
-
-  // The binding tables are defined in FIR after lowering inside fir.type_info
-  // operations. Go through each binding tables and store the procedure name and
-  // binding index for later use by the fir.dispatch conversion pattern.
-  for (auto typeInfo : mod.getOps<fir::TypeInfoOp>()) {
-    unsigned bindingIdx = 0;
-    BindingTable bindings;
-    if (typeInfo.getDispatchTable().empty()) {
-      bindingTables[typeInfo.getSymName()] = bindings;
-      continue;
-    }
-    for (auto dtEntry :
-         typeInfo.getDispatchTable().front().getOps<fir::DTEntryOp>()) {
-      bindings[dtEntry.getMethod()] = bindingIdx;
-      ++bindingIdx;
-    }
-    bindingTables[typeInfo.getSymName()] = bindings;
-  }
 }
 
 // Translate front-end KINDs for use in the IR and code gen.
@@ -110,6 +84,17 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
   } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
       return "COMPLEX(KIND+"s + std::to_string(*kind) + ")";
+  } else if (type.isUnsignedInteger()) {
+    if (type.isInteger(8))
+      return "UNSIGNED(KIND=1)";
+    else if (type.isInteger(16))
+      return "UNSIGNED(KIND=2)";
+    else if (type.isInteger(32))
+      return "UNSIGNED(KIND=4)";
+    else if (type.isInteger(64))
+      return "UNSIGNED(KIND=8)";
+    else if (type.isInteger(128))
+      return "UNSIGNED(KIND=16)";
   } else if (type.isInteger(8))
     return "INTEGER(KIND=1)";
   else if (type.isInteger(16))
@@ -162,15 +147,25 @@ mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
       return {Fortran::common::TypeCategory::Complex, *kind};
   } else if (type.isInteger(8))
-    return {Fortran::common::TypeCategory::Integer, 1};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            1};
   else if (type.isInteger(16))
-    return {Fortran::common::TypeCategory::Integer, 2};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            2};
   else if (type.isInteger(32))
-    return {Fortran::common::TypeCategory::Integer, 4};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            4};
   else if (type.isInteger(64))
-    return {Fortran::common::TypeCategory::Integer, 8};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            8};
   else if (type.isInteger(128))
-    return {Fortran::common::TypeCategory::Integer, 16};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            16};
   else if (auto logicalType = mlir::dyn_cast<fir::LogicalType>(type))
     return {Fortran::common::TypeCategory::Logical, logicalType.getFKind()};
   else if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))

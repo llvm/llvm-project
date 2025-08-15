@@ -20,6 +20,23 @@ entry:
   ret double %conv
 }
 
+define double @foo_d_ll_freeze(ppc_fp128 %a, ppc_fp128 %b) #0 {
+; CHECK-LABEL: foo_d_ll_freeze:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fcpsgn 1, 3, 1
+; CHECK-NEXT:    blr
+;
+; CHECK-VSX-LABEL: foo_d_ll_freeze:
+; CHECK-VSX:       # %bb.0: # %entry
+; CHECK-VSX-NEXT:    xscpsgndp 1, 3, 1
+; CHECK-VSX-NEXT:    blr
+entry:
+  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %a, ppc_fp128 %b) #0
+  %freeze = freeze ppc_fp128 %call
+  %conv = fptrunc ppc_fp128 %freeze to double
+  ret double %conv
+}
+
 declare ppc_fp128 @copysignl(ppc_fp128, ppc_fp128) #0
 
 define double @foo_dl(double %a, ppc_fp128 %b) #0 {
@@ -46,9 +63,9 @@ define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stdu 1, -112(1)
 ; CHECK-NEXT:    fmr 3, 2
-; CHECK-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
+; CHECK-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
 ; CHECK-NEXT:    std 0, 128(1)
-; CHECK-NEXT:    lfs 2, .LCPI2_0@toc@l(3)
+; CHECK-NEXT:    lfs 2, .LCPI3_0@toc@l(3)
 ; CHECK-NEXT:    bl copysignl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 112
@@ -81,9 +98,9 @@ define ppc_fp128 @foo_ld(double %a, double %b) #0 {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stdu 1, -112(1)
 ; CHECK-NEXT:    fmr 3, 2
-; CHECK-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
+; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
 ; CHECK-NEXT:    std 0, 128(1)
-; CHECK-NEXT:    lfs 2, .LCPI3_0@toc@l(3)
+; CHECK-NEXT:    lfs 2, .LCPI4_0@toc@l(3)
 ; CHECK-NEXT:    bl copysignl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 112
@@ -117,9 +134,9 @@ define ppc_fp128 @foo_lf(double %a, float %b) #0 {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stdu 1, -112(1)
 ; CHECK-NEXT:    fmr 3, 2
-; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; CHECK-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
 ; CHECK-NEXT:    std 0, 128(1)
-; CHECK-NEXT:    lfs 2, .LCPI4_0@toc@l(3)
+; CHECK-NEXT:    lfs 2, .LCPI5_0@toc@l(3)
 ; CHECK-NEXT:    bl copysignl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 112

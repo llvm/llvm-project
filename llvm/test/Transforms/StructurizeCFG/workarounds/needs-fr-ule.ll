@@ -47,10 +47,7 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       while.body63:
 ; CHECK-NEXT:    br i1 [[PRED5_INV]], label [[WHILE_COND47]], label [[FLOW10:%.*]]
 ; CHECK:       Flow9:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP3]], [[FLOW10]] ], [ undef, [[IRR_GUARD1:%.*]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ false, [[FLOW10]] ], [ undef, [[IRR_GUARD1]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ true, [[FLOW10]] ], [ undef, [[IRR_GUARD1]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ true, [[FLOW10]] ], [ undef, [[IRR_GUARD1]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP3]], [[FLOW10]] ], [ poison, [[IRR_GUARD1:%.*]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ [[TMP4]], [[FLOW10]] ], [ true, [[IRR_GUARD1]] ]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[COND_TRUE49:%.*]], label [[FLOW11]]
 ; CHECK:       while.cond47:
@@ -58,8 +55,7 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       cond.end61:
 ; CHECK-NEXT:    br label [[FLOW12:%.*]]
 ; CHECK:       Flow17:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i1 [ [[TMP19:%.*]], [[FLOW18:%.*]] ], [ undef, [[LOOP_EXIT_GUARD2:%.*]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ [[TMP20:%.*]], [[FLOW18]] ], [ [[DOTINV:%.*]], [[LOOP_EXIT_GUARD2]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ [[TMP20:%.*]], [[FLOW18:%.*]] ], [ [[DOTINV:%.*]], [[LOOP_EXIT_GUARD2:%.*]] ]
 ; CHECK-NEXT:    br label [[FLOW16:%.*]]
 ; CHECK:       if.then69:
 ; CHECK-NEXT:    br label [[FLOW18]]
@@ -92,30 +88,26 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       Flow15:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ true, [[LOR_RHS]] ], [ undef, [[WHILE_COND]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ true, [[LOR_RHS]] ], [ false, [[WHILE_COND]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi i1 [ [[PRED9:%.*]], [[LOR_RHS]] ], [ true, [[WHILE_COND]] ]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[IRR_GUARD:%.*]], label [[FLOW16]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_COND_END61:%.*]] = phi i1 [ [[TMP28:%.*]], [[FLOW13:%.*]] ], [ [[TMP13]], [[FLOW15]] ]
+; CHECK-NEXT:    [[GUARD_COND_END61:%.*]] = phi i1 [ true, [[FLOW13:%.*]] ], [ [[TMP13]], [[FLOW15]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_COND_END61]], label [[COND_END61:%.*]], label [[FLOW12]]
 ; CHECK:       Flow12:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i1 [ false, [[COND_END61]] ], [ undef, [[IRR_GUARD]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = phi i1 [ true, [[COND_END61]] ], [ undef, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i1 [ true, [[COND_END61]] ], [ false, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i1 [ [[PRED7:%.*]], [[COND_END61]] ], [ true, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[IRR_GUARD1]], label [[FLOW13]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_WHILE_BODY63:%.*]] = phi i1 [ [[TMP23:%.*]], [[FLOW11]] ], [ [[TMP17]], [[FLOW12]] ]
+; CHECK-NEXT:    [[GUARD_WHILE_BODY63:%.*]] = phi i1 [ true, [[FLOW11]] ], [ [[TMP17]], [[FLOW12]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY63]], label [[WHILE_BODY63]], label [[FLOW9]]
 ; CHECK:       Flow18:
-; CHECK-NEXT:    [[TMP19]] = phi i1 [ false, [[IF_THEN69:%.*]] ], [ [[TMP31:%.*]], [[LOOP_EXIT_GUARD3:%.*]] ]
-; CHECK-NEXT:    [[TMP20]] = phi i1 [ [[PRED8:%.*]], [[IF_THEN69]] ], [ [[DOTINV]], [[LOOP_EXIT_GUARD3]] ]
+; CHECK-NEXT:    [[TMP20]] = phi i1 [ [[PRED8:%.*]], [[IF_THEN69:%.*]] ], [ [[DOTINV]], [[LOOP_EXIT_GUARD3:%.*]] ]
 ; CHECK-NEXT:    br label [[FLOW17:%.*]]
 ; CHECK:       loop.exit.guard:
 ; CHECK-NEXT:    br i1 [[TMP21:%.*]], label [[WHILE_END76:%.*]], label [[FLOW8]]
 ; CHECK:       Flow16:
-; CHECK-NEXT:    [[TMP21]] = phi i1 [ [[TMP10]], [[FLOW17]] ], [ [[TMP12]], [[FLOW15]] ]
+; CHECK-NEXT:    [[TMP21]] = phi i1 [ false, [[FLOW17]] ], [ true, [[FLOW15]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = phi i1 [ [[TMP11]], [[FLOW17]] ], [ true, [[FLOW15]] ]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[LOOP_EXIT_GUARD:%.*]], label [[WHILE_COND]]
 ; CHECK:       loop.exit.guard2:
@@ -123,17 +115,13 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       loop.exit.guard3:
 ; CHECK-NEXT:    br i1 [[DOTINV14:%.*]], label [[IF_THEN69]], label [[FLOW18]]
 ; CHECK:       Flow11:
-; CHECK-NEXT:    [[TMP23]] = phi i1 [ true, [[COND_TRUE49]] ], [ undef, [[FLOW9]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi i1 [ true, [[COND_TRUE49]] ], [ [[TMP5]], [[FLOW9]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = phi i1 [ false, [[COND_TRUE49]] ], [ [[TMP6]], [[FLOW9]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = phi i1 [ false, [[COND_TRUE49]] ], [ [[TMP7]], [[FLOW9]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi i1 [ false, [[COND_TRUE49]] ], [ true, [[FLOW9]] ]
 ; CHECK-NEXT:    [[TMP27:%.*]] = phi i1 [ [[PRED4:%.*]], [[COND_TRUE49]] ], [ true, [[FLOW9]] ]
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[LOOP_EXIT_GUARD4:%.*]], label [[IRR_GUARD1]]
 ; CHECK:       Flow13:
-; CHECK-NEXT:    [[TMP28]] = phi i1 [ [[TMP8]], [[LOOP_EXIT_GUARD4]] ], [ undef, [[FLOW12]] ]
-; CHECK-NEXT:    [[TMP29:%.*]] = phi i1 [ [[TMP26]], [[LOOP_EXIT_GUARD4]] ], [ [[TMP15]], [[FLOW12]] ]
-; CHECK-NEXT:    [[TMP30:%.*]] = phi i1 [ [[TMP25]], [[LOOP_EXIT_GUARD4]] ], [ [[TMP16]], [[FLOW12]] ]
-; CHECK-NEXT:    [[TMP31]] = phi i1 [ [[TMP6]], [[LOOP_EXIT_GUARD4]] ], [ undef, [[FLOW12]] ]
+; CHECK-NEXT:    [[TMP29:%.*]] = phi i1 [ [[TMP16]], [[LOOP_EXIT_GUARD4]] ], [ false, [[FLOW12]] ]
+; CHECK-NEXT:    [[TMP30:%.*]] = phi i1 [ false, [[LOOP_EXIT_GUARD4]] ], [ true, [[FLOW12]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = phi i1 [ [[TMP24]], [[LOOP_EXIT_GUARD4]] ], [ true, [[FLOW12]] ]
 ; CHECK-NEXT:    [[DOTINV14]] = xor i1 [[TMP29]], true
 ; CHECK-NEXT:    [[DOTINV]] = xor i1 [[TMP30]], true

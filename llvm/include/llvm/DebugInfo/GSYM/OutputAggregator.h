@@ -60,11 +60,8 @@ public:
   // then merge it in here. Note that this is *not* thread safe. It is up to
   // the caller to ensure that this is only called from one thread at a time.
   void Merge(const OutputAggregator &other) {
-    for (auto &&[name, count] : other.Aggregation) {
-      auto [it, inserted] = Aggregation.emplace(name, count);
-      if (!inserted)
-        it->second += count;
-    }
+    for (auto &&[name, count] : other.Aggregation)
+      Aggregation[name] += count;
   }
 };
 

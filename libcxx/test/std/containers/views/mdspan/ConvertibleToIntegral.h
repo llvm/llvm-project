@@ -33,12 +33,20 @@ struct IntTypeNC {
 };
 
 // weird configurability of convertibility to int
-template<bool conv_c, bool conv_nc, bool ctor_nt_c, bool ctor_nt_nc>
+template <bool conv_c, bool conv_nc, bool ctor_nt_c, bool ctor_nt_nc>
 struct IntConfig {
   int val;
-  constexpr explicit IntConfig(int val_):val(val_){}
-  constexpr operator int() noexcept(ctor_nt_nc) requires(conv_nc) { return val; }
-  constexpr operator int() const noexcept(ctor_nt_c) requires(conv_c) { return val; }
+  constexpr explicit IntConfig(int val_) : val(val_) {}
+  constexpr operator int() noexcept(ctor_nt_nc)
+    requires(conv_nc)
+  {
+    return val;
+  }
+  constexpr operator int() const noexcept(ctor_nt_c)
+    requires(conv_c)
+  {
+    return val;
+  }
 };
 
 #endif // TEST_STD_CONTAINERS_VIEWS_MDSPAN_CONVERTIBLE_TO_INTEGRAL_H

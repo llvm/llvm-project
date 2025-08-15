@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMTargetParser
   TargetParser.cpp
   Triple.cpp
   X86TargetParser.cpp
+  XtensaTargetParser.cpp
 
   ADDITIONAL_HEADER_DIRS
   Unix
@@ -39,7 +40,5 @@ add_llvm_component_library(LLVMTargetParser
   Support
 
   DEPENDS
-  ARMTargetParserTableGen
-  AArch64TargetParserTableGen
-  RISCVTargetParserTableGen
+  target_parser_gen
   )

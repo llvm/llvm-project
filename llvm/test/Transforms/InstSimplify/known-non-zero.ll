@@ -192,7 +192,7 @@ define <4 x i1> @shuf_nonzero_both(<4 x i8> %xx, <4 x i8> %yy) {
 
 define <4 x i1> @shuf_nonzero_both_fail(<4 x i8> %xx, <4 x i8> %yy) {
 ; CHECK-LABEL: @shuf_nonzero_both_fail(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[Y:%.*]] = add nuw <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 0>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
@@ -208,8 +208,8 @@ define <4 x i1> @shuf_nonzero_both_fail(<4 x i8> %xx, <4 x i8> %yy) {
 
 define <4 x i1> @shuf_nonzero_both_fail2(<4 x i8> %xx, <4 x i8> %yy) {
 ; CHECK-LABEL: @shuf_nonzero_both_fail2(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add <4 x i8> [[YY:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
@@ -390,7 +390,7 @@ define i1 @nonzero_reduce_or(<2 x i8> %xx) {
 
 define i1 @nonzero_reduce_or_fail(<2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_or_fail(
-; CHECK-NEXT:    [[X:%.*]] = add nsw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nsw <2 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
 ; CHECK-NEXT:    ret i1 [[R]]

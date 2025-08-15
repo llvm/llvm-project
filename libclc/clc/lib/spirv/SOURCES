@@ -1,2 +1,3 @@
-../generic/geometric/clc_dot.cl
-
+math/clc_fmax.cl
+math/clc_fmin.cl
+math/clc_runtime_has_hw_fma32.cl

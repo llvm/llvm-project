@@ -4,34 +4,34 @@
 ; TODO(#60133): Requires updates following opaque pointer migration.
 ; XFAIL: *
 
-; CHECK-SPIRV: OpEntryPoint Kernel %[[#BlockKer1:]] "__device_side_enqueue_block_invoke_kernel"
-; CHECK-SPIRV: OpEntryPoint Kernel %[[#BlockKer2:]] "__device_side_enqueue_block_invoke_2_kernel"
-; CHECK-SPIRV: OpEntryPoint Kernel %[[#BlockKer3:]] "__device_side_enqueue_block_invoke_3_kernel"
-; CHECK-SPIRV: OpEntryPoint Kernel %[[#BlockKer4:]] "__device_side_enqueue_block_invoke_4_kernel"
-; CHECK-SPIRV: OpEntryPoint Kernel %[[#BlockKer5:]] "__device_side_enqueue_block_invoke_5_kernel"
-; CHECK-SPIRV: OpName %[[#BlockGlb1:]] "__block_literal_global"
-; CHECK-SPIRV: OpName %[[#BlockGlb2:]] "__block_literal_global.1"
+; CHECK-SPIRV-DAG: OpEntryPoint Kernel %[[#BlockKer1:]] "__device_side_enqueue_block_invoke_kernel"
+; CHECK-SPIRV-DAG: OpEntryPoint Kernel %[[#BlockKer2:]] "__device_side_enqueue_block_invoke_2_kernel"
+; CHECK-SPIRV-DAG: OpEntryPoint Kernel %[[#BlockKer3:]] "__device_side_enqueue_block_invoke_3_kernel"
+; CHECK-SPIRV-DAG: OpEntryPoint Kernel %[[#BlockKer4:]] "__device_side_enqueue_block_invoke_4_kernel"
+; CHECK-SPIRV-DAG: OpEntryPoint Kernel %[[#BlockKer5:]] "__device_side_enqueue_block_invoke_5_kernel"
+; CHECK-SPIRV-DAG: OpName %[[#BlockGlb1:]] "__block_literal_global"
+; CHECK-SPIRV-DAG: OpName %[[#BlockGlb2:]] "__block_literal_global.1"
 
-; CHECK-SPIRV: %[[#Int32Ty:]] = OpTypeInt 32
-; CHECK-SPIRV: %[[#Int8Ty:]] = OpTypeInt 8
-; CHECK-SPIRV: %[[#VoidTy:]] = OpTypeVoid
-; CHECK-SPIRV: %[[#Int8PtrGenTy:]] = OpTypePointer Generic %[[#Int8Ty]]
-; CHECK-SPIRV: %[[#EventTy:]] = OpTypeDeviceEvent
-; CHECK-SPIRV: %[[#EventPtrTy:]] = OpTypePointer Generic %[[#EventTy]]
-; CHECK-SPIRV: %[[#Int32LocPtrTy:]] = OpTypePointer Function %[[#Int32Ty]]
-; CHECK-SPIRV: %[[#BlockStructTy:]] = OpTypeStruct
-; CHECK-SPIRV: %[[#BlockStructLocPtrTy:]] = OpTypePointer Function %[[#BlockStructTy]]
-; CHECK-SPIRV: %[[#BlockTy1:]] = OpTypeFunction %[[#VoidTy]] %[[#Int8PtrGenTy]]
-; CHECK-SPIRV: %[[#BlockTy2:]] = OpTypeFunction %[[#VoidTy]] %[[#Int8PtrGenTy]]
-; CHECK-SPIRV: %[[#BlockTy3:]] = OpTypeFunction %[[#VoidTy]] %[[#Int8PtrGenTy]]
+; CHECK-SPIRV-DAG: %[[#Int32Ty:]] = OpTypeInt 32
+; CHECK-SPIRV-DAG: %[[#Int8Ty:]] = OpTypeInt 8
+; CHECK-SPIRV-DAG: %[[#VoidTy:]] = OpTypeVoid
+; CHECK-SPIRV-DAG: %[[#Int8PtrGenTy:]] = OpTypePointer Generic %[[#Int8Ty]]
+; CHECK-SPIRV-DAG: %[[#EventTy:]] = OpTypeDeviceEvent
+; CHECK-SPIRV-DAG: %[[#EventPtrTy:]] = OpTypePointer Generic %[[#EventTy]]
+; CHECK-SPIRV-DAG: %[[#Int32LocPtrTy:]] = OpTypePointer Function %[[#Int32Ty]]
+; CHECK-SPIRV-DAG: %[[#BlockStructTy:]] = OpTypeStruct
+; CHECK-SPIRV-DAG: %[[#BlockStructLocPtrTy:]] = OpTypePointer Function %[[#BlockStructTy]]
+; CHECK-SPIRV-DAG: %[[#BlockTy1:]] = OpTypeFunction %[[#VoidTy]] %[[#Int8PtrGenTy]]
+; CHECK-SPIRV-DAG: %[[#BlockTy2:]] = OpTypeFunction %[[#VoidTy]] %[[#Int8PtrGenTy]]
+; CHECK-SPIRV-DAG: %[[#BlockTy3:]] = OpTypeFunction %[[#VoidTy]] %[[#Int8PtrGenTy]]
 
-; CHECK-SPIRV: %[[#ConstInt0:]] = OpConstant %[[#Int32Ty]] 0
-; CHECK-SPIRV: %[[#EventNull:]] = OpConstantNull %[[#EventPtrTy]]
-; CHECK-SPIRV: %[[#ConstInt21:]] = OpConstant %[[#Int32Ty]] 21
-; CHECK-SPIRV: %[[#ConstInt8:]] = OpConstant %[[#Int32Ty]] 8
-; CHECK-SPIRV: %[[#ConstInt24:]] = OpConstant %[[#Int32Ty]] 24
-; CHECK-SPIRV: %[[#ConstInt12:]] = OpConstant %[[#Int32Ty]] 12
-; CHECK-SPIRV: %[[#ConstInt2:]] = OpConstant %[[#Int32Ty]] 2
+; CHECK-SPIRV-DAG: %[[#ConstInt0:]] = OpConstantNull %[[#Int32Ty]]
+; CHECK-SPIRV-DAG: %[[#EventNull:]] = OpConstantNull %[[#EventPtrTy]]
+; CHECK-SPIRV-DAG: %[[#ConstInt21:]] = OpConstant %[[#Int32Ty]] 21{{$}}
+; CHECK-SPIRV-DAG: %[[#ConstInt8:]] = OpConstant %[[#Int32Ty]] 8{{$}}
+; CHECK-SPIRV-DAG: %[[#ConstInt24:]] = OpConstant %[[#Int32Ty]] 24{{$}}
+; CHECK-SPIRV-DAG: %[[#ConstInt12:]] = OpConstant %[[#Int32Ty]] 12{{$}}
+; CHECK-SPIRV-DAG: %[[#ConstInt2:]] = OpConstant %[[#Int32Ty]] 2{{$}}
 
 ;; typedef struct {int a;} ndrange_t;
 ;; #define NULL ((void*)0)

@@ -11,7 +11,7 @@
 
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
+#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -79,9 +79,6 @@
 #endif
 #ifdef CPU_TYPE_ARM64_32
 #undef CPU_TYPE_ARM64_32
-#endif
-#ifdef CPU_TYPE_I386
-#undef CPU_TYPE_I386
 #endif
 #ifdef CPU_TYPE_X86_64
 #undef CPU_TYPE_X86_64
@@ -183,46 +180,32 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
 
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       if (flavor == 0)
-        done = true;
-      else {
-        uint32_t i;
-        uint32_t count = data.GetU32(&offset);
-        switch (flavor) {
-        case GPRRegSet:
-          for (i = 0; i < count; ++i)
-            (&gpr.rax)[i] = data.GetU64(&offset);
-          SetError(GPRRegSet, Read, 0);
-          done = true;
-
-          break;
-        case FPURegSet:
-          // TODO: fill in FPU regs....
-          // SetError (FPURegSet, Read, -1);
-          done = true;
-
-          break;
-        case EXCRegSet:
-          exc.trapno = data.GetU32(&offset);
-          exc.err = data.GetU32(&offset);
-          exc.faultvaddr = data.GetU64(&offset);
-          SetError(EXCRegSet, Read, 0);
-          done = true;
-          break;
-        case 7:
-        case 8:
-        case 9:
-          // fancy flavors that encapsulate of the above flavors...
-          break;
-
-        default:
-          done = true;
-          break;
-        }
+        break;
+      uint32_t count = data.GetU32(&offset);
+      switch (flavor) {
+      case GPRRegSet: {
+        uint32_t *gpr_data = reinterpret_cast<uint32_t *>(&gpr.rax);
+        for (uint32_t i = 0; i < count && offset < data.GetByteSize(); ++i)
+          gpr_data[i] = data.GetU32(&offset);
+        SetError(GPRRegSet, Read, 0);
+      } break;
+      case FPURegSet:
+        // TODO: fill in FPU regs....
+        SetError(FPURegSet, Read, -1);
+        break;
+      case EXCRegSet:
+        exc.trapno = data.GetU32(&offset);
+        exc.err = data.GetU32(&offset);
+        exc.faultvaddr = data.GetU64(&offset);
+        SetError(EXCRegSet, Read, 0);
+        break;
+      default:
+        offset += count * 4;
+        break;
       }
     }
   }
@@ -352,127 +335,11 @@ public:
   }
 
 protected:
-  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return 0; }
+  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return -1; }
 
-  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return 0; }
+  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return -1; }
 
-  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return 0; }
-
-  int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
-    return 0;
-  }
-
-  int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu) override {
-    return 0;
-  }
-
-  int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc) override {
-    return 0;
-  }
-};
-
-class RegisterContextDarwin_i386_Mach : public RegisterContextDarwin_i386 {
-public:
-  RegisterContextDarwin_i386_Mach(lldb_private::Thread &thread,
-                                  const DataExtractor &data)
-      : RegisterContextDarwin_i386(thread, 0) {
-    SetRegisterDataFrom_LC_THREAD(data);
-  }
-
-  void InvalidateAllRegisters() override {
-    // Do nothing... registers are always valid...
-  }
-
-  void SetRegisterDataFrom_LC_THREAD(const DataExtractor &data) {
-    lldb::offset_t offset = 0;
-    SetError(GPRRegSet, Read, -1);
-    SetError(FPURegSet, Read, -1);
-    SetError(EXCRegSet, Read, -1);
-    bool done = false;
-
-    while (!done) {
-      int flavor = data.GetU32(&offset);
-      if (flavor == 0)
-        done = true;
-      else {
-        uint32_t i;
-        uint32_t count = data.GetU32(&offset);
-        switch (flavor) {
-        case GPRRegSet:
-          for (i = 0; i < count; ++i)
-            (&gpr.eax)[i] = data.GetU32(&offset);
-          SetError(GPRRegSet, Read, 0);
-          done = true;
-
-          break;
-        case FPURegSet:
-          // TODO: fill in FPU regs....
-          // SetError (FPURegSet, Read, -1);
-          done = true;
-
-          break;
-        case EXCRegSet:
-          exc.trapno = data.GetU32(&offset);
-          exc.err = data.GetU32(&offset);
-          exc.faultvaddr = data.GetU32(&offset);
-          SetError(EXCRegSet, Read, 0);
-          done = true;
-          break;
-        case 7:
-        case 8:
-        case 9:
-          // fancy flavors that encapsulate of the above flavors...
-          break;
-
-        default:
-          done = true;
-          break;
-        }
-      }
-    }
-  }
-
-  static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
-    if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
-
-      data.PutHex32(GPRRegSet); // Flavor
-      data.PutHex32(GPRWordCount);
-      PrintRegisterValue(reg_ctx, "eax", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ebx", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ecx", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "edx", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "edi", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "esi", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ebp", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "esp", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ss", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "eflags", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "eip", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "cs", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ds", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "es", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "fs", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "gs", nullptr, 4, data);
-
-      // Write out the EXC registers
-      data.PutHex32(EXCRegSet);
-      data.PutHex32(EXCWordCount);
-      PrintRegisterValue(reg_ctx, "trapno", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "err", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "faultvaddr", nullptr, 4, data);
-      return true;
-    }
-    return false;
-  }
-
-protected:
-  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return 0; }
-
-  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return 0; }
-
-  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return 0; }
+  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return -1; }
 
   int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
     return 0;
@@ -504,12 +371,11 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
 
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       uint32_t count = data.GetU32(&offset);
-      lldb::offset_t next_thread_state = offset + (count * 4);
+      offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRAltRegSet:
       case GPRRegSet: {
@@ -523,9 +389,7 @@ public:
 
           SetError(GPRRegSet, Read, 0);
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
 
       case FPURegSet: {
         uint8_t *fpu_reg_buf = (uint8_t *)&fpu.floats;
@@ -535,12 +399,8 @@ public:
           offset += fpu_reg_buf_size;
           fpu.fpscr = data.GetU32(&offset);
           SetError(FPURegSet, Read, 0);
-        } else {
-          done = true;
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
 
       case EXCRegSet:
         if (count == 3) {
@@ -549,14 +409,9 @@ public:
           exc.far = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        done = true;
-        offset = next_thread_state;
         break;
-
-      // Unknown register set flavor, stop trying to parse.
-      default:
-        done = true;
       }
+      offset = next_thread_state;
     }
   }
 
@@ -639,11 +494,10 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       uint32_t count = data.GetU32(&offset);
-      lldb::offset_t next_thread_state = offset + (count * 4);
+      offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRRegSet:
         // x0-x29 + fp + lr + sp + pc (== 33 64-bit registers) plus cpsr (1
@@ -658,7 +512,6 @@ public:
           gpr.cpsr = data.GetU32(&offset);
           SetError(GPRRegSet, Read, 0);
         }
-        offset = next_thread_state;
         break;
       case FPURegSet: {
         uint8_t *fpu_reg_buf = (uint8_t *)&fpu.v[0];
@@ -667,12 +520,8 @@ public:
             data.ExtractBytes(offset, fpu_reg_buf_size, eByteOrderLittle,
                               fpu_reg_buf) == fpu_reg_buf_size) {
           SetError(FPURegSet, Read, 0);
-        } else {
-          done = true;
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
       case EXCRegSet:
         if (count == 4) {
           exc.far = data.GetU64(&offset);
@@ -680,12 +529,9 @@ public:
           exc.exception = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        offset = next_thread_state;
-        break;
-      default:
-        done = true;
         break;
       }
+      offset = next_thread_state;
     }
   }
 
@@ -766,6 +612,140 @@ protected:
 
   int DoWriteDBG(lldb::tid_t tid, int flavor, const DBG &dbg) override {
     return -1;
+  }
+};
+
+class RegisterContextDarwin_riscv32_Mach
+    : public RegisterContextDarwin_riscv32 {
+public:
+  RegisterContextDarwin_riscv32_Mach(lldb_private::Thread &thread,
+                                     const DataExtractor &data)
+      : RegisterContextDarwin_riscv32(thread, 0) {
+    SetRegisterDataFrom_LC_THREAD(data);
+  }
+
+  void InvalidateAllRegisters() override {
+    // Do nothing... registers are always valid...
+  }
+
+  void SetRegisterDataFrom_LC_THREAD(const DataExtractor &data) {
+    lldb::offset_t offset = 0;
+    SetError(GPRRegSet, Read, -1);
+    SetError(FPURegSet, Read, -1);
+    SetError(EXCRegSet, Read, -1);
+    SetError(CSRRegSet, Read, -1);
+    while (offset < data.GetByteSize()) {
+      int flavor = data.GetU32(&offset);
+      uint32_t count = data.GetU32(&offset);
+      offset_t next_thread_state = offset + (count * 4);
+      switch (flavor) {
+      case GPRRegSet:
+        // x0-x31 + pc
+        if (count >= 32) {
+          for (uint32_t i = 0; i < 32; ++i)
+            ((uint32_t *)&gpr.x0)[i] = data.GetU32(&offset);
+          gpr.pc = data.GetU32(&offset);
+          SetError(GPRRegSet, Read, 0);
+        }
+        break;
+      case FPURegSet: {
+        // f0-f31 + fcsr
+        if (count >= 32) {
+          for (uint32_t i = 0; i < 32; ++i)
+            ((uint32_t *)&fpr.f0)[i] = data.GetU32(&offset);
+          fpr.fcsr = data.GetU32(&offset);
+          SetError(FPURegSet, Read, 0);
+        }
+      } break;
+      case EXCRegSet:
+        if (count == 3) {
+          exc.exception = data.GetU32(&offset);
+          exc.fsr = data.GetU32(&offset);
+          exc.far = data.GetU32(&offset);
+          SetError(EXCRegSet, Read, 0);
+        }
+        break;
+      }
+      offset = next_thread_state;
+    }
+  }
+
+  static bool Create_LC_THREAD(Thread *thread, Stream &data) {
+    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    if (reg_ctx_sp) {
+      RegisterContext *reg_ctx = reg_ctx_sp.get();
+
+      data.PutHex32(GPRRegSet); // Flavor
+      data.PutHex32(GPRWordCount);
+      PrintRegisterValue(reg_ctx, "x0", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x1", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x2", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x3", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x4", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x5", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x6", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x7", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x8", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x9", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x10", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x11", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x12", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x13", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x14", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x15", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x16", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x17", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x18", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x19", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x20", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x21", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x22", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x23", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x24", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x25", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x26", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x27", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x28", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x29", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x30", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x31", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "pc", nullptr, 4, data);
+      data.PutHex32(0); // uint32_t pad at the end
+
+      // Write out the EXC registers
+      data.PutHex32(EXCRegSet);
+      data.PutHex32(EXCWordCount);
+      PrintRegisterValue(reg_ctx, "exception", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "fsr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "far", nullptr, 4, data);
+      return true;
+    }
+    return false;
+  }
+
+protected:
+  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return -1; }
+
+  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return -1; }
+
+  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return -1; }
+
+  int DoReadCSR(lldb::tid_t tid, int flavor, CSR &csr) override { return -1; }
+
+  int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
+    return 0;
+  }
+
+  int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu) override {
+    return 0;
+  }
+
+  int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc) override {
+    return 0;
+  }
+
+  int DoWriteCSR(lldb::tid_t tid, int flavor, const CSR &csr) override {
+    return 0;
   }
 };
 
@@ -916,6 +896,11 @@ ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
 ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
+}
+
+ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
+  static ConstString g_section_name_lldb_no_nlist("__lldb_no_nlist");
+  return g_section_name_lldb_no_nlist;
 }
 
 bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
@@ -1171,6 +1156,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDataObjCMessageRefs:
         case eSectionTypeDataObjCCFStrings:
         case eSectionTypeGoSymtab:
+        case eSectionTypeWasmName:
           return AddressClass::eData;
 
         case eSectionTypeDebug:
@@ -1209,6 +1195,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleObjC:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
+        case eSectionTypeLLDBTypeSummaries:
+        case eSectionTypeLLDBFormatters:
         case eSectionTypeSwiftModules:
           return AddressClass::eDebug;
 
@@ -1446,34 +1434,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_objc_classlist("__objc_classlist");
   static ConstString g_sect_name_cfstring("__cfstring");
 
-  static ConstString g_sect_name_dwarf_debug_abbrev("__debug_abbrev");
-  static ConstString g_sect_name_dwarf_debug_abbrev_dwo("__debug_abbrev.dwo");
-  static ConstString g_sect_name_dwarf_debug_addr("__debug_addr");
-  static ConstString g_sect_name_dwarf_debug_aranges("__debug_aranges");
-  static ConstString g_sect_name_dwarf_debug_cu_index("__debug_cu_index");
-  static ConstString g_sect_name_dwarf_debug_frame("__debug_frame");
-  static ConstString g_sect_name_dwarf_debug_info("__debug_info");
-  static ConstString g_sect_name_dwarf_debug_info_dwo("__debug_info.dwo");
-  static ConstString g_sect_name_dwarf_debug_line("__debug_line");
-  static ConstString g_sect_name_dwarf_debug_line_dwo("__debug_line.dwo");
-  static ConstString g_sect_name_dwarf_debug_line_str("__debug_line_str");
-  static ConstString g_sect_name_dwarf_debug_loc("__debug_loc");
-  static ConstString g_sect_name_dwarf_debug_loclists("__debug_loclists");
-  static ConstString g_sect_name_dwarf_debug_loclists_dwo("__debug_loclists.dwo");
-  static ConstString g_sect_name_dwarf_debug_macinfo("__debug_macinfo");
-  static ConstString g_sect_name_dwarf_debug_macro("__debug_macro");
-  static ConstString g_sect_name_dwarf_debug_macro_dwo("__debug_macro.dwo");
-  static ConstString g_sect_name_dwarf_debug_names("__debug_names");
-  static ConstString g_sect_name_dwarf_debug_pubnames("__debug_pubnames");
-  static ConstString g_sect_name_dwarf_debug_pubtypes("__debug_pubtypes");
-  static ConstString g_sect_name_dwarf_debug_ranges("__debug_ranges");
-  static ConstString g_sect_name_dwarf_debug_rnglists("__debug_rnglists");
-  static ConstString g_sect_name_dwarf_debug_str("__debug_str");
-  static ConstString g_sect_name_dwarf_debug_str_dwo("__debug_str.dwo");
   static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
   static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
-  static ConstString g_sect_name_dwarf_debug_tu_index("__debug_tu_index");
-  static ConstString g_sect_name_dwarf_debug_types("__debug_types");
   static ConstString g_sect_name_dwarf_apple_names("__apple_names");
   static ConstString g_sect_name_dwarf_apple_types("__apple_types");
   static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
@@ -1484,64 +1446,19 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_data("__data");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
+  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
+  static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
-  if (section_name == g_sect_name_dwarf_debug_abbrev)
-    return eSectionTypeDWARFDebugAbbrev;
-  if (section_name == g_sect_name_dwarf_debug_abbrev_dwo)
-    return eSectionTypeDWARFDebugAbbrevDwo;
-  if (section_name == g_sect_name_dwarf_debug_addr)
-    return eSectionTypeDWARFDebugAddr;
-  if (section_name == g_sect_name_dwarf_debug_aranges)
-    return eSectionTypeDWARFDebugAranges;
-  if (section_name == g_sect_name_dwarf_debug_cu_index)
-    return eSectionTypeDWARFDebugCuIndex;
-  if (section_name == g_sect_name_dwarf_debug_frame)
-    return eSectionTypeDWARFDebugFrame;
-  if (section_name == g_sect_name_dwarf_debug_info)
-    return eSectionTypeDWARFDebugInfo;
-  if (section_name == g_sect_name_dwarf_debug_info_dwo)
-    return eSectionTypeDWARFDebugInfoDwo;
-  if (section_name == g_sect_name_dwarf_debug_line)
-    return eSectionTypeDWARFDebugLine;
-  if (section_name == g_sect_name_dwarf_debug_line_dwo)
-    return eSectionTypeDWARFDebugLine; // Same as debug_line.
-  if (section_name == g_sect_name_dwarf_debug_line_str)
-    return eSectionTypeDWARFDebugLineStr;
-  if (section_name == g_sect_name_dwarf_debug_loc)
-    return eSectionTypeDWARFDebugLoc;
-  if (section_name == g_sect_name_dwarf_debug_loclists)
-    return eSectionTypeDWARFDebugLocLists;
-  if (section_name == g_sect_name_dwarf_debug_loclists_dwo)
-    return eSectionTypeDWARFDebugLocListsDwo;
-  if (section_name == g_sect_name_dwarf_debug_macinfo)
-    return eSectionTypeDWARFDebugMacInfo;
-  if (section_name == g_sect_name_dwarf_debug_macro)
-    return eSectionTypeDWARFDebugMacro;
-  if (section_name == g_sect_name_dwarf_debug_macro_dwo)
-    return eSectionTypeDWARFDebugMacInfo; // Same as debug_macro.
-  if (section_name == g_sect_name_dwarf_debug_names)
-    return eSectionTypeDWARFDebugNames;
-  if (section_name == g_sect_name_dwarf_debug_pubnames)
-    return eSectionTypeDWARFDebugPubNames;
-  if (section_name == g_sect_name_dwarf_debug_pubtypes)
-    return eSectionTypeDWARFDebugPubTypes;
-  if (section_name == g_sect_name_dwarf_debug_ranges)
-    return eSectionTypeDWARFDebugRanges;
-  if (section_name == g_sect_name_dwarf_debug_rnglists)
-    return eSectionTypeDWARFDebugRngLists;
-  if (section_name == g_sect_name_dwarf_debug_str)
-    return eSectionTypeDWARFDebugStr;
-  if (section_name == g_sect_name_dwarf_debug_str_dwo)
-    return eSectionTypeDWARFDebugStrDwo;
   if (section_name == g_sect_name_dwarf_debug_str_offs)
     return eSectionTypeDWARFDebugStrOffsets;
   if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
     return eSectionTypeDWARFDebugStrOffsetsDwo;
-  if (section_name == g_sect_name_dwarf_debug_tu_index)
-    return eSectionTypeDWARFDebugTuIndex;
-  if (section_name == g_sect_name_dwarf_debug_types)
-    return eSectionTypeDWARFDebugTypes;
+
+  llvm::StringRef stripped_name = section_name.GetStringRef();
+  if (stripped_name.consume_front("__debug_"))
+    return ObjectFile::GetDWARFSectionTypeFromName(stripped_name);
+
   if (section_name == g_sect_name_dwarf_apple_names)
     return eSectionTypeDWARFAppleNames;
   if (section_name == g_sect_name_dwarf_apple_types)
@@ -1564,6 +1481,10 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
     return eSectionTypeCTF;
+  if (section_name == g_sect_name_lldb_summaries)
+    return lldb::eSectionTypeLLDBTypeSummaries;
+  if (section_name == g_sect_name_lldb_formatters)
+    return lldb::eSectionTypeLLDBFormatters;
   if (section_name == g_sect_name_swift_ast)
     return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_objc_data ||
@@ -2235,11 +2156,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
   Progress progress("Parsing symbol table", file_name);
 
-  llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
   llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
   llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   llvm::MachO::dysymtab_command dysymtab = m_dysymtab;
+  SymtabCommandLargeOffsets symtab_load_command;
   // The data element of type bool indicates that this entry is thumb
   // code.
   typedef AddressDataArray<lldb::addr_t, bool, 100> FunctionStarts;
@@ -2276,12 +2197,20 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     // Watch for the symbol table load command
     switch (lc.cmd) {
     case LC_SYMTAB:
+      // struct symtab_command {
+      //   uint32_t        cmd;            /* LC_SYMTAB */
+      //   uint32_t        cmdsize;        /* sizeof(struct symtab_command) */
+      //   uint32_t        symoff;         /* symbol table offset */
+      //   uint32_t        nsyms;          /* number of symbol table entries */
+      //   uint32_t        stroff;         /* string table offset */
+      //   uint32_t        strsize;        /* string table size in bytes */
+      // };
       symtab_load_command.cmd = lc.cmd;
       symtab_load_command.cmdsize = lc.cmdsize;
-      // Read in the rest of the symtab load command
-      if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
-          nullptr) // fill in symoff, nsyms, stroff, strsize fields
-        return;
+      symtab_load_command.symoff = m_data.GetU32(&offset);
+      symtab_load_command.nsyms = m_data.GetU32(&offset);
+      symtab_load_command.stroff = m_data.GetU32(&offset);
+      symtab_load_command.strsize = m_data.GetU32(&offset);
       break;
 
     case LC_DYLD_INFO:
@@ -2378,14 +2307,53 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   uint32_t memory_module_load_level = eMemoryModuleLoadLevelComplete;
   bool is_shared_cache_image = IsSharedCacheBinary();
   bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
+
+  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
+  ConstString g_segment_name_DATA = GetSegmentNameDATA();
+  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
+  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
+  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
+  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
+  ConstString g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
+  SectionSP text_section_sp(
+      section_list->FindSectionByName(g_segment_name_TEXT));
+  SectionSP data_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA));
   SectionSP linkedit_section_sp(
       section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
+  SectionSP data_dirty_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
+  SectionSP data_const_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA_CONST));
+  SectionSP objc_section_sp(
+      section_list->FindSectionByName(g_segment_name_OBJC));
+  SectionSP eh_frame_section_sp;
+  SectionSP lldb_no_nlist_section_sp;
+  if (text_section_sp.get()) {
+    eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
+        g_section_name_eh_frame);
+    lldb_no_nlist_section_sp = text_section_sp->GetChildren().FindSectionByName(
+        g_section_name_lldb_no_nlist);
+  } else {
+    eh_frame_section_sp =
+        section_list->FindSectionByName(g_section_name_eh_frame);
+    lldb_no_nlist_section_sp =
+        section_list->FindSectionByName(g_section_name_lldb_no_nlist);
+  }
 
   if (process && m_header.filetype != llvm::MachO::MH_OBJECT &&
       !is_local_shared_cache_image) {
     Target &target = process->GetTarget();
 
     memory_module_load_level = target.GetMemoryModuleLoadLevel();
+
+    // If __TEXT,__lldb_no_nlist section is present in this binary,
+    // and we're reading it out of memory, do not read any of the
+    // nlist entries.  They are not needed in lldb and it may be
+    // expensive to load these.  This is to handle a dylib consisting
+    // of only metadata, no code, but it has many nlist entries.
+    if (lldb_no_nlist_section_sp)
+      memory_module_load_level = eMemoryModuleLoadLevelMinimal;
 
     // Reading mach file from memory in a process or core file...
 
@@ -2408,45 +2376,44 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       strtab_addr = linkedit_load_addr + symtab_load_command.stroff -
                     linkedit_file_offset;
 
-        // Always load dyld - the dynamic linker - from memory if we didn't
-        // find a binary anywhere else. lldb will not register
-        // dylib/framework/bundle loads/unloads if we don't have the dyld
-        // symbols, we force dyld to load from memory despite the user's
-        // target.memory-module-load-level setting.
-        if (memory_module_load_level == eMemoryModuleLoadLevelComplete ||
-            m_header.filetype == llvm::MachO::MH_DYLINKER) {
-          DataBufferSP nlist_data_sp(
-              ReadMemory(process_sp, symoff_addr, nlist_data_byte_size));
-          if (nlist_data_sp)
-            nlist_data.SetData(nlist_data_sp, 0, nlist_data_sp->GetByteSize());
-          if (dysymtab.nindirectsyms != 0) {
-            const addr_t indirect_syms_addr = linkedit_load_addr +
-                                              dysymtab.indirectsymoff -
-                                              linkedit_file_offset;
-            DataBufferSP indirect_syms_data_sp(ReadMemory(
-                process_sp, indirect_syms_addr, dysymtab.nindirectsyms * 4));
-            if (indirect_syms_data_sp)
-              indirect_symbol_index_data.SetData(
-                  indirect_syms_data_sp, 0,
-                  indirect_syms_data_sp->GetByteSize());
-            // If this binary is outside the shared cache,
-            // cache the string table.
-            // Binaries in the shared cache all share a giant string table,
-            // and we can't share the string tables across multiple
-            // ObjectFileMachO's, so we'd end up re-reading this mega-strtab
-            // for every binary in the shared cache - it would be a big perf
-            // problem. For binaries outside the shared cache, it's faster to
-            // read the entire strtab at once instead of piece-by-piece as we
-            // process the nlist records.
-            if (!is_shared_cache_image) {
-              DataBufferSP strtab_data_sp(
-                  ReadMemory(process_sp, strtab_addr, strtab_data_byte_size));
-              if (strtab_data_sp) {
-                strtab_data.SetData(strtab_data_sp, 0,
-                                    strtab_data_sp->GetByteSize());
-              }
+      // Always load dyld - the dynamic linker - from memory if we didn't
+      // find a binary anywhere else. lldb will not register
+      // dylib/framework/bundle loads/unloads if we don't have the dyld
+      // symbols, we force dyld to load from memory despite the user's
+      // target.memory-module-load-level setting.
+      if (memory_module_load_level == eMemoryModuleLoadLevelComplete ||
+          m_header.filetype == llvm::MachO::MH_DYLINKER) {
+        DataBufferSP nlist_data_sp(
+            ReadMemory(process_sp, symoff_addr, nlist_data_byte_size));
+        if (nlist_data_sp)
+          nlist_data.SetData(nlist_data_sp, 0, nlist_data_sp->GetByteSize());
+        if (dysymtab.nindirectsyms != 0) {
+          const addr_t indirect_syms_addr = linkedit_load_addr +
+                                            dysymtab.indirectsymoff -
+                                            linkedit_file_offset;
+          DataBufferSP indirect_syms_data_sp(ReadMemory(
+              process_sp, indirect_syms_addr, dysymtab.nindirectsyms * 4));
+          if (indirect_syms_data_sp)
+            indirect_symbol_index_data.SetData(
+                indirect_syms_data_sp, 0, indirect_syms_data_sp->GetByteSize());
+          // If this binary is outside the shared cache,
+          // cache the string table.
+          // Binaries in the shared cache all share a giant string table,
+          // and we can't share the string tables across multiple
+          // ObjectFileMachO's, so we'd end up re-reading this mega-strtab
+          // for every binary in the shared cache - it would be a big perf
+          // problem. For binaries outside the shared cache, it's faster to
+          // read the entire strtab at once instead of piece-by-piece as we
+          // process the nlist records.
+          if (!is_shared_cache_image) {
+            DataBufferSP strtab_data_sp(
+                ReadMemory(process_sp, strtab_addr, strtab_data_byte_size));
+            if (strtab_data_sp) {
+              strtab_data.SetData(strtab_data_sp, 0,
+                                  strtab_data_sp->GetByteSize());
             }
           }
+        }
         if (memory_module_load_level >= eMemoryModuleLoadLevelPartial) {
           if (function_starts_load_command.cmd) {
             const addr_t func_start_addr =
@@ -2510,30 +2477,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   }
 
   const bool have_strtab_data = strtab_data.GetByteSize() > 0;
-
-  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
-  ConstString g_segment_name_DATA = GetSegmentNameDATA();
-  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
-  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
-  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
-  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
-  SectionSP text_section_sp(
-      section_list->FindSectionByName(g_segment_name_TEXT));
-  SectionSP data_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA));
-  SectionSP data_dirty_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
-  SectionSP data_const_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_CONST));
-  SectionSP objc_section_sp(
-      section_list->FindSectionByName(g_segment_name_OBJC));
-  SectionSP eh_frame_section_sp;
-  if (text_section_sp.get())
-    eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
-        g_section_name_eh_frame);
-  else
-    eh_frame_section_sp =
-        section_list->FindSectionByName(g_section_name_eh_frame);
 
   const bool is_arm = (m_header.cputype == llvm::MachO::CPU_TYPE_ARM);
   const bool always_thumb = GetArchitecture().IsAlwaysThumbInstructions();
@@ -2735,7 +2678,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
         return;
 
         if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID::fromData(&cache_uuid, 16))
+          process_shared_cache_uuid != UUID(&cache_uuid, 16))
         return;
 
       dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
@@ -2744,7 +2687,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           return;
 
         dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID::fromData(dsc_image_uuid, 16))
+        if (image_uuid != UUID(dsc_image_uuid, 16))
           return;
 
         found_image = true;
@@ -2833,7 +2776,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                           "DSC unmapped local symbol[{0}] has invalid "
                           "string table offset {1:x} in {2}, ignoring symbol",
                           nlist_index, nlist.n_strx,
-                          module_sp->GetFileSpec().GetPath());
+                          module_sp->GetFileSpec().GetPath()));
                       continue;
                     }
                     if (symbol_name[0] == '\0')
@@ -5318,16 +5261,6 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
               done = true;
             }
             break;
-          case llvm::MachO::CPU_TYPE_I386:
-            if (flavor ==
-                1) // x86_THREAD_STATE32 from mach/i386/thread_status.h
-            {
-              offset += 40; // This is the offset of eip in the GPR thread state
-                            // data structure.
-              start_address = m_data.GetU32(&offset);
-              done = true;
-            }
-            break;
           case llvm::MachO::CPU_TYPE_X86_64:
             if (flavor ==
                 4) // x86_THREAD_STATE64 from mach/i386/thread_status.h
@@ -5584,9 +5517,13 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       // struct main_bin_spec
       // {
       //     uint32_t version;       // currently 2
-      //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+      //     uint32_t type;          // 0 == unspecified,
+      //                             // 1 == kernel
       //                             // 2 == user process,
+      //                                     dyld mach-o binary addr
       //                             // 3 == standalone binary
+      //                             // 4 == user process,
+      //                             //      dyld_all_image_infos addr
       //     uint64_t address;       // UINT64_MAX if address not specified
       //     uint64_t slide;         // slide, UINT64_MAX if unspecified
       //                             // 0 if no slide needs to be applied to
@@ -5637,6 +5574,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
           const char *typestr = "unrecognized type";
+          type = eBinaryTypeInvalid;
           switch (binspec_type) {
           case 0:
             type = eBinaryTypeUnknown;
@@ -5653,6 +5591,10 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           case 3:
             type = eBinaryTypeStandalone;
             typestr = "standalone";
+            break;
+          case 4:
+            type = eBinaryTypeUserAllImageInfos;
+            typestr = "userland dyld_all_image_infos";
             break;
           }
           LLDB_LOGF(log,
@@ -5681,27 +5623,8 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
-    auto lc_notes = FindLC_NOTEByName("process metadata");
-    for (auto lc_note : lc_notes) {
-      offset_t payload_offset = std::get<0>(lc_note);
-      offset_t strsize = std::get<1>(lc_note);
-      std::string buf(strsize, '\0');
-      if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
-        LLDB_LOGF(log,
-                  "Unable to read %" PRIu64
-                  " bytes of 'process metadata' LC_NOTE JSON contents",
-                  strsize);
-        return false;
-      }
-      while (buf.back() == '\0')
-        buf.resize(buf.size() - 1);
-      StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+    if (StructuredData::ObjectSP object_sp = GetCorefileProcessMetadata()) {
       StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
-      if (!dict) {
-        LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
-                       "get a dictionary.");
-        return false;
-      }
       StructuredData::Array *threads;
       if (!dict->GetValueForKeyAsArray("threads", threads) || !threads) {
         LLDB_LOGF(log,
@@ -5744,6 +5667,49 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
   return false;
 }
 
+StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return {};
+
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  auto lc_notes = FindLC_NOTEByName("process metadata");
+  if (lc_notes.size() == 0)
+    return {};
+
+  if (lc_notes.size() > 1)
+    LLDB_LOGF(
+        log,
+        "Multiple 'process metadata' LC_NOTEs found, only using the first.");
+
+  auto [payload_offset, strsize] = lc_notes[0];
+  std::string buf(strsize, '\0');
+  if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
+    LLDB_LOGF(log,
+              "Unable to read %" PRIu64
+              " bytes of 'process metadata' LC_NOTE JSON contents",
+              strsize);
+    return {};
+  }
+  while (buf.back() == '\0')
+    buf.resize(buf.size() - 1);
+  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  if (!object_sp) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "parse as valid JSON.");
+    return {};
+  }
+  StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
+  if (!dict) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "get a dictionary.");
+    return {};
+  }
+
+  return object_sp;
+}
+
 lldb::RegisterContextSP
 ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
                                          lldb_private::Thread &thread) {
@@ -5774,14 +5740,14 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
             std::make_shared<RegisterContextDarwin_arm_Mach>(thread, data);
         break;
 
-      case llvm::MachO::CPU_TYPE_I386:
-        reg_ctx_sp =
-            std::make_shared<RegisterContextDarwin_i386_Mach>(thread, data);
-        break;
-
       case llvm::MachO::CPU_TYPE_X86_64:
         reg_ctx_sp =
             std::make_shared<RegisterContextDarwin_x86_64_Mach>(thread, data);
+        break;
+
+      case llvm::MachO::CPU_TYPE_RISCV:
+        reg_ctx_sp =
+            std::make_shared<RegisterContextDarwin_riscv32_Mach>(thread, data);
         break;
       }
     }
@@ -6238,9 +6204,9 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                   "0x%" PRIx64,
                   section_sp->GetName().AsCString(),
                   section_sp->GetFileAddress() + value);
-        if (target.GetSectionLoadList().SetSectionLoadAddress(
-                section_sp, section_sp->GetFileAddress() + value,
-                warn_multiple))
+        if (target.SetSectionLoadAddress(section_sp,
+                                         section_sp->GetFileAddress() + value,
+                                         warn_multiple))
           ++num_loaded_sections;
       }
     }
@@ -6261,8 +6227,8 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                     "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
                     "0x%" PRIx64,
                     section_sp->GetName().AsCString(), section_load_addr);
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
-                  section_sp, section_load_addr, warn_multiple))
+          if (target.SetSectionLoadAddress(section_sp, section_load_addr,
+                                           warn_multiple))
             ++num_loaded_sections;
         }
       }
@@ -6458,7 +6424,6 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
 
   offset_t current_string_offset = start_of_filenames;
   offset_t current_segaddrs_offset = start_of_seg_vmaddrs;
-  std::vector<struct image_entry> image_entries;
   for (size_t i = 0; i < modules_count; i++) {
     ModuleSP module_sp = modules.GetModuleAtIndex(i);
 
@@ -6542,9 +6507,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
        target_triple.getOS() == llvm::Triple::IOS ||
        target_triple.getOS() == llvm::Triple::WatchOS ||
        target_triple.getOS() == llvm::Triple::TvOS ||
+       target_triple.getOS() == llvm::Triple::BridgeOS ||
        target_triple.getOS() == llvm::Triple::XROS)) {
-    // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
-    // {
     bool make_core = false;
     switch (target_arch.GetMachine()) {
     case llvm::Triple::aarch64:
@@ -6643,13 +6607,13 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                   thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
 
-            case llvm::MachO::CPU_TYPE_I386:
-              RegisterContextDarwin_i386_Mach::Create_LC_THREAD(
+            case llvm::MachO::CPU_TYPE_X86_64:
+              RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
                   thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
 
-            case llvm::MachO::CPU_TYPE_X86_64:
-              RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
+            case llvm::MachO::CPU_TYPE_RISCV:
+              RegisterContextDarwin_riscv32_Mach::Create_LC_THREAD(
                   thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
             }

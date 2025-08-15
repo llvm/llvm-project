@@ -137,7 +137,7 @@ define double @log10_exp(double %x) {
 
 define <2 x float> @logv_exp2v(<2 x float> %x) {
 ; CHECK-LABEL: @logv_exp2v(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 0x3FE62E4300000000, float 0x3FE62E4300000000>
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 0x3FE62E4300000000)
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %exp = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> %x)

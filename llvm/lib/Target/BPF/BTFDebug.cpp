@@ -715,7 +715,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         int64_t Count = CI->getSExtValue();
 
         // For struct s { int b; char c[]; }, the c[] will be represented
@@ -816,7 +816,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
   if (CheckPointer && !SeenPointer) {
-    SeenPointer = Tag == dwarf::DW_TAG_pointer_type;
+    SeenPointer = Tag == dwarf::DW_TAG_pointer_type && !DTy->getAnnotations();
   }
 
   if (CheckPointer && SeenPointer) {
@@ -916,7 +916,8 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
-            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type) {
+            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type &&
+                !DTy->getAnnotations()) {
               SeenPointer = true;
               if (IsForwardDeclCandidate(BaseTy))
                 break;
@@ -956,34 +957,47 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     return;
   }
 
-  // MapDef type may be a struct type or a non-pointer derived type
-  const DIType *OrigTy = Ty;
-  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    auto Tag = DTy->getTag();
-    if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
-        Tag != dwarf::DW_TAG_volatile_type &&
-        Tag != dwarf::DW_TAG_restrict_type)
-      break;
-    Ty = DTy->getBaseType();
+  uint32_t TmpId;
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_pointer_type:
+    visitMapDefType(dyn_cast<DIDerivedType>(Ty)->getBaseType(), TmpId);
+    break;
+  case dwarf::DW_TAG_array_type:
+    // Visit nested map array and jump to the element type
+    visitMapDefType(dyn_cast<DICompositeType>(Ty)->getBaseType(), TmpId);
+    break;
+  case dwarf::DW_TAG_structure_type: {
+    // Visit all struct members to ensure their types are visited.
+    const auto *CTy = cast<DICompositeType>(Ty);
+    const DINodeArray Elements = CTy->getElements();
+    for (const auto *Element : Elements) {
+      const auto *MemberType = cast<DIDerivedType>(Element);
+      const DIType *MemberBaseType = MemberType->getBaseType();
+      // If the member is a composite type, that may indicate the currently
+      // visited composite type is a wrapper, and the member represents the
+      // actual map definition.
+      // In that case, visit the member with `visitMapDefType` instead of
+      // `visitTypeEntry`, treating it specifically as a map definition rather
+      // than as a regular composite type.
+      const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+      if (MemberCTy) {
+        visitMapDefType(MemberBaseType, TmpId);
+      } else {
+        visitTypeEntry(MemberBaseType);
+      }
+    }
+    break;
   }
-
-  const auto *CTy = dyn_cast<DICompositeType>(Ty);
-  if (!CTy)
-    return;
-
-  auto Tag = CTy->getTag();
-  if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
-    return;
-
-  // Visit all struct members to ensure pointee type is visited
-  const DINodeArray Elements = CTy->getElements();
-  for (const auto *Element : Elements) {
-    const auto *MemberType = cast<DIDerivedType>(Element);
-    visitTypeEntry(MemberType->getBaseType());
+  default:
+    break;
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
-  visitTypeEntry(OrigTy, TypeId, false, false);
+  visitTypeEntry(Ty, TypeId, false, false);
 }
 
 /// Read file contents from the actual file or from the source
@@ -1026,8 +1040,9 @@ void BTFDebug::constructLineInfo(MCSymbol *Label, const DIFile *File,
   LineInfo.Label = Label;
   LineInfo.FileNameOff = addString(FileName);
   // If file content is not available, let LineOff = 0.
-  if (Line < FileContent[FileName].size())
-    LineInfo.LineOff = addString(FileContent[FileName][Line]);
+  const auto &Content = FileContent[FileName];
+  if (Line < Content.size())
+    LineInfo.LineOff = addString(Content[Line]);
   else
     LineInfo.LineOff = 0;
   LineInfo.LineNum = Line;
@@ -1240,10 +1255,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   FuncInfo.Label = FuncLabel;
   FuncInfo.TypeId = FuncTypeId;
   if (FuncLabel->isInSection()) {
-    MCSection &Section = FuncLabel->getSection();
-    const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
-    assert(SectionELF && "Null section for Function Label");
-    SecNameOff = addString(SectionELF->getName());
+    auto &Sec = static_cast<const MCSectionELF &>(FuncLabel->getSection());
+    SecNameOff = addString(Sec.getName());
   } else {
     SecNameOff = addString(".text");
   }
@@ -1436,7 +1449,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     // constant with private linkage and if it won't be in .rodata.str<#>
     // and .rodata.cst<#> sections.
     if (SecName == ".rodata" && Global.hasPrivateLinkage() &&
-        DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+        DataSecEntries.find(SecName) == DataSecEntries.end()) {
       // skip .rodata.str<#> and .rodata.cst<#> sections
       if (!GVKind->isMergeableCString() && !GVKind->isMergeableConst()) {
         DataSecEntries[std::string(SecName)] =
@@ -1542,17 +1555,12 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar) {
-        // Emit "mov ri, <imm>"
-        int64_t Imm;
-        uint32_t Reloc;
-        if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
-            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr)) {
-          Imm = PatchImms[GVar].first;
-          Reloc = PatchImms[GVar].second;
-        } else {
+        if (!GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
+            !GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
           return false;
-        }
 
+        // Emit "mov ri, <imm>"
+        auto [Imm, Reloc] = PatchImms[GVar];
         if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
             Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);
@@ -1625,6 +1633,13 @@ void BTFDebug::endModule() {
 
   // Collect global types/variables except MapDef globals.
   processGlobals(false);
+
+  // In case that BPF_TRAP usage is removed during machine-level optimization,
+  // generate btf for BPF_TRAP function here.
+  for (const Function &F : *MMI->getModule()) {
+    if (F.getName() == BPF_TRAP)
+      processFuncPrototypes(&F);
+  }
 
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));

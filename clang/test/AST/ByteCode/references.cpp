@@ -140,3 +140,41 @@ namespace Temporaries {
   static_assert(j.a.n == 1, "");  // both-error {{not an integral constant expression}} \
                                   // both-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
 }
+
+namespace Params {
+  typedef __SIZE_TYPE__ size_t;
+
+  template <class _Tp, size_t _Np>
+  constexpr _Tp* end(_Tp (&__array)[_Np]) noexcept {
+    return __array + _Np;
+  }
+
+
+  struct classnames {
+    const char* elem_;
+    int a;
+  };
+
+  constexpr classnames ClassNames[] = {
+    {"a", 0},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+    {"b", 1},
+  };
+
+  constexpr bool foo() {
+    /// This will instantiate end() with ClassNames.
+    /// In Sema, we will constant-evaluate the return statement, which is
+    /// something like __array + 8. The APValue we return for this
+    /// may NOT have a LValuePath set, since it's for a parameter
+    /// of LValueReferenceType.
+    end(ClassNames);
+    return true;
+  }
+
+  static_assert(foo());
+}

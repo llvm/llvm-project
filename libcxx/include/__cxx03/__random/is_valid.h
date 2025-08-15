@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_IS_VALID_H
-#define _LIBCPP___RANDOM_IS_VALID_H
+#ifndef _LIBCPP___CXX03___RANDOM_IS_VALID_H
+#define _LIBCPP___CXX03___RANDOM_IS_VALID_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_unsigned.h>
-#include <__utility/declval.h>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_unsigned.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -91,4 +91,4 @@ struct __libcpp_random_is_valid_urng<
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_IS_VALID_H
+#endif // _LIBCPP___CXX03___RANDOM_IS_VALID_H

@@ -18,8 +18,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <optional>
@@ -690,9 +688,8 @@ bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (!isIndexInSubscriptExpr(E->getIdx(), IndexVar))
     return VisitorBase::TraverseArraySubscriptExpr(E);
 
-  if ((ContainerExpr &&
-       !areSameExpr(Context, Arr->IgnoreParenImpCasts(),
-                    ContainerExpr->IgnoreParenImpCasts())) ||
+  if ((ContainerExpr && !areSameExpr(Context, Arr->IgnoreParenImpCasts(),
+                                     ContainerExpr->IgnoreParenImpCasts())) ||
       !arrayMatchesBoundExpr(Context, Arr->IgnoreImpCasts()->getType(),
                              ArrayBoundExpr)) {
     // If we have already discovered the array being indexed and this isn't it

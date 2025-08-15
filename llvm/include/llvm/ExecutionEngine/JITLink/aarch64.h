@@ -16,6 +16,7 @@
 #include "TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -30,6 +31,36 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///   Fixup <- Target + Addend : uint64
   ///
   Pointer64 = Edge::FirstRelocation,
+
+  /// An arm64e authenticated pointer relocation. The addend contains a 64-bit
+  /// struct containing the authentication parameters:
+  ///
+  ///   Addend encoding:
+  ///     int32_t  addend;
+  ///     uint16_t diversityData;
+  ///     uint16_t hasAddressDiversity : 1;
+  ///     uint16_t key : 2;
+  ///     uint16_t zeroes : 12;
+  ///     uint16_t authenticated : 1;
+  ///
+  /// Note: This means that the addend cannot be interpreted as a plain offset
+  ///       prior to lowering.
+  ///
+  /// Authenticated pointer edges cannot be fixed up directly by JITLink as the
+  /// signing keys are held in the executing process. They can be removed from
+  /// the graph by a combination of the createEmptyPointerSigningFunction pass
+  /// (post-prune) and the lowerPointer64AuthEdgesToSigningFunction pass
+  /// (pre-fixup). Together these passes construct a signing function that will
+  /// be run in the executing process to write the signed pointers to the fixup
+  /// locations.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - Failure to handle edges of this kind prior to the fixup phase will
+  ///     result in an unsupported error during the fixup phase.
+  Pointer64Authenticated,
 
   /// A plain 32-bit pointer value relocation.
   ///
@@ -388,7 +419,7 @@ enum EdgeKind_aarch64 : Edge::Kind {
 
 /// Returns a string name for the given aarch64 edge. For debugging purposes
 /// only
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 
 // Returns whether the Instr is LD/ST (imm12)
 inline bool isLoadStoreImm12(uint32_t Instr) {
@@ -667,7 +698,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 constexpr uint64_t PointerSize = 8;
 
 /// AArch64 null pointer content.
-extern const char NullPointerContent[PointerSize];
+LLVM_ABI extern const char NullPointerContent[PointerSize];
 
 /// AArch64 pointer jump stub content.
 ///
@@ -676,7 +707,7 @@ extern const char NullPointerContent[PointerSize];
 ///   ADRP x16, ptr@page21
 ///   LDR  x16, [x16, ptr@pageoff12]
 ///   BR   x16
-extern const char PointerJumpStubContent[12];
+LLVM_ABI extern const char PointerJumpStubContent[12];
 
 /// Creates a new pointer block in the given section and returns an
 /// Anonymous symbol pointing to it.
@@ -725,10 +756,41 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
       sizeof(PointerJumpStubContent), true, false);
 }
 
+/// AArch64 reentry trampoline.
+///
+/// Contains the instruction sequence for a trampoline that stores its return
+/// address (and stack pointer) on the stack and calls the given reentry symbol:
+///   STP  x29, x30, [sp, #-16]!
+///   BL   <reentry-symbol>
+LLVM_ABI extern const char ReentryTrampolineContent[8];
+
+/// Create a block of N reentry trampolines.
+inline Block &createReentryTrampolineBlock(LinkGraph &G,
+                                           Section &TrampolineSection,
+                                           Symbol &ReentrySymbol) {
+  auto &B = G.createContentBlock(TrampolineSection, ReentryTrampolineContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 4, 0);
+  B.addEdge(Branch26PCRel, 4, ReentrySymbol, 0);
+  return B;
+}
+
+inline Symbol &createAnonymousReentryTrampoline(LinkGraph &G,
+                                                Section &TrampolineSection,
+                                                Symbol &ReentrySymbol) {
+  return G.addAnonymousSymbol(
+      createReentryTrampolineBlock(G, TrampolineSection, ReentrySymbol), 0,
+      sizeof(ReentryTrampolineContent), true, false);
+}
+
 /// Global Offset Table Builder.
 class GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
+
+  GOTTableManager(LinkGraph &G) {
+    if ((GOTSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     Edge::Kind KindToSet = Edge::Invalid;
@@ -792,15 +854,20 @@ private:
     return *GOTSection;
   }
 
+  LLVM_ABI void registerExistingEntries();
+
   Section *GOTSection = nullptr;
 };
 
 /// Procedure Linkage Table Builder.
 class PLTTableManager : public TableManager<PLTTableManager> {
 public:
-  PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
-
   static StringRef getSectionName() { return "$__STUBS"; }
+
+  PLTTableManager(LinkGraph &G, GOTTableManager &GOT) : GOT(GOT) {
+    if ((StubsSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == aarch64::Branch26PCRel && !E.getTarget().isDefined()) {
@@ -828,9 +895,34 @@ public:
     return *StubsSection;
   }
 
+  LLVM_ABI void registerExistingEntries();
+
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
 };
+
+/// Returns the name of the pointer signing function section.
+LLVM_ABI const char *getPointerSigningFunctionSectionName();
+
+/// Creates a pointer signing function section, block, and symbol to reserve
+/// space for a signing function for this LinkGraph. Clients should insert this
+/// pass in the post-prune phase, and add the paired
+/// lowerPointer64AuthEdgesToSigningFunction pass to the pre-fixup phase.
+///
+/// No new Pointer64Auth edges can be inserted into the graph between when this
+/// pass is run and when the pass below runs (since there will not be sufficient
+/// space reserved in the signing function to write the signing code for them).
+LLVM_ABI Error createEmptyPointerSigningFunction(LinkGraph &G);
+
+/// Given a LinkGraph containing Pointer64Authenticated edges, transform those
+/// edges to Pointer64 and add signing code to the pointer signing function
+/// (which must already have been created by the
+/// createEmptyPointerSigningFunction pass above).
+///
+/// This function will add a $__ptrauth_sign section with finalization-lifetime
+/// containing an anonymous function that will sign all pointers in the graph.
+/// An allocation action will be added to run this function during finalization.
+LLVM_ABI Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G);
 
 } // namespace aarch64
 } // namespace jitlink

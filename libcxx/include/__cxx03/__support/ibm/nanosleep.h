@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_IBM_NANOSLEEP_H
-#define _LIBCPP___SUPPORT_IBM_NANOSLEEP_H
+#ifndef _LIBCPP___CXX03___SUPPORT_IBM_NANOSLEEP_H
+#define _LIBCPP___CXX03___SUPPORT_IBM_NANOSLEEP_H
 
-#include <unistd.h>
+#include <__cxx03/unistd.h>
 
 inline int nanosleep(const struct timespec* __req, struct timespec* __rem) {
   // The nanosleep() function is not available on z/OS. Therefore, we will call
@@ -52,4 +52,4 @@ inline int nanosleep(const struct timespec* __req, struct timespec* __rem) {
   return 0;
 }
 
-#endif // _LIBCPP___SUPPORT_IBM_NANOSLEEP_H
+#endif // _LIBCPP___CXX03___SUPPORT_IBM_NANOSLEEP_H

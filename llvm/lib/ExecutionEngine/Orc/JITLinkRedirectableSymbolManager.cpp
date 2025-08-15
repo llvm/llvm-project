@@ -14,169 +14,80 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+namespace {
+constexpr StringRef JumpStubSectionName = "__orc_stubs";
+constexpr StringRef StubPtrSectionName = "__orc_stub_ptrs";
+constexpr StringRef StubSuffix = "$__stub_ptr";
+} // namespace
+
 void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
-    std::unique_ptr<MaterializationResponsibility> R,
-    const SymbolAddrMap &InitialDests) {
+    std::unique_ptr<MaterializationResponsibility> R, SymbolMap InitialDests) {
+
   auto &ES = ObjLinkingLayer.getExecutionSession();
-  std::unique_lock<std::mutex> Lock(Mutex);
-  if (GetNumAvailableStubs() < InitialDests.size())
-    if (auto Err = grow(InitialDests.size() - GetNumAvailableStubs())) {
-      ES.reportError(std::move(Err));
-      R->failMaterialization();
-      return;
-    }
+  auto G = std::make_unique<jitlink::LinkGraph>(
+      ("<indirect stubs graph #" + Twine(++StubGraphIdx) + ">").str(),
+      ES.getSymbolStringPool(), ES.getTargetTriple(), SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
+  auto &PointerSection =
+      G->createSection(StubPtrSectionName, MemProt::Write | MemProt::Read);
+  auto &StubsSection =
+      G->createSection(JumpStubSectionName, MemProt::Exec | MemProt::Read);
 
-  JITDylib &TargetJD = R->getTargetJITDylib();
-  SymbolMap NewSymbolDefs;
-  std::vector<SymbolStringPtr> Symbols;
-  for (auto &[K, V] : InitialDests) {
-    StubHandle StubID = AvailableStubs.back();
-    if (SymbolToStubs[&TargetJD].count(K)) {
-      ES.reportError(make_error<StringError>(
-          "Tried to create duplicate redirectable symbols",
-          inconvertibleErrorCode()));
-      R->failMaterialization();
-      return;
-    }
-    SymbolToStubs[&TargetJD][K] = StubID;
-    NewSymbolDefs[K] = JumpStubs[StubID];
-    NewSymbolDefs[K].setFlags(V.getFlags());
-    Symbols.push_back(K);
-    AvailableStubs.pop_back();
+  SymbolFlagsMap NewSymbols;
+  for (auto &[Name, Def] : InitialDests) {
+    jitlink::Symbol *TargetSym = nullptr;
+    if (Def.getAddress())
+      TargetSym = &G->addAbsoluteSymbol(
+          G->allocateName(*Name + "$__init_tgt"), Def.getAddress(), 0,
+          jitlink::Linkage::Strong, jitlink::Scope::Local, false);
+
+    auto PtrName = ES.intern((*Name + StubSuffix).str());
+    auto &Ptr = AnonymousPtrCreator(*G, PointerSection, TargetSym, 0);
+    Ptr.setName(PtrName);
+    Ptr.setScope(jitlink::Scope::Hidden);
+    auto &Stub = PtrJumpStubCreator(*G, StubsSection, Ptr);
+    Stub.setName(Name);
+    Stub.setScope(Def.getFlags().isExported() ? jitlink::Scope::Default
+                                              : jitlink::Scope::Hidden);
+    Stub.setLinkage(!Def.getFlags().isWeak() ? jitlink::Linkage::Strong
+                                             : jitlink::Linkage::Weak);
+    NewSymbols[std::move(PtrName)] = JITSymbolFlags();
   }
 
-  // FIXME: when this fails we can return stubs to the pool
-  if (auto Err = redirectInner(TargetJD, InitialDests)) {
+  // Try to claim responsibility for the new stub symbols.
+  if (auto Err = R->defineMaterializing(std::move(NewSymbols))) {
     ES.reportError(std::move(Err));
-    R->failMaterialization();
-    return;
+    return R->failMaterialization();
   }
 
-  if (auto Err = R->replace(absoluteSymbols(NewSymbolDefs))) {
-    ES.reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-
-  auto Err = R->withResourceKeyDo([&](ResourceKey Key) {
-    TrackedResources[Key].insert(TrackedResources[Key].end(), Symbols.begin(),
-                                 Symbols.end());
-  });
-  if (Err) {
-    ES.reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
+  ObjLinkingLayer.emit(std::move(R), std::move(G));
 }
 
-Error JITLinkRedirectableSymbolManager::redirect(
-    JITDylib &TargetJD, const SymbolAddrMap &NewDests) {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  return redirectInner(TargetJD, NewDests);
-}
+Error JITLinkRedirectableSymbolManager::redirect(JITDylib &JD,
+                                                 const SymbolMap &NewDests) {
+  auto &ES = ObjLinkingLayer.getExecutionSession();
+  SymbolLookupSet LS;
+  DenseMap<NonOwningSymbolStringPtr, SymbolStringPtr> PtrToStub;
+  for (auto &[StubName, Sym] : NewDests) {
+    auto PtrName = ES.intern((*StubName + StubSuffix).str());
+    PtrToStub[NonOwningSymbolStringPtr(PtrName)] = StubName;
+    LS.add(std::move(PtrName));
+  }
+  auto PtrSyms =
+      ES.lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}}, std::move(LS));
+  if (!PtrSyms)
+    return PtrSyms.takeError();
 
-Error JITLinkRedirectableSymbolManager::redirectInner(
-    JITDylib &TargetJD, const SymbolAddrMap &NewDests) {
   std::vector<tpctypes::PointerWrite> PtrWrites;
-  for (auto &[K, V] : NewDests) {
-    if (!SymbolToStubs[&TargetJD].count(K))
-      return make_error<StringError>(
-          "Tried to redirect non-existent redirectalbe symbol",
-          inconvertibleErrorCode());
-    StubHandle StubID = SymbolToStubs[&TargetJD].at(K);
-    PtrWrites.push_back({StubPointers[StubID].getAddress(), V.getAddress()});
+  for (auto &[PtrName, PtrSym] : *PtrSyms) {
+    auto DestSymI = NewDests.find(PtrToStub[NonOwningSymbolStringPtr(PtrName)]);
+    assert(DestSymI != NewDests.end() && "Bad ptr -> stub mapping");
+    auto &DestSym = DestSymI->second;
+    PtrWrites.push_back({PtrSym.getAddress(), DestSym.getAddress()});
   }
+
   return ObjLinkingLayer.getExecutionSession()
       .getExecutorProcessControl()
       .getMemoryAccess()
       .writePointers(PtrWrites);
-}
-
-Error JITLinkRedirectableSymbolManager::grow(unsigned Need) {
-  unsigned OldSize = JumpStubs.size();
-  unsigned NumNewStubs = alignTo(Need, StubBlockSize);
-  unsigned NewSize = OldSize + NumNewStubs;
-
-  JumpStubs.resize(NewSize);
-  StubPointers.resize(NewSize);
-  AvailableStubs.reserve(NewSize);
-
-  SymbolLookupSet LookupSymbols;
-  DenseMap<SymbolStringPtr, ExecutorSymbolDef *> NewDefsMap;
-
-  auto &ES = ObjLinkingLayer.getExecutionSession();
-  Triple TT = ES.getTargetTriple();
-  auto G = std::make_unique<jitlink::LinkGraph>(
-      "<INDIRECT STUBS>", TT, TT.isArch64Bit() ? 8 : 4,
-      TT.isLittleEndian() ? endianness::little : endianness::big,
-      jitlink::getGenericEdgeKindName);
-  auto &PointerSection =
-      G->createSection(StubPtrTableName, MemProt::Write | MemProt::Read);
-  auto &StubsSection =
-      G->createSection(JumpStubTableName, MemProt::Exec | MemProt::Read);
-
-  // FIXME: We can batch the stubs into one block and use address to access them
-  for (size_t I = OldSize; I < NewSize; I++) {
-    auto Pointer = AnonymousPtrCreator(*G, PointerSection, nullptr, 0);
-    if (auto Err = Pointer.takeError())
-      return Err;
-
-    StringRef PtrSymName = StubPtrSymbolName(I);
-    Pointer->setName(PtrSymName);
-    Pointer->setScope(jitlink::Scope::Default);
-    LookupSymbols.add(ES.intern(PtrSymName));
-    NewDefsMap[ES.intern(PtrSymName)] = &StubPointers[I];
-
-    auto Stub = PtrJumpStubCreator(*G, StubsSection, *Pointer);
-    if (auto Err = Stub.takeError())
-      return Err;
-
-    StringRef JumpStubSymName = JumpStubSymbolName(I);
-    Stub->setName(JumpStubSymName);
-    Stub->setScope(jitlink::Scope::Default);
-    LookupSymbols.add(ES.intern(JumpStubSymName));
-    NewDefsMap[ES.intern(JumpStubSymName)] = &JumpStubs[I];
-  }
-
-  if (auto Err = ObjLinkingLayer.add(JD, std::move(G)))
-    return Err;
-
-  auto LookupResult = ES.lookup(makeJITDylibSearchOrder(&JD), LookupSymbols);
-  if (auto Err = LookupResult.takeError())
-    return Err;
-
-  for (auto &[K, V] : *LookupResult)
-    *NewDefsMap.at(K) = V;
-
-  for (size_t I = OldSize; I < NewSize; I++)
-    AvailableStubs.push_back(I);
-
-  return Error::success();
-}
-
-Error JITLinkRedirectableSymbolManager::handleRemoveResources(
-    JITDylib &TargetJD, ResourceKey K) {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  for (auto &Symbol : TrackedResources[K]) {
-    if (!SymbolToStubs[&TargetJD].count(Symbol))
-      return make_error<StringError>(
-          "Tried to remove non-existent redirectable symbol",
-          inconvertibleErrorCode());
-    AvailableStubs.push_back(SymbolToStubs[&TargetJD].at(Symbol));
-    SymbolToStubs[&TargetJD].erase(Symbol);
-    if (SymbolToStubs[&TargetJD].empty())
-      SymbolToStubs.erase(&TargetJD);
-  }
-  TrackedResources.erase(K);
-
-  return Error::success();
-}
-
-void JITLinkRedirectableSymbolManager::handleTransferResources(
-    JITDylib &TargetJD, ResourceKey DstK, ResourceKey SrcK) {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  TrackedResources[DstK].insert(TrackedResources[DstK].end(),
-                                TrackedResources[SrcK].begin(),
-                                TrackedResources[SrcK].end());
-  TrackedResources.erase(SrcK);
 }

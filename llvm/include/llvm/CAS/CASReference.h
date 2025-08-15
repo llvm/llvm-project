@@ -20,7 +20,6 @@ class raw_ostream;
 namespace cas {
 
 class ObjectStore;
-
 class ObjectHandle;
 class ObjectRef;
 
@@ -41,8 +40,9 @@ public:
     return InternalRef;
   }
 
+  /// Helper functions for DenseMapInfo.
   unsigned getDenseMapHash() const {
-    return (unsigned)llvm::hash_value(InternalRef);
+    return static_cast<unsigned>(llvm::hash_value(InternalRef));
   }
   bool isDenseMapEmpty() const { return InternalRef == getDenseMapEmptyRef(); }
   bool isDenseMapTombstone() const {
@@ -89,7 +89,7 @@ private:
 #endif
 };
 
-/// Reference to an object in a \a ObjectStore instance.
+/// Reference to an object in an \a ObjectStore instance.
 ///
 /// If you have an ObjectRef, you know the object exists, and you can point at
 /// it from new nodes with \a ObjectStore::store(), but you don't know anything
@@ -105,12 +105,6 @@ private:
 /// ObjectHandle, a variant that knows what kind of entity it is. \a
 /// ObjectStore::getReferenceKind() can expect the type of reference without
 /// asking for unloaded objects to be loaded.
-///
-/// This is a wrapper around a \c uint64_t (and a \a ObjectStore instance when
-/// assertions are on). If necessary, it can be deconstructed and reconstructed
-/// using \a Reference::getInternalRef() and \a
-/// Reference::getFromInternalRef(), but clients aren't expected to need to do
-/// this. These both require the right \a ObjectStore instance.
 class ObjectRef : public ReferenceBase {
   struct DenseMapTag {};
 
@@ -120,12 +114,6 @@ public:
   }
   friend bool operator!=(const ObjectRef &LHS, const ObjectRef &RHS) {
     return !(LHS == RHS);
-  }
-
-  /// Allow a reference to be recreated after it's deconstructed.
-  static ObjectRef getFromInternalRef(const ObjectStore &CAS,
-                                      uint64_t InternalRef) {
-    return ObjectRef(CAS, InternalRef);
   }
 
   static ObjectRef getDenseMapEmptyKey() {

@@ -6,19 +6,17 @@
 ; status. This was caught by the expensive check introduced in D86589.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
-@ptr = external global i64
-
-define dso_local void @hoge() local_unnamed_addr {
+define void @hoge(i64 %x, i64 %idx.start, ptr %ptr) {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = sdiv exact i64 undef, 40
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 undef, [[N]]
+; CHECK-NEXT:    [[N:%.*]] = sdiv exact i64 [[X:%.*]], 40
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IDX_START:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[N]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LATCH:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH]] ], [ undef, [[ENTRY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LATCH:%.*]] ], [ [[TMP1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH]] ], [ [[IDX_START]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[N]], [[IDX]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[INNER_PREHEADER:%.*]]
 ; CHECK:       inner.preheader:
@@ -26,7 +24,7 @@ define dso_local void @hoge() local_unnamed_addr {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[INNER]] ], [ 0, [[INNER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
-; CHECK-NEXT:    store i64 undef, ptr @ptr, align 8
+; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[I_NEXT]], [[INDVARS_IV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner_exit:
@@ -41,11 +39,11 @@ define dso_local void @hoge() local_unnamed_addr {
 ; CHECK-NEXT:    ret void
 ;
 entry:                                            ; preds = %entry
-  %n = sdiv exact i64 undef, 40
+  %n = sdiv exact i64 %x, 40
   br label %header
 
 header:                                           ; preds = %latch, %entry
-  %idx = phi i64 [ %idx.next, %latch ], [ undef, %entry ]
+  %idx = phi i64 [ %idx.next, %latch ], [ %idx.start, %entry ]
   %cond = icmp sgt i64 %n, %idx
   br i1 %cond, label %end, label %inner
 
@@ -54,7 +52,7 @@ inner:                                            ; preds = %inner, %header
   %j = phi i64 [ %j.next, %inner ], [ %n, %header ]
   %i.next = add nsw i64 %i, 1
   %j.next = add nsw i64 %j, 1
-  store i64 undef, ptr @ptr
+  store i64 0, ptr %ptr
   %cond1 = icmp slt i64 %j, %idx
   br i1 %cond1, label %inner, label %inner_exit
 

@@ -8,14 +8,13 @@ define void @test() {
 ; CHECK-NEXT:    [[ARRAYIDX21_I:%.*]] = getelementptr inbounds [4 x float], ptr undef, i64 2
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr undef, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX10_I_I86]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr undef, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr undef, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr undef, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP0]], float [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> <float poison, float 0.000000e+00>, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x float> [[TMP6]])
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP3]], <2 x float> [[TMP6]])
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP7]], zeroinitializer

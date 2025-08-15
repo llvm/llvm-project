@@ -11,16 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -68,7 +65,7 @@ struct COFFParser {
       StringRef Name = Sec.Name;
 
       if (Name.size() <= COFF::NameSize) {
-        std::copy(Name.begin(), Name.end(), Sec.Header.Name);
+        llvm::copy(Name, Sec.Header.Name);
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);
@@ -78,7 +75,7 @@ struct COFFParser {
           return false;
         }
         Sec.Header.Name[0] = '/';
-        std::copy(str.begin(), str.end(), Sec.Header.Name + 1);
+        llvm::copy(str, Sec.Header.Name + 1);
       }
 
       if (Sec.Alignment) {

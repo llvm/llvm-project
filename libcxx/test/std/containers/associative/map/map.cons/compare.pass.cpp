@@ -19,23 +19,22 @@
 #include "../../../test_compare.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef test_less<int> C;
     const std::map<int, double, C> m(C(3));
     assert(m.empty());
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(3));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef test_less<int> C;
     const std::map<int, double, C, min_allocator<std::pair<const int, double>>> m(C(3));
     assert(m.empty());
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(3));
-    }
+  }
 #endif
 
   return 0;

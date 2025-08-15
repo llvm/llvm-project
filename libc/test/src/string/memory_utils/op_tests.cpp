@@ -174,7 +174,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
-      const char value = size % 10;
+      const uint8_t value = size % 10;
       auto dst = DstBuffer.span().subspan(0, size);
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
@@ -185,7 +185,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);
       for (size_t size = kSize; size < 3 * kSize; ++size) {
-        const char value = size % 10;
+        const uint8_t value = size % 10;
         auto dst = DstBuffer.span().subspan(0, size);
         ASSERT_TRUE((CheckMemset<LoopImpl>(dst, value, size)));
       }

@@ -1,7 +1,7 @@
 ; Negative test for the 'm' operand code. This operand code is applicable
 ; for an immediate whic is exact power of 2.
 
-; RUN: not llc -march=mips < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=mips < %s 2>&1 | FileCheck %s
 
 define i32 @foo() nounwind {
 entry:

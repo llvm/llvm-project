@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchMCTargetDesc.h"
-#include "LoongArchBaseInfo.h"
 #include "LoongArchELFStreamer.h"
 #include "LoongArchInstPrinter.h"
 #include "LoongArchMCAsmInfo.h"
@@ -55,7 +54,7 @@ static MCInstrInfo *createLoongArchMCInstrInfo() {
 static MCSubtargetInfo *
 createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty() || CPU == "generic")
-    CPU = TT.isArch64Bit() ? "la464" : "generic-la32";
+    CPU = TT.isArch64Bit() ? "generic-la64" : "generic-la32";
   return createLoongArchMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
@@ -205,7 +204,8 @@ MCStreamer *createLoongArchELFStreamer(const Triple &T, MCContext &Context,
 }
 } // end namespace
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchTargetMC() {
   for (Target *T : {&getTheLoongArch32Target(), &getTheLoongArch64Target()}) {
     TargetRegistry::RegisterMCRegInfo(*T, createLoongArchMCRegisterInfo);
     TargetRegistry::RegisterMCInstrInfo(*T, createLoongArchMCInstrInfo);

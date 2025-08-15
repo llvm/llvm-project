@@ -39,9 +39,9 @@
 #define HEADER
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
-// CHECK-DAG: [[ENTTY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
+// CHECK-DAG: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
-// TCHECK: [[ENTTY:%.+]] = type { ptr, ptr, i{{32|64}}, i32, i32 }
+// TCHECK: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
 // CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 4]
 // CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
@@ -76,7 +76,7 @@ int foo(int n) {
   // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 0
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
-  // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[IN:@.+]], i32 [[GTID:%.+]], i32 1, i[[SZ]] {{20|40}}, i[[SZ]] 4, ptr [[TASK_ENTRY0:@.+]])
+  // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[IN:@.+]], i32 [[GTID:%.+]], i32 1, i[[SZ:32|64]] {{20|40}}, i[[SZ]] 4, ptr [[TASK_ENTRY0:@.+]])
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr %{{.+}}, i[[SZ]] 0
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr %{{.+}}, i[[SZ]] 1
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr %{{.+}}, i[[SZ]] 2

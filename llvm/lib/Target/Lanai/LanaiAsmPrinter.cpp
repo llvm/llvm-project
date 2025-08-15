@@ -13,26 +13,21 @@
 
 #include "LanaiAluCode.h"
 #include "LanaiCondCode.h"
-#include "LanaiInstrInfo.h"
 #include "LanaiMCInstLower.h"
 #include "LanaiTargetMachine.h"
 #include "MCTargetDesc/LanaiInstPrinter.h"
 #include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "asm-printer"
@@ -44,7 +39,7 @@ class LanaiAsmPrinter : public AsmPrinter {
 public:
   explicit LanaiAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "Lanai Assembly Printer"; }
 
@@ -58,6 +53,9 @@ public:
 private:
   void customEmitInstruction(const MachineInstr *MI);
   void emitCallInstruction(const MachineInstr *MI);
+
+public:
+  static char ID;
 };
 } // end of anonymous namespace
 
@@ -239,7 +237,13 @@ bool LanaiAsmPrinter::isBlockOnlyReachableByFallthrough(
   return !I->isBarrier();
 }
 
+char LanaiAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer", "Lanai Assembly Printer",
+                false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLanaiAsmPrinter() {
   RegisterAsmPrinter<LanaiAsmPrinter> X(getTheLanaiTarget());
 }

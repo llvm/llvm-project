@@ -4,10 +4,10 @@
 # Check that we get two move-immediates into %1 and %2, instead of a copy from
 # %1 to %2, because that would introduce a dependency and maybe a stall.
 ---
-name: f
+name: remat_v_mov_b32_e32
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: f
+  ; CHECK-LABEL: name: remat_v_mov_b32_e32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
@@ -45,4 +45,93 @@ body: |
     undef %4.sub0:vreg_96 = COPY %1:vgpr_32
     %4.sub1:vreg_96 = COPY %2:vgpr_32
     S_ENDPGM 0, implicit %4
+...
+
+---
+name: remat_v_mov_b64_pseudo
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: remat_v_mov_b64_pseudo
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef [[V_MOV_B:%[0-9]+]].sub0_sub1:vreg_192_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[V_MOV_B:%[0-9]+]].sub2_sub3:vreg_192_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[V_MOV_B:%[0-9]+]].sub0_sub1:vreg_192_align2 = V_MUL_F64_e64 0, [[V_MOV_B]].sub0_sub1, 0, [[V_MOV_B]].sub0_sub1, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MOV_B:%[0-9]+]].sub2_sub3:vreg_192_align2 = V_MUL_F64_e64 0, [[V_MOV_B]].sub2_sub3, 0, [[V_MOV_B]].sub2_sub3, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[V_MOV_B]]
+  bb.0:
+    liveins: $sgpr0
+    %0:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    %1:vreg_64_align2 = COPY %0:vreg_64_align2
+    %2:vreg_64_align2 = COPY %0:vreg_64_align2
+    %3:sreg_64 = COPY $sgpr0_sgpr1
+    $exec = S_MOV_B64_term %3:sreg_64
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    %1:vreg_64_align2 = V_MUL_F64_e64 0, %1:vreg_64_align2, 0, %1:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
+    %2:vreg_64_align2 = V_MUL_F64_e64 0, %2:vreg_64_align2, 0, %2:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
+
+  bb.2:
+    undef %4.sub0_sub1:vreg_192 = COPY %1:vreg_64_align2
+    %4.sub2_sub3:vreg_192 = COPY %2:vreg_64_align2
+    S_ENDPGM 0, implicit %4
+...
+
+---
+name: av_mov_imm_b32
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: av_mov_imm_b32
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef [[AV_MOV_:%[0-9]+]].sub0:vreg_96 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub1:vreg_96 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub0:vreg_96 = V_MUL_F32_e32 [[AV_MOV_]].sub0, [[AV_MOV_]].sub0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub1:vreg_96 = V_MUL_F32_e32 [[AV_MOV_]].sub1, [[AV_MOV_]].sub1, implicit $mode, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[AV_MOV_]]
+  bb.0:
+    liveins: $sgpr0
+    %0:av_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %1:vgpr_32 = COPY %0
+    %2:vgpr_32 = COPY %0
+    %3:sreg_64 = COPY $sgpr0
+    $exec = S_MOV_B64_term %3:sreg_64
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    %1:vgpr_32 = V_MUL_F32_e32 %1:vgpr_32, %1:vgpr_32, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_MUL_F32_e32 %2:vgpr_32, %2:vgpr_32, implicit $mode, implicit $exec
+
+  bb.2:
+    undef %4.sub0:vreg_96 = COPY %1:vgpr_32
+    %4.sub1:vreg_96 = COPY %2:vgpr_32
+    S_ENDPGM 0, implicit %4
+
 ...

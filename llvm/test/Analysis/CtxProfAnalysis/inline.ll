@@ -1,11 +1,12 @@
+; REQUIRES: x86_64-linux
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 
-; RUN: opt -passes='module-inline,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything %t/module.ll -S \
-; RUN:   -use-ctx-profile=%t/profile.ctxprofdata -ctx-profile-printer-level=json \
-; RUN:   -o - 2> %t/profile-final.txt | FileCheck %s
-; RUN: %python %S/json_equals.py %t/profile-final.txt %t/expected.json
+; RUN: opt -passes='module-inline,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything %t/1000.ll -S \
+; RUN:   -use-ctx-profile=%t/profile.ctxprofdata -ctx-profile-printer-level=yaml \
+; RUN:   -o - 2> %t/profile-final.yaml | FileCheck %s
+; RUN: diff %t/profile-final.yaml %t/expected.yaml
 
 ; There are 2 calls to @a from @entrypoint. We only inline the one callsite
 ; marked as alwaysinline, the rest are blocked (marked noinline). After the inline,
@@ -33,7 +34,7 @@
 
 ; Make sure the postlink thinlto pipeline is aware of ctxprof
 ; RUN: opt -passes='thinlto<O2>' -use-ctx-profile=%t/profile.ctxprofdata \
-; RUN:   %t/module.ll -S -o - | FileCheck %s --check-prefix=PIPELINE
+; RUN:   %t/1000.ll -S -o - | FileCheck %s --check-prefix=PIPELINE
 
 ; PIPELINE-LABEL: define i32 @entrypoint
 ; PIPELINE-SAME: !prof ![[ENTRYPOINT_COUNT:[0-9]+]]
@@ -43,13 +44,15 @@
 ; PIPELINE-LABEL: loop:
 ; PIPELINE:         br i1 %cond, label %loop, label %exit, !prof ![[LOOP_BW_ORIG:[0-9]+]]
 
-; PIPELINE: ![[ENTRYPOINT_COUNT]] = !{!"function_entry_count", i64 10}
+; *Note* that all values are multiplied by the TotalRootEntryCount, which is 24
+;
+; PIPELINE: ![[ENTRYPOINT_COUNT]] = !{!"function_entry_count", i64 240}
 ; These are the weights of the inlined @a, where the counters were 2, 100 (2 for entry, 100 for loop)
-; PIPELINE: ![[LOOP_BW_INL]] = !{!"branch_weights", i32 98, i32 2}
+; PIPELINE: ![[LOOP_BW_INL]] = !{!"branch_weights", i32 2352, i32 48}
 ; These are the weights of the un-inlined @a, where the counters were 8, 500 (8 for entry, 500 for loop)
-; PIPELINE: ![[LOOP_BW_ORIG]] = !{!"branch_weights", i32 492, i32 8}
+; PIPELINE: ![[LOOP_BW_ORIG]] = !{!"branch_weights", i32 11808, i32 192}
 
-;--- module.ll
+;--- 1000.ll
 define i32 @entrypoint(i32 %x) !guid !0 {
   call void @llvm.instrprof.increment(ptr @entrypoint, i64 0, i32 3, i32 0)
   %t = icmp eq i32 %x, 0
@@ -94,33 +97,35 @@ define i32 @b() !guid !2 {
 !0 = !{i64 1000}
 !1 = !{i64 1001}
 !2 = !{i64 1002}
-;--- profile.json
-[
-  { "Guid": 1000,
-    "Counters": [10, 2, 8],
-    "Callsites": [
-      [ { "Guid": 1001,
-          "Counters": [2, 100],
-          "Callsites": [[{"Guid": 1002, "Counters": [100]}]]}
-      ],
-      [ { "Guid": 1001,
-          "Counters": [8, 500],
-          "Callsites": [[{"Guid": 1002, "Counters": [500]}]]}
-      ]
-    ]
-  }
-]
-;--- expected.json
-[
-  { "Guid": 1000,
-    "Counters": [10, 2, 8, 100],
-    "Callsites": [
-      [],
-      [ { "Guid": 1001,
-          "Counters": [8, 500],
-          "Callsites": [[{"Guid": 1002, "Counters": [500]}]]}
-      ],
-      [{ "Guid": 1002, "Counters": [100]}]
-    ]
-  }
-]
+;--- profile.yaml
+Contexts:
+  - Guid: 1000
+    TotalRootEntryCount: 24
+    Counters: [10, 2, 8]
+    Callsites:  -
+                  - Guid: 1001
+                    Counters: [2, 100]
+                    Callsites:  -
+                                  - Guid: 1002
+                                    Counters: [100]
+                -
+                  - Guid: 1001
+                    Counters: [8, 500]
+                    Callsites:  -
+                                  - Guid: 1002
+                                    Counters: [500]
+;--- expected.yaml
+
+Contexts:
+  - Guid:            1000
+    TotalRootEntryCount: 24
+    Counters:        [ 10, 2, 8, 100 ]
+    Callsites:
+      - [  ]
+      - - Guid:            1001
+          Counters:        [ 8, 500 ]
+          Callsites:
+            - - Guid:            1002
+                Counters:        [ 500 ]
+      - - Guid:            1002
+          Counters:        [ 100 ]

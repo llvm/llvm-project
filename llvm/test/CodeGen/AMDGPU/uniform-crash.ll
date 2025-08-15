@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}icmp_2_users:
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 1
@@ -35,7 +35,7 @@ bb2:                                              ; preds = %bb
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %bb2
-  %val = load volatile i32, ptr addrspace(4) undef
+  %val = load volatile i32, ptr addrspace(4) poison
   %tmp4 = icmp eq i32 %val, %arg1
   br i1 %tmp4, label %bb5, label %bb3
 

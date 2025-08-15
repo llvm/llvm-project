@@ -21,8 +21,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Strings.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
 
@@ -136,14 +134,14 @@ static bool is32bitBranch(uint32_t instr) {
 
 Patch657417Section::Patch657417Section(Ctx &ctx, InputSection *p, uint64_t off,
                                        uint32_t instr, bool isARM)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
-                       ".text.patch"),
+    : SyntheticSection(ctx, ".text.patch", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR, 4),
       patchee(p), patcheeOffset(off), instr(instr), isARM(isARM) {
   parent = p->getParent();
   patchSym = addSyntheticLocal(
-      ctx, saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())),
+      ctx, ctx.saver.save("__CortexA8657417_" + utohexstr(getBranchAddr())),
       STT_FUNC, isARM ? 0 : 1, getSize(), *this);
-  addSyntheticLocal(ctx, saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
+  addSyntheticLocal(ctx, ctx.saver.save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
                     *this);
 }
 
@@ -300,9 +298,9 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
           scanRes.off = branchOff;
           scanRes.instr = instr2;
         } else {
-          warn(toString(isec->file) +
-               ": skipping cortex-a8 657417 erratum sequence, section " +
-               isec->name + " is too large to patch");
+          Warn(ctx) << isec->file
+                    << ": skipping cortex-a8 657417 erratum sequence, section "
+                    << isec->name << " is too large to patch";
         }
       }
     }
@@ -354,11 +352,11 @@ void ARMErr657417Patcher::init() {
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
     });
-    mapSyms.erase(std::unique(mapSyms.begin(), mapSyms.end(),
-                              [=](const Defined *a, const Defined *b) {
-                                return (isThumbMapSymbol(a) ==
-                                        isThumbMapSymbol(b));
-                              }),
+    mapSyms.erase(llvm::unique(mapSyms,
+                               [=](const Defined *a, const Defined *b) {
+                                 return (isThumbMapSymbol(a) ==
+                                         isThumbMapSymbol(b));
+                               }),
                   mapSyms.end());
     // Always start with a Thumb Mapping Symbol
     if (!mapSyms.empty() && !isThumbMapSymbol(mapSyms.front()))
@@ -420,8 +418,8 @@ void ARMErr657417Patcher::insertPatches(
 static void implementPatch(ScanResult sr, InputSection *isec,
                            std::vector<Patch657417Section *> &patches) {
   Ctx &ctx = isec->getCtx();
-  log("detected cortex-a8-657419 erratum sequence starting at " +
-      utohexstr(isec->getVA(sr.off)) + " in unpatched output.");
+  Log(ctx) << "detected cortex-a8-657419 erratum sequence starting at " <<
+      utohexstr(isec->getVA(sr.off)) << " in unpatched output";
   Patch657417Section *psec;
   // We have two cases to deal with.
   // Case 1. There is a relocation at patcheeOffset to a symbol. The

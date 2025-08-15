@@ -1,6 +1,6 @@
 ; RUN: opt %loadNPMPolly '-passes=print<polly-delicm>' -disable-output < %s | FileCheck %s
 
-; When %b is 0, %for.body13 is an infite loop. In this case the loaded
+; When %b is 0, %for.body13 is an infinite loop. In this case the loaded
 ; value %1 is not used anywhere.
 ; This is a problem when DeLICM tries to map %1 to %arrayidx16 because
 ; %1 has no corresponding when %b == 0 and therefore hat no location

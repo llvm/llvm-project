@@ -55,6 +55,8 @@ endif()
 
 set(LLVM_ENABLE_RTTI @LLVM_ENABLE_RTTI@)
 
+set(LLVM_ENABLE_LIBCXX @LLVM_ENABLE_LIBCXX@)
+
 set(LLVM_ENABLE_LIBEDIT @HAVE_LIBEDIT@)
 if(LLVM_ENABLE_LIBEDIT)
   find_package(LibEdit)
@@ -99,6 +101,8 @@ set(LLVM_NATIVE_ARCH @LLVM_NATIVE_ARCH@)
 set(LLVM_ENABLE_PIC @LLVM_ENABLE_PIC@)
 
 set(LLVM_BUILD_32_BITS @LLVM_BUILD_32_BITS@)
+
+set(LLVM_ENABLE_TELEMETRY @LLVM_ENABLE_TELEMETRY@)
 
 if (NOT "@LLVM_PTHREAD_LIB@" STREQUAL "")
   set(LLVM_PTHREAD_LIB "@LLVM_PTHREAD_LIB@")
@@ -160,14 +164,8 @@ endif()
 if(NOT TARGET acc_gen)
   add_custom_target(acc_gen)
 endif()
-if(NOT TARGET ARMTargetParserTableGen)
-  add_custom_target(ARMTargetParserTableGen)
-endif()
-if(NOT TARGET AArch64TargetParserTableGen)
-  add_custom_target(AArch64TargetParserTableGen)
-endif()
-if(NOT TARGET RISCVTargetParserTableGen)
-  add_custom_target(RISCVTargetParserTableGen)
+if(NOT TARGET target_parser_gen)
+  add_custom_target(target_parser_gen)
 endif()
 
 set_property(GLOBAL PROPERTY LLVM_TARGETS_CONFIGURED On)

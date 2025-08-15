@@ -164,7 +164,7 @@ define <2 x i1> @icmp_eq_sub_non_splat(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_sub_undef2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_sub_undef2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 15, i32 15>, [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> splat (i32 15), [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUB]], <i32 10, i32 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -175,7 +175,7 @@ define <2 x i1> @icmp_eq_sub_undef2(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_sub_non_splat2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_sub_non_splat2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 15, i32 15>, [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> splat (i32 15), [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUB]], <i32 10, i32 11>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -290,8 +290,7 @@ define i1 @subC_nsw_ne(i32 %x) {
 ; CHECK-LABEL: @subC_nsw_ne(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub nsw i32 -2147483647, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], 2147483603
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %subx = sub nsw i32 -2147483647, %x
   call void @use(i32 %subx)
@@ -312,8 +311,8 @@ define i1 @neg_slt_42(i128 %x) {
 
 define <2 x i1> @neg_ugt_42_splat(<2 x i7> %x) {
 ; CHECK-LABEL: @neg_ugt_42_splat(
-; CHECK-NEXT:    [[NOTSUB:%.*]] = add <2 x i7> [[X:%.*]], <i7 -1, i7 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i7> [[NOTSUB]], <i7 -43, i7 -43>
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add <2 x i7> [[X:%.*]], splat (i7 -1)
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i7> [[NOTSUB]], splat (i7 -43)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %negx = sub <2 x i7> zeroinitializer, %x
@@ -606,7 +605,7 @@ entry:
 define <2 x i1> @PR60818_ne_vector(<2 x i32> %a) {
 ; CHECK-LABEL: @PR60818_ne_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

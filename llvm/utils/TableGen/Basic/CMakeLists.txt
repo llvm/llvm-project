@@ -9,8 +9,17 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
+  ARMTargetDefEmitter.cpp
+  Attributes.cpp
   CodeGenIntrinsics.cpp
+  DirectiveEmitter.cpp
+  IntrinsicEmitter.cpp
+  RISCVTargetDefEmitter.cpp
+  RuntimeLibcallsEmitter.cpp
   SDNodeProperties.cpp
+  TableGen.cpp
+  TargetFeaturesEmitter.cpp
+  VTEmitter.cpp
 )
 
 # Users may include its headers as "Basic/*.h"

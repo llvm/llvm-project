@@ -12,10 +12,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: sbfx_s32
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %sbfx:gpr32 = SBFMWri %copy, 0, 9
-    ; CHECK: $w0 = COPY %sbfx
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %sbfx:gpr32 = SBFMWri %copy, 0, 9
+    ; CHECK-NEXT: $w0 = COPY %sbfx
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
     %cst1:gpr(s32) = G_CONSTANT i32 0
     %cst2:gpr(s32) = G_CONSTANT i32 10
@@ -34,10 +35,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: sbfx_s64
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64 = COPY $x0
-    ; CHECK: %sbfx:gpr64 = SBFMXri %copy, 0, 9
-    ; CHECK: $x0 = COPY %sbfx
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
+    ; CHECK-NEXT: %sbfx:gpr64 = SBFMXri %copy, 0, 9
+    ; CHECK-NEXT: $x0 = COPY %sbfx
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy:gpr(s64) = COPY $x0
     %cst1:gpr(s64) = G_CONSTANT i64 0
     %cst2:gpr(s64) = G_CONSTANT i64 10
@@ -58,10 +60,11 @@ body:             |
 
     ; CHECK-LABEL: name: sbfx_s32_31_1
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %sbfx:gpr32 = SBFMWri %copy, 31, 31
-    ; CHECK: $w0 = COPY %sbfx
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %sbfx:gpr32 = SBFMWri %copy, 31, 31
+    ; CHECK-NEXT: $w0 = COPY %sbfx
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
     %cst1:gpr(s32) = G_CONSTANT i32 31
     %cst2:gpr(s32) = G_CONSTANT i32 1

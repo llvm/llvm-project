@@ -29,8 +29,9 @@ void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
-
-void initializeAMDGPURegBankSelectPass(PassRegistry &);
+FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
+FunctionPass *createAMDGPURegBankSelectPass();
+FunctionPass *createAMDGPURegBankLegalizePass();
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
@@ -38,19 +39,18 @@ FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
-FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
-FunctionPass *createSIWholeQuadModePass();
+FunctionPass *createSIWholeQuadModeLegacyPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
-FunctionPass *createSIOptimizeVGPRLiveRangePass();
+FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
-FunctionPass *createSIFormMemoryClausesPass();
+FunctionPass *createSIFormMemoryClausesLegacyPass();
 
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
@@ -63,7 +63,9 @@ ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
-FunctionPass *createGCNPreRAOptimizationsPass();
+FunctionPass *createGCNPreRAOptimizationsLegacyPass();
+FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
+ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -94,11 +96,7 @@ void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
-Pass *createAMDGPUAnnotateKernelFeaturesPass();
-Pass *createAMDGPUAttributorLegacyPass();
-void initializeAMDGPUAttributorLegacyPass(PassRegistry &);
-void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
-extern char &AMDGPUAnnotateKernelFeaturesID;
+void initializeAMDGPUAsmPrinterPass(PassRegistry &);
 
 // DPP/Iterative option enables the atomic optimizer with given strategy
 // whereas None disables the atomic optimizer.
@@ -155,8 +153,11 @@ private:
   const TargetMachine &TM;
 };
 
-void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
-extern char &AMDGPUReserveWWMRegsID;
+void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
+extern char &AMDGPUPrepareAGPRAllocLegacyID;
+
+void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsLegacyID;
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
@@ -176,11 +177,11 @@ extern char &SIShrinkInstructionsLegacyID;
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
 
-void initializeSIFixVGPRCopiesPass(PassRegistry &);
+void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
-void initializeSILowerWWMCopiesPass(PassRegistry &);
-extern char &SILowerWWMCopiesID;
+void initializeSILowerWWMCopiesLegacyPass(PassRegistry &);
+extern char &SILowerWWMCopiesLegacyID;
 
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
@@ -188,7 +189,13 @@ extern char &SILowerI1CopiesLegacyID;
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
 
-void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+void initializeAMDGPURegBankSelectPass(PassRegistry &);
+extern char &AMDGPURegBankSelectID;
+
+void initializeAMDGPURegBankLegalizePass(PassRegistry &);
+extern char &AMDGPURegBankLegalizeID;
+
+void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
 
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
@@ -197,20 +204,20 @@ extern char &SILowerSGPRSpillsLegacyID;
 void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
 extern char &SILoadStoreOptimizerLegacyID;
 
-void initializeSIWholeQuadModePass(PassRegistry &);
+void initializeSIWholeQuadModeLegacyPass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
-void initializeSILowerControlFlowPass(PassRegistry &);
-extern char &SILowerControlFlowID;
+void initializeSILowerControlFlowLegacyPass(PassRegistry &);
+extern char &SILowerControlFlowLegacyID;
 
-void initializeSIPreEmitPeepholePass(PassRegistry &);
+void initializeSIPreEmitPeepholeLegacyPass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 
-void initializeSILateBranchLoweringPass(PassRegistry &);
+void initializeSILateBranchLoweringLegacyPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
-void initializeSIOptimizeExecMaskingPass(PassRegistry &);
-extern char &SIOptimizeExecMaskingID;
+void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
+extern char &SIOptimizeExecMaskingLegacyID;
 
 void initializeSIPreAllocateWWMRegsLegacyPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsLegacyID;
@@ -224,14 +231,16 @@ extern char &AMDGPUPerfHintAnalysisLegacyID;
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
 
+void initializeAMDGPUPreloadKernArgPrologLegacyPass(PassRegistry &);
+extern char &AMDGPUPreloadKernArgPrologLegacyID;
+
+void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
+extern char &AMDGPUPreloadKernelArgumentsLegacyID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
-
-FunctionPass *createAMDGPUPromoteAllocaToVector();
-void initializeAMDGPUPromoteAllocaToVectorPass(PassRegistry&);
-extern char &AMDGPUPromoteAllocaToVectorID;
 
 struct AMDGPUPromoteAllocaPass : PassInfoMixin<AMDGPUPromoteAllocaPass> {
   AMDGPUPromoteAllocaPass(TargetMachine &TM) : TM(TM) {}
@@ -258,6 +267,12 @@ struct AMDGPUAtomicOptimizerPass : PassInfoMixin<AMDGPUAtomicOptimizerPass> {
 private:
   TargetMachine &TM;
   ScanOptions ScanImpl;
+};
+
+struct AMDGPUInsertDelayAluPass
+    : public PassInfoMixin<AMDGPUInsertDelayAluPass> {
+  PreservedAnalyses run(MachineFunction &F,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 Pass *createAMDGPUStructurizeCFGPass();
@@ -323,9 +338,22 @@ private:
 
   AMDGPUAttributorOptions Options;
 
+  const ThinOrFullLTOPhase LTOPhase;
+
 public:
-  AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options = {})
-      : TM(TM), Options(Options) {};
+  AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options,
+                       ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
+      : TM(TM), Options(Options), LTOPhase(LTOPhase) {};
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class AMDGPUPreloadKernelArgumentsPass
+    : public PassInfoMixin<AMDGPUPreloadKernelArgumentsPass> {
+  const TargetMachine &TM;
+
+public:
+  explicit AMDGPUPreloadKernelArgumentsPass(const TargetMachine &TM) : TM(TM) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -336,13 +364,74 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+class SIModeRegisterPass : public PassInfoMixin<SIModeRegisterPass> {
+public:
+  SIModeRegisterPass() {}
+  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+};
+
+class SIMemoryLegalizerPass : public PassInfoMixin<SIMemoryLegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class GCNCreateVOPDPass : public PassInfoMixin<GCNCreateVOPDPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
+
+class AMDGPUMarkLastScratchLoadPass
+    : public PassInfoMixin<AMDGPUMarkLastScratchLoadPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
+
+class SIInsertWaitcntsPass : public PassInfoMixin<SIInsertWaitcntsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class SIInsertHardClausesPass : public PassInfoMixin<SIInsertHardClausesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class SILateBranchLoweringPass
+    : public PassInfoMixin<SILateBranchLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class SIPreEmitPeepholePass : public PassInfoMixin<SIPreEmitPeepholePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class AMDGPUSetWavePriorityPass
+    : public PassInfoMixin<AMDGPUSetWavePriorityPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
-void initializeAMDGPUResourceUsageAnalysisPass(PassRegistry &);
+void initializeAMDGPUResourceUsageAnalysisWrapperPassPass(PassRegistry &);
 extern char &AMDGPUResourceUsageAnalysisID;
 
 struct AMDGPUPrintfRuntimeBindingPass
@@ -350,19 +439,11 @@ struct AMDGPUPrintfRuntimeBindingPass
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-ModulePass* createAMDGPUUnifyMetadataPass();
-void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
-extern char &AMDGPUUnifyMetadataID;
-
-struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
-
-void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
+void initializeSIOptimizeExecMaskingPreRALegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingPreRAID;
 
-void initializeSIOptimizeVGPRLiveRangePass(PassRegistry &);
-extern char &SIOptimizeVGPRLiveRangeID;
+void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
+extern char &SIOptimizeVGPRLiveRangeLegacyID;
 
 void initializeAMDGPUAnnotateUniformValuesLegacyPass(PassRegistry &);
 extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
@@ -370,7 +451,7 @@ extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;
 
-void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
+void initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
 void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
@@ -400,28 +481,28 @@ public:
 void initializeSIAnnotateControlFlowLegacyPass(PassRegistry &);
 extern char &SIAnnotateControlFlowLegacyPassID;
 
-void initializeSIMemoryLegalizerPass(PassRegistry&);
+void initializeSIMemoryLegalizerLegacyPass(PassRegistry &);
 extern char &SIMemoryLegalizerID;
 
-void initializeSIModeRegisterPass(PassRegistry&);
+void initializeSIModeRegisterLegacyPass(PassRegistry &);
 extern char &SIModeRegisterID;
 
-void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
+void initializeAMDGPUInsertDelayAluLegacyPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
-void initializeSIInsertHardClausesPass(PassRegistry &);
+void initializeSIInsertHardClausesLegacyPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
-void initializeSIInsertWaitcntsPass(PassRegistry&);
+void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
 
-void initializeSIFormMemoryClausesPass(PassRegistry&);
+void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
-void initializeSIPostRABundlerPass(PassRegistry&);
-extern char &SIPostRABundlerID;
+void initializeSIPostRABundlerLegacyPass(PassRegistry &);
+extern char &SIPostRABundlerLegacyID;
 
-void initializeGCNCreateVOPDPass(PassRegistry &);
+void initializeGCNCreateVOPDLegacyPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
 
 void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
@@ -434,24 +515,38 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
-void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
-extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
+ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
+void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);
+extern char &AMDGPUExportKernelRuntimeHandlesLegacyID;
 
-void initializeGCNNSAReassignPass(PassRegistry &);
+void initializeGCNNSAReassignLegacyPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
-void initializeGCNPreRALongBranchRegPass(PassRegistry &);
+void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;
 
-void initializeGCNPreRAOptimizationsPass(PassRegistry &);
+void initializeGCNPreRAOptimizationsLegacyPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
 
 FunctionPass *createAMDGPUSetWavePriorityPass();
-void initializeAMDGPUSetWavePriorityPass(PassRegistry &);
+void initializeAMDGPUSetWavePriorityLegacyPass(PassRegistry &);
 
-void initializeGCNRewritePartialRegUsesPass(llvm::PassRegistry &);
+void initializeGCNRewritePartialRegUsesLegacyPass(llvm::PassRegistry &);
 extern char &GCNRewritePartialRegUsesID;
+
+void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
+extern char &AMDGPUWaitSGPRHazardsLegacyID;
+
+class AMDGPURewriteAGPRCopyMFMAPass
+    : public PassInfoMixin<AMDGPURewriteAGPRCopyMFMAPass> {
+public:
+  AMDGPURewriteAGPRCopyMFMAPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
+extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
 namespace AMDGPU {
 enum TargetIndex {
@@ -463,19 +558,16 @@ enum TargetIndex {
 };
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");
-
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
-  // This array is indexed by address space value enum elements 0 ... to 9
   // clang-format off
-  static const bool ASAliasRules[10][10] = {
-    /*                       Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
+  static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
+    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
     /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
     /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
     /* Region   */            {false, false, true,  false, false, false, false, false, false, false},
-    /* Group    */            {true,  false, false, true,  false, false, false, false, false, false},
+    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false},
     /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true},
     /* Private  */            {true,  false, false, false, false, true,  false, false, false, false},
     /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true},
@@ -484,6 +576,7 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
     /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
   };
   // clang-format on
+  static_assert(std::size(ASAliasRules) == AMDGPUAS::MAX_AMDGPU_ADDRESS + 1);
 
   return ASAliasRules[AS1][AS2];
 }

@@ -5,7 +5,7 @@ add_object_library(
   HDRS
     locale.h
   DEPENDS
-    libc.include.locale
+    libc.hdr.types.locale_t
 )
 
 add_entrypoint_object(
@@ -27,7 +27,8 @@ add_entrypoint_object(
   HDRS
     newlocale.h
   DEPENDS
-    libc.include.locale
+    libc.hdr.locale_macros
+    libc.hdr.types.locale_t
     .locale
 )
 
@@ -38,8 +39,7 @@ add_entrypoint_object(
   HDRS
     duplocale.h
   DEPENDS
-    libc.include.locale
-    .locale
+    libc.hdr.types.locale_t
 )
 
 add_entrypoint_object(
@@ -49,8 +49,8 @@ add_entrypoint_object(
   HDRS
     setlocale.h
   DEPENDS
-    libc.include.locale
-    .locale
+    libc.hdr.locale_macros
+    libc.hdr.types.locale_t
 )
 
 add_entrypoint_object(
@@ -60,7 +60,7 @@ add_entrypoint_object(
   HDRS
     uselocale.h
   DEPENDS
-    libc.include.locale
+    libc.hdr.types.locale_t
     .locale
 )
 
@@ -71,6 +71,5 @@ add_entrypoint_object(
   HDRS
     freelocale.h
   DEPENDS
-    libc.include.locale
-    .locale
+    libc.hdr.types.locale_t
 )

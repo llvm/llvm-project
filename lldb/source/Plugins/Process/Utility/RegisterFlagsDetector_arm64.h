@@ -40,7 +40,7 @@ public:
   /// If called more than once, fields will be redetected each time from
   /// scratch. If the target would not have this register at all, the list of
   /// fields will be left empty.
-  void DetectFields(uint64_t hwcap, uint64_t hwcap2);
+  void DetectFields(uint64_t hwcap, uint64_t hwcap2, uint64_t hwcap3);
 
   /// Add the field information of any registers named in this class,
   /// to the relevant RegisterInfo instances. Note that this will be done
@@ -53,14 +53,22 @@ public:
 
 private:
   using Fields = std::vector<RegisterFlags::Field>;
-  using DetectorFn = std::function<Fields(uint64_t, uint64_t)>;
+  using DetectorFn = std::function<Fields(uint64_t, uint64_t, uint64_t)>;
 
-  static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2);
-  static Fields DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2);
-  static Fields DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2);
-  static Fields DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2);
-  static Fields DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2);
-  static Fields DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2);
+  static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
+                                 uint64_t hwcap3);
+  static Fields DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2,
+                                 uint64_t hwcap3);
+  static Fields DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2,
+                                 uint64_t hwcap3);
+  static Fields DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
+                                    uint64_t hwcap3);
+  static Fields DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2,
+                                 uint64_t hwcap3);
+  static Fields DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2,
+                                 uint64_t hwcap3);
+  static Fields DetectGCSFeatureFields(uint64_t hwcap, uint64_t hwcap2,
+                                       uint64_t hwcap3);
 
   struct RegisterEntry {
     RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
@@ -70,13 +78,15 @@ private:
     llvm::StringRef m_name;
     RegisterFlags m_flags;
     DetectorFn m_detector;
-  } m_registers[6] = {
+  } m_registers[8] = {
       RegisterEntry("cpsr", 4, DetectCPSRFields),
       RegisterEntry("fpsr", 4, DetectFPSRFields),
       RegisterEntry("fpcr", 4, DetectFPCRFields),
       RegisterEntry("mte_ctrl", 8, DetectMTECtrlFields),
       RegisterEntry("svcr", 8, DetectSVCRFields),
       RegisterEntry("fpmr", 8, DetectFPMRFields),
+      RegisterEntry("gcs_features_enabled", 8, DetectGCSFeatureFields),
+      RegisterEntry("gcs_features_locked", 8, DetectGCSFeatureFields),
   };
 
   // Becomes true once field detection has been run for all registers.

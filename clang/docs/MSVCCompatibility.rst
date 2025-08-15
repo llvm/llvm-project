@@ -240,7 +240,7 @@ In the above example ``hwPopCnt`` will not be inlined into ``PopCnt`` since ``Po
 With a larger function that does real work the function call overhead is negligible. However in our popcnt example there is the function call
 overhead. There is no analog for this specific MSVC behavior in clang.
 
-For clang we effectively have to create the dispatch function ourselves to each specfic implementation.
+For clang we effectively have to create the dispatch function ourselves to each specific implementation.
 
 SIMD vector types
 =================

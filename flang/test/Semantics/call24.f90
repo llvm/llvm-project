@@ -38,8 +38,8 @@ subroutine test()
 
   !ERROR: References to the procedure 'bar' require an explicit interface
   !BECAUSE: a dummy procedure is optional or a pointer
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
-  !BECAUSE: Actual argument associated with procedure pointer dummy argument 'a_pointer=' must be a pointer unless INTENT(IN)
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
+  !BECAUSE: Actual argument associated with procedure pointer dummy argument 'a_pointer=' is not a procedure pointer
   call bar(sin)
 
   !ERROR: References to the procedure 'baz' require an explicit interface

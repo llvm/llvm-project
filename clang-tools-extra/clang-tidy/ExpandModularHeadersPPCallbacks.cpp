@@ -49,8 +49,8 @@ public:
     FilesToRecord.erase(File);
   }
 
-  /// Makes sure we have contents for all the files we were interested in. Ideally
-  /// `FilesToRecord` should be empty.
+  /// Makes sure we have contents for all the files we were interested in.
+  /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)
@@ -71,9 +71,9 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
       // Forward the new diagnostics to the original DiagnosticConsumer.
-      Diags(new DiagnosticIDs, new DiagnosticOptions,
+      Diags(DiagnosticIDs::create(), DiagOpts,
             new ForwardingDiagnosticConsumer(Compiler.getDiagnosticClient())),
-      LangOpts(Compiler.getLangOpts()) {
+      LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular
   // headers.
   OverlayFS->pushOverlay(InMemoryFs);
@@ -81,27 +81,24 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   Diags.setSourceManager(&Sources);
   // FIXME: Investigate whatever is there better way to initialize DiagEngine
   // or whatever DiagEngine can be shared by multiple preprocessors
-  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts());
+  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts(),
+                        Compiler.getVirtualFileSystem());
 
   LangOpts.Modules = false;
 
-  auto HSO = std::make_shared<HeaderSearchOptions>();
-  *HSO = Compiler.getHeaderSearchOpts();
+  HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
+                                              &Compiler.getTarget());
 
-  HeaderInfo = std::make_unique<HeaderSearch>(HSO, Sources, Diags, LangOpts,
-                                               &Compiler.getTarget());
-
-  auto PO = std::make_shared<PreprocessorOptions>();
-  *PO = Compiler.getPreprocessorOpts();
-
-  PP = std::make_unique<clang::Preprocessor>(PO, Diags, LangOpts, Sources,
-                                              *HeaderInfo, ModuleLoader,
-                                              /*IILookup=*/nullptr,
-                                              /*OwnsHeaderSearch=*/false);
+  PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
+                                             Diags, LangOpts, Sources,
+                                             *HeaderInfo, ModuleLoader,
+                                             /*IILookup=*/nullptr,
+                                             /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
-  InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
+  InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
+                         Compiler.getPCHContainerReader(),
                          Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
-  ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
+  ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                            Compiler.getTarget().getTriple());
 }
 

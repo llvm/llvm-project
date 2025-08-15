@@ -74,7 +74,6 @@ set(SCUDO_HEADERS
   internal_defs.h
   linux.h
   list.h
-  local_cache.h
   memtag.h
   mem_map.h
   mem_map_base.h
@@ -90,6 +89,7 @@ set(SCUDO_HEADERS
   report.h
   report_linux.h
   secondary.h
+  size_class_allocator.h
   size_class_map.h
   stack_depot.h
   stats.h
@@ -98,6 +98,7 @@ set(SCUDO_HEADERS
   tsd_exclusive.h
   tsd_shared.h
   tsd.h
+  type_traits.h
   vector.h
   wrappers_c_checks.h
   wrappers_c.h

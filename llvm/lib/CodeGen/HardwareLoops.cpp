@@ -30,7 +30,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -91,7 +90,7 @@ static void debugHWLoopFailure(const StringRef DebugMsg,
 
 static OptimizationRemarkAnalysis
 createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
-  Value *CodeRegion = L->getHeader();
+  BasicBlock *CodeRegion = L->getHeader();
   DebugLoc DL = L->getStartLoc();
 
   if (I) {

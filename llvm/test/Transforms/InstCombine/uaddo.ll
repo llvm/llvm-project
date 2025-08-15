@@ -18,7 +18,7 @@ define i32 @uaddo_commute1(i32 %x, i32 %y, i32 %z) {
 
 define <2 x i32> @uaddo_commute2(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: @uaddo_commute2(
-; CHECK-NEXT:    [[NOTY:%.*]] = xor <2 x i32> [[Y:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOTY:%.*]] = xor <2 x i32> [[Y:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[X]], [[NOTY]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> [[Z:%.*]], <2 x i32> [[A]]

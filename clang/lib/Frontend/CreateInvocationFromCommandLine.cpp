@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 using namespace clang;
 using namespace llvm::opt;
@@ -30,9 +31,15 @@ std::unique_ptr<CompilerInvocation>
 clang::createInvocation(ArrayRef<const char *> ArgList,
                         CreateInvocationOptions Opts) {
   assert(!ArgList.empty());
-  auto Diags = Opts.Diags
-                   ? std::move(Opts.Diags)
-                   : CompilerInstance::createDiagnostics(new DiagnosticOptions);
+  std::optional<DiagnosticOptions> LocalDiagOpts;
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
+  if (Opts.Diags) {
+    Diags = std::move(Opts.Diags);
+  } else {
+    LocalDiagOpts.emplace();
+    Diags = CompilerInstance::createDiagnostics(
+        Opts.VFS ? *Opts.VFS : *llvm::vfs::getRealFileSystem(), *LocalDiagOpts);
+  }
 
   SmallVector<const char *, 16> Args(ArgList);
 

@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
-#define _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ALIASING_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_ALIASING_ITERATOR_H
 
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
-#include <__type_traits/is_trivial.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__type_traits/is_trivial.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -124,4 +124,4 @@ using __aliasing_iterator = typename __aliasing_iterator_wrapper<_BaseT, _Alias>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_ALIASING_ITERATOR_H

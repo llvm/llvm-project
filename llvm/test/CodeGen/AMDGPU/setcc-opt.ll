@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_eq_0:
 ; GCN-NOT: v_cmp
@@ -190,7 +190,7 @@ define amdgpu_kernel void @cmp_sext_k_neg1(ptr addrspace(1) %out, ptr addrspace(
 define void @v_cmp_sext_k_neg1_i8_sext_arg(i8 signext %b) nounwind {
   %b.ext = sext i8 %b to i32
   %icmp0 = icmp ne i32 %b.ext, -1
-  store i1 %icmp0, ptr addrspace(1) undef
+  store i1 %icmp0, ptr addrspace(1) poison
   ret void
 }
 

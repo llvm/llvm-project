@@ -11,6 +11,11 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
+SymbolSet::~SymbolSet() {
+  for (auto &[Key, Sym] : Symbols)
+    Sym->~Symbol();
+}
+
 Symbol *SymbolSet::addGlobalImpl(EncodeKind Kind, StringRef Name,
                                  SymbolFlags Flags) {
   Name = copyString(Name);

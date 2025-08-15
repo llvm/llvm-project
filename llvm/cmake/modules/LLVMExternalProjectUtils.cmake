@@ -2,14 +2,18 @@ include(ExternalProject)
 
 # llvm_ExternalProject_BuildCmd(out_var target)
 #   Utility function for constructing command lines for external project targets
-function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
+function(llvm_ExternalProject_BuildCmd out_var target bin_dir stamp_dir)
   cmake_parse_arguments(ARG "" "CONFIGURATION" "" ${ARGN})
   if(NOT ARG_CONFIGURATION)
     set(ARG_CONFIGURATION "$<CONFIG>")
   endif()
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.
-    set(${out_var} "$(MAKE)" "-C" "${bin_dir}" "${target}" PARENT_SCOPE)
+    string(JOIN "@" make_cmd "$(MAKE)" "-C" "${bin_dir}" "${target}")
+    set(file_lock_script "${LLVM_CMAKE_DIR}/FileLock.cmake")
+    set(${out_var} ${CMAKE_COMMAND} "-DLOCK_FILE_PATH=${stamp_dir}/cmake.lock"
+                                    "-DCOMMAND=${make_cmd}"
+                                    "-P" "${file_lock_script}" PARENT_SCOPE)
   else()
     set(tool_args "${LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS}")
     if(NOT tool_args STREQUAL "")
@@ -34,6 +38,8 @@ endfunction()
 
 
 # llvm_ExternalProject_Add(name source_dir ...
+#   ENABLE_FORTRAN
+#     External project requires the Flang compiler
 #   USE_TOOLCHAIN
 #     Use just-built tools (see TOOLCHAIN_TOOLS)
 #   EXCLUDE_FROM_ALL
@@ -61,7 +67,7 @@ endfunction()
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
-    "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
+    "ENABLE_FORTRAN;USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
     "SOURCE_DIR;FOLDER"
     "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE"
     ${ARGN})
@@ -89,6 +95,9 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
+    if (ARG_ENABLE_FORTRAN)
+      list(APPEND ARG_TOOLCHAIN_TOOLS flang)
+    endif ()
     # AIX 64-bit XCOFF and big AR format is not yet supported in some of these tools.
     if(NOT _cmake_system_name STREQUAL AIX)
       list(APPEND ARG_TOOLCHAIN_TOOLS lld llvm-ar llvm-ranlib llvm-nm llvm-objdump)
@@ -137,6 +146,10 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(clang IN_LIST TOOLCHAIN_TOOLS)
     set(CLANG_IN_TOOLCHAIN On)
+  endif()
+
+  if(flang IN_LIST TOOLCHAIN_TOOLS)
+    set(FLANG_IN_TOOLCHAIN On)
   endif()
 
   if(RUNTIME_LIBRARIES AND CLANG_IN_TOOLCHAIN)
@@ -221,6 +234,9 @@ function(llvm_ExternalProject_Add name source_dir)
                           -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${CMAKE_EXECUTABLE_SUFFIX})
       endif()
     endif()
+    if(FLANG_IN_TOOLCHAIN)
+      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/flang${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
     if(lld IN_LIST TOOLCHAIN_TOOLS)
       if(is_msvc_target)
         list(APPEND compiler_args -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/lld-link${CMAKE_EXECUTABLE_SUFFIX})
@@ -304,6 +320,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(compiler_args -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER}
                       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                      -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
                       -DCMAKE_LINKER=${CMAKE_LINKER}
                       -DCMAKE_AR=${CMAKE_AR}
                       -DCMAKE_RANLIB=${CMAKE_RANLIB}
@@ -353,6 +370,7 @@ function(llvm_ExternalProject_Add name source_dir)
   if(ARG_TARGET_TRIPLE)
     list(APPEND compiler_args -DCMAKE_C_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
     list(APPEND compiler_args -DCMAKE_CXX_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
+    list(APPEND compiler_args -DCMAKE_Fortran_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
     list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
   endif()
 
@@ -409,7 +427,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})
   endif()
 
-  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR})
+  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR} ${STAMP_DIR})
   ExternalProject_Add_Step(${name} clean
     COMMAND ${run_clean}
     COMMENT "Cleaning ${name}..."
@@ -449,7 +467,7 @@ function(llvm_ExternalProject_Add name source_dir)
     else()
       set(external_target "${target}")
     endif()
-    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${external_target} ${BINARY_DIR})
+    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${external_target} ${BINARY_DIR} ${STAMP_DIR})
     add_custom_target(${target}
       COMMAND ${build_runtime_cmd}
       DEPENDS ${name}-configure

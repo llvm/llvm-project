@@ -28,8 +28,9 @@
 //       for every rank index r.
 //
 
-#include <mdspan>
 #include <cassert>
+#include <mdspan>
+#include <span>
 
 #include "check_assertion.h"
 

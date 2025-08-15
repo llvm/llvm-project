@@ -8,6 +8,7 @@
 
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -170,10 +171,8 @@ bool FunctionCaller::WriteFunctionArguments(
     m_wrapper_args_addrs.push_back(args_addr_ref);
   } else {
     // Make sure this is an address that we've already handed out.
-    if (find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-             args_addr_ref) == m_wrapper_args_addrs.end()) {
+    if (!llvm::is_contained(m_wrapper_args_addrs, args_addr_ref))
       return false;
-    }
   }
 
   // TODO: verify fun_addr needs to be a callable address
@@ -324,8 +323,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
 void FunctionCaller::DeallocateFunctionResults(ExecutionContext &exe_ctx,
                                                lldb::addr_t args_addr) {
   std::list<lldb::addr_t>::iterator pos;
-  pos = std::find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-                  args_addr);
+  pos = llvm::find(m_wrapper_args_addrs, args_addr);
   if (pos != m_wrapper_args_addrs.end())
     m_wrapper_args_addrs.erase(pos);
 
@@ -337,6 +335,10 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
     const EvaluateExpressionOptions &options,
     DiagnosticManager &diagnostic_manager, Value &results) {
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
+
+  Debugger *debugger =
+      exe_ctx.GetTargetPtr() ? &exe_ctx.GetTargetPtr()->GetDebugger() : nullptr;
+  Progress progress("Calling function", FunctionName(), {}, debugger);
 
   // FunctionCaller::ExecuteFunction execution is always just to get the
   // result. Unless explicitly asked for, ignore breakpoints and unwind on

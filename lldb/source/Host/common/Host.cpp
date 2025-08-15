@@ -11,12 +11,15 @@
 #include <climits>
 #include <cstdlib>
 #include <sys/types.h>
+
 #ifndef _WIN32
 #include <dlfcn.h>
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <spawn.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -24,16 +27,6 @@
 #include <mach-o/dyld.h>
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
-#endif
-
-#if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
-#if !defined(__ANDROID__)
-#include <spawn.h>
-#endif
-#include <sys/syscall.h>
-#include <sys/wait.h>
 #endif
 
 #if defined(__FreeBSD__)
@@ -89,10 +82,11 @@ int __pthread_fchdir(int fildes);
 using namespace lldb;
 using namespace lldb_private;
 
-#if !defined(__APPLE__)
-// The system log is currently only meaningful on Darwin, where this means
-// os_log. The meaning of a "system log" isn't as clear on other platforms, and
-// therefore we don't providate a default implementation. Vendors are free to
+#if !defined(__APPLE__) && !defined(_WIN32)
+// The system log is currently only meaningful on Darwin and Windows.
+// On Darwin, this means os_log. On Windows this means Events Viewer.
+// The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free
 // to implement this function if they have a use for it.
 void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
@@ -114,6 +108,10 @@ void LogChannelSystem::Initialize() {
 void LogChannelSystem::Terminate() { g_system_log.Disable(); }
 
 #if !defined(__APPLE__) && !defined(_WIN32)
+extern "C" char **environ;
+
+Environment Host::GetEnvironment() { return Environment(environ); }
+
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
                                   Host::MonitorChildProcessCallback callback);
@@ -196,8 +194,8 @@ MonitorChildProcessThreadFunction(::pid_t pid,
 
     const ::pid_t wait_pid = ::waitpid(pid, &status, 0);
 
-    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}", pid,
-             wait_pid, status);
+    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}",
+             pid, wait_pid, status);
 
     if (CheckForMonitorCancellation())
       return nullptr;
@@ -348,7 +346,6 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
-#if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -356,7 +353,6 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
-#endif
   return module_filespec;
 }
 
@@ -616,7 +612,7 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
 
   assert(Options.empty());
   const char *desc;
-  switch(WS.type) {
+  switch (WS.type) {
   case WaitStatus::Exit:
     desc = "Exited with status";
     break;

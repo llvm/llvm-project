@@ -232,7 +232,7 @@ void reorder(Instruction *I) {
     Instruction *IM = &*(BBI++);
     if (!InstructionsToMove.contains(IM))
       continue;
-    IM->moveBefore(I);
+    IM->moveBefore(I->getIterator());
   }
 }
 
@@ -322,7 +322,13 @@ private:
   template <bool IsLoadChain>
   bool isSafeToMove(
       Instruction *ChainElem, Instruction *ChainBegin,
-      const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets);
+      const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets,
+      BatchAAResults &BatchAA);
+
+  /// Merges the equivalence classes if they have underlying objects that differ
+  /// by one level of indirection (i.e., one is a getelementptr and the other is
+  /// the base pointer in that getelementptr).
+  void mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const;
 
   /// Collects loads and stores grouped by "equivalence class", where:
   ///   - all elements in an eq class are a load or all are a store,
@@ -538,6 +544,10 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
   for (const auto &E : C)
     ChainOffsets.insert({&*E.Inst, E.OffsetFromLeader});
 
+  // Across a single invocation of this function the IR is not changing, so
+  // using a batched Alias Analysis is safe and can reduce compile time.
+  BatchAAResults BatchAA(AA);
+
   // Loads get hoisted up to the first load in the chain.  Stores get sunk
   // down to the last store in the chain.  Our algorithm for loads is:
   //
@@ -564,7 +574,7 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
     NewChain.emplace_back(*ChainBegin);
     for (auto ChainIt = std::next(ChainBegin); ChainIt != ChainEnd; ++ChainIt) {
       if (isSafeToMove<IsLoad>(ChainIt->Inst, NewChain.front().Inst,
-                               ChainOffsets)) {
+                               ChainOffsets, BatchAA)) {
         LLVM_DEBUG(dbgs() << "LSV: No intervening may-alias instrs; can merge "
                           << *ChainIt->Inst << " into " << *ChainBegin->Inst
                           << "\n");
@@ -994,7 +1004,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 template <bool IsLoadChain>
 bool Vectorizer::isSafeToMove(
     Instruction *ChainElem, Instruction *ChainBegin,
-    const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets) {
+    const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets,
+    BatchAAResults &BatchAA) {
   LLVM_DEBUG(dbgs() << "LSV: isSafeToMove(" << *ChainElem << " -> "
                     << *ChainBegin << ")\n");
 
@@ -1061,7 +1072,8 @@ bool Vectorizer::isSafeToMove(
         LLVM_DEBUG({
           // Double check that AA also sees this alias.  If not, we probably
           // have a bug.
-          ModRefInfo MR = AA.getModRefInfo(I, MemoryLocation::get(ChainElem));
+          ModRefInfo MR =
+              BatchAA.getModRefInfo(I, MemoryLocation::get(ChainElem));
           assert(IsLoadChain ? isModSet(MR) : isModOrRefSet(MR));
           dbgs() << "LSV: Found alias in chain: " << *I << "\n";
         });
@@ -1072,7 +1084,7 @@ bool Vectorizer::isSafeToMove(
     }
 
     LLVM_DEBUG(dbgs() << "LSV: Querying AA for " << *I << "\n");
-    ModRefInfo MR = AA.getModRefInfo(I, MemoryLocation::get(ChainElem));
+    ModRefInfo MR = BatchAA.getModRefInfo(I, MemoryLocation::get(ChainElem));
     if (IsLoadChain ? isModSet(MR) : isModOrRefSet(MR)) {
       LLVM_DEBUG(dbgs() << "LSV: Found alias in chain:\n"
                         << "  Aliasing instruction:\n"
@@ -1264,14 +1276,12 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
     // When computing known bits, use the GEPs as context instructions, since
     // they likely are in the same BB as the load/store.
     KnownBits Known(BitWidth);
-    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, 0, &AC,
-                     ContextInst, &DT);
+    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, &AC, ContextInst,
+                     &DT);
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
-    if (BitsAllowedToBeSet.ult(IdxDiff.abs()))
-      return std::nullopt;
-    Safe = true;
+    Safe = BitsAllowedToBeSet.uge(IdxDiff.abs());
   }
 
   if (Safe)
@@ -1303,6 +1313,120 @@ std::optional<APInt> Vectorizer::getConstantOffsetSelects(
     }
   }
   return std::nullopt;
+}
+
+void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
+  if (EQClasses.size() < 2) // There is nothing to merge.
+    return;
+
+  // The reduced key has all elements of the ECClassKey except the underlying
+  // object. Check that EqClassKey has 4 elements and define the reduced key.
+  static_assert(std::tuple_size_v<EqClassKey> == 4,
+                "EqClassKey has changed - EqClassReducedKey needs changes too");
+  using EqClassReducedKey =
+      std::tuple<std::tuple_element_t<1, EqClassKey> /* AddrSpace */,
+                 std::tuple_element_t<2, EqClassKey> /* Element size */,
+                 std::tuple_element_t<3, EqClassKey> /* IsLoad; */>;
+  using ECReducedKeyToUnderlyingObjectMap =
+      MapVector<EqClassReducedKey,
+                SmallPtrSet<std::tuple_element_t<0, EqClassKey>, 4>>;
+
+  // Form a map from the reduced key (without the underlying object) to the
+  // underlying objects: 1 reduced key to many underlying objects, to form
+  // groups of potentially merge-able equivalence classes.
+  ECReducedKeyToUnderlyingObjectMap RedKeyToUOMap;
+  bool FoundPotentiallyOptimizableEC = false;
+  for (const auto &EC : EQClasses) {
+    const auto &Key = EC.first;
+    EqClassReducedKey RedKey{std::get<1>(Key), std::get<2>(Key),
+                             std::get<3>(Key)};
+    auto &UOMap = RedKeyToUOMap[RedKey];
+    UOMap.insert(std::get<0>(Key));
+    if (UOMap.size() > 1)
+      FoundPotentiallyOptimizableEC = true;
+  }
+  if (!FoundPotentiallyOptimizableEC)
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "LSV: mergeEquivalenceClasses: before merging:\n";
+    for (const auto &EC : EQClasses) {
+      dbgs() << "  Key: {" << EC.first << "}\n";
+      for (const auto &Inst : EC.second)
+        dbgs() << "    Inst: " << *Inst << '\n';
+    }
+  });
+  LLVM_DEBUG({
+    dbgs() << "LSV: mergeEquivalenceClasses: RedKeyToUOMap:\n";
+    for (const auto &RedKeyToUO : RedKeyToUOMap) {
+      dbgs() << "  Reduced key: {" << std::get<0>(RedKeyToUO.first) << ", "
+             << std::get<1>(RedKeyToUO.first) << ", "
+             << static_cast<int>(std::get<2>(RedKeyToUO.first)) << "} --> "
+             << RedKeyToUO.second.size() << " underlying objects:\n";
+      for (auto UObject : RedKeyToUO.second)
+        dbgs() << "    " << *UObject << '\n';
+    }
+  });
+
+  using UObjectToUObjectMap = DenseMap<const Value *, const Value *>;
+
+  // Compute the ultimate targets for a set of underlying objects.
+  auto GetUltimateTargets =
+      [](SmallPtrSetImpl<const Value *> &UObjects) -> UObjectToUObjectMap {
+    UObjectToUObjectMap IndirectionMap;
+    for (const auto *UObject : UObjects) {
+      const unsigned MaxLookupDepth = 1; // look for 1-level indirections only
+      const auto *UltimateTarget = getUnderlyingObject(UObject, MaxLookupDepth);
+      if (UltimateTarget != UObject)
+        IndirectionMap[UObject] = UltimateTarget;
+    }
+    UObjectToUObjectMap UltimateTargetsMap;
+    for (const auto *UObject : UObjects) {
+      auto Target = UObject;
+      auto It = IndirectionMap.find(Target);
+      for (; It != IndirectionMap.end(); It = IndirectionMap.find(Target))
+        Target = It->second;
+      UltimateTargetsMap[UObject] = Target;
+    }
+    return UltimateTargetsMap;
+  };
+
+  // For each item in RedKeyToUOMap, if it has more than one underlying object,
+  // try to merge the equivalence classes.
+  for (auto &[RedKey, UObjects] : RedKeyToUOMap) {
+    if (UObjects.size() < 2)
+      continue;
+    auto UTMap = GetUltimateTargets(UObjects);
+    for (const auto &[UObject, UltimateTarget] : UTMap) {
+      if (UObject == UltimateTarget)
+        continue;
+
+      EqClassKey KeyFrom{UObject, std::get<0>(RedKey), std::get<1>(RedKey),
+                         std::get<2>(RedKey)};
+      EqClassKey KeyTo{UltimateTarget, std::get<0>(RedKey), std::get<1>(RedKey),
+                       std::get<2>(RedKey)};
+      // The entry for KeyFrom is guarantted to exist, unlike KeyTo. Thus,
+      // request the reference to the instructions vector for KeyTo first.
+      const auto &VecTo = EQClasses[KeyTo];
+      const auto &VecFrom = EQClasses[KeyFrom];
+      SmallVector<Instruction *, 8> MergedVec;
+      std::merge(VecFrom.begin(), VecFrom.end(), VecTo.begin(), VecTo.end(),
+                 std::back_inserter(MergedVec),
+                 [](Instruction *A, Instruction *B) {
+                   return A && B && A->comesBefore(B);
+                 });
+      EQClasses[KeyTo] = std::move(MergedVec);
+      EQClasses.erase(KeyFrom);
+    }
+  }
+  LLVM_DEBUG({
+    dbgs() << "LSV: mergeEquivalenceClasses: after merging:\n";
+    for (const auto &EC : EQClasses) {
+      dbgs() << "  Key: {" << EC.first << "}\n";
+      for (const auto &Inst : EC.second)
+        dbgs() << "    Inst: " << *Inst << '\n';
+    }
+  });
 }
 
 EquivalenceClassMap
@@ -1377,6 +1501,7 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
         .emplace_back(&I);
   }
 
+  mergeEquivalenceClasses(Ret);
   return Ret;
 }
 

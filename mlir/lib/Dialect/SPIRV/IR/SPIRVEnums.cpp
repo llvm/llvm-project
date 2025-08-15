@@ -15,8 +15,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <iterator>
-
 using namespace mlir;
 
 // Pull in all enum utility function definitions
@@ -94,13 +92,12 @@ SmallVector<spirv::Capability, 0>
 spirv::getRecursiveImpliedCapabilities(spirv::Capability cap) {
   ArrayRef<spirv::Capability> directCaps = getDirectImpliedCapabilities(cap);
   SetVector<spirv::Capability, SmallVector<spirv::Capability, 0>> allCaps(
-      directCaps.begin(), directCaps.end());
+      llvm::from_range, directCaps);
 
   // TODO: This is insufficient; find a better way to handle this
   // (e.g., using static lists) if this turns out to be a bottleneck.
   for (unsigned i = 0; i < allCaps.size(); ++i)
-    for (Capability c : getDirectImpliedCapabilities(allCaps[i]))
-      allCaps.insert(c);
+    allCaps.insert_range(getDirectImpliedCapabilities(allCaps[i]));
 
   return allCaps.takeVector();
 }

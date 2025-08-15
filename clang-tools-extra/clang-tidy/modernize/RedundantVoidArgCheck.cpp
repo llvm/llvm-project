@@ -112,7 +112,8 @@ void RedundantVoidArgCheck::processFunctionDecl(
                              "function declaration");
 }
 
-bool isMacroIdentifier(const IdentifierTable &Idents, const Token &ProtoToken) {
+static bool isMacroIdentifier(const IdentifierTable &Idents,
+                              const Token &ProtoToken) {
   if (!ProtoToken.is(tok::TokenKind::raw_identifier))
     return false;
 
