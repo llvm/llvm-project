@@ -5336,6 +5336,7 @@ private:
         ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
         const auto *It = find(Op, I);
         assert(It != Op.end() && "Lane not set");
+        SmallPtrSet<Instruction *, 4> Visited;
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
@@ -5345,6 +5346,10 @@ private:
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+          if (!Visited.insert(In).second) {
+            It = find(make_range(std::next(It), Op.end()), I);
+            continue;
+          }
           ScheduleCopyableDataMapByInstUser
               .try_emplace(std::make_pair(std::make_pair(In, EI.EdgeIdx), I))
               .first->getSecond()
