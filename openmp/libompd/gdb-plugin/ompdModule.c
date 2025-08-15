@@ -943,7 +943,8 @@ static PyObject *call_ompd_get_enclosing_parallel_handle(PyObject *self,
 
   if (retVal != ompd_rc_ok) {
     _printf("An error occurred when calling "
-            "ompd_get_enclosing_parallel_handle! Error code: %d",
+            "ompd_get_enclosing_parallel_handle!"
+            "Error code: %d",
             retVal);
     return Py_BuildValue("l", retVal);
   }
@@ -967,7 +968,7 @@ static PyObject *call_ompd_get_task_parallel_handle(PyObject *self,
 
   if (retVal != ompd_rc_ok) {
     _printf("An error occurred when calling ompd_get_task_parallel_handle! "
-            "Error code: %d");
+            "Error code: %d", retVal);
     return Py_BuildValue("l", retVal);
   }
   return PyCapsule_New(taskParallelHandle, "ParallelHandle",
