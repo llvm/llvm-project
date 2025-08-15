@@ -158,8 +158,6 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-LLVM_ABI ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> getResourceClasses();
-
 #define ROOT_SIGNATURE_FLAG(Num, Val) Val = Num,
 enum class RootFlags : uint32_t {
 #include "DXContainerConstants.def"
