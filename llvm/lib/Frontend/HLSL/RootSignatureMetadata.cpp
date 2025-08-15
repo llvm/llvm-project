@@ -119,8 +119,8 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName = dxil::getResourceClassName(
-      dxil::ResourceClass(Descriptor.Type));
+  StringRef ResName =
+      dxil::getResourceClassName(dxil::ResourceClass(Descriptor.Type));
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
@@ -160,8 +160,8 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName = dxil::getResourceClassName(
-      dxil::ResourceClass(Clause.Type));
+  StringRef ResName =
+      dxil::getResourceClassName(dxil::ResourceClass(Clause.Type));
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),
