@@ -2071,6 +2071,8 @@ getUntaggedStoreAssignmentInfo(const Instruction &I, const DataLayout &Layout) {
   // with it.
   if (const auto *SI = dyn_cast<StoreInst>(&I))
     return at::getAssignmentInfo(Layout, SI);
+  // TODO: This code was written before memset.pattern was added to
+  // MemIntrinsic, consider how to update it
   if (const auto *MI = dyn_cast<MemIntrinsic>(&I);
       MI && !isa<MemSetPatternInst>(MI))
     return at::getAssignmentInfo(Layout, MI);

@@ -622,6 +622,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                          uint64_t &DeadSize, int64_t KillingStart,
                          uint64_t KillingSize, bool IsOverwriteEnd) {
   auto *DeadIntrinsic = cast<AnyMemIntrinsic>(DeadI);
+  // TODO: This code was written before memset.pattern was added to
+  // MemIntrinsic, consider how to update it
   if (isa<MemSetPatternInst>(DeadI))
     return false;
   Align PrefAlign = DeadIntrinsic->getDestAlign().valueOrOne();
@@ -1283,6 +1285,8 @@ struct DSEState {
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
       // Don't remove volatile memory intrinsics.
+      // TODO: This code was written before memset.pattern was added to
+      // MemIntrinsic, consider how to update it
       if (auto *MI = dyn_cast<MemIntrinsic>(CB))
         return !MI->isVolatile() || !isa<MemSetPatternInst>(MI);
 

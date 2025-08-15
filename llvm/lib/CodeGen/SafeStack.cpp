@@ -321,6 +321,8 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
         if (I->isLifetimeStartOrEnd())
           continue;
 
+        // TODO: This code was written before memset.pattern was added to
+        // MemIntrinsic, consider how to update it
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I);
             MI && !isa<MemSetPatternInst>(I)) {
           if (!IsMemIntrinsicSafe(MI, UI, AllocaPtr, AllocaSize)) {

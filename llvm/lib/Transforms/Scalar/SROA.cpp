@@ -2126,6 +2126,8 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
 
   Use *U = S.getUse();
 
+  // TODO: This code was written before memset.pattern was added to
+  // MemIntrinsic, consider how to update it
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U->getUser());
       MI && !isa<MemSetPatternInst>(MI)) {
     if (MI->isVolatile())
@@ -2493,6 +2495,8 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
     }
   } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U->getUser());
              MI && !isa<MemSetPatternInst>(MI)) {
+    // TODO: This code was written before memset.pattern was added to
+    // MemIntrinsic, consider how to update it
     if (MI->isVolatile() || !isa<Constant>(MI->getLength()))
       return false;
     if (!S.isSplittable())

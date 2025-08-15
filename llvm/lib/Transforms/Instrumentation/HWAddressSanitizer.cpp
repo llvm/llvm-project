@@ -1602,6 +1602,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
     getInterestingMemoryOperands(ORE, &Inst, TLI, OperandsToInstrument);
 
+    // TODO: This code was written before memset.pattern was added to
+    // MemIntrinsic, consider how to update it
     if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst);
         MI && !isa<MemSetPatternInst>(MI))
       if (!ignoreMemIntrinsic(ORE, MI))

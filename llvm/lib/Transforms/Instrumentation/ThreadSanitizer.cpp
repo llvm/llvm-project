@@ -535,6 +535,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+        // TODO: This code was written before memset.pattern was added to
+        // MemIntrinsic, consider how to update it
         if (isa<MemIntrinsic>(Inst) && !isa<MemSetPatternInst>(Inst))
           MemIntrinCalls.push_back(&Inst);
         HasCalls = true;

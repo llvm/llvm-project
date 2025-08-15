@@ -3063,6 +3063,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         PointerComparisonsOrSubtracts.push_back(&Inst);
       } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst);
                  MI && !isa<MemSetPatternInst>(MI)) {
+        // TODO: This code was written before memset.pattern was added to
+        // MemIntrinsic, consider how to update it
         // ok, take it.
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;

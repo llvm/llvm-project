@@ -1523,6 +1523,8 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
     }
   } else if (auto *DepMI = dyn_cast<MemIntrinsic>(DepInst);
              DepMI && !isa<MemSetPatternInst>(DepMI)) {
+    // TODO: This code was written before memset.pattern was added to
+    // MemIntrinsic, consider how to update it
     int Offset = analyzeLoadFromClobberingMemInst(LoadType, LoadPtr, DepMI, DL);
     if (Offset >= 0) {
       if (auto *PossibleConstant =
