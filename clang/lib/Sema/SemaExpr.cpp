@@ -10761,26 +10761,26 @@ static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
     return;
   if (BinaryOperator::isAssignmentOp(Opc) && LHSIsScoped)
     return;
-  bool isCxx23 = S.getLangOpts().CPlusPlus23;
-  unsigned diagID =
-      isCxx23 ? diag::note_no_implicit_conversion_for_scoped_enum_cxx23
+  bool IsCxx23 = S.getLangOpts().CPlusPlus23;
+  unsigned DiagID =
+      IsCxx23 ? diag::note_no_implicit_conversion_for_scoped_enum_cxx23
               : diag::note_no_implicit_conversion_for_scoped_enum;
-  auto diagnosticHelper = [&S, isCxx23, diagID](const Expr *expr, const QualType type) {
-    SourceLocation beginLoc = expr->getBeginLoc();
-    QualType intType =
+  auto DiagnosticHelper = [&S, IsCxx23, DiagID](const Expr *expr, const QualType type) {
+    SourceLocation BeginLoc = expr->getBeginLoc();
+    QualType IntType =
         type->castAs<EnumType>()->getDecl()->getIntegerType();
-    std::string insertionString =
-        isCxx23 ? "std::to_underlying("
-                : "static_cast<" + intType.getAsString() + ">(";
-    S.Diag(beginLoc, diagID)
-        << FixItHint::CreateInsertion(beginLoc, insertionString)
+    std::string InsertionString =
+        IsCxx23 ? "std::to_underlying("
+                : "static_cast<" + IntType.getAsString() + ">(";
+    S.Diag(BeginLoc, DiagID)
+        << FixItHint::CreateInsertion(BeginLoc, InsertionString)
         << FixItHint::CreateInsertion(expr->getEndLoc(), ")");
   };
   if (LHSIsScoped) {
-    diagnosticHelper(LHSExpr, LHSType);
+    DiagnosticHelper(LHSExpr, LHSType);
   }
   if (RHSIsScoped) {
-    diagnosticHelper(RHSExpr, RHSType);
+    DiagnosticHelper(RHSExpr, RHSType);
   }
 }
 
