@@ -856,6 +856,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Insert a data fence between previous data operations and the following
+  /// operations. This is a no-op for CUDA devices as operations inserted into
+  /// a queue are in-order.
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// Initialize the device info for interoperability purposes.
   Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
     assert(Context && "Context is null");
