@@ -10771,7 +10771,10 @@ static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
     return;
   auto DiagnosticHelper = [&S](const Expr *expr, const QualType type) {
     SourceLocation BeginLoc = expr->getBeginLoc();
-    QualType IntType = type->castAs<EnumType>()->getDecl()->getIntegerType();
+    QualType IntType = type->castAs<EnumType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf()
+                           ->getIntegerType();
     std::string InsertionString = "static_cast<" + IntType.getAsString() + ">(";
     S.Diag(BeginLoc, diag::note_no_implicit_conversion_for_scoped_enum)
         << FixItHint::CreateInsertion(BeginLoc, InsertionString)
