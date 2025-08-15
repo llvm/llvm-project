@@ -3552,15 +3552,19 @@ public:
 
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return Libcalls.getLibcallName(Call);
+    // FIXME: Return StringRef
+    return Libcalls.getLibcallName(Call).data();
   }
 
   /// Get the libcall routine name for the specified libcall implementation
-  const char *getLibcallImplName(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplName(Call);
+  static StringRef getLibcallImplName(RTLIB::LibcallImpl Call) {
+    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
+  const char *getMemcpyName() const {
+    // FIXME: Return StringRef
+    return Libcalls.getMemcpyName().data();
+  }
 
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
