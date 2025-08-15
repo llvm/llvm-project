@@ -3845,7 +3845,7 @@ static Constant *ConstantFoldFixedVectorCall(
       MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
     }
     for (unsigned I = 0; I < Result.size(); I++) {
-      int64_t IAdd = (int64_t)MulVector[I * 2] + MulVector[I * 2 + 1];
+      int64_t IAdd = (int64_t)MulVector[I * 2] + (int64_t)MulVector[I * 2 + 1];
       Result[I] = ConstantInt::get(Ty, IAdd);
     }
 
