@@ -1086,6 +1086,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool IsGfx90aCoarseGrainUsmMapEnabled();
   virtual bool IsGfx90aCoarseGrainUsmMapEnabledImpl() { return false; }
 
+  /// Enqueue a host call to AsyncInfo
+  Error enqueueHostCall(void (*Callback)(void *), void *UserData,
+                        __tgt_async_info *AsyncInfo);
+  virtual Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                                    AsyncInfoWrapperTy &AsyncInfo) = 0;
+
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
   virtual Error createEventImpl(void **EventPtrStorage) = 0;
