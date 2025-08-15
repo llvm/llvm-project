@@ -33,6 +33,19 @@ enum class PTXRegisterMod {
   /// set read and write for the same operand.
   ReadWrite = 1,
 };
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     PTXRegisterMod mod) {
+  switch (mod) {
+  case PTXRegisterMod::Read:
+    return os << "Read";
+  case PTXRegisterMod::Write:
+    return os << "Write";
+  case PTXRegisterMod::ReadWrite:
+    return os << "ReadWrite";
+  }
+  llvm_unreachable("Unknown PTXRegisterMod value");
+}
 } // namespace NVVM
 } // namespace mlir
 
