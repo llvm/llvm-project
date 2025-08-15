@@ -1386,6 +1386,23 @@ public:
   }
 };
 
+/// Pattern that erases 'test.type_consumers' iff the input operand is the
+/// result of a 1:1 type conversion.
+/// Used to test correct skipping of 1:1 patterns in the 1:N case.
+class TestTypeConsumerOpPattern
+    : public OpConversionPattern<TestTypeConsumerOp> {
+public:
+  TestTypeConsumerOpPattern(MLIRContext *ctx, const TypeConverter &converter)
+      : OpConversionPattern<TestTypeConsumerOp>(converter, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(TestTypeConsumerOp op, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Test unambiguous overload resolution of replaceOpWithMultiple. This
 /// function is just to trigger compiler errors. It is never executed.
 [[maybe_unused]] void testReplaceOpWithMultipleOverloads(
@@ -1497,8 +1514,8 @@ struct TestLegalizePatternDriver
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace, TestReplaceWithValidConsumer>(
-        &getContext(), converter);
+                 TestBlockArgReplace, TestReplaceWithValidConsumer,
+                 TestTypeConsumerOpPattern>(&getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
