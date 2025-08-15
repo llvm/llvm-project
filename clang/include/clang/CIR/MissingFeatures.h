@@ -27,9 +27,6 @@ struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
 
-  // CIRGenFunction implementation details
-  static bool cgfSymbolTable() { return false; }
-
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
@@ -87,7 +84,6 @@ struct MissingFeatures {
   static bool setFunctionAttributes() { return false; }
 
   // CallOp handling
-  static bool opCallPseudoDtor() { return false; }
   static bool opCallAggregateArgs() { return false; }
   static bool opCallPaddingArgs() { return false; }
   static bool opCallABIExtendArg() { return false; }
@@ -162,6 +158,13 @@ struct MissingFeatures {
   static bool addressIsKnownNonNull() { return false; }
   static bool addressPointerAuthInfo() { return false; }
 
+  // Atomic
+  static bool atomicExpr() { return false; }
+  static bool atomicInfo() { return false; }
+  static bool atomicInfoGetAtomicPointer() { return false; }
+  static bool atomicInfoGetAtomicAddress() { return false; }
+  static bool atomicUseLibCall() { return false; }
+
   // Misc
   static bool abiArgInfo() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
@@ -197,7 +200,9 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cxxRecordStaticMembers() { return false; }
+  static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
+  static bool dataLayoutTypeStoreSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupScope() { return false; }
@@ -238,6 +243,7 @@ struct MissingFeatures {
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
+  static bool openCL() { return false; }
   static bool openMP() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
