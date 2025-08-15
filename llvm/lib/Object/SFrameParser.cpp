@@ -98,17 +98,20 @@ uint64_t SFrameParser<E>::getAbsoluteStartAddress(
   uint64_t Result = SectionAddress + FDE->StartAddress;
 
   if ((getPreamble().Flags.value() & sframe::Flags::FDEFuncStartPCRel) ==
-      sframe::Flags::FDEFuncStartPCRel) {
-    uintptr_t DataPtr = reinterpret_cast<uintptr_t>(Data.data());
-    uintptr_t FDEPtr = reinterpret_cast<uintptr_t>(&*FDE);
-
-    assert(DataPtr <= FDEPtr && FDEPtr < DataPtr + Data.size() &&
-           "Iterator does not belong to this object!");
-
-    Result += FDEPtr - DataPtr;
-  }
+      sframe::Flags::FDEFuncStartPCRel)
+    Result += offsetOf(FDE);
 
   return Result;
+}
+
+template <endianness E>
+uint64_t SFrameParser<E>::offsetOf(typename FDERange::iterator FDE) const {
+  uintptr_t DataPtr = reinterpret_cast<uintptr_t>(Data.data());
+  uintptr_t FDEPtr = reinterpret_cast<uintptr_t>(&*FDE);
+
+  assert(DataPtr <= FDEPtr && FDEPtr < DataPtr + Data.size() &&
+         "Iterator does not belong to this object!");
+  return FDEPtr - DataPtr;
 }
 
 template <typename EndianT>
