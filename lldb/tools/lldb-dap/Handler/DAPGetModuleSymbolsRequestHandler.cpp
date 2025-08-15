@@ -100,12 +100,12 @@ DAPGetModuleSymbolsRequestHandler::Run(
   lldb::SBModuleSpec module_spec;
   if (args.moduleId) {
     llvm::SmallVector<uint8_t, 20> uuid_bytes;
-    if (!lldb_private::UUID::DecodeUUIDBytesFromString(*args.moduleId, uuid_bytes).empty())
+    if (!lldb_private::UUID::DecodeUUIDBytesFromString(*args.moduleId,
+                                                       uuid_bytes)
+             .empty())
       return llvm::make_error<DAPError>("Invalid module ID");
 
-    module_spec.SetUUIDBytes(
-        uuid_bytes.data(),
-        uuid_bytes.size());
+    module_spec.SetUUIDBytes(uuid_bytes.data(), uuid_bytes.size());
   }
 
   if (args.moduleName) {
