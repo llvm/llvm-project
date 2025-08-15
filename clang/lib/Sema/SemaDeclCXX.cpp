@@ -9577,6 +9577,45 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   if (DiagKind == -1)
     return false;
 
+  if (S.LangOpts.CPlusPlus26 && inUnion() &&
+      CSM == CXXSpecialMemberKind::Destructor) {
+    // [class.dtor]/7 In C++26, a destructor for a union X is only deleted under
+    // the additional conditions that:
+
+    // overload resolution to select a constructor to default-initialize an
+    // object of type X either fails or selects a constructor that is either
+    // deleted or not trivial, or
+    // or X has a variant member V of class type M (or possibly
+    // multi-dimensional array thereof) where V has a default member initializer
+    // and M has a destructor that is non-trivial,
+
+    RecordDecl *Parent = Field->getParent();
+    while (Parent && (Parent->isAnonymousStructOrUnion() ||
+                      ((Parent->isUnion() || Parent->isStruct()) &&
+                       Parent->getIdentifier() == nullptr))) {
+      if (auto RD = dyn_cast_or_null<RecordDecl>(Parent->getParent()))
+        Parent = RD;
+      else
+        break;
+    }
+
+    auto ParentDecl = cast<CXXRecordDecl>(Parent);
+    if (!ParentDecl->isBeingDefined()) {
+      Sema::SpecialMemberOverloadResult SMOR = S.LookupSpecialMember(
+          ParentDecl, CXXSpecialMemberKind::DefaultConstructor, false, false,
+          false, false, false);
+      if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Success) {
+        CXXConstructorDecl *Ctor =
+            dyn_cast<CXXConstructorDecl>(SMOR.getMethod());
+        if (Ctor->isTrivial())
+          return false;
+
+        if (!Ctor->isUserProvided() && !Field->hasInClassInitializer())
+          return false;
+      }
+    }
+  }
+
   if (Diagnose) {
     if (Field) {
       S.Diag(Field->getLocation(),
@@ -9730,6 +9769,10 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
+  if (inUnion() && S.LangOpts.CPlusPlus26 &&
+      CSM == CXXSpecialMemberKind::DefaultConstructor)
+    return false;
+
   if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
     // For a default constructor, all references must be initialized in-class
     // and, if a union, it must have a non-const member.
@@ -9808,7 +9851,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
 
       // At least one member in each anonymous union must be non-const
       if (CSM == CXXSpecialMemberKind::DefaultConstructor &&
-          AllVariantFieldsAreConst && !FieldRecord->field_empty()) {
+          AllVariantFieldsAreConst && !FieldRecord->field_empty() &&
+          !S.LangOpts.CPlusPlus26) {
         if (Diagnose)
           S.Diag(FieldRecord->getLocation(),
                  diag::note_deleted_default_ctor_all_const)
@@ -9838,6 +9882,10 @@ bool SpecialMemberDeletionInfo::shouldDeleteForAllConstMembers() {
   // default constructor. Don't do that.
   if (CSM == CXXSpecialMemberKind::DefaultConstructor && inUnion() &&
       AllFieldsAreConst) {
+
+    if (S.LangOpts.CPlusPlus26)
+      return false;
+
     bool AnyFields = false;
     for (auto *F : MD->getParent()->fields())
       if ((AnyFields = !F->isUnnamedBitField()))
