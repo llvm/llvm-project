@@ -295,6 +295,13 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "dataExchangeImpl not supported");
   }
 
+  /// Insert a data fence between previous data operations and the following
+  /// operations. This is a no-op for Host devices as operations inserted into
+  /// a queue are in-order.
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
