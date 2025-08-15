@@ -30,12 +30,6 @@
 
 #define DEBUG_TYPE "wasm-translate"
 
-// Statistics.
-STATISTIC(numFunctionSectionItems, "Parsed functions");
-STATISTIC(numGlobalSectionItems, "Parsed globals");
-STATISTIC(numMemorySectionItems, "Parsed memories");
-STATISTIC(numTableSectionItems, "Parsed tables");
-
 static_assert(CHAR_BIT == 8,
               "This code expects std::byte to be exactly 8 bits");
 
@@ -1047,10 +1041,12 @@ public:
       return;
 
     // Copy over sizes of containers into statistics.
-    numFunctionSectionItems = symbols.funcSymbols.size();
-    numGlobalSectionItems = symbols.globalSymbols.size();
-    numMemorySectionItems = symbols.memSymbols.size();
-    numTableSectionItems = symbols.tableSymbols.size();
+    LDBG() << "WASM Imports:"
+           << "\n"
+           << " - Num functions: " << symbols.funcSymbols.size() << "\n"
+           << " - Num globals: " << symbols.globalSymbols.size() << "\n"
+           << " - Num memories: " << symbols.memSymbols.size() << "\n"
+           << " - Num tables: " << symbols.tableSymbols.size();
   }
 
   ModuleOp getModule() {
