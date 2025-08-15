@@ -138,12 +138,12 @@ lldb_private::GetStoppedExecutionContext(
     const ExecutionContextRef *exe_ctx_ref_ptr) {
   if (!exe_ctx_ref_ptr)
     return llvm::createStringError(
-        "ExecutionContext created with an empty ExecutionContextRef");
+        "StoppedExecutionContext created with an empty ExecutionContextRef");
 
   lldb::TargetSP target_sp = exe_ctx_ref_ptr->GetTargetSP();
   if (!target_sp)
     return llvm::createStringError(
-        "ExecutionContext created with a null target");
+        "StoppedExecutionContext created with a null target");
 
   auto api_lock =
       std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
@@ -151,12 +151,12 @@ lldb_private::GetStoppedExecutionContext(
   auto process_sp = exe_ctx_ref_ptr->GetProcessSP();
   if (!process_sp)
     return llvm::createStringError(
-        "ExecutionContext created with a null process");
+        "StoppedExecutionContext created with a null process");
 
   ProcessRunLock::ProcessRunLocker stop_locker;
   if (!stop_locker.TryLock(&process_sp->GetRunLock()))
     return llvm::createStringError(
-        "attempted to create an ExecutionContext with a running process");
+        "attempted to create a StoppedExecutionContext with a running process");
 
   auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
   auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
@@ -164,7 +164,7 @@ lldb_private::GetStoppedExecutionContext(
                                  std::move(api_lock), std::move(stop_locker));
 }
 
-std::unique_lock<std::recursive_mutex> StoppedExecutionContext::Destroy() {
+std::unique_lock<std::recursive_mutex> StoppedExecutionContext::AllowResume() {
   Clear();
   m_stop_locker = ProcessRunLock::ProcessRunLocker();
   return std::move(m_api_lock);
