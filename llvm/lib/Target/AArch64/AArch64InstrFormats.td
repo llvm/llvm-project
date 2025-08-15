@@ -36,7 +36,12 @@ def DestructiveBinary             : DestructiveInstTypeEnum<5>;
 def DestructiveBinaryComm         : DestructiveInstTypeEnum<6>;
 def DestructiveBinaryCommWithRev  : DestructiveInstTypeEnum<7>;
 def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
-def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<9>;
+
+// 3 inputs unpredicated (reg1, reg2, imm).
+// Can be MOVPRFX'd iff reg1 == reg2.
+def Destructive2xRegImmUnpred     : DestructiveInstTypeEnum<9>;
+
+def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<10>;
 
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
