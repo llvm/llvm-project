@@ -99,59 +99,61 @@ Error COFFWriter::finalizeCFGuardContents() {
   if (Obj.IsPE)
     return Error::success();
 
+  auto IsSymIdxSection = [](StringRef Name) {
+    return Name == ".gljmp$y" || Name == ".giats$y" || Name == ".gfids$y";
+  };
+
   DenseMap<size_t, size_t> SymIdMap;
+  SmallDenseMap<ssize_t, coff_aux_section_definition *, 4> SecIdMap;
   bool NeedUpdate = false;
-  for (const auto &Sym : Obj.getSymbols()) {
+  for (auto &Sym : Obj.getMutableSymbols()) {
     NeedUpdate |= Sym.OriginalRawIndex == Sym.RawIndex;
     SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
+
+    // We collect only definition symbols of the sections to update checksum
+    if (Sym.Sym.NumberOfAuxSymbols == 1 &&
+        Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC && Sym.Sym.Value == 0 &&
+        IsSymIdxSection(Sym.Name))
+      SecIdMap[Sym.TargetSectionId] =
+          reinterpret_cast<coff_aux_section_definition *>(
+              Sym.AuxData[0].Opaque);
   }
 
   if (!NeedUpdate)
     return Error::success();
 
-  for (auto &Sym : Obj.getMutableSymbols()) {
-    if (Sym.Name != ".gljmp$y" && Sym.Name != ".giats$y" &&
-        Sym.Name != ".gfids$y")
+  for (auto &Sec : Obj.getMutableSections()) {
+    if (!IsSymIdxSection(Sec.Name))
       continue;
 
-    auto Sec = find_if(Obj.getMutableSections(),
-                       [&Sym](Section &S) { return S.Name == Sym.Name; });
-
-    if (Sec == Obj.getMutableSections().end() ||
-        Sec->UniqueId != Sym.TargetSectionId)
-      return createStringError(object_error::invalid_symbol_index,
-                               "symbol '%s' is missing its section",
-                               Sym.Name.str().c_str());
-
-    if (Sym.Sym.NumberOfAuxSymbols != 1 ||
-        Sym.Sym.StorageClass != IMAGE_SYM_CLASS_STATIC)
-      return createStringError(object_error::invalid_symbol_index,
-                               "symbol '%s' has unexpected section format",
-                               Sym.Name.str().c_str());
-
-    ArrayRef<uint8_t> RawIds = Sec->getContents();
+    ArrayRef<uint8_t> RawIds = Sec.getContents();
     // Nothing to do and also CheckSum will be -1 instead of 0 if we recalculate
     // it on empty input.
     if (RawIds.size() == 0)
       continue;
+
+    if (!SecIdMap.contains(Sec.UniqueId))
+      return createStringError(object_error::invalid_symbol_index,
+                               "section '%s' does not have the corresponding "
+                               "symbol or the symbol has unexpected format",
+                               Sec.Name.str().c_str());
 
     // Create updated content
     ArrayRef<support::ulittle32_t> Ids(
         reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
         RawIds.size() / 4);
     std::vector<support::ulittle32_t> NewIds;
-    for (auto Id : Ids)
+    for (auto Id : Ids) {
       NewIds.push_back(support::ulittle32_t(SymIdMap[Id]));
+    }
     ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
                                 RawIds.size());
     // Update check sum
     JamCRC JC(/*Init=*/0);
     JC.update(NewRawIds);
-    coff_aux_section_definition *SD =
-        reinterpret_cast<coff_aux_section_definition *>(Sym.AuxData[0].Opaque);
-    SD->CheckSum = JC.getCRC();
+    SecIdMap[Sec.UniqueId]->CheckSum = JC.getCRC();
     // Set new content
-    Sec->setOwnedContents(NewRawIds.vec());
+    Sec.setOwnedContents(NewRawIds.vec());
   }
   return Error::success();
 }
