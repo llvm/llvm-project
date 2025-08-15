@@ -199,7 +199,13 @@ llvm.func @foo() {
 define internal void @binary_load() section ".text.startup" {
 entry:
   %0 = call ptr @mgpuModuleLoad(ptr @binary_bin_cst)
-  store ptr %0, ptr @module
+  store ptr %0, ptr @binary_module
+  ...
+}
+define internal void @binary_unload() section ".text.startup" {
+entry:
+  %0 = load ptr, ptr @binary_module, align 8
+  call void @mgpuModuleUnload(ptr %0)
   ...
 }
 ...
