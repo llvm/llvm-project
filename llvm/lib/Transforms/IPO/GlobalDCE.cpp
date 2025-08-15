@@ -21,6 +21,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
@@ -29,6 +31,35 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "globaldce"
+
+namespace {
+class GlobalDCELegacyPass : public ModulePass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+  GlobalDCELegacyPass() : ModulePass(ID) {
+    initializeGlobalDCELegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+    // Note: GlobalDCEPass does not use any analyses, so we're safe to call the
+    // new-pm style pass with a default-initialized analysis manager here
+    ModuleAnalysisManager MAM;
+    auto PA = Impl.run(M, MAM);
+    return !PA.areAllPreserved();
+  }
+
+private:
+  GlobalDCEPass Impl;
+};
+} // namespace
+
+char GlobalDCELegacyPass::ID = 0;
+INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce", "Dead Global Elimination",
+                false, false)
+
+// Public interface to the GlobalDCEPass.
+ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCELegacyPass(); }
 
 static cl::opt<bool>
     ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
