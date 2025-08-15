@@ -2657,7 +2657,7 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
 
       if (const auto *ArrTy = getASTContext().getAsConstantArrayType(VarTy)) {
         // Arrays need to have each individual element initialized as there
-        // isn't a normal 'equals' feature to C/C++. This section sets these up
+        // isn't a normal 'equals' feature in C/C++. This section sets these up
         // as an init list after 'initializing' each individual element.
         llvm::SmallVector<Expr *> Args;
 
@@ -2669,7 +2669,7 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
             clang::VK_LValue, FPOptionsOverride{});
 
         for (std::size_t I = 0; I < ArrTy->getLimitedSize(); ++I) {
-          // Each element needs to be some sort of copy initialization from a
+          // Each element needs to be some sort of copy initialization from an
           // array-index of the original temporary (referenced via a
           // DeclRefExpr).
 
