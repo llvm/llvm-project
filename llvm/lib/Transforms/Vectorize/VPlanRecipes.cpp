@@ -3861,6 +3861,9 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
   Value *EVL = State.get(getEVL(), VPLane(0));
+  Value *InterleaveEVL = State.Builder.CreateMul(
+      EVL, ConstantInt::get(EVL->getType(), InterleaveFactor), "interleave.evl",
+      /* NUW= */ true, /* NSW= */ true);
   LLVMContext &Ctx = State.Builder.getContext();
 
   auto CreateGroupMask = [&BlockInMask, &State,
@@ -3880,9 +3883,9 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   const DataLayout &DL = Instr->getDataLayout();
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
-    CallInst *NewLoad = State.Builder.CreateIntrinsic(VecTy, Intrinsic::vp_load,
-                                                      {ResAddr, GroupMask, EVL},
-                                                      nullptr, "wide.vp.load");
+    CallInst *NewLoad = State.Builder.CreateIntrinsic(
+        VecTy, Intrinsic::vp_load, {ResAddr, GroupMask, InterleaveEVL}, nullptr,
+        "wide.vp.load");
     NewLoad->addParamAttr(0,
                           Attribute::getWithAlignment(Ctx, Group->getAlign()));
 
@@ -3944,9 +3947,9 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
 
   // Interleave all the smaller vectors into one wider vector.
   Value *IVec = interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
-  CallInst *NewStore = State.Builder.CreateIntrinsic(
-      Type::getVoidTy(EVL->getContext()), Intrinsic::vp_store,
-      {IVec, ResAddr, GroupMask, EVL});
+  CallInst *NewStore =
+      State.Builder.CreateIntrinsic(Type::getVoidTy(Ctx), Intrinsic::vp_store,
+                                    {IVec, ResAddr, GroupMask, InterleaveEVL});
   NewStore->addParamAttr(1,
                          Attribute::getWithAlignment(Ctx, Group->getAlign()));
 
