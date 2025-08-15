@@ -981,9 +981,12 @@ public:
   const Use &getRawDestUse() const { return getArgOperandUse(ARG_DEST); }
   Use &getRawDestUse() { return getArgOperandUse(ARG_DEST); }
 
+  /// Returns the length.  For everything except memset.pattern, this is
+  /// in bytes; for memset.pattern it is in elements.
   Value *getLength() const {
     return const_cast<Value *>(getArgOperand(ARG_LENGTH));
   }
+
   const Use &getLengthUse() const { return getArgOperandUse(ARG_LENGTH); }
   Use &getLengthUse() { return getArgOperandUse(ARG_LENGTH); }
 
@@ -1117,6 +1120,10 @@ public:
     }
   }
 
+  /// Return the element size in bytes.  For plain memset/memmove/memcpy
+  /// this will always be 1.
+  TypeSize getElementSizeInBytes() const;
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     switch (I->getIntrinsicID()) {
@@ -1212,10 +1219,10 @@ public:
   }
 };
 
-// The common base class for any memset/memmove/memcpy intrinsics;
-// whether they be atomic or non-atomic.
-// i.e. llvm.element.unordered.atomic.memset/memcpy/memmove
-//  and llvm.memset/memcpy/memmove
+// The common base class for any memset(.pattern)/memmove/memcpy
+// intrinsics; whether they be atomic or non-atomic.
+// i.e. llvm.element.unordered.atomic.memset/memcpy/memmove,
+//  llvm.memset/memcpy/memmove, and memset.pattern
 class AnyMemIntrinsic : public MemIntrinsicBase<AnyMemIntrinsic> {
 private:
   enum { ARG_ELEMENTSIZE = 3 };
@@ -1246,6 +1253,7 @@ public:
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::experimental_memset_pattern:
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
@@ -1263,10 +1271,7 @@ public:
     return getArgOperand(ARG_ELEMENTSIZE);
   }
 
-  uint32_t getElementSizeInBytes() const {
-    assert(isAtomic());
-    return cast<ConstantInt>(getRawElementSizeInBytes())->getZExtValue();
-  }
+  TypeSize getElementSizeInBytes() const;
 };
 
 /// This class represents any memset intrinsic

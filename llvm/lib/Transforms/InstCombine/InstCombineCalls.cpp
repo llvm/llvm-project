@@ -1752,7 +1752,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
-  if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
+  // TODO: This code was written before memset.pattern was added to
+  // AnyMemIntrinsic, consider how to update it
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(II);
+      MI && !isa<MemSetPatternInst>(MI)) {
     if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(MI->getLength())) {
       // memmove/cpy/set of zero bytes is a noop.
       if (NumBytes->isNullValue())
