@@ -257,10 +257,11 @@ private:
   DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> &&OwnedSolver,
                           Options Opts);
 
-  /// Computes the transitive closure of reachable atoms from `Tokens`, through
-  /// the dependency graph.
+  /// Computes the transitive closure of dependencies of (flow-condition)
+  /// `Tokens`. That is, the set of flow-condition tokens reachable from
+  /// `Tokens` in the dependency graph.
   llvm::DenseSet<Atom>
-  getTransitiveClosure(const llvm::DenseSet<Atom> &Tokens) const;
+  collectDependencies(const llvm::DenseSet<Atom> &Tokens) const;
 
   // Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);
