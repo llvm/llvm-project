@@ -67,8 +67,10 @@ jobs:
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
 
     steps:
-    - run: |
-        New-Item -Path "c:\actions-runner\llvm-project\llvm-project\build\tools\clang\tools\extra\clang-tidy\misc\ConfusableTable\CMakeFiles\clang-tidy-confusable-chars-gen.dir\C_\actions-runner\llvm-project\llvm-project\llvm" -ItemType Directory
+    - name: Check long paths
+      run: |
+        Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled'
+        New-Item -Path "C:\actions-runner\llvm-project\llvm-project\build\tools\clang\stage2-instrumented-bins\tools\clang\stage2-bins\tools\mlir\tools\mlir-linalg-ods-gen\CMakeFiles\mlir-linalg-ods-yaml-gen.dir\C_\actions-runner\llvm-project\llvm-project\llvm\resources\windows_version_resource.rc.res" -ItemType File -Force
     # It's good practice to use setup-python, but this is also required on macos-14
     # due to https://github.com/actions/runner-images/issues/10385
     - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f
@@ -92,9 +94,6 @@ jobs:
       run: |
         ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
-    - name: Check long paths
-      run: |
-        Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled'
     - name: Collect Variables
       id: vars
       shell: bash
@@ -203,6 +202,7 @@ jobs:
     - name: Check long paths
       run: |
         Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled'
+        New-Item -Path "C:\actions-runner\llvm-project\llvm-project\build\tools\clang\stage2-instrumented-bins\tools\clang\stage2-bins\tools\mlir\tools\mlir-linalg-ods-gen\CMakeFiles\mlir-linalg-ods-yaml-gen.dir\C_\actions-runner\llvm-project\llvm-project\llvm\resources\windows_version_resource.rc.res" -ItemType File -Force
     - name: Checkout Actions
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
