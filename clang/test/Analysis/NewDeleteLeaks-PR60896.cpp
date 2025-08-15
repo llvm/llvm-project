@@ -7,9 +7,9 @@
 #include "Inputs/system-header-simulator-for-malloc.h"
 
 //===----------------------------------------------------------------------===//
-// Check that we report leaks for malloc when passing smart pointers
+// unique_ptr test cases 
 //===----------------------------------------------------------------------===//
-namespace malloc_with_smart_ptr {
+namespace unique_ptr_tests {
 
 // Custom unique_ptr implementation for testing
 template <typename T>
@@ -26,167 +26,64 @@ unique_ptr<T> make_unique(Args&&... args) {
   return unique_ptr<T>(new T(args...));
 }
 
-void add(unique_ptr<int> ptr) {
+// Test 1: Check that we report leaks for malloc when passing smart pointers
+void add_unique_ptr(unique_ptr<int> ptr) {
   // The unique_ptr destructor will be called when ptr goes out of scope
 }
 
-int bar(void) {
+void test_malloc_with_smart_ptr() {
   void *ptr = malloc(4); // expected-note {{Memory is allocated}}
 
-  add(make_unique<int>(1));
+  add_unique_ptr(make_unique<int>(1));
   (void)ptr;
-  return 0; // expected-warning {{Potential leak of memory pointed to by 'ptr'}} expected-note {{Potential leak of memory pointed to by 'ptr'}}
+  // expected-warning@+1 {{Potential leak of memory pointed to by 'ptr'}} expected-note@+1 {{Potential leak of memory pointed to by 'ptr'}}
 }
 
-} // namespace malloc_with_smart_ptr
-
-//===----------------------------------------------------------------------===//
-// Check that we don't report leaks for unique_ptr in temporary objects
-//===----------------------------------------------------------------------===//
-namespace unique_ptr_temporary_PR60896 {
-
-// Custom unique_ptr implementation for testing
-template <typename T>
-struct unique_ptr {
-  T* ptr;
-  unique_ptr(T* p) : ptr(p) {}
-  ~unique_ptr() { delete ptr; }
-  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
-  T* get() const { return ptr; }
-};
-
-template <typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args) {
-  return unique_ptr<T>(new T(args...));
-}
-
-// The test case that demonstrates the issue
+// Test 2: Check that we don't report leaks for unique_ptr in temporary objects
 struct Foo { 
   unique_ptr<int> i;
 };
 
-void add(Foo foo) {
+void add_foo(Foo foo) {
   // The unique_ptr destructor will be called when foo goes out of scope
 }
 
-void test() {
+void test_temporary_object() {
   // No warning should be emitted for this - the memory is managed by unique_ptr 
   // in the temporary Foo object, which will properly clean up the memory
-  add({make_unique<int>(1)});
+  add_foo({make_unique<int>(1)});
 }
 
-} // namespace unique_ptr_temporary_PR60896
-
-//===----------------------------------------------------------------------===//
-// Check that we don't report leaks for shared_ptr in temporary objects
-//===----------------------------------------------------------------------===//
-namespace shared_ptr_temporary_PR60896 {
-
-// Custom shared_ptr implementation for testing
-template <typename T>
-struct shared_ptr {
-  T* ptr;
-  shared_ptr(T* p) : ptr(p) {}
-  ~shared_ptr() { delete ptr; }
-  shared_ptr(shared_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
-  T* get() const { return ptr; }
-};
-
-template <typename T, typename... Args>
-shared_ptr<T> make_shared(Args&&... args) {
-  return shared_ptr<T>(new T(args...));
-}
-
-struct Foo { 
-  shared_ptr<int> i;
-};
-
-void add(Foo foo) {
-  // The shared_ptr destructor will be called when foo goes out of scope
-}
-
-void test() {
-  // No warning should be emitted for this - the memory is managed by shared_ptr 
-  // in the temporary Foo object, which will properly clean up the memory
-  add({make_shared<int>(1)});
-}
-
-} // namespace shared_ptr_temporary_PR60896
-
-//===----------------------------------------------------------------------===//
-// Check that we don't report leaks for smart pointers in base class fields
-//===----------------------------------------------------------------------===//
-namespace base_class_smart_ptr_PR60896 {
-
-// Custom unique_ptr implementation for testing
-template <typename T>
-struct unique_ptr {
-  T* ptr;
-  unique_ptr(T* p) : ptr(p) {}
-  ~unique_ptr() { delete ptr; }
-  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
-  T* get() const { return ptr; }
-};
-
-template <typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args) {
-  return unique_ptr<T>(new T(args...));
-}
-
-// Base class with smart pointer field
+// Test 3: Check that we don't report leaks for smart pointers in base class fields
 struct Base {
   unique_ptr<int> base_ptr;
   Base() : base_ptr(nullptr) {}
   Base(unique_ptr<int>&& ptr) : base_ptr(static_cast<unique_ptr<int>&&>(ptr)) {}
 };
 
-// Derived class that inherits the smart pointer field
 struct Derived : public Base {
   int derived_field;
   Derived() : Base(), derived_field(0) {}
   Derived(unique_ptr<int>&& ptr, int field) : Base(static_cast<unique_ptr<int>&&>(ptr)), derived_field(field) {}
 };
 
-void add(Derived derived) {
+void add_derived(Derived derived) {
   // The unique_ptr destructor will be called when derived goes out of scope
   // This should include the base_ptr field from the base class
 }
 
-void test() {
+void test_base_class_smart_ptr() {
   // No warning should be emitted for this - the memory is managed by unique_ptr 
   // in the base class field of the temporary Derived object
-  add(Derived(make_unique<int>(1), 42));
+  add_derived(Derived(make_unique<int>(1), 42));
 }
 
-} // namespace base_class_smart_ptr_PR60896
-
-//===----------------------------------------------------------------------===//
-// Check that we don't report leaks for multiple owning arguments
-//===----------------------------------------------------------------------===//
-namespace multiple_owning_args_PR60896 {
-
-// Custom unique_ptr implementation for testing
-template <typename T>
-struct unique_ptr {
-  T* ptr;
-  unique_ptr(T* p) : ptr(p) {}
-  ~unique_ptr() { delete ptr; }
-  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
-  T* get() const { return ptr; }
-};
-
-template <typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args) {
-  return unique_ptr<T>(new T(args...));
-}
-
-// Struct with single smart pointer field
+// Test 4: Check that we don't report leaks for multiple owning arguments
 struct SinglePtr {
   unique_ptr<int> ptr;
   SinglePtr(unique_ptr<int>&& p) : ptr(static_cast<unique_ptr<int>&&>(p)) {}
 };
 
-// Struct with multiple smart pointer fields
 struct MultiPtr {
   unique_ptr<int> ptr1;
   unique_ptr<int> ptr2;
@@ -203,7 +100,7 @@ void addMultiple(SinglePtr single, MultiPtr multi) {
   // This tests handling of multiple by-value arguments with smart pointer fields
 }
 
-void test() {
+void test_multiple_owning_args() {
   // No warning should be emitted - all memory is properly managed by unique_ptr
   // in the temporary objects, which will properly clean up the memory
   addMultiple(
@@ -212,28 +109,7 @@ void test() {
   );
 }
 
-} // namespace multiple_owning_args_PR60896
-
-//===----------------------------------------------------------------------===//
-// Check that we DO report leaks for raw pointers in mixed ownership scenarios
-//===----------------------------------------------------------------------===//
-namespace mixed_ownership_PR60896 {
-
-// Custom unique_ptr implementation for testing
-template <typename T>
-struct unique_ptr {
-  T* ptr;
-  unique_ptr(T* p) : ptr(p) {}
-  ~unique_ptr() { delete ptr; }
-  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
-  T* get() const { return ptr; }
-};
-
-template <typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args) {
-  return unique_ptr<T>(new T(args...));
-}
-
+// Test 5: Check that we DO report leaks for raw pointers in mixed ownership scenarios
 struct MixedOwnership {
   unique_ptr<int> smart_ptr;  // Should NOT leak (smart pointer managed)
   int *raw_ptr;               // Should leak (raw pointer)
@@ -251,23 +127,7 @@ void test_mixed_ownership() {
   consume(MixedOwnership()); // expected-note {{Calling default constructor for 'MixedOwnership'}} expected-note {{Returning from default constructor for 'MixedOwnership'}}
 } // expected-warning {{Potential memory leak}} expected-note {{Potential memory leak}}
 
-} // namespace mixed_ownership_PR60896
-
-//===----------------------------------------------------------------------===//
-// Check that we handle direct smart pointer constructor calls correctly
-//===----------------------------------------------------------------------===//
-namespace direct_constructor_PR60896 {
-
-// Custom unique_ptr implementation for testing
-template <typename T>
-struct unique_ptr {
-  T* ptr;
-  unique_ptr(T* p) : ptr(p) {}
-  ~unique_ptr() { delete ptr; }
-  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
-  T* get() const { return ptr; }
-};
-
+// Test 6: Check that we handle direct smart pointer constructor calls correctly
 void test_direct_constructor() {
   // Direct constructor call - should not leak
   int* raw_ptr = new int(42);
@@ -284,4 +144,41 @@ void test_mixed_direct_constructor() {
   int x = *raw2; // expected-warning {{Potential leak of memory pointed to by 'raw2'}} expected-note {{Potential leak of memory pointed to by 'raw2'}}
 }
 
-} // namespace direct_constructor_PR60896
+} // namespace unique_ptr_tests
+
+//===----------------------------------------------------------------------===//
+// shared_ptr test cases
+//===----------------------------------------------------------------------===//
+namespace shared_ptr_tests {
+
+// Custom shared_ptr implementation for testing
+template <typename T>
+struct shared_ptr {
+  T* ptr;
+  shared_ptr(T* p) : ptr(p) {}
+  ~shared_ptr() { delete ptr; }
+  shared_ptr(shared_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
+  T* get() const { return ptr; }
+};
+
+template <typename T, typename... Args>
+shared_ptr<T> make_shared(Args&&... args) {
+  return shared_ptr<T>(new T(args...));
+}
+
+// Test 1: Check that we don't report leaks for shared_ptr in temporary objects
+struct Foo { 
+  shared_ptr<int> i;
+};
+
+void add_foo(Foo foo) {
+  // The shared_ptr destructor will be called when foo goes out of scope
+}
+
+void test_temporary_object() {
+  // No warning should be emitted for this - the memory is managed by shared_ptr 
+  // in the temporary Foo object, which will properly clean up the memory
+  add_foo({make_shared<int>(1)});
+}
+
+} // namespace shared_ptr_tests
