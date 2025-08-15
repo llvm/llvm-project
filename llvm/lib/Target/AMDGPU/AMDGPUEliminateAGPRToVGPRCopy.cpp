@@ -129,10 +129,11 @@ bool AMDGPUEliminateAGPRToVGPRCopyImpl::run(MachineFunction &MF) const {
               if (SIInstrInfo::isMFMA(UseMI)) {
                 if (&MO != TII.getNamedOperand(UseMI, AMDGPU::OpName::src0) &&
                     &MO != TII.getNamedOperand(UseMI, AMDGPU::OpName::src1)) {
-                  LLVM_DEBUG(dbgs() << "  Incompatible MFMA operand: " << UseMI);
+                  LLVM_DEBUG(dbgs()
+                             << "  Incompatible MFMA operand: " << UseMI);
                   return false;
                 }
-              } else if (!UseMI.isFullCopy()){
+              } else if (!UseMI.isFullCopy()) {
                 LLVM_DEBUG(dbgs() << "  Incompatible user: " << UseMI);
                 return false;
               }
