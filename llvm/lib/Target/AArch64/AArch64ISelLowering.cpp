@@ -25486,25 +25486,31 @@ static SDValue performCSELCombine(SDNode *N,
     }
   }
 
-  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
-  // use overflow flags, to avoid the comparison with zero. In case of success,
-  // this also replaces the original SUB(x,y) with the newly created SUBS(x,y).
-  // NOTE: Perhaps in the future use performFlagSettingCombine to replace SUB
-  // nodes with their SUBS equivalent as is already done for other flag-setting
+  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) or // CSEL a,
+  // b, cc, SUBS(ADD(x,y), 0) -> CSEL a, b, cc, ADDS(x,y) if cc doesn't use
+  // overflow flags, to avoid the comparison with zero. In case of success, this
+  // also replaces the original SUB(x,y) with the newly created SUBS(x,y). NOTE:
+  // Perhaps in the future use performFlagSettingCombine to replace SUB nodes
+  // with their SUBS equivalent as is already done for other flag-setting
   // operators, in which case doing the replacement here becomes redundant.
   if (Cond.getOpcode() == AArch64ISD::SUBS && Cond->hasNUsesOfValue(1, 1) &&
       isNullConstant(Cond.getOperand(1))) {
-    SDValue Sub = Cond.getOperand(0);
+    SDValue SubOrAdd = Cond.getOperand(0);
     AArch64CC::CondCode CC =
         static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
-    if (Sub.getOpcode() == ISD::SUB &&
-        (CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
-         CC == AArch64CC::PL)) {
+    if ((SubOrAdd.getOpcode() == ISD::SUB ||
+         SubOrAdd.getOpcode() == ISD::ADD) &&
+        ((CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
+          CC == AArch64CC::PL))) {
       SDLoc DL(N);
-      SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
-                                 Sub.getOperand(0), Sub.getOperand(1));
-      DCI.CombineTo(Sub.getNode(), Subs);
-      DCI.CombineTo(Cond.getNode(), Subs, Subs.getValue(1));
+
+      SDValue Result =
+          DAG.getNode((SubOrAdd.getOpcode() == ISD::SUB ? AArch64ISD::SUBS
+                                                        : AArch64ISD::ADDS),
+                      DL, Cond->getVTList(), SubOrAdd.getOperand(0),
+                      SubOrAdd.getOperand(1));
+      DCI.CombineTo(SubOrAdd.getNode(), Result);
+      DCI.CombineTo(Cond.getNode(), Result, Result.getValue(1));
       return SDValue(N, 0);
     }
   }
