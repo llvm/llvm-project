@@ -896,6 +896,20 @@ def Wsystem_headers_in_module_EQ : Joined<["-"], "Wsystem-headers-in-module=">,
 def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>,
   Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
+
+def Wgcc_compat : Flag<["-"], "Wgcc-compat">, Group<W_Group>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable warnings for GCC Incompatible">;
+def Wno_gcc_compat : Flag<["-"], "Wno-gcc-compat">, Group<W_Group>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable warnings for GCC Incompatible">;
+def Woverriding_complex_range : Flag<["-"], "Woverriding-complex-range">, Group<W_Group>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable warnings for overriding complex range">;
+def Wno_overriding_complex_range : Flag<["-"], "Wno-overriding-complex-range">, Group<W_Group>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable warnings for overriding complex range">;
+
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option]>;
 defm invalid_constexpr : BoolWOption<"invalid-constexpr",
