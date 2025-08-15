@@ -11,7 +11,10 @@
 // ADDITIONAL_COMPILE_FLAGS: -O0 -g
 
 #include <cassert>
+#include <cstddef>
 #include <cstdlib>
+#include <iostream>
+#include <memory>
 #include <stacktrace>
 
 /*
@@ -21,33 +24,46 @@
  * (This won't work properly with sanitizers, hence the `UNSUPPORTED` above.)
  */
 
-unsigned new_count;
-unsigned del_count;
-unsigned custom_alloc;
-unsigned custom_dealloc;
+unsigned new_count      = 0;
+unsigned del_count      = 0;
+unsigned custom_alloc   = 0;
+unsigned custom_dealloc = 0;
 
-void* operator new(size_t size) {
+void* operator new(size_t sz) {
   ++new_count;
-  return malloc(size);
+  auto* ret = malloc(sz);
+  std::cerr << "op new: " << new_count << ": new:   " << ret << " size " << sz << '\n';
+  return ret;
 }
-void* operator new[](size_t size) {
+
+void* operator new[](size_t sz) {
   ++new_count;
-  return malloc(size);
+  auto* ret = malloc(sz);
+  std::cerr << "op new: " << new_count << ": new[]: " << ret << " size " << sz << '\n';
+  return ret;
 }
+
 void operator delete(void* ptr) noexcept {
   ++del_count;
+  std::cerr << "op del: " << del_count << ": del:   " << ptr << '\n';
   free(ptr);
 }
-void operator delete(void* ptr, size_t) noexcept {
+
+void operator delete(void* ptr, size_t sz) noexcept {
   ++del_count;
+  std::cerr << "op del: " << del_count << ": del:   " << ptr << " size " << sz << '\n';
   free(ptr);
 }
+
 void operator delete[](void* ptr) noexcept {
   ++del_count;
+  std::cerr << "op del: " << del_count << ": del[]: " << ptr << '\n';
   free(ptr);
 }
-void operator delete[](void* ptr, size_t) noexcept {
+
+void operator delete[](void* ptr, size_t sz) noexcept {
   ++del_count;
+  std::cerr << "op del: " << del_count << ": del[]: " << ptr << " size " << sz << '\n';
   free(ptr);
 }
 
@@ -63,34 +79,27 @@ struct test_alloc {
     using other = test_alloc<U>;
   };
 
-  std::allocator<T> wrapped_{};
-
   test_alloc() = default;
 
-  template <typename U>
-  test_alloc(test_alloc<U> const& rhs) : wrapped_(rhs.wrapped_) {}
+  template <typename U = T>
+  test_alloc(const test_alloc<U>&) {}
 
   bool operator==(auto const& rhs) const { return &rhs == this; }
   bool operator==(test_alloc const&) const { return true; }
 
   T* allocate(size_t n) {
     ++custom_alloc;
-    return wrapped_.allocate(n);
+    return new T[n];
   }
 
-  auto allocate_at_least(size_t n) {
-    ++custom_alloc;
-    return wrapped_.allocate_at_least(n);
-  }
+  std::allocation_result<T*> allocate_at_least(size_t n) { return {.ptr = allocate(n), .count = n}; }
 
-  void deallocate(T* ptr, size_t n) {
-    ++custom_dealloc;
-    wrapped_.deallocate(ptr, n);
-  }
+  void deallocate(T*, size_t) { ++custom_dealloc; }
 };
 
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
+  std::cerr << "initial call to `current`\n";
   (void)std::stacktrace::current();
 
   // Clear these counters in case anything was created/deleted prior to `main`,
@@ -100,9 +109,13 @@ int main(int, char**) {
 
   {
     using A = test_alloc<std::stacktrace_entry>;
-    auto st = std::basic_stacktrace<A>::current();
-    assert(custom_alloc > 0); // Ensure allocator was called at some point
-  } // Exit this scope to destroy stacktrace (as well as allocator)
+    std::cerr << "calling `current` with allocator\n";
+    A alloc;
+    auto st = std::basic_stacktrace<A>::current(alloc);
+    // Ensure allocator was called at some point
+    assert(custom_alloc > 0);
+    // Exit this scope to destroy stacktrace and allocator
+  }
 
   assert(custom_alloc == new_count);      // All "new" calls should have been through allocator
   assert(custom_alloc == custom_dealloc); // and all allocations should be deallocated

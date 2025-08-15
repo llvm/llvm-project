@@ -109,7 +109,7 @@ struct sym_init_scope {
 }  // namespace
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void
-base::current(arena&, size_t skip, size_t max_depth) {
+base::current_impl(size_t skip, size_t max_depth) {
   if (!max_depth) [[unlikely]] {
     return;
   }
@@ -225,11 +225,11 @@ base::current(arena&, size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE64 line;
     if ((*dbghelp.SymGetSymFromAddr64)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.__desc_ = sym->Name;
+      entry.assign_desc(base_.__strings_.make_str(sym->Name));
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
     if ((*dbghelp.SymGetLineFromAddr64)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.__file_ = line.FileName;
+      entry.assign_file(base_.__strings_.make_str(line.FileName));
       entry.__line_ = line.LineNumber;
     }
 #else
@@ -241,11 +241,11 @@ base::current(arena&, size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE line;
     if ((*dbghelp.SymGetSymFromAddr)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.__desc_ = sym->Name;
+      entry.assign_desc(base_.__strings_.make_str(sym->Name));
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
     if ((*dbghelp.SymGetLineFromAddr)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.__file_ = line.FileName;
+      entry.assign_file(base_.__strings_.make_str(line.FileName));
       entry.__line_ = line.LineNumber;
     }
 #endif

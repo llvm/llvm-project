@@ -741,9 +741,8 @@ set(files
   __ranges/zip_view.h
   __split_buffer
   __stacktrace/basic_stacktrace.h
-  __stacktrace/images.h
-  __stacktrace/memory.h
   __stacktrace/stacktrace_entry.h
+  __stacktrace/string_manager.h
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h

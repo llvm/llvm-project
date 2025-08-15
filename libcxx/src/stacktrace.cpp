@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "stacktrace/images.h"
 #include <__config>
 #include <__stacktrace/basic_stacktrace.h>
-#include <__stacktrace/images.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -22,11 +22,11 @@ ostream& entry_base::write_to(ostream& __os) const {
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
   __os << "0x" << std::hex << std::setfill('0') << std::setw(__k_addr_width) << __addr_;
-  if (__desc_.size()) {
-    __os << ": " << __desc_;
+  if (__desc_) {
+    __os << ": " << *__desc_;
   }
-  if (__file_.size()) {
-    __os << ": " << __file_;
+  if (__file_) {
+    __os << ": " << *__file_;
   }
   if (__line_) {
     __os << ":" << std::dec << __line_;

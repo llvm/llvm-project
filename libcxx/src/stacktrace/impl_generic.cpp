@@ -16,15 +16,15 @@
 #  include <__config>
 #  include <__stacktrace/stacktrace_entry.h>
 
+#  include "stacktrace/images.h"
 #  include "stacktrace/tools/tools.h"
 #  include "stacktrace/unwinding.h"
-#  include <__stacktrace/images.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void
-base::current(arena& arena, size_t skip, size_t max_depth) {
+base::current_impl(size_t skip, size_t max_depth) {
   if (!max_depth) [[unlikely]] {
     return;
   }
@@ -72,16 +72,16 @@ base::current(arena& arena, size_t skip, size_t max_depth) {
   }
 
   // (2) Map these addresses to their respective program images, populate `__image_`
-  find_images(arena);
+  find_images();
 
   // (3) Use system loader and/or `dl` to get symbols
-  find_symbols(arena);
+  find_symbols();
 
   // (4C) Use an external tool to get source file/line, as well as any missing symbols
-  find_source_locs(arena);
+  find_source_locs();
 }
 
-void base::find_images(arena& arena) {
+void base::find_images() {
   images images;
   size_t i  = 0;
   auto* it  = entries_begin();
@@ -92,19 +92,19 @@ void base::find_images(arena& arena) {
     if (auto& image = images[i]) {
       entry.__image_ = &image;
       // While we're in this loop, get the executable's path, and tentatively use this for source file.
-      entry.__file_ = image.name_;
+      entry.assign_file(__strings_.make_str(image.name_));
     }
   }
 }
 
-void base::find_symbols(arena& arena) {}
+void base::find_symbols() {}
 
-void base::find_source_locs(arena& arena) {
+void base::find_source_locs() {
 #  if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
-  (void)(false                                                                                         //
-         || (__has_working_executable<atos>() && __run_tool<atos>(*this, arena))                       //
-         || (__has_working_executable<llvm_symbolizer>() && __run_tool<llvm_symbolizer>(*this, arena)) //
-         || (__has_working_executable<addr2line>() && __run_tool<addr2line>(*this, arena)));           //
+  (void)(false                                                                                  //
+         || (__has_working_executable<atos>() && __run_tool<atos>(*this))                       //
+         || (__has_working_executable<llvm_symbolizer>() && __run_tool<llvm_symbolizer>(*this)) //
+         || (__has_working_executable<addr2line>() && __run_tool<addr2line>(*this)));           //
 #  endif
 }
 

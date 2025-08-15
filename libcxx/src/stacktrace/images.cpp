@@ -14,8 +14,7 @@
 
 #if defined(__APPLE__)
 // MacOS-specific: use the `dyld` loader to access info about loaded Mach-O images.
-#  include <__stacktrace/images.h>
-#  include <__stacktrace/memory.h>
+#  include "stacktrace/images.h"
 #  include <algorithm>
 #  include <cstdlib>
 #  include <dlfcn.h>
@@ -24,8 +23,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
-
-// TODO: consider cases where e.g. libraries are loaded/unloaded, and recomputing image list.
 
 images::images() {
   images_[count_++] = {0uz, 0};  // sentinel at low end
@@ -46,16 +43,12 @@ _LIBCPP_END_NAMESPACE_STD
 
 #elif !defined(_WIN32)
 // Non-MacOS and non-Windows, including Linux: assume environment has these headers.
-#  include <__stacktrace/images.h>
-#  include <__stacktrace/memory.h>
-#  include <__stacktrace/stacktrace_entry.h>
+#  include "stacktrace/images.h"
 #  include <algorithm>
 #  include <cstdlib>
 #  include <dlfcn.h>
 #  include <link.h>
 #  include <unistd.h>
-
-// TODO: consider cases where e.g. libraries are loaded/unloaded, and recomputing image list.
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {

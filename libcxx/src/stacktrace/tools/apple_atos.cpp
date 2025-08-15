@@ -11,7 +11,6 @@
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
 #  include <__stacktrace/basic_stacktrace.h>
-#  include <__stacktrace/memory.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <cstddef>
 #  include <cstdlib>
@@ -46,7 +45,8 @@ void atos::parse(entry_base& entry, std::string_view view) const {
   // advance i to:   ^
   size_t i = 0;
   while (i < view.size() && !isspace(view[i])) { ++i; }
-  entry.__desc_ = view.substr(0, i);
+  entry.assign_desc(base_.__strings_.make_str(view.substr(0, i)));
+
   view = lstrip(ldrop(view, i));
 
   // view:       (in t.tmp.exe) (simple.o0.nosplit.pass.cpp:19)
@@ -57,7 +57,7 @@ void atos::parse(entry_base& entry, std::string_view view) const {
   view = drop_suffix(view, ")");  // simple.o0.nosplit.pass.cpp:19
   pos = view.find_last_of(":");   //                           ^here
   if (pos == std::string_view::npos) { return; }
-  entry.__file_ = view.substr(0, pos);
+  entry.assign_file(base_.__strings_.make_str(view.substr(0, pos)));
   auto lineno = view.substr(pos + 1);
   entry.__line_ = lineno.empty() ? 0 : stoi(string(lineno));
 }
@@ -65,13 +65,13 @@ void atos::parse(entry_base& entry, std::string_view view) const {
 template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<atos>;
 template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<atos>();
 
-template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<atos>(base& base, arena& arena) {
-  atos tool{base, arena};
+template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<atos>(base& base) {
+  atos tool{base};
   if (!tool.build_argv()) { return false; }
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  str line;                                   // our read buffer
+  str line = base.__strings_.make_str();               // our read buffer
   auto* entry_iter = base.entries_begin();    // position at first entry
   while (spawner.stream_.good()) {            // loop until we get EOF from tool stdout
     std::getline(spawner.stream_, line);      // consume a line from stdout

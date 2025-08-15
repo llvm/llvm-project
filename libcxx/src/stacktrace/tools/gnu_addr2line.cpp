@@ -11,7 +11,6 @@
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
 #  include <__stacktrace/basic_stacktrace.h>
-#  include <__stacktrace/memory.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <cctype>
 #  include <cerrno>
@@ -24,8 +23,8 @@
 #  include <sys/wait.h>
 #  include <unistd.h>
 
+#  include "stacktrace/images.h"
 #  include "stacktrace/tools/tools.h"
-#  include <__stacktrace/images.h>
 
 // clang-format off
 
@@ -83,7 +82,7 @@ use_available_progs.pass.cpp:84
 void addr2line::parse_sym(entry_base& entry, std::string_view view) const {
   if (!view.starts_with("??")) {
     // XXX should check for "_Z" prefix (mangled symbol) and use cxxabi.h / demangle?
-    entry.__desc_ = view;
+    entry.assign_desc(base_.__strings_.make_str(view));
   }
 }
 
@@ -91,7 +90,7 @@ void addr2line::parse_loc(entry_base& entry, std::string_view view) const {
   if (!view.starts_with("??")) {
     auto colon = view.find_last_of(":");
     if (colon != string_view::npos) {
-      entry.__file_ = view.substr(0, colon);
+      entry.assign_file(base_.__strings_.make_str(view.substr(0, colon)));
       entry.__line_ = atoi(view.data() + colon + 1);
     }
   }
@@ -100,13 +99,13 @@ void addr2line::parse_loc(entry_base& entry, std::string_view view) const {
 template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<addr2line>;
 template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<addr2line>();
 
-template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<addr2line>(base& base, arena& arena) {
-  addr2line tool{base, arena};
+template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<addr2line>(base& base) {
+  addr2line tool{base};
   if (!tool.build_argv()) { return false; }
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  str line                    ;               // our read buffer
+  str line = base.__strings_.make_str();               // our read buffer
   auto* entry_iter = base.entries_begin();    // position at first entry
   while (spawner.stream_.good()) {            // loop until we get EOF from tool stdout
     std::string_view view;
