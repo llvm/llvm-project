@@ -115,6 +115,10 @@ Improvements to clang-tidy
 - Improved documentation of the `-line-filter` command-line flag of
   :program:`clang-tidy` and :program:`run-clang-tidy.py`.
 
+- Improved :program:`clang-tidy` by renaming ``clang-diagnostic-error``
+  diagnostic to ``clang-compiler-error`` to better distinguish :program:`clang`
+  hard compiler errors from diagnostics coming from compiler flags.
+
 New checks
 ^^^^^^^^^^
 

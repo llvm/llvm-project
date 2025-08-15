@@ -3,5 +3,5 @@
 struct A;
 struct B {
   A a;
-// CHECK-MESSAGES: :[[@LINE-1]]:5: error: field has incomplete type 'A' [clang-diagnostic-error]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: error: field has incomplete type 'A' [clang-compiler-error]
 };

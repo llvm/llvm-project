@@ -3,5 +3,5 @@
 int main(){
   int a, b
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: multiple declarations in a single statement reduces readability
-  // CHECK-MESSAGES: [[@LINE-2]]:11: error: expected ';' at end of declaration [clang-diagnostic-error]
+  // CHECK-MESSAGES: [[@LINE-2]]:11: error: expected ';' at end of declaration [clang-compiler-error]
 }

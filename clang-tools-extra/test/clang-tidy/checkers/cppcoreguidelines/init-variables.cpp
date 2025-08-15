@@ -131,7 +131,7 @@ void test_clang_diagnostic_error() {
   // CHECK-FIXES: {{^}}  int a = 0;{{$}}
 
   UnknownType b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: error: unknown type name 'UnknownType' [clang-diagnostic-error]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: error: unknown type name 'UnknownType' [clang-compiler-error]
   // CHECK-FIXES-NOT: {{^}}  UnknownType b = 0;{{$}}
 }
 

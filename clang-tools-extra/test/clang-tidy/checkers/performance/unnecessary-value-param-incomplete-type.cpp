@@ -4,6 +4,6 @@
 // clang-tidy diagnostic about IncompleteType being expensive to copy.
 struct IncompleteType;
 void NegativeForIncompleteType(IncompleteType I) {
-  // CHECK-MESSAGES: [[@LINE-1]]:47: error: variable has incomplete type 'IncompleteType' [clang-diagnostic-error]
+  // CHECK-MESSAGES: [[@LINE-1]]:47: error: variable has incomplete type 'IncompleteType' [clang-compiler-error]
 }
 

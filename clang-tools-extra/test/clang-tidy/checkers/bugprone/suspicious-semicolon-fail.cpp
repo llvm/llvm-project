@@ -18,7 +18,7 @@ void f() {
   // CHECK-WERROR: :[[@LINE-1]]:11: warning: potentially unintended semicolon [bugprone-suspicious-semicolon]
 #if ERROR
   int a
-  // CHECK-ERROR: :[[@LINE-1]]:8: error: expected ';' at end of declaration [clang-diagnostic-error]
+  // CHECK-ERROR: :[[@LINE-1]]:8: error: expected ';' at end of declaration [clang-compiler-error]
 #elif WERROR
   int a;
   // CHECK-WERROR: :[[@LINE-1]]:7: error: unused variable 'a' [clang-diagnostic-unused-variable]
