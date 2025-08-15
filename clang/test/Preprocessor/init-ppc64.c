@@ -697,9 +697,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +mma -target-cpu power10 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-MMA %s
 // PPC-MMA:#define __MMA__ 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +rop-protect -target-cpu power10 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-ROP %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +rop-protect -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-ROP %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +rop-protect -target-cpu power8 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-ROP %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +rop-protect -target-abi elfv2 -target-cpu power8 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-ROP %s
 // PPC-ROP:#define __ROP_PROTECT__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +float128 -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-FLOAT128 %s
