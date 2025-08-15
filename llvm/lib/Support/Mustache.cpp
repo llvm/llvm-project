@@ -166,6 +166,10 @@ private:
   void renderSectionLambdas(const llvm::json::Value &Contexts,
                             llvm::raw_ostream &OS, SectionLambda &L);
 
+  void indentTextNode(std::string &body, size_t Indentation, bool lastChild);
+
+  void indentNodes(ASTNode *Node, bool isPartial);
+
   void renderPartial(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
                      ASTNode *Partial);
 
@@ -681,10 +685,57 @@ void ASTNode::renderChild(const json::Value &Contexts, llvm::raw_ostream &OS) {
     Child->render(Contexts, OS);
 }
 
+void ASTNode::indentTextNode(std::string &body, size_t Indentation,
+                             bool lastChild) {
+  std::string spaces(Indentation, ' ');
+  size_t pos = 0;
+
+  if (lastChild)
+    body.erase(body.find_last_not_of(" \t\r\f\v") + 1); // .rtrim??
+
+  while ((pos = body.find('\n', pos)) != std::string::npos) {
+    if ((!lastChild) || (pos != body.size() - 1)) {
+      body.insert(pos + 1, spaces);
+      pos += 1 + Indentation;
+    } else {
+      break;
+    }
+  }
+}
+
+void ASTNode::indentNodes(ASTNode *Node, bool isPartial) {
+  size_t size = Node->Children.size();
+
+  for (size_t i = 0; i < size; ++i) {
+    ASTNode *child = Node->Children[i].get();
+    switch (child->Ty) {
+    case ASTNode::Text: {
+      indentTextNode(child->Body, Indentation, ((i == size - 1) && isPartial));
+      break;
+    }
+    case ASTNode::Section: {
+      indentNodes(child, false);
+      break;
+    }
+    case ASTNode::Partial: {
+      indentNodes(child, true);
+    }
+    case ASTNode::Root:
+    case ASTNode::Variable:
+    case ASTNode::UnescapeVariable:
+    case ASTNode::InvertSection:
+      break;
+    default:
+      llvm::outs() << "Invalid ASTNode type\n";
+      break;
+    }
+  }
+}
+
 void ASTNode::renderPartial(const json::Value &Contexts, llvm::raw_ostream &OS,
                             ASTNode *Partial) {
-  AddIndentationStringStream IS(OS, Indentation);
-  Partial->render(Contexts, IS);
+  indentNodes(Partial, true);
+  Partial->render(Contexts, OS);
 }
 
 void ASTNode::renderLambdas(const json::Value &Contexts, llvm::raw_ostream &OS,
