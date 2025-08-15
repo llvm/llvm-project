@@ -268,9 +268,13 @@
         "title": "Copy Value"
       },
       {
-        "category": "lldb-dap",
         "command": "lldb-dap.modules.showSymbols",
         "title": "Show Module Symbols"
+      },
+      {
+        "category": "lldb-dap",
+        "command": "lldb-dap.debug.showSymbols",
+        "title": "Show Symbols of a Module"
       }
     ],
     "menus": {
@@ -281,6 +285,10 @@
         },
         {
           "command": "lldb-dap.modules.showSymbols",
+          "when": "false"
+        },
+        {
+          "command": "lldb-dap.debug.showSymbols",
           "when": "debuggersAvailable && debugType == 'lldb-dap'"
         }
       ],
@@ -288,6 +296,10 @@
         {
           "command": "lldb-dap.modules.copyProperty",
           "when": "view == lldb-dap.modules && viewItem == property"
+        },
+        {
+          "command": "lldb-dap.modules.showSymbols",
+          "when": "view == lldb-dap.modules && viewItem == module"
         }
       ]
     },

@@ -14,9 +14,20 @@ export class SymbolsProvider extends DisposableContext {
     super();
 
     this.pushSubscription(vscode.commands.registerCommand(
-      "lldb-dap.modules.showSymbols",
+      "lldb-dap.debug.showSymbols",
       () => {
         this.SelectModuleAndShowSymbols();
+      },
+    ));
+
+    this.pushSubscription(vscode.commands.registerCommand(
+      "lldb-dap.modules.showSymbols",
+      (moduleItem: DebugProtocol.Module) => {
+        const session = vscode.debug.activeDebugSession;
+        if (!session) {
+            return;
+        }
+        this.showSymbolsForModule(session, moduleItem);
       },
     ));
   }
@@ -55,9 +66,13 @@ export class SymbolsProvider extends DisposableContext {
         return;
     }
 
+    this.showSymbolsForModule(session, selectedModule.module);
+  }
+
+  private async showSymbolsForModule(session: vscode.DebugSession, module: DebugProtocol.Module) {
     try {
-      const symbols = await this.getSymbolsForModule(session, selectedModule.module.id.toString());
-      this.showSymbolsForModule(selectedModule.module.name.toString(), symbols);
+      const symbols = await this.getSymbolsForModule(session, module.id.toString());
+      this.showSymbolsInNewTab(module.name.toString(), symbols);
     } catch (error) {
       if (error instanceof Error) {
         vscode.window.showErrorMessage("Failed to retrieve symbols: " + error.message);
@@ -87,7 +102,7 @@ export class SymbolsProvider extends DisposableContext {
     )) || [];
   }
 
-  private async showSymbolsForModule(moduleName: string, symbols: DAPSymbol[]) {
+  private async showSymbolsInNewTab(moduleName: string, symbols: DAPSymbol[]) {
     const panel = vscode.window.createWebviewPanel(
       "lldb-dap.symbols",
       `Symbols for ${moduleName}`,
@@ -108,11 +123,11 @@ export class SymbolsProvider extends DisposableContext {
     const tabulatorJsPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"));
     const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
 
-    panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath, symbols);
+    panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath);
     panel.webview.postMessage({ command: "updateSymbols", symbols: symbols });
   }
 
-  private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbolsTableScriptPath: vscode.Uri, symbols: DAPSymbol[]): string {
+  private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbolsTableScriptPath: vscode.Uri): string {
     return `<!DOCTYPE html>
 <html>
 <head>
