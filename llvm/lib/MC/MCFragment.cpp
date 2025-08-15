@@ -70,6 +70,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << "\n  Fixup @" << F.getOffset() << " Value:";
       F.getValue()->print(OS, nullptr);
       OS << " Kind:" << F.getKind();
+      if (F.isLinkerRelaxable())
+        OS << " LinkerRelaxable";
     }
   };
 
@@ -113,6 +115,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   }
   case MCFragment::FT_Relaxable:  {
     const auto *F = cast<MCRelaxableFragment>(this);
+    if (F->isLinkerRelaxable())
+      OS << " LinkerRelaxable";
     OS << " Size:" << F->getContents().size() << ' ';
     F->getInst().dump_pretty(OS);
     printFixups(F->getFixups());
