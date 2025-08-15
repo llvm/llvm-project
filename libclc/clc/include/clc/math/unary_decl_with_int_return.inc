@@ -6,4 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_INTN FUNCTION(__CLC_GENTYPE x);
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_INTN FUNCTION(__CLC_GENTYPE x);

@@ -118,8 +118,8 @@ frameInfo:
   offsetAdjustment: 0
   maxAlignment:    4
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
@@ -256,8 +256,8 @@ frameInfo:
   stackSize:       8
   offsetAdjustment: 0
   maxAlignment:    4
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
