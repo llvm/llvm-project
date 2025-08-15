@@ -21,12 +21,17 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_STD_VER >= 23
 
+#  include <__assert>
+#  include <__functional/function.h>
 #  include <__fwd/format.h>
 #  include <__fwd/ostream.h>
-#  include <__stacktrace/memory.h>
+#  include <__string/constexpr_c_functions.h>
 #  include <cstddef>
 #  include <cstdint>
+#  include <optional>
 #  include <string>
+
+#  include <__stacktrace/string_manager.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -47,10 +52,13 @@ struct entry_base {
 #  endif
 
   uintptr_t __addr_{};
-  fixed_str<__max_sym_len> __desc_;
-  fixed_str<__max_file_len> __file_;
+  optional<str> __desc_{};
+  optional<str> __file_{};
   uint_least32_t __line_{};
   image* __image_{};
+
+  void assign_desc(str __s) { __desc_ = std::move(__s); }
+  void assign_file(str __s) { __file_ = std::move(__s); }
 
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
@@ -60,6 +68,10 @@ struct entry_base {
 } // namespace __stacktrace
 
 class stacktrace_entry : private __stacktrace::entry_base {
+  __stacktrace::entry_base const& __base() const { return *(__stacktrace::entry_base const*)this; }
+  friend _LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry);
+  friend _LIBCPP_EXPORTED_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry);
+
 public:
   // (19.6.3.1) Overview [stacktrace.entry.overview]
   using native_handle_type = uintptr_t;
@@ -79,8 +91,8 @@ public:
   }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const { return string(__desc_); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const { return string(__file_); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const { return __desc_ ? string(*__desc_) : string{}; }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const { return __file_ ? string(*__file_) : string{}; }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI uint_least32_t source_line() const { return __line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
@@ -95,29 +107,22 @@ public:
   }
 };
 
-/** `stacktrace_entry` and `entry_base` have the same layout,
-so a pointer to one can be safely casted as the other. */
-static_assert(sizeof(stacktrace_entry) == sizeof(__stacktrace::entry_base));
-
 // (19.6.4.6)
 // Non-member functions [stacktrace.basic.nonmem]
 
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string to_string(const stacktrace_entry& __entry);
 
 _LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry) {
-  return ((__stacktrace::entry_base const*)&__entry)->write_to(__os);
+  return __entry.__base().write_to(__os);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry) {
-  return ((__stacktrace::entry_base const*)&__entry)->to_string();
+  return __entry.__base().to_string();
 }
 
 // (19.6.5)
-// Formatting support [stacktrace.format]
-
-// TODO: stacktrace formatter: https://github.com/llvm/llvm-project/issues/105257
-template <>
-struct _LIBCPP_EXPORTED_FROM_ABI formatter<stacktrace_entry>;
+// Formatting support [stacktrace.format]:
+// https://github.com/llvm/llvm-project/issues/105257
 
 // (19.6.6)
 // Hash support [stacktrace.basic.hash]

@@ -11,13 +11,12 @@
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
 #  include <__stacktrace/basic_stacktrace.h>
-#  include <__stacktrace/images.h>
-#  include <__stacktrace/memory.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <cstddef>
 #  include <cstdlib>
 #  include <unistd.h>
 
+#  include "stacktrace/images.h"
 #  include "stacktrace/tools/tools.h"
 
 // clang-format off
@@ -64,12 +63,16 @@ void llvm_symbolizer::parse(entry_base** entry_iter, std::string_view view) cons
     _LIBCPP_ASSERT(*entry_iter >= base_.entries_begin(), "out of range");
     _LIBCPP_ASSERT(*entry_iter < base_.entries_end(), "out of range");
     auto& entry = **entry_iter;
-    if (view != "??") { entry.__desc_ = view; }
+    if (view != "??") {
+      entry.assign_desc(base_.__strings_.make_str(view));
+    }
 
   } else if (view.starts_with("  Filename:")) {
     auto& entry = **entry_iter;
     auto tmp    = view.substr(view.find_first_of(":") + 2); // skip ": "
-    if (tmp != "??") { entry.__file_ = tmp; }
+    if (tmp != "??") { 
+      entry.assign_file(base_.__strings_.make_str(tmp));
+    }
 
   } else if (view.starts_with("  Line:")) {
     auto& entry = **entry_iter;
@@ -82,13 +85,13 @@ void llvm_symbolizer::parse(entry_base** entry_iter, std::string_view view) cons
 template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<llvm_symbolizer>;
 template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<llvm_symbolizer>();
 
-template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base& base, arena& arena) {
-  llvm_symbolizer tool{base, arena};
+template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base& base) {
+  llvm_symbolizer tool{base};
   if (!tool.build_argv()) { return false; }
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  str line;                                     // our read buffer
+  str line = base.__strings_.make_str();                 // our read buffer
   auto* entry_iter = base.entries_begin() - 1;  // "before first" entry
   while (spawner.stream_.good()) {              // loop until we get EOF from tool stdout
     std::getline(spawner.stream_, line);        // consume a line from stdout

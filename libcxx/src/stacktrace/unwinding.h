@@ -19,17 +19,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #ifndef _WIN32
 
-/*
-Implements `unwind_addrs` using an unwind library, generally `libunwind`.
-This will work with the interface provided in either `libunwind.h` or `Unwind.h`;
-they provide different ways of using the same library code under the hood.
-
-On Windows this file will provide no definitions, since a separate implementation
-exists for that OS.
-*/
-
 #  if __has_include(<libunwind.h>)
-
 #    include <libunwind.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -62,7 +52,6 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE inline void unwind_addrs(base& base, size
 _LIBCPP_END_NAMESPACE_STD
 
 #  elif __has_include(<unwind.h>)
-
 #    include <unwind.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD

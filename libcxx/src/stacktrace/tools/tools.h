@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_TOOLS_TOOL_DEFN
-#define _LIBCPP_STACKTRACE_TOOLS_TOOL_DEFN
+#ifndef _LIBCPP_STACKTRACE_TOOLS_TOOL_H
+#define _LIBCPP_STACKTRACE_TOOLS_TOOL_H
 
 #include <__config>
 #include <memory>
@@ -16,13 +16,13 @@
 
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
+#  include <__stacktrace/string_manager.h>
 #  include <cctype>
 #  include <cerrno>
 #  include <csignal>
 #  include <cstddef>
 #  include <cstdlib>
 #  include <spawn.h>
-#  include <string>
 #  include <sys/fcntl.h>
 #  include <sys/types.h>
 #  include <sys/wait.h>
@@ -36,29 +36,37 @@ namespace __stacktrace {
 struct tool_base {
   constexpr static size_t k_max_argv_ = base::__absolute_max_depth + 10;
   base& base_;
-  arena& arena_;
   char const* tool_prog_;
-  str argvs_[k_max_argv_]{};         // will hold our generated arg strings
-  char* argv_[k_max_argv_]{nullptr}; // refers to argvs_ strings as char** (includes null terminator)
-  size_t argc_{0};                   // number of args.  Note: argv_[argc_] is nullptr
+  optional<str> argvs_[k_max_argv_]{}; // will hold our generated arg strings
+  char* argv_[k_max_argv_]{nullptr};   // refers to argvs_ strings as char** (includes null terminator)
+  size_t argc_{0};                     // number of args.  Note: argv_[argc_] is nullptr
 
-  _LIBCPP_HIDE_FROM_ABI tool_base(base& base, arena& arena, char const* tool_prog)
-      : base_(base), arena_(arena), tool_prog_(tool_prog) {
+  _LIBCPP_HIDE_FROM_ABI tool_base(base& base, char const* tool_prog) : base_(base), tool_prog_(tool_prog) {
     argv_[0] = nullptr;
   }
 
   _LIBCPP_HIDE_FROM_ABI void push_arg(std::string_view sv) {
     _LIBCPP_ASSERT(argc_ < k_max_argv_ - 1, "too many args");
-    argvs_[argc_]  = sv;                   // Have to copy the string_view into a new string
-    argv_[argc_]   = argvs_[argc_].data(); // then we have a char pointer into that string
-    argv_[++argc_] = nullptr;              // ensure there's always trailing null after last arg
+    argvs_[argc_] = base_.__strings_.make_str(); // Need to allocate chars to receive the string
+    argvs_[argc_]->assign(sv);                   // Copy from the view into the string
+    argv_[argc_]   = argvs_[argc_]->data();      // then we have a char pointer into that string
+    argv_[++argc_] = nullptr;                    // ensure there's always trailing null after last arg
   }
-
-  _LIBCPP_HIDE_FROM_ABI void push_arg(str __str) { push_arg(std::string_view{__str.data(), __str.size()}); }
 
   template <typename... _Args>
   _LIBCPP_HIDE_FROM_ABI void push_arg(char const* format, _Args&&... args) {
-    push_arg(str::makef(format, std::forward<_Args>(args)...));
+#  ifdef __clang__
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wformat-security"
+#    pragma clang diagnostic ignored "-Wformat-nonliteral"
+#  endif
+    auto arg   = base_.__strings_.make_str();
+    auto bytes = 1 + snprintf(nullptr, 0, format, args...);
+    arg.resize_and_overwrite(bytes, [&](char* p, size_t sz) { return snprintf(p, sz, format, args...); });
+    push_arg(arg);
+#  ifdef __clang__
+#    pragma clang diagnostic pop
+#  endif
   }
 
   // Helper functions for dealing with string views.
@@ -326,32 +334,31 @@ inline bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable() {
 }
 
 template <class T>
-bool _LIBCPP_EXPORTED_FROM_ABI __run_tool(base&, arena&);
+bool _LIBCPP_EXPORTED_FROM_ABI __run_tool(base&);
 
 struct llvm_symbolizer;
 extern template struct __executable_name<llvm_symbolizer>;
 extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<llvm_symbolizer>();
 template <>
-bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base&, arena&);
+bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base&);
 
 struct addr2line;
 extern template struct __executable_name<addr2line>;
 extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<addr2line>();
 template <>
-bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<addr2line>(base&, arena&);
+bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<addr2line>(base&);
 
 struct atos;
 extern template struct __executable_name<atos>;
 extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<atos>();
 template <>
-bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base&, arena&);
+bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base&);
 
 struct llvm_symbolizer : tool_base {
   constexpr static char const* __default_prog_name = "llvm-symbolizer";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH";
 
-  _LIBCPP_HIDE_FROM_ABI llvm_symbolizer(base& base, arena& arena)
-      : tool_base{base, arena, __executable_name<llvm_symbolizer>::get()} {}
+  _LIBCPP_HIDE_FROM_ABI llvm_symbolizer(base& base) : tool_base{base, __executable_name<llvm_symbolizer>::get()} {}
   _LIBCPP_HIDE_FROM_ABI bool build_argv();
   _LIBCPP_HIDE_FROM_ABI void parse(entry_base** entry_iter, std::string_view view) const;
 };
@@ -360,8 +367,7 @@ struct addr2line : tool_base {
   constexpr static char const* __default_prog_name = "addr2line";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH";
 
-  _LIBCPP_HIDE_FROM_ABI addr2line(base& base, arena& arena)
-      : tool_base{base, arena, __executable_name<addr2line>::get()} {}
+  _LIBCPP_HIDE_FROM_ABI addr2line(base& base) : tool_base{base, __executable_name<addr2line>::get()} {}
   _LIBCPP_HIDE_FROM_ABI bool build_argv();
   _LIBCPP_HIDE_FROM_ABI void parse_sym(entry_base& entry, std::string_view view) const;
   _LIBCPP_HIDE_FROM_ABI void parse_loc(entry_base& entry, std::string_view view) const;
@@ -371,7 +377,7 @@ struct atos : tool_base {
   constexpr static char const* __default_prog_name = "atos";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH";
 
-  _LIBCPP_HIDE_FROM_ABI atos(base& base, arena& arena) : tool_base{base, arena, __executable_name<atos>::get()} {}
+  _LIBCPP_HIDE_FROM_ABI atos(base& base) : tool_base{base, __executable_name<atos>::get()} {}
   _LIBCPP_HIDE_FROM_ABI bool build_argv();
   _LIBCPP_HIDE_FROM_ABI void parse(entry_base& entry, std::string_view view) const;
 };
@@ -381,4 +387,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
-#endif // _LIBCPP_STACKTRACE_TOOLS_TOOL_DEFN
+#endif // _LIBCPP_STACKTRACE_TOOLS_TOOL_H

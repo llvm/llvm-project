@@ -21,10 +21,10 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_STD_VER >= 23
 
-#  include <__stacktrace/memory.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <array>
 #  include <cstdint>
+#  include <string_view>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
@@ -35,7 +35,7 @@ struct images;
 struct image {
   uintptr_t loaded_at_{};
   uintptr_t slide_{};
-  fixed_str<entry_base::__max_file_len> name_{};
+  string_view name_{}; // String chars are owned by `ld` or `dyld`
   bool is_main_prog_{};
 
   _LIBCPP_HIDE_FROM_ABI bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
