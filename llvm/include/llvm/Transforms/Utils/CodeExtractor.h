@@ -24,6 +24,7 @@
 namespace llvm {
 
 template <typename PtrType> class SmallPtrSetImpl;
+class AddrSpaceCastInst;
 class AllocaInst;
 class BlockFrequency;
 class BlockFrequencyInfo;
@@ -85,10 +86,6 @@ public:
   /// 3) Add allocas for any scalar outputs, adding all of the outputs' allocas
   ///    as arguments, and inserting stores to the arguments for any scalars.
   class CodeExtractor {
-    using CustomArgAllocatorCBTy = std::function<Instruction *(
-        BasicBlock *, BasicBlock::iterator, Type *, const Twine &)>;
-    using CustomArgDeallocatorCBTy = std::function<Instruction *(
-        BasicBlock *, BasicBlock::iterator, Value *, Type *)>;
     using ValueSet = SetVector<Value *>;
 
     // Various bits of state computed on construction.
@@ -102,6 +99,14 @@ public:
     /// allocations will be placed inside. If this is null, allocations
     /// will be placed in the entry block of the function.
     BasicBlock *AllocationBlock;
+
+    /// A block outside of the extraction set where deallocations for
+    /// intermediate allocations can be placed inside. Not used for
+    /// automatically deallocated memory (e.g. `alloca`), which is the default.
+    ///
+    /// If it is null and needed, the end of the replacement basic block will be
+    /// used to place deallocations.
+    BasicBlock *DeallocationBlock;
 
     /// If true, varargs functions can be extracted.
     bool AllowVarArgs;
@@ -137,25 +142,6 @@ public:
     /// space.
     bool ArgsInZeroAddressSpace;
 
-    /// If set, this callback will be used to allocate the arguments in the
-    /// caller before passing it to the outlined function holding the extracted
-    /// piece of code.
-    CustomArgAllocatorCBTy *CustomArgAllocatorCB;
-
-    /// A block outside of the extraction set where previously introduced
-    /// intermediate allocations can be deallocated. This is only used when a
-    /// custom deallocator is specified.
-    BasicBlock *DeallocationBlock;
-
-    /// If set, this callback will be used to deallocate the arguments in the
-    /// caller after running the outlined function holding the extracted piece
-    /// of code. It will not be called if a custom allocator isn't also present.
-    ///
-    /// By default, this will be done at the end of the basic block containing
-    /// the call to the outlined function, except if a deallocation block is
-    /// specified. In that case, that will take precedence.
-    CustomArgDeallocatorCBTy *CustomArgDeallocatorCB;
-
   public:
     /// Create a code extractor for a sequence of blocks.
     ///
@@ -169,12 +155,12 @@ public:
     /// however code extractor won't validate whether extraction is legal.
     /// Any new allocations will be placed in the AllocationBlock, unless
     /// it is null, in which case it will be placed in the entry block of
-    /// the function from which the code is being extracted.
+    /// the function from which the code is being extracted. Explicit
+    /// deallocations for the aforementioned allocations will be placed in the
+    /// DeallocationBlock or the end of the replacement block, if needed.
     /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
     /// param pointer of the outlined function is declared in zero address
-    /// space. If a CustomArgAllocatorCB callback is specified, it will be used
-    /// to allocate any structures or variable copies needed to pass arguments
-    /// to the outlined function, rather than using regular allocas.
+    /// space.
     LLVM_ABI
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
@@ -182,10 +168,10 @@ public:
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
-                  CustomArgAllocatorCBTy *CustomArgAllocatorCB = nullptr,
                   BasicBlock *DeallocationBlock = nullptr,
-                  CustomArgDeallocatorCBTy *CustomArgDeallocatorCB = nullptr);
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
+
+    LLVM_ABI virtual ~CodeExtractor() = default;
 
     /// Perform the extraction, returning the new function.
     ///
@@ -270,6 +256,19 @@ public:
     /// Exclude a value from aggregate argument passing when extracting a code
     /// region, passing it instead as a scalar.
     LLVM_ABI void excludeArgFromAggregate(Value *Arg);
+
+  protected:
+    /// Allocate an intermediate variable at the specified point.
+    LLVM_ABI virtual Instruction *
+    allocateVar(BasicBlock *BB, BasicBlock::iterator AllocIP, Type *VarType,
+                const Twine &Name = Twine(""),
+                AddrSpaceCastInst **CastedAlloc = nullptr);
+
+    /// Deallocate a previously-allocated intermediate variable at the specified
+    /// point.
+    LLVM_ABI virtual Instruction *deallocateVar(BasicBlock *BB,
+                                                BasicBlock::iterator DeallocIP,
+                                                Value *Var, Type *VarType);
 
   private:
     struct LifetimeMarkerInfo {
