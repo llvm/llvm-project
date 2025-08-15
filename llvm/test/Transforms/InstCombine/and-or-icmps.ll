@@ -3494,10 +3494,8 @@ define i1 @and_icmp_eq_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range
 
 define i1 @or_icmp_eq_and_pow2_1(i32 %x) {
 ; CHECK-LABEL: @or_icmp_eq_and_pow2_1(
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp eq i32 [[X:%.*]], 127
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -32
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[AND]], 128
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -127
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP1]], 33
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %icmp1 = icmp eq i32 %x, 127
@@ -3509,10 +3507,8 @@ define i1 @or_icmp_eq_and_pow2_1(i32 %x) {
 
 define i1 @or_icmp_eq_and_pow2_2(i32 %x) {
 ; CHECK-LABEL: @or_icmp_eq_and_pow2_2(
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp eq i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -32
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[AND]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -31
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP1]], 33
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %icmp1 = icmp eq i32 %x, 31
@@ -3524,10 +3520,8 @@ define i1 @or_icmp_eq_and_pow2_2(i32 %x) {
 
 define i1 @or_icmp_eq_and_pow2_3(i32 %x) {
 ; CHECK-LABEL: @or_icmp_eq_and_pow2_3(
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp eq i32 [[X:%.*]], 127
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -64
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[AND]], 128
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -127
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP1]], 65
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %icmp1 = icmp eq i32 %x, 127
@@ -3539,10 +3533,8 @@ define i1 @or_icmp_eq_and_pow2_3(i32 %x) {
 
 define i1 @or_icmp_eq_and_pow2_commute(i32 %x) {
 ; CHECK-LABEL: @or_icmp_eq_and_pow2_commute(
-; CHECK-NEXT:    [[ICMP1:%.*]] = and i32 [[X:%.*]], -32
-; CHECK-NEXT:    [[AND:%.*]] = icmp eq i32 [[ICMP1]], 128
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[X]], 127
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[AND]], [[ICMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -127
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP1]], 33
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %icmp1 = and i32 %x, -32
