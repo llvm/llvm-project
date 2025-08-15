@@ -348,6 +348,30 @@ parseSanitizeSkipHotCutoffArgs(const Driver &D, const llvm::opt::ArgList &Args,
   return Cutoffs;
 }
 
+// Given a set of mismatched bits, TrapOnly (bits the user asked to trap but
+// that aren’t actually enabled), emit a warning based on -fsanitize-trap=NAME
+static void diagnoseTrapOnly(const Driver &D, SanitizerMask &TrapOnly) {
+// One pass for sanitizer groupings
+#define SANITIZER(NAME, ID)
+#define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
+  if (TrapOnly & SanitizerKind::ID##Group) {                                   \
+    D.Diag(diag::warn_drv_sanitize_trap_mismatch) << NAME;                     \
+    TrapOnly &= ~SanitizerKind::ID##Group;                                     \
+    TrapOnly &= ~SanitizerKind::ID;                                            \
+  }
+#include "clang/Basic/Sanitizers.def"
+
+#undef SANITIZER_GROUP
+// One pass for individual sanitizer names/leaves
+#define SANITIZER_GROUP(NAME, ID, ALIAS)
+#define SANITIZER(NAME, ID)                                                    \
+  if (TrapOnly & SanitizerKind::ID) {                                          \
+    D.Diag(diag::warn_drv_sanitize_trap_mismatch) << NAME;                     \
+    TrapOnly &= ~SanitizerKind::ID;                                            \
+  }
+#include "clang/Basic/Sanitizers.def"
+}
+
 bool SanitizerArgs::needsFuzzerInterceptors() const {
   return needsFuzzer() && !needsAsanRt() && !needsTsanRt() && !needsMsanRt();
 }
@@ -729,6 +753,23 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Unrecoverable, options::OPT_fsanitize_recover_EQ,
       options::OPT_fno_sanitize_recover_EQ);
   RecoverableKinds &= Kinds;
+
+  // FIXME: `DiagnoseErrors` name seems a little wrong as we emit warnings here, 
+  // not errors but that seems to be done elsewhere in this method.
+
+  // Parse any -fsanitize-trap=<...> flags the user provided, then
+  // diagnose any which do not have a matching -fsanitize=<...>
+  if (DiagnoseErrors) {
+    // parseSanitizeTrapArgs was not used because it sets a TrappingDefault 
+    // which causes the emission of warnings beyond what the user entered
+    SanitizerMask ExplicitTrap = parseSanitizeArgs(
+        D, Args, false, {}, {}, {}, options::OPT_fsanitize_trap_EQ,
+        options::OPT_fno_sanitize_trap_EQ);
+    SanitizerMask TrapOnly = ExplicitTrap & ~Kinds;
+
+    if (TrapOnly)
+      diagnoseTrapOnly(D, TrapOnly);
+  }
 
   TrappingKinds &= Kinds;
   RecoverableKinds &= ~TrappingKinds;
