@@ -41,6 +41,8 @@ using namespace llvm::casobjectformats::encoding;
 constexpr StringLiteral MCAssemblerRef::KindString;
 constexpr StringLiteral PaddingRef::KindString;
 
+#define DEBUG_TYPE "mccas"
+
 #define CASV1_SIMPLE_DATA_REF(RefName, IdentifierName)                         \
   constexpr StringLiteral RefName::KindString;
 #define CASV1_SIMPLE_GROUP_REF(RefName, IdentifierName)                        \
@@ -3120,6 +3122,12 @@ Error MCCASBuilder::buildFragments() {
     ArrayRef<MachO::any_relocation_info> RelocationBuffer;
     MCDataFragmentMerger Merger(*this, &Sec);
     uint64_t RelocationBufferIndex = 0;
+    // This is here for debugging purposes only, it is useful to know what the
+    // total size of all fragments without a section have been converted to
+    // CASObjects, one can use a conditional breakpoint to find the Fragment
+    // which might have a bug.
+    uint64_t TotalFragmentWithoutAddendsSize = 0;
+    (void)TotalFragmentWithoutAddendsSize;
     for (const MCFragment &F : Sec) {
       auto Relocs = RelMap.find(&F);
       if (RelocLocation == Atom) {
@@ -3163,6 +3171,9 @@ Error MCCASBuilder::buildFragments() {
       partitionFragment(Asm, Addends, FinalFragmentContents, RelocationBuffer,
                         F, RelocationBufferIndex,
                         ObjectWriter.Target.isLittleEndian());
+      TotalFragmentWithoutAddendsSize += FinalFragmentContents.size();
+      LLVM_DEBUG(dbgs() << "Size of all fragment data without addends: "
+                        << TotalFragmentWithoutAddendsSize << "\n");
 
       if (auto E = Merger.tryMerge(F, Size, FinalFragmentContents))
         return E;
@@ -3187,6 +3198,7 @@ Error MCCASBuilder::buildFragments() {
 
     if (auto E = finalizeSection())
       return E;
+    TotalFragmentWithoutAddendsSize = 0;
   }
   return finalizeGroup();
 }
