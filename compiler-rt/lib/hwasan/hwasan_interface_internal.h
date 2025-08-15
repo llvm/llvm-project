@@ -247,6 +247,14 @@ void *__hwasan_memmove_match_all(void *dest, const void *src, uptr n, u8);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_set_error_report_callback(void (*callback)(const char *));
+
+// hwasan does not need fake stack, so we leave it unused here.
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_start_switch_fiber(void **unused, const void *bottom,
+                                    uptr size);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_finish_switch_fiber(void *unused, const void **bottom_old,
+                                     uptr *size_old);
 }  // extern "C"
 
 #endif  // HWASAN_INTERFACE_INTERNAL_H
