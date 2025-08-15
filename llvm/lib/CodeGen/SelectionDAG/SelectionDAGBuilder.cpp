@@ -11016,27 +11016,27 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   auto &DL = CLI.DAG.getDataLayout();
   ComputeValueTypes(DL, CLI.RetTy, RetOrigTys, &Offsets);
 
-  SmallVector<EVT, 4> RetTys;
+  SmallVector<EVT, 4> RetVTs;
   for (Type *Ty : RetOrigTys)
-    RetTys.push_back(getValueType(DL, Ty));
+    RetVTs.push_back(getValueType(DL, Ty));
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
     SmallVector<Type *, 4> OldRetOrigTys;
-    SmallVector<EVT, 4> OldRetTys;
+    SmallVector<EVT, 4> OldRetVTs;
     SmallVector<TypeSize, 4> OldOffsets;
     RetOrigTys.swap(OldRetOrigTys);
-    RetTys.swap(OldRetTys);
+    RetVTs.swap(OldRetVTs);
     Offsets.swap(OldOffsets);
 
-    for (size_t i = 0, e = OldRetTys.size(); i != e; ++i) {
-      EVT RetVT = OldRetTys[i];
+    for (size_t i = 0, e = OldRetVTs.size(); i != e; ++i) {
+      EVT RetVT = OldRetVTs[i];
       uint64_t Offset = OldOffsets[i];
       MVT RegisterVT = getRegisterType(Context, RetVT);
       unsigned NumRegs = getNumRegisters(Context, RetVT);
       unsigned RegisterVTByteSZ = RegisterVT.getSizeInBits() / 8;
       RetOrigTys.append(NumRegs, OldRetOrigTys[i]);
-      RetTys.append(NumRegs, RegisterVT);
+      RetVTs.append(NumRegs, RegisterVT);
       for (unsigned j = 0; j != NumRegs; ++j)
         Offsets.push_back(TypeSize::getFixed(Offset + j * RegisterVTByteSZ));
     }
@@ -11090,14 +11090,14 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   } else {
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         CLI.RetTy, CLI.CallConv, CLI.IsVarArg, DL);
-    for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
+    for (unsigned I = 0, E = RetVTs.size(); I != E; ++I) {
       ISD::ArgFlagsTy Flags;
       if (NeedsRegBlock) {
         Flags.setInConsecutiveRegs();
-        if (I == RetTys.size() - 1)
+        if (I == RetVTs.size() - 1)
           Flags.setInConsecutiveRegsLast();
       }
-      EVT VT = RetTys[I];
+      EVT VT = RetVTs[I];
       MVT RegisterVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
       unsigned NumRegs =
           getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
@@ -11258,7 +11258,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
                 (CLI.RetTy->isPointerTy() && Args[i].Ty->isPointerTy() &&
                  CLI.RetTy->getPointerAddressSpace() ==
                      Args[i].Ty->getPointerAddressSpace())) &&
-               RetTys.size() == NumValues && "unexpected use of 'returned'");
+               RetVTs.size() == NumValues && "unexpected use of 'returned'");
         // Before passing 'returned' to the target lowering code, ensure that
         // either the register MVT and the actual EVT are the same size or that
         // the return value and argument are extended in the same way; in these
@@ -11339,7 +11339,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // hidden sret parameter.
     MVT PtrVT = getPointerTy(DL, DL.getAllocaAddrSpace());
 
-    unsigned NumValues = RetTys.size();
+    unsigned NumValues = RetVTs.size();
     ReturnValues.resize(NumValues);
     SmallVector<SDValue, 4> Chains(NumValues);
 
@@ -11352,7 +11352,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           DemoteStackSlot, CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
           CLI.DL, SDNodeFlags::NoUnsignedWrap);
       SDValue L = CLI.DAG.getLoad(
-          RetTys[i], CLI.DL, CLI.Chain, Add,
+          RetVTs[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),
                                             DemoteStackIdx, Offsets[i]),
           HiddenSRetAlign);
@@ -11370,7 +11370,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     else if (CLI.RetZExt)
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
-    for (EVT VT : RetTys) {
+    for (EVT VT : RetVTs) {
       MVT RegisterVT = getRegisterTypeForCallingConv(Context, CLI.CallConv, VT);
       unsigned NumRegs =
           getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
@@ -11389,7 +11389,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   }
 
   SDValue Res = CLI.DAG.getNode(ISD::MERGE_VALUES, CLI.DL,
-                                CLI.DAG.getVTList(RetTys), ReturnValues);
+                                CLI.DAG.getVTList(RetVTs), ReturnValues);
   return std::make_pair(Res, CLI.Chain);
 }
 
