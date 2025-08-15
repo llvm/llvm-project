@@ -608,6 +608,17 @@ func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: 
   return
 }
 
+// CHECK-LABEL: @prefetch_tensormap
+func.func @prefetch_tensormap(%gen_ptr: !llvm.ptr, %const_ptr: !llvm.ptr<4>) {
+  // CHECK:   nvvm.prefetch.tensormap %{{.*}}
+  nvvm.prefetch.tensormap %gen_ptr : !llvm.ptr
+  // CHECK:   nvvm.prefetch.tensormap %{{.*}}
+  nvvm.prefetch.tensormap %const_ptr : !llvm.ptr<4>
+  // CHECK:   nvvm.prefetch.tensormap param %{{.*}}
+  nvvm.prefetch.tensormap param %gen_ptr : !llvm.ptr
+  return
+}
+
 // -----
 
 // Just check these don't emit errors.

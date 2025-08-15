@@ -1299,6 +1299,20 @@ LogicalResult NVVM::PrefetchOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::PrefetchTensorMapOp::verify() {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getTmaDescriptor().getType())
+          .getAddressSpace();
+
+  if (getInParamSpace()) {
+    if (addressSpace != MemSpace::kGenericMemorySpace)
+      return emitOpError(
+          "in_param_space can only be specified for a generic pointer");
+  }
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *

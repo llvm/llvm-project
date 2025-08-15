@@ -25,9 +25,12 @@ include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerConst : LLVM_PointerInAddressSpace<4>;
 def LLVM_PointerLocal : LLVM_PointerInAddressSpace<5>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
+def LLVM_PointerParam : LLVM_PointerInAddressSpace<101>; // Parameter State Space (PTX Reference: https://docs.nvidia.com/cuda/parallel-thread-execution/#parameter-state-space)
+
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -2467,14 +2470,44 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
   }];
 }
 
-def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Arguments<(ins LLVM_AnyPointer:$tmaDescriptor, PtxPredicate:$predicate)> {
-  let assemblyFormat = "$tmaDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap", 
+    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, NVVMRequiresSM<90>]> {
+  let summary = "Brings the cache line containing an address from the constant (`.const`) or parameter (`.param`) state spaces for subsequent use by the `cp.async.bulk.tensor` instruction";
+  let description = [{
+    Operand `tmaDescriptor` can be a `const` or generic address 
+    pointer.
+    If it is a generic address pointer, it must map to a memory 
+    location in the [const](https://docs.nvidia.com/cuda/parallel-thread-execution/#constant-state-space) or [param](https://docs.nvidia.com/cuda/parallel-thread-execution/#parameter-state-space) state space.
+
+    If the `in_param_space` attribute is present, the `tmaDescriptor` must be a
+    generic address pointer and is treated as pointing to a memory location in 
+    the `param` state space. 
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric,
+                                  LLVM_PointerConst]>:$tmaDescriptor,
+                       PtxPredicate:$predicate,
+                       UnitAttr:$in_param_space);
+  let assemblyFormat = "(`param` $in_param_space^)? $tmaDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = "bool hasIntrinsic() { return !getPredicate(); }";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { 
+    std::string $cppClass::getPtx() {
       return std::string("prefetch.tensormap [%0];");
     }
+  }];
+  let llvmBuilder = [{
+    llvm::Value* tmaDesc;
+    if(op.getInParamSpace())
+      tmaDesc = builder.CreateAddrSpaceCast($tmaDescriptor, 
+                          llvm::PointerType::get(builder.getContext(), 101));
+    else
+      tmaDesc = $tmaDescriptor;
+    
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_prefetch_tensormap, 
+                        {tmaDesc}, {tmaDesc->getType()});
   }];
 }
 
