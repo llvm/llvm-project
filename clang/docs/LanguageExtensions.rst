@@ -1715,11 +1715,40 @@ Variadic Friends                              __cpp_variadic_friend            C
 Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
+``_Complex`` (N693)                                                            C99           C89, C++
+``_Bool`` (N815)                                                               C99           C89
+Variable-length arrays (N683)                                                  C99           C89, C++
+Flexible array members                                                         C99           C89, C++
+static and type quals in arrays                                                C99           C89
+``long long`` (N601)                                                           C99           C89
+Hexadecimal floating constants (N308)                                          C99           C89
+Compound literals (N716)                                                       C99           C89, C++
+``//`` comments (N644)                                                         C99           C89
+Mixed declarations and code (N740)                                             C99           C89
+Variadic macros (N707)                                                         C99           C89
+Empty macro arguments (N570)                                                   C99           C89
+Trailing comma in enum declaration                                             C99           C89
+Implicit ``return 0`` in ``main``                                              C99           C89
+``__func__`` (N611)                                                            C99           C89
+``_Generic`` (N1441)                                                           C11           C89, C++
+``_Static_assert`` (N1330)                                                     C11           C89, C++
+``_Atomic`` (N1485)                                                            C11           C89, C++
+``_Thread_local`` (N1364)                                                      C11           C89, C++
 Array & element qualification (N2607)                                          C23           C89
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
+Enum with fixed underlying type (N3030)                                        C23           C89
+``#warning`` (N2686)                                                           C23           C89
+``_BitInt`` (N3035)                                                            C23           C89, C++
+Binary literals (N2549)                                                        C23           C89
+Unnamed parameters in a function definition                                    C23           C89
+Free positioning of labels (N2508)                                             C23           C89
+``#elifdef`` (N2645)                                                           C23           C89
+``__has_include`` (N2799)                                                      C23           C89
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
+``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
+``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
