@@ -1,4 +1,4 @@
-//===- unittests/Analysis/FlowSensitive/FormulaTest.cpp -------===//
+//===- unittests/Analysis/FlowSensitive/FormulaTest.cpp -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Formula.h"
-#include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
 #include "clang/Analysis/FlowSensitive/FormulaSerialization.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,7 +19,9 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 
+using ::llvm::Failed;
 using ::llvm::HasValue;
+using ::llvm::Succeeded;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 
@@ -95,6 +96,11 @@ protected:
     AtomMap[1] = Atom2;
   }
 
+  // Convenience wrapper for `testParseFormula`.
+  llvm::Expected<const Formula *> testParseFormula(llvm::StringRef Str) {
+    return parseFormula(Str, A, AtomMap);
+  }
+
   Arena A;
   std::string Out;
   llvm::raw_string_ostream OS{Out};
@@ -107,53 +113,53 @@ protected:
 };
 
 TEST_F(ParseFormulaTest, Atom) {
-  EXPECT_THAT_EXPECTED(parseFormula("V0", A, AtomMap), HasValue(&A1));
-  EXPECT_THAT_EXPECTED(parseFormula("V1", A, AtomMap), HasValue(&A2));
+  EXPECT_THAT_EXPECTED(testParseFormula("V0"), HasValue(&A1));
+  EXPECT_THAT_EXPECTED(testParseFormula("V1"), HasValue(&A2));
 }
 
 TEST_F(ParseFormulaTest, LiteralTrue) {
-  EXPECT_THAT_EXPECTED(parseFormula("T", A, AtomMap),
-                       HasValue(&A.makeLiteral(true)));
+  EXPECT_THAT_EXPECTED(testParseFormula("T"), HasValue(&A.makeLiteral(true)));
 }
 
 TEST_F(ParseFormulaTest, LiteralFalse) {
-  EXPECT_THAT_EXPECTED(parseFormula("F", A, AtomMap),
-                       HasValue(&A.makeLiteral(false)));
+  EXPECT_THAT_EXPECTED(testParseFormula("F"), HasValue(&A.makeLiteral(false)));
 }
 
 TEST_F(ParseFormulaTest, Not) {
-  EXPECT_THAT_EXPECTED(parseFormula("!V0", A, AtomMap),
-                       HasValue(&A.makeNot(A1)));
+  EXPECT_THAT_EXPECTED(testParseFormula("!V0"), HasValue(&A.makeNot(A1)));
 }
 
 TEST_F(ParseFormulaTest, Or) {
-  EXPECT_THAT_EXPECTED(parseFormula("|V0V1", A, AtomMap),
-                       HasValue(&A.makeOr(A1, A2)));
+  EXPECT_THAT_EXPECTED(testParseFormula("|V0V1"), HasValue(&A.makeOr(A1, A2)));
 }
 
 TEST_F(ParseFormulaTest, And) {
-  EXPECT_THAT_EXPECTED(parseFormula("&V0V1", A, AtomMap),
-                       HasValue(&A.makeAnd(A1, A2)));
+  EXPECT_THAT_EXPECTED(testParseFormula("&V0V1"), HasValue(&A.makeAnd(A1, A2)));
+}
+
+TEST_F(ParseFormulaTest, OutOfNumericOrder) {
+  EXPECT_THAT_EXPECTED(parseFormula("&V1V0", A, AtomMap),
+                       HasValue(&A.makeAnd(A2, A1)));
 }
 
 TEST_F(ParseFormulaTest, Implies) {
-  EXPECT_THAT_EXPECTED(parseFormula(">V0V1", A, AtomMap),
+  EXPECT_THAT_EXPECTED(testParseFormula(">V0V1"),
                        HasValue(&A.makeImplies(A1, A2)));
 }
 
 TEST_F(ParseFormulaTest, Equal) {
-  EXPECT_THAT_EXPECTED(parseFormula("=V0V1", A, AtomMap),
+  EXPECT_THAT_EXPECTED(testParseFormula("=V0V1"),
                        HasValue(&A.makeEquals(A1, A2)));
 }
 
 TEST_F(ParseFormulaTest, NestedBinaryUnary) {
-  EXPECT_THAT_EXPECTED(parseFormula("=|V0V1V1", A, AtomMap),
+  EXPECT_THAT_EXPECTED(testParseFormula("=|V0V1V1"),
                        HasValue(&A.makeEquals(A.makeOr(A1, A2), A2)));
 }
 
 TEST_F(ParseFormulaTest, NestedBinaryBinary) {
   EXPECT_THAT_EXPECTED(
-      parseFormula("=|V0V1&V0V1", A, AtomMap),
+      testParseFormula("=|V0V1&V0V1"),
       HasValue(&A.makeEquals(A.makeOr(A1, A2), A.makeAnd(A1, A2))));
 }
 
@@ -161,19 +167,36 @@ TEST_F(ParseFormulaTest, NestedBinaryBinary) {
 // map.
 TEST_F(ParseFormulaTest, GeneratesAtoms) {
   llvm::DenseMap<unsigned, Atom> FreshAtomMap;
-  ASSERT_THAT_EXPECTED(parseFormula("=V0V1", A, FreshAtomMap),
-                       llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(parseFormula("=V0V1", A, FreshAtomMap), Succeeded());
   // The map contains two, unique elements.
   ASSERT_EQ(FreshAtomMap.size(), 2U);
   EXPECT_NE(FreshAtomMap[0], FreshAtomMap[1]);
 }
 
-TEST_F(ParseFormulaTest, BadFormulaFails) {
-  EXPECT_THAT_EXPECTED(parseFormula("Hello", A, AtomMap), llvm::Failed());
-}
-
-TEST_F(ParseFormulaTest, FormulaWithSuffixFails) {
-  EXPECT_THAT_EXPECTED(parseFormula("=V0V1Hello", A, AtomMap), llvm::Failed());
+TEST_F(ParseFormulaTest, MalformedFormulaFails) {
+  // Arbitrary string.
+  EXPECT_THAT_EXPECTED(testParseFormula("Hello"), Failed());
+  // Empty string.
+  EXPECT_THAT_EXPECTED(testParseFormula(""), Failed());
+  // Malformed atom.
+  EXPECT_THAT_EXPECTED(testParseFormula("Vabc"), Failed());
+  // Irrelevant suffix.
+  EXPECT_THAT_EXPECTED(testParseFormula("V0Hello"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("=V0V1Hello"), Failed());
+  // Sequence without operator.
+  EXPECT_THAT_EXPECTED(testParseFormula("TF"), Failed());
+  // Bad subformula.
+  EXPECT_THAT_EXPECTED(testParseFormula("!G"), Failed());
+  // Incomplete formulas.
+  EXPECT_THAT_EXPECTED(testParseFormula("V"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("&"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("|"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula(">"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("="), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("&V0"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("|V0"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula(">V0"), Failed());
+  EXPECT_THAT_EXPECTED(testParseFormula("=V0"), Failed());
 }
 
 } // namespace
