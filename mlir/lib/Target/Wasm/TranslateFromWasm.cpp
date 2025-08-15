@@ -78,7 +78,8 @@ constexpr const char *wasmSectionName = "";
 
 #define WASM_SEC_TRANSFORM(section)                                            \
   template <>                                                                  \
-  constexpr const char *wasmSectionName<WasmSectionType::section> = #section;
+  [[maybe_unused]] constexpr const char                                        \
+      *wasmSectionName<WasmSectionType::section> = #section;
 APPLY_WASM_SEC_TRANSFORM
 #undef WASM_SEC_TRANSFORM
 
@@ -93,11 +94,10 @@ struct ByteSequence {};
 template <std::byte Byte>
 struct UniqueByte : ByteSequence<Byte> {};
 
-constexpr ByteSequence<
+[[maybe_unused]] constexpr ByteSequence<
     WasmBinaryEncoding::Type::i32, WasmBinaryEncoding::Type::i64,
     WasmBinaryEncoding::Type::f32, WasmBinaryEncoding::Type::f64,
-    WasmBinaryEncoding::Type::v128>
-    valueTypesEncodings{};
+    WasmBinaryEncoding::Type::v128> valueTypesEncodings{};
 
 template <std::byte... allowedFlags>
 constexpr bool isValueOneOf(std::byte value,
@@ -289,7 +289,7 @@ public:
 private:
   std::optional<Location> currentOpLoc;
   ParserHead &parser;
-  WasmModuleSymbolTables const &symbols;
+  [[maybe_unused]] WasmModuleSymbolTables const &symbols;
   locals_t locals;
   ValueStack valueStack;
 };
@@ -732,12 +732,12 @@ inline Type buildLiteralType<int64_t>(OpBuilder &builder) {
 }
 
 template <>
-inline Type buildLiteralType<uint32_t>(OpBuilder &builder) {
+[[maybe_unused]] inline Type buildLiteralType<uint32_t>(OpBuilder &builder) {
   return builder.getI32Type();
 }
 
 template <>
-inline Type buildLiteralType<uint64_t>(OpBuilder &builder) {
+[[maybe_unused]] inline Type buildLiteralType<uint64_t>(OpBuilder &builder) {
   return builder.getI64Type();
 }
 
