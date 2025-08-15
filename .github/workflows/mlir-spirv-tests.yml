@@ -47,5 +47,5 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DLLVM_TARGETS_TO_BUILD="host" \
             -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON \
-            -LLVM_ENABLE_PROJECTS=mlir
+            -DLLVM_ENABLE_PROJECTS=mlir
           ninja -C build check-mlir
