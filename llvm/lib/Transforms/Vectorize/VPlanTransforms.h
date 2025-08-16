@@ -79,6 +79,13 @@ struct VPlanTransforms {
                                                bool RequiresScalarEpilogueCheck,
                                                bool TailFolded);
 
+  // Create a check to \p Plan to see if the vector loop should be executed.
+  static void addMinimumIterationCheck(
+      VPlan &Plan, ElementCount VF, unsigned UF,
+      ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+      bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
+      const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE);
+
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
