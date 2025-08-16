@@ -4965,11 +4965,21 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
 
     // Produce a normal comparison if we are first in the chain
     if (!CCOp) {
-      auto Dst = MRI.cloneVirtualRegister(LHS);
-      if (isa<GICmp>(Cmp))
-        return emitSUBS(Dst, Cmp->getOperand(2), Cmp->getOperand(3), MIB);
-      return emitFPCompare(Cmp->getOperand(2).getReg(),
-                           Cmp->getOperand(3).getReg(), MIB);
+      if (isa<GICmp>(Cmp)) {
+        auto &Pred = Cmp->getOperand(1);
+        MachineInstr *Ret = emitIntegerCompare(Cmp->getOperand(2),
+                                               Cmp->getOperand(3), Pred, MIB);
+
+        // Change OutCC in case emitIntegerCompare() changed it.
+        auto PredOp = static_cast<CmpInst::Predicate>(Pred.getPredicate());
+        if (Negate)
+          PredOp = CmpInst::getInversePredicate(PredOp);
+        OutCC = changeICMPPredToAArch64CC(PredOp, Cmp->getOperand(3).getReg(),
+                                          MIB.getMRI());
+                                          
+        return Ret;
+      }
+      return emitFPCompare(LHS, RHS, MIB, CC);
     }
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, Predicate, OutCC, MIB);
