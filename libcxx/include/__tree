@@ -624,7 +624,7 @@ public:
 note: non-literal type 'std::__tree_node<std::__value_type<int, int>, void *>' cannot be used in a constant expression
 */
 #if _LIBCPP_STD_VER >= 26
-  ~__tree_node() = default;
+  ~__tree_node() {}
 #else
   ~__tree_node()                             = delete;
 #endif
