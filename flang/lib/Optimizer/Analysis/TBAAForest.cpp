@@ -11,12 +11,21 @@
 
 mlir::LLVM::TBAATagAttr
 fir::TBAATree::SubtreeState::getTag(llvm::StringRef uniqueName) const {
-  std::string id = (parentId + "/" + uniqueName).str();
+  std::string id = (parentId + '/' + uniqueName).str();
   mlir::LLVM::TBAATypeDescriptorAttr type =
       mlir::LLVM::TBAATypeDescriptorAttr::get(
           context, id, mlir::LLVM::TBAAMemberAttr::get(parent, 0));
   return mlir::LLVM::TBAATagAttr::get(type, type, 0);
-  // return tag;
+}
+
+fir::TBAATree::SubtreeState &
+fir::TBAATree::SubtreeState::getOrCreateNamedSubtree(mlir::StringAttr name) {
+  if (!namedSubtrees.contains(name))
+    namedSubtrees.insert(
+        {name, SubtreeState(context, parentId + '/' + name.str(), parent)});
+  auto it = namedSubtrees.find(name);
+  assert(it != namedSubtrees.end());
+  return it->second;
 }
 
 mlir::LLVM::TBAATagAttr fir::TBAATree::SubtreeState::getTag() const {
