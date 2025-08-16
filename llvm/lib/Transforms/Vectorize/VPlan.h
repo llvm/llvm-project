@@ -950,7 +950,7 @@ public:
   }
 
   /// Intersect this VPIRMetada object with \p MD, keeping only metadata
-  /// nodes in both.
+  /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
 };
 

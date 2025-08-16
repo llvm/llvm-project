@@ -2614,21 +2614,19 @@ void VPlanTransforms::createInterleaveGroups(
   for (const auto *IG : InterleaveGroups) {
     auto *Start =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
-
     VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
     if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(Start))
       StoredValues.push_back(StoreR->getStoredValue());
     for (unsigned I = 1; I < IG->getFactor(); ++I) {
-      Instruction *MemI = IG->getMember(I);
-      if (!MemI)
+      Instruction *MemberI = IG->getMember(I);
+      if (!MemberI)
         continue;
-      VPWidenMemoryRecipe *MemR =
-          cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(MemI));
-      if (!StoredValues.empty())
-        StoredValues.push_back(
-            cast<VPWidenStoreRecipe>(MemR)->getStoredValue());
-      InterleaveMD.intersect(*MemR);
+      VPWidenMemoryRecipe *MemoryR =
+          cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(MemberI));
+      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemoryR))
+        StoredValues.push_back(StoreR->getStoredValue());
+      InterleaveMD.intersect(*MemoryR);
     }
 
     bool NeedsMaskForGaps =

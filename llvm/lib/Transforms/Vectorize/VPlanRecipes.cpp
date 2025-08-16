@@ -1561,14 +1561,16 @@ void VPIRMetadata::applyMetadata(Instruction &I) const {
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
-  SmallVector<std::pair<unsigned, MDNode *>> MetadataUnion;
+  SmallVector<std::pair<unsigned, MDNode *>> MetadataIntersection;
   for (const auto &[KindA, MDA] : Metadata) {
     for (const auto &[KindB, MDB] : Other.Metadata) {
-      if (KindA == KindB && MDA == MDB)
-        MetadataUnion.emplace_back(KindA, MDA);
+      if (KindA == KindB && MDA == MDB) {
+        MetadataIntersection.emplace_back(KindA, MDA);
+        break;
+      }
     }
   }
-  Metadata = std::move(MetadataUnion);
+  Metadata = std::move(MetadataIntersection);
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
