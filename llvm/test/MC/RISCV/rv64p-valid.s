@@ -79,6 +79,12 @@ pli.w a5, 5
 # CHECK-ASM-AND-OBJ: pli.b a6, 6
 # CHECK-ASM: encoding: [0x1b,0x28,0x06,0xb4]
 pli.b a6, 6
+# CHECK-ASM-AND-OBJ: pli.b a6, -1
+# CHECK-ASM: encoding: [0x1b,0x28,0xff,0xb4]
+pli.b a6, -1
+# CHECK-ASM-AND-OBJ: pli.b a6, -1
+# CHECK-ASM: encoding: [0x1b,0x28,0xff,0xb4]
+pli.b a6, 255
 # CHECK-ASM-AND-OBJ: psext.h.b t3, a2
 # CHECK-ASM: encoding: [0x1b,0x2e,0x46,0xe0]
 psext.h.b t3, a2
