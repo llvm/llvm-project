@@ -774,6 +774,18 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   return IsWave32Capable;
 }
 
+static bool isWave64Capable(StringRef GPU, const Triple &T) {
+  if (T.isAMDGCN()) {
+    switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1250:
+      return false;
+    default:
+      break;
+    }
+  }
+  return true;
+}
+
 std::pair<FeatureError, StringRef>
 AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
                               StringMap<bool> &Features) {
@@ -787,6 +799,9 @@ AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
   }
   if (HaveWave32 && !IsNullGPU && !IsWave32Capable) {
     return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize32"};
+  }
+  if (HaveWave64 && !IsNullGPU && !isWave64Capable(GPU, T)) {
+    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize64"};
   }
   // Don't assume any wavesize with an unknown subtarget.
   if (!IsNullGPU) {
