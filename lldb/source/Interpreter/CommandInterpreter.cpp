@@ -956,7 +956,8 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-step <function-name> // Step into the named function\n",
           0, false));
   if (step_regex_cmd_sp) {
-    if (step_regex_cmd_sp->AddRegexCommand("^$", "thread step-in") &&
+    if (step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*$",
+                                           "thread step-in") &&
         step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*(-.*)$",
                                            "thread step-in %1") &&
         step_regex_cmd_sp->AddRegexCommand(
