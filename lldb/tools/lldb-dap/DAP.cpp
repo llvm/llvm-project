@@ -1566,6 +1566,7 @@ void DAP::RegisterRequests() {
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();
   RegisterRequest<ModulesRequestHandler>();
+  RegisterRequest<ModuleSymbolsRequestHandler>();
 
   // Testing requests
   RegisterRequest<TestGetTargetBreakpointsRequestHandler>();

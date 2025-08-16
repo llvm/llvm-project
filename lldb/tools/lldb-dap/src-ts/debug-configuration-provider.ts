@@ -69,6 +69,10 @@ const configurations: Record<string, DefaultConfig> = {
   terminateCommands: { type: "stringArray", default: [] },
 };
 
+export function getDefaultConfigKey(key: string): string | number | boolean | string[] | undefined {
+  return configurations[key]?.default;
+}
+
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
