@@ -46,7 +46,6 @@ protected:
     Regular,
     Equated,
     Common,
-    TargetCommon, // Index stores the section index
   };
 
   // Special sentinel value for the absolute pseudo fragment.
@@ -315,7 +314,7 @@ public:
   void setCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(getOffset() == 0);
     CommonSize = Size;
-    kind = Target ? Kind::TargetCommon : Kind::Common;
+    kind = Kind::Common;
 
     unsigned Log2Align = encode(Alignment);
     assert(Log2Align < (1U << NumCommonAlignmentBits) &&
@@ -338,8 +337,7 @@ public:
   bool declareCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Alignment ||
-          isTargetCommon() != Target)
+      if (CommonSize != Size || getCommonAlignment() != Alignment)
         return true;
     } else
       setCommon(Size, Alignment, Target);
@@ -347,13 +345,7 @@ public:
   }
 
   /// Is this a 'common' symbol.
-  bool isCommon() const {
-    return kind == Kind::Common || kind == Kind::TargetCommon;
-  }
-
-  /// Used by AMDGPU to indicate a common-like symbol of section index
-  /// SHN_AMDGPU_LDS.
-  bool isTargetCommon() const { return kind == Kind::TargetCommon; }
+  bool isCommon() const { return kind == Kind::Common; }
 
   MCFragment *getFragment() const {
     if (Fragment || !isVariable() || isWeakExternal())
