@@ -1206,6 +1206,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixDsAtomicAsyncBarrierArriveB64(MI);
   if (ST.hasScratchBaseForwardingHazard())
     fixScratchBaseForwardingHazard(MI);
+  if (ST.setRegModeNeedsVNOPs())
+    fixSetRegMode(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
@@ -1355,6 +1357,16 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         // DsCnt corresponds to LGKMCnt here.
         return (Decoded.DsCnt == 0);
       }
+      case AMDGPU::S_WAIT_STORECNT:
+      case AMDGPU::S_WAIT_STORECNT_DSCNT:
+      case AMDGPU::S_WAIT_LOADCNT:
+      case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+      case AMDGPU::S_WAIT_SAMPLECNT:
+      case AMDGPU::S_WAIT_BVHCNT:
+      case AMDGPU::S_WAIT_DSCNT:
+      case AMDGPU::S_WAIT_EXPCNT:
+      case AMDGPU::S_WAIT_KMCNT:
+        llvm_unreachable("unexpected wait count instruction");
       default:
         // SOPP instructions cannot mitigate the hazard.
         if (TII->isSOPP(MI))
@@ -1737,7 +1749,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0x0fff);
+      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
 
   return true;
 }
@@ -1787,7 +1799,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
         SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-         I.getOperand(0).getImm() == 0x0fff))
+         AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
       return HazardExpired;
 
     // Track registers writes
@@ -2252,6 +2264,15 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     case AMDGPU::S_WAITCNT_EXPCNT:
     case AMDGPU::S_WAITCNT_LGKMCNT:
     case AMDGPU::S_WAIT_IDLE:
+    case AMDGPU::S_WAIT_LOADCNT:
+    case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    case AMDGPU::S_WAIT_SAMPLECNT:
+    case AMDGPU::S_WAIT_BVHCNT:
+    case AMDGPU::S_WAIT_STORECNT:
+    case AMDGPU::S_WAIT_STORECNT_DSCNT:
+    case AMDGPU::S_WAIT_EXPCNT:
+    case AMDGPU::S_WAIT_DSCNT:
+    case AMDGPU::S_WAIT_KMCNT:
       return true;
     default:
       break;
@@ -3544,5 +3565,15 @@ bool GCNHazardRecognizer::fixScratchBaseForwardingHazard(MachineInstr *MI) {
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVaSdst(
           AMDGPU::DepCtr::encodeFieldSaSdst(0), 0));
+  return true;
+}
+
+bool GCNHazardRecognizer::fixSetRegMode(MachineInstr *MI) {
+  if (!isSSetReg(MI->getOpcode()) ||
+      MI->getOperand(1).getImm() != AMDGPU::Hwreg::ID_MODE)
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
   return true;
 }

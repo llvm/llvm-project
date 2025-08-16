@@ -38,31 +38,25 @@ add_unittest_framework_library(
   SRCS
     LibcGpuBenchmark.cpp
     LibcGpuBenchmarkMain.cpp
-    BenchmarkLogger.cpp
   HDRS
     LibcGpuBenchmark.h
-    BenchmarkLogger.h
   DEPENDS
+    libc.benchmarks.gpu.timing.timing
     libc.hdr.stdint_proxy
-    libc.src.__support.big_int
-    libc.src.__support.c_string
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
-    libc.src.__support.CPP.limits
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.array
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.macros.properties.types
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.uint128
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.fixedvector
-    libc.src.time.clock
-    libc.benchmarks.gpu.timing.timing
+    libc.src.__support.GPU.utils
+    libc.src.__support.time.gpu.time_utils
     libc.src.stdio.printf
+    libc.src.time.clock
 )
 
 add_subdirectory(src)
