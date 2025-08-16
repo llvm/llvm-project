@@ -26,7 +26,6 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   PLTRelativeSpecifier = AArch64::S_PLT;
-  SupportIndirectSymViaGOTPCRel = true;
 
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
   // within a module.  Do not generate AT_location for TLS variables.

@@ -20,6 +20,10 @@ class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
 public:
+  AArch64_ELFTargetObjectFile(bool SupportIndirectSymViaGOTPCRel) {
+    this->SupportIndirectSymViaGOTPCRel = SupportIndirectSymViaGOTPCRel;
+  }
+
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
                                           const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,
