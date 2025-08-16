@@ -113,6 +113,8 @@ static cl::opt<bool> EnableLoopDistribute(
     cl::desc("Enable the new, experimental LoopDistribution Pass"),
     cl::init(false));
 
+static const char *DistributedCountMetaData = "llvm.loop.distribute.count";
+
 STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
 namespace {
@@ -826,6 +828,8 @@ public:
           {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
           "llvm.loop.distribute.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
+      addStringMetadataToLoop(LVer.getNonVersionedLoop(),
+                              DistributedCountMetaData, Partitions.getSize());
     }
 
     // Create identical copies of the original loop for each partition and hook
@@ -985,6 +989,14 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
   bool Changed = false;
   for (Loop *L : Worklist) {
     LoopDistributeForLoop LDL(L, &F, LI, DT, SE, LAIs, ORE);
+
+    // Do not reprocess loops we already distributed
+    if (auto Distributed =
+            getOptionalIntLoopAttribute(L, DistributedCountMetaData)) {
+      LLVM_DEBUG(
+          dbgs() << "LDist: Distributed loop guarded for reprocessing\n");
+      continue;
+    }
 
     // If distribution was forced for the specific loop to be
     // enabled/disabled, follow that.  Otherwise use the global flag.
