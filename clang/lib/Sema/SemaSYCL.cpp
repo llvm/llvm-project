@@ -526,10 +526,6 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
     ++i;
   }
 
-  // FIXME: Diagnose (implicit or explicit) use of CXXThisExpr in potentially
-  // evaluated contexts in the function body. This is not necessarily the
-  // right place to add such a diagnostic.
-
   OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap,
                                                            FD);
   Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
