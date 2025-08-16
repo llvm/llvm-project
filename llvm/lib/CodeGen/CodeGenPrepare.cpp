@@ -338,6 +338,10 @@ class CodeGenPrepare {
   /// Keep track of instructions removed during promotion.
   SetOfInstrs RemovedInsts;
 
+  /// Keep track of seen mul_with_overflow intrinsics to avoid
+  // reprocessing them.
+  DenseMap<Instruction *, bool> SeenMulWithOverflowInstrs;
+
   /// Keep track of sext chains based on their initial value.
   DenseMap<Value *, Instruction *> SeenChainsForSExt;
 
@@ -431,6 +435,10 @@ private:
   bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr, Type *AccessTy,
                           unsigned AddrSpace);
   bool optimizeGatherScatterInst(Instruction *MemoryInst, Value *Ptr);
+  bool optimizeUMulWithOverflow(Instruction *I);
+  bool optimizeSMulWithOverflow(Instruction *I);
+  bool optimizeMulWithOverflow(Instruction *I, bool IsSigned,
+                               ModifyDT &ModifiedDT);
   bool optimizeInlineAsmInst(CallInst *CS);
   bool optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT);
   bool optimizeExt(Instruction *&I);
@@ -772,6 +780,7 @@ bool CodeGenPrepare::_run(Function &F) {
     verifyBFIUpdates(F);
 #endif
 
+  SeenMulWithOverflowInstrs.clear();
   return EverMadeChange;
 }
 
@@ -2792,6 +2801,10 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
         }
       }
       return false;
+    case Intrinsic::umul_with_overflow:
+      return optimizeMulWithOverflow(II, /*IsSigned=*/false, ModifiedDT);
+    case Intrinsic::smul_with_overflow:
+      return optimizeMulWithOverflow(II, /*IsSigned=*/true, ModifiedDT);
     }
 
     SmallVector<Value *, 2> PtrOps;
@@ -6400,6 +6413,145 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
         Ptr, TLInfo, nullptr,
         [&](Value *V) { removeAllAssertingVHReferences(V); });
 
+  return true;
+}
+
+// Rewrite the mul_with_overflow intrinsic by checking if both of the
+// operands' value range is within the legal type. If so, we can optimize the
+// multiplication algorithm. This code is supposed to be written during the step
+// of type legalization, but given that we need to reconstruct the IR which is
+// not doable there, we do it here.
+bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
+                                             ModifyDT &ModifiedDT) {
+  // Enable this optimization only for aarch64.
+  if (!TLI->getTargetMachine().getTargetTriple().isAArch64())
+    return false;
+  // If we have already seen this instruction, don't process it again.
+  if (!SeenMulWithOverflowInstrs.insert(std::make_pair(I, true)).second)
+    return false;
+
+  if (TLI->getTypeAction(
+          I->getContext(),
+          TLI->getValueType(*DL, I->getType()->getContainedType(0))) !=
+      TargetLowering::TypeExpandInteger)
+    return false;
+
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  Type *Ty = LHS->getType();
+  unsigned VTBitWidth = Ty->getScalarSizeInBits();
+  unsigned VTHalfBitWidth = VTBitWidth / 2;
+  IntegerType *LegalTy =
+      IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
+
+  // Skip the optimization if the type with HalfBitWidth is not legal for the
+  // target.
+  if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) !=
+      TargetLowering::TypeLegal)
+    return false;
+
+  // Make sure that the I->getType() is a struct type with two elements.
+  if (!I->getType()->isStructTy() || I->getType()->getStructNumElements() != 2)
+    return false;
+
+  I->getParent()->setName("overflow.res");
+  BasicBlock *OverflowResBB = I->getParent();
+  BasicBlock *OverflowoEntryBB =
+      I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
+  BasicBlock *NoOverflowBB = BasicBlock::Create(
+      I->getContext(), "overflow.no", I->getFunction(), OverflowResBB);
+  BasicBlock *OverflowBB = BasicBlock::Create(I->getContext(), "overflow",
+                                              I->getFunction(), OverflowResBB);
+  // new blocks should be:
+  //  entry:
+  //    if signed:
+  //      (lhs_lo ^ lhs_hi) || (rhs_lo ^ rhs_hi) ? overflow, overflow_no
+  //    else:
+  //      (lhs_hi != 0) || (rhs_hi != 0) ? overflow, overflow_no
+
+  //  overflow_no:
+  //  overflow:
+  //  overflow.res:
+
+  // ----------------------------
+  // BB overflow.entry:
+  // get Lo and Hi of LHS & RHS:
+  IRBuilder<> Builder(OverflowoEntryBB->getTerminator());
+  Value *LoLHS = Builder.CreateTrunc(LHS, LegalTy, "lo.lhs");
+  Value *HiLHS = Builder.CreateLShr(LHS, VTHalfBitWidth, "lhs.lsr");
+  HiLHS = Builder.CreateTrunc(HiLHS, LegalTy, "hi.lhs");
+  Value *LoRHS = Builder.CreateTrunc(RHS, LegalTy, "lo.rhs");
+  Value *HiRHS = Builder.CreateLShr(RHS, VTHalfBitWidth, "rhs.lsr");
+  HiRHS = Builder.CreateTrunc(HiRHS, LegalTy, "hi.rhs");
+
+  Value *IsAnyBitTrue;
+  if (IsSigned) {
+    Value *SignLoLHS =
+        Builder.CreateAShr(LoLHS, VTHalfBitWidth - 1, "sign.lo.lhs");
+    Value *SignLoRHS =
+        Builder.CreateAShr(LoRHS, VTHalfBitWidth - 1, "sign.lo.rhs");
+    Value *XorLHS = Builder.CreateXor(HiLHS, SignLoLHS);
+    Value *XorRHS = Builder.CreateXor(HiRHS, SignLoRHS);
+    Value *Or = Builder.CreateOr(XorLHS, XorRHS, "or.lhs.rhs");
+    IsAnyBitTrue = Builder.CreateCmp(ICmpInst::ICMP_EQ, Or,
+                                     ConstantInt::get(Or->getType(), 1));
+  } else {
+    Value *CmpLHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiLHS,
+                                      ConstantInt::getNullValue(LegalTy));
+    Value *CmpRHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiRHS,
+                                      ConstantInt::getNullValue(LegalTy));
+    IsAnyBitTrue = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
+  }
+
+  Builder.CreateCondBr(IsAnyBitTrue, OverflowBB, NoOverflowBB);
+  OverflowoEntryBB->getTerminator()->eraseFromParent();
+
+  // BB overflow.no:
+  Builder.SetInsertPoint(NoOverflowBB);
+  Value *ExtLoLHS, *ExtLoRHS;
+  if (IsSigned) {
+    ExtLoLHS = Builder.CreateSExt(LoLHS, Ty, "lo.lhs.ext");
+    ExtLoRHS = Builder.CreateSExt(LoRHS, Ty, "lo.rhs.ext");
+  } else {
+    ExtLoLHS = Builder.CreateZExt(LoLHS, Ty, "lo.lhs.ext");
+    ExtLoRHS = Builder.CreateZExt(LoRHS, Ty, "lo.rhs.ext");
+  }
+
+  Value *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
+  Builder.CreateBr(OverflowResBB);
+
+  // BB overflow.res:
+  Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
+  PHINode *PHINode1 = Builder.CreatePHI(Ty, 2);
+  PHINode1->addIncoming(Mul, NoOverflowBB);
+  PHINode *PHINode2 =
+      Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
+  PHINode2->addIncoming(ConstantInt::getFalse(I->getContext()), NoOverflowBB);
+
+  StructType *STy = StructType::get(
+      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
+  Value *StructValOverflowRes = PoisonValue::get(STy);
+  StructValOverflowRes =
+      Builder.CreateInsertValue(StructValOverflowRes, PHINode1, {0});
+  StructValOverflowRes =
+      Builder.CreateInsertValue(StructValOverflowRes, PHINode2, {1});
+  // Before moving the mul.overflow intrinsic to the overflowBB, replace all its
+  // uses by StructValOverflowRes.
+  I->replaceAllUsesWith(StructValOverflowRes);
+  I->removeFromParent();
+
+  // BB overflow:
+  I->insertInto(OverflowBB, OverflowBB->end());
+  Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
+  Value *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
+  Value *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
+  Builder.CreateBr(OverflowResBB);
+
+  // Add The Extracted values to the PHINodes in the overflow.res block.
+  PHINode1->addIncoming(MulOverflow, OverflowBB);
+  PHINode2->addIncoming(OverflowFlag, OverflowBB);
+
+  ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
 }
 
