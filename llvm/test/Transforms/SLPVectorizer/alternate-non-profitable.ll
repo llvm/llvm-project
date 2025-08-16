@@ -170,11 +170,10 @@ define <2 x i8> @replace_through_binop_fail_cant_speculate(i8 %inp, <2 x i8> %d,
 define <2 x i8> @replace_through_binop_preserve_flags(i8 %inp, <2 x i8> %d, <2 x i8> %any) {
 ; CHECK-LABEL: define <2 x i8> @replace_through_binop_preserve_flags(
 ; CHECK-SAME: i8 [[INP:%.*]], <2 x i8> [[D:%.*]], <2 x i8> [[ANY:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = xor i8 [[INP]], 5
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[INP]], 123
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i8 [[ADD]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> poison, i8 [[TMP1]], i64 0
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i8> [[TMP3]], i8 [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP2]], <i8 123, i8 5>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP3]], <i8 0, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %add = xor i8 %inp, 5

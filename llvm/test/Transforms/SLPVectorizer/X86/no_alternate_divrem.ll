@@ -10,14 +10,14 @@ define void @test_add_sdiv(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, ptr [[ARR2]], i32 3
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP1_2]], align 4
 ; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP1_3]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1146, i32 146>
 ; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
 ; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
 ; CHECK-NEXT:    [[RES2:%.*]] = sdiv i32 [[V2]], [[Y2]]
 ; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[ARR1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP3]], <i32 1146, i32 146>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[ARR2]], align 4
 ; CHECK-NEXT:    store i32 [[RES2]], ptr [[GEP2_2]], align 4
