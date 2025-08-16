@@ -129,6 +129,15 @@ public:
                                        RegisterContext &reg_context) const {
     return false;
   }
+
+  /// Return an UnwindPlan that allows architecture-defined rules for finding
+  /// saved registers in a specific context (not specific to a function's
+  /// instructions/unwind info).
+  virtual lldb::UnwindPlanSP GetArchitectureUnwindPlan(
+      lldb_private::Thread &thread, lldb::addr_t callers_return_address,
+      lldb::addr_t cfa, std::shared_ptr<const UnwindPlan> current_unwindplan) {
+    return lldb::UnwindPlanSP();
+  }
 };
 
 } // namespace lldb_private

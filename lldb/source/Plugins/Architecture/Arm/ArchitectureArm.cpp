@@ -9,10 +9,15 @@
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
+#include "Utility/ARM_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -149,4 +154,119 @@ addr_t ArchitectureArm::GetOpcodeLoadAddress(addr_t opcode_addr,
   default: break;
   }
   return opcode_addr & ~(1ull);
+}
+
+// The ARM M-Profile Armv7-M Architecture Reference Manual
+// "Exception return behavior" describes how the processor
+// saves registers to the stack, decrements the stack pointer,
+// puts a special value in $lr, and then calls a registered
+// exception handler routine.
+//
+// Detect that special value in $lr, and if present, add
+// unwind rules for the registers that were saved above this
+// stack frame's CFA.  Overwrite any register locations that
+// the current_unwindplan has for these registers; they are
+// not correct when we're invoked this way.
+UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
+    Thread &thread, addr_t callers_return_address, addr_t cfa,
+    std::shared_ptr<const UnwindPlan> current_unwindplan) {
+
+  ProcessSP process_sp = thread.GetProcess();
+  if (!process_sp)
+    return {};
+
+  const ArchSpec arch = process_sp->GetTarget().GetArchitecture();
+  if (!arch.GetTriple().isArmMClass() || arch.GetAddressByteSize() != 4)
+    return {};
+
+  if (callers_return_address != 0xFFFFFFF1 &&
+      callers_return_address != 0xFFFFFFF9 &&
+      callers_return_address != 0xFFFFFFFD &&
+      callers_return_address != 0xFFFFFFE1 &&
+      callers_return_address != 0xFFFFFFE9 &&
+      callers_return_address != 0xFFFFFFED)
+    return {};
+
+  const RegisterKind plan_regkind = current_unwindplan->GetRegisterKind();
+  UnwindPlanSP new_plan = std::make_shared<UnwindPlan>(plan_regkind);
+  new_plan->SetSourceName("Arm Cortex-M exception return UnwindPlan");
+  new_plan->SetSourcedFromCompiler(eLazyBoolNo);
+  new_plan->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  new_plan->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+
+  // bit 4 will be 1 if only the general purpose registers were saved.
+  // bit 4 will be 0 if the GPRs + floating point registers were saved.
+  const bool fp_regs_saved = (callers_return_address & 0x10) == 0;
+
+  int stored_regs_size = 0x20;
+  if (fp_regs_saved)
+    stored_regs_size = 0x68;
+
+  uint32_t gpr_regs[] = {dwarf_r0,  dwarf_r1, dwarf_r2, dwarf_r3,
+                         dwarf_r12, dwarf_lr, dwarf_pc, dwarf_cpsr};
+  const int gpr_reg_count = sizeof(gpr_regs) / sizeof(uint32_t);
+  uint32_t fpr_regs[] = {dwarf_s0,  dwarf_s1,  dwarf_s2,  dwarf_s3,
+                         dwarf_s4,  dwarf_s5,  dwarf_s6,  dwarf_s7,
+                         dwarf_s8,  dwarf_s9,  dwarf_s10, dwarf_s11,
+                         dwarf_s12, dwarf_s13, dwarf_s14, dwarf_s15};
+  const int fpr_reg_count = sizeof(fpr_regs) / sizeof(uint32_t);
+
+  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  std::vector<uint32_t> saved_regs;
+  for (int i = 0; i < gpr_reg_count; i++) {
+    uint32_t regno = gpr_regs[i];
+    reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, gpr_regs[i],
+                                            plan_regkind, regno);
+    saved_regs.push_back(regno);
+  }
+  if (fp_regs_saved) {
+    for (int i = 0; i < fpr_reg_count; i++) {
+      uint32_t regno = fpr_regs[i];
+      reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, fpr_regs[i],
+                                              plan_regkind, regno);
+      saved_regs.push_back(regno);
+    }
+  }
+
+  // PSR bit 9 indicates that the stack pointer was unaligned (to
+  // an 8-byte alignment) when the exception happened, and we must
+  // account for that when restoring the excepted stack pointer value.
+  Status error;
+  uint32_t callers_xPSR =
+      process_sp->ReadUnsignedIntegerFromMemory(cfa + 0x28, 4, 0, error);
+  const bool align_stack = callers_xPSR & (1 << 9U);
+  uint32_t callers_sp = cfa + stored_regs_size;
+  if (align_stack)
+    callers_sp |= 4;
+
+  Log *log = GetLog(LLDBLog::Unwind);
+  LLDB_LOGF(log,
+            "ArchitectureArm::GetArchitectureUnwindPlan found caller return "
+            "addr of 0x%" PRIx64 ", for frame with CFA 0x%" PRIx64
+            ", fp_regs_saved %d, stored_regs_size 0x%x, align stack %d",
+            callers_return_address, cfa, fp_regs_saved, stored_regs_size,
+            align_stack);
+
+  uint32_t sp_regnum = dwarf_sp;
+  reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, dwarf_sp,
+                                          plan_regkind, sp_regnum);
+
+  const int row_count = current_unwindplan->GetRowCount();
+  for (int i = 0; i < row_count; i++) {
+    UnwindPlan::Row row = *current_unwindplan->GetRowAtIndex(i);
+    uint32_t offset = 0;
+    const size_t saved_reg_count = saved_regs.size();
+    for (size_t j = 0; j < saved_reg_count; j++) {
+      // The locations could be set with
+      // SetRegisterLocationToIsConstant(regno, cfa+offset)
+      // expressing it in terms of CFA addr+offset - this UnwindPlan
+      // is only used once, with this specific CFA.  I'm not sure
+      // which will be clearer for someone reading the unwind log.
+      row.SetRegisterLocationToAtCFAPlusOffset(saved_regs[j], offset, true);
+      offset += 4;
+    }
+    row.SetRegisterLocationToIsCFAPlusOffset(sp_regnum, callers_sp - cfa, true);
+    new_plan->AppendRow(row);
+  }
+  return new_plan;
 }
