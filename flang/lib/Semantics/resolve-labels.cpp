@@ -383,9 +383,9 @@ public:
   template <typename FIRST, typename CONSTRUCT, typename STMT>
   void CheckOptionalName(const char *constructTag, const CONSTRUCT &a,
       const parser::Statement<STMT> &stmt) {
-    if (const parser::CharBlock * name{GetStmtName(stmt)}) {
+    if (const parser::CharBlock *name{GetStmtName(stmt)}) {
       const auto &firstStmt{std::get<parser::Statement<FIRST>>(a.t)};
-      if (const parser::CharBlock * firstName{GetStmtName(firstStmt)}) {
+      if (const parser::CharBlock *firstName{GetStmtName(firstStmt)}) {
         if (*firstName != *name) {
           context_.Say(*name, "%s name mismatch"_err_en_US, constructTag)
               .Attach(*firstName, "should be"_en_US);
@@ -504,9 +504,9 @@ public:
       progName = &program->statement.v.source;
       upperCaseCharBlock(*progName);
     }
-    if (const parser::CharBlock *
-        endName{GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
-            mainProgram.t))}) {
+    if (const parser::CharBlock *endName{
+            GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
+                mainProgram.t))}) {
       upperCaseCharBlock(*endName);
       if (progName) {
         if (*endName != *progName) {
@@ -716,7 +716,7 @@ private:
     const auto &constructStmt{std::get<parser::Statement<FIRST>>(a.t)};
     const auto &endStmt{std::get<parser::Statement<END>>(a.t)};
     const parser::CharBlock *endName{GetStmtName(endStmt)};
-    if (const parser::CharBlock * constructName{GetStmtName(constructStmt)}) {
+    if (const parser::CharBlock *constructName{GetStmtName(constructStmt)}) {
       if (endName) {
         if (*constructName != *endName) {
           context_
@@ -1072,7 +1072,7 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
       bool isFatal{false};
       ProxyForScope fromScope{scope};
       for (ProxyForScope toScope{target.proxyForScope}; HasScope(toScope);
-           toScope = scopes[toScope].parent) {
+          toScope = scopes[toScope].parent) {
         while (scopes[fromScope].depth > scopes[toScope].depth) {
           fromScope = scopes[fromScope].parent;
         }

@@ -667,8 +667,8 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
   if (loopNestLevel == 0) {
-    context_.Say(verbatim.source,
-          "The CACHE directive must be inside a loop"_err_en_US);
+    context_.Say(
+        verbatim.source, "The CACHE directive must be inside a loop"_err_en_US);
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {

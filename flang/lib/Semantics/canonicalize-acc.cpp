@@ -68,7 +68,7 @@ private:
           return; // Tile is not allowed on DO CONCURRENT
         }
         for (const parser::DoConstruct *loop{&outer}; loop && tileArgNb > 0;
-             --tileArgNb) {
+            --tileArgNb) {
           const auto &block{std::get<parser::Block>(loop->t)};
           const auto it{block.begin()};
           loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)

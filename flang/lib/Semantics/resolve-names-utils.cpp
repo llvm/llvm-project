@@ -352,7 +352,7 @@ void EquivalenceSets::AddToSet(const parser::Designator &designator) {
       }
       auto subscripts{currObject_.subscripts};
       if (subscripts.empty()) {
-        if (const ArraySpec * shape{symbol->GetShape()};
+        if (const ArraySpec *shape{symbol->GetShape()};
             shape && shape->IsExplicitShape()) {
           // record a whole array as its first element
           for (const ShapeSpec &spec : *shape) {
@@ -645,9 +645,9 @@ bool EquivalenceSets::IsSequenceType(const DeclTypeSpec *type,
     std::function<bool(const IntrinsicTypeSpec &)> predicate) {
   if (!type) {
     return false;
-  } else if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {
+  } else if (const IntrinsicTypeSpec *intrinsic{type->AsIntrinsic()}) {
     return predicate(*intrinsic);
-  } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+  } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
     for (const auto &pair : *derived->typeSymbol().scope()) {
       const Symbol &component{*pair.second};
       if (IsAllocatableOrPointer(component) ||
@@ -744,8 +744,8 @@ Symbol *SymbolMapper::CopySymbol(const Symbol *symbol) {
 void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
   common::visit(
       common::visitors{[&](ObjectEntityDetails &object) {
-                         if (const DeclTypeSpec * type{object.type()}) {
-                           if (const DeclTypeSpec * newType{MapType(*type)}) {
+                         if (const DeclTypeSpec *type{object.type()}) {
+                           if (const DeclTypeSpec *newType{MapType(*type)}) {
                              object.ReplaceType(*newType);
                            }
                          }
@@ -757,11 +757,11 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
                          }
                        },
           [&](ProcEntityDetails &proc) {
-            if (const Symbol *
-                mappedSymbol{MapInterface(proc.rawProcInterface())}) {
+            if (const Symbol *mappedSymbol{
+                    MapInterface(proc.rawProcInterface())}) {
               proc.set_procInterfaces(
                   *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
-            } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
+            } else if (const DeclTypeSpec *mappedType{MapType(proc.type())}) {
               if (proc.type()) {
                 CHECK(*proc.type() == *mappedType);
               } else {
@@ -769,13 +769,13 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
               }
             }
             if (proc.init()) {
-              if (const Symbol * mapped{MapSymbol(*proc.init())}) {
+              if (const Symbol *mapped{MapSymbol(*proc.init())}) {
                 proc.set_init(*mapped);
               }
             }
           },
           [&](const HostAssocDetails &hostAssoc) {
-            if (const Symbol * mapped{MapSymbol(hostAssoc.symbol())}) {
+            if (const Symbol *mapped{MapSymbol(hostAssoc.symbol())}) {
               symbol.set_details(HostAssocDetails{*mapped});
             }
           },
@@ -838,7 +838,7 @@ const Symbol *SymbolMapper::MapInterface(const Symbol *interface) {
     if (&interface->owner() != &scope_) {
       return interface;
     } else if (const auto *subp{interface->detailsIf<SubprogramDetails>()};
-               subp && subp->isInterface()) {
+        subp && subp->isInterface()) {
       return CopySymbol(interface);
     }
   }

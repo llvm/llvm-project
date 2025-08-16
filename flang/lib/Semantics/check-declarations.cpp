@@ -481,7 +481,7 @@ void CheckHelper::Check(const Symbol &symbol) {
     }
   }
   if (IsAutomatic(symbol)) {
-    if (const Symbol * common{FindCommonBlockContaining(symbol)}) {
+    if (const Symbol *common{FindCommonBlockContaining(symbol)}) {
       messages_.Say(
           "Automatic data object '%s' may not appear in COMMON block /%s/"_err_en_US,
           symbol.name(), common->name());
@@ -573,7 +573,7 @@ void CheckHelper::CheckExplicitSave(const Symbol &symbol) {
     messages_.Say(
         "The function result variable '%s' may not have an explicit SAVE attribute"_err_en_US,
         symbol.name());
-  } else if (const Symbol * common{FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *common{FindCommonBlockContaining(ultimate)}) {
     messages_.Say(
         "The entity '%s' in COMMON block /%s/ may not have an explicit SAVE attribute"_err_en_US,
         symbol.name(), common->name());
@@ -1090,8 +1090,7 @@ void CheckHelper::CheckObjectEntity(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -1177,8 +1176,8 @@ void CheckHelper::CheckObjectEntity(
     if (isComponent) {
       if (attr == common::CUDADataAttr::Device) {
         const DeclTypeSpec *type{symbol.GetType()};
-        if (const DerivedTypeSpec *
-            derived{type ? type->AsDerived() : nullptr}) {
+        if (const DerivedTypeSpec *derived{
+                type ? type->AsDerived() : nullptr}) {
           DirectComponentIterator directs{*derived};
           if (auto iter{std::find_if(directs.begin(), directs.end(),
                   [](const Symbol &) { return false; })}) {
@@ -1547,7 +1546,7 @@ void CheckHelper::CheckSubprogram(
         iter != symbol.owner().end()) {
       const Symbol &resNameSym{*iter->second};
       if (const auto *resNameSubp{resNameSym.detailsIf<SubprogramDetails>()}) {
-        if (const Scope * resNameEntryScope{resNameSubp->entryScope()}) {
+        if (const Scope *resNameEntryScope{resNameSubp->entryScope()}) {
           const Scope *myScope{
               details.entryScope() ? details.entryScope() : symbol.scope()};
           if (resNameEntryScope == myScope) {
@@ -1562,7 +1561,7 @@ void CheckHelper::CheckSubprogram(
       }
     }
   }
-  if (const MaybeExpr & stmtFunction{details.stmtFunction()}) {
+  if (const MaybeExpr &stmtFunction{details.stmtFunction()}) {
     if (auto msg{evaluate::CheckStatementFunction(
             symbol, *stmtFunction, context_.foldingContext())}) {
       SayWithDeclaration(symbol, std::move(*msg));
@@ -1571,8 +1570,8 @@ void CheckHelper::CheckSubprogram(
           "A statement function must not have the POINTER attribute"_err_en_US);
     } else if (details.result().flags().test(Symbol::Flag::Implicit)) {
       // 15.6.4 p2 weird requirement
-      if (const Symbol *
-          host{symbol.owner().parent().FindSymbol(symbol.name())}) {
+      if (const Symbol *host{
+              symbol.owner().parent().FindSymbol(symbol.name())}) {
         evaluate::AttachDeclaration(
             Warn(common::LanguageFeature::StatementFunctionExtensions,
                 symbol.name(),
@@ -1647,7 +1646,7 @@ void CheckHelper::CheckSubprogram(
         "A subroutine may not have LAUNCH_BOUNDS() or CLUSTER_DIMS() unless it has ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)"_err_en_US);
   }
   if (!IsStmtFunction(symbol)) {
-    if (const Scope * outerDevice{FindCUDADeviceContext(&symbol.owner())};
+    if (const Scope *outerDevice{FindCUDADeviceContext(&symbol.owner())};
         outerDevice && outerDevice->symbol()) {
       if (auto *msg{messages_.Say(symbol.name(),
               "'%s' may not be an internal procedure of CUDA device subprogram '%s'"_err_en_US,
@@ -1665,8 +1664,7 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
     if (const auto *bind{symbol.GetBindName()}) {
       interfaceName = *bind;
     }
-    if (const Symbol * global{FindGlobal(symbol)};
-        global && global != &symbol) {
+    if (const Symbol *global{FindGlobal(symbol)}; global && global != &symbol) {
       std::string definitionName{global->name().ToString()};
       if (const auto *bind{global->GetBindName()}) {
         definitionName = *bind;
@@ -1709,7 +1707,7 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
         }
       }
     } else if (auto iter{externalNames_.find(interfaceName)};
-               iter != externalNames_.end()) {
+        iter != externalNames_.end()) {
       const Symbol &previous{*iter->second};
       if (auto chars{Characterize(symbol)}) {
         if (auto previousChars{Characterize(previous)}) {
@@ -2031,8 +2029,8 @@ void CheckHelper::CollectSpecifics(DistinguishabilityHelper &helper,
       }
     }
   }
-  if (const Scope * parent{generic.owner().GetDerivedTypeParent()}) {
-    if (const Symbol * inherited{parent->FindComponent(generic.name())}) {
+  if (const Scope *parent{generic.owner().GetDerivedTypeParent()}) {
+    if (const Symbol *inherited{parent->FindComponent(generic.name())}) {
       if (IsAccessible(*inherited, generic.owner().parent())) {
         if (const auto *details{inherited->detailsIf<GenericDetails>()}) {
           // Include specifics of inherited generic of the same name, too
@@ -2236,7 +2234,7 @@ bool CheckHelper::CheckDefinedOperatorArg(const SourceName &opName,
     msg =
         "In %s function '%s', dummy argument '%s' may not be OPTIONAL"_err_en_US;
   } else if (const auto *dataObject{std::get_if<DummyDataObject>(&arg.u)};
-             dataObject == nullptr) {
+      dataObject == nullptr) {
     msg =
         "In %s function '%s', dummy argument '%s' must be a data object"_err_en_US;
   } else if (dataObject->intent == common::Intent::Out) {
@@ -2468,9 +2466,7 @@ void CheckHelper::CheckPassArg(
     return;
   }
   const auto &name{proc.name()};
-  const Symbol *interface {
-    interface0 ? FindInterface(*interface0) : nullptr
-  };
+  const Symbol *interface{interface0 ? FindInterface(*interface0) : nullptr};
   if (!interface) {
     messages_.Say(name,
         "Procedure component '%s' must have NOPASS attribute or explicit interface"_err_en_US,
@@ -3137,9 +3133,9 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             msgs.Annex(std::move(bad));
           }
         } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
-                   !evaluate::IsInteroperableIntrinsicType(
-                       *dyType, &context_.languageFeatures())
-                        .value_or(false)) {
+            !evaluate::IsInteroperableIntrinsicType(
+                *dyType, &context_.languageFeatures())
+                .value_or(false)) {
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
               msgs.Say(common::UsageWarning::LogicalVsCBool, component.name(),
@@ -3228,7 +3224,7 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
             .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
       } else if (auto bad{
                      WhyNotInteroperableDerivedType(derived->typeSymbol())};
-                 bad.AnyFatalError()) {
+          bad.AnyFatalError()) {
         bad.AttachTo(
             msgs.Say(symbol.name(),
                     "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)
@@ -3297,7 +3293,7 @@ parser::Messages CheckHelper::WhyNotInteroperableFunctionResult(
     msgs.Say(symbol.name(),
         "Interoperable function result may not have ALLOCATABLE or POINTER attribute"_err_en_US);
   }
-  if (const DeclTypeSpec * type{symbol.GetType()};
+  if (const DeclTypeSpec *type{symbol.GetType()};
       type && type->category() == DeclTypeSpec::Character) {
     bool isConstOne{false}; // 18.3.1(1)
     if (const auto &len{type->characterTypeSpec().length().GetExplicit()}) {
@@ -3401,7 +3397,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     // procedure interface) but is not itself BIND(C).
   }
   parser::Messages whyNot;
-  if (const std::string * bindName{symbol.GetBindName()};
+  if (const std::string *bindName{symbol.GetBindName()};
       bindName) { // has a binding name
     if (!bindName->empty()) {
       bool ok{bindName->front() == '_' || parser::IsLetter(bindName->front())};
@@ -3490,7 +3486,7 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
   if (generic.owner().IsDerivedType()) {
     return;
   }
-  if (const Scope * dtScope{derivedType.scope()}) {
+  if (const Scope *dtScope{derivedType.scope()}) {
     if (auto iter{dtScope->find(generic.name())}; iter != dtScope->end() &&
         IsAccessible(*iter->second, generic.owner())) {
       for (auto specRef : iter->second->get<GenericDetails>().specificProcs()) {
@@ -3784,8 +3780,8 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
           symbol.name(), dyType->AsFortran());
     }
     if (!symbol.has<ObjectEntityDetails>()) {
-      if (const DerivedTypeSpec *
-          derived{evaluate::GetDerivedTypeSpec(*dyType)}) {
+      if (const DerivedTypeSpec *derived{
+              evaluate::GetDerivedTypeSpec(*dyType)}) {
         if (IsEventTypeOrLockType(derived)) {
           messages_.Say(
               "Entity '%s' with EVENT_TYPE or LOCK_TYPE must be an object"_err_en_US,
@@ -3807,13 +3803,12 @@ void CheckHelper::CheckModuleProcedureDef(const Symbol &symbol) {
       (procClass == ProcedureDefinitionClass::Module &&
           symbol.attrs().test(Attr::MODULE)) &&
       !subprogram->bindName() && !subprogram->isInterface()) {
-    const Symbol &interface {
-      subprogram->moduleInterface() ? *subprogram->moduleInterface() : symbol
-    };
-    if (const Symbol *
-            module{interface.owner().kind() == Scope::Kind::Module
-                    ? interface.owner().symbol()
-                    : nullptr};
+    const Symbol &interface{subprogram->moduleInterface()
+            ? *subprogram->moduleInterface()
+            : symbol};
+    if (const Symbol *module{interface.owner().kind() == Scope::Kind::Module
+                ? interface.owner().symbol()
+                : nullptr};
         module && module->has<ModuleDetails>()) {
       std::pair<SourceName, const Symbol *> key{symbol.name(), module};
       auto iter{moduleProcs_.find(key)};

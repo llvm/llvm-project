@@ -32,6 +32,6 @@ void UnparseWithSymbols(llvm::raw_ostream &, const parser::Program &,
 void UnparseWithModules(llvm::raw_ostream &, SemanticsContext &,
     const parser::Program &,
     parser::Encoding encoding = parser::Encoding::UTF_8);
-}
+} // namespace Fortran::semantics
 
 #endif // FORTRAN_SEMANTICS_UNPARSE_WITH_SYMBOLS_H_

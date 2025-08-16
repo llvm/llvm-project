@@ -249,7 +249,7 @@ static void HarvestSymbolsNeededFromOtherModules(
       HarvestSymbolsNeededFromOtherModules(set, *symbol.scope());
     }
   } else if (const auto &generic{symbol.detailsIf<GenericDetails>()};
-             generic && generic->derivedType()) {
+      generic && generic->derivedType()) {
     const Symbol &dtSym{*generic->derivedType()};
     if (dtSym.has<DerivedTypeDetails>()) {
       if (dtSym.scope()) {
@@ -324,7 +324,7 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
       continue;
     }
     SourceName rename{s->name()};
-    if (const Symbol * found{scope.FindSymbol(s->name())}) {
+    if (const Symbol *found{scope.FindSymbol(s->name())}) {
       if (found == &*s) {
         continue; // available in scope
       }
@@ -553,7 +553,7 @@ void ModFileWriter::PutDerivedType(
     return;
   }
   PutAttrs(decls_ << "type", typeSymbol.attrs());
-  if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
+  if (const DerivedTypeSpec *extends{typeSymbol.GetParentTypeSpec()}) {
     decls_ << ",extends(" << extends->name() << ')';
   }
   decls_ << "::" << typeSymbol.name();
@@ -685,7 +685,7 @@ static void PutOpenACCRoutineInfo(
 
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   auto &details{symbol.get<SubprogramDetails>()};
-  if (const Symbol * interface{details.moduleInterface()}) {
+  if (const Symbol *interface{details.moduleInterface()}) {
     const Scope *module{FindModuleContaining(interface->owner())};
     if (module && module != &symbol.owner()) {
       // Interface is in ancestor module
@@ -1345,7 +1345,7 @@ static void GetModuleDependences(
   std::size_t limit{content.size()};
   std::string_view str{content.data(), limit};
   for (std::size_t j{ModHeader::len};
-       str.substr(j, ModHeader::needLen) == ModHeader::need; ++j) {
+      str.substr(j, ModHeader::needLen) == ModHeader::need; ++j) {
     j += 7;
     auto checkSum{ExtractCheckSum(str.substr(j, ModHeader::sumLen))};
     if (!checkSum) {
@@ -1673,7 +1673,7 @@ void SubprogramSymbolCollector::Collect() {
         needed = needed || (spec && useSet_.count(spec->GetUltimate()) > 0) ||
             (dt && useSet_.count(dt->GetUltimate()) > 0);
       } else if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
-        const Symbol *interface { subp->moduleInterface() };
+        const Symbol *interface{subp->moduleInterface()};
         needed = needed || (interface && useSet_.count(*interface) > 0);
       }
       if (needed) {
@@ -1736,7 +1736,7 @@ void SubprogramSymbolCollector::DoSymbol(
                         DoBound(spec.lbound());
                         DoBound(spec.ubound());
                       }
-                      if (const Symbol * commonBlock{details.commonBlock()}) {
+                      if (const Symbol *commonBlock{details.commonBlock()}) {
                         DoSymbol(*commonBlock);
                       }
                     },
@@ -1789,7 +1789,7 @@ void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
     DoParamValue(type->characterTypeSpec().length());
     break;
   default:
-    if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+    if (const DerivedTypeSpec *derived{type->AsDerived()}) {
       const auto &typeSymbol{derived->typeSymbol()};
       for (const auto &pair : derived->parameters()) {
         DoParamValue(pair.second);
@@ -1798,7 +1798,7 @@ void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
       // any) matter to IMPORT symbol collection only for derived types
       // defined in the subprogram.
       if (typeSymbol.owner() == scope_) {
-        if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
+        if (const DerivedTypeSpec *extends{typeSymbol.GetParentTypeSpec()}) {
           DoSymbol(extends->name(), extends->typeSymbol());
         }
         for (const auto &pair : *typeSymbol.scope()) {
@@ -1811,7 +1811,7 @@ void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
 }
 
 void SubprogramSymbolCollector::DoBound(const Bound &bound) {
-  if (const MaybeSubscriptIntExpr & expr{bound.GetExplicit()}) {
+  if (const MaybeSubscriptIntExpr &expr{bound.GetExplicit()}) {
     DoExpr(*expr);
   }
 }
