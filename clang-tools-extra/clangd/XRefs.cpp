@@ -1106,11 +1106,11 @@ public:
     return true;
   }
   bool VisitBreakStmt(BreakStmt *B) {
-    found(Break, B->getBreakLoc());
+    found(Break, B->getKwLoc());
     return true;
   }
   bool VisitContinueStmt(ContinueStmt *C) {
-    found(Continue, C->getContinueLoc());
+    found(Continue, C->getKwLoc());
     return true;
   }
   bool VisitSwitchCase(SwitchCase *C) {
