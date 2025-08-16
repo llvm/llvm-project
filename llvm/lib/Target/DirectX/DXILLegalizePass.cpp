@@ -15,8 +15,11 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
 
@@ -622,6 +625,92 @@ legalizeScalarLoadStoreOnArrays(Instruction &I,
   return true;
 }
 
+// Note: Legalization to undo SimplifyCFG. Ideally, SimplifyCFG's
+// TargetTransformInfo would ignore our resource intrinsics, but
+// it doesn't. This Works for a single select; multiple selects on
+// raw buffer loads won’t be legalized. The hasOneUser for ExtractValueInst
+// of dx_resource_load_rawbuffer is enforced in DXILOpLowering,
+// so checking it here is fine.
+static bool
+legalizeBuffLoadSelectCalls(Instruction &I,
+                            SmallVectorImpl<Instruction *> &ToRemove,
+                            DenseMap<Value *, Value *> &) {
+  // Check if this is a dx_resource_load_rawbuffer intrinsic
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II || II->getIntrinsicID() != Intrinsic::dx_resource_load_rawbuffer)
+    return false;
+
+  // Check if the first argument is a select instruction
+  Value *Arg0 = II->getArgOperand(0);
+  auto *Sel = dyn_cast<SelectInst>(Arg0);
+  if (!Sel)
+    return false;
+
+  if (!II->hasOneUser())
+    return false;
+  ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(*II->user_begin());
+  if (!EVI->hasOneUser())
+    return false;
+  auto *StoreII = dyn_cast<IntrinsicInst>(*EVI->user_begin());
+  if (!StoreII ||
+      StoreII->getIntrinsicID() != Intrinsic::dx_resource_store_rawbuffer)
+    return false;
+
+  BasicBlock *BB = II->getParent();
+  Function *F = BB->getParent();
+  IRBuilder<> Builder(StoreII);
+
+  // Create new basic blocks
+  BasicBlock *ThenBB = BasicBlock::Create(F->getContext(), "rawbuf.if", F);
+  BasicBlock *ElseBB = BasicBlock::Create(F->getContext(), "rawbuf.else", F);
+  BasicBlock *ContinueBB =
+      BB->splitBasicBlock(std::next(II->getIterator()), "rawbuf.continue");
+
+  // Remove the unconditional branch
+  BB->getTerminator()->eraseFromParent();
+
+  // Create a conditional branch based on the select condition
+  Builder.SetInsertPoint(BB);
+  Builder.CreateCondBr(Sel->getCondition(), ThenBB, ElseBB);
+
+  // Create the true path
+  Builder.SetInsertPoint(ThenBB);
+  Instruction *TrueResourceLoad = II->clone();
+  Instruction *TrueExtract = EVI->clone();
+  Instruction *TrueResourceStore = StoreII->clone();
+  TrueResourceLoad->setOperand(0, Sel->getTrueValue());
+  TrueExtract->setOperand(0, TrueResourceLoad);
+  TrueResourceStore->setOperand(3, TrueExtract);
+  Builder.Insert(TrueResourceLoad);
+  Builder.Insert(TrueExtract);
+  Builder.Insert(TrueResourceStore);
+  Builder.CreateBr(ContinueBB);
+
+  // Create the false path
+  Builder.SetInsertPoint(ElseBB);
+  Instruction *FalseResourceLoad = II->clone();
+  Instruction *FalseExtract = EVI->clone();
+  Instruction *FalseResourceStore = StoreII->clone();
+  FalseResourceLoad->setOperand(0, Sel->getFalseValue());
+  FalseExtract->setOperand(0, FalseResourceLoad);
+  FalseResourceStore->setOperand(3, FalseExtract);
+  Builder.Insert(FalseResourceLoad);
+  Builder.Insert(FalseExtract);
+  Builder.Insert(FalseResourceStore);
+  Builder.CreateBr(ContinueBB);
+
+  // Set up the merge block
+  Builder.SetInsertPoint(ContinueBB);
+
+  // Mark the instructions for removal
+  ToRemove.push_back(Sel);
+  ToRemove.push_back(II);
+  ToRemove.push_back(EVI);
+  ToRemove.push_back(StoreII);
+
+  return true;
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -671,6 +760,7 @@ private:
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
     LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
+    LegalizationPipeline[Stage2].push_back(legalizeBuffLoadSelectCalls);
   }
 };
 
