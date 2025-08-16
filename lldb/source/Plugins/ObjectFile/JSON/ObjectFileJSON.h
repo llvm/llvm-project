@@ -86,6 +86,9 @@ public:
 
   Strata CalculateStrata() override { return eStrataUser; }
 
+  bool SetLoadAddress(Target &target, lldb::addr_t value,
+                      bool value_is_offset) override;
+
   static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 

@@ -1702,6 +1702,21 @@ class Base(unittest.TestCase):
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
 
+    def yaml2macho_core(self, yaml_path, obj_path, uuids=None):
+        """
+        Create a Mach-O corefile at the given path from a yaml file.
+
+        Throws subprocess.CalledProcessError if the object could not be created.
+        """
+        yaml2macho_core_bin = configuration.get_yaml2macho_core_path()
+        if not yaml2macho_core_bin:
+            self.assertTrue(False, "No valid yaml2macho-core executable specified")
+        if uuids != None:
+          command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path, "-u", uuids]
+        else:
+          command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path]
+        self.runBuildCommand(command)
+
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()
