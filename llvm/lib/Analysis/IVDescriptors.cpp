@@ -821,7 +821,8 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
   if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax, I);
+    return InstDesc(
+        Kind == RecurKind::FMax || Kind == RecurKind::OrderedFCmpSelect, I);
   if (match(I, m_FMinNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_FMaxNum(m_Value(), m_Value())))
@@ -967,6 +968,14 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
         assert(Kind == RecurKind::FMin &&
                "unexpected recurrence kind for minnum");
         return InstDesc(I, RecurKind::FMinNum);
+      }
+      if (Kind == RecurKind::FMax || Kind == RecurKind::OrderedFCmpSelect) {
+        if (isa<SelectInst>(I))
+          return InstDesc(I, RecurKind::OrderedFCmpSelect);
+        auto *Cmp = dyn_cast<FCmpInst>(I);
+        if (Cmp && FCmpInst::isOrdered(Cmp->getPredicate()) &&
+            isMinMaxPattern(I, Kind, Prev).isRecurrence())
+          return InstDesc(I, RecurKind::OrderedFCmpSelect);
       }
       return InstDesc(false, I);
     }
@@ -1247,6 +1256,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::UMin:
     return Instruction::ICmp;
   case RecurKind::FMax:
+  case RecurKind::OrderedFCmpSelect:
   case RecurKind::FMin:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
