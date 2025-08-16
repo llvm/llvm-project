@@ -6,7 +6,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr noalias %dst) {
 ; CHECK-LABEL: define void @gep_for_first_member_does_not_dominate_insert_point(
 ; CHECK-SAME: ptr [[STR:%.*]], ptr noalias [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -28,12 +28,10 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i64 [[IV2]], 1
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[STR]], i64 [[OR_1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[GEP1]], align 1

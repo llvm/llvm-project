@@ -65,6 +65,10 @@ protected:
   /// relative to, if any.
   mutable MCFragment *Fragment = nullptr;
 
+  /// This is actually a Contents enumerator, but is unsigned to avoid sign
+  /// extension and achieve better bitpacking with MSVC.
+  unsigned SymbolContents : 2;
+
   /// True if this symbol is named.  A named symbol will have a pointer to the
   /// name allocated in the bytes immediately prior to the MCSymbol.
   unsigned HasName : 1;
@@ -94,10 +98,6 @@ protected:
 
   /// Used to detect cyclic dependency like `a = a + 1` and `a = b; b = a`.
   unsigned IsResolving : 1;
-
-  /// This is actually a Contents enumerator, but is unsigned to avoid sign
-  /// extension and achieve better bitpacking with MSVC.
-  unsigned SymbolContents : 3;
 
   /// The alignment of the symbol if it is 'common'.
   ///
@@ -145,10 +145,10 @@ protected:
   };
 
   MCSymbol(const MCSymbolTableEntry *Name, bool isTemporary)
-      : IsTemporary(isTemporary), IsRedefinable(false), IsRegistered(false),
-        IsExternal(false), IsPrivateExtern(false), IsWeakExternal(false),
-        IsUsedInReloc(false), IsResolving(0), SymbolContents(SymContentsUnset),
-        CommonAlignLog2(0), Flags(0) {
+      : SymbolContents(SymContentsUnset), IsTemporary(isTemporary),
+        IsRedefinable(false), IsRegistered(false), IsExternal(false),
+        IsPrivateExtern(false), IsWeakExternal(false), IsUsedInReloc(false),
+        IsResolving(0), CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
