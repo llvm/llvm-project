@@ -18,7 +18,8 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmLeafOp<10>;
+def simm8 : RISCVSImmOp<8>;
+def simm10 : RISCVSImmOp<10>;
 
 def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
   let RenderMethod = "addSImm10UnsignedOperands";
@@ -75,13 +76,13 @@ class PLUI_i<bits<7> funct7, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class PLI_B_i<bits<8> funct8, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins uimm8:$uimm8), opcodestr, "$rd, $uimm8", [],
+    : RVInst<(outs GPR:$rd), (ins simm8:$imm8), opcodestr, "$rd, $imm8", [],
              InstFormatOther> {
-  bits<8> uimm8;
+  bits<8> imm8;
   bits<5> rd;
 
   let Inst{31-24} = funct8;
-  let Inst{23-16} = uimm8;
+  let Inst{23-16} = imm8;
   let Inst{15}    = 0b0;
   let Inst{14-12} = 0b010;
   let Inst{11-7} = rd;
