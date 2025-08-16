@@ -1082,109 +1082,95 @@ void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
 }
 
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
+    const parser::Designator &designator) {
+  auto *name{parser::Unwrap<parser::Name>(designator)};
+  // If the symbol is null, return early, CheckSymbolNames
+  // should have already reported the missing symbol as a
+  // diagnostic error
+  if (!name || !name->symbol) {
+    return;
+  }
+
+  llvm::omp::Directive directive{GetContext().directive};
+
+  if (name->symbol->GetUltimate().IsSubprogram()) {
+    if (directive == llvm::omp::Directive::OMPD_threadprivate)
+      context_.Say(name->source,
+          "The procedure name cannot be in a %s directive"_err_en_US,
+          ContextDirectiveAsFortran());
+    // TODO: Check for procedure name in declare target directive.
+  } else if (name->symbol->attrs().test(Attr::PARAMETER)) {
+    if (directive == llvm::omp::Directive::OMPD_threadprivate)
+      context_.Say(name->source,
+          "The entity with PARAMETER attribute cannot be in a %s directive"_err_en_US,
+          ContextDirectiveAsFortran());
+    else if (directive == llvm::omp::Directive::OMPD_declare_target)
+      context_.Warn(common::UsageWarning::OpenMPUsage, name->source,
+          "The entity with PARAMETER attribute is used in a %s directive"_warn_en_US,
+          ContextDirectiveAsFortran());
+  } else if (FindCommonBlockContaining(*name->symbol)) {
+    context_.Say(name->source,
+        "A variable in a %s directive cannot be an element of a common block"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (FindEquivalenceSet(*name->symbol)) {
+    context_.Say(name->source,
+        "A variable in a %s directive cannot appear in an EQUIVALENCE statement"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (name->symbol->test(Symbol::Flag::OmpThreadprivate) &&
+      directive == llvm::omp::Directive::OMPD_declare_target) {
+    context_.Say(name->source,
+        "A THREADPRIVATE variable cannot appear in a %s directive"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else {
+    const semantics::Scope &useScope{
+        context_.FindScope(GetContext().directiveSource)};
+    const semantics::Scope &curScope = name->symbol->GetUltimate().owner();
+    if (!curScope.IsTopLevel()) {
+      const semantics::Scope &declScope =
+          GetProgramUnitOrBlockConstructContaining(curScope);
+      const semantics::Symbol *sym{
+          declScope.parent().FindSymbol(name->symbol->name())};
+      if (sym &&
+          (sym->has<MainProgramDetails>() || sym->has<ModuleDetails>())) {
+        context_.Say(name->source,
+            "The module name cannot be in a %s directive"_err_en_US,
+            ContextDirectiveAsFortran());
+      } else if (!IsSaved(*name->symbol) &&
+          declScope.kind() != Scope::Kind::MainProgram &&
+          declScope.kind() != Scope::Kind::Module) {
+        context_.Say(name->source,
+            "A variable that appears in a %s directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly"_err_en_US,
+            ContextDirectiveAsFortran());
+      } else if (useScope != declScope) {
+        context_.Say(name->source,
+            "The %s directive and the common block or variable in it must appear in the same declaration section of a scoping unit"_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
+    const parser::Name &name) {
+  if (!name.symbol) {
+    return;
+  }
+
+  if (auto *cb{name.symbol->detailsIf<CommonBlockDetails>()}) {
+    for (const auto &obj : cb->objects()) {
+      if (FindEquivalenceSet(*obj)) {
+        context_.Say(name.source,
+            "A variable in a %s directive cannot appear in an EQUIVALENCE statement (variable '%s' from common block '/%s/')"_err_en_US,
+            ContextDirectiveAsFortran(), obj->name(), name.symbol->name());
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &) {
-              if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-                // The symbol is null, return early, CheckSymbolNames
-                // should have already reported the missing symbol as a
-                // diagnostic error
-                if (!name->symbol) {
-                  return;
-                }
-
-                if (name->symbol->GetUltimate().IsSubprogram()) {
-                  if (GetContext().directive ==
-                      llvm::omp::Directive::OMPD_threadprivate)
-                    context_.Say(name->source,
-                        "The procedure name cannot be in a %s "
-                        "directive"_err_en_US,
-                        ContextDirectiveAsFortran());
-                  // TODO: Check for procedure name in declare target directive.
-                } else if (name->symbol->attrs().test(Attr::PARAMETER)) {
-                  if (GetContext().directive ==
-                      llvm::omp::Directive::OMPD_threadprivate)
-                    context_.Say(name->source,
-                        "The entity with PARAMETER attribute cannot be in a %s "
-                        "directive"_err_en_US,
-                        ContextDirectiveAsFortran());
-                  else if (GetContext().directive ==
-                      llvm::omp::Directive::OMPD_declare_target)
-                    context_.Warn(common::UsageWarning::OpenMPUsage,
-                        name->source,
-                        "The entity with PARAMETER attribute is used in a %s directive"_warn_en_US,
-                        ContextDirectiveAsFortran());
-                } else if (FindCommonBlockContaining(*name->symbol)) {
-                  context_.Say(name->source,
-                      "A variable in a %s directive cannot be an element of a "
-                      "common block"_err_en_US,
-                      ContextDirectiveAsFortran());
-                } else if (FindEquivalenceSet(*name->symbol)) {
-                  context_.Say(name->source,
-                      "A variable in a %s directive cannot appear in an "
-                      "EQUIVALENCE statement"_err_en_US,
-                      ContextDirectiveAsFortran());
-                } else if (name->symbol->test(Symbol::Flag::OmpThreadprivate) &&
-                    GetContext().directive ==
-                        llvm::omp::Directive::OMPD_declare_target) {
-                  context_.Say(name->source,
-                      "A THREADPRIVATE variable cannot appear in a %s "
-                      "directive"_err_en_US,
-                      ContextDirectiveAsFortran());
-                } else {
-                  const semantics::Scope &useScope{
-                      context_.FindScope(GetContext().directiveSource)};
-                  const semantics::Scope &curScope =
-                      name->symbol->GetUltimate().owner();
-                  if (!curScope.IsTopLevel()) {
-                    const semantics::Scope &declScope =
-                        GetProgramUnitOrBlockConstructContaining(curScope);
-                    const semantics::Symbol *sym{
-                        declScope.parent().FindSymbol(name->symbol->name())};
-                    if (sym &&
-                        (sym->has<MainProgramDetails>() ||
-                            sym->has<ModuleDetails>())) {
-                      context_.Say(name->source,
-                          "The module name cannot be in a %s "
-                          "directive"_err_en_US,
-                          ContextDirectiveAsFortran());
-                    } else if (!IsSaved(*name->symbol) &&
-                        declScope.kind() != Scope::Kind::MainProgram &&
-                        declScope.kind() != Scope::Kind::Module) {
-                      context_.Say(name->source,
-                          "A variable that appears in a %s directive must be "
-                          "declared in the scope of a module or have the SAVE "
-                          "attribute, either explicitly or "
-                          "implicitly"_err_en_US,
-                          ContextDirectiveAsFortran());
-                    } else if (useScope != declScope) {
-                      context_.Say(name->source,
-                          "The %s directive and the common block or variable "
-                          "in it must appear in the same declaration section "
-                          "of a scoping unit"_err_en_US,
-                          ContextDirectiveAsFortran());
-                    }
-                  }
-                }
-              }
-            },
-            [&](const parser::Name &name) {
-              if (name.symbol) {
-                if (auto *cb{name.symbol->detailsIf<CommonBlockDetails>()}) {
-                  for (const auto &obj : cb->objects()) {
-                    if (FindEquivalenceSet(*obj)) {
-                      context_.Say(name.source,
-                          "A variable in a %s directive cannot appear in an EQUIVALENCE statement (variable '%s' from common block '/%s/')"_err_en_US,
-                          ContextDirectiveAsFortran(), obj->name(),
-                          name.symbol->name());
-                    }
-                  }
-                }
-              }
-            },
-        },
+    common::visit([&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
         ompObject.u);
   }
 }
