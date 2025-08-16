@@ -135,7 +135,8 @@ mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
   }
   if (truncEqual)
     // Returing the 64-bit result preserves more information.
-    return sixtyFour;
+    return propagatePoison(sixtyFour, argRanges);
+
   ConstantIntRanges merged = sixtyFour.rangeUnion(thirtyTwoAsSixtyFour);
   return propagatePoison(merged, argRanges);
 }
