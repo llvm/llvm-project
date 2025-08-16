@@ -75,3 +75,9 @@ Options
   .. code:: c++
 
     const char name[] = "Some name";
+
+.. option:: CheckSugaredTypes
+
+  When set to `true` (default is `false`), type aliases, decltypes as well as
+  template parameter types will get resolved and diagnosed as usage of
+  C-style array in case their underlying type resolves to one.
