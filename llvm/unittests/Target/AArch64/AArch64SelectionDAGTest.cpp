@@ -319,6 +319,64 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_UADDO_CARRY) {
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto N0 = DAG->getConstant(0xA5, Loc, Int8VT);
+  KnownBits Known;
+
+  auto OpMOVIedit = DAG->getNode(AArch64ISD::MOVIedit, Loc, Int64VT, N0);
+  Known = DAG->computeKnownBits(OpMOVIedit);
+  EXPECT_EQ(Known.Zero, APInt(64, 0x00FF00FFFF00FF00));
+  EXPECT_EQ(Known.One, APInt(64, 0xFF00FF0000FF00FF));
+
+  auto N1 = DAG->getConstant(16, Loc, Int8VT);
+  auto OpMOVImsl = DAG->getNode(AArch64ISD::MOVImsl, Loc, Int32VT, N0, N1);
+  Known = DAG->computeKnownBits(OpMOVImsl);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFF5A0000));
+  EXPECT_EQ(Known.One, APInt(32, 0x00A5FFFF));
+
+  auto OpMVNImsl = DAG->getNode(AArch64ISD::MVNImsl, Loc, Int32VT, N0, N1);
+  Known = DAG->computeKnownBits(OpMVNImsl);
+  EXPECT_EQ(Known.Zero, APInt(32, 0x00A50000));
+  EXPECT_EQ(Known.One, APInt(32, 0xFF5AFFFF));
+
+  auto N2 = DAG->getConstant(16, Loc, Int8VT);
+  auto OpMOVIshift32 =
+      DAG->getNode(AArch64ISD::MOVIshift, Loc, Int32VT, N0, N2);
+  Known = DAG->computeKnownBits(OpMOVIshift32);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFF5AFFFF));
+  EXPECT_EQ(Known.One, APInt(32, 0x00A50000));
+
+  auto OpMVNIshift32 =
+      DAG->getNode(AArch64ISD::MVNIshift, Loc, Int32VT, N0, N2);
+  Known = DAG->computeKnownBits(OpMVNIshift32);
+  EXPECT_EQ(Known.Zero, APInt(32, 0x00A5FFFF));
+  EXPECT_EQ(Known.One, APInt(32, 0xFF5A0000));
+
+  auto N3 = DAG->getConstant(8, Loc, Int8VT);
+  auto OpMOVIshift16 =
+      DAG->getNode(AArch64ISD::MOVIshift, Loc, Int16VT, N0, N3);
+  Known = DAG->computeKnownBits(OpMOVIshift16);
+  EXPECT_EQ(Known.One, APInt(16, 0xA500));
+  EXPECT_EQ(Known.Zero, APInt(16, 0x5AFF));
+
+  auto OpMVNIshift16 =
+      DAG->getNode(AArch64ISD::MVNIshift, Loc, Int16VT, N0, N3);
+  Known = DAG->computeKnownBits(OpMVNIshift16);
+  EXPECT_EQ(Known.Zero, APInt(16, 0xA5FF));
+  EXPECT_EQ(Known.One, APInt(16, 0x5A00));
+
+  auto OpMOVI = DAG->getNode(AArch64ISD::MOVI, Loc, Int8VT, N0);
+  Known = DAG->computeKnownBits(OpMOVI);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x5A));
+  EXPECT_EQ(Known.One, APInt(8, 0xA5));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
