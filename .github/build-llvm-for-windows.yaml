@@ -1,0 +1,37 @@
+name: Build LLVM for Windows
+
+on:
+  push:
+    branches: [ build ]
+  pull_request:
+    branches: [ build ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        choco install ninja cmake -y
+
+    - name: Configure LLVM
+      run: |
+        mkdir build
+        cd build
+        cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release ../llvm
+
+    - name: Build LLVM
+      run: |
+        cd build
+        ninja
+
+    - name: Archive Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: llvm-windows-build
+        path: build/
