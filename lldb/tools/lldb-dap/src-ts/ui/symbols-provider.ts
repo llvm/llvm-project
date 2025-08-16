@@ -96,9 +96,7 @@ export class SymbolsProvider extends DisposableContext {
   }
 
   private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbolType[]> {
-    console.log(`Getting symbols for module: ${moduleId}`);
     const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("moduleSymbols", { moduleId, moduleName: '' });
-
     return symbols_response?.symbols || [];
   }
 
