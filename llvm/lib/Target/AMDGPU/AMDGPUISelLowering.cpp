@@ -3910,10 +3910,14 @@ SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
 // type.
 SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
+  StoreSDNode *SN = cast<StoreSDNode>(N);
+  unsigned AS = SN->getAddressSpace();
+  if (AMDGPU::isConstantAddressSpace(AS))
+    return SN->getChain();
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
-  StoreSDNode *SN = cast<StoreSDNode>(N);
   if (!SN->isSimple() || !ISD::isNormalStore(SN))
     return SDValue();
 
@@ -3925,7 +3929,6 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
   Align Alignment = SN->getAlign();
   if (Alignment < Size && isTypeLegal(VT)) {
     unsigned IsFast;
-    unsigned AS = SN->getAddressSpace();
 
     // Expand unaligned stores earlier than legalization. Due to visitation
     // order problems during legalization, the emitted instructions to pack and
