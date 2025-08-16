@@ -1,7 +1,9 @@
 ; RUN: opt %loadNPMPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s
 ; RUN: opt %loadNPMPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s
 
-define void @func(i32 %n, ptr  noalias nonnull %A,  ptr  noalias nonnull %B) {
+@A = common global [1024 x [1024 x double]] zeroinitializer
+
+define void @func(i32 %n) {
 entry:
   br label %outer.for1
 
@@ -16,7 +18,7 @@ outer.for1:
     br i1 %j1.cmp, label %body1, label %exit1
 
       body1:
-        %arrayidx1 = getelementptr inbounds [1024 x double], ptr %A, i32 %k1, i32 %j1
+        %arrayidx1 = getelementptr inbounds [1024 x double], ptr @A, i32 %k1, i32 %j1
         store double 21.0, ptr %arrayidx1
         br label %inc1
 
@@ -45,7 +47,7 @@ outer.for2:
     br i1 %j2.cmp, label %body2, label %exit2
 
       body2:
-        %arrayidx2 = getelementptr inbounds [1024 x double], ptr %A, i32 %k2, i32 %j2
+        %arrayidx2 = getelementptr inbounds [1024 x double], ptr @A, i32 %k2, i32 %j2
         store double 42.0, ptr %arrayidx2
         br label %inc2
 

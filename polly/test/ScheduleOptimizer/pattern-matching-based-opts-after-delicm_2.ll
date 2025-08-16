@@ -34,11 +34,12 @@
 ;               C[i][j][k][w] += A[i][l][j][q] * B[q][w][l][k];
 ;
 ; CHECK: The tensor contraction pattern was detected
-;
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
-define internal fastcc void @kernel_tc(ptr nocapture %C, ptr nocapture readonly %A, ptr nocapture readonly %B) {
+@A = common global [32 x [32 x [32 x [32 x double]]]] zeroinitializer
+@B = common global [32 x [32 x [32 x [32 x double]]]] zeroinitializer
+@C = common global [32 x [32 x [32 x [32 x double]]]] zeroinitializer
+
+define internal fastcc void @kernel_tc() {
 entry:
   br label %for.cond1.preheader
 
@@ -60,16 +61,16 @@ for.cond10.preheader:                             ; preds = %for.inc41, %for.con
 
 for.cond13.preheader:                             ; preds = %for.inc38, %for.cond10.preheader
   %indvars.iv7 = phi i64 [ 0, %for.cond10.preheader ], [ %indvars.iv.next8, %for.inc38 ]
-  %arrayidx37 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr %C, i64 %indvars.iv19, i64 %indvars.iv16, i64 %indvars.iv13, i64 %indvars.iv7
+  %arrayidx37 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr @C, i64 %indvars.iv19, i64 %indvars.iv16, i64 %indvars.iv13, i64 %indvars.iv7
   %.pre = load double, ptr %arrayidx37, align 8
   br label %for.body15
 
 for.body15:                                       ; preds = %for.body15, %for.cond13.preheader
   %i = phi double [ %.pre, %for.cond13.preheader ], [ %add, %for.body15 ]
   %indvars.iv = phi i64 [ 0, %for.cond13.preheader ], [ %indvars.iv.next, %for.body15 ]
-  %arrayidx21 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr %A, i64 %indvars.iv19, i64 %indvars.iv10, i64 %indvars.iv16, i64 %indvars.iv
+  %arrayidx21 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr @A, i64 %indvars.iv19, i64 %indvars.iv10, i64 %indvars.iv16, i64 %indvars.iv
   %i1 = load double, ptr %arrayidx21, align 8
-  %arrayidx29 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr %B, i64 %indvars.iv, i64 %indvars.iv7, i64 %indvars.iv10, i64 %indvars.iv13
+  %arrayidx29 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr @B, i64 %indvars.iv, i64 %indvars.iv7, i64 %indvars.iv10, i64 %indvars.iv13
   %i2 = load double, ptr %arrayidx29, align 8
   %mul = fmul fast double %i2, %i1
   %add = fadd fast double %i, %mul

@@ -5,9 +5,10 @@
 ; Do not remove the pair (store double %add119, read %add119) as redundant
 ; because the are in the wrong order.
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+@data = common global [10 x [1000 x double]] zeroinitializer
+@symmat = common global [10 x [1000 x double]] zeroinitializer
 
-define fastcc void @pr33323(ptr nocapture %data, ptr nocapture %symmat) {
+define fastcc void @pr33323() {
 entry:
   br label %for.body98
 
@@ -20,14 +21,14 @@ for.body98:
 
 for.body105:
   %indvars.iv = phi i64 [ 0, %for.body98 ], [ %indvars.iv.next, %for.body105 ]
-  %arrayidx109 = getelementptr inbounds [1000 x double], ptr %data, i64 %indvars.iv, i64 0
+  %arrayidx109 = getelementptr inbounds [1000 x double], ptr @data, i64 %indvars.iv, i64 0
   %add119 = fadd double undef, undef
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end122, label %for.body105
 
 for.end122:
-  %arrayidx130 = getelementptr inbounds [1000 x double], ptr %symmat, i64 %indvars.iv13, i64 0
+  %arrayidx130 = getelementptr inbounds [1000 x double], ptr @symmat, i64 %indvars.iv13, i64 0
   store double %add119, ptr %arrayidx130
   %indvars.iv.next14 = add nuw nsw i64 %indvars.iv13, 1
   %exitcond15 = icmp eq i64 %indvars.iv.next14, 1000
