@@ -178,6 +178,7 @@ def get_yaml2obj_path():
     if yaml2obj and os.path.lexists(yaml2obj):
         return yaml2obj
 
+
 def get_yaml2macho_core_path():
     """
     Get the path to the yaml2macho-core tool.
