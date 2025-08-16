@@ -987,6 +987,12 @@ struct ModuleSymbolsArguments {
 
   /// The module path.
   std::string moduleName;
+
+  /// The index of the first symbol to return; if omitted, start at the beginning.
+  std::optional<uint32_t> startIndex;
+
+  /// The number of symbols to return; if omitted, all symbols are returned.
+  std::optional<uint32_t> count;
 };
 bool fromJSON(const llvm::json::Value &, ModuleSymbolsArguments &,
               llvm::json::Path);
