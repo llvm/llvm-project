@@ -28,11 +28,9 @@ class DisconnectRequestHandlerTest : public DAPTestBase {};
 
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
   DisconnectRequestHandler handler(*dap);
-  EXPECT_FALSE(dap->disconnecting);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
-  EXPECT_TRUE(dap->disconnecting);
-  std::vector<Message> messages = DrainOutput();
-  EXPECT_THAT(messages,
+  RunOnce();
+  EXPECT_THAT(from_dap,
               testing::Contains(testing::VariantWith<Event>(testing::FieldsAre(
                   /*event=*/"terminated", /*body=*/testing::_))));
 }
@@ -47,17 +45,18 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
 
   DisconnectRequestHandler handler(*dap);
 
-  EXPECT_FALSE(dap->disconnecting);
   dap->configuration.terminateCommands = {"?script print(1)",
                                           "script print(2)"};
   EXPECT_EQ(dap->target.GetProcess().GetState(), lldb::eStateStopped);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
-  EXPECT_TRUE(dap->disconnecting);
-  std::vector<Message> messages = DrainOutput();
-  EXPECT_THAT(messages, testing::ElementsAre(
-                            OutputMatcher("Running terminateCommands:\n"),
-                            OutputMatcher("(lldb) script print(2)\n"),
-                            OutputMatcher("2\n"),
-                            testing::VariantWith<Event>(testing::FieldsAre(
-                                /*event=*/"terminated", /*body=*/testing::_))));
+  RunOnce();
+  EXPECT_THAT(from_dap,
+              testing::Contains(OutputMatcher("Running terminateCommands:\n")));
+  EXPECT_THAT(from_dap,
+              testing::Contains(OutputMatcher("(lldb) script print(2)\n")));
+  EXPECT_THAT(from_dap, testing::Contains(OutputMatcher("1\n")));
+  EXPECT_THAT(from_dap, testing::Contains(OutputMatcher("2\n")));
+  EXPECT_THAT(from_dap,
+              testing::Contains(testing::VariantWith<Event>(testing::FieldsAre(
+                  /*event=*/"terminated", /*body=*/testing::_))));
 }
