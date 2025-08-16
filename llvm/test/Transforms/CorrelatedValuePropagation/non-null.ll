@@ -309,7 +309,7 @@ define void @test12(ptr %arg1, ptr %arg2) {
 ; CHECK:       non_null:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       null:
-; CHECK-NEXT:    [[ANOTHER_ARG:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8, !nonnull !0
+; CHECK-NEXT:    [[ANOTHER_ARG:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8, !nonnull [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[MERGED_ARG:%.*]] = phi ptr [ [[ANOTHER_ARG]], [[NULL]] ], [ [[ARG1]], [[NON_NULL]] ]
@@ -444,5 +444,19 @@ entry:
 
 declare void @callee(ptr)
 declare void @callee2(ptr noundef)
+
+define void @test_memset_pattern(ptr %dest) {
+; CHECK-LABEL: @test_memset_pattern(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr [[DEST:%.*]], i32 257, i64 17, i1 false)
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern(ptr %dest, i32 257, i64 17, i1 false)
+  br label %bb
+bb:
+  icmp ne ptr %dest, null
+  ret void
+}
 
 attributes #0 = { null_pointer_is_valid }

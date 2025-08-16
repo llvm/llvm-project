@@ -1239,7 +1239,10 @@ void InferAddressSpacesImpl::performPointerReplacement(
     return;
 
   // Handle more complex cases like intrinsic that need to be remangled.
-  if (auto *MI = dyn_cast<MemIntrinsic>(CurUser)) {
+  // TODO: This code was written before memset.pattern was added to
+  // MemIntrinsic, consider how to update it
+  if (auto *MI = dyn_cast<MemIntrinsic>(CurUser);
+      MI && !isa<MemSetPatternInst>(MI)) {
     if (!MI->isVolatile() && handleMemIntrinsicPtrUse(MI, V, NewV))
       return;
   }

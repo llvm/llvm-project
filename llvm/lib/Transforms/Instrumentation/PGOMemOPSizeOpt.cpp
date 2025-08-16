@@ -199,6 +199,11 @@ public:
     // Not perform on constant length calls.
     if (isa<ConstantInt>(Length))
       return;
+    // TODO: This code was written before memset.pattern was added to
+    // MemIntrinsic, consider how to update it
+    if (isa<MemSetPatternInst>(MI))
+      return; // not supported
+
     WorkList.push_back(MemOp(&MI));
   }
 

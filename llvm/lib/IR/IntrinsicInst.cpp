@@ -236,6 +236,30 @@ void DbgAssignIntrinsic::setValue(Value *V) {
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
+TypeSize MemIntrinsic::getElementSizeInBytes() const {
+  switch (getIntrinsicID()) {
+  case Intrinsic::experimental_memset_pattern:
+    return getDataLayout().getTypeStoreSize(getArgOperand(1)->getType());
+  default:
+    return TypeSize::getFixed(1);
+  }
+}
+
+TypeSize AnyMemIntrinsic::getElementSizeInBytes() const {
+  switch (getIntrinsicID()) {
+  case Intrinsic::experimental_memset_pattern:
+    return getDataLayout().getTypeStoreSize(getArgOperand(1)->getType());
+  case Intrinsic::memcpy_element_unordered_atomic:
+  case Intrinsic::memmove_element_unordered_atomic:
+  case Intrinsic::memset_element_unordered_atomic: {
+    unsigned Bytes = cast<ConstantInt>(getArgOperand(3))->getZExtValue();
+    return TypeSize::getFixed(Bytes);
+  }
+  default:
+    return TypeSize::getFixed(1);
+  }
+}
+
 ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("InstrProfValueProfileInst does not have counters!");

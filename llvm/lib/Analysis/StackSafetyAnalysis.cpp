@@ -489,7 +489,8 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
           break;
         }
-        if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
+        if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I);
+            MI && !isa<MemSetPatternInst>(I)) {
           auto AccessRange = getMemIntrinsicAccessRange(MI, UI, Ptr);
           bool Safe = false;
           if (const auto *MTI = dyn_cast<MemTransferInst>(MI)) {
