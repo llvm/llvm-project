@@ -623,7 +623,8 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_freestanding_cstring",
             "values": {
-                "c++26": 202306  # P2338R4 Freestanding Library: Character primitives and the C library
+                "c++26": 202307  # P2937R0 Freestanding: Remove strtok
+                # 		 202306	 # P2338R4 Freestanding Library: Character primitives and the C library
                 #        202311  # P2407R5 Freestanding Library: Partial Classes
             },
             "headers": ["cstring"],
