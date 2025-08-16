@@ -30,11 +30,12 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
 
   // Test first libcall name
   EXPECT_EQ(
-      RTLIB::arm64ec__Unwind_Resume,
+      RTLIB::LibcallImpl::Impl_arm64ec__Unwind_Resume,
       *RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("#_Unwind_Resume")
            .begin());
   // Test longest libcall names
-  EXPECT_EQ(RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes,
+  EXPECT_EQ(RTLIB::LibcallImpl::
+                Impl___hexagon_memcpy_likely_aligned_min32bytes_mult8bytes,
             *RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(
                  "__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes")
                  .begin());
@@ -44,9 +45,9 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
         RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("sqrtl");
     ASSERT_EQ(size(SquirtleSquad), 3);
     auto I = SquirtleSquad.begin();
-    EXPECT_EQ(*I++, RTLIB::sqrt_f128);
-    EXPECT_EQ(*I++, RTLIB::sqrt_f80);
-    EXPECT_EQ(*I++, RTLIB::sqrt_ppcf128);
+    EXPECT_EQ(*I++, RTLIB::LibcallImpl::Impl_sqrt_f128);
+    EXPECT_EQ(*I++, RTLIB::LibcallImpl::Impl_sqrt_f80);
+    EXPECT_EQ(*I++, RTLIB::LibcallImpl::Impl_sqrt_ppcf128);
   }
 
   // Last libcall
@@ -54,9 +55,9 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
     auto Truncs = RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("truncl");
     ASSERT_EQ(size(Truncs), 3);
     auto I = Truncs.begin();
-    EXPECT_EQ(*I++, RTLIB::trunc_f128);
-    EXPECT_EQ(*I++, RTLIB::trunc_f80);
-    EXPECT_EQ(*I++, RTLIB::trunc_ppcf128);
+    EXPECT_EQ(*I++, RTLIB::LibcallImpl::Impl_trunc_f128);
+    EXPECT_EQ(*I++, RTLIB::LibcallImpl::Impl_trunc_f80);
+    EXPECT_EQ(*I++, RTLIB::LibcallImpl::Impl_trunc_ppcf128);
   }
 }
 

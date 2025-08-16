@@ -157,7 +157,7 @@ public:
 
   const Record *getDef() const { return TheDef; }
 
-  StringRef getName() const { return TheDef->getName(); }
+  Twine getName() const { return Twine("Impl_") + TheDef->getName(); }
 
   size_t getEnumVal() const { return EnumVal; }
 
@@ -178,7 +178,7 @@ public:
   bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
 
   void emitEnumEntry(raw_ostream &OS) const {
-    OS << "RTLIB::" << TheDef->getName();
+    OS << "RTLIB::LibcallImpl::" << this->getName();
   }
 
   void emitSetImplCall(raw_ostream &OS) const {
@@ -309,17 +309,19 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
 
   OS << "  UNKNOWN_LIBCALL = " << RuntimeLibcallDefList.size()
      << "\n};\n\n"
-        "enum LibcallImpl : unsigned short {\n"
+        "enum class LibcallImpl : unsigned short {\n"
         "  Unsupported = 0,\n";
 
-  // FIXME: Emit this in a different namespace. And maybe use enum class.
   for (const RuntimeLibcallImpl &LibCall : RuntimeLibcallImplDefList) {
     OS << "  " << LibCall.getName() << " = " << LibCall.getEnumVal() << ", // "
        << LibCall.getLibcallFuncName() << '\n';
   }
 
-  OS << "  NumLibcallImpls = " << RuntimeLibcallImplDefList.size() + 1
-     << "\n};\n"
+  OS << "};\n"
+     << "constexpr size_t NumLibcallImpls = "
+     << RuntimeLibcallImplDefList.size() + 1
+     << ";\n"
+        "constexpr LibcallImpl Unsupported = LibcallImpl::Unsupported;\n"
         "} // End namespace RTLIB\n"
         "} // End namespace llvm\n"
         "#endif\n\n";
