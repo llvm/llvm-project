@@ -138,3 +138,20 @@ func.func @caller(%arg0: i1, %arg1: i17) -> (i17, i1, i17) {
   %res:2 = func.call @multi_return(%arg1, %arg0) : (i17, i1) -> (i17, i1)
   return %res#0, %res#1, %res#0 : i17, i1, i17
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @branch(
+//  CHECK-SAME:     %[[arg0:.*]]: i1, %[[arg1:.*]]: i18, %[[arg2:.*]]: i18)
+//       CHECK:   llvm.br ^[[bb1:.*]](%[[arg1]], %[[arg2]], %[[arg0]] : i18, i18, i1)
+//       CHECK: ^[[bb1]](%[[arg3:.*]]: i18, %[[arg4:.*]]: i18, %[[arg5:.*]]: i1):
+//       CHECK:   llvm.cond_br %[[arg5]], ^[[bb1]](%[[arg1]], %[[arg2]], %[[arg5]] : i18, i18, i1), ^[[bb2:.*]](%[[arg3]], %[[arg4]] : i18, i18)
+//       CHECK: ^bb2(%{{.*}}: i18, %{{.*}}: i18):
+//       CHECK:   llvm.return
+func.func @branch(%arg0: i1, %arg1: i17) {
+  cf.br ^bb1(%arg1, %arg0: i17, i1)
+^bb1(%arg2: i17, %arg3: i1):
+  cf.cond_br %arg3, ^bb1(%arg1, %arg3 : i17, i1), ^bb2(%arg2 : i17)
+^bb2(%arg4: i17):
+  return
+}
