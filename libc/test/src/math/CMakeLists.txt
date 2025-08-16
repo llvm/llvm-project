@@ -3085,6 +3085,70 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  bf16fma_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16fma_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.bf16fma
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16fmaf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16fmaf_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.bf16fmaf
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16fmal_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16fmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.bf16fmal
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16fmaf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16fmaf128_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.bf16fmaf128
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   bf16mul_test
   NEED_MPFR
   SUITE
