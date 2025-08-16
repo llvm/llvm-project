@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/APValue.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -58,6 +59,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
@@ -2154,29 +2156,51 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UnusedAttr(S.Context, AL));
 }
 
+static std::optional<Expr *>
+sharedGetConstructorDestructorAttrExpr(Sema &S, const ParsedAttr &AL) {
+  // If no Expr node exists on the attribute, return a nullptr (default priority
+  // to be used). If Expr node exists but is not valid, return a nullopt.
+  // Otherwise, return the Expr.
+  Expr *E = nullptr;
+  if (AL.getNumArgs() == 1) {
+    E = AL.getArgAsExpr(0);
+    if (E->isValueDependent()) {
+      if (!E->isTypeDependent() && !E->getType()->isIntegerType()) {
+        S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+            << AL << AANT_ArgumentIntegerConstant << E->getSourceRange();
+        return std::nullopt;
+      }
+    } else {
+      uint32_t priority;
+      if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority)) {
+        return std::nullopt;
+      }
+      return ConstantExpr::Create(S.Context, E,
+                                  APValue(llvm::APSInt::getUnsigned(priority)));
+    }
+  }
+  return E;
+}
+
 static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t priority = ConstructorAttr::DefaultPriority;
   if (S.getLangOpts().HLSL && AL.getNumArgs()) {
     S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
   }
-  if (AL.getNumArgs() &&
-      !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
+  auto E = sharedGetConstructorDestructorAttrExpr(S, AL);
+  if (!E.has_value())
     return;
   S.Diag(D->getLocation(), diag::warn_global_constructor)
       << D->getSourceRange();
-
-  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
+  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, E.value()));
 }
 
 static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t priority = DestructorAttr::DefaultPriority;
-  if (AL.getNumArgs() &&
-      !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
+  auto E = sharedGetConstructorDestructorAttrExpr(S, AL);
+  if (!E.has_value())
     return;
   S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
-
-  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
+  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, E.value()));
 }
 
 template <typename AttrTy>
