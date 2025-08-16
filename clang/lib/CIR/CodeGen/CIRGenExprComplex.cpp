@@ -10,7 +10,6 @@ namespace {
 class ComplexExprEmitter : public StmtVisitor<ComplexExprEmitter, mlir::Value> {
   CIRGenFunction &cgf;
   CIRGenBuilderTy &builder;
-  bool fpHasBeenPromoted = false;
 
 public:
   explicit ComplexExprEmitter(CIRGenFunction &cgf)
@@ -131,43 +130,9 @@ public:
   mlir::Value emitBinMul(const BinOpInfo &op);
   mlir::Value emitBinDiv(const BinOpInfo &op);
 
-  QualType higherPrecisionTypeForComplexArithmetic(QualType elementType,
-                                                   bool isDivOpCode) {
-    ASTContext &astContext = cgf.getContext();
-    const QualType higherElementType =
-        astContext.GetHigherPrecisionFPType(elementType);
-    const llvm::fltSemantics &elementTypeSemantics =
-        astContext.getFloatTypeSemantics(elementType);
-    const llvm::fltSemantics &higherElementTypeSemantics =
-        astContext.getFloatTypeSemantics(higherElementType);
-
-    // Check that the promoted type can handle the intermediate values without
-    // overflowing. This can be interpreted as:
-    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal) * 2 <=
-    // LargerType.LargestFiniteVal.
-    // In terms of exponent it gives this formula:
-    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
-    // doubles the exponent of SmallerType.LargestFiniteVal)
-    if (llvm::APFloat::semanticsMaxExponent(elementTypeSemantics) * 2 + 1 <=
-        llvm::APFloat::semanticsMaxExponent(higherElementTypeSemantics)) {
-      fpHasBeenPromoted = true;
-      return astContext.getComplexType(higherElementType);
-    }
-
-    // The intermediate values can't be represented in the promoted type
-    // without overflowing.
-    return QualType();
-  }
-
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
     if (auto *complexTy = ty->getAs<ComplexType>()) {
       QualType elementTy = complexTy->getElementType();
-      if (isDivOpCode && elementTy->isFloatingType() &&
-          cgf.getLangOpts().getComplexRange() ==
-              LangOptions::ComplexRangeKind::CX_Promoted) {
-        return higherPrecisionTypeForComplexArithmetic(elementTy, isDivOpCode);
-      }
-
       if (elementTy.UseExcessPrecision(cgf.getContext()))
         return cgf.getContext().getComplexType(cgf.getContext().FloatTy);
     }
@@ -896,8 +861,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return builder.create<cir::ComplexDivOp>(op.loc, op.lhs, op.rhs, rangeKind,
-                                             fpHasBeenPromoted);
+    return builder.create<cir::ComplexDivOp>(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   cgf.cgm.errorNYI("ComplexExprEmitter::emitBinMu between Complex & Scalar");

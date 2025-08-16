@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -312,22 +313,125 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   return ternary.getResult();
 }
 
-static mlir::Value lowerComplexDiv(LoweringPreparePass &pass,
-                                   CIRBaseBuilderTy &builder,
-                                   mlir::Location loc, cir::ComplexDivOp op,
-                                   mlir::Value lhsReal, mlir::Value lhsImag,
-                                   mlir::Value rhsReal, mlir::Value rhsImag) {
+static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
+    mlir::MLIRContext &context, clang::ASTContext &cc,
+    CIRBaseBuilderTy &builder, mlir::Type elementType) {
+
+  auto getHigherPrecisionFPType = [&context](mlir::Type type) -> mlir::Type {
+    if (mlir::isa<cir::FP16Type>(type))
+      return cir::SingleType::get(&context);
+
+    if (mlir::isa<cir::SingleType>(type) || mlir::isa<cir::BF16Type>(type))
+      return cir::DoubleType::get(&context);
+
+    if (mlir::isa<cir::DoubleType>(type))
+      return cir::LongDoubleType::get(&context, type);
+
+    return type;
+  };
+
+  auto getFloatTypeSemantics =
+      [&cc](mlir::Type type) -> const llvm::fltSemantics & {
+    const clang::TargetInfo &info = cc.getTargetInfo();
+    if (mlir::isa<cir::FP16Type>(type))
+      return info.getHalfFormat();
+
+    if (mlir::isa<cir::BF16Type>(type))
+      return info.getBFloat16Format();
+
+    if (mlir::isa<cir::SingleType>(type))
+      return info.getFloatFormat();
+
+    if (mlir::isa<cir::DoubleType>(type))
+      return info.getDoubleFormat();
+
+    if (mlir::isa<cir::LongDoubleType>(type)) {
+      if (cc.getLangOpts().OpenMP && cc.getLangOpts().OpenMPIsTargetDevice)
+        llvm_unreachable("NYI Float type semantics with OpenMP");
+      return info.getLongDoubleFormat();
+    }
+
+    if (mlir::isa<cir::FP128Type>(type)) {
+      if (cc.getLangOpts().OpenMP && cc.getLangOpts().OpenMPIsTargetDevice)
+        llvm_unreachable("NYI Float type semantics with OpenMP");
+      return info.getFloat128Format();
+    }
+
+    assert(false && "Unsupported float type semantics");
+  };
+
+  const mlir::Type higherElementType = getHigherPrecisionFPType(elementType);
+  const llvm::fltSemantics &elementTypeSemantics =
+      getFloatTypeSemantics(elementType);
+  const llvm::fltSemantics &higherElementTypeSemantics =
+      getFloatTypeSemantics(higherElementType);
+
+  // Check that the promoted type can handle the intermediate values without
+  // overflowing. This can be interpreted as:
+  // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal) * 2 <=
+  //      LargerType.LargestFiniteVal.
+  // In terms of exponent it gives this formula:
+  // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
+  // doubles the exponent of SmallerType.LargestFiniteVal)
+  if (llvm::APFloat::semanticsMaxExponent(elementTypeSemantics) * 2 + 1 <=
+      llvm::APFloat::semanticsMaxExponent(higherElementTypeSemantics)) {
+    return higherElementType;
+  }
+
+  // The intermediate values can't be represented in the promoted type
+  // without overflowing.
+  return {};
+}
+
+static mlir::Value
+lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
+                mlir::Location loc, cir::ComplexDivOp op, mlir::Value lhsReal,
+                mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag,
+                mlir::MLIRContext &mlirCx, clang::ASTContext &cc) {
   cir::ComplexType complexTy = op.getType();
   if (mlir::isa<cir::FPTypeInterface>(complexTy.getElementType())) {
     cir::ComplexRangeKind range = op.getRange();
-    if (range == cir::ComplexRangeKind::Improved ||
-        (range == cir::ComplexRangeKind::Promoted && !op.getPromoted()))
+    if (range == cir::ComplexRangeKind::Improved)
       return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
                                            rhsReal, rhsImag);
+
     if (range == cir::ComplexRangeKind::Full)
       return buildComplexBinOpLibCall(pass, builder, &getComplexDivLibCallName,
                                       loc, complexTy, lhsReal, lhsImag, rhsReal,
                                       rhsImag);
+
+    if (range == cir::ComplexRangeKind::Promoted) {
+      mlir::Type originalElementType = complexTy.getElementType();
+      mlir::Type higherPrecisionElementType =
+          higherPrecisionElementTypeForComplexArithmetic(mlirCx, cc, builder,
+                                                         originalElementType);
+
+      if (!higherPrecisionElementType)
+        return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
+                                             rhsReal, rhsImag);
+
+      cir::CastKind floatingCastKind = cir::CastKind::floating;
+      lhsReal = builder.createCast(floatingCastKind, lhsReal,
+                                   higherPrecisionElementType);
+      lhsImag = builder.createCast(floatingCastKind, lhsImag,
+                                   higherPrecisionElementType);
+      rhsReal = builder.createCast(floatingCastKind, rhsReal,
+                                   higherPrecisionElementType);
+      rhsImag = builder.createCast(floatingCastKind, rhsImag,
+                                   higherPrecisionElementType);
+
+      mlir::Value algebraicResult = buildAlgebraicComplexDiv(
+          builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
+
+      mlir::Value resultReal = builder.createComplexReal(loc, algebraicResult);
+      mlir::Value resultImag = builder.createComplexImag(loc, algebraicResult);
+
+      mlir::Value finalReal =
+          builder.createCast(floatingCastKind, resultReal, originalElementType);
+      mlir::Value finalImag =
+          builder.createCast(floatingCastKind, resultImag, originalElementType);
+      return builder.createComplexCreate(loc, finalReal, finalImag);
+    }
   }
 
   return buildAlgebraicComplexDiv(builder, loc, lhsReal, lhsImag, rhsReal,
@@ -345,8 +449,9 @@ void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
   mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
   mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
 
-  mlir::Value loweredResult = lowerComplexDiv(*this, builder, loc, op, lhsReal,
-                                              lhsImag, rhsReal, rhsImag);
+  mlir::Value loweredResult =
+      lowerComplexDiv(*this, builder, loc, op, lhsReal, lhsImag, rhsReal,
+                      rhsImag, getContext(), *astCtx);
   op.replaceAllUsesWith(loweredResult);
   op.erase();
 }

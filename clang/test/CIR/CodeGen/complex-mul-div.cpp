@@ -476,25 +476,21 @@ void foo3() {
 // OGCG-IMPROVED:  store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-IMPROVED:  store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.double>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
 
 // LLVM-PROMOTED: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM-PROMOTED: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM-PROMOTED: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM-PROMOTED: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM-PROMOTED: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM-PROMOTED: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
 // LLVM-PROMOTED: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
-// LLVM-PROMOTED: %[[A_REAL_F64:.*]] = fpext float %[[A_REAL]] to double
-// LLVM-PROMOTED: %[[A_IMAG_F64:.*]] = fpext float %[[A_IMAG]] to double
-// LLVM-PROMOTED: %[[TMP_A_CF64:.*]] = insertvalue { double, double } {{.*}}, double %[[A_REAL_F64]], 0
-// LLVM-PROMOTED: %[[A_CF64:.*]] = insertvalue { double, double } %[[TMP_A_CF64]], double %[[A_IMAG_F64]], 1
-// LLVM-PROMOTED: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM-PROMOTED: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
 // LLVM-PROMOTED: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
+// LLVM-PROMOTED: %[[A_REAL_F64:.*]] = fpext float %[[A_REAL]] to double
+// LLVM-PROMOTED: %[[A_IMAG_F64:.*]] = fpext float %[[A_IMAG]] to double
 // LLVM-PROMOTED: %[[B_REAL_F64:.*]] = fpext float %[[B_REAL]] to double
 // LLVM-PROMOTED: %[[B_IMAG_F64:.*]] = fpext float %[[B_IMAG]] to double
-// LLVM-PROMOTED: %[[TMP_B_CF64:.*]] = insertvalue { double, double } {{.*}}, double %[[B_REAL_F64]], 0
-// LLVM-PROMOTED: %[[B_CF64:.*]] = insertvalue { double, double } %[[TMP_B_CF64]], double %[[B_IMAG_F64]], 1
 // LLVM-PROMOTED: %[[MUL_AR_BR:.*]] = fmul double %[[A_REAL_F64]], %[[B_REAL_F64]]
 // LLVM-PROMOTED: %[[MUL_AI_BI:.*]] = fmul double %[[A_IMAG_F64]], %[[B_IMAG_F64]]
 // LLVM-PROMOTED: %[[MUL_BR_BR:.*]] = fmul double %[[B_REAL_F64]], %[[B_REAL_F64]]
@@ -503,16 +499,16 @@ void foo3() {
 // LLVM-PROMOTED: %[[ADD_BRBR_BIBI:.*]] = fadd double %[[MUL_BR_BR]], %[[MUL_BI_BI]]
 // LLVM-PROMOTED: %[[RESULT_REAL:.*]] = fdiv double %[[ADD_ARBR_AIBI]], %[[ADD_BRBR_BIBI]]
 // LLVM-PROMOTED: %[[MUL_AI_BR:.*]] = fmul double %[[A_IMAG_F64]], %[[B_REAL_F64]]
-// LLVM-PROMOTED: %[[MUL_AR_BI:.*]] = fmul double %[[A_REAL_F64]], %[[B_IMAG_F64]]
-// LLVM-PROMOTED: %[[SUB_AIBR_ARBI:.*]] = fsub double %[[MUL_AI_BR]], %[[MUL_AR_BI]]
-// LLVM-PROMOTED: %[[RESULT_IMAG:.*]] = fdiv double %[[SUB_AIBR_ARBI]], %23
-// LLVM-PROMOTED: %[[TMP_RESULT_CF64:.*]] = insertvalue { double, double } {{.*}}, double %[[RESULT_REAL]], 0
-// LLVM-PROMOTED: %[[RESULT_CF64:.*]] = insertvalue { double, double } %[[TMP_RESULT_CF64]], double %[[RESULT_IMAG]], 1
+// LLVM-PROMOTED: %[[MUL_AR_BR:.*]] = fmul double %[[A_REAL_F64]], %[[B_IMAG_F64]]
+// LLVM-PROMOTED: %[[SUB_AIBR_ARBI:.*]] = fsub double %[[MUL_AI_BR]], %[[MUL_AR_BR]]
+// LLVM-PROMOTED: %[[RESULT_IMAG:.*]] = fdiv double %[[SUB_AIBR_ARBI]], %[[ADD_BRBR_BIBI]]
+// LLVM-PROMOTED: %[[TMP_RESULT_F64:.*]] = insertvalue { double, double } {{.*}}, double %[[RESULT_REAL]], 0
+// LLVM-PROMOTED: %[[RESULT_F64:.*]] = insertvalue { double, double } %[[TMP_RESULT_F64]], double %[[RESULT_IMAG]], 1
 // LLVM-PROMOTED: %[[RESULT_REAL_F32:.*]] = fptrunc double %[[RESULT_REAL]] to float
 // LLVM-PROMOTED: %[[RESULT_IMAG_F32:.*]] = fptrunc double %[[RESULT_IMAG]] to float
-// LLVM-PROMOTED: %[[TMP_RESULT_CF32:.*]] = insertvalue { float, float } {{.*}}, float %[[RESULT_REAL_F32]], 0
-// LLVM-PROMOTED: %[[RESULT_CF32:.*]] = insertvalue { float, float } %[[TMP_RESULT_CF32]], float %[[RESULT_IMAG_F32]], 1
-// LLVM-PROMOTED: store { float, float } %[[RESULT_CF32]], ptr %[[C_ADDR]], align 4
+// LLVM-PROMOTED: %[[TMP_RESULT_F32:.*]] = insertvalue { float, float } {{.*}}, float %[[RESULT_REAL_F32]], 0
+// LLVM-PROMOTED: %[[RESULT_F32:.*]] = insertvalue { float, float } %[[TMP_RESULT_F32]], float %[[RESULT_IMAG_F32]], 1
+// LLVM-PROMOTED: store { float, float } %[[RESULT_F32]], ptr %[[C_ADDR]], align 4
 
 // OGCG-PROMOTED:  %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG-PROMOTED: %[[B_ADDR:.*]] = alloca { float, float }, align 4
@@ -537,9 +533,9 @@ void foo3() {
 // OGCG-PROMOTED: %[[ADD_BRBR_BIBI:.*]] = fadd double %[[MUL_BR_BR]], %[[MUL_BI_BI]]
 // OGCG-PROMOTED: %[[MUL_AI_BR:.*]] = fmul double %[[A_IMAG_F64]], %[[B_REAL_F64]]
 // OGCG-PROMOTED: %[[MUL_AR_BI:.*]] = fmul double %[[A_REAL_F64]], %[[B_IMAG_F64]]
-// OGCG-PROMOTED: %[[SUB_AIBR_BRBI:.*]] = fsub double %[[MUL_AI_BR]], %[[MUL_AR_BI]]
+// OGCG-PROMOTED: %[[SUB_AIBR_ARBI:.*]] = fsub double %[[MUL_AI_BR]], %[[MUL_AR_BI]]
 // OGCG-PROMOTED: %[[RESULT_REAL:.*]] = fdiv double %[[ADD_ARBR_AIBI]], %[[ADD_BRBR_BIBI]]
-// OGCG-PROMOTED: %[[RESULT_IMAG:.*]] = fdiv double %[[SUB_AIBR_BRBI]], %[[ADD_BRBR_BIBI]]
+// OGCG-PROMOTED: %[[RESULT_IMAG:.*]] = fdiv double %[[SUB_AIBR_ARBI]], %[[ADD_BRBR_BIBI]]
 // OGCG-PROMOTED: %[[UNPROMOTION_RESULT_REAL:.*]] = fptrunc double %[[RESULT_REAL]] to float
 // OGCG-PROMOTED: %[[UNPROMOTION_RESULT_IMAG:.*]] = fptrunc double %[[RESULT_IMAG]] to float
 // OGCG-PROMOTED: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 0
