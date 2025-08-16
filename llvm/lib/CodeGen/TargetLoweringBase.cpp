@@ -900,6 +900,9 @@ void TargetLoweringBase::initActions() {
     // Masked vector extracts default to expand.
     setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
+    setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Expand);
+    setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Expand);
+
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
