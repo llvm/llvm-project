@@ -413,7 +413,7 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with ``nest``.
 
-    - On RISC-V the callee preserve x5-x31 except x6, x7 and x28 registers.
+    - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
@@ -575,7 +575,7 @@ DLL storage classes:
     and the function or variable name. On XCOFF targets, ``dllexport`` indicates
     that the symbol will be made visible to other modules using "exported"
     visibility and thus placed by the linker in the loader section symbol table.
-    Since this storage class exists for defining a dll interface, the compiler,
+    Since this storage class exists for defining a DLL interface, the compiler,
     assembler and linker know it is externally referenced and must refrain from
     deleting the symbol.
 
@@ -1887,7 +1887,7 @@ Attribute Groups
 
 Attribute groups are groups of attributes that are referenced by objects within
 the IR. They are important for keeping ``.ll`` files readable, because a lot of
-functions will use the same set of attributes. In the degenerative case of a
+functions will use the same set of attributes. In the degenerate case of a
 ``.ll`` file that corresponds to a single ``.c`` file, the single attribute
 group will capture the important command line flags used to build that file.
 
@@ -1946,8 +1946,8 @@ For example:
     ``::operator::delete``. Matching malloc/realloc/free calls within a family
     can be optimized, but mismatched ones will be left alone.
 ``allockind("KIND")``
-    Describes the behavior of an allocation function. The KIND string contains comma
-    separated entries from the following options:
+    Describes the behavior of an allocation function. The KIND string contains
+    comma-separated entries from the following options:
 
     * "alloc": the function returns a new block of memory or null.
     * "realloc": the function returns a new block of memory or null. If the
@@ -2047,7 +2047,7 @@ For example:
     even if this attribute says the frame pointer can be eliminated.
     The allowed string values are:
 
-     * ``"none"`` (default) - the frame pointer can be eliminated, and it's
+     * ``"none"`` (default) - the frame pointer can be eliminated, and its
        register can be used for other purposes.
      * ``"reserved"`` - the frame pointer register must either be updated to
        point to a valid frame record for the current function, or not be
@@ -2201,7 +2201,7 @@ For example:
 
     A ``nofree`` function is explicitly allowed to free memory which it
     allocated or (if not ``nosync``) arrange for another thread to free
-    memory on it's behalf.  As a result, perhaps surprisingly, a ``nofree``
+    memory on its behalf.  As a result, perhaps surprisingly, a ``nofree``
     function can return a pointer to a previously deallocated
     :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
@@ -2232,14 +2232,14 @@ For example:
     may make calls to the function faster, at the cost of extra program
     startup time if the function is not called during program startup.
 ``noprofile``
-    This function attribute prevents instrumentation based profiling, used for
+    This function attribute prevents instrumentation-based profiling, used for
     coverage or profile based optimization, from being added to a function. It
     also blocks inlining if the caller and callee have different values of this
     attribute.
 ``skipprofile``
-    This function attribute prevents instrumentation based profiling, used for
+    This function attribute prevents instrumentation-based profiling, used for
     coverage or profile based optimization, from being added to a function. This
-    attribute does not restrict inlining, so instrumented instruction could end
+    attribute does not restrict inlining, so instrumented instructions could end
     up in this function.
 ``noredzone``
     This attribute indicates that the code generator should not use a
@@ -2339,7 +2339,7 @@ For example:
 
      * ``"prologue-short-redirect"`` - This style of patchable
        function is intended to support patching a function prologue to
-       redirect control away from the function in a thread safe
+       redirect control away from the function in a thread-safe
        manner.  It guarantees that the first instruction of the
        function will be large enough to accommodate a short jump
        instruction, and will be sufficiently aligned to allow being
@@ -2584,7 +2584,7 @@ For example:
 ``uwtable[(sync|async)]``
     This attribute indicates that the ABI being targeted requires that
     an unwind table entry be produced for this function even if we can
-    show that no exceptions passes by it. This is normally the case for
+    show that no exceptions pass by it. This is normally the case for
     the ELF x86-64 abi, but it can be disabled for some compilation
     units. The optional parameter describes what kind of unwind tables
     to generate: ``sync`` for normal unwind tables, ``async`` for asynchronous
@@ -2599,7 +2599,7 @@ For example:
 ``shadowcallstack``
     This attribute indicates that the ShadowCallStack checks are enabled for
     the function. The instrumentation checks that the return address for the
-    function has not changed between the function prolog and epilog. It is
+    function has not changed between the function prologue and epilogue. It is
     currently x86_64-specific.
 
 .. _langref_mustprogress:
@@ -2807,7 +2807,7 @@ operand bundle tag.  These operand bundles represent an alternate
 "safe" continuation for the call site they're attached to, and can be
 used by a suitable runtime to deoptimize the compiled frame at the
 specified call site.  There can be at most one ``"deopt"`` operand
-bundle attached to a call site.  Exact details of deoptimization is
+bundle attached to a call site.  Exact details of deoptimization are
 out of scope for the language reference, but it usually involves
 rewriting a compiled frame into a set of interpreted frames.
 
@@ -2896,7 +2896,7 @@ generated code.  For more details, see :ref:`GC Transitions
 
 The bundle contains an arbitrary list of Values which need to be passed
 to GC transition code. They will be lowered and passed as operands to
-the appropriate GC_TRANSITION nodes in the selection DAG. It is assumed
+the appropriate ``GC_TRANSITION`` nodes in the selection DAG. It is assumed
 that these arguments must be available before and after (but not
 necessarily during) the execution of the callee.
 
@@ -3334,7 +3334,7 @@ by the minus sign character ('-'). The canonical forms are:
 
 This information is passed along to the backend so that it generates
 code for the proper architecture. It's possible to override this on the
-command line with the ``-mtriple`` command line option.
+command line with the ``-mtriple`` command-line option.
 
 
 .. _allocatedobjects:
@@ -4289,7 +4289,7 @@ X86_amx Type
 :Overview:
 
 The x86_amx type represents a value held in an AMX tile register on an x86
-machine. The operations allowed on it are quite limited. Only few intrinsics
+machine. The operations allowed on it are quite limited. Only a few intrinsics
 are allowed: stride load and store, zero and dot product. No instruction is
 allowed for this type. There are no arguments, arrays, pointers, vectors
 or constants of this type.
@@ -5058,14 +5058,14 @@ Addresses of Basic Blocks
 The '``blockaddress``' constant computes the address of the specified
 basic block in the specified function.
 
-It always has an ``ptr addrspace(P)`` type, where ``P`` is the address space
+It always has a ``ptr addrspace(P)`` type, where ``P`` is the address space
 of the function containing ``%block`` (usually ``addrspace(0)``).
 
 Taking the address of the entry block is illegal.
 
 This value only has defined behavior when used as an operand to the
 ':ref:`indirectbr <i_indirectbr>`' or for comparisons against null. Pointer
-equality tests between labels addresses results in undefined behavior ---
+equality tests between label addresses results in undefined behavior ---
 though, again, comparison against null is ok, and no label is equal to the null
 pointer. This may be passed around as an opaque pointer sized value as long as
 the bits are not inspected. This allows ``ptrtoint`` and arithmetic to be
@@ -5098,7 +5098,7 @@ The target function may not have ``extern_weak`` linkage.
   to the function.
 - ``dso_local_equivalent`` can be implemented with a stub that tail-calls the
   function. Many targets support relocations that resolve at link time to either
-  a function or a stub for it, depending on if the function is defined within the
+  a function or a stub for it, depending on whether the function is defined within the
   linkage unit; LLVM will use this when available. (This is commonly called a
   "PLT stub".) On other targets, the stub may need to be emitted explicitly.
 
@@ -5320,7 +5320,7 @@ the '``unwind``' keyword, the behavior is undefined.
 
 If multiple keywords appear, the '``sideeffect``' keyword must come
 first, the '``alignstack``' keyword second, the '``inteldialect``' keyword
-third and the '``unwind``' keyword last.
+third, and the '``unwind``' keyword last.
 
 Inline Asm Constraint String
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -5483,7 +5483,7 @@ followed by two letters (e.g. "``^wc``"), or "``{``" register-name "``}``"
 The one and two letter constraint codes are typically chosen to be the same as
 GCC's constraint codes.
 
-A single constraint may include one or more than constraint code in it, leaving
+A single constraint may include one or more constraint codes in it, leaving
 it up to LLVM to choose which one to use. This is included mainly for
 compatibility with the translation of GCC inline asm coming from clang.
 
@@ -6028,7 +6028,7 @@ Inline Asm Metadata
 The call instructions that wrap inline asm nodes may have a
 "``!srcloc``" MDNode attached to it that contains a list of constant
 integers. If present, the code generator will use the integer as the
-location cookie value when report errors through the ``LLVMContext``
+location cookie value when reporting errors through the ``LLVMContext``
 error reporting mechanisms. This allows a front-end to correlate backend
 errors that occur with inline asm back to the source code that produced
 it. For example:
@@ -6209,7 +6209,7 @@ Unlike instructions, global objects (functions and global variables) may have
 multiple metadata attachments with the same identifier.
 
 A transformation is required to drop any metadata attachment that it
-does not know or know it can't preserve. Currently there is an
+does not recognize or cannot preserve. Currently there is an
 exception for metadata attachment to globals for ``!func_sanitize``,
 ``!type``, ``!absolute_symbol`` and ``!associated`` which can't be
 unconditionally dropped unless the global is itself deleted.
@@ -6460,7 +6460,7 @@ pointer and pointee is called association.  The optional
 array is currently associated.  The optional ``allocated`` is a
 ``DIExpression`` that describes whether the allocatable array is currently
 allocated.  The optional ``rank`` is a ``DIExpression`` that describes the
-rank (number of dimensions) of fortran assumed rank array (rank is
+rank (number of dimensions) of Fortran assumed rank array (rank is
 known at runtime).  The optional ``bitStride`` is an unsigned constant
 that describes the number of bits occupied by an element of the array;
 this is only needed if it differs from the element type's natural
@@ -6776,7 +6776,7 @@ The current supported opcode vocabulary is limited:
 - ``DW_OP_plus_uconst, 93`` adds ``93`` to the working expression.
 - ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
   here, respectively) of the variable fragment from the working expression. Note
-  that contrary to DW_OP_bit_piece, the offset is describing the location
+  that contrary to ``DW_OP_bit_piece``, the offset is describing the location
   within the described source variable.
 - ``DW_OP_LLVM_convert, 16, DW_ATE_signed`` specifies a bit size and encoding
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
@@ -6844,9 +6844,9 @@ The current supported opcode vocabulary is limited:
   expression over two registers.
 - ``DW_OP_push_object_address`` pushes the address of the object which can then
   serve as a descriptor in subsequent calculation. This opcode can be used to
-  calculate bounds of fortran allocatable array which has array descriptors.
+  calculate bounds of an Fortran allocatable array which has array descriptors.
 - ``DW_OP_over`` duplicates the entry currently second in the stack at the top
-  of the stack. This opcode can be used to calculate bounds of fortran assumed
+  of the stack. This opcode can be used to calculate bounds of a Fortran assumed
   rank array which has rank known at run time and current dimension number is
   implicitly first element of the stack.
 - ``DW_OP_LLVM_implicit_pointer`` It specifies the dereferenced value. It can
@@ -7447,7 +7447,7 @@ For example, in the code below, the call instruction may only target the
 
 ``callback`` metadata may be attached to a function declaration, or definition.
 (Call sites are excluded only due to the lack of a use case.) For ease of
-exposition, we'll refer to the function annotated w/ metadata as a broker
+exposition, we'll refer to the function annotated with metadata as a broker
 function. The metadata describes how the arguments of a call to the broker are
 in turn passed to the callback function specified by the metadata. Thus, the
 ``callback`` metadata provides a partial description of a call site inside the
@@ -7616,7 +7616,7 @@ loop is transformed to a different loop before an explicitly requested
 other transformations impossible. Mandatory loop canonicalizations such
 as loop rotation are still applied.
 
-It is recommended to use this metadata in addition to any llvm.loop.*
+It is recommended to use this metadata in addition to any ``llvm.loop.*``
 transformation directive. Also, any loop should have at most one
 directive applied to it (and a sequence of transformations built using
 followup-attributes). Otherwise, which transformation will be applied
@@ -7962,7 +7962,7 @@ the non-distributed fallback version will have. See
 '``llvm.loop.distribute.followup_all``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The attributes in this metadata is added to all followup loops of the
+The attributes in this metadata are added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
@@ -8041,8 +8041,8 @@ undefined.
 Note that if not all memory access instructions belong to an access
 group referred to by ``llvm.loop.parallel_accesses``, then the loop must
 not be considered trivially parallel. Additional
-memory dependence analysis is required to make that determination. As a fail
-safe mechanism, this causes loops that were originally parallel to be considered
+memory dependence analysis is required to make that determination. As a
+fail-safe mechanism, this causes loops that were originally parallel to be considered
 sequential (if optimization passes that are unaware of the parallel semantics
 insert new memory instructions into the loop body).
 
@@ -8211,7 +8211,7 @@ compatibility, globals carrying this metadata should:
 - Be in ``@llvm.compiler.used``.
 - If the referenced global variable is in a comdat, be in the same comdat.
 
-``!associated`` can not express many-to-one relationship. A global variable with
+``!associated`` can not express a many-to-one relationship. A global variable with
 the metadata should generally not be referenced by a function: the function may
 be inlined into other functions, leading to more references to the metadata.
 Ideally we would want to keep metadata alive as long as any inline location is
@@ -8272,7 +8272,7 @@ VP
 
 VP (value profile) metadata can be attached to instructions that have
 value profile information. Currently this is indirect calls (where it
-records the hottest callees) and calls to memory intrinsics such as memcpy,
+records the hottest callees) and calls to memory intrinsics, such as memcpy,
 memmove, and memset (where it records the hottest byte lengths).
 
 Each VP metadata node contains "VP" string, then a ``uint32_t`` value for the value
@@ -8476,8 +8476,8 @@ Example:
 
 This is intended for use on targets with a notion of generic address
 spaces, which at runtime resolve to different physical memory
-spaces. The interpretation of the address space values is target
-specific. The behavior is undefined if the runtime memory address does
+spaces. The interpretation of the address space values is target specific.
+The behavior is undefined if the runtime memory address does
 resolve to an object defined in one of the indicated address spaces.
 
 
@@ -8488,7 +8488,7 @@ Information about the module as a whole is difficult to convey to LLVM's
 subsystems. The LLVM IR isn't sufficient to transmit this information.
 The ``llvm.module.flags`` named metadata exists in order to facilitate
 this. These flags are in the form of key / value pairs --- much like a
-dictionary --- making it easy for any subsystem who cares about a flag to
+dictionary --- making it easy for any subsystem that cares about a flag to
 look it up.
 
 The ``llvm.module.flags`` metadata contains a list of metadata triplets.
@@ -8748,7 +8748,7 @@ Automatic Linker Flags Named Metadata
 
 Some targets support embedding of flags to the linker inside individual object
 files. Typically this is used in conjunction with language extensions which
-allow source files to contain linker command line options, and have these
+allow source files to contain linker command-line options, and have these
 automatically be transmitted to the linker via object files.
 
 These flags are encoded in the IR using named metadata with the name
@@ -11739,7 +11739,7 @@ size of the '<value>' type. Note that this default alignment assumption is
 different from the alignment used for the load/store instructions when align
 isn't specified.
 
-A ``atomicrmw`` instruction can also take an optional
+An ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
 
 Semantics:
@@ -12510,7 +12510,7 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the all pointer representation bits as an integer
+``ty2`` by interpreting all the pointer representation bits as an integer
 (equivalent to a ``bitcast``) and either truncating or zero extending that value
 to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
@@ -13542,7 +13542,7 @@ ensures that each ``catchpad`` has exactly one predecessor block, and it always
 terminates in a ``catchswitch``.
 
 The ``args`` correspond to whatever information the personality routine
-requires to know if this is an appropriate handler for the exception. Control
+requires to determine if this is an appropriate handler for the exception. Control
 will transfer to the ``catchpad`` if this is the first appropriate handler for
 the exception.
 
@@ -13886,7 +13886,7 @@ Semantics:
 The '``llvm.va_copy``' intrinsic works just like the ``va_copy`` macro
 available in C. In a target-dependent way, it copies the source
 ``va_list`` element into the destination ``va_list`` element. This
-intrinsic is necessary because the `` llvm.va_start`` intrinsic may be
+intrinsic is necessary because the ``llvm.va_start`` intrinsic may be
 arbitrarily complex and require, for example, memory allocation.
 
 Accurate Garbage Collection Intrinsics
@@ -14077,7 +14077,7 @@ types of the 'call parameters' arguments.
 
 The '#call args' operand is the number of arguments to the actual
 call.  It must exactly match the number of arguments passed in the
-'call parameters' variable length section.
+'call parameters' variable-length section.
 
 The 'flags' operand is used to specify extra information about the
 statepoint. This is currently only used to mark certain statepoints
@@ -14198,7 +14198,7 @@ so constructed.
 
 The third argument is an index which specify the (potentially) derived pointer
 being relocated.  It is legal for this index to be the same as the second
-argument if-and-only-if a base pointer is being relocated.
+argument if and only if a base pointer is being relocated.
 
 Semantics:
 """"""""""
@@ -14894,7 +14894,7 @@ Overview:
 """""""""
 
 The '``llvm.instrprof.increment``' intrinsic can be emitted by a
-frontend for use with instrumentation based profiling. These will be
+frontend for use with instrumentation-based profiling. These will be
 lowered by the ``-instrprof`` pass to generate execution counts of a
 program at runtime.
 
@@ -15097,7 +15097,7 @@ Overview:
 """""""""
 
 The '``llvm.instrprof.value.profile``' intrinsic can be emitted by a
-frontend for use with instrumentation based profiling. This will be
+frontend for use with instrumentation-based profiling. This will be
 lowered by the ``-instrprof`` pass to find out the target values,
 instrumented expressions take in a program at runtime.
 
@@ -18514,7 +18514,7 @@ Overview:
 """""""""
 
 The '``llvm.umul.with.overflow``' family of intrinsic functions perform
-a unsigned multiplication of the two arguments, and indicate whether an
+an unsigned multiplication of the two arguments, and indicate whether an
 overflow occurred during the unsigned multiplication.
 
 Arguments:
@@ -20681,7 +20681,7 @@ Semantics:
 
 The '``llvm.experimental.vector.histogram.*``' intrinsics are used to perform
 updates on potentially overlapping values in memory. The intrinsics represent
-the follow sequence of operations:
+the following sequence of operations:
 
 1. Gather load from the ``ptrs`` operand, with element type matching that of
    the ``inc`` operand.
@@ -28541,7 +28541,7 @@ environment.  The rounding mode argument is only intended as information
 to the compiler.
 
 If the runtime floating-point environment is using the default rounding mode
-then the results will be the same as the ``llvm.llrint intrinsic``.
+then the results will be the same as the ``llvm.llrint`` intrinsic.
 
 
 '``llvm.experimental.constrained.nearbyint``' Intrinsic
@@ -29002,7 +29002,7 @@ was only valid within a single iteration.
 
 .. code-block:: llvm
 
-  ; This examples shows two possible positions for noalias.decl and how they impact the semantics:
+  ; This example shows two possible positions for noalias.decl and how they impact the semantics:
   ; If it is outside the loop (Version 1), then %a and %b are noalias across *all* iterations.
   ; If it is inside the loop (Version 2), then %a and %b are noalias only within *one* iteration.
   declare void @decl_in_loop(ptr %a.base, ptr %b.base) {

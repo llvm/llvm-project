@@ -654,11 +654,10 @@ bool RuntimeDyldELF::resolveLoongArch64ShortBranch(
     if (Loc == GlobalSymbolTable.end())
       return false;
     const auto &SymInfo = Loc->second;
-    Address =
-        uint64_t(Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
-            SymInfo.getOffset()));
+    Address = Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
+        SymInfo.getOffset());
   } else {
-    Address = uint64_t(Sections[Value.SectionID].getLoadAddress());
+    Address = Sections[Value.SectionID].getLoadAddress();
   }
   uint64_t Offset = RelI->getOffset();
   uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);

@@ -147,6 +147,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
     // TODO: Test multiple uses
     for (VNInfo *VNI : LI.vnis()) {
+      if (VNI->isPHIDef() || VNI->isUnused())
+        continue;
+
       MachineInstr *DefMI = LIS.getInstructionFromIndex(VNI->def);
 
       // TODO: Handle SplitKit produced copy bundles for partially defined
