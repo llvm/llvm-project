@@ -56,6 +56,7 @@ protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
+                             unsigned NestingLevel,
                              DiagOrStoredDiag Info) override {
     // Remove check name from the message.
     // FIXME: Remove this once there's a better way to pass check names than
