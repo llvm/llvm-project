@@ -3960,16 +3960,23 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op) {
 // works.
 static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
   // Only works for ANDS and AND.
+
+  // TODO: Is this too restrictive? This is just to prevent CSE with other
+  // comparisons.
+  if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS &&
+      !LHS.hasOneUse())
+    return false;
+
+  if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
+    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    return true;
+  }
+
   if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
     return false;
 
   if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
     CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
-    return true;
-  }
-
-  if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
-    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
     return true;
   }
 
