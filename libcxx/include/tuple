@@ -1432,6 +1432,7 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, 
     enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>> * = nullptr)
     _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
 #endif // _LIBCPP_STD_VER >= 20
+#undef _LIBCPP_NOEXCEPT_RETURN
 
 template <class _Tp, class _Tuple,
           class _Seq = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>, class = void>
@@ -1451,10 +1452,19 @@ template <class _Tp, class _Tuple>
 #else
 template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp, _Tuple>>> // strengthen
 #endif // _LIBCPP_STD_VER >= 20
+
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
-    _LIBCPP_NOEXCEPT_RETURN(std::__make_from_tuple_impl<_Tp>(
-        std::forward<_Tuple>(__t), make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))
-#    undef _LIBCPP_NOEXCEPT_RETURN
+  noexcept(noexcept(std::__make_from_tuple_impl<_Tp>(std::forward<_Tuple>(__t),
+                    make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))) {
+#if _LIBCPP_STD_VER >= 23 && __has_builtin(__reference_constructs_from_temporary)
+  if constexpr (tuple_size_v<remove_reference_t<_Tuple>> == 1) {
+    static_assert(!std::reference_constructs_from_temporary_v<_Tp, decltype(std::get<0>(std::declval<_Tuple>()))>,
+                  "Attempted construction of reference element binds to a temporary whose lifetime has ended");
+  }
+#endif // _LIBCPP_STD_VER >= 23
+  return std::__make_from_tuple_impl<_Tp>(
+        std::forward<_Tuple>(__t), make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>());
+}
 
 #  endif // _LIBCPP_STD_VER >= 17
 
