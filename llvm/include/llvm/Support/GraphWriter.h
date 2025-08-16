@@ -74,6 +74,7 @@ protected:
   using child_iterator = typename GTraits::ChildIteratorType;
   DOTTraits DTraits;
 
+private:
   static_assert(std::is_pointer_v<NodeRef>,
                 "FIXME: Currently GraphWriterBase requires the NodeRef type to "
                 "be a pointer.\nThe pointer usage should be moved to "
