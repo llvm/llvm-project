@@ -18,8 +18,26 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm8 : RISCVSImmOp<8>;
 def simm10 : RISCVSImmOp<10>;
+
+def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
+  let RenderMethod = "addSImm8UnsignedOperands";
+}
+
+// A 8-bit signed immediate allowing range [-128, 255]
+// but represented as [-128, 255].
+def simm8_unsigned : RISCVOp {
+  let ParserMatchClass = SImm8UnsignedAsmOperand;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<8>";
+  let OperandType = "OPERAND_SIMM10";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<8>(Imm);
+  }];
+}
 
 def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
   let RenderMethod = "addSImm10UnsignedOperands";
@@ -76,8 +94,8 @@ class PLUI_i<bits<7> funct7, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class PLI_B_i<bits<8> funct8, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins simm8:$imm8), opcodestr, "$rd, $imm8", [],
-             InstFormatOther> {
+    : RVInst<(outs GPR:$rd), (ins simm8_unsigned:$imm8), opcodestr,
+             "$rd, $imm8", [], InstFormatOther> {
   bits<8> imm8;
   bits<5> rd;
 

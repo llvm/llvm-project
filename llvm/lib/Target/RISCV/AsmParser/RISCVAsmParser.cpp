@@ -808,7 +808,6 @@ public:
 
   bool isSImm5() const { return isSImm<5>(); }
   bool isSImm6() const { return isSImm<6>(); }
-  bool isSImm8() const { return isSImm<8>(); }
   bool isSImm10() const { return isSImm<10>(); }
   bool isSImm11() const { return isSImm<11>(); }
   bool isSImm16() const { return isSImm<16>(); }
@@ -904,6 +903,7 @@ public:
            VK == RISCV::S_QC_ABS20;
   }
 
+  bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
   bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isUImm20LUI() const {
@@ -1198,6 +1198,14 @@ public:
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm(), isRV64Imm());
+  }
+
+  void addSImm8UnsignedOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    int64_t Imm;
+    [[maybe_unused]] bool IsConstant = evaluateConstantImm(getImm(), Imm);
+    assert(IsConstant);
+    Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm)));
   }
 
   void addSImm10UnsignedOperands(MCInst &Inst, unsigned N) const {
@@ -1548,9 +1556,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm8:
+  case Match_InvalidSImm8Unsigned:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
-                                      (1 << 7) - 1);
+                                      (1 << 8) - 1);
   case Match_InvalidSImm10:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
