@@ -28,7 +28,7 @@ TEST_F(DAPTest, SendProtocolMessages) {
       /*pre_init_commands=*/{},
       /*client_name=*/"test_client",
       /*transport=*/*transport,
-      loop,
+      /*loop=*/loop,
   };
   dap.Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
   loop.AddPendingCallback(

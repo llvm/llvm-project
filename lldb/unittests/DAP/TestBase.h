@@ -8,12 +8,19 @@
 
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 
 namespace lldb_dap_tests {
 
@@ -29,27 +36,30 @@ public:
   TestTransport(lldb_private::MainLoop &loop, MessageHandler &handler)
       : m_loop(loop), m_handler(handler) {}
 
-  void Event(const lldb_dap::protocol::Event &e) override {
+  llvm::Error Event(const lldb_dap::protocol::Event &e) override {
     m_loop.AddPendingCallback([this, e](lldb_private::MainLoopBase &) {
       this->m_handler.OnEvent(e);
     });
+    return llvm::Error::success();
   }
 
-  void Request(const lldb_dap::protocol::Request &r) override {
+  llvm::Error Request(const lldb_dap::protocol::Request &r) override {
     m_loop.AddPendingCallback([this, r](lldb_private::MainLoopBase &) {
       this->m_handler.OnRequest(r);
     });
+    return llvm::Error::success();
   }
 
-  void Response(const lldb_dap::protocol::Response &r) override {
+  llvm::Error Response(const lldb_dap::protocol::Response &r) override {
     m_loop.AddPendingCallback([this, r](lldb_private::MainLoopBase &) {
       this->m_handler.OnResponse(r);
     });
+    return llvm::Error::success();
   }
 
-  llvm::Error Run(lldb_private::MainLoop &loop, MessageHandler &) override {
-    return loop.Run().takeError();
-  }
+  llvm::Expected<lldb_private::MainLoop::ReadHandleUP>
+  RegisterMessageHandler(lldb_private::MainLoop &loop,
+                         MessageHandler &handler) override;
 
   void Log(llvm::StringRef message) override {
     log_messages.emplace_back(message);
@@ -60,6 +70,7 @@ public:
 private:
   lldb_private::MainLoop &m_loop;
   MessageHandler &m_handler;
+  lldb::FileSP m_dummy_file;
 };
 
 /// A base class for tests that need transport configured for communicating DAP
@@ -78,12 +89,22 @@ protected:
   void OnEvent(const lldb_dap::protocol::Event &e) override {
     from_dap.emplace_back(e);
   }
+
   void OnRequest(const lldb_dap::protocol::Request &r) override {
     from_dap.emplace_back(r);
   }
+
   void OnResponse(const lldb_dap::protocol::Response &r) override {
     from_dap.emplace_back(r);
   }
+
+  void OnError(lldb_private::MainLoopBase &loop, llvm::Error error) override {
+    loop.RequestTermination();
+    FAIL() << "Error while reading from transport: "
+           << llvm::toString(std::move(error));
+  }
+
+  void OnEOF() override { /* no-op */ }
 };
 
 /// Matches an "output" event.
@@ -113,9 +134,6 @@ protected:
   void CreateDebugger();
   void LoadCore();
 
-  /// Closes the DAP output pipe and returns the remaining protocol messages in
-  /// the buffer.
-  // std::vector<lldb_dap::protocol::Message> DrainOutput();
   void RunOnce() {
     loop.AddPendingCallback(
         [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });

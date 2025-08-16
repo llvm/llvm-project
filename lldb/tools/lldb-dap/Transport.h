@@ -34,10 +34,6 @@ public:
 
   void Log(llvm::StringRef message) override;
 
-  /// Returns the name of this transport client, for example `stdin/stdout` or
-  /// `client_1`.
-  llvm::StringRef GetClientName() { return m_client_name; }
-
 private:
   llvm::StringRef m_client_name;
   lldb_dap::Log *m_log;

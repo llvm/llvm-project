@@ -62,25 +62,43 @@ public:
 
   virtual ~Transport() = default;
 
-  // Called by transport to send outgoing messages.
-  virtual void Event(const Evt &) = 0;
-  virtual void Request(const Req &) = 0;
-  virtual void Response(const Resp &) = 0;
+  /// Sends an event, a message that does not require a response.
+  virtual llvm::Error Event(const Evt &) = 0;
+  /// Sends a request, a message that expects a response.
+  virtual llvm::Error Request(const Req &) = 0;
+  /// Sends a response to a specific request.
+  virtual llvm::Error Response(const Resp &) = 0;
 
   /// Implemented to handle incoming messages. (See Run() below).
   class MessageHandler {
   public:
     virtual ~MessageHandler() = default;
+    /// Called when an event is received.
     virtual void OnEvent(const Evt &) = 0;
+    /// Called when a request is received.
     virtual void OnRequest(const Req &) = 0;
+    /// Called when a response is received.
     virtual void OnResponse(const Resp &) = 0;
+
+    /// Called when an error occurs while reading from the transport.
+    ///
+    /// NOTE: This does *NOT* indicate that a specific request failed, but that
+    /// there was an error in the underlying transport.
+    virtual void OnError(MainLoopBase &, llvm::Error) = 0;
+
+    /// Called on EOF or disconnect.
+    virtual void OnEOF() = 0;
   };
 
-  /// Called by server or client to receive messages from the connection.
-  /// The transport should in turn invoke the handler to process messages.
-  /// The MainLoop is used to handle reading from the incoming connection and
-  /// will run until the loop is terminated.
-  virtual llvm::Error Run(MainLoop &, MessageHandler &) = 0;
+  using MessageHandlerSP = std::shared_ptr<MessageHandler>;
+
+  /// RegisterMessageHandler registers the Transport with the given MainLoop and
+  /// handles any incoming messages using the given MessageHandler.
+  ///
+  /// If an unexpected error occurs, the MainLoop will be terminated and a log
+  /// message will include additional information about the termination reason.
+  virtual llvm::Expected<MainLoop::ReadHandleUP>
+  RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) = 0;
 
 protected:
   template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
@@ -94,37 +112,27 @@ template <typename Req, typename Resp, typename Evt>
 class JSONTransport : public Transport<Req, Resp, Evt> {
 public:
   using Transport<Req, Resp, Evt>::Transport;
+  using MessageHandler = typename Transport<Req, Resp, Evt>::MessageHandler;
 
   JSONTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
       : m_in(in), m_out(out) {}
 
-  void Event(const Evt &evt) override { Write(evt); }
-  void Request(const Req &req) override { Write(req); }
-  void Response(const Resp &resp) override { Write(resp); }
+  llvm::Error Event(const Evt &evt) override { return Write(evt); }
+  llvm::Error Request(const Req &req) override { return Write(req); }
+  llvm::Error Response(const Resp &resp) override { return Write(resp); }
 
-  /// Run registers the transport with the given MainLoop and handles any
-  /// incoming messages using the given MessageHandler.
-  llvm::Error
-  Run(MainLoop &loop,
-      typename Transport<Req, Resp, Evt>::MessageHandler &handler) override {
-    llvm::Error error = llvm::Error::success();
+  llvm::Expected<MainLoop::ReadHandleUP>
+  RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
     Status status;
-    auto read_handle = loop.RegisterReadObject(
+    MainLoop::ReadHandleUP read_handle = loop.RegisterReadObject(
         m_in,
-        std::bind(&JSONTransport::OnRead, this, &error, std::placeholders::_1,
+        std::bind(&JSONTransport::OnRead, this, std::placeholders::_1,
                   std::ref(handler)),
         status);
     if (status.Fail()) {
-      // This error is only set if the read object handler is invoked, mark it
-      // as consumed if registration of the handler failed.
-      llvm::consumeError(std::move(error));
       return status.takeError();
     }
-
-    status = loop.Run();
-    if (status.Fail())
-      return status.takeError();
-    return error;
+    return read_handle;
   }
 
   /// Public for testing purposes, otherwise this should be an implementation
@@ -134,26 +142,21 @@ public:
 protected:
   virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
   virtual std::string Encode(const llvm::json::Value &message) = 0;
-  void Write(const llvm::json::Value &message) {
+  llvm::Error Write(const llvm::json::Value &message) {
     this->Logv("<-- {0}", message);
     std::string output = Encode(message);
     size_t bytes_written = output.size();
-    Status status = m_out->Write(output.data(), bytes_written);
-    if (status.Fail())
-      this->Logv("writing failed: {0}", status.AsCString());
+    return m_out->Write(output.data(), bytes_written).takeError();
   }
 
   llvm::SmallString<kReadBufferSize> m_buffer;
 
 private:
-  void OnRead(llvm::Error *err, MainLoopBase &loop,
-              typename Transport<Req, Resp, Evt>::MessageHandler &handler) {
-    llvm::ErrorAsOutParameter ErrAsOutParam(err);
+  void OnRead(MainLoopBase &loop, MessageHandler &handler) {
     char buf[kReadBufferSize];
     size_t num_bytes = sizeof(buf);
     if (Status status = m_in->Read(buf, num_bytes); status.Fail()) {
-      *err = status.takeError();
-      loop.RequestTermination();
+      handler.OnError(loop, status.takeError());
       return;
     }
 
@@ -164,8 +167,7 @@ private:
     if (!m_buffer.empty()) {
       llvm::Expected<std::vector<std::string>> raw_messages = Parse();
       if (llvm::Error error = raw_messages.takeError()) {
-        *err = std::move(error);
-        loop.RequestTermination();
+        handler.OnError(loop, std::move(error));
         return;
       }
 
@@ -174,9 +176,8 @@ private:
             llvm::json::parse<typename Transport<Req, Resp, Evt>::Message>(
                 raw_message);
         if (!message) {
-          *err = message.takeError();
-          loop.RequestTermination();
-          return;
+          handler.OnError(loop, message.takeError());
+          continue;
         }
 
         if (Evt *evt = std::get_if<Evt>(&*message)) {
@@ -198,15 +199,13 @@ private:
       }
     }
 
+    // Check if we reached EOF.
     if (num_bytes == 0) {
-      // If we're at EOF and we have unhandled contents in the buffer, return an
-      // error for the partial message.
-      if (m_buffer.empty())
-        *err = llvm::Error::success();
-      else
-        *err = llvm::make_error<TransportUnhandledContentsError>(
-            std::string(m_buffer));
-      loop.RequestTermination();
+      // EOF reached, but there may still be unhandled contents in the buffer.
+      if (!m_buffer.empty())
+        handler.OnError(loop, llvm::make_error<TransportUnhandledContentsError>(
+                                  std::string(m_buffer.str())));
+      handler.OnEOF();
     }
   }
 

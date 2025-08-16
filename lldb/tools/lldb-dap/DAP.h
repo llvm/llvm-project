@@ -429,6 +429,8 @@ struct DAP final : private DAPTransport::MessageHandler {
   void OnEvent(const protocol::Event &) override;
   void OnRequest(const protocol::Request &) override;
   void OnResponse(const protocol::Response &) override;
+  void OnError(lldb_private::MainLoopBase &loop, llvm::Error error) override;
+  void OnEOF() override;
 
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
@@ -436,7 +438,8 @@ private:
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
       SourceBreakpointMap &existing_breakpoints);
 
-  void TransportHandler(llvm::Error *);
+  void TransportHandler();
+  void TerminateLoop(bool failed = false);
 
   /// Registration of request handler.
   /// @{
@@ -467,6 +470,7 @@ private:
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
   bool m_disconnecting = false;
+  bool m_error_occurred = false;
 
   // Loop for managing reading from the client.
   lldb_private::MainLoop &m_loop;

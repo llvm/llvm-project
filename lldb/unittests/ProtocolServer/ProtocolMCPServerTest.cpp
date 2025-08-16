@@ -163,6 +163,12 @@ public:
     void OnEvent(const Notification &V) override { messages.emplace_back(V); }
     void OnRequest(const Request &V) override { messages.emplace_back(V); }
     void OnResponse(const Response &V) override { messages.emplace_back(V); }
+    void OnError(MainLoopBase &loop, llvm::Error error) override {
+      loop.RequestTermination();
+      FAIL() << "Error while reading from transport: "
+             << llvm::toString(std::move(error));
+    }
+    void OnEOF() override { /* no-op */ }
   };
 
   /// Run the transport MainLoop and return any messages received.
@@ -171,8 +177,13 @@ public:
     MessageCollector collector;
     loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
                      timeout);
-    if (auto error = m_transport_up->Run(loop, collector))
-      return error;
+    auto handle = m_transport_up->RegisterMessageHandler(loop, collector);
+    if (!handle)
+      return handle.takeError();
+
+    if (Status status = loop.Run(); status.Fail())
+      return status.takeError();
+
     return std::move(collector.messages);
   }
 
