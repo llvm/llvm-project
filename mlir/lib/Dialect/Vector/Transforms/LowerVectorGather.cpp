@@ -54,27 +54,13 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
-    VectorType resultTy = op.getType();
-    if (resultTy.getRank() < 2)
-      return rewriter.notifyMatchFailure(op, "already 1-D");
-
-    // Unrolling doesn't take vscale into account. Pattern is disabled for
-    // vectors with leading scalable dim(s).
-    if (resultTy.getScalableDims().front())
-      return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
-
-    Location loc = op.getLoc();
     Value indexVec = op.getIndexVec();
     Value maskVec = op.getMask();
     Value passThruVec = op.getPassThru();
 
-    Value result = arith::ConstantOp::create(rewriter, loc, resultTy,
-                                             rewriter.getZeroAttr(resultTy));
-
-    VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
-
-    for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
-      int64_t thisIdx[1] = {i};
+    auto unrollGatherFn = [&](PatternRewriter &rewriter, Location loc,
+                              VectorType subTy, int64_t index) {
+      int64_t thisIdx[1] = {index};
 
       Value indexSubVec =
           vector::ExtractOp::create(rewriter, loc, indexVec, thisIdx);
@@ -82,15 +68,12 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
           vector::ExtractOp::create(rewriter, loc, maskVec, thisIdx);
       Value passThruSubVec =
           vector::ExtractOp::create(rewriter, loc, passThruVec, thisIdx);
-      Value subGather = vector::GatherOp::create(
-          rewriter, loc, subTy, op.getBase(), op.getIndices(), indexSubVec,
-          maskSubVec, passThruSubVec);
-      result =
-          vector::InsertOp::create(rewriter, loc, subGather, result, thisIdx);
-    }
+      return vector::GatherOp::create(rewriter, loc, subTy, op.getBase(),
+                                      op.getIndices(), indexSubVec, maskSubVec,
+                                      passThruSubVec);
+    };
 
-    rewriter.replaceOp(op, result);
-    return success();
+    return unrollVectorOp(op, rewriter, unrollGatherFn);
   }
 };
 
