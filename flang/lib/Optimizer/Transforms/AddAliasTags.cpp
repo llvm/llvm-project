@@ -14,6 +14,7 @@
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/TBAAForest.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -61,8 +62,10 @@ namespace {
 class PassState {
 public:
   PassState(mlir::DominanceInfo &domInfo,
-            std::optional<unsigned> localAllocsThreshold)
-      : domInfo(domInfo), localAllocsThreshold(localAllocsThreshold) {}
+            std::optional<unsigned> localAllocsThreshold,
+            const mlir::SymbolTable &symTab)
+      : domInfo(domInfo), localAllocsThreshold(localAllocsThreshold),
+        symTab(symTab) {}
   /// memoised call to fir::AliasAnalysis::getSource
   inline const fir::AliasAnalysis::Source &getSource(mlir::Value value) {
     if (!analysisCache.contains(value))
@@ -72,13 +75,14 @@ public:
   }
 
   /// get the per-function TBAATree for this function
-  inline const fir::TBAATree &getFuncTree(mlir::func::FuncOp func) {
-    return forrest[func];
+  inline fir::TBAATree &getMutableFuncTreeWithScope(mlir::func::FuncOp func,
+                                                    fir::DummyScopeOp scope) {
+    auto &scopeMap = scopeNames.at(func);
+    return forrest.getMutableFuncTreeWithScope(func, scopeMap.lookup(scope));
   }
   inline const fir::TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
                                                    fir::DummyScopeOp scope) {
-    auto &scopeMap = scopeNames.at(func);
-    return forrest.getFuncTreeWithScope(func, scopeMap.lookup(scope));
+    return getMutableFuncTreeWithScope(func, scope);
   }
 
   void processFunctionScopes(mlir::func::FuncOp func);
@@ -98,8 +102,14 @@ public:
   // attachment.
   bool attachLocalAllocTag();
 
+  fir::GlobalOp getGlobalDefiningOp(mlir::StringAttr name) const {
+    return symTab.lookup<fir::GlobalOp>(name);
+  }
+
 private:
   mlir::DominanceInfo &domInfo;
+  std::optional<unsigned> localAllocsThreshold;
+  const mlir::SymbolTable &symTab;
   fir::AliasAnalysis analysis;
   llvm::DenseMap<mlir::Value, fir::AliasAnalysis::Source> analysisCache;
   fir::TBAAForrest forrest;
@@ -117,8 +127,6 @@ private:
   // Local pass cache for derived types that contain descriptor
   // member(s), to avoid the cost of isRecordWithDescriptorMember().
   llvm::DenseSet<mlir::Type> typesContainingDescriptors;
-
-  std::optional<unsigned> localAllocsThreshold;
 };
 
 // Process fir.dummy_scope operations in the given func:
@@ -310,14 +318,55 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              !source.isBoxData()) {
     mlir::SymbolRefAttr glbl = llvm::cast<mlir::SymbolRefAttr>(source.origin.u);
-    const char *name = glbl.getRootReference().data();
-    LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
-                                      << " at " << *op << "\n");
-    if (source.isPointer())
+    mlir::StringAttr name = glbl.getRootReference();
+    LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global "
+                                      << name.str() << " at " << *op << "\n");
+    if (source.isPointer()) {
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    else
-      tag =
-          state.getFuncTreeWithScope(func, scopeOp).globalDataTree.getTag(name);
+    } else {
+      // In general, place the tags under the "global data" root.
+      fir::TBAATree::SubtreeState *subTree =
+          &state.getMutableFuncTreeWithScope(func, scopeOp).globalDataTree;
+
+      // The COMMON blocks have their own sub-tree root under the "global data"
+      // root, which is named after the name of the COMMON block.
+      // If we can identify the name of the member variable, then
+      // we create a sub-tree under the root of the COMMON block
+      // and place the tag there. If we cannot identify the name
+      // of the member variable (e.g. for whatever reason there is no
+      // fir.declare for it), then we place the tag under the root
+      // of the COMMON block.
+      auto globalOp = state.getGlobalDefiningOp(name);
+      // TODO: this is a subtle identification of the fact that
+      // the variable belongs to a COMMON block.
+      // Should we have an attribute on [hl]fir.declare
+      // that specifies the name of the COMMON block the variable
+      // belongs to?
+      if (globalOp &&
+          globalOp.getLinkName() ==
+              fir::FirOpBuilder::createCommonLinkage(globalOp->getContext())) {
+        // Get or create a sub-tree for the COMMON block.
+        subTree = &subTree->getOrCreateNamedSubtree(name);
+
+        auto declOp = mlir::dyn_cast_or_null<fir::DeclareOp>(
+            source.origin.instantiationPoint);
+        mlir::StringAttr varName;
+        if (declOp) {
+          // The tag for the variable will be placed under its own
+          // root in the COMMON sub-tree.
+          varName = declOp.getUniqName();
+          tag = subTree->getTag(varName.str());
+        } else {
+          tag = subTree->getTag();
+        }
+        LLVM_DEBUG(llvm::dbgs().indent(2)
+                   << "Variable named '"
+                   << (varName ? varName.str() : "<unknown>")
+                   << "' is from COMMON block '" << name.str() << "'\n");
+      } else {
+        tag = subTree->getTag(name.str());
+      }
+    }
 
     // TBAA for global variables with descriptors
   } else if (enableDirect &&
@@ -401,11 +450,14 @@ void AddAliasTagsPass::runOnOperation() {
   // thinks the pass operates on), then the real work of the pass is done in
   // runOnAliasInterface
   auto &domInfo = getAnalysis<mlir::DominanceInfo>();
-  PassState state(domInfo, localAllocsThreshold.getPosition()
-                               ? std::optional<unsigned>(localAllocsThreshold)
-                               : std::nullopt);
-
   mlir::ModuleOp mod = getOperation();
+  mlir::SymbolTable symTab(mod);
+  PassState state(domInfo,
+                  localAllocsThreshold.getPosition()
+                      ? std::optional<unsigned>(localAllocsThreshold)
+                      : std::nullopt,
+                  symTab);
+
   mod.walk(
       [&](fir::FirAliasTagOpInterface op) { runOnAliasInterface(op, state); });
 

@@ -8,16 +8,21 @@
 // ALL: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA]], 0>}>
 // ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TARGETDATA]], 0>}>
 // ALL: #[[BLK:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_", members = {<#[[GLOBALDATA]], 0>}>
-// ALL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[BLK]], access_type = #[[BLK]], offset = 0>
+// ALL: #[[BLK_A:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_/_QFtest_commonEa", members = {<#[[BLK]], 0>}>
+// ALL: #[[BLK_C:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_/_QFtest_commonEc", members = {<#[[BLK]], 0>}>
+// ALL: #[[BLK_B:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_/_QFtest_commonEb", members = {<#[[BLK]], 0>}>
+// ALL: #[[BLK_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[BLK_A]], access_type = #[[BLK_A]], offset = 0>
+// ALL: #[[BLK_C_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[BLK_C]], access_type = #[[BLK_C]], offset = 0>
+// ALL: #[[BLK_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[BLK_B]], access_type = #[[BLK_B]], offset = 0>
 
 module {
 // ALL-LABEL:   fir.global common @blk_(dense<0> : vector<48xi8>) {alignment = 4 : i64} : !fir.array<48xi8>
   fir.global common @blk_(dense<0> : vector<48xi8>) {alignment = 4 : i64} : !fir.array<48xi8>
 
 // ALL-LABEL:   func.func @_QPtest_common() {
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<f32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<i32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<f32>
+// ALL:           fir.store{{.*}}{tbaa = [#[[BLK_A_TAG]]]} : !fir.ref<f32>
+// ALL:           fir.store{{.*}}{tbaa = [#[[BLK_C_TAG]]]} : !fir.ref<i32>
+// ALL:           fir.store{{.*}}{tbaa = [#[[BLK_B_TAG]]]} : !fir.ref<f32>
   func.func @_QPtest_common() {
     %c1 = arith.constant 1 : index
     %c1_i32 = arith.constant 1 : i32
@@ -55,7 +60,7 @@ module {
 // LOCAL: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA]], 0>}>
 // LOCAL: #[[ALLOCATEDDATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[TARGETDATA]], 0>}>
 // LOCAL: #[[EQUIV:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest_local_equivEa", members = {<#[[ALLOCATEDDATA]], 0>}>
-// LOCAL: #[[$ATTR_13:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
+// LOCAL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
 
 // ALL-LABEL:   func.func @_QPtest_local_equiv() {
 // LOCAL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
