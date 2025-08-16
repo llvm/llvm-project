@@ -6224,7 +6224,6 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___funcref:
       ParseWebAssemblyFuncrefTypeAttribute(DS.getAttributes());
       continue;
-      goto DoneWithTypeQuals;
 
     case tok::kw___pascal:
       if (AttrReqs & AR_VendorAttributesParsed) {
