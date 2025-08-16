@@ -1772,7 +1772,8 @@ def note_unsatisfied_trait
            "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
-           "%StandardLayout{standard-layout}"
+           "%StandardLayout{standard-layout}|"
+           "%Aggregate{aggregate}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1805,6 +1806,8 @@ def note_unsatisfied_trait_reason
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
+           "%UserDeclaredCtr{has a user-declared constructor}|"
+           "%InheritedCtr{has an inherited constructor}|"
            "%DeletedCtr{has a deleted %select{copy|move}1 "
            "constructor}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
@@ -1815,7 +1818,11 @@ def note_unsatisfied_trait_reason
            "%sub{select_special_member_kind}1}|"
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%IncompleteArrayType{is an incomplete array type}|"
+           "%PrivateDirectDataMember{has a private direct data member}|"
+           "%ProtectedDirectDataMember{has a protected direct data member}|"
+           "%PrivateDirectBase{has a private direct base}|"
+           "%ProtectedDirectBase{has a protected direct base}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
