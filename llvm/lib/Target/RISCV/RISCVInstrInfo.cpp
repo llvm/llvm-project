@@ -658,7 +658,12 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::SW_INX;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
-    Opcode = RISCV::PseudoRV32ZdinxSD;
+    if (STI.hasStdExtZilsd() && !STI.is64Bit()) {
+      Opcode = RISCV::SD_RV32;
+    } else {
+      assert(STI.hasStdExtZdinx() && !STI.is64Bit());
+      Opcode = RISCV::PseudoRV32ZdinxSD;
+    }
   } else if (RISCV::FPR16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::FSH;
   } else if (RISCV::FPR32RegClass.hasSubClassEq(RC)) {
@@ -742,7 +747,12 @@ void RISCVInstrInfo::loadRegFromStackSlot(
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::LW_INX;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
-    Opcode = RISCV::PseudoRV32ZdinxLD;
+    if (STI.hasStdExtZilsd() && !STI.is64Bit()) {
+      Opcode = RISCV::LD_RV32;
+    } else {
+      assert(STI.hasStdExtZdinx() && !STI.is64Bit());
+      Opcode = RISCV::PseudoRV32ZdinxLD;
+    }
   } else if (RISCV::FPR16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::FLH;
   } else if (RISCV::FPR32RegClass.hasSubClassEq(RC)) {
