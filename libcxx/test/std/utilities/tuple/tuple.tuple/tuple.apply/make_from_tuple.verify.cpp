@@ -19,9 +19,8 @@
 #include "test_macros.h"
 
 void test() {
-
   // FreeBSD ci use clang 19.1.1, which hasn't implement __reference_constructs_from_temporary.
-  // The static_assert inner std::make_from_tuple will not tiggered. 
+  // The static_assert inner std::make_from_tuple will not triggered.
 #if __has_builtin(__reference_constructs_from_temporary)
   // expected-error@*:* {{static assertion failed}}
 #endif
