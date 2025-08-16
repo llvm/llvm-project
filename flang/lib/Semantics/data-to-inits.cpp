@@ -216,7 +216,7 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
         auto &value{context.StartImpliedDo(name.source, *lower)};
         bool result{true};
         for (auto n{(*upper - value + stepVal) / stepVal}; n > 0;
-             --n, value += stepVal) {
+            --n, value += stepVal) {
           for (const auto &object :
               std::get<std::list<parser::DataIDoObject>>(ido.t)) {
             if (!Scan(object)) {
@@ -511,7 +511,7 @@ static const DerivedTypeSpec *HasDefaultInitialization(const Symbol &symbol) {
     if (object->init().has_value()) {
       return nullptr; // init is explicit, not default
     } else if (!object->isDummy() && object->type()) {
-      if (const DerivedTypeSpec * derived{object->type()->AsDerived()}) {
+      if (const DerivedTypeSpec *derived{object->type()->AsDerived()}) {
         DirectComponentIterator directs{*derived};
         if (llvm::any_of(directs, [](const Symbol &component) {
               return !IsAllocatable(component) &&
@@ -544,7 +544,7 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
       stride = ((stride + alignment - 1) / alignment) * alignment;
     }
     for (auto elements{evaluate::GetSize(*extents)}; elements-- > 0;
-         offset += stride) {
+        offset += stride) {
       PopulateWithComponentDefaults(init, offset, derived, foldingContext);
     }
   }
@@ -588,8 +588,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
                   foldingContext);
             }
           }
-        } else if (const DeclTypeSpec * type{component.GetType()}) {
-          if (const DerivedTypeSpec * componentDerived{type->AsDerived()}) {
+        } else if (const DeclTypeSpec *type{component.GetType()}) {
+          if (const DerivedTypeSpec *componentDerived{type->AsDerived()}) {
             PopulateWithComponentDefaults(init, componentOffset,
                 *componentDerived, foldingContext, component);
           }
@@ -829,7 +829,7 @@ static bool CombineEquivalencedInitialization(
         !HasDeclarationInitializer(symbol) && IsSaved(symbol) &&
         equivalenced.find(symbol) == equivalenced.end()) {
       // Static object, no local storage association, no explicit initialization
-      if (const DerivedTypeSpec * derived{HasDefaultInitialization(symbol)}) {
+      if (const DerivedTypeSpec *derived{HasDefaultInitialization(symbol)}) {
         auto newInitIter{inits.emplace(&symbol, symbol.size())};
         CHECK(newInitIter.second);
         auto &newInit{newInitIter.first->second};

@@ -77,7 +77,7 @@ struct DeviceExprChecker
   explicit DeviceExprChecker(SemanticsContext &c) : Base(*this), context_{c} {}
   using Base::operator();
   Result operator()(const evaluate::ProcedureDesignator &x) const {
-    if (const Symbol * sym{x.GetInterfaceSymbol()}) {
+    if (const Symbol *sym{x.GetInterfaceSymbol()}) {
       const auto *subp{
           sym->GetUltimate().detailsIf<semantics::SubprogramDetails>()};
       if (subp) {
@@ -402,7 +402,7 @@ private:
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (isHostDevice)
       return;
-    if (const Symbol * hostArray{FindHostArray{}(expr)}) {
+    if (const Symbol *hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
           "Host array '%s' cannot be present in device context"_err_en_US,
           hostArray->name());
@@ -467,8 +467,8 @@ private:
               Check(x.value());
             },
             [&](const common::Indirection<parser::AssignmentStmt> &x) {
-              if (const evaluate::Assignment *
-                  assign{semantics::GetAssignment(x.value())}) {
+              if (const evaluate::Assignment *assign{
+                      semantics::GetAssignment(x.value())}) {
                 ErrorIfHostSymbol(assign->lhs, source);
                 ErrorIfHostSymbol(assign->rhs, source);
               }

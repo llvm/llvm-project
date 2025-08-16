@@ -121,7 +121,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
     // Compute the integer kind value of the type parameter,
     // which may depend on the values of earlier ones.
     if (const auto *typeSpec{symbol.GetType()}) {
-      if (const IntrinsicTypeSpec * intrinType{typeSpec->AsIntrinsic()};
+      if (const IntrinsicTypeSpec *intrinType{typeSpec->AsIntrinsic()};
           intrinType && intrinType->category() == TypeCategory::Integer) {
         auto restorer{foldingContext.WithPDTInstance(*this)};
         auto folded{Fold(foldingContext, KindExpr{intrinType->kind()})};
@@ -142,7 +142,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
       // the scope of the derived type being instantiated, as the expressions
       // themselves are not in that scope and cannot reference its type
       // parameters.
-      if (const MaybeIntExpr & expr{paramValue->GetExplicit()}) {
+      if (const MaybeIntExpr &expr{paramValue->GetExplicit()}) {
         evaluate::DynamicType dyType{TypeCategory::Integer, parameterKind};
         if (auto converted{evaluate::ConvertToType(dyType, SomeExpr{*expr})}) {
           SomeExpr folded{
@@ -243,8 +243,8 @@ static bool MatchKindParams(const Symbol &typeSymbol,
       }
     }
   }
-  if (const DerivedTypeSpec *
-      parent{typeSymbol.GetParentTypeSpec(typeSymbol.scope())}) {
+  if (const DerivedTypeSpec *parent{
+          typeSymbol.GetParentTypeSpec(typeSymbol.scope())}) {
     return MatchKindParams(parent->typeSymbol(), thisSpec, thatSpec);
   } else {
     return true;
@@ -254,8 +254,8 @@ static bool MatchKindParams(const Symbol &typeSymbol,
 bool DerivedTypeSpec::MatchesOrExtends(const DerivedTypeSpec &that) const {
   const Symbol *typeSymbol{&typeSymbol_};
   while (typeSymbol != &that.typeSymbol_) {
-    if (const DerivedTypeSpec *
-        parent{typeSymbol->GetParentTypeSpec(typeSymbol->scope())}) {
+    if (const DerivedTypeSpec *parent{
+            typeSymbol->GetParentTypeSpec(typeSymbol->scope())}) {
       typeSymbol = &parent->typeSymbol_;
     } else {
       return false;
@@ -387,7 +387,7 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
           }
         }
         if (!instanceDetails.type()) {
-          if (const DeclTypeSpec * type{details.type()}) {
+          if (const DeclTypeSpec *type{details.type()}) {
             instanceDetails.set_type(*type);
           }
         }
@@ -466,7 +466,7 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
   }
   newSymbol.flags() = oldSymbol.flags();
   if (auto *details{newSymbol.detailsIf<ObjectEntityDetails>()}) {
-    if (const DeclTypeSpec * newType{InstantiateType(newSymbol)}) {
+    if (const DeclTypeSpec *newType{InstantiateType(newSymbol)}) {
       details->ReplaceType(*newType);
     }
     for (ShapeSpec &dim : details->shape()) {
@@ -509,7 +509,7 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     }
   } else if (auto *procDetails{newSymbol.detailsIf<ProcEntityDetails>()}) {
     // We have a procedure pointer.  Instantiate its return type
-    if (const DeclTypeSpec * returnType{InstantiateType(newSymbol)}) {
+    if (const DeclTypeSpec *returnType{InstantiateType(newSymbol)}) {
       if (!procDetails->procInterface()) {
         procDetails->ReplaceType(*returnType);
       }
@@ -521,7 +521,7 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
   const DeclTypeSpec *type{symbol.GetType()};
   if (!type) {
     return nullptr; // error has occurred
-  } else if (const DerivedTypeSpec * spec{type->AsDerived()}) {
+  } else if (const DerivedTypeSpec *spec{type->AsDerived()}) {
     return &FindOrInstantiateDerivedType(scope_,
         CreateDerivedTypeSpec(*spec, symbol.test(Symbol::Flag::ParentComp)),
         type->category());
@@ -847,7 +847,7 @@ bool DeclTypeSpec::IsNumeric(TypeCategory tc) const {
   return category_ == Numeric && numericTypeSpec().category() == tc;
 }
 bool DeclTypeSpec::IsSequenceType() const {
-  if (const DerivedTypeSpec * derivedType{AsDerived()}) {
+  if (const DerivedTypeSpec *derivedType{AsDerived()}) {
     const auto *typeDetails{
         derivedType->typeSymbol().detailsIf<DerivedTypeDetails>()};
     return typeDetails && typeDetails->sequence();

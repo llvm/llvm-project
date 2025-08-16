@@ -31,7 +31,7 @@ void SelectRankConstructChecker::Leave(
   // R1149 select-rank-stmt checks
   const Symbol *saveSelSymbol{nullptr};
   if (const auto selExpr{GetExprFromSelector(selectRankStmtSel)}) {
-    if (const Symbol * sel{evaluate::UnwrapWholeSymbolDataRef(*selExpr)}) {
+    if (const Symbol *sel{evaluate::UnwrapWholeSymbolDataRef(*selExpr)}) {
       if (!evaluate::IsAssumedRank(*sel)) { // C1150
         context_.Say(parser::FindSourceLocation(selectRankStmtSel),
             "Selector '%s' is not an assumed-rank array variable"_err_en_US,

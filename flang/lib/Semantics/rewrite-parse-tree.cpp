@@ -104,7 +104,7 @@ void RewriteMutator::Post(parser::Name &name) {
 }
 
 static bool ReturnsDataPointer(const Symbol &symbol) {
-  if (const Symbol * funcRes{FindFunctionResult(symbol)}) {
+  if (const Symbol *funcRes{FindFunctionResult(symbol)}) {
     return IsPointer(*funcRes) && !IsProcedure(*funcRes);
   } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
     for (auto ref : generic->specificProcs()) {
@@ -254,8 +254,8 @@ void RewriteMutator::FixMisparsedStmtFuncs(
     if (auto *stmt{std::get_if<
             parser::Statement<common::Indirection<parser::StmtFunctionStmt>>>(
             &it->u)}) {
-      if (const Symbol *
-          symbol{std::get<parser::Name>(stmt->statement.value().t).symbol}) {
+      if (const Symbol *symbol{
+              std::get<parser::Name>(stmt->statement.value().t).symbol}) {
         const Symbol &ultimate{symbol->GetUltimate()};
         convert =
             ultimate.has<ObjectEntityDetails>() || ReturnsDataPointer(ultimate);
@@ -459,7 +459,7 @@ template <typename READ_OR_WRITE>
 void FixMisparsedUntaggedNamelistName(READ_OR_WRITE &x) {
   if (x.iounit && x.format &&
       std::holds_alternative<parser::Expr>(x.format->u)) {
-    if (const parser::Name * name{parser::Unwrap<parser::Name>(x.format)}) {
+    if (const parser::Name *name{parser::Unwrap<parser::Name>(x.format)}) {
       if (name->symbol && name->symbol->GetUltimate().has<NamelistDetails>()) {
         x.controls.emplace_front(parser::IoControlSpec{std::move(*name)});
         x.format.reset();

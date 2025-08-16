@@ -32,7 +32,7 @@ namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclareReductionConstruct;
 struct OmpMetadirectiveDirective;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 

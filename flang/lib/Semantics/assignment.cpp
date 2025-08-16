@@ -62,7 +62,7 @@ private:
 };
 
 void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
-  if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
+  if (const evaluate::Assignment *assignment{GetAssignment(stmt)}) {
     const SomeExpr &lhs{assignment->lhs};
     const SomeExpr &rhs{assignment->rhs};
     auto lhsLoc{std::get<parser::Variable>(stmt.t).GetSource()};
@@ -72,8 +72,8 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
         std::holds_alternative<evaluate::ProcedureRef>(assignment->u)};
     if (isDefinedAssignment) {
       flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
-    } else if (const Symbol *
-        whole{evaluate::UnwrapWholeSymbolOrComponentDataRef(lhs)}) {
+    } else if (const Symbol *whole{
+                   evaluate::UnwrapWholeSymbolOrComponentDataRef(lhs)}) {
       if (IsAllocatable(whole->GetUltimate())) {
         flags.set(DefinabilityFlag::PotentialDeallocation);
       }
@@ -101,7 +101,7 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
 
 void AssignmentContext::Analyze(const parser::PointerAssignmentStmt &stmt) {
   CHECK(whereDepth_ == 0);
-  if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
+  if (const evaluate::Assignment *assignment{GetAssignment(stmt)}) {
     parser::CharBlock at{context_.location().value()};
     auto restorer{foldingContext().messages().SetLocation(at)};
     CheckPointerAssignment(context_, *assignment, context_.FindScope(at));
@@ -125,7 +125,7 @@ static std::optional<std::string> GetPointerComponentDesignatorName(
 bool CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
     const SomeExpr &expr, const Scope &scope) {
   if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
-    if (const Symbol * base{GetFirstSymbol(expr)}) {
+    if (const Symbol *base{GetFirstSymbol(expr)}) {
       const char *why{WhyBaseObjectIsSuspicious(base->GetUltimate(), scope)};
       if (!why) {
         if (auto coarray{evaluate::ExtractCoarrayRef(expr)}) {

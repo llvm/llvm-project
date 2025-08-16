@@ -74,7 +74,7 @@ private:
     if (type_->category() == DeclTypeSpec::Category::Character) {
       hasDeferredTypeParameter_ =
           type_->characterTypeSpec().length().isDeferred();
-    } else if (const DerivedTypeSpec * derivedTypeSpec{type_->AsDerived()}) {
+    } else if (const DerivedTypeSpec *derivedTypeSpec{type_->AsDerived()}) {
       for (const auto &pair : derivedTypeSpec->parameters()) {
         hasDeferredTypeParameter_ |= pair.second.isDeferred();
       }
@@ -114,7 +114,7 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
     }
     info.gotTypeSpec = true;
     info.typeSpecLoc = parser::FindSourceLocation(*typeSpec);
-    if (const DerivedTypeSpec * derived{info.typeSpec->AsDerived()}) {
+    if (const DerivedTypeSpec *derived{info.typeSpec->AsDerived()}) {
       // C937
       if (auto it{FindCoarrayUltimateComponent(*derived)}) {
         context
@@ -224,8 +224,8 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
       }
       info.sourceExprRank = expr->Rank();
       info.sourceExprLoc = parserSourceExpr->source;
-      if (const DerivedTypeSpec *
-          derived{evaluate::GetDerivedTypeSpec(info.sourceExprType)}) {
+      if (const DerivedTypeSpec *derived{
+              evaluate::GetDerivedTypeSpec(info.sourceExprType)}) {
         // C949
         if (auto it{FindCoarrayUltimateComponent(*derived)}) {
           context
@@ -279,13 +279,13 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
 // in this test.
 static bool IsTypeCompatible(
     const DeclTypeSpec &type1, const DerivedTypeSpec &derivedType2) {
-  if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
+  if (const DerivedTypeSpec *derivedType1{type1.AsDerived()}) {
     if (type1.category() == DeclTypeSpec::Category::TypeDerived) {
       return evaluate::AreSameDerivedTypeIgnoringTypeParameters(
           *derivedType1, derivedType2);
     } else if (type1.category() == DeclTypeSpec::Category::ClassDerived) {
       for (const DerivedTypeSpec *parent{&derivedType2}; parent;
-           parent = parent->typeSymbol().GetParentTypeSpec()) {
+          parent = parent->typeSymbol().GetParentTypeSpec()) {
         if (evaluate::AreSameDerivedTypeIgnoringTypeParameters(
                 *derivedType1, *parent)) {
           return true;
@@ -303,13 +303,13 @@ static bool IsTypeCompatible(
     // cannot be allocatable (C709)
     return true;
   }
-  if (const IntrinsicTypeSpec * intrinsicType2{type2.AsIntrinsic()}) {
-    if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
+  if (const IntrinsicTypeSpec *intrinsicType2{type2.AsIntrinsic()}) {
+    if (const IntrinsicTypeSpec *intrinsicType1{type1.AsIntrinsic()}) {
       return intrinsicType1->category() == intrinsicType2->category();
     } else {
       return false;
     }
-  } else if (const DerivedTypeSpec * derivedType2{type2.AsDerived()}) {
+  } else if (const DerivedTypeSpec *derivedType2{type2.AsDerived()}) {
     return IsTypeCompatible(type1, *derivedType2);
   }
   return false;
@@ -323,7 +323,7 @@ static bool IsTypeCompatible(
     return true;
   }
   if (type2.category() != evaluate::TypeCategory::Derived) {
-    if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
+    if (const IntrinsicTypeSpec *intrinsicType1{type1.AsIntrinsic()}) {
       return intrinsicType1->category() == type2.category();
     } else {
       return false;
@@ -348,16 +348,16 @@ static bool HaveSameAssumedTypeParameters(
     }
     // It is possible to reach this if type1 is unlimited polymorphic
     return !type2LengthIsAssumed;
-  } else if (const DerivedTypeSpec * derivedType2{type2.AsDerived()}) {
+  } else if (const DerivedTypeSpec *derivedType2{type2.AsDerived()}) {
     int type2AssumedParametersCount{0};
     int type1AssumedParametersCount{0};
     for (const auto &pair : derivedType2->parameters()) {
       type2AssumedParametersCount += pair.second.isAssumed();
     }
     // type1 may be unlimited polymorphic
-    if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
+    if (const DerivedTypeSpec *derivedType1{type1.AsDerived()}) {
       for (auto it{derivedType1->parameters().begin()};
-           it != derivedType1->parameters().end(); ++it) {
+          it != derivedType1->parameters().end(); ++it) {
         if (it->second.isAssumed()) {
           ++type1AssumedParametersCount;
           const ParamValue *param{derivedType2->FindParameter(it->first)};
@@ -378,8 +378,8 @@ static bool HaveSameAssumedTypeParameters(
 
 static std::optional<std::int64_t> GetTypeParameterInt64Value(
     const Symbol &parameterSymbol, const DerivedTypeSpec &derivedType) {
-  if (const ParamValue *
-      paramValue{derivedType.FindParameter(parameterSymbol.name())}) {
+  if (const ParamValue *paramValue{
+          derivedType.FindParameter(parameterSymbol.name())}) {
     return evaluate::ToInt64(paramValue->GetExplicit());
   }
   return std::nullopt;
@@ -403,11 +403,11 @@ static bool HaveCompatibleTypeParameters(
   if (type1.category() == DeclTypeSpec::Category::ClassStar) {
     return true;
   }
-  if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
+  if (const IntrinsicTypeSpec *intrinsicType1{type1.AsIntrinsic()}) {
     return evaluate::ToInt64(intrinsicType1->kind()).value() == type2.kind();
   } else if (type2.IsUnlimitedPolymorphic()) {
     return false;
-  } else if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
+  } else if (const DerivedTypeSpec *derivedType1{type1.AsDerived()}) {
     return HaveCompatibleTypeParameters(
         *derivedType1, type2.GetDerivedTypeSpec());
   } else {
@@ -419,10 +419,10 @@ static bool HaveCompatibleTypeParameters(
     const DeclTypeSpec &type1, const DeclTypeSpec &type2) {
   if (type1.category() == DeclTypeSpec::Category::ClassStar) {
     return true;
-  } else if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
+  } else if (const IntrinsicTypeSpec *intrinsicType1{type1.AsIntrinsic()}) {
     const IntrinsicTypeSpec *intrinsicType2{type2.AsIntrinsic()};
     return !intrinsicType2 || intrinsicType1->kind() == intrinsicType2->kind();
-  } else if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
+  } else if (const DerivedTypeSpec *derivedType1{type1.AsDerived()}) {
     const DerivedTypeSpec *derivedType2{type2.AsDerived()};
     return !derivedType2 ||
         HaveCompatibleTypeParameters(*derivedType1, *derivedType2);
@@ -699,8 +699,7 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
   if (evaluate::IsCoarray(*ultimate_)) {
     if (allocateInfo_.gotTypeSpec) {
       // C938
-      if (const DerivedTypeSpec *
-          derived{allocateInfo_.typeSpec->AsDerived()}) {
+      if (const DerivedTypeSpec *derived{allocateInfo_.typeSpec->AsDerived()}) {
         if (IsTeamType(derived)) {
           context
               .Say(allocateInfo_.typeSpecLoc.value(),
@@ -784,8 +783,8 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
       return false;
     }
   }
-  if (const parser::CoindexedNamedObject *
-      coindexedObject{parser::GetCoindexedNamedObject(allocateObject_)}) {
+  if (const parser::CoindexedNamedObject *coindexedObject{
+          parser::GetCoindexedNamedObject(allocateObject_)}) {
     // C950
     context.Say(parser::FindSourceLocation(*coindexedObject),
         "Allocatable object must not be coindexed in ALLOCATE"_err_en_US);

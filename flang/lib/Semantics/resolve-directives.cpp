@@ -949,7 +949,7 @@ const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
     const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
-    if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+    if (const Bounds *b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
       return &b->name.thing;
     } else {
       return nullptr;
@@ -1310,7 +1310,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
 static bool IsLastNameArray(const parser::Designator &designator) {
   const auto &name{GetLastName(designator)};
   const evaluate::DataRef dataRef{*(name.symbol)};
-  return common::visit(
+  return common::visit( //
       common::visitors{
           [](const evaluate::SymbolRef &ref) {
             return ref->Rank() > 0 ||
@@ -1481,10 +1481,10 @@ void AccAttributeVisitor::CheckAssociatedLoop(
   using Bounds = parser::LoopControl::Bounds;
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
     // Go through all nested loops to ensure index variable exists.
-    if (const parser::Name * ivName{GetLoopIndex(*loop)}) {
+    if (const parser::Name *ivName{GetLoopIndex(*loop)}) {
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
         if (auto &control{loop->GetLoopControl()}) {
-          if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
+          if (const Bounds *b{std::get_if<Bounds>(&control->u)}) {
             if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->lower)}) {
               semantics::UnorderedSymbolSet lowerSyms =
                   evaluate::CollectSymbols(*lowerExpr);
@@ -1906,7 +1906,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   }
   // If this symbol already has a data-sharing attribute then there is nothing
   // to do here.
-  if (const Symbol * symbol{iv.symbol}) {
+  if (const Symbol *symbol{iv.symbol}) {
     for (auto symMap : targetIt->objectWithDSA) {
       if (symMap.first->name() == symbol->name()) {
         return;
@@ -2732,7 +2732,7 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
     return nullptr;
   }
   if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
-                   .FindCommonBlock(name->source)}) {
+              .FindCommonBlock(name->source)}) {
     name->symbol = cb;
     return cb;
   }
@@ -3107,19 +3107,18 @@ void ResolveOmpTopLevelParts(
   // Combine global REQUIRES information from all program units except modules
   // and submodules.
   processProgramUnits([&](Symbol &symbol, WithOmpDeclarative &details) {
-    if (const WithOmpDeclarative::RequiresFlags *
-        flags{details.ompRequires()}) {
+    if (const WithOmpDeclarative::RequiresFlags *flags{details.ompRequires()}) {
       combinedFlags |= *flags;
     }
-    if (const common::OmpMemoryOrderType *
-        memOrder{details.ompAtomicDefaultMemOrder()}) {
+    if (const common::OmpMemoryOrderType *memOrder{
+            details.ompAtomicDefaultMemOrder()}) {
       if (combinedMemOrder && *combinedMemOrder != *memOrder) {
         context.Say(symbol.scope()->sourceRange(),
             "Conflicting '%s' REQUIRES clauses found in compilation "
             "unit"_err_en_US,
             parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
                 llvm::omp::Clause::OMPC_atomic_default_mem_order)
-                                           .str()));
+                    .str()));
       }
       combinedMemOrder = *memOrder;
     }
@@ -3345,8 +3344,8 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
             if constexpr (std::is_convertible_v<decltype(&details),
                               WithOmpDeclarative *>) {
               if (flags.any()) {
-                if (const WithOmpDeclarative::RequiresFlags *
-                    otherFlags{details.ompRequires()}) {
+                if (const WithOmpDeclarative::RequiresFlags *otherFlags{
+                        details.ompRequires()}) {
                   flags |= *otherFlags;
                 }
                 details.set_ompRequires(flags);
@@ -3359,7 +3358,7 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
                       "unit"_err_en_US,
                       parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
                           llvm::omp::Clause::OMPC_atomic_default_mem_order)
-                                                     .str()));
+                              .str()));
                 }
                 details.set_ompAtomicDefaultMemOrder(*memOrder);
               }

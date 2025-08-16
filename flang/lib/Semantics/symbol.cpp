@@ -532,7 +532,7 @@ llvm::raw_ostream &operator<<(
   DumpOptional(os, "bindName", x.bindName());
   DumpOptional(os, "passName", x.passName());
   if (x.init()) {
-    if (const Symbol * target{*x.init()}) {
+    if (const Symbol *target{*x.init()}) {
       os << " => " << target->name();
     } else {
       os << " => NULL()";
@@ -741,7 +741,7 @@ llvm::raw_ostream &DumpForUnparse(
 }
 
 const DerivedTypeSpec *Symbol::GetParentTypeSpec(const Scope *scope) const {
-  if (const Symbol * parentComponent{GetParentComponent(scope)}) {
+  if (const Symbol *parentComponent{GetParentComponent(scope)}) {
     const auto &object{parentComponent->get<ObjectEntityDetails>()};
     return &object.type()->derivedTypeSpec();
   } else {
@@ -751,7 +751,7 @@ const DerivedTypeSpec *Symbol::GetParentTypeSpec(const Scope *scope) const {
 
 const Symbol *Symbol::GetParentComponent(const Scope *scope) const {
   if (const auto *dtDetails{detailsIf<DerivedTypeDetails>()}) {
-    if (const Scope * localScope{scope ? scope : scope_}) {
+    if (const Scope *localScope{scope ? scope : scope_}) {
       return dtDetails->GetParentComponent(DEREF(localScope));
     }
   }
@@ -768,7 +768,7 @@ void DerivedTypeDetails::add_component(const Symbol &symbol) {
 const Symbol *DerivedTypeDetails::GetParentComponent(const Scope &scope) const {
   if (auto extends{GetParentComponentName()}) {
     if (auto iter{scope.find(*extends)}; iter != scope.cend()) {
-      if (const Symbol & symbol{*iter->second};
+      if (const Symbol &symbol{*iter->second};
           symbol.test(Symbol::Flag::ParentComp)) {
         return &symbol;
       }
@@ -782,7 +782,7 @@ const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
     const Symbol &symbol{*pair.second};
     if (const auto *details{symbol.detailsIf<SubprogramDetails>()}) {
       if (details->dummyArgs().size() == 1) {
-        if (const Symbol * arg{details->dummyArgs().at(0)}) {
+        if (const Symbol *arg{details->dummyArgs().at(0)}) {
           if (const auto *object{arg->detailsIf<ObjectEntityDetails>()}) {
             if (rank == object->shape().Rank() || object->IsAssumedRank() ||
                 IsElementalProcedure(symbol)) {

@@ -167,7 +167,7 @@ static void WarnUndefinedFunctionResult(
         IsInitialized(symbol, /*ignoreDataStatements=*/true,
             /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
   }};
-  if (const Symbol * symbol{scope.symbol()}) {
+  if (const Symbol *symbol{scope.symbol()}) {
     if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
       if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
         bool wasDefined{WasDefined(subp->result())};
@@ -456,7 +456,7 @@ void SemanticsContext::UpdateScopeIndex(
 
 bool SemanticsContext::IsInModuleFile(parser::CharBlock source) const {
   for (const Scope *scope{&FindScope(source)}; !scope->IsGlobal();
-       scope = &scope->parent()) {
+      scope = &scope->parent()) {
     if (scope->IsModuleFile()) {
       return true;
     }
@@ -501,13 +501,13 @@ void SemanticsContext::CheckIndexVarRedefine(
 }
 
 void SemanticsContext::CheckIndexVarRedefine(const parser::Variable &variable) {
-  if (const Symbol * entity{GetLastName(variable).symbol}) {
+  if (const Symbol *entity{GetLastName(variable).symbol}) {
     CheckIndexVarRedefine(variable.GetSource(), *entity);
   }
 }
 
 void SemanticsContext::CheckIndexVarRedefine(const parser::Name &name) {
-  if (const Symbol * entity{name.symbol}) {
+  if (const Symbol *entity{name.symbol}) {
     CheckIndexVarRedefine(name.source, *entity);
   }
 }
@@ -515,7 +515,7 @@ void SemanticsContext::CheckIndexVarRedefine(const parser::Name &name) {
 void SemanticsContext::ActivateIndexVar(
     const parser::Name &name, IndexVarKind kind) {
   CheckIndexVarRedefine(name);
-  if (const Symbol * indexVar{name.symbol}) {
+  if (const Symbol *indexVar{name.symbol}) {
     activeIndexVars_.emplace(
         ResolveAssociations(*indexVar), IndexVarInfo{name.source, kind});
   }

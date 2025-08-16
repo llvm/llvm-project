@@ -39,8 +39,8 @@ class SemanticsContext;
 struct EquivalenceObject {
   EquivalenceObject(Symbol &symbol, std::vector<ConstantSubscript> subscripts,
       std::optional<ConstantSubscript> substringStart, parser::CharBlock source)
-      : symbol{symbol}, subscripts{subscripts},
-        substringStart{substringStart}, source{source} {}
+      : symbol{symbol}, subscripts{subscripts}, substringStart{substringStart},
+        source{source} {}
   explicit EquivalenceObject(Symbol &symbol)
       : symbol{symbol}, source{symbol.name()} {}
 

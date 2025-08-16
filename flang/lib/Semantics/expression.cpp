@@ -250,7 +250,7 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
       }
     } else if (auto interface{context_.intrinsics().IsSpecificIntrinsicFunction(
                    symbol.name().ToString())};
-               interface && !interface->isRestrictedSpecific) {
+        interface && !interface->isRestrictedSpecific) {
       SpecificIntrinsic intrinsic{
           symbol.name().ToString(), std::move(*interface)};
       intrinsic.isRestrictedSpecific = interface->isRestrictedSpecific;
@@ -1070,8 +1070,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
         // instantiations.
         int kind{SubscriptInteger::kind};
         if (const auto *typeSpec{ultimate.GetType()}) {
-          if (const semantics::IntrinsicTypeSpec *
-              intrinType{typeSpec->AsIntrinsic()}) {
+          if (const semantics::IntrinsicTypeSpec *intrinType{
+                  typeSpec->AsIntrinsic()}) {
             if (auto k{ToInt64(Fold(semantics::KindExpr{intrinType->kind()}))};
                 k &&
                 common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
@@ -1956,7 +1956,7 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   exprAnalyzer_.Analyze(bounds.name);
   parser::CharBlock name{bounds.name.thing.thing.source};
   int kind{ImpliedDoIntType::kind};
-  if (const Symbol * symbol{bounds.name.thing.thing.symbol}) {
+  if (const Symbol *symbol{bounds.name.thing.thing.symbol}) {
     if (auto dynamicType{DynamicType::From(symbol)}) {
       if (dynamicType->category() == TypeCategory::Integer) {
         kind = dynamicType->kind();
@@ -2045,8 +2045,8 @@ void ArrayConstructorContext::UnrollConstantImpliedDo(
   auto &foldingContext{exprAnalyzer_.GetFoldingContext()};
   auto restorer{exprAnalyzer_.DoNotUseSavedTypedExprs()};
   for (auto &at{foldingContext.StartImpliedDo(name, lower)};
-       (stride > 0 && at <= upper) || (stride < 0 && at >= upper);
-       at += stride) {
+      (stride > 0 && at <= upper) || (stride < 0 && at >= upper);
+      at += stride) {
     for (const auto &value :
         std::get<std::list<parser::AcValue>>(impliedDo.t)) {
       Add(value);
@@ -2172,7 +2172,7 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
         for (auto parent{components.begin()};
-             parent != afterLastParentComponentIter; ++parent) {
+            parent != afterLastParentComponentIter; ++parent) {
           if (auto parentType{DynamicType::From(*parent)}; parentType &&
               parent->test(Symbol::Flag::ParentComp) &&
               valueType->IsEquivalentTo(*parentType)) {
@@ -2279,8 +2279,7 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
                      evaluate::DynamicType::From(*symbol))}) {
         if (auto iter{FindPointerPotentialComponent(*derived)};
             iter && pureContext) { // F'2023 C15104(4)
-          if (const Symbol *
-              visible{semantics::FindExternallyVisibleObject(
+          if (const Symbol *visible{semantics::FindExternallyVisibleObject(
                   value, *pureContext)}) {
             Say(exprSource,
                 "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
@@ -2445,9 +2444,7 @@ static std::optional<parser::CharBlock> GetPassName(
 static std::optional<int> GetPassIndex(const Symbol &proc) {
   CHECK(!proc.attrs().test(semantics::Attr::NOPASS));
   std::optional<parser::CharBlock> passName{GetPassName(proc)};
-  const auto *interface {
-    semantics::FindInterface(proc)
-  };
+  const auto *interface{semantics::FindInterface(proc)};
   if (!passName || !interface) {
     return 0; // first argument is passed-object
   }
@@ -2552,9 +2549,9 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           // binding to be overridden by a PRIVATE one.
           CHECK(dyType && dyType->category() == TypeCategory::Derived &&
               !dyType->IsUnlimitedPolymorphic());
-          if (const Symbol *
-              latest{DEREF(dyType->GetDerivedTypeSpec().typeSymbol().scope())
-                         .FindComponent(sym->name())}) {
+          if (const Symbol *latest{
+                  DEREF(dyType->GetDerivedTypeSpec().typeSymbol().scope())
+                      .FindComponent(sym->name())}) {
             if (sym->attrs().test(semantics::Attr::PRIVATE)) {
               const auto *bindingModule{FindModuleContaining(generic.owner())};
               const Symbol *s{latest};
@@ -2951,7 +2948,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   // Is there a derived type of the same name?
   const Symbol *derivedType{nullptr};
   if (mightBeStructureConstructor && !isSubroutine && genericDetails) {
-    if (const Symbol * dt{genericDetails->derivedType()}) {
+    if (const Symbol *dt{genericDetails->derivedType()}) {
       const Symbol &ultimate{dt->GetUltimate()};
       if (ultimate.has<semantics::DerivedTypeDetails>()) {
         derivedType = &ultimate;
@@ -2965,7 +2962,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           common::LanguageFeature::AmbiguousStructureConstructor)) {
     // See whethr there's ambiguity with a structure constructor.
     bool possiblyAmbiguous{true};
-    if (const semantics::Scope * dtScope{derivedType->scope()}) {
+    if (const semantics::Scope *dtScope{derivedType->scope()}) {
       parser::Messages buffer;
       auto restorer{GetContextualMessages().SetMessages(buffer)};
       std::list<ComponentSpec> componentSpecs;
@@ -3022,7 +3019,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   }
   // Check parent derived type
   if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
-    if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
+    if (const Symbol *extended{parentScope->FindComponent(symbol.name())}) {
       auto pair{ResolveGeneric(
           *extended, actuals, adjustActuals, isSubroutine, false)};
       if (pair.first) {
@@ -3037,8 +3034,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   // Check for generic or explicit INTRINSIC of the same name in outer scopes.
   // See 15.5.5.2 for details.
   if (!symbol.owner().IsGlobal() && !symbol.owner().IsDerivedType()) {
-    if (const Symbol *
-        outer{symbol.owner().parent().FindSymbol(symbol.name())}) {
+    if (const Symbol *outer{
+            symbol.owner().parent().FindSymbol(symbol.name())}) {
       auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
           mightBeStructureConstructor)};
       if (pair.first) {
@@ -3438,7 +3435,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       ProcedureDesignator *proc{std::get_if<ProcedureDesignator>(&callee->u)};
       CHECK(proc);
       bool isKernel{false};
-      if (const Symbol * procSym{proc->GetSymbol()}) {
+      if (const Symbol *procSym{proc->GetSymbol()}) {
         const Symbol &ultimate{procSym->GetUltimate()};
         if (const auto *subpDetails{
                 ultimate.detailsIf<semantics::SubprogramDetails>()}) {
@@ -3648,8 +3645,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
         /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
   }
   if (procSymbol && !IsPureProcedure(*procSymbol)) {
-    if (const semantics::Scope *
-        pure{semantics::FindPureProcedureContaining(
+    if (const semantics::Scope *pure{semantics::FindPureProcedureContaining(
             context_.FindScope(callSite))}) {
       Say(callSite,
           "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
@@ -4027,7 +4023,8 @@ static void FixMisparsedFunctionReference(
       }
     }
     auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-    if (Symbol *origSymbol{
+    if (Symbol *
+        origSymbol{
             common::visit(common::visitors{
                               [&](parser::Name &name) { return name.symbol; },
                               [&](parser::ProcComponentRef &pcr) {
@@ -4586,7 +4583,7 @@ bool ArgumentAnalyzer::CheckConformance() {
         if (!evaluate::CheckConformance(foldingContext.messages(), *lhShape,
                 *rhShape, CheckConformanceFlags::EitherScalarExpandable,
                 "left operand", "right operand")
-                 .value_or(false /*fail when conformance is not known now*/)) {
+                .value_or(false /*fail when conformance is not known now*/)) {
           fatalErrors_ = true;
           return false;
         }
@@ -4608,7 +4605,7 @@ bool ArgumentAnalyzer::CheckAssignmentConformance() {
         if (!evaluate::CheckConformance(foldingContext.messages(), *lhShape,
                 *rhShape, CheckConformanceFlags::RightScalarExpandable,
                 "left-hand side", "right-hand side")
-                 .value_or(true /*ok when conformance is not known now*/)) {
+                .value_or(true /*ok when conformance is not known now*/)) {
           fatalErrors_ = true;
           return false;
         }
@@ -4732,7 +4729,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
       }
     }};
 
-    if (Symbol * generic{scope.FindSymbol(oprName)}; generic && !fatalErrors_) {
+    if (Symbol *generic{scope.FindSymbol(oprName)}; generic && !fatalErrors_) {
       parser::Name name{generic->name(), generic};
       const Symbol *resultSymbol{nullptr};
       MaybeExpr possibleResult{context_.AnalyzeDefinedOp(
@@ -4742,8 +4739,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
       buffer.clear();
       const Symbol *generic{nullptr};
-      if (const Symbol *
-          binding{FindBoundOp(
+      if (const Symbol *binding{FindBoundOp(
               oprName, passIndex, generic, /*isSubroutine=*/false)}) {
         FoundOne(TryBoundOp(*binding, passIndex), DEREF(generic), binding);
       }

@@ -322,7 +322,7 @@ void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
 
 static void CheckLockVariable(
     SemanticsContext &context, const parser::LockVariable &lockVar) {
-  if (const SomeExpr * expr{GetExpr(lockVar)}) {
+  if (const SomeExpr *expr{GetExpr(lockVar)}) {
     if (auto dyType{expr->GetType()}) {
       auto at{parser::FindSourceLocation(lockVar)};
       if (dyType->category() != TypeCategory::Derived ||
