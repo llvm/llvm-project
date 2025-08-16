@@ -89,7 +89,7 @@ export class LLDBDapServer implements vscode.Disposable {
     args: string[],
     env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
   ): Promise<boolean> {
-    if (!this.serverProcess || !this.serverInfo) {
+    if (!this.serverProcess || !this.serverInfo || !this.serverSpawnInfo) {
       return true;
     }
 
