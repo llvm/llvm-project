@@ -20,6 +20,30 @@ end subroutine
 ! CHECK-LABEL: _QPtest_usad
 ! CHECK: %{{.*}} = fir.call @__nv_usad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32, i32) -> i32
 
+attributes(global) subroutine test_uint2float_rX()
+  real :: res
+  integer :: i
+  res = __uint2float_rd(i)
+  res = __uint2float_rn(i)
+  res = __uint2float_ru(i)
+  res = __uint2float_rz(i)
+end subroutine
+
+! CHECK-LABEL: _QPtest_uint2float_rx
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_uint2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+
+attributes(global) subroutine test_uint2double_rn()
+  double precision :: res
+  integer :: i
+  res = __uint2double_rn(i)
+end subroutine
+
+! CHECK-LABEL: _QPtest_uint2double_rn
+! CHECK: %{{.*}} = fir.call @__nv_uint2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f64
+
 attributes(global) subroutine test_ull2dloat_rX()
   real :: res
   integer(8) :: i

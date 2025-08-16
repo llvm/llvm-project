@@ -590,8 +590,36 @@ implicit none
     end function
   end interface
 
+  interface __uint2float_rd
+    attributes(device) real function __uint2float_rd(i) bind(c, name='__nv_uint2float_rd')
+      !dir$ ignore_tkr (d) i
+      integer, value :: i
+    end function
+  end interface
+
+  interface __uint2float_rn
+    attributes(device) real function __uint2float_rn(i) bind(c, name='__nv_uint2float_rn')
+      !dir$ ignore_tkr (d) i
+      integer, value :: i
+    end function
+  end interface
+
+  interface __uint2float_ru
+    attributes(device) real function __uint2float_ru(i) bind(c, name='__nv_uint2float_ru')
+      !dir$ ignore_tkr (d) i
+      integer, value :: i
+    end function
+  end interface
+
+  interface __uint2float_rz
+    attributes(device) real function __uint2float_rz(i) bind(c, name='__nv_uint2float_rz')
+      !dir$ ignore_tkr (d) i
+      integer, value :: i
+    end function
+  end interface
+
   interface __uint2double_rn
-    attributes(device) double precision function __uint2double_rn(i) bind(c)
+    attributes(device) double precision function __uint2double_rn(i) bind(c, name='__nv_uint2double_rn')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
