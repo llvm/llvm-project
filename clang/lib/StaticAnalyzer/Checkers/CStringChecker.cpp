@@ -1130,7 +1130,7 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
     return true; // cf top comment.
 
   // Support library functions defined with non-default address spaces
-  assert(ER->getValueType().getCanonicalType().getUnqualifiedType() ==
+  assert(ER->getValueType()->getCanonicalTypeUnqualified() ==
              C.getASTContext().CharTy &&
          "isFirstBufInBound should only be called with char* ElementRegions");
 
