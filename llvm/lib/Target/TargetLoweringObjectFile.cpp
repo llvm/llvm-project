@@ -151,17 +151,17 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
 
-  MDNode *CFGProfile = nullptr;
+  MDNode *CGProfile = nullptr;
 
   for (const auto &MFE : ModuleFlags) {
     StringRef Key = MFE.Key->getString();
     if (Key == "CG Profile") {
-      CFGProfile = cast<MDNode>(MFE.Val);
+      CGProfile = cast<MDNode>(MFE.Val);
       break;
     }
   }
 
-  if (!CFGProfile)
+  if (!CGProfile)
     return;
 
   auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
@@ -174,7 +174,7 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
     return TM->getSymbol(F);
   };
 
-  for (const auto &Edge : CFGProfile->operands()) {
+  for (const auto &Edge : CGProfile->operands()) {
     MDNode *E = cast<MDNode>(Edge);
     const MCSymbol *From = GetSym(E->getOperand(0));
     const MCSymbol *To = GetSym(E->getOperand(1));
