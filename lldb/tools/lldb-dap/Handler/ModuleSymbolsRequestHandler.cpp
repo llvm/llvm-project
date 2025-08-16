@@ -15,77 +15,11 @@
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/lldb-enumerations.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
 
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
-
-static std::string SymbolTypeToString(lldb::SymbolType symbol_type) {
-  switch (symbol_type) {
-  case lldb::eSymbolTypeInvalid:
-    return "Invalid";
-  case lldb::eSymbolTypeAbsolute:
-    return "Absolute";
-  case lldb::eSymbolTypeCode:
-    return "Code";
-  case lldb::eSymbolTypeResolver:
-    return "Resolver";
-  case lldb::eSymbolTypeData:
-    return "Data";
-  case lldb::eSymbolTypeTrampoline:
-    return "Trampoline";
-  case lldb::eSymbolTypeRuntime:
-    return "Runtime";
-  case lldb::eSymbolTypeException:
-    return "Exception";
-  case lldb::eSymbolTypeSourceFile:
-    return "SourceFile";
-  case lldb::eSymbolTypeHeaderFile:
-    return "HeaderFile";
-  case lldb::eSymbolTypeObjectFile:
-    return "ObjectFile";
-  case lldb::eSymbolTypeCommonBlock:
-    return "CommonBlock";
-  case lldb::eSymbolTypeBlock:
-    return "Block";
-  case lldb::eSymbolTypeLocal:
-    return "Local";
-  case lldb::eSymbolTypeParam:
-    return "Param";
-  case lldb::eSymbolTypeVariable:
-    return "Variable";
-  case lldb::eSymbolTypeVariableType:
-    return "VariableType";
-  case lldb::eSymbolTypeLineEntry:
-    return "LineEntry";
-  case lldb::eSymbolTypeLineHeader:
-    return "LineHeader";
-  case lldb::eSymbolTypeScopeBegin:
-    return "ScopeBegin";
-  case lldb::eSymbolTypeScopeEnd:
-    return "ScopeEnd";
-  case lldb::eSymbolTypeAdditional:
-    return "Additional";
-  case lldb::eSymbolTypeCompiler:
-    return "Compiler";
-  case lldb::eSymbolTypeInstrumentation:
-    return "Instrumentation";
-  case lldb::eSymbolTypeUndefined:
-    return "Undefined";
-  case lldb::eSymbolTypeObjCClass:
-    return "ObjCClass";
-  case lldb::eSymbolTypeObjCMetaClass:
-    return "ObjCMetaClass";
-  case lldb::eSymbolTypeObjCIVar:
-    return "ObjCIVar";
-  case lldb::eSymbolTypeReExported:
-    return "ReExported";
-  }
-
-  llvm_unreachable("unhandled symbol type.");
-}
 
 llvm::Expected<ModuleSymbolsResponseBody>
 ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
@@ -127,7 +61,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
 
     Symbol dap_symbol;
     dap_symbol.userId = symbol.GetID();
-    dap_symbol.type = SymbolTypeToString(symbol.GetType());
+    dap_symbol.type = symbol.GetType();
     dap_symbol.isDebug = symbol.IsDebug();
     dap_symbol.isSynthetic = symbol.IsSynthetic();
     dap_symbol.isExternal = symbol.IsExternal();
