@@ -3479,13 +3479,7 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   if (platform_sp && !platform_sp->IsHost())
     return Status::FromErrorString("Lost debug server connection");
 
-  auto error = LaunchAndConnectToDebugserver(process_info);
-  if (error.Fail()) {
-    const char *error_string = error.AsCString();
-    if (error_string == nullptr)
-      error_string = "unable to launch " DEBUGSERVER_BASENAME;
-  }
-  return error;
+  return LaunchAndConnectToDebugserver(process_info);
 }
 
 static FileSpec GetDebugserverPath(Platform &platform) {
