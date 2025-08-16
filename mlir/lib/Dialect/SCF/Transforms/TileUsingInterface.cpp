@@ -1929,8 +1929,8 @@ static FailureOr<OpOperand *> getConsumerFromLoopUses(RewriterBase &rewriter,
 ///    yield %1
 /// ```
 /// Here loops should be [%0, %1].
-static bool
-isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops) {
+bool mlir::scf::isPerfectlyNestedForLoops(
+    MutableArrayRef<LoopLikeOpInterface> loops) {
   assert(!loops.empty() && "unexpected empty loop nest");
   if (loops.size() == 1) {
     return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
@@ -1993,7 +1993,7 @@ getUntiledConsumerFromSlice(RewriterBase &rewriter,
   }
 
   // 2. Check that the loop is perfectly nested.
-  if (!isPerfectlyNestedForLoops(loops)) {
+  if (!mlir::scf::isPerfectlyNestedForLoops(loops)) {
     return rewriter.notifyMatchFailure(
         candidateSliceOp, "expected passed loops to be perfectly nested.");
   }
