@@ -1825,6 +1825,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
         LI->getAlign(), VecTy->getElementType(), Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
 
+    if (MDNode *aliasScope = LI->getMetadata(LLVMContext::MD_alias_scope)) {
+      NewLoad->setMetadata(LLVMContext::MD_alias_scope, aliasScope);
+    }
+
+    if (MDNode *noAlias = LI->getMetadata(LLVMContext::MD_noalias)) {
+      NewLoad->setMetadata(LLVMContext::MD_noalias, noAlias);
+    }
+
     replaceValue(*EI, *NewLoad);
   }
 
