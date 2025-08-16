@@ -65,8 +65,8 @@ public:
   /// sint_max(width)].
   static ConstantIntRanges maxRange(unsigned bitwidth);
 
-  /// Create a poisoned range, i.e. a range that represents no valid integer
-  /// values.
+  /// Create a poisoned range, poisoned ranges are propagated through the DAG
+  /// and will cause the immediate UB if reached the side-effecting operation.
   static ConstantIntRanges poison(unsigned bitwidth);
 
   /// Create a `ConstantIntRanges` with a constant value - that is, with the
