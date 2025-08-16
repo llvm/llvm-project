@@ -871,7 +871,18 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
     ctx->executeAction<GreedyPatternRewriteIteration>(
         [&] {
-          continueRewrites = processWorklist();
+          continueRewrites = false;
+
+          // Erase unreachable blocks
+          // Operations like:
+          //   %add = arith.addi %add, %add : i64
+          // are legal in unreachable code. Unfortunately many patterns would be
+          // unsafe to apply on such IR and can lead to crashes or infinite
+          // loops.
+          continueRewrites |=
+              succeeded(eraseUnreachableBlocks(rewriter, region));
+
+          continueRewrites |= processWorklist();
 
           // After applying patterns, make sure that the CFG of each of the
           // regions is kept up to date.
