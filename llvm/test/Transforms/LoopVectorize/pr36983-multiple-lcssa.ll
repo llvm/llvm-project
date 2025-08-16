@@ -5,7 +5,7 @@
 define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK-LABEL: define i16 @duplicate_lcssa(
 ; CHECK-SAME: i16 [[VAL:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -22,12 +22,10 @@ define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VAL]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[IV_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i16 [ [[VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = sub nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i16 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]

@@ -6,7 +6,7 @@ target triple = "x86_64"
 define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK-LABEL: define i8 @pr141968(
 ; CHECK-SAME: i1 [[COND:%.*]], i8 [[V:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ZEXT_TRUE:%.*]] = zext i1 true to i16
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[V]] to i16
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -107,10 +107,9 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <16 x i8> [[PREDPHI]], i32 15
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_LATCH]], label %[[COND_FALSE:.*]]
 ; CHECK:       [[COND_FALSE]]:
 ; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i16 [[SEXT]], [[ZEXT_TRUE]]

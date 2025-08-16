@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux"
 define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %dst.1, ptr noalias %src.1, ptr %src.2) {
 ; CHECK-LABEL: define void @check_widen_intrinsic_with_nnan(
 ; CHECK-SAME: ptr noalias [[DST_0:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[SRC_1:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -70,10 +70,9 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds double, ptr [[SRC_1]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_SRC_1]], align 8
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call nnan double @llvm.fabs.f64(double [[L_1]])

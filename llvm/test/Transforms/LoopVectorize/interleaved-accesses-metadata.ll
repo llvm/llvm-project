@@ -14,7 +14,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias %cp, i32 %i)
 ; CHECK-LABEL: define void @merge_tbaa_interleave_group(
 ; CHECK-SAME: ptr readonly captures(none) [[P:%.*]], ptr noalias [[CP:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -46,10 +46,9 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[IV]], i32 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[X]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP19]], 2.000000e+00

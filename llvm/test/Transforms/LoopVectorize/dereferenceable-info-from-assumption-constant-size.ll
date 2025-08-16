@@ -6,7 +6,7 @@ declare void @llvm.assume(i1)
 define void @deref_assumption_in_header_constant_trip_count(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_header_constant_trip_count(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -50,10 +50,9 @@ define void @deref_assumption_in_header_constant_trip_count(ptr noalias noundef 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP_A]], i64 4), "dereferenceable"(ptr [[GEP_A]], i64 4) ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
@@ -104,7 +103,7 @@ exit:
 define void @align_deref_assumption_in_header_constant_trip_count_loop_invariant_ptr(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @align_deref_assumption_in_header_constant_trip_count_loop_invariant_ptr(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 4) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -127,10 +126,9 @@ define void @align_deref_assumption_in_header_constant_trip_count_loop_invariant
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -178,7 +176,7 @@ exit:
 define void @deref_assumption_too_small_in_header_constant_trip_count(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_too_small_in_header_constant_trip_count(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -222,10 +220,9 @@ define void @deref_assumption_too_small_in_header_constant_trip_count(ptr noalia
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP_A]], i64 4), "dereferenceable"(ptr [[GEP_A]], i64 2) ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
@@ -276,7 +273,7 @@ exit:
 define void @deref_assumption_in_header_constant_trip_count_align_1(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_header_constant_trip_count_align_1(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -320,10 +317,9 @@ define void @deref_assumption_in_header_constant_trip_count_align_1(ptr noalias 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[GEP_A]], i64 4) ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
@@ -374,7 +370,7 @@ exit:
 define void @deref_assumption_in_header_constant_trip_count_align_via_arg_attribute(ptr noalias align 4 %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_header_constant_trip_count_align_via_arg_attribute(
 ; CHECK-SAME: ptr noalias align 4 [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -418,10 +414,9 @@ define void @deref_assumption_in_header_constant_trip_count_align_via_arg_attrib
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[GEP_A]], i64 4) ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
@@ -472,7 +467,7 @@ exit:
 define void @deref_assumption_in_header_constant_trip_count_align_not_known(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_header_constant_trip_count_align_not_known(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -516,10 +511,9 @@ define void @deref_assumption_in_header_constant_trip_count_align_not_known(ptr 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[GEP_A]], i64 4) ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
@@ -570,7 +564,7 @@ exit:
 define void @deref_assumption_in_then_constant_trip_count(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_then_constant_trip_count(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -610,10 +604,9 @@ define void @deref_assumption_in_then_constant_trip_count(ptr noalias noundef %a
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -664,7 +657,7 @@ exit:
 define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_latch_constant_trip_count(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -710,10 +703,9 @@ define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
@@ -866,7 +858,7 @@ exit:
 define void @deref_assumption_in_preheader_constant_trip_count_align_1(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_constant_trip_count_align_1(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4000) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -887,10 +879,9 @@ define void @deref_assumption_in_preheader_constant_trip_count_align_1(ptr noali
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -940,7 +931,7 @@ exit:
 define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_1(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_1(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 3999) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -980,10 +971,9 @@ define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_1
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -1033,7 +1023,7 @@ exit:
 define void @align_and_deref_assumption_in_preheader_constant_trip_count_align_4(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @align_and_deref_assumption_in_preheader_constant_trip_count_align_4(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 4000) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -1054,10 +1044,9 @@ define void @align_and_deref_assumption_in_preheader_constant_trip_count_align_4
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -1108,7 +1097,7 @@ exit:
 define void @deref_assumption_in_preheader_constant_trip_count_align_4_known_via_argument_attr(ptr noalias noundef align 4 %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_constant_trip_count_align_4_known_via_argument_attr(
 ; CHECK-SAME: ptr noalias noundef align 4 [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4000) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -1129,10 +1118,9 @@ define void @deref_assumption_in_preheader_constant_trip_count_align_4_known_via
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -1182,7 +1170,7 @@ exit:
 define void @deref_assumption_in_preheader_constant_trip_count_align_4_not_known(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_constant_trip_count_align_4_not_known(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4000) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -1222,10 +1210,9 @@ define void @deref_assumption_in_preheader_constant_trip_count_align_4_not_known
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -1275,7 +1262,7 @@ exit:
 define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_4(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
 ; CHECK-LABEL: define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_4(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 3999) ]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -1315,10 +1302,9 @@ define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_4
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -1369,7 +1355,7 @@ exit:
 define void @may_free_align_deref_assumption_in_header_constant_trip_count_loop_invariant_ptr(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @may_free_align_deref_assumption_in_header_constant_trip_count_loop_invariant_ptr(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 4) ]
 ; CHECK-NEXT:    call void @may_free()
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -1406,10 +1392,9 @@ define void @may_free_align_deref_assumption_in_header_constant_trip_count_loop_
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0
@@ -1459,7 +1444,7 @@ exit:
 define void @may_free_local_ptr_align_deref_assumption_in_header_constant_trip_count_loop_invariant_ptr(ptr noalias %b, ptr noalias %c) nofree nosync {
 ; CHECK-LABEL: define void @may_free_local_ptr_align_deref_assumption_in_header_constant_trip_count_loop_invariant_ptr(
 ; CHECK-SAME: ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @get_ptr()
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 4) ]
 ; CHECK-NEXT:    call void @may_free()
@@ -1497,10 +1482,9 @@ define void @may_free_local_ptr_align_deref_assumption_in_header_constant_trip_c
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[L_B]], 0

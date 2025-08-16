@@ -50,10 +50,9 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_INC1286_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[IF_THEN1165_US:%.*]]
 ; CHECK:       if.then1165.us:
-; CHECK-NEXT:    [[INDVARS_IV1783:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT1784:%.*]], [[IF_THEN1165_US]] ]
+; CHECK-NEXT:    [[INDVARS_IV1783:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT1784:%.*]], [[IF_THEN1165_US]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDVARS_IV1783]]
 ; CHECK-NEXT:    [[L_A:%.*]] = load i16, ptr [[GEP_A]], align 2
 ; CHECK-NEXT:    [[CONV1177_US:%.*]] = zext i16 [[L_A]] to i32
@@ -143,10 +142,9 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_INC1286_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[IF_THEN1165_US:%.*]]
 ; CHECK:       if.then1165.us:
-; CHECK-NEXT:    [[INDVARS_IV1783:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT1784:%.*]], [[IF_THEN1165_US]] ]
+; CHECK-NEXT:    [[INDVARS_IV1783:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT1784:%.*]], [[IF_THEN1165_US]] ]
 ; CHECK-NEXT:    [[FPTR:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDVARS_IV1783]]
 ; CHECK-NEXT:    [[L_A:%.*]] = load i16, ptr [[GEP_A]], align 2

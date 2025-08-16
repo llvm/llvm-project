@@ -24,10 +24,9 @@ define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[FOR_BODY_PREHEADER4]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER4]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = uitofp nneg i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[CONV]], [[Y]]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = zext nneg i32 [[TMP4]] to i64
