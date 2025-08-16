@@ -217,6 +217,7 @@
 ; CHECK-NEXT:   xsfvqmaccqoq                     - 'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)).
 ; CHECK-NEXT:   xsifivecdiscarddlone             - 'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction).
 ; CHECK-NEXT:   xsifivecflushdlone               - 'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction).
+; CHECK-NEXT:   xsmtvdot                         - 'XSMTVDot' (SpacemiT Vector Dot Product Extension).
 ; CHECK-NEXT:   xtheadba                         - 'XTHeadBa' (T-Head address calculation instructions).
 ; CHECK-NEXT:   xtheadbb                         - 'XTHeadBb' (T-Head basic bit-manipulation instructions).
 ; CHECK-NEXT:   xtheadbs                         - 'XTHeadBs' (T-Head single-bit instructions).
