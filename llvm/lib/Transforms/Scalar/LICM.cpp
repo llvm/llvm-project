@@ -1699,8 +1699,12 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // The check on hasMetadataOtherThanDebugLoc is to prevent us from burning
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
-      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
-    I.dropUBImplyingAttrsAndMetadata();
+      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
+    if (ProfcheckDisableMetadataFixes)
+      I.dropUBImplyingAttrsAndMetadata();
+    else
+      I.dropUBImplyingAttrsAndMetadata({LLVMContext::MD_prof});
+  }
 
   if (isa<PHINode>(I))
     // Move the new node to the end of the phi list in the destination block.
