@@ -6,6 +6,7 @@ if (NOT DEFINED LLDB_RPC_GEN_EXE)
 endif()
 set(lldb_rpc_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(lldb_rpc_server_generated_source_dir "${lldb_rpc_generated_dir}/server")
+set(lldb_rpc_lib_generated_source_dir "${lldb_rpc_generated_dir}/lib")
 
 file(GLOB api_headers ${LLDB_SOURCE_DIR}/include/lldb/API/SB*.h)
 # We don't generate SBCommunication
@@ -25,6 +26,8 @@ set(lldb_rpc_gen_byproducts
 )
 
 set(lldb_rpc_gen_server_impl_files)
+set(lldb_rpc_gen_lib_header_files)
+set(lldb_rpc_gen_lib_impl_files)
 foreach(path ${api_headers})
   get_filename_component(filename_no_ext ${path} NAME_WLE)
 
@@ -35,6 +38,13 @@ foreach(path ${api_headers})
   list(APPEND lldb_rpc_gen_byproducts "${lldb_rpc_server_generated_source_dir}/${server_impl_file}")
   list(APPEND lldb_rpc_gen_server_impl_files "${lldb_rpc_server_generated_source_dir}/${server_impl_file}")
 
+  set(lib_header_file "${filename_no_ext}.h")
+  list(APPEND lldb_rpc_gen_byproducts "${lldb_rpc_lib_generated_source_dir}/${lib_header_file}")
+  list(APPEND lldb_rpc_gen_lib_header_files "${lldb_rpc_lib_generated_source_dir}/${lib_header_file}")
+
+  set(lib_impl_file "${filename_no_ext}.cpp")
+  list(APPEND lldb_rpc_gen_byproducts "${lldb_rpc_lib_generated_source_dir}/${lib_impl_file}")
+  list(APPEND lldb_rpc_gen_lib_impl_files "${lldb_rpc_lib_generated_source_dir}/${lib_impl_file}")
 endforeach()
 
 # Make sure that the clang-resource-dir is set correctly or else the tool will
@@ -59,6 +69,9 @@ add_custom_command(OUTPUT ${lldb_rpc_gen_byproducts}
 
   COMMAND ${CMAKE_COMMAND} -E make_directory
     ${lldb_rpc_server_generated_source_dir}
+
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+    ${lldb_rpc_lib_generated_source_dir}
 
   COMMAND ${LLDB_RPC_GEN_EXE}
     -p ${CMAKE_BINARY_DIR}
