@@ -278,6 +278,7 @@ jobs:
     # ninja: error: mkdir(tools/clang/tools/extra/clang-tidy/misc/ConfusableTable/CMakeFiles/clang-tidy-confusable-chars-gen.dir/C_/actions-runner/llvm-project/llvm-project/llvm): No such file or directory
     - name: Build Windows
       if: runner.os == 'Windows'
+      shell: bash
       run: |
         ninja -v -C build stage2-package
     
