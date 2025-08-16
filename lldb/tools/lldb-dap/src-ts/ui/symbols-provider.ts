@@ -44,7 +44,7 @@ export class SymbolsProvider extends DisposableContext {
       });
     });
 
-    this.tracker.onDidExitSession((session) => {
+    this.tracker.onDidExitSession((_session) => {
       vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", false);
     });
   }
