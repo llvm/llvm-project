@@ -1051,6 +1051,16 @@ def CC_X86_64_Preserve_None : CallingConv<[
   CCDelegateTo<CC_X86_64_C>
 ]>;
 
+def CC_X86_32_Preserve_None : CallingConv<[
+  // 32-bit variant of CC_X86_64_Preserve_None, above. Use everything except:
+  //   - EBP        frame pointer
+  //   - ECX        'nest' parameter
+  //   - ESI        base pointer
+  //   - EBX        GOT pointer for PLT calls
+  CCIfType<[i32], CCAssignToReg<[EDI, EDX, EAX]>>,
+  CCDelegateTo<CC_X86_32_C>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Root Argument Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -1072,6 +1082,7 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin32()", CCIfRegCallv4<CCDelegateTo<CC_X86_32_RegCallv4_Win>>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_32_RegCall>>,
+  CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_32_Preserve_None>>,
 
   // Otherwise, drop to normal X86-32 CC
   CCDelegateTo<CC_X86_32_C>
@@ -1186,7 +1197,8 @@ def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
                                                       (sequence "ZMM%u", 0, 31),
                                                       (sequence "K%u", 0, 7)),
                                                  (sequence "XMM%u", 0, 15))>;
-def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP)>;
+def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP, RBX)>;
+def CSR_32_NoneRegs    : CalleeSavedRegs<(add EBP, ESI)>;
 
 // Standard C + YMM6-15
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,
