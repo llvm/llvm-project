@@ -1099,6 +1099,7 @@ R"(All available -march extensions for RISC-V
     smcdeleg             1.0
     smcntrpmf            1.0
     smcsrind             1.0
+    smctr                1.0
     smdbltrp             1.0
     smepmp               1.0
     smmpm                1.0
@@ -1111,6 +1112,7 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssctr                1.0
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
@@ -1185,8 +1187,6 @@ Experimental extensions
     zvbc32e              0.7
     zvkgs                0.7
     zvqdotq              0.0
-    smctr                1.0
-    ssctr                1.0
     svukte               0.3
     xqccmp               0.3
     xqcia                0.7

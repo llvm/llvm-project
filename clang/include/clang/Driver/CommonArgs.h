@@ -85,6 +85,8 @@ const char *RelocationModelName(llvm::Reloc::Model Model);
 std::tuple<llvm::Reloc::Model, unsigned, bool>
 ParsePICArgs(const ToolChain &ToolChain, const llvm::opt::ArgList &Args);
 
+bool getStaticPIE(const llvm::opt::ArgList &Args, const ToolChain &TC);
+
 unsigned ParseFunctionAlignment(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args);
 

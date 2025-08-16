@@ -147,17 +147,17 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     }
     llvm_unreachable("Unhandled ArgKind enum");
   }
-  std::string getKind(const NestedNameSpecifierLoc &NNSL) {
-    assert(NNSL.getNestedNameSpecifier());
-    switch (NNSL.getNestedNameSpecifier()->getKind()) {
+  std::string getKind(NestedNameSpecifierLoc NNSL) {
+    switch (NNSL.getNestedNameSpecifier().getKind()) {
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
 #define NNS_KIND(X)                                                            \
-  case NestedNameSpecifier::X:                                                 \
+  case NestedNameSpecifier::Kind::X:                                           \
     return #X
-      NNS_KIND(Identifier);
       NNS_KIND(Namespace);
-      NNS_KIND(TypeSpec);
+      NNS_KIND(Type);
       NNS_KIND(Global);
-      NNS_KIND(Super);
+      NNS_KIND(MicrosoftSuper);
 #undef NNS_KIND
     }
     llvm_unreachable("Unhandled SpecifierKind enum");
@@ -261,7 +261,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       return TL.getType().getLocalQualifiers().getAsString(
           Ctx.getPrintingPolicy());
     if (const auto *TT = dyn_cast<TagType>(TL.getTypePtr()))
-      return getDetail(TT->getDecl());
+      return getDetail(TT->getOriginalDecl());
     if (const auto *DT = dyn_cast<DeducedType>(TL.getTypePtr()))
       if (DT->isDeduced())
         return DT->getDeducedType().getAsString(Ctx.getPrintingPolicy());
@@ -273,16 +273,11 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       return getDetail(TT->getDecl());
     return "";
   }
-  std::string getDetail(const NestedNameSpecifierLoc &NNSL) {
-    const auto &NNS = *NNSL.getNestedNameSpecifier();
-    switch (NNS.getKind()) {
-    case NestedNameSpecifier::Identifier:
-      return NNS.getAsIdentifier()->getName().str() + "::";
-    case NestedNameSpecifier::Namespace:
-      return NNS.getAsNamespace()->getNameAsString() + "::";
-    default:
+  std::string getDetail(NestedNameSpecifierLoc NNSL) {
+    NestedNameSpecifier NNS = NNSL.getNestedNameSpecifier();
+    if (NNS.getKind() != NestedNameSpecifier::Kind::Namespace)
       return "";
-    }
+    return NNS.getAsNamespaceAndPrefix().Namespace->getNameAsString() + "::";
   }
   std::string getDetail(const CXXCtorInitializer *CCI) {
     if (FieldDecl *FD = CCI->getAnyMember())
@@ -346,8 +341,10 @@ public:
     return !D || isInjectedClassName(D) ||
            traverseNode("declaration", D, [&] { Base::TraverseDecl(D); });
   }
-  bool TraverseTypeLoc(TypeLoc TL) {
-    return !TL || traverseNode("type", TL, [&] { Base::TraverseTypeLoc(TL); });
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
+    return !TL || traverseNode("type", TL, [&] {
+      Base::TraverseTypeLoc(TL, TraverseQualifier);
+    });
   }
   bool TraverseTemplateName(const TemplateName &TN) {
     return traverseNode("template name", TN,
@@ -389,11 +386,11 @@ public:
   // This means we'd never see 'int' in 'const int'! Work around that here.
   // (The reason for the behavior is to avoid traversing the nested Type twice,
   // but we ignore TraverseType anyway).
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QTL) {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QTL, bool TraverseQualifier) {
     return TraverseTypeLoc(QTL.getUnqualifiedLoc());
   }
   // Uninteresting parts of the AST that don't have locations within them.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier) { return true; }
   bool TraverseType(QualType) { return true; }
 
   // OpaqueValueExpr blocks traversal, we must explicitly traverse it.
@@ -420,7 +417,7 @@ ASTNode dumpAST(const DynTypedNode &N, const syntax::TokenBuffer &Tokens,
     V.TraverseNestedNameSpecifierLoc(
         *const_cast<NestedNameSpecifierLoc *>(NNSL));
   else if (const auto *NNS = N.get<NestedNameSpecifier>())
-    V.TraverseNestedNameSpecifier(const_cast<NestedNameSpecifier *>(NNS));
+    V.TraverseNestedNameSpecifier(*NNS);
   else if (const auto *TL = N.get<TypeLoc>())
     V.TraverseTypeLoc(*const_cast<TypeLoc *>(TL));
   else if (const auto *QT = N.get<QualType>())

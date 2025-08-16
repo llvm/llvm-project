@@ -759,20 +759,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
   StringRef CPU;
 
   switch (Family) {
-  case 3:
+  case 0x3:
     CPU = "i386";
     break;
-  case 4:
+  case 0x4:
     CPU = "i486";
     break;
-  case 5:
+  case 0x5:
     if (testFeature(X86::FEATURE_MMX)) {
       CPU = "pentium-mmx";
       break;
     }
     CPU = "pentium";
     break;
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -1120,7 +1120,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 15: {
+  case 0xf: {
     if (testFeature(X86::FEATURE_64BIT)) {
       CPU = "nocona";
       break;
@@ -1132,7 +1132,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:

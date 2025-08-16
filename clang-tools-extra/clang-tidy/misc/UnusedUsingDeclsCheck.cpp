@@ -71,11 +71,7 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
                          templateArgument().bind("used")))),
                      this);
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
-  Finder->addMatcher(
-      loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
-                         hasUnqualifiedDesugaredType(
-                             type(asTagDecl(tagDecl().bind("used")))))),
-      this);
+  Finder->addMatcher(loc(asTagDecl(tagDecl().bind("used"))), this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.
@@ -136,7 +132,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     }
     if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
       if (const auto *ET = ECD->getType()->getAs<EnumType>())
-        removeFromFoundDecls(ET->getDecl());
+        removeFromFoundDecls(ET->getOriginalDecl());
     }
   };
   // We rely on the fact that the clang AST is walked in order, usages are only

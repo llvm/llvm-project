@@ -1,3 +1,6 @@
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 # Flang |version| (In-Progress) Release Notes
 
 > **warning**

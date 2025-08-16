@@ -5519,13 +5519,129 @@ APFloat::opStatus DoubleAPFloat::next(bool nextDown) {
   return opOK;
 }
 
+APFloat::opStatus DoubleAPFloat::convertToSignExtendedInteger(
+    MutableArrayRef<integerPart> Input, unsigned int Width, bool IsSigned,
+    roundingMode RM, bool *IsExact) const {
+  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+
+  // If Hi is not finite, or Lo is zero, the value is entirely represented
+  // by Hi. Delegate to the simpler single-APFloat conversion.
+  if (!getFirst().isFiniteNonZero() || getSecond().isZero())
+    return getFirst().convertToInteger(Input, Width, IsSigned, RM, IsExact);
+
+  // First, round the full double-double value to an integral value. This
+  // simplifies the rest of the function, as we no longer need to consider
+  // fractional parts.
+  *IsExact = false;
+  DoubleAPFloat Integral = *this;
+  const opStatus RoundStatus = Integral.roundToIntegral(RM);
+  if (RoundStatus == opInvalidOp)
+    return opInvalidOp;
+  const APFloat &IntegralHi = Integral.getFirst();
+  const APFloat &IntegralLo = Integral.getSecond();
+
+  // If rounding results in either component being zero, the sum is trivial.
+  // Delegate to the simpler single-APFloat conversion.
+  bool HiIsExact;
+  if (IntegralHi.isZero() || IntegralLo.isZero()) {
+    const opStatus HiStatus =
+        IntegralHi.convertToInteger(Input, Width, IsSigned, RM, &HiIsExact);
+    // The conversion from an integer-valued float to an APInt may fail if the
+    // result would be out of range.  Regardless, taking this path is only
+    // possible if rounding occurred during the initial `roundToIntegral`.
+    return HiStatus == opOK ? opInexact : HiStatus;
+  }
+
+  // A negative number cannot be represented by an unsigned integer.
+  // Since a double-double is canonical, if Hi is negative, the sum is negative.
+  if (!IsSigned && IntegralHi.isNegative())
+    return opInvalidOp;
+
+  // Handle the special boundary case where |Hi| is exactly the power of two
+  // that marks the edge of the integer's range (e.g., 2^63 for int64_t). In
+  // this situation, Hi itself won't fit, but the sum Hi + Lo might.
+  // `PositiveOverflowWidth` is the bit number for this boundary (N-1 for
+  // signed, N for unsigned).
+  bool LoIsExact;
+  const int HiExactLog2 = IntegralHi.getExactLog2Abs();
+  const unsigned PositiveOverflowWidth = IsSigned ? Width - 1 : Width;
+  if (HiExactLog2 >= 0 &&
+      static_cast<unsigned>(HiExactLog2) == PositiveOverflowWidth) {
+    // If Hi and Lo have the same sign, |Hi + Lo| > |Hi|, so the sum is
+    // guaranteed to overflow. E.g., for uint128_t, (2^128, 1) overflows.
+    if (IntegralHi.isNegative() == IntegralLo.isNegative())
+      return opInvalidOp;
+
+    // If the signs differ, the sum will fit. We can compute the result using
+    // properties of two's complement arithmetic without a wide intermediate
+    // integer. E.g., for uint128_t, (2^128, -1) should be 2^128 - 1.
+    const opStatus LoStatus = IntegralLo.convertToInteger(
+        Input, Width, /*IsSigned=*/true, RM, &LoIsExact);
+    if (LoStatus == opInvalidOp)
+      return opInvalidOp;
+
+    // Adjust the bit pattern of Lo to account for Hi's value:
+    //  - For unsigned (Hi=2^Width): `2^Width + Lo` in `Width`-bit
+    //    arithmetic is equivalent to just `Lo`. The conversion of `Lo` above
+    //    already produced the correct final bit pattern.
+    //  - For signed (Hi=2^(Width-1)): The sum `2^(Width-1) + Lo` (where Lo<0)
+    //    can be computed by taking the two's complement pattern for `Lo` and
+    //    clearing the sign bit.
+    if (IsSigned && !IntegralHi.isNegative())
+      APInt::tcClearBit(Input.data(), PositiveOverflowWidth);
+    *IsExact = RoundStatus == opOK;
+    return RoundStatus;
+  }
+
+  // Convert Hi into an integer.  This may not fit but that is OK: we know that
+  // Hi + Lo would not fit either in this situation.
+  const opStatus HiStatus = IntegralHi.convertToInteger(
+      Input, Width, IsSigned, rmTowardZero, &HiIsExact);
+  if (HiStatus == opInvalidOp)
+    return HiStatus;
+
+  // Convert Lo into a temporary integer of the same width.
+  APSInt LoResult{Width, /*isUnsigned=*/!IsSigned};
+  const opStatus LoStatus =
+      IntegralLo.convertToInteger(LoResult, rmTowardZero, &LoIsExact);
+  if (LoStatus == opInvalidOp)
+    return LoStatus;
+
+  // Add Lo to Hi. This addition is guaranteed not to overflow because of the
+  // double-double canonicalization rule (`|Lo| <= ulp(Hi)/2`). The only case
+  // where the sum could cross the integer type's boundary is when Hi is a
+  // power of two, which is handled by the special case block above.
+  APInt::tcAdd(Input.data(), LoResult.getRawData(), /*carry=*/0, Input.size());
+
+  *IsExact = RoundStatus == opOK;
+  return RoundStatus;
+}
+
 APFloat::opStatus
 DoubleAPFloat::convertToInteger(MutableArrayRef<integerPart> Input,
                                 unsigned int Width, bool IsSigned,
                                 roundingMode RM, bool *IsExact) const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  return APFloat(semPPCDoubleDoubleLegacy, bitcastToAPInt())
-      .convertToInteger(Input, Width, IsSigned, RM, IsExact);
+  opStatus FS =
+      convertToSignExtendedInteger(Input, Width, IsSigned, RM, IsExact);
+
+  if (FS == opInvalidOp) {
+    const unsigned DstPartsCount = partCountForBits(Width);
+    assert(DstPartsCount <= Input.size() && "Integer too big");
+
+    unsigned Bits;
+    if (getCategory() == fcNaN)
+      Bits = 0;
+    else if (isNegative())
+      Bits = IsSigned;
+    else
+      Bits = Width - IsSigned;
+
+    tcSetLeastSignificantBits(Input.data(), DstPartsCount, Bits);
+    if (isNegative() && IsSigned)
+      APInt::tcShiftLeft(Input.data(), DstPartsCount, Width - 1);
+  }
+
+  return FS;
 }
 
 APFloat::opStatus DoubleAPFloat::convertFromAPInt(const APInt &Input,
@@ -5626,14 +5742,30 @@ bool DoubleAPFloat::getExactInverse(APFloat *inv) const {
   return Ret;
 }
 
-int DoubleAPFloat::getExactLog2() const {
-  // TODO: Implement me
-  return INT_MIN;
+int DoubleAPFloat::getExactLog2Abs() const {
+  // In order for Hi + Lo to be a power of two, the following must be true:
+  // 1. Hi must be a power of two.
+  // 2. Lo must be zero.
+  if (getSecond().isNonZero())
+    return INT_MIN;
+  return getFirst().getExactLog2Abs();
 }
 
-int DoubleAPFloat::getExactLog2Abs() const {
-  // TODO: Implement me
-  return INT_MIN;
+int ilogb(const DoubleAPFloat &Arg) {
+  const APFloat &Hi = Arg.getFirst();
+  const APFloat &Lo = Arg.getSecond();
+  int IlogbResult = ilogb(Hi);
+  // Zero and non-finite values can delegate to ilogb(Hi).
+  if (Arg.getCategory() != fcNormal)
+    return IlogbResult;
+  // If Lo can't change the binade, we can delegate to ilogb(Hi).
+  if (Lo.isZero() || Hi.isNegative() == Lo.isNegative())
+    return IlogbResult;
+  if (Hi.getExactLog2Abs() == INT_MIN)
+    return IlogbResult;
+  // Numbers of the form 2^a - 2^b or -2^a + 2^b are almost powers of two but
+  // get nudged out of the binade by the low component.
+  return IlogbResult - 1;
 }
 
 DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
@@ -5646,10 +5778,101 @@ DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
 DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                     APFloat::roundingMode RM) {
   assert(Arg.Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat First = frexp(Arg.Floats[0], Exp, RM);
-  APFloat Second = Arg.Floats[1];
-  if (Arg.getCategory() == APFloat::fcNormal)
-    Second = scalbn(Second, -Exp, RM);
+
+  // Get the unbiased exponent e of the number, where |Arg| = m * 2^e for m in
+  // [1.0, 2.0).
+  Exp = ilogb(Arg);
+
+  // For NaNs, quiet any signaling NaN and return the result, as per standard
+  // practice.
+  if (Exp == APFloat::IEK_NaN) {
+    DoubleAPFloat Quiet{Arg};
+    Quiet.getFirst().makeQuiet();
+    return Quiet;
+  }
+
+  // For infinity, return it unchanged. The exponent remains IEK_Inf.
+  if (Exp == APFloat::IEK_Inf)
+    return Arg;
+
+  // For zero, the fraction is zero and the standard requires the exponent be 0.
+  if (Exp == APFloat::IEK_Zero) {
+    Exp = 0;
+    return Arg;
+  }
+
+  const APFloat &Hi = Arg.getFirst();
+  const APFloat &Lo = Arg.getSecond();
+
+  // frexp requires the fraction's absolute value to be in [0.5, 1.0).
+  // ilogb provides an exponent for an absolute value in [1.0, 2.0).
+  // Increment the exponent to ensure the fraction is in the correct range.
+  ++Exp;
+
+  const bool SignsDisagree = Hi.isNegative() != Lo.isNegative();
+  APFloat Second = Lo;
+  if (Arg.getCategory() == APFloat::fcNormal && Lo.isFiniteNonZero()) {
+    roundingMode LoRoundingMode;
+    // The interpretation of rmTowardZero depends on the sign of the combined
+    // Arg rather than the sign of the component.
+    if (RM == rmTowardZero)
+      LoRoundingMode = Arg.isNegative() ? rmTowardPositive : rmTowardNegative;
+    // For rmNearestTiesToAway, we face a similar problem. If signs disagree,
+    // Lo is a correction *toward* zero relative to Hi. Rounding Lo
+    // "away from zero" based on its own sign would move the value in the
+    // wrong direction. As a safe proxy, we use rmNearestTiesToEven, which is
+    // direction-agnostic. We only need to bother with this if Lo is scaled
+    // down.
+    else if (RM == rmNearestTiesToAway && SignsDisagree && Exp > 0)
+      LoRoundingMode = rmNearestTiesToEven;
+    else
+      LoRoundingMode = RM;
+    Second = scalbn(Lo, -Exp, LoRoundingMode);
+    // The rmNearestTiesToEven proxy is correct most of the time, but it
+    // differs from rmNearestTiesToAway when the scaled value of Lo is an
+    // exact midpoint.
+    // NOTE: This is morally equivalent to roundTiesTowardZero.
+    if (RM == rmNearestTiesToAway && LoRoundingMode == rmNearestTiesToEven) {
+      // Re-scale the result back to check if rounding occurred.
+      const APFloat RecomposedLo = scalbn(Second, Exp, rmNearestTiesToEven);
+      if (RecomposedLo != Lo) {
+        // RoundingError tells us which direction we rounded:
+        //   - RoundingError > 0: we rounded up.
+        //   - RoundingError < 0: we down up.
+        const APFloat RoundingError = RecomposedLo - Lo;
+        // Determine if scalbn(Lo, -Exp) landed exactly on a midpoint.
+        // We do this by checking if the absolute rounding error is exactly
+        // half a ULP of the result.
+        const APFloat UlpOfSecond = harrisonUlp(Second);
+        const APFloat ScaledUlpOfSecond =
+            scalbn(UlpOfSecond, Exp - 1, rmNearestTiesToEven);
+        const bool IsMidpoint = abs(RoundingError) == ScaledUlpOfSecond;
+        const bool RoundedLoAway =
+            Second.isNegative() == RoundingError.isNegative();
+        // The sign of Hi and Lo disagree and we rounded Lo away: we must
+        // decrease the magnitude of Second to increase the magnitude
+        // First+Second.
+        if (IsMidpoint && RoundedLoAway)
+          Second.next(/*nextDown=*/!Second.isNegative());
+      }
+    }
+    // Handle a tricky edge case where Arg is slightly less than a power of two
+    // (e.g., Arg = 2^k - epsilon). In this situation:
+    // 1. Hi is 2^k, and Lo is a small negative value -epsilon.
+    // 2. ilogb(Arg) correctly returns k-1.
+    // 3. Our initial Exp becomes (k-1) + 1 = k.
+    // 4. Scaling Hi (2^k) by 2^-k would yield a magnitude of 1.0 and
+    //    scaling Lo by 2^-k would yield zero. This would make the result 1.0
+    //    which is an invalid fraction, as the required interval is [0.5, 1.0).
+    // We detect this specific case by checking if Hi is a power of two and if
+    // the scaled Lo underflowed to zero. The fix: Increment Exp to k+1. This
+    // adjusts the scale factor, causing Hi to be scaled to 0.5, which is a
+    // valid fraction.
+    if (Second.isZero() && SignsDisagree && Hi.getExactLog2Abs() != INT_MIN)
+      ++Exp;
+  }
+
+  APFloat First = scalbn(Hi, -Exp, RM);
   return DoubleAPFloat(semPPCDoubleDouble, std::move(First), std::move(Second));
 }
 
@@ -5749,10 +5972,6 @@ void APFloat::Profile(FoldingSetNodeID &NID) const {
   NID.Add(bitcastToAPInt());
 }
 
-/* Same as convertToInteger(integerPart*, ...), except the result is returned in
-   an APSInt, whose initial bit-width and signed-ness are used to determine the
-   precision of the conversion.
- */
 APFloat::opStatus APFloat::convertToInteger(APSInt &result,
                                             roundingMode rounding_mode,
                                             bool *isExact) const {

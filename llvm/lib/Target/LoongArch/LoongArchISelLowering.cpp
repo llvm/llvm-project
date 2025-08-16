@@ -2786,7 +2786,7 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getUINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -2811,7 +2811,7 @@ SDValue LoongArchTargetLowering::lowerSINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getSINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -3037,10 +3037,7 @@ SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -4107,7 +4104,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     LC = RTLIB::getFPTOSINT(Src.getValueType(), VT);
     MakeLibCallOptions CallOptions;
     EVT OpVT = Src.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, VT, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, VT);
     SDValue Chain = SDValue();
     SDValue Result;
     std::tie(Result, Chain) =
@@ -4360,7 +4357,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     RTLIB::Libcall LC =
         OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
     MakeLibCallOptions CallOptions;
-    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
     Results.push_back(Result);
@@ -7073,7 +7070,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
 
 static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                             ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                             CCState &State) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, SpLim
     //                        s0    s1  s2  s3  s4  s5  s6  s7  s8

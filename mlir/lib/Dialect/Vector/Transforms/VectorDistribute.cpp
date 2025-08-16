@@ -1826,7 +1826,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     auto newForOp = scf::ForOp::create(
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newForOpOperands);
+        forOp.getStep(), newForOpOperands, /*bodyBuilder=*/nullptr,
+        forOp.getUnsignedCmp());
     // Next, we insert a new `WarpOp` (called inner `WarpOp`) inside the
     // newly created `ForOp`. This `WarpOp` will contain all ops that were
     // contained within the original `ForOp` body.

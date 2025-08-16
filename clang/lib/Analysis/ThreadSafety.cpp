@@ -1929,7 +1929,9 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder;
-      if (TagT->getDecl()->hasAttr<ScopedLockableAttr>())
+      if (TagT->getOriginalDecl()
+              ->getMostRecentDecl()
+              ->hasAttr<ScopedLockableAttr>())
         Scp = CapabilityExpr(Placeholder, Exp->getType(), /*Neg=*/false);
     }
 

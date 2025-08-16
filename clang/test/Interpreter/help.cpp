@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
 %help
 // CHECK: %help   list clang-repl %commands

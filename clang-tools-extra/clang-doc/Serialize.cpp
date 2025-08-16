@@ -902,8 +902,8 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
     return;
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (const RecordType *Ty = B.getType()->getAs<RecordType>()) {
-      if (const CXXRecordDecl *Base =
-              cast_or_null<CXXRecordDecl>(Ty->getDecl()->getDefinition())) {
+      if (const CXXRecordDecl *Base = cast_or_null<CXXRecordDecl>(
+              Ty->getOriginalDecl()->getDefinition())) {
         // Initialized without USR and name, this will be set in the following
         // if-else stmt.
         BaseRecordInfo BI(

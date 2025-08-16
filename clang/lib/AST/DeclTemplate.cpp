@@ -632,7 +632,8 @@ ClassTemplateDecl::findPartialSpecialization(QualType T) {
   ASTContext &Context = getASTContext();
   for (ClassTemplatePartialSpecializationDecl &P :
        getPartialSpecializations()) {
-    if (Context.hasSameType(P.getInjectedSpecializationType(), T))
+    if (Context.hasSameType(P.getCanonicalInjectedSpecializationType(Context),
+                            T))
       return P.getMostRecentDecl();
   }
 
@@ -651,28 +652,20 @@ ClassTemplateDecl::findPartialSpecInstantiatedFromMember(
   return nullptr;
 }
 
-QualType
-ClassTemplateDecl::getInjectedClassNameSpecialization() {
+CanQualType ClassTemplateDecl::getCanonicalInjectedSpecializationType(
+    const ASTContext &Ctx) const {
   Common *CommonPtr = getCommonPtr();
-  if (!CommonPtr->InjectedClassNameType.isNull())
-    return CommonPtr->InjectedClassNameType;
 
-  // C++0x [temp.dep.type]p2:
-  //  The template argument list of a primary template is a template argument
-  //  list in which the nth template argument has the value of the nth template
-  //  parameter of the class template. If the nth template parameter is a
-  //  template parameter pack (14.5.3), the nth template argument is a pack
-  //  expansion (14.5.3) whose pattern is the name of the template parameter
-  //  pack.
-  ASTContext &Context = getASTContext();
-  TemplateName Name = Context.getQualifiedTemplateName(
-      /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
-  auto TemplateArgs = getTemplateParameters()->getInjectedTemplateArgs(Context);
-  CommonPtr->InjectedClassNameType =
-      Context.getTemplateSpecializationType(Name,
-                                            /*SpecifiedArgs=*/TemplateArgs,
-                                            /*CanonicalArgs=*/{});
-  return CommonPtr->InjectedClassNameType;
+  if (CommonPtr->CanonInjectedTST.isNull()) {
+    SmallVector<TemplateArgument> CanonicalArgs(
+        getTemplateParameters()->getInjectedTemplateArgs(Ctx));
+    Ctx.canonicalizeTemplateArguments(CanonicalArgs);
+    CommonPtr->CanonInjectedTST =
+        CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
+            TemplateName(const_cast<ClassTemplateDecl *>(getCanonicalDecl())),
+            CanonicalArgs));
+  }
+  return CommonPtr->CanonInjectedTST;
 }
 
 //===----------------------------------------------------------------------===//
@@ -998,7 +991,6 @@ ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
   auto *Result = new (Context, DC) ClassTemplateSpecializationDecl(
       Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
       SpecializedTemplate, Args, StrictPackMatch, PrevDecl);
-  Result->setMayHaveOutOfDateDef(false);
 
   // If the template decl is incomplete, copy the external lexical storage from
   // the base template. This allows instantiations of incomplete types to
@@ -1008,17 +1000,14 @@ ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
     Result->setHasExternalLexicalStorage(
       SpecializedTemplate->getTemplatedDecl()->hasExternalLexicalStorage());
 
-  Context.getTypeDeclType(Result, PrevDecl);
   return Result;
 }
 
 ClassTemplateSpecializationDecl *
 ClassTemplateSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                     GlobalDeclID ID) {
-  auto *Result =
-    new (C, ID) ClassTemplateSpecializationDecl(C, ClassTemplateSpecialization);
-  Result->setMayHaveOutOfDateDef(false);
-  return Result;
+  return new (C, ID)
+      ClassTemplateSpecializationDecl(C, ClassTemplateSpecialization);
 }
 
 void ClassTemplateSpecializationDecl::getNameForDiagnostic(
@@ -1180,13 +1169,15 @@ ClassTemplatePartialSpecializationDecl::ClassTemplatePartialSpecializationDecl(
     ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, TemplateParameterList *Params,
     ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+    CanQualType CanonInjectedTST,
     ClassTemplatePartialSpecializationDecl *PrevDecl)
     : ClassTemplateSpecializationDecl(
           Context, ClassTemplatePartialSpecialization, TK, DC, StartLoc, IdLoc,
           // Tracking StrictPackMatch for Partial
           // Specializations is not needed.
           SpecializedTemplate, Args, /*StrictPackMatch=*/false, PrevDecl),
-      TemplateParams(Params), InstantiatedFromMember(nullptr, false) {
+      TemplateParams(Params), InstantiatedFromMember(nullptr, false),
+      CanonInjectedTST(CanonInjectedTST) {
   if (AdoptTemplateParameterList(Params, this))
     setInvalidDecl();
 }
@@ -1196,24 +1187,31 @@ ClassTemplatePartialSpecializationDecl::Create(
     ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, TemplateParameterList *Params,
     ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
-    QualType CanonInjectedType,
+    CanQualType CanonInjectedTST,
     ClassTemplatePartialSpecializationDecl *PrevDecl) {
   auto *Result = new (Context, DC) ClassTemplatePartialSpecializationDecl(
       Context, TK, DC, StartLoc, IdLoc, Params, SpecializedTemplate, Args,
-      PrevDecl);
+      CanonInjectedTST, PrevDecl);
   Result->setSpecializationKind(TSK_ExplicitSpecialization);
-  Result->setMayHaveOutOfDateDef(false);
-
-  Context.getInjectedClassNameType(Result, CanonInjectedType);
   return Result;
 }
 
 ClassTemplatePartialSpecializationDecl *
 ClassTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                            GlobalDeclID ID) {
-  auto *Result = new (C, ID) ClassTemplatePartialSpecializationDecl(C);
-  Result->setMayHaveOutOfDateDef(false);
-  return Result;
+  return new (C, ID) ClassTemplatePartialSpecializationDecl(C);
+}
+
+CanQualType
+ClassTemplatePartialSpecializationDecl::getCanonicalInjectedSpecializationType(
+    const ASTContext &Ctx) const {
+  if (CanonInjectedTST.isNull()) {
+    CanonInjectedTST =
+        CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
+            TemplateName(getSpecializedTemplate()->getCanonicalDecl()),
+            getTemplateArgs().asArray()));
+  }
+  return CanonInjectedTST;
 }
 
 SourceRange ClassTemplatePartialSpecializationDecl::getSourceRange() const {

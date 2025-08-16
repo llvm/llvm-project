@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s -check-prefixes=CHECK,DXIL
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-library -finclude-default-header -ast-dump -o - %s | FileCheck %s -check-prefixes=CHECK,SPV
 
 // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 4]]:9 cbuffer CB
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
@@ -34,6 +35,10 @@ RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
 // CHECK: HLSLResourceBindingAttr {{.*}} "" "space5"
 RWBuffer<float> UAV3 : register(space5);
 
+// CHECK: VarDecl {{.*}} UAV_Array 'RWBuffer<float>[10]'
+// CHECK: HLSLResourceBindingAttr {{.*}} "u10" "space6"
+RWBuffer<float> UAV_Array[10] : register(u10, space6);
+
 //
 // Default constants ($Globals) layout annotations
 
@@ -56,3 +61,44 @@ struct S {
 // CHECK: VarDecl {{.*}} s 'hlsl_constant S'
 // CHECK: HLSLResourceBindingAttr {{.*}} "c10" "space0
 S s : register(c10);
+
+//
+// Implicit binding
+
+// Constant buffers should have implicit binding attribute added by SemaHLSL,
+// unless the target is SPIR-V and there is [[vk::binding]] attribute.
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB2
+// CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+cbuffer CB2 {
+  float4 c;
+}
+
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 7]]:9 cbuffer CB3
+// CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit
+// DXIL-NOT: HLSLVkBindingAttr
+// SPV: HLSLVkBindingAttr {{.*}} 1 0
+// SPV-NOT: HLSLResourceBindingAttr {{.*}} Implicit
+[[vk::binding(1)]]
+cbuffer CB3 {
+  float2 d;
+}
+
+// Resource arrays should have implicit binding attribute added by SemaHLSL,
+// unless the target is SPIR-V and there is [[vk::binding]] attribute.
+// CHECK: VarDecl {{.*}} SB 'StructuredBuffer<float>[10]'
+// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+StructuredBuffer<float> SB[10];
+
+// CHECK: VarDecl {{.*}} SB2 'StructuredBuffer<float>[10]'
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit
+// DXIL-NOT: HLSLVkBindingAttr
+// SPV: HLSLVkBindingAttr {{.*}} 2 0
+// SPV-NOT: HLSLResourceBindingAttr {{.*}} Implicit
+[[vk::binding(2)]]
+StructuredBuffer<float> SB2[10];
+
+// $Globals should have implicit binding attribute added by SemaHLSL
+// CHECK: HLSLBufferDecl {{.*}} implicit cbuffer $Globals
+// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"

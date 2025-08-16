@@ -848,8 +848,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (Level == OptimizationLevel::O0)
           return;
 
-        PM.addPass(AMDGPUUnifyMetadataPass());
-
         // We don't want to run internalization at per-module stage.
         if (InternalizeSymbols && !isLTOPreLink(Phase)) {
           PM.addPass(InternalizePass(mustPreserveGV));

@@ -856,6 +856,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Insert a data fence between previous data operations and the following
+  /// operations. This is a no-op for CUDA devices as operations inserted into
+  /// a queue are in-order.
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// Initialize the device info for interoperability purposes.
   Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
     assert(Context && "Context is null");
@@ -872,6 +879,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     return Plugin::success();
   }
+
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    if (auto Err = setContext())
+      return Err;
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfo, Stream))
+      return Err;
+
+    CUresult Res = cuLaunchHostFunc(Stream, Callback, UserData);
+    return Plugin::check(Res, "error in cuStreamLaunchHostFunc: %s");
+  };
 
   /// Create an event.
   Error createEventImpl(void **EventPtrStorage) override {
@@ -914,9 +934,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamWaitEvent: %s");
   }
 
-  // TODO: This should be implementable on CUDA
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfo, Stream))
+      return Err;
+
+    CUresult Ret = cuStreamQuery(Stream);
+    if (Ret == CUDA_SUCCESS)
+      return false;
+
+    if (Ret == CUDA_ERROR_NOT_READY)
+      return true;
+
+    return Plugin::check(Ret, "error in cuStreamQuery: %s");
   }
 
   /// Synchronize the current thread with the event.
@@ -1317,9 +1347,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
     CUresult AttrResult = cuFuncSetAttribute(
         Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
-    return Plugin::check(
-        AttrResult,
-        "Error in cuLaunchKernel while setting the memory limits: %s");
+    if (auto Err = Plugin::check(
+            AttrResult,
+            "Error in cuLaunchKernel while setting the memory limits: %s"))
+      return Err;
     MaxDynCGroupMemLimit = MaxDynCGroupMem;
   }
 

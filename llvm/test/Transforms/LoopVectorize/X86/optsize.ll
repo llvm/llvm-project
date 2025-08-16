@@ -32,7 +32,6 @@ define i32 @foo_optsize() #0 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -69,7 +68,6 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF:       middle.block:
 ; AUTOVF-NEXT:    br label [[FOR_END:%.*]]
 ; AUTOVF:       scalar.ph:
-; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTOVF:       for.body:
 ; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -128,7 +126,6 @@ define i32 @foo_minsize() #1 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -165,7 +162,6 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF:       middle.block:
 ; AUTOVF-NEXT:    br label [[FOR_END:%.*]]
 ; AUTOVF:       scalar.ph:
-; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTOVF:       for.body:
 ; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -376,7 +372,6 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
@@ -420,7 +415,6 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF:       middle.block:
 ; AUTOVF-NEXT:    br label [[EXIT:%.*]]
 ; AUTOVF:       scalar.ph:
-; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[LOOP:%.*]]
 ; AUTOVF:       loop:
 ; AUTOVF-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]

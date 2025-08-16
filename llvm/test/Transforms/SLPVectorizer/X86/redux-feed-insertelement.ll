@@ -6,25 +6,9 @@ declare void @llvm.masked.scatter.v2f64.v2p0(<2 x double>, <2 x ptr>, i32 immarg
 define void @rdx_feeds_single_insert(<2 x double> %v, ptr nocapture readonly %arg, ptr nocapture readonly %arg1, ptr nocapture %arg2) {
 ; CHECK-LABEL: @rdx_feeds_single_insert(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD0_0:%.*]] = load double, ptr [[ARG1:%.*]], align 8
-; CHECK-NEXT:    [[MUL1_0:%.*]] = fmul fast double [[LD0_0]], 1.000000e+01
-; CHECK-NEXT:    [[GEP0_1:%.*]] = getelementptr inbounds double, ptr [[ARG1]], i64 1
-; CHECK-NEXT:    [[LD0_1:%.*]] = load double, ptr [[GEP0_1]], align 8
-; CHECK-NEXT:    [[MUL1_1:%.*]] = fmul fast double [[LD0_1]], 1.100000e+01
-; CHECK-NEXT:    [[RDX1_0:%.*]] = fadd fast double [[MUL1_0]], [[MUL1_1]]
-; CHECK-NEXT:    [[GEP0_2:%.*]] = getelementptr inbounds double, ptr [[ARG1]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[GEP0_2]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <4 x double> [[TMP0]], <double 1.200000e+01, double 1.300000e+01, double 1.400000e+01, double 1.500000e+01>
-; CHECK-NEXT:    [[GEP0_6:%.*]] = getelementptr inbounds double, ptr [[ARG1]], i64 6
-; CHECK-NEXT:    [[TMP10:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[GEP0_6]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[TMP3]], <double 1.600000e+01, double 1.700000e+01>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[RDX1_0]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast double [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr [[ARG1:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <8 x double> [[TMP0]], <double 1.000000e+01, double 1.100000e+01, double 1.200000e+01, double 1.300000e+01, double 1.400000e+01, double 1.500000e+01, double 1.600000e+01, double 1.700000e+01>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP1]])
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x double> [[V:%.*]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds double, ptr [[ARG2:%.*]], <2 x i64> <i64 0, i64 16>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[I]], <2 x ptr> [[P]], i32 8, <2 x i1> splat (i1 true))

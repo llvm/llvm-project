@@ -149,9 +149,7 @@ TEST(ProtocolMCPTest, MessageWithRequest) {
   const Request &deserialized_request =
       std::get<Request>(*deserialized_message);
 
-  EXPECT_EQ(request.id, deserialized_request.id);
-  EXPECT_EQ(request.method, deserialized_request.method);
-  EXPECT_EQ(request.params, deserialized_request.params);
+  EXPECT_EQ(request, deserialized_request);
 }
 
 TEST(ProtocolMCPTest, MessageWithResponse) {
@@ -168,8 +166,7 @@ TEST(ProtocolMCPTest, MessageWithResponse) {
   const Response &deserialized_response =
       std::get<Response>(*deserialized_message);
 
-  EXPECT_EQ(response.id, deserialized_response.id);
-  EXPECT_EQ(response.result, deserialized_response.result);
+  EXPECT_EQ(response, deserialized_response);
 }
 
 TEST(ProtocolMCPTest, MessageWithNotification) {
@@ -186,49 +183,28 @@ TEST(ProtocolMCPTest, MessageWithNotification) {
   const Notification &deserialized_notification =
       std::get<Notification>(*deserialized_message);
 
-  EXPECT_EQ(notification.method, deserialized_notification.method);
-  EXPECT_EQ(notification.params, deserialized_notification.params);
+  EXPECT_EQ(notification, deserialized_notification);
 }
 
-TEST(ProtocolMCPTest, MessageWithError) {
-  ErrorInfo error_info;
-  error_info.code = -32603;
-  error_info.message = "Internal error";
-
+TEST(ProtocolMCPTest, MessageWithErrorResponse) {
   Error error;
-  error.id = 3;
-  error.error = error_info;
+  error.code = -32603;
+  error.message = "Internal error";
 
-  Message message = error;
+  Response error_response;
+  error_response.id = 3;
+  error_response.result = error;
+
+  Message message = error_response;
 
   llvm::Expected<Message> deserialized_message = roundtripJSON(message);
   ASSERT_THAT_EXPECTED(deserialized_message, llvm::Succeeded());
 
-  ASSERT_TRUE(std::holds_alternative<Error>(*deserialized_message));
-  const Error &deserialized_error = std::get<Error>(*deserialized_message);
+  ASSERT_TRUE(std::holds_alternative<Response>(*deserialized_message));
+  const Response &deserialized_error =
+      std::get<Response>(*deserialized_message);
 
-  EXPECT_EQ(error.id, deserialized_error.id);
-  EXPECT_EQ(error.error.code, deserialized_error.error.code);
-  EXPECT_EQ(error.error.message, deserialized_error.error.message);
-}
-
-TEST(ProtocolMCPTest, ResponseWithError) {
-  ErrorInfo error_info;
-  error_info.code = -32700;
-  error_info.message = "Parse error";
-
-  Response response;
-  response.id = 4;
-  response.error = error_info;
-
-  llvm::Expected<Response> deserialized_response = roundtripJSON(response);
-  ASSERT_THAT_EXPECTED(deserialized_response, llvm::Succeeded());
-
-  EXPECT_EQ(response.id, deserialized_response->id);
-  EXPECT_FALSE(deserialized_response->result.has_value());
-  ASSERT_TRUE(deserialized_response->error.has_value());
-  EXPECT_EQ(response.error->code, deserialized_response->error->code);
-  EXPECT_EQ(response.error->message, deserialized_response->error->message);
+  EXPECT_EQ(error_response, deserialized_error);
 }
 
 TEST(ProtocolMCPTest, Resource) {

@@ -24,7 +24,7 @@ void DynamicAllocator::cleanup() {
     auto &AllocSite = Iter.second;
     for (auto &Alloc : AllocSite.Allocations) {
       Block *B = Alloc.block();
-      assert(!B->IsDead);
+      assert(!B->isDead());
       assert(B->isInitialized());
       B->invokeDtor();
 
@@ -121,7 +121,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   assert(!Site.empty());
 
   // Find the Block to delete.
-  auto AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
+  auto *AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
     return BlockToDelete == A.block();
   });
 
@@ -129,7 +129,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
 
   Block *B = AllocIt->block();
   assert(B->isInitialized());
-  assert(!B->IsDead);
+  assert(!B->isDead());
   B->invokeDtor();
 
   // Almost all our dynamic allocations have a pointer pointing to them
@@ -139,7 +139,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   // over to a DeadBlock and simply keep the block in a separate DeadAllocations
   // list.
   if (B->hasPointers()) {
-    B->IsDead = true;
+    B->AccessFlags |= Block::DeadFlag;
     DeadAllocations.push_back(std::move(*AllocIt));
     Site.Allocations.erase(AllocIt);
 
