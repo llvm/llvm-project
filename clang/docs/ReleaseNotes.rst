@@ -193,6 +193,7 @@ Bug Fixes in This Version
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
+- Fixed scope of typedefs present inside a template class. (#GH91451)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
