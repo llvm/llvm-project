@@ -5,7 +5,7 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.data {
-# CHECK-NEXT:     0x0 R_LARCH_64 .text 0x4
+# CHECK-NEXT:     0x0 R_LARCH_64 .L1 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

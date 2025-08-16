@@ -1,6 +1,6 @@
 ; RUN: llc --mtriple=loongarch64 --filetype=obj -mattr=-relax \
 ; RUN:     --relocation-model=pic --code-model=medium < %s \
-; RUN:     | llvm-readobj -r - | FileCheck --check-prefixes=CHECK-RELOC,PCALA-RELOC %s
+; RUN:     | llvm-readobj -r - | FileCheck --check-prefix=CHECK-RELOC %s
 ; RUN: llc --mtriple=loongarch64 --filetype=obj -mattr=+relax \
 ; RUN:     --relocation-model=pic --code-model=medium < %s \
 ; RUN:     | llvm-readobj -r - | FileCheck --check-prefixes=CHECK-RELOC,RELAX %s
@@ -35,10 +35,8 @@ define ptr @caller() nounwind {
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; CHECK-RELOC-NEXT: R_LARCH_GOT_PC_LO12 g_e 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
-; PCALA-RELOC:      R_LARCH_PCALA_HI20 .bss 0x0
-; RELAX-NEXT:       R_LARCH_PCALA_HI20 g_i 0x0
-; PCALA-RELOC:      R_LARCH_PCALA_LO12 .bss 0x0
-; RELAX-NEXT:       R_LARCH_PCALA_LO12 g_i 0x0
+; CHECK-RELOC-NEXT: R_LARCH_PCALA_HI20 g_i 0x0
+; CHECK-RELOC-NEXT: R_LARCH_PCALA_LO12 g_i 0x0
 ; CHECK-RELOC:      R_LARCH_TLS_GD_PC_HI20 t_un 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; CHECK-RELOC-NEXT: R_LARCH_GOT_PC_LO12 t_un 0x0
@@ -83,11 +81,9 @@ define ptr @caller() nounwind {
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee3 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
-; PCALA-RELOC:      R_LARCH_PCALA_HI20 .data 0x0
-; RELAX-NEXT:       R_LARCH_PCALA_HI20 g_i1 0x0
+; CHECK-RELOC-NEXT: R_LARCH_PCALA_HI20 g_i1 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
-; PCALA-RELOC:      R_LARCH_PCALA_LO12 .data 0x0
-; RELAX-NEXT:       R_LARCH_PCALA_LO12 g_i1 0x0
+; CHECK-RELOC-NEXT: R_LARCH_PCALA_LO12 g_i1 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
   %a = load volatile i32, ptr @g_e
   %b = load volatile i32, ptr @g_i
