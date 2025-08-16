@@ -103,12 +103,14 @@ public:
   /// value.
   std::optional<APInt> getConstantValue() const;
 
-  /// Returns true if signed range is poisoned, i.e. no valid signed value
-  /// can be represented.
+  /// Returns true if signed range is poisoned, poisoned ranges are propagated
+  /// through the DAG and will cause the immediate UB if reached the
+  /// side-effecting operation.
   bool isSignedPoison() const;
 
-  /// Returns true if unsigned range is poisoned, i.e. no valid unsigned value
-  /// can be represented.
+  /// Returns true if unsigned range is poisoned, poisoned ranges are propagated
+  /// through the DAG and will cause the immediate UB if reached the
+  /// side-effecting operation.
   bool isUnsignedPoison() const;
 
   friend raw_ostream &operator<<(raw_ostream &os,
