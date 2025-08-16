@@ -3849,6 +3849,16 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     FunctionTypeBits.HasExtraBitfields = false;
   }
 
+  // Propagate any extra attribute information.
+  if (epi.requiresFunctionProtoTypeExtraAttributeInfo()) {
+    auto &ExtraAttrInfo = *getTrailingObjects<FunctionTypeExtraAttributeInfo>();
+    ExtraAttrInfo.CFISalt = epi.ExtraAttributeInfo.CFISalt;
+
+    // Also set the bit in FunctionTypeExtraBitfields.
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.HasExtraAttributeInfo = true;
+  }
+
   if (epi.requiresFunctionProtoTypeArmAttributes()) {
     auto &ArmTypeAttrs = *getTrailingObjects<FunctionTypeArmAttributes>();
     ArmTypeAttrs = FunctionTypeArmAttributes();
@@ -4066,7 +4076,8 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // This is followed by the ext info:
   //      int
   // Finally we have a trailing return type flag (bool)
-  // combined with AArch64 SME Attributes, to save space:
+  // combined with AArch64 SME Attributes and extra attribute info, to save
+  // space:
   //      int
   // combined with any FunctionEffects
   //
@@ -4103,6 +4114,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   }
 
   epi.ExtInfo.Profile(ID);
+  epi.ExtraAttributeInfo.Profile(ID);
 
   unsigned EffectCount = epi.FunctionEffects.size();
   bool HasConds = !epi.FunctionEffects.Conditions.empty();
