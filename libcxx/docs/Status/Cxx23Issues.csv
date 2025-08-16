@@ -230,7 +230,7 @@
 "`LWG3782 <https://wg21.link/LWG3782>`__","Should ``<math.h>`` declare ``::lerp``?","2022-11 (Kona)","|Complete|","17",""
 "`LWG3784 <https://wg21.link/LWG3784>`__","std.compat should not provide ``::byte`` and its friends","2022-11 (Kona)","|Complete|","19",""
 "`LWG3785 <https://wg21.link/LWG3785>`__","``ranges::to`` is over-constrained on the destination type being a range","2022-11 (Kona)","","",""
-"`LWG3788 <https://wg21.link/LWG3788>`__","``jthread::operator=(jthread&&)`` postconditions are unimplementable under self-assignment","2022-11 (Kona)","","",""
+"`LWG3788 <https://wg21.link/LWG3788>`__","``jthread::operator=(jthread&&)`` postconditions are unimplementable under self-assignment","2022-11 (Kona)","|Complete|","18",""
 "`LWG3792 <https://wg21.link/LWG3792>`__","``__cpp_lib_constexpr_algorithms`` should also be defined in ``<utility>``","2022-11 (Kona)","|Complete|","16",""
 "`LWG3795 <https://wg21.link/LWG3795>`__","Self-move-assignment of ``std::future`` and ``std::shared_future`` have unimplementable postconditions","2022-11 (Kona)","","",""
 "`LWG3796 <https://wg21.link/LWG3796>`__","``movable-box`` as member should use ``default-initialization`` instead of ``copy-initialization``","2022-11 (Kona)","","",""
