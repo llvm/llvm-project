@@ -84,6 +84,8 @@ if (LLVM_RELEASE_ENABLE_PGO)
   set(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED IR CACHE STRING "")
   set(BOOTSTRAP_LLVM_ENABLE_RUNTIMES "compiler-rt" CACHE STRING "")
   set(BOOTSTRAP_LLVM_ENABLE_PROJECTS "clang;lld" CACHE STRING "")
+  # Ensure clang resource headers are available in instrumented stage
+  set(BOOTSTRAP_CLANG_RESOURCE_DIR "" CACHE STRING "")
 
 else()
   if (LLVM_RELEASE_ENABLE_LTO)
@@ -109,6 +111,8 @@ endif()
 set(LLVM_ENABLE_RUNTIMES ${STAGE1_RUNTIMES} CACHE STRING "")
 set(LLVM_ENABLE_PROJECTS ${STAGE1_PROJECTS} CACHE STRING "")
 set(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY ON CACHE STRING "")
+# Ensure clang resource headers are properly embedded for standalone libclang
+set(CLANG_RESOURCE_DIR "" CACHE STRING "")
 
 # stage2-instrumented and Final Stage Config:
 # Options that need to be set in both the instrumented stage (if we are doing
@@ -120,6 +124,8 @@ if (LLVM_RELEASE_ENABLE_LTO)
 endif()
 set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
 set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
+# Ensure clang resource headers are properly embedded in all stages for standalone libclang
+set_instrument_and_final_stage_var(CLANG_RESOURCE_DIR "" STRING)
 set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")
 if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
