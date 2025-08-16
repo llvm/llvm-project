@@ -396,24 +396,28 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
 
 // The order of finalization follows Fortran 2018 7.5.6.2, with
 // elementwise finalization of non-parent components taking place
-// before parent component finalization, and with all finalization
-// preceding any deallocation.
+// before parent component finalization, and with all "top level"
+// finalization preceding any deallocation.
 RT_API_ATTRS void Destroy(const Descriptor &descriptor, bool finalize,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (descriptor.IsAllocated() && !derived.noDestructionNeeded()) {
     Terminator stubTerminator{"Destroy() in Fortran runtime", 0};
     WorkQueue workQueue{terminator ? *terminator : stubTerminator};
-    if (workQueue.BeginDestroy(descriptor, derived, finalize) == StatContinue) {
+    if (workQueue.BeginDestroy(descriptor, derived, finalize,
+            /*isNestedFinalizationPossible=*/!finalize) == StatContinue) {
       workQueue.Run();
     }
   }
 }
 
 RT_API_ATTRS int DestroyTicket::Begin(WorkQueue &workQueue) {
-  if (finalize_ && !derived_.noFinalizationNeeded()) {
-    if (int status{workQueue.BeginFinalize(instance_, derived_)};
-        status != StatOk && status != StatContinue) {
-      return status;
+  if (finalize_) {
+    isNestedFinalizationPossible_ = false;
+    if (!derived_.noFinalizationNeeded()) {
+      if (int status{workQueue.BeginFinalize(instance_, derived_)};
+          status != StatOk && status != StatContinue) {
+        return status;
+      }
     }
   }
   return StatContinue;
@@ -440,8 +444,13 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
         if (d.IsAllocated()) {
           if (componentDerived && !componentDerived->noDestructionNeeded() &&
               phase_ == 0) {
-            if (int status{workQueue.BeginDestroy(
-                    d, *componentDerived, /*finalize=*/false)};
+            // Per F'2023 7.5.6.3p2, deallocations are finalization-triggering
+            // events -- so if an allocatable component was not finalized
+            // before, and we're not in the left-hand side of an intrinsic
+            // assignment, it must be finalized now.
+            if (int status{workQueue.BeginDestroy(d, *componentDerived,
+                    /*finalize=*/!finalize_ && isNestedFinalizationPossible_,
+                    isNestedFinalizationPossible_)};
                 status != StatOk) {
               ++phase_;
               return status;
@@ -465,8 +474,8 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
             ++j, p += *fixedStride_) {
           compDesc.set_base_addr(p);
           ++elementAt_;
-          if (int status{workQueue.BeginDestroy(
-                  compDesc, compType, /*finalize=*/false)};
+          if (int status{workQueue.BeginDestroy(compDesc, compType,
+                  /*finalize=*/false, isNestedFinalizationPossible_)};
               status != StatOk) {
             return status;
           }
@@ -481,8 +490,8 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
             instance_.ElementComponent<char>(subscripts_, component_->offset()),
             component_->rank(), extents);
         Advance();
-        if (int status{
-                workQueue.BeginDestroy(compDesc, compType, /*finalize=*/false)};
+        if (int status{workQueue.BeginDestroy(compDesc, compType,
+                /*finalize=*/false, isNestedFinalizationPossible_)};
             status != StatOk) {
           return status;
         }

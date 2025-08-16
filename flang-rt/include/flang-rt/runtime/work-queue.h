@@ -298,15 +298,18 @@ class DestroyTicket : public ImmediateTicketRunner<DestroyTicket>,
                       private ComponentsOverElements {
 public:
   RT_API_ATTRS DestroyTicket(const Descriptor &instance,
-      const typeInfo::DerivedType &derived, bool finalize)
+      const typeInfo::DerivedType &derived, bool finalize,
+      bool isNestedFinalizationPossible)
       : ImmediateTicketRunner<DestroyTicket>{*this},
         ComponentsOverElements{instance, derived}, finalize_{finalize},
+        isNestedFinalizationPossible_{isNestedFinalizationPossible},
         fixedStride_{instance.FixedStride()} {}
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
 
 private:
   bool finalize_{false};
+  bool isNestedFinalizationPossible_{false};
   common::optional<SubscriptValue> fixedStride_;
 };
 
@@ -479,11 +482,15 @@ public:
     }
   }
   RT_API_ATTRS int BeginDestroy(const Descriptor &descriptor,
-      const typeInfo::DerivedType &derived, bool finalize) {
+      const typeInfo::DerivedType &derived, bool finalize,
+      bool isNestedFinalizationPossible) {
     if (runTicketsImmediately_) {
-      return DestroyTicket{descriptor, derived, finalize}.Run(*this);
+      return DestroyTicket{
+          descriptor, derived, finalize, isNestedFinalizationPossible}
+          .Run(*this);
     } else {
-      StartTicket().u.emplace<DestroyTicket>(descriptor, derived, finalize);
+      StartTicket().u.emplace<DestroyTicket>(
+          descriptor, derived, finalize, isNestedFinalizationPossible);
       return StatContinue;
     }
   }
