@@ -182,7 +182,7 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Strides:\n";
     for (const SCEV *S : Strides)
-      dbgs() << *S << "\n";
+      dbgs() << "  " << *S << "\n";
   });
 
   for (const SCEV *S : Strides) {
@@ -193,7 +193,7 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Terms:\n";
     for (const SCEV *T : Terms)
-      dbgs() << *T << "\n";
+      dbgs() << "  " << *T << "\n";
   });
 
   SCEVCollectAddRecMultiplies MulCollector(Terms, SE);
@@ -294,7 +294,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Terms:\n";
     for (const SCEV *T : Terms)
-      dbgs() << *T << "\n";
+      dbgs() << "  " << *T << "\n";
   });
 
   // Remove duplicates.
@@ -325,7 +325,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Terms after sorting:\n";
     for (const SCEV *T : NewTerms)
-      dbgs() << *T << "\n";
+      dbgs() << "  " << *T << "\n";
   });
 
   if (NewTerms.empty() || !findArrayDimensionsRec(SE, NewTerms, Sizes)) {
@@ -339,7 +339,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Sizes:\n";
     for (const SCEV *S : Sizes)
-      dbgs() << *S << "\n";
+      dbgs() << "  " << *S << "\n";
   });
 }
 
@@ -354,18 +354,27 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     if (!AR->isAffine())
       return;
 
+  // Clear output vector.
+  Subscripts.clear();
+
+  LLVM_DEBUG(dbgs() << "\ncomputeAccessFunctions\n"
+                    << "Linearized Memory Access Function: " << *Expr << "\n");
+
   const SCEV *Res = Expr;
   int Last = Sizes.size() - 1;
+
   for (int i = Last; i >= 0; i--) {
+    const SCEV *Size = Sizes[i];
     const SCEV *Q, *R;
-    SCEVDivision::divide(SE, Res, Sizes[i], &Q, &R);
+
+    SCEVDivision::divide(SE, Res, Size, &Q, &R);
 
     LLVM_DEBUG({
-      dbgs() << "Res: " << *Res << "\n";
-      dbgs() << "Sizes[i]: " << *Sizes[i] << "\n";
-      dbgs() << "Res divided by Sizes[i]:\n";
-      dbgs() << "Quotient: " << *Q << "\n";
-      dbgs() << "Remainder: " << *R << "\n";
+      dbgs() << "Computing 'MemAccFn / Sizes[" << i << "]':\n";
+      dbgs() << "  MemAccFn: " << *Res << "\n";
+      dbgs() << "  Sizes[" << i << "]: " << *Size << "\n";
+      dbgs() << "  Quotient (Leftover): " << *Q << "\n";
+      dbgs() << "  Remainder (Subscript Access Function): " << *R << "\n";
     });
 
     Res = Q;
@@ -385,6 +394,7 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     }
 
     // Record the access function for the current subscript.
+    LLVM_DEBUG(dbgs() << "Subscripts push_back Remainder: " << *R << "\n");
     Subscripts.push_back(R);
   }
 
@@ -397,7 +407,8 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Subscripts:\n";
     for (const SCEV *S : Subscripts)
-      dbgs() << *S << "\n";
+      dbgs() << "  " << *S << "\n";
+    dbgs() << "\n";
   });
 }
 
@@ -454,6 +465,10 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
                        SmallVectorImpl<const SCEV *> &Subscripts,
                        SmallVectorImpl<const SCEV *> &Sizes,
                        const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
+
   // First step: collect parametric terms.
   SmallVector<const SCEV *, 4> Terms;
   collectParametricTerms(SE, Expr, Terms);
@@ -469,21 +484,6 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
 
   // Third step: compute the access functions for each subscript.
   computeAccessFunctions(SE, Expr, Subscripts, Sizes);
-
-  if (Subscripts.empty())
-    return;
-
-  LLVM_DEBUG({
-    dbgs() << "succeeded to delinearize " << *Expr << "\n";
-    dbgs() << "ArrayDecl[UnknownSize]";
-    for (const SCEV *S : Sizes)
-      dbgs() << "[" << *S << "]";
-
-    dbgs() << "\nArrayRef";
-    for (const SCEV *S : Subscripts)
-      dbgs() << "[" << *S << "]";
-    dbgs() << "\n";
-  });
 }
 
 static std::optional<APInt> tryIntoAPInt(const SCEV *S) {
@@ -646,6 +646,9 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      SmallVectorImpl<const SCEV *> &Subscripts,
                                      SmallVectorImpl<const SCEV *> &Sizes,
                                      const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
 
   // First step: find the fixed array size.
   SmallVector<uint64_t, 4> ConstSizes;
@@ -671,6 +674,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
+  LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
@@ -683,28 +687,43 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
           continue;
         }
       Subscripts.push_back(Expr);
+      LLVM_DEBUG(dbgs() << "Subscripts push_back: " << *Expr << "\n");
       continue;
     }
 
     auto *ArrayTy = dyn_cast<ArrayType>(Ty);
     if (!ArrayTy) {
+      LLVM_DEBUG(dbgs() << "GEP delinearize failed: " << *Ty
+                        << " is not an array type.\n");
       Subscripts.clear();
       Sizes.clear();
       return false;
     }
 
     Subscripts.push_back(Expr);
+    LLVM_DEBUG(dbgs() << "Subscripts push_back: " << *Expr << "\n");
     if (!(DroppedFirstDim && i == 2))
       Sizes.push_back(ArrayTy->getNumElements());
 
     Ty = ArrayTy->getElementType();
   }
+  LLVM_DEBUG({
+    dbgs() << "Subscripts:\n";
+    for (const SCEV *S : Subscripts)
+      dbgs() << *S << "\n";
+    dbgs() << "\n";
+  });
+
   return !Subscripts.empty();
 }
 
 bool llvm::tryDelinearizeFixedSizeImpl(
     ScalarEvolution *SE, Instruction *Inst, const SCEV *AccessFn,
     SmallVectorImpl<const SCEV *> &Subscripts, SmallVectorImpl<int> &Sizes) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
+
   Value *SrcPtr = getLoadStorePointerOperand(Inst);
 
   // Check the simple case where the array dimensions are fixed size.
@@ -769,8 +788,7 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
 
     O << "\n";
     O << "Inst:" << Inst << "\n";
-    O << "In Loop with Header: " << L->getHeader()->getName() << "\n";
-    O << "AccessFunction: " << *AccessFn << "\n";
+    O << "LinearAccessFunction: " << *AccessFn << "\n";
 
     SmallVector<const SCEV *, 3> Subscripts, Sizes;
 
@@ -787,22 +805,33 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
                                 SE->getElementSize(&Inst));
     }
 
-      if (IsDelinearizationFailed()) {
-        O << "failed to delinearize\n";
-        continue;
-      }
+    if (IsDelinearizationFailed()) {
+      O << "failed to delinearize\n";
+      continue;
+    }
 
-      O << "Base offset: " << *BasePointer << "\n";
-      O << "ArrayDecl[UnknownSize]";
-      int Size = Subscripts.size();
-      for (int i = 0; i < Size - 1; i++)
+    O << "Base offset: " << *BasePointer << "\n";
+    O << "ArrayDecl";
+    int NumSubscripts = Subscripts.size();
+    int NumSizes = Sizes.size();
+
+    // Handle different size relationships between Subscripts and Sizes.
+    if (NumSizes > 0) {
+      // Print array dimensions (all but the last size, which is element
+      // size).
+      for (int i = 0; i < NumSizes - 1; i++)
         O << "[" << *Sizes[i] << "]";
-      O << " with elements of " << *Sizes[Size - 1] << " bytes.\n";
 
-      O << "ArrayRef";
-      for (int i = 0; i < Size; i++)
-        O << "[" << *Subscripts[i] << "]";
-      O << "\n";
+      // Print element size (last element in Sizes array).
+      O << " with elements of " << *Sizes[NumSizes - 1] << " bytes.\n";
+    } else {
+      O << " unknown sizes.\n";
+    }
+
+    O << "ArrayRef";
+    for (int i = 0; i < NumSubscripts; i++)
+      O << "[" << *Subscripts[i] << "]";
+    O << "\n";
   }
 }
 
