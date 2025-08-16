@@ -301,6 +301,9 @@ public:
   public:
     Value *Val;
     SDValue Node;
+    /// Original unlegalized argument type.
+    Type *OrigTy;
+    /// Same as OrigTy, or partially legalized for soft float libcalls.
     Type *Ty;
     bool IsSExt : 1;
     bool IsZExt : 1;
@@ -321,9 +324,9 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry(Value *Val, SDValue Node, Type *Ty)
-        : Val(Val), Node(Node), Ty(Ty), IsSExt(false), IsZExt(false),
-          IsNoExt(false), IsInReg(false), IsSRet(false), IsNest(false),
-          IsByVal(false), IsByRef(false), IsInAlloca(false),
+        : Val(Val), Node(Node), OrigTy(Ty), Ty(Ty), IsSExt(false),
+          IsZExt(false), IsNoExt(false), IsInReg(false), IsSRet(false),
+          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
           IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
@@ -4677,6 +4680,9 @@ public:
   /// implementation.
   struct CallLoweringInfo {
     SDValue Chain;
+    /// Original unlegalized return type.
+    Type *OrigRetTy = nullptr;
+    /// Same as OrigRetTy, or partially legalized for soft float libcalls.
     Type *RetTy = nullptr;
     bool RetSExt           : 1;
     bool RetZExt           : 1;
@@ -4731,6 +4737,14 @@ public:
     // setCallee with target/module-specific attributes
     CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
                                    SDValue Target, ArgListTy &&ArgsList) {
+      return setLibCallee(CC, ResultType, ResultType, Target,
+                          std::move(ArgsList));
+    }
+
+    CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
+                                   Type *OrigResultType, SDValue Target,
+                                   ArgListTy &&ArgsList) {
+      OrigRetTy = OrigResultType;
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
@@ -4745,7 +4759,7 @@ public:
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 AttributeSet ResultAttrs = {}) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
       IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
       RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
       RetZExt = ResultAttrs.hasAttribute(Attribute::ZExt);
@@ -4761,7 +4775,7 @@ public:
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 const CallBase &Call) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
