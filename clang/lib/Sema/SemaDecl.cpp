@@ -20270,9 +20270,10 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // different from T:
   // - every enumerator of every member of class T that is an unscoped
   // enumerated type
-  if (getLangOpts().CPlusPlus && !TheEnumDecl->isScoped())
-    DiagnoseClassNameShadow(TheEnumDecl->getDeclContext(),
-                            DeclarationNameInfo(Id, IdLoc));
+  if (getLangOpts().CPlusPlus && !TheEnumDecl->isScoped() &&
+      DiagnoseClassNameShadow(TheEnumDecl->getDeclContext(),
+                              DeclarationNameInfo(Id, IdLoc)))
+    return nullptr;
 
   EnumConstantDecl *New =
     CheckEnumConstant(TheEnumDecl, LastEnumConst, IdLoc, Id, Val);
