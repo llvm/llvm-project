@@ -63,7 +63,7 @@ struct Symbol {
   bool isExternal;
 
   /// The symbol type.
-  std::string type;
+  lldb::SymbolType type;
 
   /// The symbol file address.
   lldb::addr_t fileAddress;

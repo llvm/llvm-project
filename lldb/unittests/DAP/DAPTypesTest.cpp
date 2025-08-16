@@ -8,6 +8,7 @@
 
 #include "Protocol/DAPTypes.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -38,7 +39,7 @@ TEST(DAPTypesTest, DAPSymbol) {
   symbol.isDebug = true;
   symbol.isExternal = false;
   symbol.isSynthetic = true;
-  symbol.type = "Trampoline";
+  symbol.type = lldb::eSymbolTypeTrampoline;
   symbol.fileAddress = 0x12345678;
   symbol.loadAddress = 0x87654321;
   symbol.size = 64;
