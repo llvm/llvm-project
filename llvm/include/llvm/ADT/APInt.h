@@ -1798,6 +1798,9 @@ public:
     return *this;
   }
 
+  /// \returns the multiplicative inverse for a given modulus.
+  APInt multiplicativeInverse(const APInt &Modulus) const;
+
   /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
   LLVM_ABI APInt multiplicativeInverse() const;
 
