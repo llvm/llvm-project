@@ -861,10 +861,11 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return builder.create<cir::ComplexDivOp>(op.loc, op.lhs, op.rhs, rangeKind);
+    return cir::ComplexDivOp::create(builder, op.loc, op.lhs, op.rhs,
+                                     rangeKind);
   }
 
-  cgf.cgm.errorNYI("ComplexExprEmitter::emitBinMu between Complex & Scalar");
+  cgf.cgm.errorNYI("ComplexExprEmitter::emitBinDiv between Complex & Scalar");
   return {};
 }
 
