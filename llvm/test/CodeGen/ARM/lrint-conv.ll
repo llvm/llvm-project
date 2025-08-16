@@ -1,12 +1,15 @@
 ; RUN: llc < %s -mtriple=arm-eabi -float-abi=soft | FileCheck %s --check-prefix=SOFTFP
 ; RUN: llc < %s -mtriple=arm-eabi -float-abi=hard | FileCheck %s --check-prefix=HARDFP
 
-; FIXME: crash
-; define i32 @testmswh_builtin(half %x) {
-; entry:
-;   %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
-;   ret i32 %0
-; }
+; SOFTFP-LABEL: testmswh_builtin:
+; SOFTFP:       bl      lrintf
+; HARDFP-LABEL: testmswh_builtin:
+; HARDFP:       bl      lrintf
+define i32 @testmswh_builtin(half %x) {
+entry:
+  %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
+  ret i32 %0
+}
 
 ; SOFTFP-LABEL: testmsws_builtin:
 ; SOFTFP:       bl      lrintf
