@@ -1078,6 +1078,7 @@ def executeScriptInternal(
     test, litConfig, tmpBase, commands, cwd, debug=True
 ) -> Tuple[str, str, int, Optional[str]]:
     cmds = []
+    print(test, commands)
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
         # to maximize debuggability.  However, custom lit test formats might not
@@ -1107,6 +1108,7 @@ def executeScriptInternal(
             ) from None
 
     cmd = cmds[0]
+    print(cmds)
     for c in cmds[1:]:
         cmd = ShUtil.Seq(cmd, "&&", c)
 
