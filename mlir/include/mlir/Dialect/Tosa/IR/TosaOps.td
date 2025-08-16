@@ -43,7 +43,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
   let arguments = (ins
     Tosa_TensorAtLeast1D: $input,
     I32Attr: $axis,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -357,7 +357,7 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -487,7 +487,7 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
     Tosa_Tensor:$input,
     Tosa_IntOrFloatAttr:$min_val,
     Tosa_IntOrFloatAttr:$max_val,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -935,7 +935,7 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
   let arguments = (ins
     Tosa_Tensor:$input1,
     Tosa_Tensor:$input2,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -964,7 +964,7 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
   let arguments = (ins
     Tosa_Tensor:$input1,
     Tosa_Tensor:$input2,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -1711,7 +1711,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
   let arguments = (ins
     Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -1751,7 +1751,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
   let arguments = (ins
     Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -2224,7 +2224,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
     Rank4TosaShape:$scale,
     Rank2TosaShape:$offset,
     Rank2TosaShape:$border,
-    Tosa_ResizeTypeAttr:$mode
+    Tosa_ResizeModeAttr:$mode
   );
 
   let results = (outs
@@ -2374,7 +2374,7 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$output_zp,
     BoolAttr:$scale32,
-    Tosa_RoundingTypeAttr:$rounding_mode,
+    Tosa_RoundingModeAttr:$rounding_mode,
     BoolAttr:$per_channel,
     BoolAttr: $input_unsigned,
     BoolAttr: $output_unsigned
