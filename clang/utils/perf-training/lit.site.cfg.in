@@ -1,6 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 import sys
+import shlex
 
 config.clang_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
 config.perf_helper_dir = "@CMAKE_CURRENT_SOURCE_DIR@"
