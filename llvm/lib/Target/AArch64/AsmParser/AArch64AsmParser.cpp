@@ -3908,6 +3908,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
   bool ExpectRegister = true;
+  bool OptionalRegister = false;
+  bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
 
   if (Mnemonic == "ic") {
     const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
@@ -3956,7 +3958,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (Op.lower() != "rctx")
       return TokError("invalid operand for prediction restriction instruction");
 
-    bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
     bool hasPredres = hasAll || getSTI().hasFeature(AArch64::FeaturePredRes);
     bool hasSpecres2 = hasAll || getSTI().hasFeature(AArch64::FeatureSPECRES2);
 
@@ -3989,10 +3990,12 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     HasRegister = true;
   }
 
-  if (ExpectRegister && !HasRegister)
-    return TokError("specified " + Mnemonic + " op requires a register");
-  else if (!ExpectRegister && HasRegister)
-    return TokError("specified " + Mnemonic + " op does not use a register");
+  if (!OptionalRegister) {
+    if (ExpectRegister && !HasRegister)
+      return TokError("specified " + Mnemonic + " op requires a register");
+    else if (!ExpectRegister && HasRegister)
+      return TokError("specified " + Mnemonic + " op does not use a register");
+  }
 
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;
