@@ -4356,9 +4356,11 @@ createAlteredByCaptureMap(MapInfoData &mapData,
 
         if (!isPtrTy) {
           auto curInsert = builder.saveIP();
+          llvm::DebugLoc DbgLoc = builder.getCurrentDebugLocation();
           builder.restoreIP(findAllocaInsertPoint(builder, moduleTranslation));
           auto *memTempAlloc =
               builder.CreateAlloca(builder.getPtrTy(), nullptr, ".casted");
+          builder.SetCurrentDebugLocation(DbgLoc);
           builder.restoreIP(curInsert);
 
           builder.CreateStore(newV, memTempAlloc);

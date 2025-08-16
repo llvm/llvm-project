@@ -2460,10 +2460,9 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
 
-  TargetLowering::ArgListEntry Entry;
   for (SDValue Op : Ops) {
-    Entry.Node = Op;
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Op, Op.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = shouldSignExtendTypeInLibCall(Entry.Ty, IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);

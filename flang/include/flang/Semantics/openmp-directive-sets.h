@@ -401,6 +401,22 @@ static const OmpDirectiveSet nestedWorkshareErrSet{
         Directive::OMPD_taskloop,
     } | workShareSet,
 };
+
+//===----------------------------------------------------------------------===//
+// Misc directive sets
+//===----------------------------------------------------------------------===//
+
+// Simple standalone directives than can be erased by -fopenmp-simd.
+static const OmpDirectiveSet simpleStandaloneNonSimdOnlySet{
+    Directive::OMPD_taskyield,
+    Directive::OMPD_barrier,
+    Directive::OMPD_ordered,
+    Directive::OMPD_target_enter_data,
+    Directive::OMPD_target_exit_data,
+    Directive::OMPD_target_update,
+    Directive::OMPD_taskwait,
+};
+
 } // namespace llvm::omp
 
 #endif // FORTRAN_SEMANTICS_OPENMP_DIRECTIVE_SETS_H_
