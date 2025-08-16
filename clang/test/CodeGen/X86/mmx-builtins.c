@@ -389,6 +389,7 @@ __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_su32(a, b);
 }
+TEST_CONSTEXPR(match_m64(_mm_mul_su32((__m64)(__v2si){+1, -2}, (__m64)(__v2si){-10, +8}), 4294967286));
 
 __m64 test_mm_mulhi_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mulhi_pi16

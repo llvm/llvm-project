@@ -925,6 +925,7 @@ __m128i test_mm_mul_epu32(__m128i A, __m128i B) {
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_epu32(A, B);
 }
+TEST_CONSTEXPR(match_m128i(_mm_mul_epu32((__m128i)(__v4si){+1, -2, +3, -4}, (__m128i)(__v4si){-16, -14, +12, +10}), 4294967280, 36));
 
 __m128d test_mm_mul_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_mul_pd

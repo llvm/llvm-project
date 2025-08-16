@@ -62,6 +62,9 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __zext128(x)                                                           \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, 2, 3)
 #define __anyext128(x)                                                         \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, -1, -1)
@@ -2445,9 +2448,10 @@ _mm_mullo_epi16(__m128i __a, __m128i __b) {
 /// \param __b
 ///    A 64-bit integer containing one of the source operands.
 /// \returns A 64-bit integer vector containing the product of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_mul_su32(__m64 __a, __m64 __b) {
-  return __trunc64(__builtin_ia32_pmuludq128((__v4si)__anyext128(__a),
-                                             (__v4si)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_mul_su32(__m64 __a,
+                                                                  __m64 __b) {
+  return __trunc64(__builtin_ia32_pmuludq128((__v4si)__zext128(__a),
+                                             (__v4si)__zext128(__b)));
 }
 
 /// Multiplies 32-bit unsigned integer values contained in the lower
@@ -2463,8 +2467,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_mul_su32(__m64 __a, __m64 __b) {
 /// \param __b
 ///    A [2 x i64] vector containing one of the source operands.
 /// \returns A [2 x i64] vector containing the product of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mul_epu32(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mul_epu32(__m128i __a, __m128i __b) {
   return __builtin_ia32_pmuludq128((__v4si)__a, (__v4si)__b);
 }
 
