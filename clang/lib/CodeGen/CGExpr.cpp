@@ -23,6 +23,7 @@
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
+#include "SanitizerHandler.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -37,6 +38,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -44,6 +46,7 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
@@ -85,15 +88,84 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
-static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
-  switch (ID) {
-#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
-  case SanitizerHandler::Enum:                                                 \
-    return Msg;
-    LIST_SANITIZER_CHECKS
-#undef SANITIZER_CHECK
+std::string CodeGenFunction::BuildSanitizerTrapMessage(
+    SanitizerHandler Handler, QualType LhsTy, QualType OpType, bool IsLeftShift,
+    bool IsSigned, std::string ReasonStr, bool IsDivideByZero,
+    bool IsTruncation) {
+  switch (Handler) {
+  case SanitizerHandler::AddOverflow:
+    return llvm::formatv("{0} integer addition overflow on type '{1}'",
+                         IsSigned ? "Signed" : "Unsigned", LhsTy.getAsString());
+  case SanitizerHandler::BuiltinUnreachable:
+    return "_builtin_unreachable(), execution reached an unreachable program "
+           "point";
+  case SanitizerHandler::CFICheckFail:
+    return "Control flow integrity check failed";
+  case SanitizerHandler::DivremOverflow:
+    return llvm::formatv("{0} on type '{1}'", ReasonStr, LhsTy.getAsString());
+  case SanitizerHandler::DynamicTypeCacheMiss:
+    return "Dynamic type cache miss, member call made on an object whose "
+           "dynamic type differs from the expected type";
+  case SanitizerHandler::FloatCastOverflow:
+    return llvm::formatv("Float cast overflow converting from floating-point "
+                         "type '{0}' to integer type '{1}'",
+                         LhsTy.getAsString(), OpType.getAsString());
+  case SanitizerHandler::FunctionTypeMismatch:
+    return llvm::formatv("Call through function pointer of type '{0}' with an "
+                         "incompatible target",
+                         (LhsTy->getPointeeType()).getAsString());
+  case SanitizerHandler::ImplicitConversion:
+    return llvm::formatv(
+        "Implicit {0}conversion from '{1}' to '{2}' caused {3}",
+        IsTruncation ? (IsSigned ? "signed " : "unsigned ") : "",
+        LhsTy.getAsString(), OpType.getAsString(),
+        IsTruncation ? "truncation" : "sign-change");
+  case SanitizerHandler::InvalidBuiltin:
+    return "Invalid use of builtin function";
+  case SanitizerHandler::InvalidObjCCast:
+    return "Invalid Objective-C cast";
+  case SanitizerHandler::LoadInvalidValue:
+    return "Loaded an invalid or uninitialized value for the type";
+  case SanitizerHandler::MissingReturn:
+    return "Execution reached the end of a value-returning function without "
+           "returning a value";
+  case SanitizerHandler::MulOverflow:
+    return llvm::formatv("{0} integer multiplication overflow on type '{1}'",
+                         IsSigned ? "Signed" : "Unsigned", LhsTy.getAsString());
+  case SanitizerHandler::NegateOverflow:
+    return llvm::formatv("Integer negation overflow on type '{0}'",
+                         LhsTy.getAsString());
+  case SanitizerHandler::NullabilityArg:
+    return "Passing null as an argument which is annotated with _Nonnull";
+  case SanitizerHandler::NullabilityReturn:
+    return "Returning null from a function with a return type annotated with "
+           "_Nonnull";
+  case SanitizerHandler::NonnullArg:
+    return "Passing null pointer as an argument which is declared to never be "
+           "null";
+  case SanitizerHandler::NonnullReturn:
+    return "Returning null pointer from a function which is declared to never "
+           "return null";
+  case SanitizerHandler::OutOfBounds:
+    return "Array index out of bounds";
+  case SanitizerHandler::PointerOverflow:
+    return "Pointer arithmetic overflowed bounds";
+  case SanitizerHandler::ShiftOutOfBounds:
+    return llvm::formatv("{0} shift is too large for {1}-bit type '{2}'",
+                         IsLeftShift ? "Left" : "Right",
+                         getContext().getIntWidth(LhsTy), LhsTy.getAsString());
+  case SanitizerHandler::SubOverflow:
+    return llvm::formatv("{0} integer subtraction overflow on type '{1}'",
+                         IsSigned ? "Signed" : "Unsigned", LhsTy.getAsString());
+  case SanitizerHandler::TypeMismatch:
+    return "Type mismatch in operation";
+  case SanitizerHandler::AlignmentAssumption:
+    return "Alignment assumption violated";
+  case SanitizerHandler::VLABoundNotPositive:
+    return "Variable length array bound evaluates to non-positive value";
+  default:
+    return "";
   }
-  llvm_unreachable("unhandled switch case");
 }
 
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
@@ -3720,7 +3792,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
-    ArrayRef<llvm::Value *> DynamicArgs) {
+    ArrayRef<llvm::Value *> DynamicArgs, std::string TrapMessage) {
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
@@ -3759,7 +3831,7 @@ void CodeGenFunction::EmitCheck(
   }
 
   if (TrapCond)
-    EmitTrapCheck(TrapCond, CheckHandler, NoMerge);
+    EmitTrapCheck(TrapCond, CheckHandler, NoMerge, TrapMessage);
   if (!FatalCond && !RecoverableCond)
     return;
 
@@ -4071,7 +4143,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge) {
+                                    bool NoMerge, std::string TrapMessage) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4082,7 +4154,11 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+  // If no additional context was needed for building the trap message, we build
+  // it here instead
+  if (TrapMessage.empty()) {
+    TrapMessage = BuildSanitizerTrapMessage(CheckHandlerID, {}, {});
+  }
 
   if (getDebugInfo() && !TrapMessage.empty() &&
       CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
@@ -6404,8 +6480,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
           Builder.CreateICmpEQ(CalleeTypeHash, TypeHash);
       llvm::Constant *StaticData[] = {EmitCheckSourceLocation(E->getBeginLoc()),
                                       EmitCheckTypeDescriptor(CalleeType)};
+      std::string Msg =
+          BuildSanitizerTrapMessage(SanitizerHandler::FunctionTypeMismatch,
+                                    CalleeType, {}, {}, {}, {}, {});
       EmitCheck(std::make_pair(CalleeTypeHashMatch, CheckOrdinal), CheckHandler,
-                StaticData, {CalleePtr});
+                StaticData, {CalleePtr}, Msg);
 
       Builder.CreateBr(Cont);
       EmitBlock(Cont);

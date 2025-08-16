@@ -15,7 +15,7 @@ int add_overflow(int a, int b) { return a + b; }
 // ANNOTATE-LABEL: @add_overflow
 // ANNOTATE: call void @llvm.ubsantrap(i8 0) {{.*}}!dbg [[LOC:![0-9]+]]
 // ANNOTATE: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// ANNOTATE: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Integer addition overflowed"
+// ANNOTATE: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Signed integer addition overflow on type 'int'"
 
 // NO-ANNOTATE-LABEL: @add_overflow
 // NO-ANNOTATE: call void @llvm.ubsantrap(i8 0) {{.*}}!dbg [[LOC:![0-9]+]]
