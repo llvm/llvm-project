@@ -146,3 +146,36 @@ int Test_UnderscoreInSpecialCommand;
 // CHECK:      VarDecl{{.*}}Test_UnderscoreInSpecialCommand 'int'
 // CHECK:        InlineCommandComment{{.*}} Name="thread_safe" RenderNormal
 // CHECK-NEXT:     TextComment{{.*}} Text=" test for underscore in special command"
+
+/// <details>
+///   <summary>
+///     Summary
+///   </summary>
+///   <p>Details</p>
+/// </details>
+///
+/// Some <mark>highlighting</mark>
+///
+/// <figure>
+///   <img src="pic.jpg">
+///   <figcaption>Figure 1</figcaption>
+/// </figure>
+int Test_AdditionalHTMLTags(int Aaa);
+// CHECK:      FunctionDecl{{.*}}Test_AdditionalHTMLTags 'int (int)'
+// CHECK:        HTMLStartTagComment{{.*}} Name="details"
+// CHECK:        HTMLStartTagComment{{.*}} Name="summary"
+// CHECK-NEXT:   TextComment{{.*}} Text="     Summary"
+// CHECK:        HTMLEndTagComment{{.*}} Name="summary"
+// CHECK:        HTMLStartTagComment{{.*}} Name="p"
+// CHECK-NEXT:   TextComment{{.*}} Text="Details"
+// CHECK-NEXT:   HTMLEndTagComment{{.*}} Name="p"
+// CHECK:        HTMLEndTagComment{{.*}} Name="details"
+// CHECK:        HTMLStartTagComment{{.*}} Name="mark"
+// CHECK-NEXT:   TextComment{{.*}} Text="highlighting"
+// CHECK-NEXT:   HTMLEndTagComment{{.*}} Name="mark"
+// CHECK:        HTMLStartTagComment{{.*}} Name="figure"
+// CHECK:        HTMLStartTagComment{{.*}} Name="img" Attrs:  "src="pic.jpg"
+// CHECK:        HTMLStartTagComment{{.*}} Name="figcaption"
+// CHECK-NEXT:   TextComment{{.*}} Text="Figure 1"
+// CHECK-NEXT:   HTMLEndTagComment{{.*}} Name="figcaption"
+// CHECK:        HTMLEndTagComment{{.*}} Name="figure"
