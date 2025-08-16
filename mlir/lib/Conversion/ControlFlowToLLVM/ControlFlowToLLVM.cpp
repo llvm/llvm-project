@@ -128,7 +128,7 @@ static FailureOr<Block *> getConvertedBlock(ConversionPatternRewriter &rewriter,
 /// Flatten the given value ranges into a single vector of values.
 static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
   SmallVector<Value> result;
-  for (const auto &vals : values)
+  for (const ValueRange &vals : values)
     llvm::append_range(result, vals);
   return result;
 }
