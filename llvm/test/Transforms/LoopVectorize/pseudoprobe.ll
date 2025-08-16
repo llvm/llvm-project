@@ -25,12 +25,11 @@ for.end:                                          ; preds = %for.body
   ret i32 0
 }
 
-
 ; CHECK-LABEL:  @test1
 ; CHECK:        vector.body:
 ; CHECK:          load <4 x float>, ptr %{{.*}}
-; CHECK:          store <4 x i32> %{{.*}}, ptr %{{.*}}
-; CHECK-COUNT-4:  call void @llvm.pseudoprobe(i64 3666282617048535130, i64 2, i32 0, i64 -1)
+; CHECK:          store <4 x i32> {{.*}}, ptr %{{.*}}
+; CHECK:          call void @llvm.pseudoprobe(i64 3666282617048535130, i64 2, i32 0, i64 -1)
 ; CHECK:          %index.next = add nuw i64 %index, 4
 
 
