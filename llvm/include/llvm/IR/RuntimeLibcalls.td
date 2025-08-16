@@ -1280,6 +1280,9 @@ def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
 // ARM Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
+def isTargetAEABIAndAAPCS_ABI : RuntimeLibcallPredicate<
+  [{TT.isTargetAEABI() && isAAPCS_ABI(TT, ABIName)}]>;
+
 // if (isTargetMachO()) {
 // if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
 //  Subtarget->hasARMOps() && !Subtarget->useSoftFloat()) {
@@ -1473,13 +1476,23 @@ def __udivmodsi4 : RuntimeLibcallImpl<UDIVREM_I32>;
 // a __gnu_ prefix (which is the default).
 // isTargetAEABI()
 def __aeabi_f2h : RuntimeLibcallImpl<FPROUND_F32_F16>; // CallingConv::ARM_AAPCS
-//def __aeabi_d2h : RuntimeLibcallImpl<FPROUND_F64_F16>; // CallingConv::ARM_AAPCS
 def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 
 // !isTargetMachO()
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 
+def GNUEABIHalfConvertCalls :
+  LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
+    RuntimeLibcallPredicate<[{!TT.isOSBinFormatMachO() &&
+                              !TT.isTargetAEABI()}]>>;
+
+// In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
+// they have a __gnu_ prefix (which is the default).
+def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
+                                        isTargetAEABIAndAAPCS_ABI> {
+  let CallingConv = ARM_AAPCS;
+}
 
 def WindowARMDivRemCalls : LibcallImpls<
   (add __rt_sdiv, __rt_sdiv64, __rt_udiv, __rt_udiv64),
@@ -1553,8 +1566,8 @@ def AEABICalls : LibcallImpls<
       // RTABI chapter 4.1.2, Table 7
       __aeabi_d2f,
       __aeabi_f2d,
-      __aeabi_h2f,
-      __aeabi_f2h,
+      //__aeabi_h2f added separately
+      //__aeabi_f2h added separately
       __aeabi_d2h,
 
       // Integer to floating-point conversions.
@@ -1614,6 +1627,8 @@ def ARMSystemLibrary
 
            AEABICalls,
            AEABI45MemCalls,
+           EABIHalfConvertCalls,
+           GNUEABIHalfConvertCalls,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
