@@ -18,6 +18,132 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include <cstdint>
 
+namespace {
+
+using llvm::StringRef;
+using namespace clang;
+
+/// Attempts to apply a user-defined conversion on Arg at ArgIndex to a
+/// 32-bit-compatible type. If successful, updates TheCall's argument. Returns
+/// true if a suitable conversion was applied.
+bool tryUserDefinedConversion32Bit(Sema &SemaRef, Expr *Arg, CallExpr *TheCall,
+                                   unsigned ArgIndex) {
+  const CXXRecordDecl *RecordDecl = Arg->getType()->getAsCXXRecordDecl();
+  if (!RecordDecl)
+    return false;
+
+  // Iterate over class conversion operators and pick the first that yields a
+  // 32-bit type.
+  for (CXXMethodDecl *MethodDecl : RecordDecl->methods()) {
+    if (auto *ConversionDecl = dyn_cast<CXXConversionDecl>(MethodDecl)) {
+      QualType ConvType = ConversionDecl->getConversionType();
+
+      bool Is32Bit = false;
+      auto SizeIs32 = [&](QualType T) {
+        return SemaRef.Context.getTypeSize(T) == 32;
+      };
+
+      // Classify 32-bit-compatible target types with target-dependent size
+      // checks where needed.
+      if (const auto *BT = ConvType->getAs<BuiltinType>())
+        Is32Bit = (BT->getKind() == BuiltinType::Float) ||
+                  ((BT->getKind() == BuiltinType::Int ||
+                    BT->getKind() == BuiltinType::UInt) &&
+                   SizeIs32(ConvType));
+      else if (ConvType->isPointerType() || ConvType->isVectorType())
+        Is32Bit = SizeIs32(ConvType);
+
+      if (Is32Bit) {
+        ExprResult ConvResult = SemaRef.PerformImplicitConversion(
+            Arg, ConvType, AssignmentAction::Converting);
+        if (ConvResult.isInvalid())
+          return false;
+
+        TheCall->setArg(ArgIndex, ConvResult.get());
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/// Handles and coerces a "payload" argument at ArgIndex to a 32-bit-compatible
+/// type. On success, also sets the call result type to the argument's resulting
+/// type. Returns true on error (diagnosed), false on success.
+bool handle32BitPayloadArg(Sema &SemaRef, CallExpr *TheCall, unsigned ArgIndex,
+                           StringRef BuiltinName) {
+  ASTContext &AstContext = SemaRef.getASTContext();
+  Expr *Arg = TheCall->getArg(ArgIndex);
+  QualType Type = Arg->getType();
+  QualType Int32Ty = AstContext.IntTy;
+
+  if (Type->isVectorType() || Type->isPointerType()) {
+    uint64_t Size = AstContext.getTypeSize(Type);
+    if (Size > 32) {
+      SemaRef.Diag(Arg->getBeginLoc(),
+                   diag::err_amdgcn_builtin_vector_pointer_arg_size)
+          << BuiltinName << 32 << Type << Size << Arg->getSourceRange();
+      return true;
+    }
+  } else if (Type->isScalarType()) {
+    uint64_t Size = AstContext.getTypeSize(Type);
+    if (Size > 32)
+      SemaRef.Diag(Arg->getBeginLoc(), diag::warn_amdgcn_builtin_arg_truncation)
+          << Size << 32 << BuiltinName << Arg->getSourceRange();
+  } else {
+    // Prefer user-defined conversion operators that yield a 32-bit-compatible
+    // type. If none apply, fall back to an implicit int32 conversion.
+    if (!tryUserDefinedConversion32Bit(SemaRef, Arg, TheCall, ArgIndex)) {
+      ExprResult ConvResult = SemaRef.PerformImplicitConversion(
+          Arg, Int32Ty, AssignmentAction::Converting);
+      if (ConvResult.isInvalid())
+        return true;
+      TheCall->setArg(ArgIndex, ConvResult.get());
+    }
+  }
+
+  TheCall->setType(TheCall->getArg(ArgIndex)->getType());
+  return false;
+}
+
+/// Validates and coerces the arguments to __builtin_amdgcn_ds_bpermute.
+/// Ensures arg0 is int32 (with truncation warning as needed) and applies the
+/// 32-bit payload handler to arg1.
+bool checkDsBpermuteFunctionCall(Sema &SemaRef, CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 2))
+    return true;
+
+  ASTContext &AstContext = SemaRef.getASTContext();
+
+  const FunctionDecl *FuncDecl = TheCall->getDirectCallee();
+  StringRef BuiltinName = FuncDecl ? FuncDecl->getName()
+                                   : StringRef("__builtin_amdgcn_ds_bpermute");
+
+  Expr *IndexArg = TheCall->getArg(0);
+  QualType Int32Ty = AstContext.IntTy;
+
+  if (AstContext.getTypeSize(IndexArg->getType()) > 32 &&
+      !IndexArg->getType()->isRecordType())
+    SemaRef.Diag(IndexArg->getBeginLoc(),
+                 diag::warn_amdgcn_builtin_arg_truncation)
+        << AstContext.getTypeSize(IndexArg->getType()) << 32 << BuiltinName
+        << IndexArg->getSourceRange();
+
+  ExprResult ConvResult = SemaRef.PerformImplicitConversion(
+      IndexArg, Int32Ty, AssignmentAction::Converting);
+  if (ConvResult.isInvalid())
+    return true;
+  TheCall->setArg(0, ConvResult.get());
+
+  if (handle32BitPayloadArg(SemaRef, TheCall, /*ArgIndex=*/1, BuiltinName))
+    return true;
+
+  return false;
+}
+
+} // anonymous namespace
+
 namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
@@ -100,6 +226,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case AMDGPU::BI__builtin_amdgcn_ds_bpermute:
+    return checkDsBpermuteFunctionCall(SemaRef, TheCall);
   default:
     return false;
   }
