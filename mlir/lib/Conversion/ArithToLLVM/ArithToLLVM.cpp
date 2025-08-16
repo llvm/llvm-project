@@ -238,6 +238,16 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<arith::CmpFOp> {
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+struct SelectOpOneToNLowering : public ConvertOpToLLVMPattern<arith::SelectOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  using Adaptor =
+      typename ConvertOpToLLVMPattern<arith::SelectOp>::OneToNOpAdaptor;
+
+  LogicalResult
+  matchAndRewrite(arith::SelectOp op, Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -480,6 +490,36 @@ CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOpOneToNLowering
+//===----------------------------------------------------------------------===//
+
+/// Pattern for arith.select where the true/false values lower to multiple
+/// SSA values (1:N conversion). This pattern generates multiple arith.select
+/// than can be lowered by the 1:1 arith.select pattern.
+LogicalResult SelectOpOneToNLowering::matchAndRewrite(
+    arith::SelectOp op, Adaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  // In case of a 1:1 conversion, the 1:1 pattern will match.
+  if (llvm::hasSingleElement(adaptor.getTrueValue()))
+    return rewriter.notifyMatchFailure(
+        op, "not a 1:N conversion, 1:1 pattern will match");
+  if (!op.getCondition().getType().isInteger(1))
+    return rewriter.notifyMatchFailure(op,
+                                       "non-i1 conditions are not supported");
+  if (!llvm::hasSingleElement(adaptor.getCondition()))
+    return rewriter.notifyMatchFailure(
+        op, "1:N condition conversion is not supported");
+  SmallVector<Value> results;
+  for (auto [trueValue, falseValue] :
+       llvm::zip_equal(adaptor.getTrueValue(), adaptor.getFalseValue()))
+    results.push_back(arith::SelectOp::create(
+        rewriter, op.getLoc(), llvm::getSingleElement(adaptor.getCondition()),
+        trueValue, falseValue));
+  rewriter.replaceOpWithMultiple(op, {results});
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
 
@@ -587,6 +627,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     RemSIOpLowering,
     RemUIOpLowering,
     SelectOpLowering,
+    SelectOpOneToNLowering,
     ShLIOpLowering,
     ShRSIOpLowering,
     ShRUIOpLowering,
