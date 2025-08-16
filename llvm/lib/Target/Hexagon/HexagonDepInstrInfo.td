@@ -41176,8 +41176,6 @@ let Inst{31-21} = 0b01101101100;
 let Uses = [SGP0, SGP1];
 let Defs = [SGP0, SGP1];
 let Constraints = "$Rxx32 = $Rxx32in";
-// $sgp10 operand has no encoding bits, we have to add the operand manually.
-let DecoderMethod = "decodeCRSWAP10";
 }
 def Y4_l2fetch : HInst<
 (outs),
