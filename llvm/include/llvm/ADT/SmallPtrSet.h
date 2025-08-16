@@ -435,7 +435,8 @@ public:
   bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
-      const void **APtr = CurArray, **E = CurArray + NumEntries;
+      auto Buckets = small_buckets();
+      const void **APtr = Buckets.begin(), **E = Buckets.end();
       while (APtr != E) {
         PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(*APtr));
         if (P(Ptr)) {
