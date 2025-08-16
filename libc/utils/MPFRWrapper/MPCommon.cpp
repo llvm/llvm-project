@@ -105,6 +105,21 @@ MPFRNumber MPFRNumber::asinh() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::asinpi() const {
+  MPFRNumber result(*this);
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  mpfr_asinpi(result.value, value, mpfr_rounding);
+  return result;
+#else
+  MPFRNumber value_asin(0.0, 1280);
+  mpfr_asin(value_asin.value, value, MPFR_RNDN);
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_div(result.value, value_asin.value, value_pi.value, mpfr_rounding);
+  return result;
+#endif
+}
+
 MPFRNumber MPFRNumber::atan() const {
   MPFRNumber result(*this);
   mpfr_atan(result.value, value, mpfr_rounding);
