@@ -4462,15 +4462,16 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
                                Preamble.get(), Inputs, Opts);
     EXPECT_THAT(
         Result.Completions,
-        ElementsAre(AllOf(named("foo"), signature("<class self:auto>(int arg)"),
-                          snippetSuffix("<${1:class self:auto}>"))));
+        ElementsAre(AllOf(named("foo"), signature("(auto &&self, int arg)"),
+                          snippetSuffix("(${1:auto &&self}, ${2:int arg})"))));
   }
   {
     auto Result = codeComplete(testPath(TU.Filename), Code.point("c3"),
                                Preamble.get(), Inputs, Opts);
-    EXPECT_THAT(Result.Completions,
-                ElementsAre(AllOf(named("bar"), signature("(int arg)"),
-                                  snippetSuffix(""))));
+    EXPECT_THAT(
+        Result.Completions,
+        ElementsAre(AllOf(named("bar"), signature("(A self, int arg)"),
+                          snippetSuffix("(${1:A self}, ${2:int arg})"))));
   }
 }
 } // namespace

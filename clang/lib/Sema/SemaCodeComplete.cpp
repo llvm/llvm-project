@@ -1318,6 +1318,11 @@ bool ResultBuilder::canCxxMethodBeCalled(const CXXMethodDecl *Method,
       (CurrentClassScope == Method->getParent() ||
        CurrentClassScope->isDerivedFrom(Method->getParent()));
 
+  // if method is using C++23 "deducing this", then it is a call
+  if (Method->isExplicitObjectMemberFunction()) {
+    FunctionCanBeCall = true;
+  }
+
   // We skip the following calculation for exceptions if it's already true.
   if (FunctionCanBeCall)
     return true;
@@ -3251,6 +3256,7 @@ static std::string GetDefaultValueString(const ParmVarDecl *Param,
 static void AddFunctionParameterChunks(Preprocessor &PP,
                                        const PrintingPolicy &Policy,
                                        const FunctionDecl *Function,
+                                       const CodeCompletionContext &CCContext,
                                        CodeCompletionBuilder &Result,
                                        unsigned Start = 0,
                                        bool InOptional = false) {
@@ -3266,15 +3272,17 @@ static void AddFunctionParameterChunks(Preprocessor &PP,
                                 Result.getCodeCompletionTUInfo());
       if (!FirstParameter)
         Opt.AddChunk(CodeCompletionString::CK_Comma);
-      AddFunctionParameterChunks(PP, Policy, Function, Opt, P, true);
+      AddFunctionParameterChunks(PP, Policy, Function, CCContext, Opt, P, true);
       Result.AddOptionalChunk(Opt.TakeString());
       break;
     }
 
     // C++23 introduces an explicit object parameter, a.k.a. "deducing this"
     // Skip it for autocomplete and treat the next parameter as the first
-    // parameter
-    if (FirstParameter && Param->isExplicitObjectParameter()) {
+    // parameter. But if the context is a symbol, i.e., "A::method" call,
+    // do not skip
+    auto IsSymbol = CCContext.getKind() == CodeCompletionContext::CCC_Symbol;
+    if (FirstParameter && Param->isExplicitObjectParameter() && !IsSymbol) {
       continue;
     }
 
@@ -3735,7 +3743,7 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
                                    Ctx, Policy);
     AddTypedNameChunk(Ctx, Policy, ND, Result);
     Result.AddChunk(CodeCompletionString::CK_LeftParen);
-    AddFunctionParameterChunks(PP, Policy, Function, Result);
+    AddFunctionParameterChunks(PP, Policy, Function, CCContext, Result);
     Result.AddChunk(CodeCompletionString::CK_RightParen);
     AddFunctionTypeQualsToCompletionString(Result, Function);
   };
@@ -3817,7 +3825,7 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
 
     // Add the function parameters
     Result.AddChunk(CodeCompletionString::CK_LeftParen);
-    AddFunctionParameterChunks(PP, Policy, Function, Result);
+    AddFunctionParameterChunks(PP, Policy, Function, CCContext, Result);
     Result.AddChunk(CodeCompletionString::CK_RightParen);
     AddFunctionTypeQualsToCompletionString(Result, Function);
     return Result.TakeString();
@@ -7149,13 +7157,16 @@ void SemaCodeCompletion::CodeCompleteConstructorInitializer(
   auto GenerateCCS = [&](const NamedDecl *ND, const char *Name) {
     CodeCompletionBuilder Builder(Results.getAllocator(),
                                   Results.getCodeCompletionTUInfo());
+    auto CCContext = Results.getCompletionContext();
     Builder.AddTypedTextChunk(Name);
     Builder.AddChunk(CodeCompletionString::CK_LeftParen);
     if (const auto *Function = dyn_cast<FunctionDecl>(ND))
-      AddFunctionParameterChunks(SemaRef.PP, Policy, Function, Builder);
+      AddFunctionParameterChunks(SemaRef.PP, Policy, Function, CCContext,
+                                 Builder);
     else if (const auto *FunTemplDecl = dyn_cast<FunctionTemplateDecl>(ND))
       AddFunctionParameterChunks(SemaRef.PP, Policy,
-                                 FunTemplDecl->getTemplatedDecl(), Builder);
+                                 FunTemplDecl->getTemplatedDecl(), CCContext,
+                                 Builder);
     Builder.AddChunk(CodeCompletionString::CK_RightParen);
     return Builder.TakeString();
   };
