@@ -15419,17 +15419,17 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
         return SDValue();
     }
 
-    // Avoid returning the same shuffle operation. For example,
-    // t7: v16i16 = vector_shuffle<8,9,10,11,4,5,6,7,0,1,2,3,12,13,14,15> t5,
-    //                             undef:v16i16
-    if (CrossLaneMask == Mask || InLaneMask == Mask)
-      return SDValue();
-
     // Simplify CrossLaneMask based on the actual demanded elements.
     if (V1.hasOneUse())
       for (int i = 0; i != NumElts; ++i)
         if (!DemandedCrossLane[i])
           CrossLaneMask[i] = SM_SentinelUndef;
+
+    // Avoid returning the same shuffle operation. For example,
+    // t7: v16i16 = vector_shuffle<8,9,10,11,4,5,6,7,0,1,2,3,12,13,14,15> t5,
+    //                             undef:v16i16
+    if (CrossLaneMask == Mask || InLaneMask == Mask)
+      return SDValue();
 
     SDValue CrossLane = DAG.getVectorShuffle(VT, DL, V1, V2, CrossLaneMask);
     return DAG.getVectorShuffle(VT, DL, CrossLane, DAG.getUNDEF(VT),
@@ -22219,9 +22219,8 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
       In = DAG.getBitcast(MVT::i16, In);
       TargetLowering::ArgListTy Args;
-      TargetLowering::ArgListEntry Entry;
-      Entry.Node = In;
-      Entry.Ty = EVT(MVT::i16).getTypeForEVT(*DAG.getContext());
+      TargetLowering::ArgListEntry Entry(
+          In, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()));
       Entry.IsSExt = false;
       Entry.IsZExt = true;
       Args.push_back(Entry);
@@ -22318,9 +22317,8 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
     TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = In;
-    Entry.Ty = EVT(SVT).getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        In, EVT(SVT).getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = false;
     Entry.IsZExt = true;
     Args.push_back(Entry);
@@ -30049,7 +30047,6 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (unsigned i = 0, e = Op->getNumOperands(); i != e; ++i) {
     EVT ArgVT = Op->getOperand(i).getValueType();
     assert(ArgVT.isInteger() && ArgVT.getSizeInBits() == 128 &&
@@ -30058,13 +30055,9 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
     MachinePointerInfo MPI =
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
-    Entry.Node = StackPtr;
     InChain =
         DAG.getStore(InChain, dl, Op->getOperand(i), StackPtr, MPI, Align(16));
-    Entry.Ty = PointerType::get(*DAG.getContext(), 0);
-    Entry.IsSExt = false;
-    Entry.IsZExt = false;
-    Args.push_back(Entry);
+    Args.emplace_back(StackPtr, PointerType::get(*DAG.getContext(), 0));
   }
 
   SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
@@ -33087,13 +33080,7 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-
-  Entry.Node = Arg;
-  Entry.Ty = ArgTy;
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
-  Args.push_back(Entry);
+  Args.emplace_back(Arg, ArgTy);
 
   bool isF64 = ArgVT == MVT::f64;
   // Only optimize x86_64 for now. i386 is a bit messy. For f32,

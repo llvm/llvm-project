@@ -11639,6 +11639,29 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case Builtin::BI__builtin_elementwise_abs: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APValue CurrentEle = Source.getVectorElt(EltNum);
+      APValue Val = DestEltTy->isFloatingType()
+                        ? APValue(llvm::abs(CurrentEle.getFloat()))
+                        : APValue(APSInt(
+                              CurrentEle.getInt().abs(),
+                              DestEltTy->isUnsignedIntegerOrEnumerationType()));
+      ResultElements.push_back(Val);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case clang::X86::BI__builtin_ia32_pmulhuw128:
@@ -11682,6 +11705,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case clang::X86::BI__builtin_ia32_pmulhw512:
         ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhs(LHS, RHS),
                                                 /*isUnsigned=*/false)));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_min: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+
+    if (!DestEltTy->isIntegerType())
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_max:
+        ResultElements.push_back(
+            APValue(APSInt(std::max(LHS, RHS),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case Builtin::BI__builtin_elementwise_min:
+        ResultElements.push_back(
+            APValue(APSInt(std::min(LHS, RHS),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       }
     }
@@ -13352,6 +13410,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Operand, E);
   }
 
+  case Builtin::BI__builtin_elementwise_abs: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    return Success(Val.abs(), E);
+  }
+
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:
     return Visit(E->getArg(0));
@@ -13585,7 +13651,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APInt Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
   }
+  case Builtin::BI__builtin_elementwise_max: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
 
+    APInt Result = std::max(LHS, RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_min: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = std::min(LHS, RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
     // A call to strlen is not a constant expression.
@@ -15826,6 +15909,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return Error(E);
     return true;
 
+  case Builtin::BI__builtin_elementwise_abs:
   case Builtin::BI__builtin_fabs:
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:

@@ -416,7 +416,10 @@ hlfir::Entity hlfir::loadTrivialScalar(mlir::Location loc,
   entity = derefPointersAndAllocatables(loc, builder, entity);
   if (entity.isVariable() && entity.isScalar() &&
       fir::isa_trivial(entity.getFortranElementType())) {
-    return Entity{fir::LoadOp::create(builder, loc, entity)};
+    // Optional entities may be represented with !fir.box<i32/f32/...>.
+    // We need to take the data pointer before loading the scalar.
+    mlir::Value base = genVariableRawAddress(loc, builder, entity);
+    return Entity{fir::LoadOp::create(builder, loc, base)};
   }
   return entity;
 }
