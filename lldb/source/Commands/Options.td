@@ -57,7 +57,7 @@ let Command = "settings clear" in {
 }
 
 let Command = "settings show" in {
-  def setshow_include_defaults : Option<"include-defaults", "d">,
+  def setshow_defaults : Option<"defaults", "d">,
     Desc<"Include default values if defined.">;
 }
 
