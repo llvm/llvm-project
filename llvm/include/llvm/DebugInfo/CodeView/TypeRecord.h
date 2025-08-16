@@ -952,6 +952,19 @@ public:
   uint32_t Signature = 0;
 };
 
+// LF_ALIAS
+class AliasRecord : public TypeRecord {
+public:
+  AliasRecord() = default;
+  explicit AliasRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+  AliasRecord(TypeIndex UnderlyingType, StringRef Name)
+      : TypeRecord(TypeRecordKind::Alias), UnderlyingType(UnderlyingType), Name(Name) {}
+
+  TypeIndex UnderlyingType;
+  StringRef Name;
+
+};
+
 } // end namespace codeview
 } // end namespace llvm
 

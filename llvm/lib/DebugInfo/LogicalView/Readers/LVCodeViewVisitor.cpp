@@ -2623,6 +2623,18 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record,
   return Error::success();
 }
 
+// LF_ALIAS (TPI)
+Error LVLogicalVisitor::visitKnownRecord(CVType &Record, AliasRecord &Alias,
+                                         TypeIndex TI, LVElement *Element) {
+  LLVM_DEBUG({
+    printTypeBegin(Record, TI, Element, StreamTPI);
+    printTypeIndex("UnderlyingType", Alias.UnderlyingType, StreamTPI);
+    W.printString("Name", Alias.Name);
+    printTypeEnd(Record);
+  });
+  return Error::success();
+}
+
 Error LVLogicalVisitor::visitUnknownMember(CVMemberRecord &Record,
                                            TypeIndex TI) {
   LLVM_DEBUG({ W.printHex("UnknownMember", unsigned(Record.Kind)); });

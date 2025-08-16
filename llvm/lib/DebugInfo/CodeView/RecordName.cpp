@@ -251,6 +251,11 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR,
   return Error::success();
 }
 
+Error TypeNameComputer::visitKnownRecord(CVType &CVR, AliasRecord &Alias) {
+  Name = Alias.Name;
+  return Error::success();
+}
+
 std::string llvm::codeview::computeTypeName(TypeCollection &Types,
                                             TypeIndex Index) {
   TypeNameComputer Computer(Types);

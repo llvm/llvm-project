@@ -1,0 +1,8 @@
+RUN: llvm-pdbutil dump -type-index=0x348A,0x348C %p/Inputs/typedef.pdb \
+RUN: | FileCheck --check-prefix=TYPES %s
+
+TYPES:                           Types (TPI Stream)
+TYPES-NEXT:============================================================
+TYPES-NEXT:  Showing 2 records.
+TYPES-NEXT:   0x348A | LF_ALIAS [size = 12] alias = u8, underlying type = 0x0020 (unsigned char)
+TYPES-NEXT:   0x348C | LF_ALIAS [size = 12] alias = i64, underlying type = 0x0013 (__int64)
