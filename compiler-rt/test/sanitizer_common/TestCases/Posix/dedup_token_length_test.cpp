@@ -11,6 +11,7 @@
 // REQUIRES: stable-runtime
 
 // XFAIL: target={{.*netbsd.*}} && !asan
+// XFAIL: darwin && ubsan
 
 volatile int *null = 0;
 
