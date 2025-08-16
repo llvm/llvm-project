@@ -96,6 +96,7 @@ add_llvm_component_library(LLVMScalarOpts
   Analysis
   Core
   InstCombine
+  ProfileData
   Support
   TransformUtils
   )
