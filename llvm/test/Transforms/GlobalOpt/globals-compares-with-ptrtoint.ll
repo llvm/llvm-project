@@ -21,6 +21,8 @@
 ; CHECK: @C = internal global i64 0
 ; CHECK: @D = internal global i64 0
 ; CHECK: @G = internal global i64 0
+; CHECK: @H = internal global i64 0
+; CHECK: @J = internal global [2 x ptr] zeroinitializer
 ;.
 define i64 @A_and_B_cmp_ptrtoint_constant_expr() {
 ; CHECK-LABEL: define i64 @A_and_B_cmp_ptrtoint_constant_expr() local_unnamed_addr {
@@ -153,7 +155,8 @@ define ptr @compare_arg(ptr %a) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], @J
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    ret ptr null
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr @J, align 8
+; CHECK-NEXT:    ret ptr [[L]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret ptr null
 ;
