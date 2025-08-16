@@ -1664,6 +1664,27 @@ implicit none
     end function
   end interface
 
+  interface __log2f
+    attributes(device) real function __log2f(r) bind(c, name='__nv_log2f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __log10f
+    attributes(device) real function __log10f(r) bind(c, name='__nv_log10f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __logf
+    attributes(device) real function __logf(r) bind(c, name='__nv_logf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()
