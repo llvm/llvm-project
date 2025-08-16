@@ -1,0 +1,388 @@
+# RUN: yaml2obj %s -o %t.in.o
+
+# RUN: llvm-readobj -r -s  -x '.gehcont$y' %t.in.o | FileCheck %s --check-prefix=ORIG
+# RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
+# RUN: llvm-readobj -r -s  -x '.gehcont$y' %t.out.o | FileCheck %s --check-prefix=STRIP
+
+# ORIG:      Symbols [
+# ORIG:          Name: .text
+# ORIG:          Name: .data
+# ORIG:          Name: .bss
+# ORIG:          Name: .text
+# ORIG:          Name: ?foo@@YAXXZ
+# ORIG:          Name: .data
+# ORIG:          Name: ??_R0H@8
+# ORIG:          Name: .debug$S
+# ORIG:          Name: .gehcont$y
+# ORIG:          Name: .pdata
+# ORIG:          Name: @feat.00
+# ORIG:          Name: ?foo2@@YAXXZ
+# ORIG:          Name: $ehgcr_0_1
+# ORIG:      Hex dump of section '.gehcont$y':
+# ORIG-NEXT: 0x00000000 18000000 18000000 18000000          ............
+
+# .debug$S is going to be stripped and $ehgcr_0_1 index is decreased by 2
+
+# STRIP:      Symbols [
+# STRIP:          Name: .text
+# STRIP:          Name: .data
+# STRIP:          Name: .bss
+# STRIP:          Name: .text
+# STRIP:          Name: ?foo@@YAXXZ
+# STRIP:          Name: .data
+# STRIP:          Name: ??_R0H@8
+# STRIP:          Name: .drectve
+# STRIP:          Name: .gehcont$y
+# STRIP:          Name: .pdata
+# STRIP:          Name: @feat.00
+# STRIP:          Name: ?foo2@@YAXXZ
+# STRIP:          Name: $ehgcr_0_1
+# STRIP:      Hex dump of section '.gehcont$y':
+# STRIP-NEXT: 0x00000000 16000000 16000000 16000000          ............
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     554883EC30488D6C243048C745F0FEFFFFFFE800000000904883C4305DC366904889542410554883EC20488D6A30488D05E2FFFFFF4883C4205DC3
+    SizeOfRawData:   59
+    Relocations:
+      - VirtualAddress:  19
+        SymbolName:      '?foo2@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       16
+    SectionData:     '000000000000000000000000000000002E48000000000000'
+    SizeOfRawData:   24
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      '??_7type_info@@6B@'
+        Type:            IMAGE_REL_AMD64_ADDR64
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     202F44454641554C544C49423A6C6962636D742E6C6962202F44454641554C544C49423A6C69626972636D742E6C6962202F44454641554C544C49423A73766D6C5F646973706D742E6C6962202F44454641554C544C49423A6C69626D6D742E6C6962202F44454641554C544C49423A6F6C646E616D65732E6C6962
+    SizeOfRawData:   124
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     04000000F1000000380000000A00011100000000000000002A003C1101000000D000EA070000000000000852000000000000536F6D6520646562756720696E666F000000
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      ''
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   2026
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    21000
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         Some debug info
+    SizeOfRawData:   68
+  - Name:            '.gehcont$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '180000001800000018000000'
+    SizeOfRawData:   12
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     190A03350A030552015000000000000000000000190E02000A320650000000000000000022059319020000000000000001000000000000000400000000000000200000000000000001000000FFFFFFFF00000000FFFFFFFF00000000000000000000000001000000010000000000000000000000000000002C000000000000003800000000000000FFFFFFFF130000000000000018000000FFFFFFFF0000000001000000
+    SizeOfRawData:   164
+    Relocations:
+      - VirtualAddress:  12
+        SymbolName:      __CxxFrameHandler3
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  16
+        SymbolName:      '$cppxdata$?foo@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  28
+        SymbolName:      __CxxFrameHandler3
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  32
+        SymbolName:      '$cppxdata$?foo@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  44
+        SymbolName:      '$stateUnwindMap$?foo@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  52
+        SymbolName:      '$tryMap$?foo@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  60
+        SymbolName:      '$ip2state$?foo@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  108
+        SymbolName:      '$handlerMap$0$?foo@@YAXXZ'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  116
+        SymbolName:      '??_R0H@8'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  124
+        SymbolName:      '?catch$2@?0??foo@@YAXXZ@4HA'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  132
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  140
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  148
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  156
+        SymbolName:      '?catch$2@?0??foo@@YAXXZ@4HA'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     000000001E00000000000000200000003B00000014000000
+    SizeOfRawData:   24
+    Relocations:
+      - VirtualAddress:  0
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  8
+        SymbolName:      .xdata
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  12
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  16
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  20
+        SymbolName:      .xdata
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            .data
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            .bss
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          3
+  - Name:            .text
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          59
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        517419950
+      Number:          4
+      Selection:       IMAGE_COMDAT_SELECT_NODUPLICATES
+  - Name:            '?foo@@YAXXZ'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          164
+      NumberOfRelocations: 14
+      NumberOfLinenumbers: 0
+      CheckSum:        135891540
+      Number:          4
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            .data
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          24
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        2602060666
+      Number:          5
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            '??_R0H@8'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .drectve
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          124
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1122646683
+      Number:          6
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          68
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        82254810
+      Number:          7
+  - Name:            '.gehcont$y'
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        820498156
+      Number:          8
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   10
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          24
+      NumberOfRelocations: 6
+      NumberOfLinenumbers: 0
+      CheckSum:        3872633945
+      Number:          4
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            '@feat.00'
+    Value:           16384
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '?foo2@@YAXXZ'
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '$ehgcr_0_1'
+    Value:           23
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            __CxxFrameHandler3
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '$cppxdata$?foo@@YAXXZ'
+    Value:           36
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '?catch$2@?0??foo@@YAXXZ@4HA'
+    Value:           32
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '$stateUnwindMap$?foo@@YAXXZ'
+    Value:           76
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '$tryMap$?foo@@YAXXZ'
+    Value:           92
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '$ip2state$?foo@@YAXXZ'
+    Value:           132
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '$handlerMap$0$?foo@@YAXXZ'
+    Value:           112
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '??_7type_info@@6B@'
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

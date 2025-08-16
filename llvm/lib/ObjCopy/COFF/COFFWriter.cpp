@@ -94,13 +94,17 @@ Error COFFWriter::finalizeSymbolContents() {
   return Error::success();
 }
 
-Error COFFWriter::finalizeCFGuardContents() {
+Error COFFWriter::finalizeSymIdxContents() {
   // CFGuards shouldn't be present in PE
   if (Obj.IsPE)
     return Error::success();
 
+  // Currently handle only sections consisting only of .symidx.
+  // TODO: other sections such as .impcall and .hybmp$x require more complex
+  // handling as they have more complex layout.
   auto IsSymIdxSection = [](StringRef Name) {
-    return Name == ".gljmp$y" || Name == ".giats$y" || Name == ".gfids$y";
+    return Name == ".gljmp$y" || Name == ".giats$y" || Name == ".gfids$y" ||
+           Name == ".gehcont$y";
   };
 
   DenseMap<size_t, size_t> SymIdMap;
@@ -254,7 +258,7 @@ Error COFFWriter::finalize(bool IsBigObj) {
     return E;
   if (Error E = finalizeSymbolContents())
     return E;
-  if (Error E = finalizeCFGuardContents())
+  if (Error E = finalizeSymIdxContents())
     return E;
 
   size_t SizeOfHeaders = 0;
