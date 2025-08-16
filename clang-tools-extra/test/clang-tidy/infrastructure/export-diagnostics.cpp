@@ -18,10 +18,10 @@ struct Foo {
 // CHECK-MESSAGES: {{^}}note: expanded from here{{$}}
 // CHECK-MESSAGES: -input.cpp:2:1: note: declare 'static' if the function is not intended to be used outside of this translation unit
 // CHECK-MESSAGES: -input.cpp:1:14: note: expanded from macro 'X'
-// CHECK-MESSAGES: -input.cpp:3:7: error: 'a' declared as an array with a negative size [clang-diagnostic-error]
+// CHECK-MESSAGES: -input.cpp:3:7: error: 'a' declared as an array with a negative size [clang-compiler-error]
 // CHECK-MESSAGES: -input.cpp:4:7: warning: zero size arrays are an extension [clang-diagnostic-zero-length-array]
-// CHECK-MESSAGES: -input.cpp:6:11: error: unknown type name 'x' [clang-diagnostic-error]
-// CHECK-MESSAGES: -input.cpp:8:3: error: a type specifier is required for all declarations [clang-diagnostic-error]
+// CHECK-MESSAGES: -input.cpp:6:11: error: unknown type name 'x' [clang-compiler-error]
+// CHECK-MESSAGES: -input.cpp:8:3: error: a type specifier is required for all declarations [clang-compiler-error]
 // CHECK-MESSAGES: -input.cpp:9:3: error: single-argument constructors must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor,-warnings-as-errors]
 
 // CHECK-YAML: ---
@@ -56,7 +56,7 @@ struct Foo {
 // CHECK-YAML-NEXT:         Replacements:    []
 // CHECK-YAML-NEXT:     Level:           Error
 // CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
-// CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-error
+// CHECK-YAML-NEXT:   - DiagnosticName:  clang-compiler-error
 // CHECK-YAML-NEXT:     DiagnosticMessage:
 // CHECK-YAML-NEXT:       Message:         '''a'' declared as an array with a negative size'
 // CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
@@ -80,7 +80,7 @@ struct Foo {
 // CHECK-YAML-NEXT:          Length:          1
 // CHECK-YAML-NEXT:     Level:           Warning
 // CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
-// CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-error
+// CHECK-YAML-NEXT:   - DiagnosticName:  clang-compiler-error
 // CHECK-YAML-NEXT:     DiagnosticMessage:
 // CHECK-YAML-NEXT:       Message:         'unknown type name ''x'''
 // CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
@@ -88,7 +88,7 @@ struct Foo {
 // CHECK-YAML-NEXT:       Replacements:    []
 // CHECK-YAML-NEXT:     Level:           Error
 // CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
-// CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-error
+// CHECK-YAML-NEXT:   - DiagnosticName:  clang-compiler-error
 // CHECK-YAML-NEXT:     DiagnosticMessage:
 // CHECK-YAML-NEXT:       Message:         a type specifier is required for all declarations
 // CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'

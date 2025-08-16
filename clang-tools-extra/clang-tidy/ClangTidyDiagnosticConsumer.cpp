@@ -409,16 +409,16 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       switch (DiagLevel) {
       case DiagnosticsEngine::Error:
       case DiagnosticsEngine::Fatal:
-        CheckName = "clang-diagnostic-error";
+        CheckName = "clang-compiler-error";
         break;
       case DiagnosticsEngine::Warning:
-        CheckName = "clang-diagnostic-warning";
+        CheckName = "clang-compiler-warning";
         break;
       case DiagnosticsEngine::Remark:
-        CheckName = "clang-diagnostic-remark";
+        CheckName = "clang-compiler-remark";
         break;
       default:
-        CheckName = "clang-diagnostic-unknown";
+        CheckName = "clang-compiler-unknown";
         break;
       }
     }

@@ -8,5 +8,5 @@ using n::C;
 
 void f() {
   for (C *p : unknown()) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: error: use of undeclared identifier 'unknown' [clang-diagnostic-error]
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: error: use of undeclared identifier 'unknown' [clang-compiler-error]
 }

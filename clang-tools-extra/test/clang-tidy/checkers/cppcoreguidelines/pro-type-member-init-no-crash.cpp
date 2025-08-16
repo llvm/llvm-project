@@ -2,7 +2,7 @@
 
 struct X {
   X x;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: error: field has incomplete type 'X' [clang-diagnostic-error]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: error: field has incomplete type 'X' [clang-compiler-error]
   int a = 10;
 };
 

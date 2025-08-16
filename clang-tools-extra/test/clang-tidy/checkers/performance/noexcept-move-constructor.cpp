@@ -408,8 +408,8 @@ template <typename value_type> class set {
 
 #ifdef ENABLE_ERROR
   set(initializer_list<value_type> __l) {};
-  // CHECK-MESSAGES-ERR: :[[@LINE-1]]:7: error: member 'initializer_list' cannot have template arguments [clang-diagnostic-error]
-  // CHECK-MESSAGES-ERR: :[[@LINE-2]]:36: error: expected ')' [clang-diagnostic-error]
+  // CHECK-MESSAGES-ERR: :[[@LINE-1]]:7: error: member 'initializer_list' cannot have template arguments [clang-compiler-error]
+  // CHECK-MESSAGES-ERR: :[[@LINE-2]]:36: error: expected ')' [clang-compiler-error]
 #endif
 };
 
