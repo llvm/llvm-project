@@ -1951,6 +1951,8 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
                   clauses.privateNeedsBarrier, clauses.threadLimit,
+                  clauses.modifierFirst, clauses.modifierSecond,
+                  clauses.dynGroupprivateSize,
                   /*private_maps=*/nullptr);
 }
 
@@ -2340,7 +2342,8 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                  clauses.reductionVars,
                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                  makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit);
+                 clauses.threadLimit, clauses.modifierFirst,
+                 clauses.modifierSecond, clauses.dynGroupprivateSize);
 }
 
 LogicalResult TeamsOp::verify() {
