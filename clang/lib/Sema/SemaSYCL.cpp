@@ -463,9 +463,10 @@ class OutlinedFunctionDeclBodyInstantiator
 public:
   using ParmDeclMap = llvm::DenseMap<ParmVarDecl *, VarDecl *>;
 
-  OutlinedFunctionDeclBodyInstantiator(Sema &S, ParmDeclMap &M)
+  OutlinedFunctionDeclBodyInstantiator(Sema &S, ParmDeclMap &M,
+                                       FunctionDecl *FD)
       : TreeTransform<OutlinedFunctionDeclBodyInstantiator>(S), SemaRef(S),
-        MapRef(M) {}
+        MapRef(M), FD(FD) {}
 
   // A new set of AST nodes is always required.
   bool AlwaysRebuild() { return true; }
@@ -491,9 +492,20 @@ public:
     return DRE;
   }
 
+  // Diagnose CXXThisExpr in a potentially evaluated expression.
+  ExprResult TransformCXXThisExpr(CXXThisExpr *CTE) {
+    if (SemaRef.currentEvaluationContext().isPotentiallyEvaluated()) {
+      SemaRef.Diag(CTE->getExprLoc(), diag::err_sycl_entry_point_invalid_this)
+          << (CTE->isImplicitCXXThis() ? /* implicit */ 1 : /* empty */ 0)
+          << FD->getAttr<SYCLKernelEntryPointAttr>();
+    }
+    return CTE;
+  }
+
 private:
   Sema &SemaRef;
   ParmDeclMap &MapRef;
+  FunctionDecl *FD;
 };
 
 OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
@@ -518,7 +530,8 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   // evaluated contexts in the function body. This is not necessarily the
   // right place to add such a diagnostic.
 
-  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap);
+  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap,
+                                                           FD);
   Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
   OFD->setBody(OFDBody);
   OFD->setNothrow();

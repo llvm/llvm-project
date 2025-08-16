@@ -13265,6 +13265,9 @@ def err_sycl_entry_point_invalid : Error<
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
+def err_sycl_entry_point_invalid_this : Error<
+  "'this' cannot be%select{| implicitly}0 used in a potentially evaluated"
+  " expression in the body of a function declared with the %1 attribute">;
 def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
