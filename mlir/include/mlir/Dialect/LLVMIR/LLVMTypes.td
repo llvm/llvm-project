@@ -293,7 +293,10 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 // LLVMTargetExtType
 //===----------------------------------------------------------------------===//
 
-def LLVMTargetExtType : LLVMType<"LLVMTargetExt", "target"> {
+def LLVMTargetExtType
+    : LLVMType<
+          "LLVMTargetExt",
+          "target", [VectorElementTypeInterface, MemRefElementTypeInterface]> {
   let summary = "LLVM target-specific extension type";
   let description = [{
     LLVM dialect target extension type, which are generally unintrospectable
