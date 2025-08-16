@@ -3,7 +3,7 @@
 
 // CHECK-LABEL: func.func @main
 func.func @main() {
-  // CHECK-NEXT: %[[RESULT:.*]] = arith.constant 2 : i32
+  // CHECK-NEXT: %[[RESULT:.*]] = arith.constant 3 : i32
   // CHECK-NEXT: {{.*}} = "test.op_crash"(%[[RESULT]], %[[RESULT]]) : (i32, i32) -> i32
   // CHECK-NEXT return
 

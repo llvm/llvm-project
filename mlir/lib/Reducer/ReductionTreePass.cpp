@@ -68,8 +68,10 @@ static void applyPatterns(Region &region,
         size_t index = operandTie.index();
         auto operand = operandTie.value();
         for (auto candidate : valueMap[operand.getType()])
-          if (domInfo.properlyDominates(candidate, op))
+          if (domInfo.properlyDominates(candidate, op)) {
             op->setOperand(index, candidate);
+            break;
+          }
       }
 
     // `applyOpPatternsGreedily` with folding returns whether the op is
