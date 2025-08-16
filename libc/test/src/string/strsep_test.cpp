@@ -53,6 +53,14 @@ TEST(LlvmLibcStrsepTest, DelimitersShouldNotBeIncludedInToken) {
   }
 }
 
+TEST(LlvmLibcStrsepTest, SubsequentSearchesReturnNull) {
+  char s[] = "a";
+  char *string = s;
+  ASSERT_STREQ(LIBC_NAMESPACE::strsep(&string, ":"), "a");
+  ASSERT_EQ(LIBC_NAMESPACE::strsep(&string, ":"), nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::strsep(&string, ":"), nullptr);
+}
+
 #if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcStrsepTest, CrashOnNullPtr) {
