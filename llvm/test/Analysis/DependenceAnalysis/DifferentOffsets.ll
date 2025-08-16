@@ -149,11 +149,18 @@ define void @multidim_accesses(ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
-; CHECK-NEXT:    da analyze - consistent output [0 0 0|<]!
+; CHECK-NEXT:    da analyze - output [<= * *|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
-; FIXME: the dependence distance is not constant. Distance vector should be [* * *|<]!
+; NOTE: the dependence distance between the two stores at idx0 and idx1 is not constant.
+; The dependence direction vector should be "[<= * *|<]!"
+;
+; The memory accesses used to be GEP-delinearized leading to 32b and 64b stores
+; with the same subscript access functions to the same array A, leading the
+; dependence analysis to incorrect constant distance "[0 0 0|<]!" dependences.
+; The distance is not constant: 64b store's strides in memory is twice the 32b store.
+;
 ; for (i = 0; i < 256; i++)
 ;   for (j = 0; j < 256; j++)
 ;      for (k = 0; k < 256; k++) {

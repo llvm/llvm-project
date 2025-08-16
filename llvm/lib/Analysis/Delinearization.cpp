@@ -41,10 +41,6 @@ static cl::opt<bool> UseFixedSizeArrayHeuristic(
     cl::desc("When printing analysis, use the heuristic for fixed-size arrays "
              "if the default delinearizetion fails."));
 
-static cl::opt<bool> useGEPToDelinearize(
-    "use-gep-to-delinearize", cl::init(true), cl::Hidden,
-    cl::desc("validate both delinearization methods match."));
-
 // Return true when S contains at least an undef value.
 static inline bool containsUndefs(const SCEV *S) {
   return SCEVExprContains(S, [](const SCEV *S) {
@@ -848,56 +844,6 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
-bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
-                                      const GetElementPtrInst *GEP,
-                                      SmallVectorImpl<const SCEV *> &Subscripts,
-                                      SmallVectorImpl<int> &Sizes) {
-  assert(Subscripts.empty() && Sizes.empty() &&
-         "Expected output lists to be empty on entry to this function.");
-  assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
-  LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
-  Type *Ty = nullptr;
-  bool DroppedFirstDim = false;
-  for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
-    const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
-    if (i == 1) {
-      Ty = GEP->getSourceElementType();
-      if (auto *Const = dyn_cast<SCEVConstant>(Expr))
-        if (Const->getValue()->isZero()) {
-          DroppedFirstDim = true;
-          continue;
-        }
-      Subscripts.push_back(Expr);
-      LLVM_DEBUG(dbgs() << "Subscripts push_back: " << *Expr << "\n");
-      continue;
-    }
-
-    auto *ArrayTy = dyn_cast<ArrayType>(Ty);
-    if (!ArrayTy) {
-      LLVM_DEBUG(dbgs() << "GEP delinearize failed: " << *Ty
-                        << " is not an array type.\n");
-      Subscripts.clear();
-      Sizes.clear();
-      return false;
-    }
-
-    Subscripts.push_back(Expr);
-    LLVM_DEBUG(dbgs() << "Subscripts push_back: " << *Expr << "\n");
-    if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(ArrayTy->getNumElements());
-
-    Ty = ArrayTy->getElementType();
-  }
-  LLVM_DEBUG({
-    dbgs() << "Subscripts:\n";
-    for (const SCEV *S : Subscripts)
-      dbgs() << *S << "\n";
-    dbgs() << "\n";
-  });
-
-  return !Subscripts.empty();
-}
-
 bool llvm::tryDelinearizeFixedSizeImpl(
     ScalarEvolution *SE, Instruction *Inst, const SCEV *AccessFn,
     SmallVectorImpl<const SCEV *> &Subscripts, SmallVectorImpl<int> &Sizes) {
@@ -943,133 +889,15 @@ bool llvm::tryDelinearizeFixedSizeImpl(
   // Array_info delinearization.
   SmallVector<const SCEV *, 4> SCEVSizes;
   const SCEV *ElementSize = SE->getElementSize(Inst);
-  bool ArrayInfoSuccess = delinearizeUsingArrayInfo(
-      *SE, AccessFn, ArrayInfoSubscripts, SCEVSizes, ElementSize);
+  if (!delinearizeUsingArrayInfo(*SE, AccessFn, Subscripts, SCEVSizes,
+                                 ElementSize))
+    return false;
 
   // TODO: Remove the following code. Convert SCEV sizes to int sizes. This
   // conversion is only needed as long as getIndexExpressionsFromGEP is still
   // around. Remove this code and change the interface of
   // tryDelinearizeFixedSizeImpl to take a SmallVectorImpl<const SCEV *> &Sizes.
-  if (ArrayInfoSuccess)
-    convertSCEVSizesToIntSizes(SCEVSizes, ArrayInfoSizes);
-
-  // Validate consistency between methods.
-  if (GEPSuccess && ArrayInfoSuccess) {
-    // If both methods succeeded, validate they produce the same results.
-    // Compare sizes arrays.
-    if (GEPSizes.size() + 2 != ArrayInfoSizes.size()) {
-      LLVM_DEBUG({
-        dbgs() << "WARN: Size arrays have different lengths!\n";
-        dbgs() << "GEP sizes count: " << GEPSizes.size() << "\n"
-               << "ArrayInfo sizes count: " << ArrayInfoSizes.size() << "\n";
-      });
-    }
-
-    for (size_t i = 0; i < GEPSizes.size(); ++i) {
-      if (GEPSizes[i] != ArrayInfoSizes[i + 1]) {
-        LLVM_DEBUG({
-          dbgs() << "WARN: Size arrays differ at index " << i << "!\n";
-          dbgs() << "GEP size[" << i << "]: " << GEPSizes[i] << "\n"
-                 << "ArrayInfo size[" << i + 1 << "]: " << ArrayInfoSizes[i + 1]
-                 << "\n";
-        });
-      }
-    }
-
-    // Compare subscripts arrays.
-    if (GEPSubscripts.size() != ArrayInfoSubscripts.size()) {
-      LLVM_DEBUG({
-        dbgs() << "WARN: Subscript arrays have different lengths!\n";
-        dbgs() << "  GEP subscripts count: " << GEPSubscripts.size() << "\n"
-               << "  ArrayInfo subscripts count: " << ArrayInfoSubscripts.size()
-               << "\n";
-
-        dbgs() << "  GEP subscripts:\n";
-        for (size_t i = 0; i < GEPSubscripts.size(); ++i)
-          dbgs() << "    subscript[" << i << "]: " << *GEPSubscripts[i] << "\n";
-
-        dbgs() << "  ArrayInfo subscripts:\n";
-        for (size_t i = 0; i < ArrayInfoSubscripts.size(); ++i)
-          dbgs() << "    subscript[" << i << "]: " << *ArrayInfoSubscripts[i]
-                 << "\n";
-      });
-    }
-
-    for (size_t i = 0; i < GEPSubscripts.size(); ++i) {
-      const SCEV *GEPS = GEPSubscripts[i];
-      const SCEV *AIS = ArrayInfoSubscripts[i];
-      // FIXME: there's no good way to compare two scevs: don't abort, warn.
-      if (GEPS != AIS || !SE->getMinusSCEV(GEPS, AIS)->isZero()) {
-        LLVM_DEBUG({
-          dbgs() << "WARN: Subscript arrays differ at index " << i << "!\n";
-          dbgs() << "  GEP subscript[" << i << "]: " << *GEPSubscripts[i]
-                 << "\n"
-                 << "  ArrayInfo subscript[" << i
-                 << "]: " << *ArrayInfoSubscripts[i] << "\n";
-        });
-      }
-    }
-
-    LLVM_DEBUG(dbgs() << "SUCCESS: Both delinearization methods produced "
-                         "identical results\n");
-  } else if (GEPSuccess && !ArrayInfoSuccess) {
-    LLVM_DEBUG({
-      dbgs() << "WARNING: array_info failed and GEP analysis succeeded.\n";
-      dbgs() << "  Instruction: " << *Inst << "\n";
-      dbgs() << "  Using GEP analysis results despite array_info failure\n";
-    });
-  } else if (!GEPSuccess && ArrayInfoSuccess) {
-    LLVM_DEBUG({
-      dbgs() << "WARNING: GEP failed and array_info analysis succeeded.\n";
-      dbgs() << "  Instruction: " << *Inst << "\n";
-      dbgs() << "  Using array_info analysis results despite GEP failure\n";
-    });
-  } else if (!GEPSuccess && !ArrayInfoSuccess) {
-    LLVM_DEBUG({
-      dbgs() << "WARNING: both GEP and array_info analysis failed.\n";
-      dbgs() << "  Instruction: " << *Inst << "\n";
-    });
-  }
-
-  // Choose which result to use.
-  // Prefer array_info when available.
-  if (ArrayInfoSuccess) {
-    Subscripts = std::move(ArrayInfoSubscripts);
-    Sizes = std::move(ArrayInfoSizes);
-    return true;
-  }
-
-  // Both failed.
-  if (!GEPSuccess)
-    return false;
-
-  // Return GEP-based delinearization.
-  Subscripts = std::move(GEPSubscripts);
-  Sizes = std::move(GEPSizes);
-
-  // Check that the two size arrays are non-empty and equal in length and
-  // value.
-  // TODO: it would be better to let the caller to clear Subscripts, similar
-  // to how we handle Sizes.
-  if (Sizes.empty() || Subscripts.size() <= 1) {
-    Subscripts.clear();
-    return false;
-  }
-
-  // Check that for identical base pointers we do not miss index offsets
-  // that have been added before this GEP is applied.
-  Value *SrcBasePtr = SrcGEP->getOperand(0)->stripPointerCasts();
-  const SCEVUnknown *SrcBase =
-      dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-  if (!SrcBase || SrcBasePtr != SrcBase->getValue()) {
-    Subscripts.clear();
-    return false;
-  }
-
-  assert(Subscripts.size() == Sizes.size() + 1 &&
-         "Expected equal number of entries in the list of size and "
-         "subscript.");
-
+  convertSCEVSizesToIntSizes(SCEVSizes, Sizes);
   return true;
 }
 

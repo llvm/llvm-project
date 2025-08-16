@@ -23,8 +23,8 @@
 ;        E[j] = 1
 ; }
 
-; CHECK: Loop 'for.j' has cost = 18
-; CHECK-NEXT: Loop 'for.i' has cost = 10
+; CHECK: Loop 'for.j' has cost = 12
+; CHECK-NEXT: Loop 'for.i' has cost = 8
 
 define void @test() {
 
