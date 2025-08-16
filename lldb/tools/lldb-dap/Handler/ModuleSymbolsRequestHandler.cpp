@@ -53,7 +53,8 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
 
   const size_t num_symbols = module.GetNumSymbols();
   const size_t start_index = args.startIndex.value_or(0);
-  const size_t end_index = std::min(start_index + args.count.value_or(num_symbols), num_symbols);
+  const size_t end_index =
+      std::min(start_index + args.count.value_or(num_symbols), num_symbols);
   for (size_t i = start_index; i < end_index; ++i) {
     lldb::SBSymbol symbol = module.GetSymbolAtIndex(i);
     if (!symbol.IsValid())

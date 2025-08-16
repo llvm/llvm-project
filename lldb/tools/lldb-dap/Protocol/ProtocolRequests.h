@@ -988,7 +988,8 @@ struct ModuleSymbolsArguments {
   /// The module path.
   std::string moduleName;
 
-  /// The index of the first symbol to return; if omitted, start at the beginning.
+  /// The index of the first symbol to return; if omitted, start at the
+  /// beginning.
   std::optional<uint32_t> startIndex;
 
   /// The number of symbols to return; if omitted, all symbols are returned.
