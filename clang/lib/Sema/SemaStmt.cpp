@@ -3533,8 +3533,6 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
         return StmtError();
       RetValExp = ER.get();
     }
-    return ReturnStmt::Create(Context, ReturnLoc, RetValExp,
-                              /* NRVOCandidate=*/nullptr);
   }
 
   if (HasDeducedReturnType) {
