@@ -8772,8 +8772,35 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // Propagate any NaN of both operands
   if (!N->getFlags().hasNoNaNs() &&
       (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
-    ConstantFP *FPNaN = ConstantFP::get(*DAG.getContext(),
-                                        APFloat::getNaN(VT.getFltSemantics()));
+    ConstantFP *FPNaN = NULL;
+    bool hasNaN2008 = false;
+    if (DAG.getTarget().getTargetTriple().isMIPS()) {
+      const MCSubtargetInfo *STI = getTargetMachine().getMCSubtargetInfo();
+      StringRef FeatureString = STI->getFeatureString();
+      SubtargetFeatures Features(FeatureString);
+      for (const std::string &Feature : Features.getFeatures()) {
+        if (Feature == "+nan2008")
+          hasNaN2008 = true;
+      }
+      if (hasNaN2008 == false) {
+        if (&VT.getFltSemantics() == &APFloat::IEEEsingle()) {
+          APInt intPayload(64, 0xbfffff);
+          FPNaN = ConstantFP::get(
+              *DAG.getContext(),
+              APFloat::getSNaN(VT.getFltSemantics(), false, &intPayload));
+        } else if (&VT.getFltSemantics() == &APFloat::IEEEdouble()) {
+          APInt intPayload(64, 0x7ffffffffffff);
+          FPNaN = ConstantFP::get(
+              *DAG.getContext(),
+              APFloat::getSNaN(VT.getFltSemantics(), false, &intPayload));
+        }
+      } else
+        FPNaN = ConstantFP::get(*DAG.getContext(),
+                                APFloat::getNaN(VT.getFltSemantics()));
+    } else
+      FPNaN = ConstantFP::get(*DAG.getContext(),
+                              APFloat::getNaN(VT.getFltSemantics()));
+
     MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
                            DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
   }
