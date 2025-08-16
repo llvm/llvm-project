@@ -35,7 +35,7 @@ export class SymbolsProvider extends DisposableContext {
   static async doesServerSupportSymbolsRequest(session: vscode.DebugSession): Promise<boolean> {
     try {
       const dummyArguments = { _dummy: true };
-      await session.customRequest("dapGetModuleSymbols", dummyArguments);
+      await session.customRequest("moduleSymbols", dummyArguments);
       return true;
     } catch (_error) {
       return false;
@@ -86,7 +86,7 @@ export class SymbolsProvider extends DisposableContext {
 
   private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbolType[]> {
     console.log(`Getting symbols for module: ${moduleId}`);
-    const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("dapGetModuleSymbols", { moduleId });
+    const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("moduleSymbols", { moduleId });
 
 
     return symbols_response?.symbols || [];
