@@ -1373,10 +1373,13 @@ static bool checkTupleLikeDecomposition(Sema &S,
         S.BuildReferenceType(T, E.get()->isLValue(), Loc, B->getDeclName());
     if (RefType.isNull())
       return true;
-    auto *RefVD = VarDecl::Create(
-        S.Context, Src->getDeclContext(), Loc, Loc,
-        B->getDeclName().getAsIdentifierInfo(), RefType,
-        S.Context.getTrivialTypeSourceInfo(T, Loc), Src->getStorageClass());
+
+    // Don't give this VarDecl a TypeSourceInfo, since this is a synthesized
+    // entity and this type was never written in source code.
+    auto *RefVD =
+        VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
+                        B->getDeclName().getAsIdentifierInfo(), RefType,
+                        /*TInfo=*/nullptr, Src->getStorageClass());
     RefVD->setLexicalDeclContext(Src->getLexicalDeclContext());
     RefVD->setTSCSpec(Src->getTSCSpec());
     RefVD->setImplicit();
