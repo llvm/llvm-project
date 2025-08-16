@@ -1336,6 +1336,11 @@ feature_test_macros = [
             "headers": ["string"],
         },
         {
+            "name": "__cpp_lib_string_subview",
+            "values": {"c++26": 202506},
+            "headers": ["string", "string_view"],
+        },
+        {
             "name": "__cpp_lib_string_udls",
             "values": {"c++14": 201304},
             "headers": ["string"],
