@@ -6745,6 +6745,22 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // value.
   bool IsReference = D->getType()->isReferenceType();
 
+  // Function parameters.
+  // Note that it's important to check them first since we might have a local
+  // variable created for a ParmVarDecl as well.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
+        !D->getType()->isIntegralOrEnumerationType()) {
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
+    }
+    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+      if (IsReference || !It->second.IsPtr)
+        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
+
+      return this->emitGetPtrParam(It->second.Offset, E);
+    }
+  }
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
@@ -6761,20 +6777,6 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
-  }
-  // Function parameters.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
-    if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
-        !D->getType()->isIntegralOrEnumerationType()) {
-      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
-                                      /*InitializerFailed=*/false, E);
-    }
-    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-      if (IsReference || !It->second.IsPtr)
-        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
-
-      return this->emitGetPtrParam(It->second.Offset, E);
-    }
   }
 
   // In case we need to re-visit a declaration.
