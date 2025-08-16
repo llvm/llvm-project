@@ -139,6 +139,24 @@ ArrayRef<EnumEntry<StaticBorderColor>> dxbc::getStaticBorderColors() {
   return ArrayRef(StaticBorderColorValues);
 }
 
+#define DESCRIPTOR_RANGE(Val, Enum) {#Enum, DescriptorRangeType::Enum},
+static const EnumEntry<DescriptorRangeType> DescriptorRangeTypeValues[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeType>> dxbc::getDescriptorRangeTypes() {
+  return ArrayRef(DescriptorRangeTypeValues);
+}
+
+static const EnumEntry<RootSignatureVersion> RootSignatureVersionsValues[] = {
+    {"V1_0", RootSignatureVersion::V1_0},
+    {"V1_1", RootSignatureVersion::V1_1},
+};
+
+ArrayRef<EnumEntry<RootSignatureVersion>> dxbc::getRootSignatureVersions() {
+  return ArrayRef(RootSignatureVersionsValues);
+}
+
 #define ROOT_PARAMETER(Val, Enum) {#Enum, RootParameterType::Enum},
 
 static const EnumEntry<RootParameterType> RootParameterTypes[] = {

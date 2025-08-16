@@ -8,6 +8,7 @@
 
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
@@ -35,27 +36,33 @@ size_t RootSignatureDesc::getSize() const {
       StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
   for (const RootParameterInfo &I : ParametersContainer) {
-    switch (I.Header.ParameterType) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+    if (!dxbc::isValidParameterType(I.Header.ParameterType))
+      continue;
+
+    dxbc::RootParameterType PT =
+        static_cast<dxbc::RootParameterType>(I.Header.ParameterType);
+
+    switch (PT) {
+    case dxbc::RootParameterType::Constants32Bit:
       Size += sizeof(dxbc::RTS0::v1::RootConstants);
       break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      if (Version == 1)
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == dxbc::RootSignatureVersion::V1_0)
         Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
         Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
 
       break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+    case dxbc::RootParameterType::DescriptorTable:
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(I.Location);
 
       // 4 bytes for the number of ranges in table and
       // 4 bytes for the ranges offset
       Size += 2 * sizeof(uint32_t);
-      if (Version == 1)
+      if (Version == dxbc::RootSignatureVersion::V1_0)
         Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
       else
         Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
@@ -97,8 +104,12 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   for (size_t I = 0; I < NumParameters; ++I) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
     const auto &[Type, Loc] = ParametersContainer.getTypeAndLocForParameter(I);
-    switch (Type) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+    if (!dxbc::isValidParameterType(Type))
+      continue;
+    dxbc::RootParameterType PT = static_cast<dxbc::RootParameterType>(Type);
+
+    switch (PT) {
+    case dxbc::RootParameterType::Constants32Bit: {
       const dxbc::RTS0::v1::RootConstants &Constants =
           ParametersContainer.getConstant(Loc);
       support::endian::write(BOS, Constants.ShaderRegister,
@@ -109,9 +120,9 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       break;
     }
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV: {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
           ParametersContainer.getRootDescriptor(Loc);
 
@@ -119,11 +130,11 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Descriptor.RegisterSpace,
                              llvm::endianness::little);
-      if (Version > 1)
+      if (Version > dxbc::RootSignatureVersion::V1_0)
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
       break;
     }
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    case dxbc::RootParameterType::DescriptorTable: {
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(Loc);
       support::endian::write(BOS, (uint32_t)Table.Ranges.size(),
@@ -137,7 +148,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                                llvm::endianness::little);
         support::endian::write(BOS, Range.RegisterSpace,
                                llvm::endianness::little);
-        if (Version > 1)
+        if (Version > dxbc::RootSignatureVersion::V1_0)
           support::endian::write(BOS, Range.Flags, llvm::endianness::little);
         support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
                                llvm::endianness::little);

@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/Support/Casting.h"
@@ -1218,9 +1219,9 @@ bool SemaHLSL::handleRootSignatureElements(
       ReportError(Loc, 0, 0xffffffef);
   };
 
-  const uint32_t Version =
-      llvm::to_underlying(SemaRef.getLangOpts().HLSLRootSigVer);
-  const uint32_t VersionEnum = Version - 1;
+  const llvm::dxbc::RootSignatureVersion Version =
+      SemaRef.getLangOpts().HLSLRootSigVer;
+  const uint32_t VersionEnum = static_cast<uint32_t>(Version) - 1;
   auto ReportFlagError = [this, &HadError, VersionEnum](SourceLocation Loc) {
     HadError = true;
     this->Diag(Loc, diag::err_hlsl_invalid_rootsig_flag)
@@ -1270,7 +1271,9 @@ bool SemaHLSL::handleRootSignatureElements(
       }
 
       if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
-              Version, llvm::to_underlying(Clause->Type),
+              Version,
+              llvm::dxbc::DescriptorRangeType(
+                  llvm::to_underlying(Clause->Type)),
               llvm::to_underlying(Clause->Flags)))
         ReportFlagError(Loc);
     }

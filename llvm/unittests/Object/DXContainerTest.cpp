@@ -8,6 +8,7 @@
 
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
@@ -848,7 +849,7 @@ TEST(RootSignature, RootParameters) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_1);
     ASSERT_EQ(RS.getNumParameters(), 1u);
     ASSERT_EQ(RS.getRootParametersOffset(), 36u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
@@ -856,8 +857,8 @@ TEST(RootSignature, RootParameters) {
     ASSERT_EQ(RS.getFlags(), 17u);
 
     auto RootParam = *RS.param_headers().begin();
-    ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
-    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
+    ASSERT_EQ(RootParam.ParameterType, dxbc::RootParameterType::Constants32Bit);
+    ASSERT_EQ(RootParam.ShaderVisibility, dxbc::ShaderVisibility::Hull);
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
@@ -889,7 +890,7 @@ TEST(RootSignature, ParseRootFlags) {
 
     const auto &RS = C.getRootSignature();
     ASSERT_TRUE(RS.has_value());
-    ASSERT_EQ(RS->getVersion(), 2u);
+    ASSERT_EQ(RS->getVersion(), dxbc::RootSignatureVersion::V1_1);
     ASSERT_EQ(RS->getNumParameters(), 0u);
     ASSERT_EQ(RS->getRootParametersOffset(), 24u);
     ASSERT_EQ(RS->getNumStaticSamplers(), 0u);
@@ -934,7 +935,7 @@ TEST(RootSignature, ParseRootConstant) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_1);
     ASSERT_EQ(RS.getNumParameters(), 1u);
     ASSERT_EQ(RS.getRootParametersOffset(), 24u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
@@ -943,7 +944,7 @@ TEST(RootSignature, ParseRootConstant) {
 
     auto RootParam = *RS.param_headers().begin();
     ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
-    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
+    ASSERT_EQ(RootParam.ShaderVisibility, dxbc::ShaderVisibility::Hull);
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
@@ -981,7 +982,7 @@ TEST(RootSignature, ParseRootDescriptor) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 1u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_0);
     ASSERT_EQ(RS.getNumParameters(), 1u);
     ASSERT_EQ(RS.getRootParametersOffset(), 24u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
@@ -990,7 +991,7 @@ TEST(RootSignature, ParseRootDescriptor) {
 
     auto RootParam = *RS.param_headers().begin();
     ASSERT_EQ((unsigned)RootParam.ParameterType, 2u);
-    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    ASSERT_EQ(RootParam.ShaderVisibility, dxbc::ShaderVisibility::Domain);
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
@@ -1025,7 +1026,7 @@ TEST(RootSignature, ParseRootDescriptor) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_1);
     ASSERT_EQ(RS.getNumParameters(), 1u);
     ASSERT_EQ(RS.getRootParametersOffset(), 24u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
@@ -1034,7 +1035,7 @@ TEST(RootSignature, ParseRootDescriptor) {
 
     auto RootParam = *RS.param_headers().begin();
     ASSERT_EQ((unsigned)RootParam.ParameterType, 2u);
-    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    ASSERT_EQ(RootParam.ShaderVisibility, dxbc::ShaderVisibility::Domain);
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
@@ -1072,7 +1073,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_1);
     ASSERT_EQ(RS.getNumParameters(), 1u);
     ASSERT_EQ(RS.getRootParametersOffset(), 24u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
@@ -1081,7 +1082,7 @@ TEST(RootSignature, ParseDescriptorTable) {
 
     auto RootParam = *RS.param_headers().begin();
     ASSERT_EQ((unsigned)RootParam.ParameterType, 0u);
-    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    ASSERT_EQ(RootParam.ShaderVisibility, dxbc::ShaderVisibility::Domain);
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
@@ -1096,7 +1097,7 @@ TEST(RootSignature, ParseDescriptorTable) {
 
     auto Range = *Table->begin();
 
-    ASSERT_EQ(Range.RangeType, 0u);
+    ASSERT_EQ(Range.RangeType, dxbc::DescriptorRangeType::SRV);
     ASSERT_EQ(Range.NumDescriptors, -1u);
     ASSERT_EQ(Range.BaseShaderRegister, 42u);
     ASSERT_EQ(Range.RegisterSpace, 43u);
@@ -1124,7 +1125,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 1u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_0);
     ASSERT_EQ(RS.getNumParameters(), 1u);
     ASSERT_EQ(RS.getRootParametersOffset(), 24u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
@@ -1133,7 +1134,7 @@ TEST(RootSignature, ParseDescriptorTable) {
 
     auto RootParam = *RS.param_headers().begin();
     ASSERT_EQ((unsigned)RootParam.ParameterType, 0u);
-    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    ASSERT_EQ(RootParam.ShaderVisibility, dxbc::ShaderVisibility::Domain);
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
@@ -1148,7 +1149,7 @@ TEST(RootSignature, ParseDescriptorTable) {
 
     auto Range = *Table->begin();
 
-    ASSERT_EQ(Range.RangeType, 0u);
+    ASSERT_EQ(Range.RangeType, dxbc::DescriptorRangeType::SRV);
     ASSERT_EQ(Range.NumDescriptors, -1u);
     ASSERT_EQ(Range.BaseShaderRegister, 42u);
     ASSERT_EQ(Range.RegisterSpace, 43u);
@@ -1177,7 +1178,7 @@ TEST(RootSignature, ParseStaticSamplers) {
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());
     const auto &RS = MaybeRS.value();
-    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getVersion(), dxbc::RootSignatureVersion::V1_1);
     ASSERT_EQ(RS.getNumParameters(), 0u);
     ASSERT_EQ(RS.getRootParametersOffset(), 0u);
     ASSERT_EQ(RS.getNumStaticSamplers(), 1u);
@@ -1186,18 +1187,18 @@ TEST(RootSignature, ParseStaticSamplers) {
 
     auto Sampler = *RS.samplers().begin();
 
-    ASSERT_EQ(Sampler.Filter, 10u);
-    ASSERT_EQ(Sampler.AddressU, 1u);
-    ASSERT_EQ(Sampler.AddressV, 2u);
-    ASSERT_EQ(Sampler.AddressW, 5u);
+    ASSERT_EQ(Sampler.Filter, dxbc::SamplerFilter::MinLinearMagMipPoint);
+    ASSERT_EQ(Sampler.AddressU, dxbc::TextureAddressMode::Wrap);
+    ASSERT_EQ(Sampler.AddressV, dxbc::TextureAddressMode::Mirror);
+    ASSERT_EQ(Sampler.AddressW, dxbc::TextureAddressMode::MirrorOnce);
     ASSERT_FLOAT_EQ(Sampler.MipLODBias, 1.23f);
     ASSERT_EQ(Sampler.MaxAnisotropy, 20u);
-    ASSERT_EQ(Sampler.ComparisonFunc, 4u);
-    ASSERT_EQ(Sampler.BorderColor, 0u);
+    ASSERT_EQ(Sampler.ComparisonFunc, dxbc::ComparisonFunc::LessEqual);
+    ASSERT_EQ(Sampler.BorderColor, dxbc::StaticBorderColor::TransparentBlack);
     ASSERT_FLOAT_EQ(Sampler.MinLOD, 4.56f);
     ASSERT_FLOAT_EQ(Sampler.MaxLOD, 8.9f);
     ASSERT_EQ(Sampler.ShaderRegister, 31u);
     ASSERT_EQ(Sampler.RegisterSpace, 32u);
-    ASSERT_EQ(Sampler.ShaderVisibility, 7u);
+    ASSERT_EQ(Sampler.ShaderVisibility, dxbc::ShaderVisibility::Mesh);
   }
 }

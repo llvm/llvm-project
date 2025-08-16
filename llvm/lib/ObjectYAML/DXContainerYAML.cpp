@@ -79,7 +79,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     const object::DirectX::RootSignature &Data) {
 
   RootSignatureYamlDesc RootSigDesc;
-  uint32_t Version = Data.getVersion();
+  dxbc::RootSignatureVersion Version = Data.getVersion();
 
   RootSigDesc.Version = Version;
   RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
@@ -139,7 +139,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 
       YamlDescriptor.ShaderRegister = Descriptor.ShaderRegister;
       YamlDescriptor.RegisterSpace = Descriptor.RegisterSpace;
-      if (Version > 1) {
+      if (Version > dxbc::RootSignatureVersion::V1_0) {
 #define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag)                                  \
   YamlDescriptor.Enum =                                                        \
       (Descriptor.Flags &                                                      \
@@ -148,11 +148,11 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       }
     } else if (auto *DTV =
                    dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
-      if (Version == 1) {
+      if (Version == dxbc::RootSignatureVersion::V1_0) {
         if (Error E = readDescriptorRanges<dxbc::RTS0::v1::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
-      } else if (Version == 2) {
+      } else if (Version == dxbc::RootSignatureVersion::V1_1) {
         if (Error E = readDescriptorRanges<dxbc::RTS0::v2::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
@@ -424,22 +424,29 @@ void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
   IO.mapRequired("ParameterType", L.Header.Type);
   IO.mapRequired("ShaderVisibility", L.Header.Visibility);
 
-  switch (L.Header.Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+  // If a parameter type is invalid, we don't have a body to parse.
+  if (!dxbc::isValidParameterType(L.Header.Type))
+    return;
+
+  // parses the body of a given root parameter type
+  dxbc::RootParameterType PT =
+      static_cast<dxbc::RootParameterType>(L.Header.Type);
+  switch (PT) {
+  case dxbc::RootParameterType::Constants32Bit: {
     DXContainerYAML::RootConstantsYaml &Constants =
         S.Parameters.getOrInsertConstants(L);
     IO.mapRequired("Constants", Constants);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::CBV):
-  case llvm::to_underlying(dxbc::RootParameterType::SRV):
-  case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+  case dxbc::RootParameterType::CBV:
+  case dxbc::RootParameterType::SRV:
+  case dxbc::RootParameterType::UAV: {
     DXContainerYAML::RootDescriptorYaml &Descriptor =
         S.Parameters.getOrInsertDescriptor(L);
     IO.mapRequired("Descriptor", Descriptor);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+  case dxbc::RootParameterType::DescriptorTable: {
     DXContainerYAML::DescriptorTableYaml &Table =
         S.Parameters.getOrInsertTable(L);
     IO.mapRequired("Table", Table);
@@ -582,6 +589,54 @@ void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
+    IO &IO, dxbc::ShaderVisibility &Value) {
+  for (const auto &E : dxbc::getShaderVisibility())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::DescriptorRangeType>::enumeration(
+    IO &IO, dxbc::DescriptorRangeType &Value) {
+  for (const auto &E : dxbc::getDescriptorRangeTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SamplerFilter>::enumeration(
+    IO &IO, dxbc::SamplerFilter &Value) {
+  for (const auto &E : dxbc::getSamplerFilters())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::TextureAddressMode>::enumeration(
+    IO &IO, dxbc::TextureAddressMode &Value) {
+  for (const auto &E : dxbc::getTextureAddressModes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::StaticBorderColor>::enumeration(
+    IO &IO, dxbc::StaticBorderColor &Value) {
+  for (const auto &E : dxbc::getStaticBorderColors())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
+    IO &IO, dxbc::ComparisonFunc &Value) {
+  for (const auto &E : dxbc::getComparisonFuncs())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::RootSignatureVersion>::enumeration(
+    IO &IO, dxbc::RootSignatureVersion &Value) {
+  for (const auto &E : dxbc::getRootSignatureVersions())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

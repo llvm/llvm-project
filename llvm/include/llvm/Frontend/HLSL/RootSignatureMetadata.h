@@ -143,7 +143,7 @@ public:
   MetadataParser(MDNode *Root) : Root(Root) {}
 
   LLVM_ABI llvm::Expected<llvm::mcdxbc::RootSignatureDesc>
-  ParseRootSignature(uint32_t Version);
+  ParseRootSignature(dxbc::RootSignatureVersion Version);
 
 private:
   llvm::Error parseRootFlags(mcdxbc::RootSignatureDesc &RSD,
