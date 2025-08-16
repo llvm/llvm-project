@@ -414,3 +414,16 @@ void tautological_compare(bool x, int y) {
     calledFun();
 
 }
+
+namespace GH152477{
+    class A{
+    public:
+        ~A(); // expected-warning {{will never be executed}}
+    };
+
+    [[noreturn]] A never_return_so_destructor_never_called();
+
+    void func(){
+        never_return_so_destructor_never_called();
+    }
+};
