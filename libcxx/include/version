@@ -211,6 +211,7 @@ __cpp_lib_ranges_repeat                                 202207L <ranges>
 __cpp_lib_ranges_slide                                  202202L <ranges>
 __cpp_lib_ranges_starts_ends_with                       202106L <algorithm>
 __cpp_lib_ranges_to_container                           202202L <ranges>
+__cpp_lib_ranges_to_input                               202502L <ranges>
 __cpp_lib_ranges_zip                                    202110L <ranges> <tuple> <utility>
 __cpp_lib_ratio                                         202306L <ratio>
 __cpp_lib_raw_memory_algorithms                         201606L <memory>
@@ -590,6 +591,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_philox_engine                        202406L
 // # define __cpp_lib_ranges_concat                        202403L
+# define __cpp_lib_ranges_to_input                      202502L
 # define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
 # define __cpp_lib_reference_wrapper                    202403L
