@@ -1,0 +1,36 @@
+; REUIRES: amdgpu-registered-target
+
+; Regression test for:
+;  - DW_AT_ranges not being read properly
+;  - Instructions at DW_AT_high_pc of a scope incorrectly included in the scope
+
+; test.hlsl
+; 01 RWBuffer<float> u0 : register(u0);
+; 02 RWBuffer<float> u1 : register(u1);
+; 03 
+; 04 [RootSignature("DescriptorTable(UAV(u0,numDescriptors=2))")]
+; 05 [numthreads(64,1,1)]
+; 06 void main(uint3 dtid : SV_DispatchThreadID) {
+; 07   float my_var = u0[dtid.x];
+; 08   [loop]
+; 09   for (int i = 0; i < 10; i++) {
+; 10     float my_local_var = i*2;
+; 11     my_var += my_local_var;
+; 12   }
+; 13   u1[dtid.x] = my_var;
+; 14 }
+
+; RUN: llvm-debuginfo-analyzer --attribute=all \
+; RUN:                         --print=all \
+; RUN:                         --output-sort=offset \
+; RUN:                         %p/Inputs/amdgpu-ranges.o 2>&1 | \
+; RUN: FileCheck %s
+
+; Make sure these two ranges are present and point to the correct offsets
+; CHECK: [005] {Range} Lines 10:9 [0x00000000b0:0x00000000c8]
+; CHECK: [005] {Range} Lines 11:13 [0x00000000f4:0x0000000114]
+
+; Make sure the offset 0x114 does not show up at the scope level 005 and 004
+; CHECK-NOT: [0x0000000114][005]
+; CHECK-NOT: [0x0000000114][004]
+
