@@ -5,13 +5,13 @@ define <4 x i32> @quux(ptr addrspace(3) %arg) {
 ; CHECK-LABEL: define <4 x i32> @quux(
 ; CHECK-SAME: ptr addrspace(3) [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = load i8, ptr addrspace(3) [[ARG]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = load i8, ptr addrspace(3) [[ARG]], align 4, !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META0:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i32 0, i64 1
-; CHECK-NEXT:    [[EXTRACTELEMENT1:%.*]] = load i8, ptr addrspace(3) [[TMP0]], align 1, !alias.scope [[META0]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT1:%.*]] = load i8, ptr addrspace(3) [[TMP0]], align 1, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i32 0, i64 2
-; CHECK-NEXT:    [[EXTRACTELEMENT2:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 2, !alias.scope [[META0]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT2:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 2, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i32 0, i64 3
-; CHECK-NEXT:    [[EXTRACTELEMENT3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1, !alias.scope [[META0]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[EXTRACTELEMENT]] to i32
 ; CHECK-NEXT:    [[ZEXT4:%.*]] = zext i8 [[EXTRACTELEMENT1]] to i32
 ; CHECK-NEXT:    [[ZEXT5:%.*]] = zext i8 [[EXTRACTELEMENT2]] to i32
@@ -23,7 +23,7 @@ define <4 x i32> @quux(ptr addrspace(3) %arg) {
 ; CHECK-NEXT:    ret <4 x i32> [[INSERTELEMENT9]]
 ;
 bb:
-  %load = load <4 x i8>, ptr addrspace(3) %arg, align 4, !alias.scope !0, !noalias !0
+  %load = load <4 x i8>, ptr addrspace(3) %arg, align 4, !alias.scope !0, !noalias !0, !tbaa !5
   %extractelement = extractelement <4 x i8> %load, i64 0
   %extractelement1 = extractelement <4 x i8> %load, i64 1
   %extractelement2 = extractelement <4 x i8> %load, i64 2
@@ -42,6 +42,9 @@ bb:
 !0 = !{!1}
 !1 = distinct !{!1, !2}
 !2 = distinct !{!2}
+!3 = !{!"Simple C/C++ TBAA"}
+!4 = !{!"omnipotent char", !3, i64 0}
+!5 = !{!"i8", !4, i64 0}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
