@@ -78,12 +78,12 @@ int main() {
 // CHECK-NEXT:   8: decomposition-a-b
 // CHECK-NEXT:   9: [B3.7]([B3.8])
 // CHECK-NEXT:  10: [B3.9]
-// CHECK-NEXT:  11: std::tuple_element<0UL, std::pair<int, int>>::type a = get<0UL>(decomposition-a-b);
+// CHECK-NEXT:  11: std::tuple_element<0UL, std::pair<int, int>>::type &&a = get<0UL>(decomposition-a-b);
 // CHECK-NEXT:  12: get<1UL>
 // CHECK-NEXT:  13: [B3.12] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<1L, pair<int, int> >::type (*)(pair<int, int> &))
 // CHECK-NEXT:  14: decomposition-a-b
 // CHECK-NEXT:  15: [B3.13]([B3.14])
 // CHECK-NEXT:  16: [B3.15]
-// CHECK-NEXT:  17: std::tuple_element<1UL, std::pair<int, int>>::type b = get<1UL>(decomposition-a-b);
+// CHECK-NEXT:  17: std::tuple_element<1UL, std::pair<int, int>>::type &&b = get<1UL>(decomposition-a-b);
 // CHECK-NEXT:   Preds (1): B1
 // CHECK-NEXT:   Succs (1): B2
