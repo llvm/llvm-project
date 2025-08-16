@@ -1159,6 +1159,7 @@ void DumpCompilerOptionsAction::ExecuteAction() {
   raw_ostream &OS = *OSP;
   const Preprocessor &PP = CI.getPreprocessor();
   const LangOptions &LangOpts = PP.getLangOpts();
+  const TargetInfo &Target = CI.getTarget();
 
   // FIXME: Rather than manually format the JSON (which is awkward due to
   // needing to remove trailing commas), this should make use of a JSON library.
