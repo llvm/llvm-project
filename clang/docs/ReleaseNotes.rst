@@ -141,6 +141,8 @@ New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 
+- New Option ``-Wpointer-bool-conversion-strict`` has been added to warn about all implicit pointer-to-bool conversions (#GH9500). This option is ignored by default.
+
 Deprecated Compiler Flags
 -------------------------
 
