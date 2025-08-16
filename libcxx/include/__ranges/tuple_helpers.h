@@ -22,13 +22,13 @@ namespace ranges {
 
 template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tuple) {
-    return std::apply(
-        [&]<class... _Types>(_Types&&... __elements) {
+  return std::apply(
+      [&]<class... _Types>(_Types&&... __elements) {
         return tuple<invoke_result_t<_Fun&, _Types>...>(std::invoke(__f, std::forward<_Types>(__elements))...);
-        },
-        std::forward<_Tuple>(__tuple));
+      },
+      std::forward<_Tuple>(__tuple));
 }
 
-}
+} // namespace ranges
 
 #endif // _LIBCPP___RANGES_TUPLE_HELPERS_H
