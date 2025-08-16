@@ -289,10 +289,12 @@ private:
 
   template <typename _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr auto __invoke_at_index(_Func&& __func) const {
-    return [&__func, this]<std::size_t _Is>(this auto&& __self) {
-      if (_Is == __it_.index()) {
+    // TODO(GCC 16): Just capture `this` when GCC PR113563 and PR121008 are fixed.
+    return [&__func, &__view_iter = *this]<std::size_t _Is>(this auto&& __self) {
+      if (_Is == __view_iter.__it_.index()) {
         return __func.template operator()<_Is>();
-      } if constexpr (_Is + 1 < sizeof...(_Views)) {
+      }
+      if constexpr (_Is + 1 < sizeof...(_Views)) {
         return __self.template operator()<_Is + 1>();
       }
       __builtin_unreachable();
