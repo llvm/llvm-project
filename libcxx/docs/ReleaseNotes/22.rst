@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 
 - P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially implemented. ``zip_transform_view`` is implemented in this release)
+- P3138R3: ``std::ranges::cache_latest`` (`Github <https://github.com/llvm/llvm-project/issues/118134>`__)
 
 Improvements and New Features
 -----------------------------
