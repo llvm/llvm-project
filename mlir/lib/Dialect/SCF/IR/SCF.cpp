@@ -4237,13 +4237,15 @@ LogicalResult scf::IndexSwitchOp::verify() {
     }
     for (auto [idx, result, operand] :
          llvm::zip(llvm::seq<unsigned>(0, getNumResults()), getResultTypes(),
-                   yield.getOperandTypes())) {
-      if (result == operand)
+                   yield.getOperands())) {
+      if (!operand)
+        return yield.emitOpError() << "operand " << idx << " is null\n";
+      if (result == operand.getType())
         continue;
       return (emitOpError("expected result #")
               << idx << " of each region to be " << result)
                  .attachNote(yield.getLoc())
-             << name << " returns " << operand << " here";
+             << name << " returns " << operand.getType() << " here";
     }
     return success();
   };
