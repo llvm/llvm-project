@@ -400,17 +400,25 @@ Feature testing
 Whether the current target uses pointer authentication can be tested for with
 a number of different tests.
 
-- ``__has_feature(ptrauth_intrinsics)`` is true if ``<ptrauth.h>`` provides its
-  normal interface.  This may be true even on targets where pointer
-  authentication is not enabled by default.
+- ``__PTRAUTH__`` macro is defined if ``<ptrauth.h>`` provides its normal
+  interface. This implies support for the pointer authentication intrinsics
+  and the ``__ptrauth`` qualifier.
 
 - ``__has_feature(ptrauth_returns)`` is true if the target uses pointer
   authentication to protect return addresses.
 
 - ``__has_feature(ptrauth_calls)`` is true if the target uses pointer
-  authentication to protect indirect branches.  This implies
-  ``__has_feature(ptrauth_returns)`` and
-  ``__has_feature(ptrauth_intrinsics)``.
+  authentication to protect indirect branches.  On arm64e this implies
+  ``__has_feature(ptrauth_returns)``, ``__has_feature(ptrauth_intrinsics)``,
+  and the ``__PTRAUTH__`` macro.
+
+- For backwards compatibility purposes ``__has_feature(ptrauth_intrinsics)``
+  and ``__has_feature(ptrauth_qualifier)`` are available on arm64e targets.
+  These features are synonymous with each other, and are equivalent to testing
+  for the ``__PTRAUTH__`` macro definition. Use of these features should be
+  restricted to cases where backwards compatibility is required, and should be
+  paired with ``defined(__PTRAUTH__)``.
+
 
 Clang provides several other tests only for historical purposes; for current
 purposes they are all equivalent to ``ptrauth_calls``.
@@ -848,7 +856,7 @@ functions can also be signed with address diversity:
 
 .. code-block:: c
 
-  #if __has_feature(ptrauth_calls)
+  #if defined(__PTRAUTH__)
   #define objectOperation(discriminator) \
     __ptrauth(ptrauth_key_function_pointer, 1, discriminator)
   #else
