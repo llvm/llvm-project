@@ -45,7 +45,8 @@ class CheckResult(gdb.Command):
 
             # Stack frame is:
             # 0. StopForDebugger
-            # 1. CompareListChildrenToChars, ComparePrettyPrintToChars or ComparePrettyPrintToRegex
+            # 1. CompareListChildrenToChars, CompareListChildrenSortedToChars,
+            #    ComparePrettyPrintToChars or ComparePrettyPrintToRegex
             # 2. TestCase
             compare_frame = gdb.newest_frame().older()
             testcase_frame = compare_frame.older()
@@ -57,7 +58,9 @@ class CheckResult(gdb.Command):
             frame_name = compare_frame.name()
             if frame_name.startswith("CompareListChildren"):
                 if has_execute_mi:
-                    value = self._get_children(compare_frame)
+                    value = self._get_children(
+                        compare_frame, with_sorting="Sorted" in frame_name
+                    )
                 else:
                     print("SKIPPED: " + test_loc_str)
                     return
@@ -91,7 +94,7 @@ class CheckResult(gdb.Command):
             print(str(e))
             test_failures += 1
 
-    def _get_children(self, compare_frame):
+    def _get_children(self, compare_frame, *, with_sorting=False):
         compare_frame.select()
         gdb.execute_mi("-var-create", "value", "*", "value")
         r = gdb.execute_mi("-var-list-children", "--simple-values", "value")
@@ -105,8 +108,12 @@ class CheckResult(gdb.Command):
                 }
                 for i in range(len(children) // 2)
             ]
+            if with_sorting:
+                r.sort(key=lambda item: item["key"])
         else:
             r = [json.loads(el["value"]) for el in children]
+            if with_sorting:
+                r.sort()
         return json.dumps(r, sort_keys=True)
 
     def _get_value(self, compare_frame, testcase_frame):

@@ -136,6 +136,12 @@ void CompareListChildrenToChars(TypeToPrint value, const char* expectation) {
   StopForDebugger(&value, &expectation);
 }
 
+template <typename TypeToPrint>
+void CompareListChildrenSortedToChars(TypeToPrint value, const char* expectation) {
+  MarkAsLive(value);
+  StopForDebugger(&value, &expectation);
+}
+
 namespace example {
   struct example_struct {
     int a = 0;
@@ -672,19 +678,19 @@ void streampos_test() {
 }
 
 void mi_mode_test() {
-  std::map<int, std::string> one_two_three_map;
-  one_two_three_map.insert({1, "one"});
-  one_two_three_map.insert({2, "two"});
-  one_two_three_map.insert({3, "three"});
+  std::set<std::string> one_two_three_set{"3", "2", "1"};
+  CompareListChildrenToChars(one_two_three_set, R"(["1", "2", "3"])");
+
+  std::unordered_set<std::string> one_two_three_uset{"3", "2", "1"};
+  CompareListChildrenSortedToChars(one_two_three_uset, R"(["1", "2", "3"])");
+
+  std::map<int, std::string> one_two_three_map{{3, "three"}, {2, "two"}, {1, "one"}};
   CompareListChildrenToChars(
       one_two_three_map, R"([{"key": 1, "value": "one"}, {"key": 2, "value": "two"}, {"key": 3, "value": "three"}])");
 
-  std::unordered_map<int, std::string> one_two_three_umap;
-  one_two_three_umap.insert({3, "three"});
-  one_two_three_umap.insert({2, "two"});
-  one_two_three_umap.insert({1, "one"});
-  CompareListChildrenToChars(
-      one_two_three_umap, R"([{"key": 3, "value": "three"}, {"key": 2, "value": "two"}, {"key": 1, "value": "one"}])");
+  std::unordered_map<int, std::string> one_two_three_umap{{3, "three"}, {2, "two"}, {1, "one"}};
+  CompareListChildrenSortedToChars(
+      one_two_three_umap, R"([{"key": 1, "value": "one"}, {"key": 2, "value": "two"}, {"key": 3, "value": "three"}])");
 
   std::deque<int> one_two_three_deque{1, 2, 3};
   CompareListChildrenToChars(one_two_three_deque, "[1, 2, 3]");
