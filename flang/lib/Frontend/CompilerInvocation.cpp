@@ -1152,6 +1152,17 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+  // -fcoarray
+  if (args.hasArg(clang::driver::options::OPT_fcoarray)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::Coarray);
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                              "Support for multi image Fortran features is "
+                              "still experimental and in development.");
+    diags.Report(diagID);
+  }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 

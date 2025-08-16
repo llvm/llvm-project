@@ -261,6 +261,12 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
   let TSFlags{25-24} = DestEEW.Value;
+
+  // Some vector instructions like vslidedown/vrgather will read elements past
+  // VL, and should be marked to make sure RISCVVLOptimizer doesn't reduce its
+  // operands' VLs.
+  bit ReadsPastVL = 0;
+  let TSFlags{26} = ReadsPastVL;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

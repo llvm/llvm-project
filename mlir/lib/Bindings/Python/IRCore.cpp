@@ -2810,7 +2810,7 @@ private:
 
 // bpo-42262 added Py_XNewRef()
 #if !defined(Py_XNewRef)
-PyObject *_Py_XNewRef(PyObject *obj) {
+[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
   Py_XINCREF(obj);
   return obj;
 }
@@ -2819,7 +2819,7 @@ PyObject *_Py_XNewRef(PyObject *obj) {
 
 // bpo-42262 added Py_NewRef()
 #if !defined(Py_NewRef)
-PyObject *_Py_NewRef(PyObject *obj) {
+[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
   Py_INCREF(obj);
   return obj;
 }

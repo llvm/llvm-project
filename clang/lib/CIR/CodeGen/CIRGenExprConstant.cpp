@@ -388,11 +388,20 @@ private:
   /// Return GEP-like value offset
   mlir::ArrayAttr getOffset(mlir::Type ty) {
     int64_t offset = value.getLValueOffset().getQuantity();
-    if (offset == 0)
-      return {};
+    cir::CIRDataLayout layout(cgm.getModule());
+    SmallVector<int64_t, 3> idxVec;
+    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
+                                                            idxVec);
 
-    cgm.errorNYI("ConstantLValueEmitter: global view with offset");
-    return {};
+    llvm::SmallVector<mlir::Attribute, 3> indices;
+    for (int64_t i : idxVec) {
+      mlir::IntegerAttr intAttr = cgm.getBuilder().getI32IntegerAttr(i);
+      indices.push_back(intAttr);
+    }
+
+    if (indices.empty())
+      return {};
+    return cgm.getBuilder().getArrayAttr(indices);
   }
 
   /// Apply the value offset to the given constant.
@@ -400,10 +409,11 @@ private:
     // Handle attribute constant LValues.
     if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
       if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
-        if (value.getLValueOffset().getQuantity() == 0)
-          return gv;
-        cgm.errorNYI("ConstantLValue: global view with offset");
-        return {};
+        auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
+        mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+        assert(!gv.getIndices() && "Global view is already indexed");
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
+                                        getOffset(baseTy));
       }
       llvm_unreachable("Unsupported attribute type to offset");
     }
@@ -700,6 +710,16 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
   return (c ? emitForMemory(c, destType) : nullptr);
 }
 
+mlir::Attribute ConstantEmitter::emitAbstract(const Expr *e,
+                                              QualType destType) {
+  AbstractStateRAII state{*this, true};
+  mlir::Attribute c = mlir::cast<mlir::Attribute>(tryEmitPrivate(e, destType));
+  if (!c)
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitAbstract failed, emit null constaant");
+  return c;
+}
+
 mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
                                               const APValue &value,
                                               QualType destType) {
@@ -719,6 +739,32 @@ mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
   }
 
   return c;
+}
+
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
+                                                QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (mlir::Attribute c =
+          ConstExprEmitter(*this).Visit(const_cast<Expr *>(e), destType))
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+
+  Expr::EvalResult result;
+
+  bool success = false;
+
+  if (destType->isReferenceType())
+    success = e->EvaluateAsLValue(result, cgm.getASTContext());
+  else
+    success =
+        e->EvaluateAsRValue(result, cgm.getASTContext(), inConstantContext);
+
+  if (success && !result.hasSideEffects()) {
+    mlir::Attribute c = tryEmitPrivate(result.Val, destType);
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+  }
+
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,

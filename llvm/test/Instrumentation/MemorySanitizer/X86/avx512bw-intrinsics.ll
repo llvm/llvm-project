@@ -17,7 +17,6 @@
 ; - llvm.x86.avx512.pavg.b.512, llvm.x86.avx512.pavg.w.512
 ; - llvm.x86.avx512.permvar.hi.512
 ; - llvm.x86.avx512.pmul.hr.sw.512, llvm.x86.avx512.pmulhu.w.512, llvm.x86.avx512.pmulh.w.512
-; - llvm.x86.avx512.pshuf.b.512
 ; - llvm.x86.avx512.psllv.w.512
 ; - llvm.x86.avx512.psrav.w.512, llvm.x86.avx512.psrlv.w.512
 
@@ -1714,8 +1713,9 @@ define <64 x i8>@test_int_x86_avx512_pshuf_b_512(<64 x i8> %x0, <64 x i8> %x1) #
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <64 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <64 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[TMP1]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <64 x i8> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[RES:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1]])
 ; CHECK-NEXT:    store <64 x i8> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <64 x i8> [[RES]]
 ;
@@ -1730,8 +1730,9 @@ define <64 x i8>@test_int_x86_avx512_pshuf_b_512_mask(<64 x i8> %x0, <64 x i8> %
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 192) to ptr), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <64 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <64 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[TMP1]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <64 x i8> [[TMP2]], [[TMP10]]
+; CHECK-NEXT:    [[RES:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64 [[TMP3]] to <64 x i1>
 ; CHECK-NEXT:    [[MASK_CAST:%.*]] = bitcast i64 [[MASK:%.*]] to <64 x i1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <64 x i1> [[MASK_CAST]], <64 x i8> [[_MSPROP]], <64 x i8> [[TMP4]]
@@ -1755,8 +1756,9 @@ define <64 x i8>@test_int_x86_avx512_pshuf_b_512_maskz(<64 x i8> %x0, <64 x i8> 
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <64 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[TMP1]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <64 x i8> [[TMP2]], [[TMP9]]
+; CHECK-NEXT:    [[RES:%.*]] = call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64 [[TMP3]] to <64 x i1>
 ; CHECK-NEXT:    [[MASK_CAST:%.*]] = bitcast i64 [[MASK:%.*]] to <64 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <64 x i1> [[MASK_CAST]], <64 x i8> [[_MSPROP]], <64 x i8> zeroinitializer

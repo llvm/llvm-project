@@ -72,7 +72,7 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE:       for.body.preheader:
 ; SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SIZE]] to i64
 ; SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
+; SVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SVE:       vector.ph:

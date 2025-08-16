@@ -7668,8 +7668,11 @@ QualType TreeTransform<Derived>::TransformDependentNameType(
   } else if (isa<TypedefType>(Result)) {
     TLB.push<TypedefTypeLoc>(Result).set(TL.getElaboratedKeywordLoc(),
                                          QualifierLoc, TL.getNameLoc());
+  } else if (isa<UnresolvedUsingType>(Result)) {
+    auto NewTL = TLB.push<UnresolvedUsingTypeLoc>(Result);
+    NewTL.set(TL.getElaboratedKeywordLoc(), QualifierLoc, TL.getNameLoc());
   } else {
-    DependentNameTypeLoc NewTL = TLB.push<DependentNameTypeLoc>(Result);
+    auto NewTL = TLB.push<DependentNameTypeLoc>(Result);
     NewTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
     NewTL.setQualifierLoc(QualifierLoc);
     NewTL.setNameLoc(TL.getNameLoc());
