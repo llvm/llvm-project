@@ -313,17 +313,16 @@ struct CGSCCUpdateResult {
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor>,
+      public PassAdaptorMixin<
+          detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
+                              LazyCallGraph &, CGSCCUpdateResult &>> {
 public:
-  using PassConceptT =
-      detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
-                          LazyCallGraph &, CGSCCUpdateResult &>;
-
   explicit ModuleToPostOrderCGSCCPassAdaptor(std::unique_ptr<PassConceptT> Pass)
-      : Pass(std::move(Pass)) {}
+      : PassAdaptorMixin(std::move(Pass)) {}
 
   ModuleToPostOrderCGSCCPassAdaptor(ModuleToPostOrderCGSCCPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
+      : PassAdaptorMixin(std::move(Arg.Pass)) {}
 
   friend void swap(ModuleToPostOrderCGSCCPassAdaptor &LHS,
                    ModuleToPostOrderCGSCCPassAdaptor &RHS) {
@@ -347,9 +346,6 @@ public:
   }
 
   static bool isRequired() { return true; }
-
-private:
-  std::unique_ptr<PassConceptT> Pass;
 };
 
 /// A function to deduce a function pass type and wrap it in the
@@ -445,18 +441,18 @@ LLVM_ABI LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class CGSCCToFunctionPassAdaptor
-    : public PassInfoMixin<CGSCCToFunctionPassAdaptor> {
+    : public PassInfoMixin<CGSCCToFunctionPassAdaptor>,
+      public PassAdaptorMixin<
+          detail::PassConcept<Function, FunctionAnalysisManager>> {
 public:
-  using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
-
   explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
                                       bool EagerlyInvalidate, bool NoRerun)
-      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate),
+      : PassAdaptorMixin(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate),
         NoRerun(NoRerun) {}
 
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)), EagerlyInvalidate(Arg.EagerlyInvalidate),
-        NoRerun(Arg.NoRerun) {}
+      : PassAdaptorMixin(std::move(Arg.Pass)),
+        EagerlyInvalidate(Arg.EagerlyInvalidate), NoRerun(Arg.NoRerun) {}
 
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
@@ -494,7 +490,6 @@ public:
   static bool isRequired() { return true; }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
   bool EagerlyInvalidate;
   bool NoRerun;
 };
