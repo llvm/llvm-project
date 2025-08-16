@@ -182,6 +182,10 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BraceBreakingStyle> {
 
 template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   static void mapping(IO &IO, FormatStyle::BraceWrappingFlags &Wrapping) {
+    // For backward compatibility.
+    if (!IO.outputting())
+      IO.mapOptional("SplitEmptyRecord", Wrapping.WrapEmptyRecord);
+
     IO.mapOptional("AfterCaseLabel", Wrapping.AfterCaseLabel);
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
@@ -198,8 +202,8 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
     IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
-    IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
     IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
+    IO.mapOptional("WrapEmptyRecord", Wrapping.WrapEmptyRecord);
   }
 };
 
@@ -229,6 +233,20 @@ struct ScalarEnumerationTraits<
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::BWACS_Never);
     IO.enumCase(Value, "true", FormatStyle::BWACS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BraceWrapEmptyRecordStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BraceWrapEmptyRecordStyle &Value) {
+    IO.enumCase(Value, "Default", FormatStyle::BWER_Default);
+    IO.enumCase(Value, "BeforeBrace", FormatStyle::BWER_BeforeBrace);
+    IO.enumCase(Value, "Never", FormatStyle::BWER_Never);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::BWER_BeforeBrace);
+    IO.enumCase(Value, "true", FormatStyle::BWER_Default);
   }
 };
 
@@ -1391,8 +1409,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*BeforeWhile=*/false,
                             /*IndentBraces=*/false,
                             /*SplitEmptyFunction=*/true,
-                            /*SplitEmptyRecord=*/true,
-                            /*SplitEmptyNamespace=*/true};
+                            /*SplitEmptyNamespace=*/true,
+                            /*WrapEmptyRecord=*/FormatStyle::BWER_Default};
   switch (Expanded.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;
@@ -1407,7 +1425,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
-    Expanded.BraceWrapping.SplitEmptyRecord = false;
+    Expanded.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
     break;
   case FormatStyle::BS_Stroustrup:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -1461,8 +1479,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*BeforeWhile=*/true,
         /*IndentBraces=*/true,
         /*SplitEmptyFunction=*/true,
-        /*SplitEmptyRecord=*/true,
-        /*SplitEmptyNamespace=*/true};
+        /*SplitEmptyNamespace=*/true,
+        /*WrapEmptyRecord=*/FormatStyle::BWER_Default};
     break;
   case FormatStyle::BS_WebKit:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -1561,8 +1579,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*BeforeWhile=*/false,
                              /*IndentBraces=*/false,
                              /*SplitEmptyFunction=*/true,
-                             /*SplitEmptyRecord=*/true,
-                             /*SplitEmptyNamespace=*/true};
+                             /*SplitEmptyNamespace=*/true,
+                             /*WrapEmptyRecord=*/FormatStyle::BWER_Default};
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;

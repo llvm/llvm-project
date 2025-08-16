@@ -1491,7 +1491,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
   AllowSimpleBracedStatements.BreakBeforeBraces = FormatStyle::BS_Custom;
   AllowSimpleBracedStatements.BraceWrapping.AfterFunction = true;
-  AllowSimpleBracedStatements.BraceWrapping.SplitEmptyRecord = false;
+  AllowSimpleBracedStatements.BraceWrapping.WrapEmptyRecord =
+      FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
@@ -4678,7 +4679,7 @@ TEST_F(FormatTest, FormatsExternC) {
                Style);
 
   Style.BraceWrapping.AfterExternBlock = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
   verifyFormat("extern \"C\"\n"
                "{}",
                Style);
@@ -8622,6 +8623,19 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyFormat("void aaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*\n"
                "                 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}",
                Style);
+}
+
+TEST_F(FormatTest, BreakFunctionsReturningRecords) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.AfterClass = false;
+  Style.BraceWrapping.AfterStruct = false;
+  Style.BraceWrapping.AfterUnion = false;
+
+  verifyFormat("class Bar foo() {}", Style);
+  verifyFormat("struct Bar foo() {}", Style);
+  verifyFormat("union Bar foo() {}", Style);
 }
 
 TEST_F(FormatTest, DontBreakBeforeQualifiedOperator) {
@@ -15322,7 +15336,7 @@ TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.SplitEmptyFunction = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("class C {};", Style);
   verifyFormat("struct C {};", Style);
@@ -15361,7 +15375,7 @@ TEST_F(FormatTest, SplitEmptyClass) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("class Foo\n"
                "{};",
@@ -15382,7 +15396,7 @@ TEST_F(FormatTest, SplitEmptyClass) {
                "} Foo_t;",
                Style);
 
-  Style.BraceWrapping.SplitEmptyRecord = true;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_Default;
   Style.BraceWrapping.AfterStruct = true;
   verifyFormat("class rep\n"
                "{\n"
@@ -15467,7 +15481,7 @@ TEST_F(FormatTest, SplitEmptyStruct) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterStruct = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("struct Foo\n"
                "{};",
@@ -15494,7 +15508,7 @@ TEST_F(FormatTest, SplitEmptyUnion) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterUnion = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("union Foo\n"
                "{};",
@@ -15613,6 +15627,54 @@ TEST_F(FormatTest, NeverMergeShortRecords) {
                "void Bar();\n"
                "};",
                Style);
+}
+
+TEST_F(FormatTest, WrapEmptyRecords) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterStruct = true;
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.AfterUnion = true;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
+
+  verifyFormat("class foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo\n{};", Style);
+
+  verifyFormat("struct foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("struct foo\n{};", Style);
+
+  verifyFormat("union foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("union foo\n{};", Style);
+
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_Never;
+
+  verifyFormat("class foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("union foo {};", Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {

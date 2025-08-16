@@ -237,7 +237,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeWhile);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBraces);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
-  CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfFile);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfBlock);
@@ -758,6 +757,24 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BraceWrapping:\n"
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
+
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_Default;
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: BeforeBrace",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: Default",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Default);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: Never",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Never);
+  // For backward compatibility:
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: true",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Default);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: false",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
 
   Style.BreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
