@@ -994,7 +994,7 @@ bool fromJSON(const llvm::json::Value &, ModuleSymbolsArguments &,
 /// Response to `getModuleSymbols` request.
 struct ModuleSymbolsResponseBody {
   /// The symbols for the specified module.
-  std::vector<dap::Symbol> symbols;
+  std::vector<Symbol> symbols;
 };
 llvm::json::Value toJSON(const ModuleSymbolsResponseBody &);
 

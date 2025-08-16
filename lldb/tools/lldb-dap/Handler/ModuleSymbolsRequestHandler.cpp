@@ -114,7 +114,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
   if (!module_spec.IsValid())
     return response;
 
-  std::vector<dap::Symbol> &symbols = response.symbols;
+  std::vector<Symbol> &symbols = response.symbols;
   lldb::SBModule module = dap.target.FindModule(module_spec);
   if (!module.IsValid())
     return llvm::make_error<DAPError>("Module not found");
@@ -125,7 +125,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
     if (!symbol.IsValid())
       continue;
 
-    dap::Symbol dap_symbol;
+    Symbol dap_symbol;
     dap_symbol.userId = symbol.GetID();
     dap_symbol.type = SymbolTypeToString(symbol.GetType());
     dap_symbol.isDebug = symbol.IsDebug();
