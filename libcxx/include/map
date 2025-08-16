@@ -1389,7 +1389,8 @@ map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty()) {
-      __tree_.__insert_unique_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
+      __tree_.__insert_unique_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
     }
   }
 }
@@ -1959,7 +1960,8 @@ multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const alloca
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty())
-      __tree_.__insert_multi_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
+      __tree_.__insert_multi_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
   }
 }
 #  endif

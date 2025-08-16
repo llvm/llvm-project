@@ -601,16 +601,18 @@ private:
   _ALIGNAS_TYPE(__node_value_type) unsigned char __buffer_[sizeof(__node_value_type)];
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return *std::__launder(reinterpret_cast<__node_value_type*>(&__buffer_)); }
+  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() {
+    return *std::__launder(reinterpret_cast<__node_value_type*>(&__buffer_));
+  }
 #endif
 
   template <class _Alloc, class... _Args>
   explicit __tree_node(_Alloc& __na, _Args&&... __args) {
-
 #ifndef _LIBCPP_CXX03_LANG
     allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
 #else
-    allocator_traits<_Alloc>::construct(__na, reinterpret_cast<__node_value_type*>(std::addressof(__buffer_)), std::forward<_Args>(__args)...);
+    allocator_traits<_Alloc>::construct(
+        __na, reinterpret_cast<__node_value_type*>(std::addressof(__buffer_)), std::forward<_Args>(__args)...);
 #endif
   }
   ~__tree_node()                             = delete;
