@@ -692,6 +692,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
+  bool ForceAtomics = ST.hasForcedAtomics() && !ST.hasStdExtA();
+
+  getActionDefinitionsBuilder(G_ATOMICRMW_ADD)
+      .legalFor(!ForceAtomics, {{s32, p0}, {sXLen, p0}})
+      .libcallFor(ForceAtomics, {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, s32, sXLen);
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }

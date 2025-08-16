@@ -92,6 +92,7 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool selectAtomicRMWAdd(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
@@ -815,6 +816,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
+  case TargetOpcode::G_ATOMICRMW_ADD:
+    return selectAtomicRMWAdd(MI, MIB);
   default:
     return false;
   }
@@ -1413,6 +1416,72 @@ void RISCVInstructionSelector::emitFence(AtomicOrdering FenceOrdering,
     break;
   }
   MIB.buildInstr(RISCV::FENCE, {}, {}).addImm(Pred).addImm(Succ);
+}
+
+bool RISCVInstructionSelector::selectAtomicRMWAdd(MachineInstr &MI,
+                                                  MachineIRBuilder &MIB) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  Register ValReg = MI.getOperand(2).getReg();
+
+  if (MI.memoperands_empty())
+    return false;
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  AtomicOrdering Ordering = MMO->getSuccessOrdering();
+
+  unsigned BaseOpcode;
+  LLT Ty = MRI.getType(DstReg);
+  if (Ty == LLT::scalar(32)) {
+    switch (Ordering) {
+    case AtomicOrdering::Monotonic:
+      BaseOpcode = RISCV::AMOADD_W;
+      break;
+    case AtomicOrdering::Acquire:
+      BaseOpcode = RISCV::AMOADD_W_AQ;
+      break;
+    case AtomicOrdering::Release:
+      BaseOpcode = RISCV::AMOADD_W_RL;
+      break;
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      BaseOpcode = RISCV::AMOADD_W_AQ_RL;
+      break;
+    default:
+      return false;
+    }
+  } else if (Ty == LLT::scalar(64)) {
+    switch (Ordering) {
+    case AtomicOrdering::Monotonic:
+      BaseOpcode = RISCV::AMOADD_D;
+      break;
+    case AtomicOrdering::Acquire:
+      BaseOpcode = RISCV::AMOADD_D_AQ;
+      break;
+    case AtomicOrdering::Release:
+      BaseOpcode = RISCV::AMOADD_D_RL;
+      break;
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      BaseOpcode = RISCV::AMOADD_D_AQ_RL;
+      break;
+    default:
+      return false;
+    }
+  } else {
+    return false;
+  }
+
+  auto NewMI =
+      MIB.buildInstr(BaseOpcode).addDef(DstReg).addUse(ValReg).addUse(PtrReg);
+  NewMI.addMemOperand(MMO);
+
+  MI.eraseFromParent();
+
+  return constrainSelectedInstRegOperands(*NewMI, TII, TRI, RBI);
 }
 
 namespace llvm {
