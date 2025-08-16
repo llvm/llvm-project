@@ -1337,6 +1337,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
+  case Type::SubstBuiltinTemplatePack: {
+    const auto *Subst1 = cast<SubstBuiltinTemplatePackType>(T1);
+    const auto *Subst2 = cast<SubstBuiltinTemplatePackType>(T2);
+    if (!IsStructurallyEquivalent(Context, Subst1->getArgumentPack(),
+                                  Subst2->getArgumentPack()))
+      return false;
+    break;
+  }
   case Type::SubstTemplateTypeParmPack: {
     const auto *Subst1 = cast<SubstTemplateTypeParmPackType>(T1);
     const auto *Subst2 = cast<SubstTemplateTypeParmPackType>(T2);

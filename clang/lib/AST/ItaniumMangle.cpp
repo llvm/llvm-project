@@ -2444,6 +2444,13 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::CountAttributed:
     llvm_unreachable("type is illegal as a nested name specifier");
 
+  case Type::SubstBuiltinTemplatePack:
+    // FIXME: not clear how to mangle this!
+    // template <class T...> class A {
+    //   template <class U...> void foo(__builtin_dedup_pack<T...>(*)(U) x...);
+    // };
+    Out << "_SUBSTBUILTINPACK_";
+    break;
   case Type::SubstTemplateTypeParmPack:
     // FIXME: not clear how to mangle this!
     // template <class T...> class A {
@@ -3889,6 +3896,14 @@ void CXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T) {
   //   template <class U...> void foo(T(*)(U) x...);
   // };
   Out << "_SUBSTPACK_";
+}
+
+void CXXNameMangler::mangleType(const SubstBuiltinTemplatePackType *T) {
+  // FIXME: not clear how to mangle this!
+  // template <class T...> class A {
+  //   template <class U...> void foo(__builtin_dedup_pack<T...>(*)(U) x...);
+  // };
+  Out << "_SUBSTBUILTINPACK_";
 }
 
 // <type> ::= P <type>   # pointer-to

@@ -232,6 +232,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Enum:
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
+    case Type::SubstBuiltinTemplatePack:
     case Type::DeducedTemplateSpecialization:
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
@@ -1730,6 +1731,15 @@ void TypePrinter::printSubstTemplateTypeParmAfter(
   IncludeStrongLifetimeRAII Strong(Policy);
   printAfter(T->getReplacementType(), OS);
 }
+
+void TypePrinter::printSubstBuiltinTemplatePackBefore(
+    const SubstBuiltinTemplatePackType *T, raw_ostream &OS) {
+  IncludeStrongLifetimeRAII Strong(Policy);
+  OS << "type-pack";
+}
+
+void TypePrinter::printSubstBuiltinTemplatePackAfter(
+    const SubstBuiltinTemplatePackType *T, raw_ostream &OS) {}
 
 void TypePrinter::printSubstTemplateTypeParmPackBefore(
                                         const SubstTemplateTypeParmPackType *T,
