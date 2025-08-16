@@ -31,10 +31,9 @@ define void @single_incoming_phi_no_blend_mask(i64 %a, i64 %b) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    br label [[LOOP_COND:%.*]]
 ; CHECK:       loop.cond:
@@ -104,9 +103,8 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP3]], <2 x i1> [[TMP6]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i16> [[WIDE_LOAD]], <2 x i16> splat (i16 1)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP8]], <2 x i16> zeroinitializer, <2 x i16> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP3]], <2 x i16> [[PREDPHI]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i16> [[PREDPHI1]], ptr [[TMP9]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -116,10 +114,9 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
 ; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_COND:%.*]], label [[LOOP_LATCH]]
@@ -206,10 +203,9 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[IV_TRUNC_2:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
@@ -292,9 +288,8 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i16> [ [[TMP8]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP13]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp sle <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> [[TMP15]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP16]], <2 x i16> [[TMP14]], <2 x i16> splat (i16 1)
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP17]], <2 x i16> zeroinitializer, <2 x i16> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP2]], <2 x i16> [[PREDPHI]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i16> [[PREDPHI3]], ptr [[TMP18]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -304,10 +299,9 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
 ; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_COND:%.*]], label [[LOOP_LATCH]]
@@ -379,10 +373,9 @@ define void @duplicated_incoming_blocks_blend(i32 %x, ptr %ptr) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD_I:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ADD_I:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i32 [[IV]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:

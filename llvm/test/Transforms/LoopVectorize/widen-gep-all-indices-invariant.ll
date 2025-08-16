@@ -22,10 +22,9 @@ define void @pr63340(ptr %A, ptr %B) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[F_0_I:%.*]] = phi ptr [ [[A]], [[LOOP_HEADER]] ]
@@ -80,10 +79,9 @@ define void @wide_gep_index_invariant(ptr noalias %dst, ptr noalias %src, i64 %n
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[GEP_L:%.*]] = getelementptr float, ptr [[L]], i64 [[N]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[IV]]
@@ -134,10 +132,9 @@ define void @wide_gep_multiple_indices_some_invariant(ptr noalias %dst, ptr noal
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[GEP_L:%.*]] = getelementptr [10 x float], ptr [[L]], i32 [[X]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[IV]]

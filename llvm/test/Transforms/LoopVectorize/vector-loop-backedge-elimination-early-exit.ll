@@ -10,7 +10,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosync nofree {
 ; VF8UF1-LABEL: define i8 @test_early_exit_max_tc_less_than_16(
 ; VF8UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; VF8UF1-NEXT:  [[ENTRY:.*]]:
+; VF8UF1-NEXT:  [[ENTRY:.*:]]
 ; VF8UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -31,10 +31,9 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8UF1-NEXT:    br label %[[EXIT]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF8UF1:       [[LOOP_HEADER]]:
-; VF8UF1-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF8UF1-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; VF8UF1-NEXT:    [[P_SRC1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV1]]
 ; VF8UF1-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC1]], align 1
 ; VF8UF1-NEXT:    [[C:%.*]] = icmp eq i8 [[L]], 0
@@ -49,7 +48,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ;
 ; VF8UF2-LABEL: define i8 @test_early_exit_max_tc_less_than_16(
 ; VF8UF2-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; VF8UF2-NEXT:  [[ENTRY:.*]]:
+; VF8UF2-NEXT:  [[ENTRY:.*:]]
 ; VF8UF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -69,10 +68,9 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF2:       [[VECTOR_EARLY_EXIT]]:
 ; VF8UF2-NEXT:    br label %[[EXIT]]
 ; VF8UF2:       [[SCALAR_PH]]:
-; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF8UF2:       [[LOOP_HEADER]]:
-; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; VF8UF2-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
 ; VF8UF2-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC]], align 1
 ; VF8UF2-NEXT:    [[C:%.*]] = icmp eq i8 [[L]], 0
@@ -87,7 +85,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ;
 ; VF16UF1-LABEL: define i8 @test_early_exit_max_tc_less_than_16(
 ; VF16UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; VF16UF1-NEXT:  [[ENTRY:.*]]:
+; VF16UF1-NEXT:  [[ENTRY:.*:]]
 ; VF16UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -103,10 +101,9 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF16UF1:       [[VECTOR_EARLY_EXIT]]:
 ; VF16UF1-NEXT:    br label %[[EXIT]]
 ; VF16UF1:       [[SCALAR_PH]]:
-; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF16UF1:       [[LOOP_HEADER]]:
-; VF16UF1-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF16UF1-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; VF16UF1-NEXT:    [[P_SRC1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV1]]
 ; VF16UF1-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC1]], align 1
 ; VF16UF1-NEXT:    [[C:%.*]] = icmp eq i8 [[L]], 0
@@ -142,7 +139,7 @@ exit:
 define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr dereferenceable(16) %A) nosync nofree {
 ; VF8UF1-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
 ; VF8UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
-; VF8UF1-NEXT:  [[ENTRY:.*]]:
+; VF8UF1-NEXT:  [[ENTRY:.*:]]
 ; VF8UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -165,10 +162,9 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF1-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], [[FIRST_ACTIVE_LANE]]
 ; VF8UF1-NEXT:    br label %[[EXIT]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF8UF1:       [[LOOP_HEADER]]:
-; VF8UF1-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF8UF1-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; VF8UF1-NEXT:    [[P_SRC1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV1]]
 ; VF8UF1-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC1]], align 1
 ; VF8UF1-NEXT:    [[C:%.*]] = icmp eq i8 [[L]], 0
@@ -183,7 +179,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ;
 ; VF8UF2-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
 ; VF8UF2-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
-; VF8UF2-NEXT:  [[ENTRY:.*]]:
+; VF8UF2-NEXT:  [[ENTRY:.*:]]
 ; VF8UF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -210,10 +206,9 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; VF8UF2-NEXT:    br label %[[EXIT]]
 ; VF8UF2:       [[SCALAR_PH]]:
-; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF8UF2:       [[LOOP_HEADER]]:
-; VF8UF2-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF8UF2-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; VF8UF2-NEXT:    [[P_SRC1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV1]]
 ; VF8UF2-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC1]], align 1
 ; VF8UF2-NEXT:    [[C:%.*]] = icmp eq i8 [[L]], 0
@@ -228,7 +223,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ;
 ; VF16UF1-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
 ; VF16UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
-; VF16UF1-NEXT:  [[ENTRY:.*]]:
+; VF16UF1-NEXT:  [[ENTRY:.*:]]
 ; VF16UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -246,10 +241,9 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF16UF1-NEXT:    [[TMP5:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE]]
 ; VF16UF1-NEXT:    br label %[[EXIT]]
 ; VF16UF1:       [[SCALAR_PH]]:
-; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF16UF1:       [[LOOP_HEADER]]:
-; VF16UF1-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF16UF1-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; VF16UF1-NEXT:    [[P_SRC1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV1]]
 ; VF16UF1-NEXT:    [[L:%.*]] = load i8, ptr [[P_SRC1]], align 1
 ; VF16UF1-NEXT:    [[C:%.*]] = icmp eq i8 [[L]], 0

@@ -31,10 +31,9 @@ define i64 @early_exit_alignment_and_deref_known_via_assumption_with_constant_si
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX1]], [[TMP8]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]

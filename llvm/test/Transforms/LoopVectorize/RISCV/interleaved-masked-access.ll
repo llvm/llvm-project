@@ -115,8 +115,6 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP3:%.*]] = icmp ult <vscale x 16 x i32> [[TMP2]], [[BROADCAST_SPLAT4]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP4:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -138,7 +136,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP13]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK5]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], 1024
 ; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PREDICATED_DATA-WITH-EVL:       middle.block:
@@ -298,8 +296,6 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP3:%.*]] = icmp ult <vscale x 16 x i32> [[TMP2]], [[BROADCAST_SPLAT4]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP4:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -325,7 +321,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr [[TMP18]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK5]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], 1024
 ; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; PREDICATED_DATA-WITH-EVL:       middle.block:

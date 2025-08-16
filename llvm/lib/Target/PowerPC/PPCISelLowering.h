@@ -430,20 +430,6 @@ namespace llvm {
     /// optimizations due to constant folding.
     VADD_SPLAT,
 
-    /// CHAIN = SC CHAIN, Imm128 - System call.  The 7-bit unsigned
-    /// operand identifies the operating system entry point.
-    SC,
-
-    /// CHAIN = CLRBHRB CHAIN - Clear branch history rolling buffer.
-    CLRBHRB,
-
-    /// GPRC, CHAIN = MFBHRBE CHAIN, Entry, Dummy - Move from branch
-    /// history rolling buffer entry.
-    MFBHRBE,
-
-    /// CHAIN = RFEBB CHAIN, State - Return from event-based branch.
-    RFEBB,
-
     /// VSRC, CHAIN = XXSWAPD CHAIN, VSRC - Occurs only for little
     /// endian.  Maps to an xxswapd instruction that corrects an lxvd2x
     /// or stxvd2x instruction.  The chain is necessary because the

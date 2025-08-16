@@ -18,8 +18,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP12]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[P:%.*]], <vscale x 4 x i64> [[TMP14]]
@@ -496,8 +495,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[TMP43:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; STRIDED-NEXT:    [[TMP44:%.*]] = zext i32 [[TMP43]] to i64
-; STRIDED-NEXT:    [[TMP45:%.*]] = mul i64 1, [[TMP44]]
-; STRIDED-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP45]], i64 0
+; STRIDED-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP44]], i64 0
 ; STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT9]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; STRIDED-NEXT:    [[TMP18:%.*]] = mul nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT1]]
 ; STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[P]], <vscale x 4 x i64> [[TMP18]]

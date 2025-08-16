@@ -121,14 +121,11 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR6:%.*]] = phi float [ [[SCALAR_RECUR_INIT5]], [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR6:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SCALAR_RECUR6]]
 ; CHECK-NEXT:    [[MULADD:%.*]] = call float @llvm.fmuladd.f32(float [[SCALAR_RECUR]], float [[NEG]], float 0.000000e+00)
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]

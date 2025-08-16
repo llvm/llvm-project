@@ -27,8 +27,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP7]], i64 0
 ; VLENUNK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; VLENUNK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP7]] to i64
-; VLENUNK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP15]]
-; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0
+; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP15]], i64 0
 ; VLENUNK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; VLENUNK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; VLENUNK-NEXT:    [[TMP11:%.*]] = icmp ult <vscale x 4 x i32> [[TMP10]], [[BROADCAST_SPLAT4]]
