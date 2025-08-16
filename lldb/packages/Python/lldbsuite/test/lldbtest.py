@@ -1792,6 +1792,11 @@ class LLDBTestCaseFactory(type):
                         if can_replicate
                     ]
 
+                    # PDB is off by default, because it has a lot of failures right now.
+                    # See llvm.org/pr149498
+                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+                        dbginfo_categories.append("pdb")
+
                 xfail_for_debug_info_cat_fn = getattr(
                     attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
                 )
@@ -1878,6 +1883,13 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
+
+    TEST_WITH_PDB_DEBUG_INFO = False
+    """
+    Subclasses can set this to True to test with PDB in addition to the other debug info
+    types. This id off by default because many tests will fail due to missing functionality in PDB.
+    See llvm.org/pr149498.
+    """
 
     def generateSource(self, source):
         template = source + ".template"
