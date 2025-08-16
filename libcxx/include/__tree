@@ -575,7 +575,8 @@ public:
 // libcxx/test/std/containers/associative/map/map.erasure/erase_if.pass.cpp
 //
 /*
-libcxx/test-suite-install/include/c++/v1/__tree:114:33: error: ‘‘result_decl’ not supported by dump_expr<expression error>’ is not a constant expression
+libcxx/test-suite-install/include/c++/v1/__tree:114:33: error: ‘‘result_decl’ not supported by dump_expr<expression
+error>’ is not a constant expression
 
 # |   114 |   return __x == __x->__parent_->__left_;
 
@@ -623,7 +624,7 @@ public:
 note: non-literal type 'std::__tree_node<std::__value_type<int, int>, void *>' cannot be used in a constant expression
 */
 #if _LIBCPP_CONSTEXPR_SINCE_CXX26
-  ~__tree_node(){}
+  ~__tree_node() {}
 #else
   ~__tree_node()                             = delete;
 #endif
