@@ -7405,44 +7405,6 @@ multiclass SIMDLongThreeVectorHS<bit U, bits<4> opc, string asm,
                                       (extract_high_v4i32 (v4i32 V128:$Rm))))]>;
 }
 
-let isCommutable = 1 in
-multiclass SIMDLongThreeVectorBHSabdl<bit U, bits<4> opc, string asm,
-                                  SDPatternOperator OpNode = null_frag> {
-  def v8i8_v8i16   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
-                                                  V128, V64, V64,
-                                                  asm, ".8h", ".8b", ".8b",
-      [(set (v8i16 V128:$Rd),
-            (zext (v8i8 (OpNode (v8i8 V64:$Rn), (v8i8 V64:$Rm)))))]>;
-  def v16i8_v8i16  : BaseSIMDDifferentThreeVector<U, 0b001, opc,
-                                                 V128, V128, V128,
-                                                 asm#"2", ".8h", ".16b", ".16b",
-      [(set (v8i16 V128:$Rd),
-            (zext (v8i8 (OpNode (extract_high_v16i8 (v16i8 V128:$Rn)),
-                                (extract_high_v16i8 (v16i8 V128:$Rm))))))]>;
-  def v4i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b010, opc,
-                                                  V128, V64, V64,
-                                                  asm, ".4s", ".4h", ".4h",
-      [(set (v4i32 V128:$Rd),
-            (zext (v4i16 (OpNode (v4i16 V64:$Rn), (v4i16 V64:$Rm)))))]>;
-  def v8i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b011, opc,
-                                                  V128, V128, V128,
-                                                  asm#"2", ".4s", ".8h", ".8h",
-      [(set (v4i32 V128:$Rd),
-            (zext (v4i16 (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
-                                  (extract_high_v8i16 (v8i16 V128:$Rm))))))]>;
-  def v2i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b100, opc,
-                                                  V128, V64, V64,
-                                                  asm, ".2d", ".2s", ".2s",
-      [(set (v2i64 V128:$Rd),
-            (zext (v2i32 (OpNode (v2i32 V64:$Rn), (v2i32 V64:$Rm)))))]>;
-  def v4i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b101, opc,
-                                                  V128, V128, V128,
-                                                  asm#"2", ".2d", ".4s", ".4s",
-      [(set (v2i64 V128:$Rd),
-            (zext (v2i32 (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
-                                 (extract_high_v4i32 (v4i32 V128:$Rm))))))]>;
-}
-
 multiclass SIMDLongThreeVectorTiedBHSabal<bit U, bits<4> opc,
                                           string asm,
                                           SDPatternOperator OpNode> {

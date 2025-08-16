@@ -192,6 +192,17 @@ struct DecoderTableInfo {
   DecoderSet Decoders;
 
   bool isOutermostScope() const { return FixupStack.size() == 1; }
+
+  void pushScope() { FixupStack.emplace_back(); }
+
+  void popScope() {
+    // Resolve any remaining fixups in the current scope before popping it.
+    // All fixups resolve to the current location.
+    uint32_t DestIdx = Table.size();
+    for (uint32_t FixupIdx : FixupStack.back())
+      Table.patchNumToSkip(FixupIdx, DestIdx);
+    FixupStack.pop_back();
+  }
 };
 
 struct EncodingAndInst {
@@ -398,9 +409,6 @@ protected:
   // Number of instructions which fall under FilteredInstructions category.
   unsigned NumFiltered;
 
-  // Keeps track of the last opcode in the filtered bucket.
-  EncodingIDAndOpcode LastOpcFiltered;
-
 public:
   Filter(Filter &&f);
   Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
@@ -411,7 +419,7 @@ public:
 
   EncodingIDAndOpcode getSingletonOpc() const {
     assert(NumFiltered == 1);
-    return LastOpcFiltered;
+    return FilteredInstructions.begin()->second.front();
   }
 
   // Return the filter chooser for the group of instructions without constant
@@ -650,14 +658,13 @@ Filter::Filter(Filter &&f)
       FilteredInstructions(std::move(f.FilteredInstructions)),
       VariableInstructions(std::move(f.VariableInstructions)),
       FilterChooserMap(std::move(f.FilterChooserMap)),
-      NumFiltered(f.NumFiltered), LastOpcFiltered(f.LastOpcFiltered) {}
+      NumFiltered(f.NumFiltered) {}
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
   assert(StartBit + NumBits - 1 < Owner.BitWidth);
 
   NumFiltered = 0;
-  LastOpcFiltered = {0, 0};
 
   for (const auto &OpcPair : Owner.Opcodes) {
     // Populates the insn given the uid.
@@ -669,8 +676,7 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     if (Ok) {
       // The encoding bits are well-known.  Lets add the uid of the
       // instruction into the bucket keyed off the constant field value.
-      LastOpcFiltered = OpcPair;
-      FilteredInstructions[Field].push_back(LastOpcFiltered);
+      FilteredInstructions[Field].push_back(OpcPair);
       ++NumFiltered;
     } else {
       // Some of the encoding bit(s) are unspecified.  This contributes to
@@ -731,14 +737,6 @@ void Filter::recurse() {
   }
 }
 
-static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
-                               uint32_t DestIdx) {
-  // Any NumToSkip fixups in the current scope can resolve to the
-  // current location.
-  for (uint32_t FixupIdx : Fixups)
-    Table.patchNumToSkip(FixupIdx, DestIdx);
-}
-
 // Emit table entries to decode instructions given a segment or segments
 // of bits.
 void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
@@ -758,7 +756,7 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
   const uint64_t LastFilter = FilterChooserMap.rbegin()->first;
   bool HasFallthrough = LastFilter == NO_FIXED_SEGMENTS_SENTINEL;
   if (HasFallthrough)
-    TableInfo.FixupStack.emplace_back();
+    TableInfo.pushScope();
 
   DecoderTable &Table = TableInfo.Table;
 
@@ -770,13 +768,7 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
       // Each scope should always have at least one filter value to check
       // for.
       assert(PrevFilter != 0 && "empty filter set!");
-      FixupList &CurScope = TableInfo.FixupStack.back();
-      // Resolve any NumToSkip fixups in the current scope.
-      resolveTableFixups(Table, CurScope, Table.size());
-
-      // Delete the scope we have added here.
-      TableInfo.FixupStack.pop_back();
-
+      TableInfo.popScope();
       PrevFilter = 0; // Don't re-process the filter's fallthrough.
     } else {
       // The last filtervalue emitted can be OPC_FilterValue if we are at
@@ -1520,13 +1512,9 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 
   // complex singletons need predicate checks from the first singleton
   // to refer forward to the variable filterchooser that follows.
-  TableInfo.FixupStack.emplace_back();
-
+  TableInfo.pushScope();
   emitSingletonTableEntry(TableInfo, Opc);
-
-  resolveTableFixups(TableInfo.Table, TableInfo.FixupStack.back(),
-                     TableInfo.Table.size());
-  TableInfo.FixupStack.pop_back();
+  TableInfo.popScope();
 
   Best.getVariableFC().emitTableEntries(TableInfo);
 }
@@ -2628,16 +2616,12 @@ namespace {
     // predicates and decoders themselves, however, are shared across all
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
-    TableInfo.FixupStack.clear();
-    TableInfo.FixupStack.emplace_back();
+    TableInfo.pushScope();
     FC.emitTableEntries(TableInfo);
     // Any NumToSkip fixups in the top level scope can resolve to the
     // OPC_Fail at the end of the table.
-    assert(TableInfo.FixupStack.size() == 1 && "fixup stack phasing error!");
-    // Resolve any NumToSkip fixups in the current scope.
-    resolveTableFixups(TableInfo.Table, TableInfo.FixupStack.back(),
-                       TableInfo.Table.size());
-    TableInfo.FixupStack.clear();
+    assert(TableInfo.isOutermostScope() && "fixup stack phasing error!");
+    TableInfo.popScope();
 
     TableInfo.Table.push_back(MCD::OPC_Fail);
 
