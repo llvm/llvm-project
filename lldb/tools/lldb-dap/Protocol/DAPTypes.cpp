@@ -2,7 +2,7 @@
 
 using namespace llvm;
 
-namespace lldb_dap::protocol::dap {
+namespace lldb_dap::protocol {
 
 bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
               llvm::json::Path P) {
@@ -60,4 +60,4 @@ llvm::json::Value toJSON(const Symbol &DS) {
   return result;
 }
 
-} // namespace lldb_dap::protocol::dap
+} // namespace lldb_dap::protocol
