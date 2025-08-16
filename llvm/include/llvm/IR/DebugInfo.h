@@ -225,11 +225,6 @@ LLVM_ABI void deleteAll(Function *F);
 LLVM_ABI bool
 calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
                            uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
-                           const DbgAssignIntrinsic *DbgAssign,
-                           std::optional<DIExpression::FragmentInfo> &Result);
-LLVM_ABI bool
-calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
-                           uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
                            const DbgVariableRecord *DVRAssign,
                            std::optional<DIExpression::FragmentInfo> &Result);
 
