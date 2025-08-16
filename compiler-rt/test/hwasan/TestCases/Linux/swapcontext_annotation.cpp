@@ -1,19 +1,18 @@
-// Check that HwASan plays well with annotated makecontext/swapcontext.
+// Test hwasan __sanitizer_start_switch_fiber and __sanitizer_finish_switch_fiber interface.
 
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: seq 60 | xargs -i -- grep LOOPCHECK %s > %t.checks
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: seq 30 | xargs -i -- grep LOOPCHECK %s > %t.checks
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O0 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O1 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O2 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O3 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
 
 //
-// This test is too subtle to try on non-x86 arch for now.
 // Android and musl do not support swapcontext.
-// REQUIRES: x86-target-arch && glibc-2.27
+// REQUIRES: glibc-2.27
 
 #include <pthread.h>
 #include <setjmp.h>
@@ -22,6 +21,7 @@
 #include <sys/time.h>
 #include <ucontext.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include <sanitizer/common_interface_defs.h>
 
@@ -125,8 +125,7 @@ int Run(int arg, int mode, char *child_stack) {
   }
   makecontext(&child_context, (void (*)())Child, 1, mode);
   CallNoReturn();
-  void *fake_stack_save;
-  __sanitizer_start_switch_fiber(&fake_stack_save, child_context.uc_stack.ss_sp,
+  __sanitizer_start_switch_fiber(nullptr, child_context.uc_stack.ss_sp,
                                  child_context.uc_stack.ss_size);
   CallNoReturn();
   if (swapcontext(&orig_context, &child_context) < 0) {
@@ -134,22 +133,22 @@ int Run(int arg, int mode, char *child_stack) {
     _exit(1);
   }
   CallNoReturn();
-  __sanitizer_finish_switch_fiber(fake_stack_save, &from_stack,
-                                  &from_stacksize);
+  __sanitizer_finish_switch_fiber(nullptr, &from_stack, &from_stacksize);
   CallNoReturn();
   printf("Main context from: %p %zu\n", from_stack, from_stacksize);
 
-  // Touch childs's stack to make sure it's unpoisoned.
-  for (int i = 0; i < kStackSize; i++) {
-    child_stack[i] = i;
-  }
   return child_stack[arg];
 }
 
 void handler(int sig) { CallNoReturn(); }
 
 int main(int argc, char **argv) {
-  // removed huge stack test since hwasan has no huge stack limitations
+  // This testcase is copied from ASan's swapcontext_annotation.cpp testcase
+  // and adapted to HWASan:
+  // 1. removed huge stack test since hwasan has no huge stack limitations
+  // 2. stack allocations are now done with original malloc/free instead of
+  //   hwasan interceptor, since HWASan does not support tagged stack pointer
+  //   in longjmp (see __hwasan_handle_longjmp)
 
   // set up a signal that will spam and trigger __hwasan_handle_vfork at
   // tricky moments
@@ -169,25 +168,36 @@ int main(int argc, char **argv) {
     _exit(1);
   }
 
-  char *heap = new char[kStackSize + 1];
-  next_child_stack = new char[kStackSize + 1];
-  char stack[kStackSize + 1];
+  // We search malloc/free here because the original symbol is intercepted.
+  // Unfortunately, hwasan does not support longjmp with tagged stack pointer,
+  // so we use RTLD_NEXT to search original symbols assuming hwasan is
+  // statically linked (default behavior currently).
+  void *(*malloc_func)(size_t) = (void *(*)(size_t)) dlsym(RTLD_NEXT, "malloc");
+  if (malloc_func == nullptr) {
+    perror("dlsym malloc");
+    _exit(1);
+  }
+  void (*free_func)(void *) = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
+  if (free_func == nullptr) {
+    perror("dlsym free");
+    _exit(1);
+  }
+
+  char *heap = (char *)malloc_func(kStackSize + 1);
+  next_child_stack = (char *)malloc_func(kStackSize + 1);
   int ret = 0;
   // CHECK-NOT: WARNING: HWASan is ignoring requested __hwasan_handle_vfork
   for (unsigned int i = 0; i < 30; ++i) {
-    ret += Run(argc - 1, 0, stack);
     // LOOPCHECK: Child stack: [[CHILD_STACK:0x[0-9a-f]*]]
     // LOOPCHECK: Main context from: [[CHILD_STACK]] 524288
-    ret += Run(argc - 1, 1, stack);
+    ret += Run(argc - 1, 0, heap);
     // LOOPCHECK: Child stack: [[CHILD_STACK:0x[0-9a-f]*]]
     // LOOPCHECK: Main context from: [[CHILD_STACK]] 524288
-    ret += Run(argc - 1, 2, stack);
+    ret += Run(argc - 1, 1, heap);
     // LOOPCHECK: Child stack: [[CHILD_STACK:0x[0-9a-f]*]]
     // LOOPCHECK: NextChild stack: [[NEXT_CHILD_STACK:0x[0-9a-f]*]]
     // LOOPCHECK: NextChild from: [[CHILD_STACK]] 524288
     // LOOPCHECK: Main context from: [[NEXT_CHILD_STACK]] 524288
-    ret += Run(argc - 1, 0, heap);
-    ret += Run(argc - 1, 1, heap);
     ret += Run(argc - 1, 2, heap);
     printf("Iteration %d passed\n", i);
   }
@@ -195,8 +205,8 @@ int main(int argc, char **argv) {
   // CHECK: Test passed
   printf("Test passed\n");
 
-  delete[] heap;
-  delete[] next_child_stack;
+  free_func(heap);
+  free_func(next_child_stack);
 
   return ret;
 }
