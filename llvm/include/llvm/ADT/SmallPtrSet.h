@@ -62,10 +62,10 @@ protected:
   /// CurArraySize - The allocated size of CurArray, always a power of two.
   unsigned CurArraySize;
 
-  /// Number of elements in CurArray that contain a value or are a tombstone.
+  /// Number of elements in CurArray that contain a value.
   /// If small, all these elements are at the beginning of CurArray and the rest
   /// is uninitialized.
-  unsigned NumNonEmpty;
+  unsigned NumEntries;
   /// Number of tombstones in CurArray.
   unsigned NumTombstones;
   /// Whether the set is in small representation.
@@ -79,7 +79,7 @@ protected:
                                SmallPtrSetImplBase &&that);
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
-      : CurArray(SmallStorage), CurArraySize(SmallSize), NumNonEmpty(0),
+      : CurArray(SmallStorage), CurArraySize(SmallSize), NumEntries(0),
         NumTombstones(0), IsSmall(true) {
     assert(llvm::has_single_bit(SmallSize) &&
            "Initial size must be a power of two!");
@@ -96,7 +96,7 @@ public:
   SmallPtrSetImplBase &operator=(const SmallPtrSetImplBase &) = delete;
 
   [[nodiscard]] bool empty() const { return size() == 0; }
-  size_type size() const { return NumNonEmpty - NumTombstones; }
+  size_type size() const { return NumEntries; }
   size_type capacity() const { return CurArraySize; }
 
   void clear() {
@@ -110,25 +110,25 @@ public:
       memset(CurArray, -1, CurArraySize * sizeof(void *));
     }
 
-    NumNonEmpty = 0;
+    NumEntries = 0;
     NumTombstones = 0;
   }
 
-  void reserve(size_type NumEntries) {
+  void reserve(size_type NewNumEntries) {
     incrementEpoch();
     // Do nothing if we're given zero as a reservation size.
-    if (NumEntries == 0)
+    if (NewNumEntries == 0)
       return;
-    // No need to expand if we're small and NumEntries will fit in the space.
-    if (isSmall() && NumEntries <= CurArraySize)
+    // No need to expand if we're small and NewNumEntries will fit in the space.
+    if (isSmall() && NewNumEntries <= CurArraySize)
       return;
     // insert_imp_big will reallocate if stores is more than 75% full, on the
     // /final/ insertion.
-    if (!isSmall() && ((NumEntries - 1) * 4) < (CurArraySize * 3))
+    if (!isSmall() && ((NewNumEntries - 1) * 4) < (CurArraySize * 3))
       return;
     // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
-    size_type NewSize = NumEntries + (NumEntries / 3);
+    size_type NewSize = NewNumEntries + (NewNumEntries / 3);
     NewSize = llvm::bit_ceil(NewSize);
     // Like insert_imp_big, always allocate at least 128 elements.
     NewSize = std::max(128u, NewSize);
@@ -145,15 +145,15 @@ protected:
   }
 
   const void **EndPointer() const {
-    return isSmall() ? CurArray + NumNonEmpty : CurArray + CurArraySize;
+    return isSmall() ? CurArray + NumEntries : CurArray + CurArraySize;
   }
 
   iterator_range<const void **> small_buckets() {
-    return make_range(CurArray, CurArray + NumNonEmpty);
+    return make_range(CurArray, CurArray + NumEntries);
   }
 
   iterator_range<const void *const *> small_buckets() const {
-    return {CurArray, CurArray + NumNonEmpty};
+    return {CurArray, CurArray + NumEntries};
   }
 
   iterator_range<const void **> buckets() {
@@ -172,10 +172,10 @@ protected:
       }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
-      if (NumNonEmpty < CurArraySize) {
-        CurArray[NumNonEmpty++] = Ptr;
+      if (NumEntries < CurArraySize) {
+        CurArray[NumEntries++] = Ptr;
         incrementEpoch();
-        return std::make_pair(CurArray + (NumNonEmpty - 1), true);
+        return std::make_pair(CurArray + (NumEntries - 1), true);
       }
       // Otherwise, hit the big set case, which will call grow.
     }
@@ -190,7 +190,7 @@ protected:
     if (isSmall()) {
       for (const void *&Bucket : small_buckets()) {
         if (Bucket == Ptr) {
-          Bucket = CurArray[--NumNonEmpty];
+          Bucket = CurArray[--NumEntries];
           incrementEpoch();
           return true;
         }
@@ -204,6 +204,7 @@ protected:
 
     *const_cast<const void **>(Bucket) = getTombstoneMarker();
     NumTombstones++;
+    --NumEntries;
     // Treat this consistently from an API perspective, even if we don't
     // actually invalidate iterators here.
     incrementEpoch();
@@ -430,12 +431,12 @@ public:
   bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
-      const void **APtr = CurArray, **E = CurArray + NumNonEmpty;
+      const void **APtr = CurArray, **E = CurArray + NumEntries;
       while (APtr != E) {
         PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(*APtr));
         if (P(Ptr)) {
           *APtr = *--E;
-          --NumNonEmpty;
+          --NumEntries;
           incrementEpoch();
           Removed = true;
         } else {
@@ -452,6 +453,7 @@ public:
       if (P(Ptr)) {
         Bucket = getTombstoneMarker();
         ++NumTombstones;
+        --NumEntries;
         incrementEpoch();
         Removed = true;
       }
