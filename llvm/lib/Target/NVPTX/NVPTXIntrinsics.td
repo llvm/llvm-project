@@ -4378,10 +4378,15 @@ def INT_PTX_SREG_WARPSIZE :
 // In addition to target-independent fields provided by WMMA_REGS, it adds
 // the fields commonly used to implement specific PTX instruction -- register
 // types and names, constraints, parts of assembly, etc.
-class WMMA_REGINFO<WMMA_REGS r, string op>
-      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type> {
+class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "">
+      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type, !eq(op, "mma.sp")> {
   // NVPTX register types used to carry fragment data.
   NVPTXRegClass regclass = !cond(
+    !eq(ptx_elt_type, "e4m3") : B32,
+    !eq(ptx_elt_type, "e5m2") : B32,
+    !eq(ptx_elt_type, "e3m2") : B32,
+    !eq(ptx_elt_type, "e2m3") : B32,
+    !eq(ptx_elt_type, "e2m1") : B32,
     !eq(ptx_elt_type, "f16") : B32,
     !eq(ptx_elt_type, "f32") : B32,
     !eq(ptx_elt_type, "f64") : B64,
@@ -4414,6 +4419,18 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !or(!eq(ptx_elt_type, "e3m2"),
+        !eq(ptx_elt_type, "e2m3"),
+        !eq(ptx_elt_type, "e2m1"),
+        !ne(kind, "")) : [hasSM120a, hasPTX<87>],
+
+    !or(!eq(ptx_elt_type, "e4m3"),
+        !eq(ptx_elt_type, "e5m2")) : [hasSM<89>, hasPTX<84>],
+
+    !and(!eq(op, "mma.sp"),
+         !ne(metadata, "sp")) : [hasSM<80>, hasPTX<85>],
+    !eq(op, "mma.sp") : [hasSM<80>, hasPTX<71>],
+
     // fp16 -> fp16/fp32 @ m16n16k16
     !and(!eq(geom, "m16n16k16"),
          !or(!eq(ptx_elt_type, "f16"),
@@ -4518,7 +4535,8 @@ class BuildPatternI<Intrinsic Intr, dag Ins> {
   // Build a dag pattern that matches the intrinsic call.
   dag ret = !foreach(tmp, Ins,
                           !subst(ADDR, addr,
-                          !subst(ins, Intr, tmp)));
+                          !subst(ins, Intr,
+                          !subst(i32imm, timm, tmp))));
 }
 
 // Same as above, but uses PatFrag instead of an Intrinsic.
@@ -4752,6 +4770,62 @@ defset list<WMMA_INSTR> MMAs  = {
 } // defset
 }
 
+// MMA SP
+class MMA_SP<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
+             WMMA_REGINFO FragC, WMMA_REGINFO FragD,
+             string Metadata, string Kind, int Satfinite>
+  : WMMA_INSTR<MMA_SP_NAME<Metadata, Kind, Satfinite,
+                           FragA, FragB, FragC, FragD>.record,
+               [FragA.Ins, FragB.Ins, FragC.Ins,
+                (ins B32:$metadata, i32imm:$selector)]>,
+    // Requires does not seem to have effect on Instruction w/o Patterns.
+    // We set it here anyways and propagate to the Pat<> we construct below.
+    Requires<!listconcat(FragA.Predicates,
+                         FragB.Predicates,
+                         FragC.Predicates,
+                         FragD.Predicates)> {
+  let OutOperandList = FragD.Outs;
+  let InOperandList = !con(Args, (ins MmaCode:$ptx));
+  string TypeList = "." # FragD.ptx_elt_type
+                    # "." # FragA.ptx_elt_type
+                    # "." # FragB.ptx_elt_type
+                    # "." # FragC.ptx_elt_type;
+  let AsmString = "mma"
+                  # "." # Metadata
+                  # ".sync.aligned."
+                  # FragA.geom
+                  # ".row.col"
+                  # !if(!ne(Kind, ""), "." # Kind, "")
+                  # !if(Satfinite, ".satfinite", "")
+                  # TypeList # "\n\t\t"
+                  # FragD.regstring # ",\n\t\t"
+                  # FragA.regstring # ",\n\t\t"
+                  # FragB.regstring # ",\n\t\t"
+                  # FragC.regstring # ",\n\t\t"
+                  # "$metadata" # ",\n\t\t"
+                  # "$selector" # ";";
+}
+
+let isConvergent = true in {
+defset list<WMMA_INSTR> MMA_SPs = {
+  foreach metadata = ["sp", "sp::ordered_metadata"] in {
+    foreach kind = ["", "kind::f8f6f4"] in {
+      foreach satf = [0, 1] in {
+        foreach op = NVVM_MMA_OPS.all_mma_sp_ops in {
+          if NVVM_MMA_SP_SUPPORTED<op, metadata, kind, satf>.ret then {
+            def : MMA_SP<WMMA_REGINFO<op[0], "mma.sp", metadata, kind>,
+                         WMMA_REGINFO<op[1], "mma.sp", metadata, kind>,
+                         WMMA_REGINFO<op[2], "mma.sp", metadata, kind>,
+                         WMMA_REGINFO<op[3], "mma.sp", metadata, kind>,
+                         metadata, kind, satf>;
+          }
+        } // op
+      } // satf
+    } // kind
+  } // metadata
+} // defset
+}
+
 //
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
@@ -4833,7 +4907,7 @@ class MMA_PAT<WMMA_INSTR wi>
         Requires<wi.Predicates>;
 
 // Build intrinsic->instruction patterns for all MMA instructions.
-foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs, STMATRIXs) in
+foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs, STMATRIXs, MMA_SPs) in
   def : MMA_PAT<mma>;
 
 multiclass MAPA<string suffix, Intrinsic Intr> {
