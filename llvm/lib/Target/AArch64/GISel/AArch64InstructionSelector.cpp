@@ -5203,19 +5203,25 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   // Produce this if the compare is signed:
   //
   // tst x, y
-  if (!CmpInst::isUnsigned(P) && LHSDef &&
-      LHSDef->getOpcode() == TargetOpcode::G_AND) {
-    // Make sure that the RHS is 0.
-    auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
-    if (!ValAndVReg || ValAndVReg->Value != 0)
-      return nullptr;
+  if (!CmpInst::isUnsigned(P) && LHSDef) {
+    MachineInstr *AndDef = LHSDef;
+    // Peek through freeze to find AND operation
+    if (LHSDef->getOpcode() == TargetOpcode::G_FREEZE &&
+        MRI.hasOneUse(LHSDef->getOperand(0).getReg())) {
+      AndDef = getDefIgnoringCopies(LHSDef->getOperand(0).getReg(), MRI);
+    }
 
-    return emitTST(LHSDef->getOperand(1),
-                   LHSDef->getOperand(2), MIRBuilder);
+    if (AndDef && AndDef->getOpcode() == TargetOpcode::G_AND) {
+      // Make sure that the RHS is 0.
+      auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
+      if (!ValAndVReg || ValAndVReg->Value != 0)
+        return nullptr;
+
+      return emitTST(AndDef->getOperand(1), AndDef->getOperand(2), MIRBuilder);
+    }
+
+    return nullptr;
   }
-
-  return nullptr;
-}
 
 bool AArch64InstructionSelector::selectShuffleVector(
     MachineInstr &I, MachineRegisterInfo &MRI) {
