@@ -70,12 +70,13 @@ jobs:
     - name: Bash Test
       shell: bash
       run: |
-        export PATH=C:\Strawberry\c\bin\:$PATH
+        export PATH=C:\Strawberry\c\bin\:C:\Android\android-sdk\cmake\3.18.1\bin:$PATH
+        export PATH=/c/Strawberry/c/bin/:$PATH
         cmake --version
         which cmake
     - name: Check long paths
       run: |
-        #Get-ChildItem -Path "C:\" -Recurse -Include "cmake.exe"
+        Get-ChildItem -Path "C:\Strawberry\" -Recurse -Include "cmake.exe"
         Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled'
         New-Item -Path "C:\actions-runner\llvm-project\llvm-project\build\tools\clang\stage2-instrumented-bins\tools\clang\stage2-bins\tools\mlir\tools\mlir-linalg-ods-gen\CMakeFiles\mlir-linalg-ods-yaml-gen.dir\C_\actions-runner\llvm-project\llvm-project\llvm\resources\windows_version_resource.rc.res" -ItemType File -Force
     # It's good practice to use setup-python, but this is also required on macos-14
