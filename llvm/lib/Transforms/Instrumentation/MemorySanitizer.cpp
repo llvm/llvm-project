@@ -3237,6 +3237,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
   ///       by this handler. See horizontalReduce().
+  ///
+  /// TODO: permutation intrinsics are also often incorrectly matched.
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
@@ -5717,6 +5719,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpermi2var_qi_256:
     case Intrinsic::x86_avx512_vpermi2var_qi_512:
       handleAVXVpermi2var(I);
+      break;
+
+    // Packed Shuffle
+    //   llvm.x86.sse.pshuf.w(<1 x i64>, i8)
+    //   llvm.x86.ssse3.pshuf.b(<1 x i64>, <1 x i64>)
+    //   llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
+    //   llvm.x86.avx2.pshuf.b(<32 x i8>, <32 x i8>)
+    //   llvm.x86.avx512.pshuf.b.512(<64 x i8>, <64 x i8>)
+    //
+    // The following intrinsics are auto-upgraded:
+    //   llvm.x86.sse2.pshuf.d(<4 x i32>, i8)
+    //   llvm.x86.sse2.gpshufh.w(<8 x i16>, i8)
+    //   llvm.x86.sse2.pshufl.w(<8 x i16>, i8)
+    case Intrinsic::x86_avx2_pshuf_b:
+    case Intrinsic::x86_sse_pshuf_w:
+    case Intrinsic::x86_ssse3_pshuf_b_128:
+    case Intrinsic::x86_ssse3_pshuf_b:
+    case Intrinsic::x86_avx512_pshuf_b_512:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1);
       break;
 
     case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
