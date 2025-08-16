@@ -568,3 +568,9 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
   W->printHex("Signature", EndPrecomp.getSignature());
   return Error::success();
 }
+
+Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, AliasRecord &Alias) {
+  printTypeIndex("UnderlyingType", Alias.UnderlyingType);
+  W->printString("Name", Alias.Name);
+  return Error::success();
+}
