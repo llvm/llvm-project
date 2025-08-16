@@ -49,3 +49,36 @@ define i1 @vec_reverse_known_bits_demanded_fail(<4 x i8> %xx) {
   %r = icmp slt i8 %ele, 0
   ret i1 %r
 }
+
+; Test known bits for (sext i8 x) * (sext i8 x)
+; RUN: opt -passes=instcombine < %s -S | FileCheck %s --check-prefix=SEXT_SQUARE
+
+define i1 @sext_square_bit31(i8 %x) {
+; SEXT_SQUARE-LABEL: @sext_square_bit31(
+; SEXT_SQUARE-NEXT:    ret i1 false
+  %sx = sext i8 %x to i32
+  %mul = mul nsw i32 %sx, %sx
+  %and = and i32 %mul, 2147483648 ; 1 << 31
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @sext_square_bit30(i8 %x) {
+; SEXT_SQUARE-LABEL: @sext_square_bit30(
+; SEXT_SQUARE-NEXT:    ret i1 false
+  %sx = sext i8 %x to i32
+  %mul = mul nsw i32 %sx, %sx
+  %and = and i32 %mul, 1073741824 ; 1 << 30
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @sext_square_bit14(i8 %x) {
+; SEXT_SQUARE-LABEL: @sext_square_bit14(
+; SEXT_SQUARE-NOT: ret i1 false
+  %sx = sext i8 %x to i32
+  %mul = mul nsw i32 %sx, %sx
+  %and = and i32 %mul, 16384 ; 1 << 14
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
