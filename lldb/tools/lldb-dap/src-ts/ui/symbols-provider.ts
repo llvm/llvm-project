@@ -5,6 +5,7 @@ import { DebugSessionTracker } from "../debug-session-tracker";
 import { DisposableContext } from "../disposable-context";
 
 import { DAPSymbolType } from "..";
+import { getDefaultConfigKey } from "../debug-configuration-provider";
 
 export class SymbolsProvider extends DisposableContext {
   constructor(
@@ -16,7 +17,10 @@ export class SymbolsProvider extends DisposableContext {
     this.pushSubscription(vscode.commands.registerCommand(
       "lldb-dap.debug.showSymbols",
       () => {
-        this.SelectModuleAndShowSymbols();
+        const session = vscode.debug.activeDebugSession;
+        if (!session) return;
+
+        this.SelectModuleAndShowSymbols(session);
       },
     ));
 
@@ -24,38 +28,45 @@ export class SymbolsProvider extends DisposableContext {
       "lldb-dap.modules.showSymbols",
       (moduleItem: DebugProtocol.Module) => {
         const session = vscode.debug.activeDebugSession;
-        if (!session) {
-            return;
-        }
+        if (!session) return;
+
         this.showSymbolsForModule(session, moduleItem);
       },
     ));
+
+    this.tracker.onDidInitializeSession((session) => {
+      this.GetLLDBServerVersion(session).then((version) => {
+        if (version !== undefined) {
+          if (version[0] >= 23) {
+            vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", true);
+          }
+        }
+      });
+    });
+
+    this.tracker.onDidExitSession((session) => {
+      vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", false);
+    });
   }
 
-  static async doesServerSupportSymbolsRequest(session: vscode.DebugSession): Promise<boolean> {
-    try {
-      const dummyArguments = { _dummy: true };
-      await session.customRequest("moduleSymbols", dummyArguments);
-      return true;
-    } catch (_error) {
-      return false;
-    }
+  private async GetLLDBServerVersion(session: vscode.DebugSession): Promise<[number, number, number] | undefined> {
+    const commandEscapePrefix = session.configuration.commandEscapePrefix || getDefaultConfigKey("commandEscapePrefix");
+    const response = await session.customRequest("evaluate", { expression: commandEscapePrefix + "version", context: "repl" });
+
+    const versionLine = response.result?.split("\n")[0];
+    if (!versionLine) return undefined;
+    
+    const versionMatch = versionLine.match(/(\d+)\.(\d+)\.(\d+)/);
+    if (!versionMatch) return undefined;
+
+    const [major, minor, patch] = versionMatch.slice(1, 4).map(Number);
+    return [major, minor, patch];
   }
 
-  private async SelectModuleAndShowSymbols() {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
-        return;
-    }
-
-    if (!await SymbolsProvider.doesServerSupportSymbolsRequest(session)) {
-        vscode.window.showErrorMessage("The debug adapter does not support symbol requests.");
-        return;
-    }
-
+  private async SelectModuleAndShowSymbols(session: vscode.DebugSession) {
     const modules = this.tracker.debugSessionModules(session);
     if (!modules || modules.length === 0) {
-        return;
+      return;
     }
 
     // Let the user select a module to show symbols for
@@ -63,7 +74,7 @@ export class SymbolsProvider extends DisposableContext {
         placeHolder: "Select a module to show symbols for"
     });
     if (!selectedModule) {
-        return;
+      return;
     }
 
     this.showSymbolsForModule(session, selectedModule.module);
@@ -86,8 +97,7 @@ export class SymbolsProvider extends DisposableContext {
 
   private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbolType[]> {
     console.log(`Getting symbols for module: ${moduleId}`);
-    const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("moduleSymbols", { moduleId });
-
+    const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("moduleSymbols", { moduleId, moduleName: '' });
 
     return symbols_response?.symbols || [];
   }

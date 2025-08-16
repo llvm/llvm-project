@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 interface EventMap {
   "module": DebugProtocol.ModuleEvent;
   "exited": DebugProtocol.ExitedEvent;
+  "initialized": DebugProtocol.InitializedEvent;
 }
 
 /** A type assertion to check if a ProtocolMessage is an event or if it is a specific event. */
@@ -39,6 +40,8 @@ export class DebugSessionTracker
   private modulesChanged = new vscode.EventEmitter<
     vscode.DebugSession | undefined
   >();
+  private sessionInitialized = new vscode.EventEmitter<vscode.DebugSession>();
+  private sessionExited = new vscode.EventEmitter<vscode.DebugSession>();
 
   /**
    * Fired when modules are changed for any active debug session.
@@ -47,6 +50,14 @@ export class DebugSessionTracker
    */
   onDidChangeModules: vscode.Event<vscode.DebugSession | undefined> =
     this.modulesChanged.event;
+
+  /** Fired when a debug session is initialized. */
+  onDidInitializeSession: vscode.Event<vscode.DebugSession> =
+    this.sessionInitialized.event;
+
+  /** Fired when a debug session is exiting. */
+  onDidExitSession: vscode.Event<vscode.DebugSession> =
+    this.sessionExited.event;
 
   constructor(private logger: vscode.LogOutputChannel) {
     this.onDidChangeModules(this.moduleChangedListener, this);
@@ -146,6 +157,10 @@ export class DebugSessionTracker
       this.logger.info(
         `Session "${session.name}" exited with code ${exitCode}`,
       );
+
+      this.sessionExited.fire(session);
+    } else if (isEvent(message, "initialized")) {
+      this.sessionInitialized.fire(session);
     }
   }
 }
