@@ -295,19 +295,33 @@ define i64 @test_and_4(i64 %x, i64 %y) {
 }
 
 define i64 @test_add(i64 %x, i64 %y) {
-; CHECK-LABEL: test_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x19, x0, #3
-; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    cmp x19, #0
-; CHECK-NEXT:    csel x0, x19, x0, eq
-; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_add:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    mov x19, x0
+; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:    bl callee
+; CHECK-SD-NEXT:    adds x8, x19, #3
+; CHECK-SD-NEXT:    csel x0, x8, x0, eq
+; CHECK-SD-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_add:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    add x19, x0, #3
+; CHECK-GI-NEXT:    mov x0, xzr
+; CHECK-GI-NEXT:    bl callee
+; CHECK-GI-NEXT:    cmp x19, #0
+; CHECK-GI-NEXT:    csel x0, x19, x0, eq
+; CHECK-GI-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %a = add i64 %x, 3
   %b = call i64 @callee(i64 0)
   %c = icmp eq i64 %a, 0
