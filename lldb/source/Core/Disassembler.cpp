@@ -397,7 +397,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   // enhances source-level debugging.
 
   struct VarState {
-    std::string name;     //< Display name.
+    std::string name;     ///< Display name.
     std::string last_loc; //< Last printed location (empty means <undef>).
     bool seen_this_inst = false;
   };
