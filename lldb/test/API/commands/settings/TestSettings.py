@@ -972,6 +972,74 @@ class SettingsCommandTestCase(TestBase):
         # A known option should fail if its argument is invalid.
         self.expect("settings set auto-confirm bogus", error=True)
 
+    def test_settings_show_defaults(self):
+        # boolean
+        self.expect(
+            "settings show --defaults auto-one-line-summaries",
+            matching=False,
+            substrs=["(default: true)"],
+        )
+        self.runCmd("settings set auto-one-line-summaries false")
+        self.expect(
+            "settings show --defaults auto-one-line-summaries",
+            substrs=["= false (default: true)"],
+        )
+        # unsigned
+        self.expect(
+            "settings show --defaults stop-line-count-before",
+            matching=False,
+            patterns=[r"\(default: \d+\)"],
+        )
+        self.runCmd("settings set stop-line-count-before 99")
+        self.expect(
+            "settings show --defaults stop-line-count-before",
+            patterns=[r"= 99 \(default: \d+\)"],
+        )
+        # string
+        self.expect(
+            "settings show --defaults prompt",
+            matching=False,
+            patterns=[r'\(default: ".+"\)'],
+        )
+        self.runCmd("settings set prompt '<LlDb> '")
+        self.expect(
+            "settings show --defaults prompt",
+            patterns=[r'= "<LlDb> " \(default: ".+"\)'],
+        )
+        # enum
+        self.expect(
+            "settings show --defaults stop-disassembly-display",
+            matching=False,
+            patterns=[r"\(default: .+\)"],
+        )
+        self.runCmd("settings set stop-disassembly-display no-source")
+        self.expect(
+            "settings show --defaults stop-disassembly-display",
+            patterns=[r"= no-source \(default: .+\)"],
+        )
+        # regex
+        self.expect(
+            "settings show --defaults target.process.thread.step-avoid-regexp",
+            matching=False,
+            patterns=[r"\(default: .+\)"],
+        )
+        self.runCmd("settings set target.process.thread.step-avoid-regexp dotstar")
+        self.expect(
+            "settings show --defaults target.process.thread.step-avoid-regexp",
+            patterns=[r"= dotstar \(default: .+\)"],
+        )
+        # format-string
+        self.expect(
+            "settings show --defaults disassembly-format",
+            matching=False,
+            patterns=[r'\(default: ".+"\)'],
+        )
+        self.runCmd("settings set disassembly-format dollar")
+        self.expect(
+            "settings show --defaults disassembly-format",
+            patterns=[r'= "dollar" \(default: ".+"\)'],
+        )
+
     def get_setting_json(self, setting_path=None):
         settings_data = self.dbg.GetSetting(setting_path)
         stream = lldb.SBStream()
