@@ -12507,6 +12507,9 @@ def note_coroutine_promise_call_implicitly_required : Note<
 def err_await_suspend_invalid_return_type : Error<
   "return type of 'await_suspend' is required to be 'void' or 'bool' (have %0)"
 >;
+def err_await_suspend_destroy_invalid_return_type : Error<
+  "return type of 'await_suspend_destroy' is required to be 'void' (have %0)"
+>;
 def note_await_ready_no_bool_conversion : Note<
   "return type of 'await_ready' is required to be contextually convertible to 'bool'"
 >;
