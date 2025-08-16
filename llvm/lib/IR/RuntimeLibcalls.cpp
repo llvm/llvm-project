@@ -9,6 +9,7 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
@@ -18,9 +19,11 @@ using namespace RTLIB;
 
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
+#define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 #include "llvm/IR/RuntimeLibcalls.inc"
 #undef GET_INIT_RUNTIME_LIBCALL_NAMES
 #undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
+#undef DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
@@ -58,49 +61,23 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   }
 }
 
-RTLIB::LibcallImpl
-RuntimeLibcallsInfo::getSupportedLibcallImpl(StringRef FuncName) const {
-  const ArrayRef<uint16_t> RuntimeLibcallNameOffsets(
-      RuntimeLibcallNameOffsetTable);
-
-  iterator_range<ArrayRef<uint16_t>::const_iterator> Range =
-      getRecognizedLibcallImpls(FuncName);
-
-  for (auto I = Range.begin(); I != Range.end(); ++I) {
-    RTLIB::LibcallImpl Impl =
-        static_cast<RTLIB::LibcallImpl>(I - RuntimeLibcallNameOffsets.begin());
-
-    // FIXME: This should not depend on looking up ImplToLibcall, only the list
-    // of libcalls for the module.
-    RTLIB::LibcallImpl Recognized = LibcallImpls[ImplToLibcall[Impl]];
-    if (Recognized != RTLIB::Unsupported)
-      return Recognized;
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+iota_range<RTLIB::LibcallImpl>
+RuntimeLibcallsInfo::libcallImplNameHit(uint16_t NameOffsetEntry,
+                                        uint16_t StrOffset) {
+  int NumAliases = 1;
+  for (uint16_t Entry : ArrayRef(RuntimeLibcallNameOffsetTable)
+                            .drop_front(NameOffsetEntry + 1)) {
+    if (Entry != StrOffset)
+      break;
+    ++NumAliases;
   }
 
-  return RTLIB::Unsupported;
-}
-
-iterator_range<ArrayRef<uint16_t>::const_iterator>
-RuntimeLibcallsInfo::getRecognizedLibcallImpls(StringRef FuncName) {
-  StringTable::Iterator It = lower_bound(RuntimeLibcallImplNameTable, FuncName);
-  if (It == RuntimeLibcallImplNameTable.end() || *It != FuncName)
-    return iterator_range(ArrayRef<uint16_t>());
-
-  uint16_t IndexVal = It.offset().value();
-  const ArrayRef<uint16_t> TableRef(RuntimeLibcallNameOffsetTable);
-
-  ArrayRef<uint16_t>::const_iterator E = TableRef.end();
-  ArrayRef<uint16_t>::const_iterator EntriesBegin =
-      std::lower_bound(TableRef.begin(), E, IndexVal);
-  ArrayRef<uint16_t>::const_iterator EntriesEnd = EntriesBegin;
-
-  while (EntriesEnd != E && *EntriesEnd == IndexVal)
-    ++EntriesEnd;
-
-  assert(EntriesBegin != E &&
-         "libcall found in name table but not offset table");
-
-  return make_range(EntriesBegin, EntriesEnd);
+  RTLIB::LibcallImpl ImplStart = static_cast<RTLIB::LibcallImpl>(
+      &RuntimeLibcallNameOffsetTable[NameOffsetEntry] -
+      &RuntimeLibcallNameOffsetTable[0]);
+  return enum_seq(ImplStart,
+                  static_cast<RTLIB::LibcallImpl>(ImplStart + NumAliases));
 }
 
 bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
