@@ -16,7 +16,9 @@ class TestDAP_moduleSymbols(lldbdap_testcase.DAPTestCaseBase):
         symbol_names = []
         i = 0
         while True:
-            next_symbol = self.dap_server.request_moduleSymbols(moduleName="a.out", startIndex=i, count=1)
+            next_symbol = self.dap_server.request_moduleSymbols(
+                moduleName="a.out", startIndex=i, count=1
+            )
             self.assertIn("symbols", next_symbol["body"])
             result_symbols = next_symbol["body"]["symbols"]
             self.assertLessEqual(len(result_symbols), 1)
