@@ -289,7 +289,7 @@
         },
         {
           "command": "lldb-dap.debug.showSymbols",
-          "when": "debuggersAvailable && debugType == 'lldb-dap'"
+          "when": "debuggersAvailable && debugType == 'lldb-dap' && lldb-dap.supportsModuleSymbolsRequest"
         }
       ],
       "view/item/context": [
@@ -299,7 +299,7 @@
         },
         {
           "command": "lldb-dap.modules.showSymbols",
-          "when": "view == lldb-dap.modules && viewItem == module"
+          "when": "view == lldb-dap.modules && viewItem == module && lldb-dap.supportsModuleSymbolsRequest"
         }
       ]
     },

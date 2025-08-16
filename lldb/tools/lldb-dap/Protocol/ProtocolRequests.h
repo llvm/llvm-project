@@ -983,10 +983,10 @@ llvm::json::Value toJSON(const WriteMemoryResponseBody &);
 
 struct ModuleSymbolsArguments {
   /// The module UUID for which to retrieve symbols.
-  std::optional<std::string> moduleId;
+  std::string moduleId;
 
   /// The module path.
-  std::optional<std::string> moduleName;
+  std::string moduleName;
 };
 bool fromJSON(const llvm::json::Value &, ModuleSymbolsArguments &,
               llvm::json::Path);

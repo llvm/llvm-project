@@ -26,9 +26,9 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
   ModuleSymbolsResponseBody response;
 
   lldb::SBModuleSpec module_spec;
-  if (args.moduleId) {
+  if (!args.moduleId.empty()) {
     llvm::SmallVector<uint8_t, 20> uuid_bytes;
-    if (!lldb_private::UUID::DecodeUUIDBytesFromString(*args.moduleId,
+    if (!lldb_private::UUID::DecodeUUIDBytesFromString(args.moduleId,
                                                        uuid_bytes)
              .empty())
       return llvm::make_error<DAPError>("Invalid module ID");
@@ -36,15 +36,13 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
     module_spec.SetUUIDBytes(uuid_bytes.data(), uuid_bytes.size());
   }
 
-  if (args.moduleName) {
+  if (!args.moduleName.empty()) {
     lldb::SBFileSpec file_spec;
-    file_spec.SetFilename(args.moduleName->c_str());
+    file_spec.SetFilename(args.moduleName.c_str());
     module_spec.SetFileSpec(file_spec);
   }
 
   // Empty request, return empty response.
-  // We use it in the client to check if the lldb-dap server supports this
-  // request.
   if (!module_spec.IsValid())
     return response;
 
