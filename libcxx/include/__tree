@@ -600,7 +600,7 @@ private:
   _ALIGNAS_TYPE(__node_value_type) unsigned char __buffer_[sizeof(__node_value_type)];
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_)); }
+  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return *std::__launder(reinterpret_cast<__node_value_type*>(&__buffer_)); }
 #endif
 
   template <class _Alloc, class... _Args>
