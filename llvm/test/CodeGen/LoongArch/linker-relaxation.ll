@@ -29,10 +29,8 @@ declare void @callee1() nounwind
 declare dso_local void @callee2() nounwind
 declare dso_local void @callee3() nounwind
 
-define ptr @caller() nounwind {
-; RELAX:            R_LARCH_ALIGN - 0x1C
 ; CHECK-RELOC:      R_LARCH_GOT_PC_HI20 g_e 0x0
-; RELAX-NEXT:       R_LARCH_RELAX - 0x0
+; RELAX:            R_LARCH_RELAX - 0x0
 ; CHECK-RELOC-NEXT: R_LARCH_GOT_PC_LO12 g_e 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; PCALA-RELOC:      R_LARCH_PCALA_HI20 .bss 0x0
@@ -77,26 +75,35 @@ define ptr @caller() nounwind {
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; CHECK-RELOC-NEXT: R_LARCH_TLS_LE_LO12_R t_le 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
-; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee1 0x0
-; RELAX-NEXT:       R_LARCH_RELAX - 0x0
-; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee2 0x0
-; RELAX-NEXT:       R_LARCH_RELAX - 0x0
-; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee3 0x0
-; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; PCALA-RELOC:      R_LARCH_PCALA_HI20 .data 0x0
 ; RELAX-NEXT:       R_LARCH_PCALA_HI20 g_i1 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
 ; PCALA-RELOC:      R_LARCH_PCALA_LO12 .data 0x0
 ; RELAX-NEXT:       R_LARCH_PCALA_LO12 g_i1 0x0
 ; RELAX-NEXT:       R_LARCH_RELAX - 0x0
+; RELAX-NEXT:       R_LARCH_ALIGN - 0x1C
+; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee1 0x0
+; RELAX-NEXT:       R_LARCH_RELAX - 0x0
+; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee2 0x0
+; RELAX-NEXT:       R_LARCH_RELAX - 0x0
+; CHECK-RELOC-NEXT: R_LARCH_CALL36 callee3 0x0
+; RELAX-NEXT:       R_LARCH_RELAX - 0x0
+
+;; No ALIGN reloc will emit before the first linker-relaxable instruction.
+define ptr @loader() nounwind {
   %a = load volatile i32, ptr @g_e
   %b = load volatile i32, ptr @g_i
   %c = load volatile i32, ptr @t_un
   %d = load volatile i32, ptr @t_ld
   %e = load volatile i32, ptr @t_ie
   %f = load volatile i32, ptr @t_le
+  ret ptr @g_i1
+}
+
+;; ALIGN reloc will be emitted here.
+define void @caller() nounwind {
   call i32 @callee1()
   call i32 @callee2()
   tail call i32 @callee3()
-  ret ptr @g_i1
+  ret void
 }
