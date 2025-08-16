@@ -106,6 +106,10 @@ throughput_baseline(const cpp::array<T, N> &inputs) {
   asm("" ::"llr"(start));
 
   T result{};
+
+  #if defined(LIBC_GPU_BENCHMARKS_DISABLE_UNROLL)
+  #pragma clang loop unroll(disable)
+  #endif
   for (auto input : inputs) {
     asm("" ::"r"(input));
     result = input;
@@ -135,6 +139,10 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs) {
   asm("" ::"llr"(start));
 
   T result{};
+
+  #if defined(LIBC_GPU_BENCHMARKS_DISABLE_UNROLL)
+  #pragma clang loop unroll(disable)
+  #endif
   for (auto input : inputs) {
     asm("" ::"r"(input));
     result = f(input);
@@ -163,6 +171,10 @@ static LIBC_INLINE uint64_t throughput_baseline(
   asm("" ::"llr"(start));
 
   T result{};
+
+  #if defined(LIBC_GPU_BENCHMARKS_DISABLE_UNROLL)
+  #pragma clang loop unroll(disable)
+  #endif
   for (size_t i = 0; i < N; i++) {
     T x = inputs1[i];
     T y = inputs2[i];
@@ -195,6 +207,10 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs1,
   asm("" ::"llr"(start));
 
   T result{};
+
+  #if defined(LIBC_GPU_BENCHMARKS_DISABLE_UNROLL)
+  #pragma clang loop unroll(disable)
+  #endif
   for (size_t i = 0; i < N; i++) {
     T x = inputs1[i];
     T y = inputs2[i];

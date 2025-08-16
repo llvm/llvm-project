@@ -2,6 +2,8 @@ add_subdirectory(timing)
 
 add_custom_target(gpu-benchmark)
 
+option(LIBC_GPU_BENCHMARKS_ALLOW_UNROLL "Allow compiler loop unrolling in throughput loops" OFF)
+
 function(add_benchmark benchmark_name)
   cmake_parse_arguments(
     "BENCHMARK"
@@ -14,6 +16,12 @@ function(add_benchmark benchmark_name)
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()
+
+  set(benchmark_extra_flags "")
+  if(NOT LIBC_GPU_BENCHMARKS_ALLOW_UNROLL)
+    list(APPEND benchmark_extra_flags "-DLIBC_GPU_BENCHMARKS_DISABLE_UNROLL=1")
+  endif()
+
   add_libc_hermetic(
     ${benchmark_name}
     IS_GPU_BENCHMARK
@@ -26,6 +34,7 @@ function(add_benchmark benchmark_name)
     ${BENCHMARK_UNPARSED_ARGUMENTS}
     COMPILE_OPTIONS
       -flto
+      ${benchmark_extra_flags}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
   set(fq_build_target_name ${fq_target_name}.__build__)
