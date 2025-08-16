@@ -125,22 +125,33 @@ static FailureOr<Block *> getConvertedBlock(ConversionPatternRewriter &rewriter,
   return rewriter.applySignatureConversion(block, *conversion, converter);
 }
 
+/// Flatten the given value ranges into a single vector of values.
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const ValueRange &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
+
 /// Convert the destination block signature (if necessary) and lower the branch
 /// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
   using ConvertOpToLLVMPattern<cf::BranchOp>::ConvertOpToLLVMPattern;
+  using Adaptor =
+      typename ConvertOpToLLVMPattern<cf::BranchOp>::OneToNOpAdaptor;
 
   LogicalResult
-  matchAndRewrite(cf::BranchOp op, typename cf::BranchOp::Adaptor adaptor,
+  matchAndRewrite(cf::BranchOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> flattenedAdaptor = flattenValues(adaptor.getOperands());
     FailureOr<Block *> convertedBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getSuccessor(),
-                          TypeRange(adaptor.getOperands()));
+                          TypeRange(flattenedAdaptor));
     if (failed(convertedBlock))
       return failure();
     DictionaryAttr attrs = op->getAttrDictionary();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-        op, adaptor.getOperands(), *convertedBlock);
+        op, flattenedAdaptor, *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
     newOp->setAttrs(attrs);
@@ -152,29 +163,37 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
 /// branch op to llvm.cond_br.
 struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
   using ConvertOpToLLVMPattern<cf::CondBranchOp>::ConvertOpToLLVMPattern;
+  using Adaptor =
+      typename ConvertOpToLLVMPattern<cf::CondBranchOp>::OneToNOpAdaptor;
 
   LogicalResult
-  matchAndRewrite(cf::CondBranchOp op,
-                  typename cf::CondBranchOp::Adaptor adaptor,
+  matchAndRewrite(cf::CondBranchOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> flattenedAdaptorTrue =
+        flattenValues(adaptor.getTrueDestOperands());
+    SmallVector<Value> flattenedAdaptorFalse =
+        flattenValues(adaptor.getFalseDestOperands());
+    if (!llvm::hasSingleElement(adaptor.getCondition()))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected single element condition");
     FailureOr<Block *> convertedTrueBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getTrueDest(),
-                          TypeRange(adaptor.getTrueDestOperands()));
+                          TypeRange(flattenedAdaptorTrue));
     if (failed(convertedTrueBlock))
       return failure();
     FailureOr<Block *> convertedFalseBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getFalseDest(),
-                          TypeRange(adaptor.getFalseDestOperands()));
+                          TypeRange(flattenedAdaptorFalse));
     if (failed(convertedFalseBlock))
       return failure();
-    DictionaryAttr attrs = op->getAttrDictionary();
+    DictionaryAttr attrs = op->getDiscardableAttrDictionary();
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getCondition(), adaptor.getTrueDestOperands(),
-        adaptor.getFalseDestOperands(), op.getBranchWeightsAttr(),
+        op, llvm::getSingleElement(adaptor.getCondition()),
+        flattenedAdaptorTrue, flattenedAdaptorFalse, op.getBranchWeightsAttr(),
         *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(attrs);
+    newOp->setDiscardableAttrs(attrs);
     return success();
   }
 };
