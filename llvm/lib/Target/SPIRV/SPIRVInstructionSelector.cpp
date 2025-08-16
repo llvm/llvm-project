@@ -737,9 +737,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
     return selectExtInst(ResVReg, ResType, I, CL::fmin, GL::NMin);
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
   case TargetOpcode::G_FCOPYSIGN:
