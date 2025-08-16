@@ -209,15 +209,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr2_vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
@@ -549,18 +548,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr16_vgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
@@ -636,18 +634,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr18_vgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
@@ -724,16 +721,15 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
   ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr4_vgpr5, $vgpr8_vgpr9, undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr4_vgpr5, $vgpr8_vgpr9, undef $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
@@ -810,16 +806,15 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr18_vgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X16F16_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $agpr2_agpr3_agpr4_agpr5, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
@@ -1038,9 +1033,8 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
     ; CHECK-NEXT: renamable $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: renamable $vgpr18_vgpr19 = COPY killed renamable $agpr0_agpr1
-    ; CHECK-NEXT: early-clobber renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17
+    ; CHECK-NEXT: renamable $agpr16_agpr17 = COPY killed renamable $agpr0_agpr1
+    ; CHECK-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
@@ -1650,18 +1644,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr16_vgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
@@ -1824,16 +1817,15 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr2_vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
