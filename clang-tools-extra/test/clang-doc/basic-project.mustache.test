@@ -62,13 +62,16 @@ HTML-SHAPE:                 <div class="hero__title">
 HTML-SHAPE:                     <h1 class="hero__title-large">class Shape</h1>
 HTML-SHAPE:                    <div class="hero__subtitle">
 HTML-SHAPE:                                    <div>
-HTML-SHAPE:                                        <p> Abstract base class for shapes.</p>
+HTML-SHAPE:                                        <p>
+HTML-SHAPE: Abstract base class for shapes.
+HTML-SHAPE:                                        </p>
 HTML-SHAPE:                                    </div>
 HTML-SHAPE:                                        <div>
-HTML-SHAPE:                                    <p></p>
 HTML-SHAPE:                                </div>
 HTML-SHAPE:                                    <div>
-HTML-SHAPE:                                    <p> Provides a common interface for different types of shapes.</p>
+HTML-SHAPE:                                    <p>
+HTML-SHAPE: Provides a common interface for different types of shapes.
+HTML-SHAPE:                                    </p>
 HTML-SHAPE:                                </div>
 HTML-SHAPE:                                                </div>
 HTML-SHAPE:                 </div>
@@ -85,16 +88,20 @@ HTML-SHAPE:             </code>
 HTML-SHAPE:         </pre>
 HTML-SHAPE:        <div>
 HTML-SHAPE:                        <div>
-HTML-SHAPE:                            <p> Calculates the area of the shape.</p>
+HTML-SHAPE:                                <p>
+HTML-SHAPE: Calculates the area of the shape.
+HTML-SHAPE:                                </p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:                            <div>
-HTML-SHAPE:                        <p></p>
+HTML-SHAPE:                        <p>
+HTML-SHAPE:                        </p>
 HTML-SHAPE:                    </div>
 HTML-SHAPE:                        <div>
-HTML-SHAPE:                        <p></p>
 HTML-SHAPE:                    </div>
 HTML-SHAPE:                    <h3>Returns</h3>
-HTML-SHAPE:                        <p> double The area of the shape.</p>
+HTML-SHAPE:                        <p>
+HTML-SHAPE: double The area of the shape.
+HTML-SHAPE:                        </p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
@@ -107,16 +114,18 @@ HTML-SHAPE:             </code>
 HTML-SHAPE:         </pre>
 HTML-SHAPE:        <div>
 HTML-SHAPE:                        <div>
-HTML-SHAPE:                            <p> Calculates the perimeter of the shape.</p>
+HTML-SHAPE:                            <p>
+HTML-SHAPE: Calculates the perimeter of the shape.
+HTML-SHAPE:                            </p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:                            <div>
-HTML-SHAPE:                        <p></p>
 HTML-SHAPE:                    </div>
 HTML-SHAPE:                        <div>
-HTML-SHAPE:                        <p></p>
 HTML-SHAPE:                    </div>
 HTML-SHAPE:                    <h3>Returns</h3>
-HTML-SHAPE:                        <p> double The perimeter of the shape.</p>
+HTML-SHAPE:                        <p>
+HTML-SHAPE: double The perimeter of the shape.
+HTML-SHAPE:                        </p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
@@ -129,10 +138,11 @@ HTML-SHAPE:             </code>
 HTML-SHAPE:         </pre>
 HTML-SHAPE:        <div>
 HTML-SHAPE:                        <div>
-HTML-SHAPE:                            <p> Virtual destructor.</p>
+HTML-SHAPE:                            <p>
+HTML-SHAPE: Virtual destructor.
+HTML-SHAPE:                            </p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:                            <div>
-HTML-SHAPE:                        <p></p>
 HTML-SHAPE:                    </div>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
@@ -218,13 +228,16 @@ HTML-CALC:             <section class="hero section-container">
 HTML-CALC:                 <div class="hero__title">
 HTML-CALC:                     <h1 class="hero__title-large">class Calculator</h1>
 HTML-CALC:                                    <div>
-HTML-CALC:                                        <p> A simple calculator class.</p>
+HTML-CALC:                                        <p>
+HTML-CALC: A simple calculator class.
+HTML-CALC:                                        </p>
 HTML-CALC:                                    </div>
 HTML-CALC:                                        <div>
-HTML-CALC:                                    <p></p>
 HTML-CALC:                                </div>
 HTML-CALC:                                    <div>
-HTML-CALC:                                    <p> Provides basic arithmetic operations.</p>
+HTML-CALC:                                    <p>
+HTML-CALC: Provides basic arithmetic operations.
+HTML-CALC:                                    </p>
 HTML-CALC:                                </div>
 HTML-CALC:                                                </div>
 HTML-CALC:                 </div>
@@ -256,33 +269,35 @@ HTML-CALC:             </code>
 HTML-CALC:         </pre>
 HTML-CALC:        <div>
 HTML-CALC:                        <div>
-HTML-CALC:                            <p> Adds two integers.</p>
+HTML-CALC:                            <p>
+HTML-CALC: Adds two integers.
+HTML-CALC:                            </p>
 HTML-CALC:                        </div>
 HTML-CALC:                            <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Parameters</h3>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>a</b>      <div>
-HTML-CALC:                        <p> First integer.</p>
+HTML-CALC:                        <b>a</b>      
+HTML-CALC:                        <div>
+HTML-CALC: First integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>b</b>      <div>
-HTML-CALC:                        <p> Second integer.</p>
+HTML-CALC:                        <b>b</b>      
+HTML-CALC:                        <div>
+HTML-CALC: Second integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
-HTML-CALC:                        <p> int The sum of a and b.</p>
+HTML-CALC:                        <p>
+HTML-CALC: int The sum of a and b.
+HTML-CALC:                        </p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -295,16 +310,18 @@ HTML-CALC:             </code>
 HTML-CALC:         </pre>
 HTML-CALC:        <div>
 HTML-CALC:                        <div>
-HTML-CALC:                            <p> Subtracts the second integer from the first.</p>
+HTML-CALC:                            <p>
+HTML-CALC: Subtracts the second integer from the first.
+HTML-CALC:                            </p>
 HTML-CALC:                        </div>
 HTML-CALC:                            <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
-HTML-CALC:                        <p> int The result of a - b.</p>
+HTML-CALC:                        <p>
+HTML-CALC: int The result of a - b.
+HTML-CALC:                        </p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -317,33 +334,35 @@ HTML-CALC:             </code>
 HTML-CALC:         </pre>
 HTML-CALC:        <div>
 HTML-CALC:                        <div>
-HTML-CALC:                            <p> Multiplies two integers.</p>
+HTML-CALC:                            <p>
+HTML-CALC: Multiplies two integers.
+HTML-CALC:                            </p>
 HTML-CALC:                        </div>
 HTML-CALC:                            <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Parameters</h3>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>a</b>      <div>
-HTML-CALC:                        <p> First integer.</p>
+HTML-CALC:                        <b>a</b>      
+HTML-CALC:                        <div>
+HTML-CALC: First integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>b</b>      <div>
-HTML-CALC:                        <p> Second integer.</p>
+HTML-CALC:                        <b>b</b>      
+HTML-CALC:                    <div>
+HTML-CALC: Second integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
-HTML-CALC:                        <p> int The product of a and b.</p>
+HTML-CALC:                        <p> 
+HTML-CALC: int The product of a and b.
+HTML-CALC:                        </p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -356,34 +375,35 @@ HTML-CALC:             </code>
 HTML-CALC:         </pre>
 HTML-CALC:        <div>
 HTML-CALC:                        <div>
-HTML-CALC:                            <p> Divides the first integer by the second.</p>
+HTML-CALC:                            <p>
+HTML-CALC: Divides the first integer by the second.
+HTML-CALC:                            </p>
 HTML-CALC:                        </div>
 HTML-CALC:                            <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Parameters</h3>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>a</b>      <div>
-HTML-CALC:                        <p> First integer.</p>
+HTML-CALC:                        <b>a</b>      
+HTML-CALC:                        <div>
+HTML-CALC: First integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>b</b>      <div>
-HTML-CALC:                        <p> Second integer.</p>
+HTML-CALC:                        <b>b</b>
+HTML-CALC:                        <div>
+HTML-CALC: Second integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
-HTML-CALC:                        <p> double The result of a / b.</p>
-HTML-CALC:                        <p></p>
+HTML-CALC:                        <p>
+HTML-CALC: double The result of a / b.
+HTML-CALC:                        </p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -396,33 +416,35 @@ HTML-CALC:             </code>
 HTML-CALC:         </pre>
 HTML-CALC:        <div>
 HTML-CALC:                        <div>
-HTML-CALC:                            <p> Performs the mod operation on integers.</p>
+HTML-CALC:                            <p>
+HTML-CALC: Performs the mod operation on integers.
+HTML-CALC:                            </p>
 HTML-CALC:                        </div>
 HTML-CALC:                            <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Parameters</h3>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>a</b>      <div>
-HTML-CALC:                        <p> First integer.</p>
+HTML-CALC:                        <b>a</b>      
+HTML-CALC:                        <div>
+HTML-CALC: First integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <b>b</b>      <div>
-HTML-CALC:                        <p> Second integer.</p>
+HTML-CALC:                        <b>b</b>      
+HTML-CALC:                    <div>
+HTML-CALC: Second integer.
 HTML-CALC:                    </div>
 HTML-CALC:                    <div>
-HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
-HTML-CALC:                        <p> The result of a % b.</p>
+HTML-CALC:                        <p>
+HTML-CALC: The result of a % b.
+HTML-CALC:                        </p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -491,13 +513,18 @@ HTML-RECTANGLE:                 <div class="hero__title">
 HTML-RECTANGLE:                     <h1 class="hero__title-large">class Rectangle</h1>
 HTML-RECTANGLE:                    <div class="hero__subtitle">
 HTML-RECTANGLE:                                    <div>
-HTML-RECTANGLE:                                        <p> Rectangle class derived from Shape.</p>
+HTML-RECTANGLE:                                        <p>
+HTML-RECTANGLE: Rectangle class derived from Shape.
+HTML-RECTANGLE:                                        </p>
 HTML-RECTANGLE:                                    </div>
 HTML-RECTANGLE:                                        <div>
-HTML-RECTANGLE:                                    <p></p>
+HTML-RECTANGLE:                                    <p>
+HTML-RECTANGLE:                                    </p>
 HTML-RECTANGLE:                                </div>
 HTML-RECTANGLE:                                    <div>
-HTML-RECTANGLE:                                    <p> Represents a rectangle with a given width and height.</p>
+HTML-RECTANGLE:                                    <p>
+HTML-RECTANGLE: Represents a rectangle with a given width and height.
+HTML-RECTANGLE:                                    </p>
 HTML-RECTANGLE:                                </div>
 HTML-RECTANGLE:                                                </div>
 HTML-RECTANGLE:                 </div>
@@ -514,26 +541,31 @@ HTML-RECTANGLE:             </code>
 HTML-RECTANGLE:         </pre>
 HTML-RECTANGLE:        <div>
 HTML-RECTANGLE:                        <div>
-HTML-RECTANGLE:                            <p> Constructs a new Rectangle object.</p>
+HTML-RECTANGLE:                            <p>
+HTML-RECTANGLE: Constructs a new Rectangle object.
+HTML-RECTANGLE:                            </p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:                            <div>
-HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        <div>
-HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    <h3>Parameters</h3>
 HTML-RECTANGLE:                    <div>
-HTML-RECTANGLE:                        <b>width</b>      <div>
-HTML-RECTANGLE:                        <p> Width of the rectangle.</p>
+HTML-RECTANGLE:                        <b>width</b>
+HTML-RECTANGLE:                    <div>
+HTML-RECTANGLE: Width of the rectangle.
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    <div>
-HTML-RECTANGLE:                        <p></p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    <div>
-HTML-RECTANGLE:                        <b>height</b>      <div>
-HTML-RECTANGLE:                        <p> Height of the rectangle.</p>
+HTML-RECTANGLE:                        <b>height</b>
+HTML-RECTANGLE:                    <div>
+HTML-RECTANGLE: Height of the rectangle.
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        </div>
@@ -548,16 +580,22 @@ HTML-RECTANGLE:             </code>
 HTML-RECTANGLE:         </pre>
 HTML-RECTANGLE:        <div>
 HTML-RECTANGLE:                        <div>
-HTML-RECTANGLE:                            <p> Calculates the area of the rectangle.</p>
+HTML-RECTANGLE:                            <p>
+HTML-RECTANGLE: Calculates the area of the rectangle.
+HTML-RECTANGLE:                            </p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:                            <div>
-HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        <div>
-HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    <h3>Returns</h3>
-HTML-RECTANGLE:                        <p> double The area of the rectangle.</p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE: double The area of the rectangle.
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
@@ -570,16 +608,22 @@ HTML-RECTANGLE:             </code>
 HTML-RECTANGLE:         </pre>
 HTML-RECTANGLE:        <div>
 HTML-RECTANGLE:                        <div>
-HTML-RECTANGLE:                            <p> Calculates the perimeter of the rectangle.</p>
+HTML-RECTANGLE:                            <p>
+HTML-RECTANGLE: Calculates the perimeter of the rectangle.
+HTML-RECTANGLE:                            </p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:                            <div>
-HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        <div>
-HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                    <h3>Returns</h3>
-HTML-RECTANGLE:                        <p> double The perimeter of the rectangle.</p>
+HTML-RECTANGLE:                        <p>
+HTML-RECTANGLE: double The perimeter of the rectangle.
+HTML-RECTANGLE:                        </p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
@@ -648,13 +692,18 @@ HTML-CIRCLE:                 <div class="hero__title">
 HTML-CIRCLE:                     <h1 class="hero__title-large">class Circle</h1>
 HTML-CIRCLE:                    <div class="hero__subtitle">
 HTML-CIRCLE:                                    <div>
-HTML-CIRCLE:                                        <p> Circle class derived from Shape.</p>
+HTML-CIRCLE:                                        <p>
+HTML-CIRCLE: Circle class derived from Shape.
+HTML-CIRCLE:                                        </p>
 HTML-CIRCLE:                                    </div>
 HTML-CIRCLE:                                        <div>
-HTML-CIRCLE:                                    <p></p>
+HTML-CIRCLE:                                    <p>
+HTML-CIRCLE:                                    </p>
 HTML-CIRCLE:                                </div>
 HTML-CIRCLE:                                    <div>
-HTML-CIRCLE:                                    <p> Represents a circle with a given radius.</p>
+HTML-CIRCLE:                                    <p>
+HTML-CIRCLE: Represents a circle with a given radius.
+HTML-CIRCLE:                                    </p>
 HTML-CIRCLE:                                </div>
 HTML-CIRCLE:                                                </div>
 HTML-CIRCLE:                 </div>
@@ -671,18 +720,23 @@ HTML-CIRCLE:             </code>
 HTML-CIRCLE:         </pre>
 HTML-CIRCLE:        <div>
 HTML-CIRCLE:                        <div>
-HTML-CIRCLE:                            <p> Constructs a new Circle object.</p>
+HTML-CIRCLE:                            <p>
+HTML-CIRCLE: Constructs a new Circle object.
+HTML-CIRCLE:                            </p>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:                            <div>
-HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        <div>
-HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                    <h3>Parameters</h3>
 HTML-CIRCLE:                    <div>
-HTML-CIRCLE:                        <b>radius</b>      <div>
-HTML-CIRCLE:                        <p> Radius of the circle.</p>
+HTML-CIRCLE:                        <b>radius</b>
+HTML-CIRCLE:                    <div>
+HTML-CIRCLE: Radius of the circle.
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        </div>
@@ -697,16 +751,20 @@ HTML-CIRCLE:             </code>
 HTML-CIRCLE:         </pre>
 HTML-CIRCLE:        <div>
 HTML-CIRCLE:                        <div>
-HTML-CIRCLE:                            <p> Calculates the area of the circle.</p>
+HTML-CIRCLE:                            <p>
+HTML-CIRCLE: Calculates the area of the circle.
+HTML-CIRCLE:                            </p>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:                            <div>
-HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        <div>
-HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                    <h3>Returns</h3>
-HTML-CIRCLE:                        <p> double The area of the circle.</p>
+HTML-CIRCLE: double The area of the circle.
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
@@ -719,16 +777,22 @@ HTML-CIRCLE:             </code>
 HTML-CIRCLE:         </pre>
 HTML-CIRCLE:        <div>
 HTML-CIRCLE:                        <div>
-HTML-CIRCLE:                            <p> Calculates the perimeter of the circle.</p>
+HTML-CIRCLE:                            <p>
+HTML-CIRCLE: Calculates the perimeter of the circle.
+HTML-CIRCLE:                            </p>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:                            <div>
-HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        <div>
-HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                    <h3>Returns</h3>
-HTML-CIRCLE:                        <p> double The perimeter of the circle.</p>
+HTML-CIRCLE:                        <p>
+HTML-CIRCLE: double The perimeter of the circle.
+HTML-CIRCLE:                        </p>
 HTML-CIRCLE:                    <h3>Code</h3> 
 HTML-CIRCLE:                    <div>
 HTML-CIRCLE:                        <pre class="code-block">
