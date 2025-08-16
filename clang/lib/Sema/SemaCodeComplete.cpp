@@ -1435,6 +1435,14 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
 
   AdjustResultPriorityForDecl(R);
 
+  // Account for explicit object parameter
+  const auto getQualifiers = [&](const CXXMethodDecl *MethodDecl) {
+    if (MethodDecl->isExplicitObjectMemberFunction())
+      return MethodDecl->getFunctionObjectParameterType().getQualifiers();
+    else
+      return MethodDecl->getMethodQualifiers();
+  };
+
   if (IsExplicitObjectMemberFunction &&
       R.Kind == CodeCompletionResult::RK_Declaration &&
       (isa<CXXMethodDecl>(R.Declaration) || isa<FieldDecl>(R.Declaration))) {
@@ -1447,7 +1455,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
   if (HasObjectTypeQualifiers)
     if (const auto *Method = dyn_cast<CXXMethodDecl>(R.Declaration))
       if (Method->isInstance()) {
-        Qualifiers MethodQuals = Method->getMethodQualifiers();
+        Qualifiers MethodQuals = getQualifiers(Method);
         if (ObjectTypeQualifiers == MethodQuals)
           R.Priority += CCD_ObjectQualifierMatch;
         else if (ObjectTypeQualifiers - MethodQuals) {
