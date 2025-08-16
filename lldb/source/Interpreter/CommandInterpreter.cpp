@@ -958,7 +958,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   if (step_regex_cmd_sp) {
     if (step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*$",
                                            "thread step-in") &&
-        step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*(-.*)$",
+        step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*(-.+)$",
                                            "thread step-in %1") &&
         step_regex_cmd_sp->AddRegexCommand(
             "^[[:space:]]*(.+)[[:space:]]*$",
