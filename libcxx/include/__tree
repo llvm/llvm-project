@@ -569,7 +569,20 @@ public:
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<_VoidPtr, __tree_end_node<pointer> >;
 
   pointer __right_;
+
+// TODO: this is needed because of a bug in G++-15
+// in the 
+// libcxx/test/std/containers/associative/map/map.erasure/erase_if.pass.cpp
+//
+// libcxx/test-suite-install/include/c++/v1/__tree:114:33: error: ‘‘result_decl’ not supported by dump_expr<expression error>’ is not a constant expression
+// 2025-08-15T10:35:29.5793550Z # |   114 |   return __x == __x->__parent_->__left_;
+// 2025-08-15T10:35:29.5794039Z # |       |                 ~~~~~~~~~~~~~~~~^~~~~~~
+// 2025-08-15T10:35:29.5794446Z # | At global scope:
+#if _LIBCPP_STD_VER <= 26
   __end_node_pointer __parent_;
+#else
+  __end_node_pointer __parent_ = nullptr;
+#endif
   bool __is_black_;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pointer __parent_unsafe() const {
