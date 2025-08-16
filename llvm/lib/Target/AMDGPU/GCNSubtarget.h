@@ -1577,6 +1577,12 @@ public:
   // extended VA to 57 bits.
   bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
 
+  // \returns true if the target needs to create a prolog for backward
+  // compatibility when preloading kernel arguments.
+  bool needsKernArgPreloadProlog() const {
+    return hasKernargPreload() && !GFX1250Insts;
+  }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
