@@ -779,6 +779,34 @@ implicit none
     end function
   end interface
 
+  interface __drcp_rd
+    attributes(device) double precision function __drcp_rd(x) bind(c, name='__nv_drcp_rd')
+      !dir$ ignore_tkr (d) x
+      double precision, value :: x
+    end function
+  end interface
+
+  interface __drcp_rn
+    attributes(device) double precision function __drcp_rn(x) bind(c, name='__nv_drcp_rn')
+      !dir$ ignore_tkr (d) x
+      double precision, value :: x
+    end function
+  end interface
+
+  interface __drcp_ru
+    attributes(device) double precision function __drcp_ru(x) bind(c, name='__nv_drcp_ru')
+      !dir$ ignore_tkr (d) x
+      double precision, value :: x
+    end function
+  end interface
+
+  interface __drcp_rz
+    attributes(device) double precision function __drcp_rz(x) bind(c, name='__nv_drcp_rz')
+      !dir$ ignore_tkr (d) x
+      double precision, value :: x
+    end function
+  end interface
+
   interface __dsqrt_rd
     attributes(device) double precision function __dsqrt_rd(x) bind(c, name='__nv_dsqrt_rd')
       !dir$ ignore_tkr (d) x
