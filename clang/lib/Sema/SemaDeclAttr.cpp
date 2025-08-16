@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AttributeLangSupport.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -72,14 +73,6 @@
 
 using namespace clang;
 using namespace sema;
-
-namespace AttributeLangSupport {
-  enum LANG {
-    C,
-    Cpp,
-    ObjC
-  };
-} // end namespace AttributeLangSupport
 
 static unsigned getNumAttributeArgs(const ParsedAttr &AL) {
   // FIXME: Include the type in the argument list.
