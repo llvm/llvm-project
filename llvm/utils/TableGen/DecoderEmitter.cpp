@@ -398,9 +398,6 @@ protected:
   // Number of instructions which fall under FilteredInstructions category.
   unsigned NumFiltered;
 
-  // Keeps track of the last opcode in the filtered bucket.
-  EncodingIDAndOpcode LastOpcFiltered;
-
 public:
   Filter(Filter &&f);
   Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
@@ -411,7 +408,7 @@ public:
 
   EncodingIDAndOpcode getSingletonOpc() const {
     assert(NumFiltered == 1);
-    return LastOpcFiltered;
+    return FilteredInstructions.begin()->second.front();
   }
 
   // Return the filter chooser for the group of instructions without constant
@@ -650,14 +647,13 @@ Filter::Filter(Filter &&f)
       FilteredInstructions(std::move(f.FilteredInstructions)),
       VariableInstructions(std::move(f.VariableInstructions)),
       FilterChooserMap(std::move(f.FilterChooserMap)),
-      NumFiltered(f.NumFiltered), LastOpcFiltered(f.LastOpcFiltered) {}
+      NumFiltered(f.NumFiltered) {}
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
   assert(StartBit + NumBits - 1 < Owner.BitWidth);
 
   NumFiltered = 0;
-  LastOpcFiltered = {0, 0};
 
   for (const auto &OpcPair : Owner.Opcodes) {
     // Populates the insn given the uid.
@@ -669,8 +665,7 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     if (Ok) {
       // The encoding bits are well-known.  Lets add the uid of the
       // instruction into the bucket keyed off the constant field value.
-      LastOpcFiltered = OpcPair;
-      FilteredInstructions[Field].push_back(LastOpcFiltered);
+      FilteredInstructions[Field].push_back(OpcPair);
       ++NumFiltered;
     } else {
       // Some of the encoding bit(s) are unspecified.  This contributes to
