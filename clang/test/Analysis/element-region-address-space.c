@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
 // RUN:   -Wno-incompatible-library-redeclaration \
-// RUN:   -analyzer-checker=core,unix.cstring.BadSizeArg -verify %s
+// RUN:   -analyzer-checker=core,unix -verify %s
 
 // expected-no-diagnostics
 //
