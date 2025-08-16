@@ -154,6 +154,10 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     }
   } break;
 
+  case 'v': //< --rich variable annotations
+    enable_rich_annotations = true;
+    break;
+
   case '\x01':
     force = true;
     break;
@@ -180,6 +184,7 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   end_addr = LLDB_INVALID_ADDRESS;
   symbol_containing_addr = LLDB_INVALID_ADDRESS;
   raw = false;
+  enable_rich_annotations = false;
   plugin_name.clear();
 
   Target *target =
@@ -527,6 +532,9 @@ void CommandObjectDisassemble::DoExecute(Args &command,
 
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
+
+  if (m_options.enable_rich_annotations)
+    options |= Disassembler::eOptionRichAnnotations;
 
   llvm::Expected<std::vector<AddressRange>> ranges =
       GetRangesForSelectedMode(result);

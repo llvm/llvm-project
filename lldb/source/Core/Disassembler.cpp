@@ -26,7 +26,10 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -41,6 +44,7 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -376,6 +380,147 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
   }
 
+  // Add rich variable location annotations to the disassembly output.
+  //
+  // For each instruction, this block attempts to resolve in-scope variables
+  // and determine if the current PC falls within their
+  // DWARF location entry. If so, it prints a simplified annotation using the
+  // variable name and its resolved location (e.g., "var = reg; " ).
+  //
+  // Annotations are only included if the variable has a valid DWARF location
+  // entry, and the location string is non-empty after filtering. Decoding
+  // errors and DWARF opcodes are intentionally omitted to keep the output
+  // concise and user-friendly.
+  //
+  // The goal is to give users helpful live variable hints alongside the
+  // disassembled instruction stream, similar to how debug information
+  // enhances source-level debugging.
+
+  struct VarState {
+    std::string name;     //< Display name.
+    std::string last_loc; //< Last printed location (empty means <undef>).
+    bool seen_this_inst = false;
+  };
+
+  // Track live variables across instructions (keyed by stable LLDB user_id_t. 8
+  // is a good small-buffer guess.
+  llvm::SmallDenseMap<lldb::user_id_t, VarState, 8> live_vars;
+
+  // Stateful annotator: updates live_vars and returns only what should be
+  // printed for THIS instruction.
+  auto annotate_variables = [&](Instruction &inst) -> std::vector<std::string> {
+    std::vector<std::string> events;
+
+    StackFrame *frame = exe_ctx.GetFramePtr();
+    TargetSP target_sp = exe_ctx.GetTargetSP();
+    ProcessSP process_sp = exe_ctx.GetProcessSP();
+    if (!frame || !target_sp || !process_sp)
+      return events;
+
+    // Reset "seen" flags for this instruction.
+    for (auto &kv : live_vars)
+      kv.second.seen_this_inst = false;
+
+    addr_t current_pc = inst.GetAddress().GetLoadAddress(target_sp.get());
+    addr_t original_pc =
+        frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
+
+    // We temporarily move the frame PC so variable locations resolve at this
+    // instruction.
+    if (!frame->ChangePC(current_pc))
+      return events;
+
+    VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
+    if (!var_list_sp) {
+      // No variables in scope: everything previously live becomes <undef>.
+      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
+        auto Cur = I++;
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        live_vars.erase(Cur);
+      }
+      frame->ChangePC(original_pc);
+      return events;
+    }
+
+    SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
+    addr_t func_load_addr =
+        sc.function ? sc.function->GetAddress().GetLoadAddress(target_sp.get())
+                    : LLDB_INVALID_ADDRESS;
+
+    // Walk all in-scope variables and try to resolve a location.
+    for (const VariableSP &var_sp : *var_list_sp) {
+      if (!var_sp)
+        continue;
+
+      // The var_id is a lldb::user_id_t – stable key.
+      const auto var_id = var_sp->GetID();
+      const char *name_cstr = var_sp->GetName().AsCString();
+      llvm::StringRef name = name_cstr ? name_cstr : "<anon>";
+
+      auto &expr_list = var_sp->LocationExpressionList();
+      if (!expr_list.IsValid())
+        continue;
+
+      auto entry_or_err =
+          expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc);
+      if (!entry_or_err)
+        continue;
+
+      auto entry = *entry_or_err;
+
+      // Check range if present.
+      if (entry.file_range &&
+          !entry.file_range->ContainsFileAddress(
+              (current_pc - func_load_addr) + expr_list.GetFuncFileAddress()))
+        continue;
+
+      // Render a compact location string.
+      ABI *abi = process_sp->GetABI().get();
+      llvm::DIDumpOptions opts;
+      opts.ShowAddresses = false;
+      opts.PrintRegisterOnly = true;
+
+      StreamString loc_str;
+      entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
+      llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
+      if (loc_clean.empty())
+        continue;
+
+      auto insert_res =
+          live_vars.insert({var_id, VarState{std::string(name), loc_clean.str(),
+                                             /*seen_this_inst*/ true}});
+      if (insert_res.second) {
+        // Newly inserted → print.
+        events.push_back(llvm::formatv("{0} = {1}", name, loc_clean).str());
+      } else {
+        // Already present.
+        VarState &vs = insert_res.first->second;
+        vs.seen_this_inst = true;
+        if (vs.last_loc != loc_clean) {
+          vs.last_loc = loc_clean.str();
+          events.push_back(
+              llvm::formatv("{0} = {1}", vs.name, loc_clean).str());
+        }
+      }
+    }
+
+    // Anything previously live that we didn't see a location for at this inst
+    // is now <undef>.
+    for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
+      auto Cur = I++;
+      if (!Cur->second.seen_this_inst) {
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        live_vars.erase(Cur);
+      }
+    }
+
+    // Restore PC.
+    frame->ChangePC(original_pc);
+    return events;
+  };
+
   previous_symbol = nullptr;
   SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -540,10 +685,26 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       const bool show_bytes = (options & eOptionShowBytes) != 0;
       const bool show_control_flow_kind =
           (options & eOptionShowControlFlowKind) != 0;
-      inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
+
+      StreamString inst_line;
+
+      inst->Dump(&inst_line, max_opcode_byte_size, true, show_bytes,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
                  address_text_size);
+
+      if (options & eOptionRichAnnotations) {
+        std::vector<std::string> annotations = annotate_variables(*inst);
+        if (!annotations.empty()) {
+          const size_t annotation_column = 100;
+          inst_line.FillLastLineToColumn(annotation_column, ' ');
+          inst_line.PutCString("; ");
+          inst_line.PutCString(llvm::join(annotations, ", "));
+        }
+      }
+
+      strm.PutCString(inst_line.GetString());
       strm.EOL();
+
     } else {
       break;
     }
@@ -724,9 +885,7 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
+bool Instruction::CanSetBreakpoint() { return !HasDelaySlot(); }
 
 bool Instruction::HasDelaySlot() {
   // Default is false.
@@ -1073,10 +1232,8 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
     m_instructions.push_back(inst_sp);
 }
 
-uint32_t
-InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 bool ignore_calls,
-                                                 bool *found_calls) const {
+uint32_t InstructionList::GetIndexOfNextBranchInstruction(
+    uint32_t start, bool ignore_calls, bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
