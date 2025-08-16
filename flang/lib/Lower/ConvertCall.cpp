@@ -1257,10 +1257,30 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // The simple contiguity of the actual is "lost" when passing a polymorphic
   // to a non polymorphic entity because the dummy dynamic type matters for
   // the contiguity.
-  const bool mustDoCopyInOut =
+  bool mustDoCopyIn =
       actual.isArray() && arg.mustBeMadeContiguous() &&
       (passingPolymorphicToNonPolymorphic ||
        !isSimplyContiguous(*arg.entity, foldingContext));
+  bool mustDoCopyOut = mustDoCopyIn && arg.mayBeModifiedByCall();
+  bool newMustDoCopyIn = false;
+  bool newMustDoCopyOut = false;
+  if constexpr (Fortran::lower::CallerInterface::PassedEntity::isCaller) {
+    newMustDoCopyIn = arg.entity->GetMayNeedCopyIn();
+    newMustDoCopyOut = arg.entity->GetMayNeedCopyOut();
+#if 1
+    llvm::dbgs() << "copyinout: CALLER " <<
+        "copy-in: old=" << mustDoCopyIn << ", new=" << newMustDoCopyIn <<
+        "| copy-out: old=" << mustDoCopyOut << ", new=" << newMustDoCopyOut <<
+        "\n";
+#endif
+  } else {
+#if 1
+    llvm::dbgs() << "copyinout: CALLEE " <<
+        "copy-in=" << mustDoCopyIn << ", copy-out=" << mustDoCopyOut << "\n";
+#endif
+  }
+  mustDoCopyIn = newMustDoCopyIn;
+  mustDoCopyOut = newMustDoCopyOut;
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
@@ -1370,7 +1390,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyInOut) {
+    } else if (mustDoCopyIn) {
       // Copy-in non contiguous variables.
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
@@ -1379,7 +1399,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      entity = genCopyIn(entity, arg.mayBeModifiedByCall());
+      entity = genCopyIn(entity, mustDoCopyOut);
     }
   } else {
     const Fortran::lower::SomeExpr *expr = arg.entity->UnwrapExpr();
