@@ -95,7 +95,6 @@ struct MissingFeatures {
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallMustTail() { return false; }
-  static bool opCallVirtual() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
@@ -204,6 +203,7 @@ struct MissingFeatures {
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
@@ -215,6 +215,7 @@ struct MissingFeatures {
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
+  static bool emitTypeMetadataCodeForVCall() { return false; }
   static bool fastMathFlags() { return false; }
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }

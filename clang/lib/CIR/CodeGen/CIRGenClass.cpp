@@ -657,6 +657,20 @@ Address CIRGenFunction::getAddressOfBaseClass(
   return value;
 }
 
+// TODO(cir): this can be shared with LLVM codegen.
+bool CIRGenFunction::shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd) {
+  assert(!cir::MissingFeatures::hiddenVisibility());
+  if (!cgm.getCodeGenOpts().WholeProgramVTables)
+    return false;
+
+  if (cgm.getCodeGenOpts().VirtualFunctionElimination)
+    return true;
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  return false;
+}
+
 mlir::Value CIRGenFunction::getVTablePtr(mlir::Location loc, Address thisAddr,
                                          const CXXRecordDecl *rd) {
   auto vtablePtr = cir::VTableGetVPtrOp::create(
