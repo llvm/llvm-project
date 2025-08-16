@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_ARCHITECTURE_ARM_ARCHITECTUREARM_H
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Target/Thread.h"
 
 namespace lldb_private {
 
@@ -28,6 +29,11 @@ public:
 
   lldb::addr_t GetOpcodeLoadAddress(lldb::addr_t load_addr,
                                     AddressClass addr_class) const override;
+
+  lldb::UnwindPlanSP GetArchitectureUnwindPlan(
+      lldb_private::Thread &thread, lldb::addr_t callers_return_address,
+      lldb::addr_t cfa,
+      std::shared_ptr<const UnwindPlan> current_unwindplan) override;
 
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);

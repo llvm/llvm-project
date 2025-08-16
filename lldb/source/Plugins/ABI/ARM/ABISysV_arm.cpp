@@ -1921,6 +1921,13 @@ UnwindPlanSP ABISysV_arm::CreateFunctionEntryUnwindPlan() {
 
 UnwindPlanSP ABISysV_arm::CreateDefaultUnwindPlan() {
   // TODO: Handle thumb
+  // If we had a Target argument, could at least check
+  // target.GetArchitecture().GetTriple().isArmMClass()
+  // which is always thumb.
+  // To handle thumb properly, we'd need to fetch the current
+  // CPSR state at unwind time to tell if the processor is
+  // in thumb mode in this stack frame.  There's no way to
+  // express something like that in an UnwindPlan today.
   uint32_t fp_reg_num = dwarf_r11;
   uint32_t pc_reg_num = dwarf_pc;
 

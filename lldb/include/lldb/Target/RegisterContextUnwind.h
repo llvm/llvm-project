@@ -202,6 +202,8 @@ private:
 
   std::shared_ptr<const UnwindPlan> GetFullUnwindPlanForFrame();
 
+  lldb::UnwindPlanSP AdoptArchitectureUnwindPlan();
+
   void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   void UnwindLogMsgVerbose(const char *fmt, ...)
