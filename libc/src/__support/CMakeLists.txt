@@ -314,6 +314,15 @@ add_header_library(
 )
 
 add_header_library(
+  vector
+  HDRS
+    vector.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.macros.attributes
+)
+
+add_header_library(
   char_vector
   HDRS
     char_vector.h

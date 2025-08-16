@@ -22,6 +22,10 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#if LIBC_HAS_VECTOR_TYPE
+#include "src/__support/vector.h"
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
@@ -61,7 +65,7 @@ template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
 }
 
 template <typename Word>
-LIBC_INLINE size_t string_length_wide_read(const char *src) {
+LIBC_INLINE size_t string_length_wide_read_chars(const char *src) {
   const char *char_ptr = src;
   // Step 1: read 1 byte at a time to align to block size
   for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
@@ -81,6 +85,38 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   return static_cast<size_t>(char_ptr - src);
 }
 
+#if LIBC_HAS_VECTOR_TYPE
+LIBC_INLINE size_t string_length_wide_read_vector(const char *src) {
+  using namespace vector;
+
+  const Vector<char> null('\0');
+
+  // Align the pointer to the native vector width and shift out unused byted.
+  const char *aligned = __builtin_align_down(src, sizeof(Vector<char>));
+  const Vector<char> *char_ptr =
+      reinterpret_cast<const Vector<char> *>(aligned);
+  auto bitmask = to_bitmask(*char_ptr == null);
+  if (decltype(bitmask) shifted = bitmask >> (src - aligned))
+    return cpp::countr_zero(shifted);
+
+  // Continue until we find the null byte.
+  for (;;) {
+    ++char_ptr;
+    if (auto bitmask = to_bitmask(*char_ptr == null))
+      return (reinterpret_cast<const char *>(char_ptr) - src) +
+             cpp::countr_zero(bitmask);
+  }
+}
+#endif
+
+LIBC_INLINE size_t string_length_wide_read(const char *src) {
+#if LIBC_HAS_VECTOR_TYPE
+  return string_length_wide_read_vector(src);
+#else
+  return string_length_wide_read_chars<unsigned int>(src);
+#endif
+}
+
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
 template <typename T> LIBC_INLINE size_t string_length(const T *src) {
@@ -90,7 +126,7 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // be aligned to a word boundary, so it's the size we use for reading the
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
-    return string_length_wide_read<unsigned int>(src);
+    return string_length_wide_read(src);
 #endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
