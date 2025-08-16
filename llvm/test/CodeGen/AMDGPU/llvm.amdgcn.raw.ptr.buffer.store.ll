@@ -421,9 +421,10 @@ define amdgpu_ps void @buffer_store_v2bf16(ptr addrspace(8) inreg %rsrc, <2 x bf
 ; VERDE-LABEL: buffer_store_v2bf16:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; VERDE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; VERDE-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VERDE-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; VERDE-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
+; VERDE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; VERDE-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VERDE-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
@@ -439,13 +440,15 @@ define amdgpu_ps void @buffer_store_v4bf16(ptr addrspace(8) inreg %rsrc, <4 x bf
 ; VERDE-LABEL: buffer_store_v4bf16:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; VERDE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; VERDE-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; VERDE-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; VERDE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; VERDE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; VERDE-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VERDE-NEXT:    v_alignbit_b32 v2, v3, v2, 16
-; VERDE-NEXT:    v_alignbit_b32 v1, v1, v0, 16
+; VERDE-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
+; VERDE-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; VERDE-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
+; VERDE-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; VERDE-NEXT:    v_or_b32_e32 v2, v2, v3
+; VERDE-NEXT:    v_or_b32_e32 v1, v0, v1
 ; VERDE-NEXT:    buffer_store_dwordx2 v[1:2], v4, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;

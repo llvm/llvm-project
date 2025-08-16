@@ -56,7 +56,8 @@ define i32 @cast_v4i32_to_i128_lshr_33_trunc_i32(<4 x i32> %arg) {
 ; CHECK-LABEL: cast_v4i32_to_i128_lshr_33_trunc_i32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_alignbit_b32 v0, v2, v1, 1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v1
+; CHECK-NEXT:    v_lshl_or_b32 v0, v2, 31, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %bigint = bitcast <4 x i32> %arg to i128
   %srl = lshr i128 %bigint, 33
