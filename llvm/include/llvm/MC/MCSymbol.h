@@ -42,11 +42,11 @@ class raw_ostream;
 class MCSymbol {
 protected:
   // A symbol can be regular, equated to an expression, or a common symbol.
-  enum Contents : uint8_t {
-    SymContentsUnset,
-    SymContentsVariable,
-    SymContentsCommon,
-    SymContentsTargetCommon, // Index stores the section index
+  enum Kind : uint8_t {
+    Regular,
+    Equated,
+    Common,
+    TargetCommon, // Index stores the section index
   };
 
   // Special sentinel value for the absolute pseudo fragment.
@@ -65,9 +65,9 @@ protected:
   /// relative to, if any.
   mutable MCFragment *Fragment = nullptr;
 
-  /// This is actually a Contents enumerator, but is unsigned to avoid sign
-  /// extension and achieve better bitpacking with MSVC.
-  unsigned SymbolContents : 2;
+  /// The symbol kind. Use an unsigned bitfield to achieve better bitpacking
+  /// with MSVC.
+  unsigned kind : 2;
 
   /// True if this symbol is named.  A named symbol will have a pointer to the
   /// name allocated in the bytes immediately prior to the MCSymbol.
@@ -145,10 +145,10 @@ protected:
   };
 
   MCSymbol(const MCSymbolTableEntry *Name, bool isTemporary)
-      : SymbolContents(SymContentsUnset), IsTemporary(isTemporary),
-        IsRedefinable(false), IsRegistered(false), IsExternal(false),
-        IsPrivateExtern(false), IsWeakExternal(false), IsUsedInReloc(false),
-        IsResolving(0), CommonAlignLog2(0), Flags(0) {
+      : kind(Kind::Regular), IsTemporary(isTemporary), IsRedefinable(false),
+        IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
+        IsWeakExternal(false), IsUsedInReloc(false), IsResolving(0),
+        CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
@@ -212,9 +212,9 @@ public:
   /// Prepare this symbol to be redefined.
   void redefineIfPossible() {
     if (IsRedefinable) {
-      if (SymbolContents == SymContentsVariable) {
+      if (kind == Kind::Equated) {
         Value = nullptr;
-        SymbolContents = SymContentsUnset;
+        kind = Kind::Regular;
       }
       setUndefined();
       IsRedefinable = false;
@@ -268,9 +268,7 @@ public:
   /// @{
 
   /// isVariable - Check if this is a variable symbol.
-  bool isVariable() const {
-    return SymbolContents == SymContentsVariable;
-  }
+  bool isVariable() const { return kind == Equated; }
 
   /// Get the expression of the variable symbol.
   const MCExpr *getVariableValue() const {
@@ -293,12 +291,12 @@ public:
   }
 
   uint64_t getOffset() const {
-    assert(SymbolContents == SymContentsUnset &&
+    assert(kind == Kind::Regular &&
            "Cannot get offset for a common/variable symbol");
     return Offset;
   }
   void setOffset(uint64_t Value) {
-    assert(SymbolContents == SymContentsUnset &&
+    assert(kind == Kind::Regular &&
            "Cannot set offset for a common/variable symbol");
     Offset = Value;
   }
@@ -317,7 +315,7 @@ public:
   void setCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(getOffset() == 0);
     CommonSize = Size;
-    SymbolContents = Target ? SymContentsTargetCommon : SymContentsCommon;
+    kind = Target ? Kind::TargetCommon : Kind::Common;
 
     unsigned Log2Align = encode(Alignment);
     assert(Log2Align < (1U << NumCommonAlignmentBits) &&
@@ -350,14 +348,12 @@ public:
 
   /// Is this a 'common' symbol.
   bool isCommon() const {
-    return SymbolContents == SymContentsCommon ||
-           SymbolContents == SymContentsTargetCommon;
+    return kind == Kind::Common || kind == Kind::TargetCommon;
   }
 
-  /// Is this a target-specific common-like symbol.
-  bool isTargetCommon() const {
-    return SymbolContents == SymContentsTargetCommon;
-  }
+  /// Used by AMDGPU to indicate a common-like symbol of section index
+  /// SHN_AMDGPU_LDS.
+  bool isTargetCommon() const { return kind == Kind::TargetCommon; }
 
   MCFragment *getFragment() const {
     if (Fragment || !isVariable() || isWeakExternal())
