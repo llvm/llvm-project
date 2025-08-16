@@ -3046,7 +3046,7 @@ void OmpStructureChecker::CheckReductionModifier(
   if (modifier.v == ReductionModifier::Value::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
-        llvm::omp::Directive::OMPD_do,
+        llvm::omp::Directive::OMPD_do, //
         llvm::omp::Directive::OMPD_scope,
         llvm::omp::Directive::OMPD_sections,
         // There are more worksharing directives, but they do not apply:
