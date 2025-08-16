@@ -10872,8 +10872,8 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
       // on that type, and the truncate to that type is both legal and free,
       // perform the transform.
       if ((ShiftAmt > 0) &&
-          TLI.isOperationLegalOrCustom(ISD::SIGN_EXTEND, TruncVT) &&
-          TLI.isOperationLegalOrCustom(ISD::TRUNCATE, VT) &&
+          TLI.isOperationLegalOrCustom(ISD::SIGN_EXTEND, VT) &&
+          TLI.isOperationLegalOrCustom(ISD::TRUNCATE, TruncVT) &&
           TLI.isTruncateFree(VT, TruncVT)) {
         SDValue Amt = DAG.getShiftAmountConstant(ShiftAmt, VT, DL);
         SDValue Shift = DAG.getNode(ISD::SRL, DL, VT,
