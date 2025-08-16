@@ -1013,9 +1013,11 @@ void mapped_file_region::unmapImpl() {
 void mapped_file_region::dontNeedImpl() {}
 
 std::error_code mapped_file_region::sync() const {
-  if (::FlushViewOfFile(Mapping, 0))
-    return std::error_code();
-  return mapWindowsError(::GetLastError());
+  if (!::FlushViewOfFile(Mapping, Size))
+    return mapWindowsError(GetLastError());
+  if (!::FlushFileBuffers(FileHandle))
+    return mapWindowsError(GetLastError());
+  return std::error_code();
 }
 
 int mapped_file_region::alignment() {
