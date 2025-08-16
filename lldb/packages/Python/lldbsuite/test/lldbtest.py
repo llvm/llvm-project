@@ -1712,9 +1712,17 @@ class Base(unittest.TestCase):
         if not yaml2macho_core_bin:
             self.assertTrue(False, "No valid yaml2macho-core executable specified")
         if uuids != None:
-          command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path, "-u", uuids]
+            command = [
+                yaml2macho_core_bin,
+                "-i",
+                yaml_path,
+                "-o",
+                obj_path,
+                "-u",
+                uuids,
+            ]
         else:
-          command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path]
+            command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path]
         self.runBuildCommand(command)
 
     def cleanup(self, dictionary=None):
@@ -2279,7 +2287,9 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, max_completions, match_strings)
+        interp.HandleCompletion(
+            command, len(command), 0, max_completions, match_strings
+        )
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
