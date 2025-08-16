@@ -74,6 +74,7 @@ jobs:
         export PATH=/c/Strawberry/c/bin/:$PATH
         cmake --version
         which cmake
+        /c/Android/android-sdk/cmake/3.31.5/bin/cmake.exe --version
     - name: Check long paths
       run: |
         Get-ChildItem -Path "C:\Strawberry\" -Recurse -Include "cmake.exe"
@@ -251,11 +252,12 @@ jobs:
       shell: bash
       env:
         CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
+        CMAKE: /c/Android/android-sdk/cmake/3.31.5/bin/cmake.exe
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         export PATH=C:\Strawberry\c\bin\:$PATH
-        cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+        $CMAKE -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
