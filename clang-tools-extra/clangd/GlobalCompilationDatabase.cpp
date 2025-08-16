@@ -833,6 +833,8 @@ bool OverlayCDB::setCompileCommand(PathRef File,
 std::unique_ptr<ProjectModules>
 OverlayCDB::getProjectModules(PathRef File) const {
   auto MDB = DelegatingCDB::getProjectModules(File);
+  if (!MDB)
+    return {};
   MDB->setCommandMangler([&Mangler = Mangler](tooling::CompileCommand &Command,
                                               PathRef CommandPath) {
     Mangler(Command, CommandPath);
