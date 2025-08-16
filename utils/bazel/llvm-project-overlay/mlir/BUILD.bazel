@@ -3654,6 +3654,7 @@ cc_library(
         ":ArithUtils",
         ":BytecodeOpInterface",
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":IndexDialect",
         ":ShapedOpInterfaces",
@@ -3663,6 +3664,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
