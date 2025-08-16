@@ -11,6 +11,9 @@
 
 #define __LLVM_LIBC__ 1
 
+#undef _Returns_twice
+#define _Returns_twice [[gnu::returns_twice]]
+
 #ifdef __cplusplus
 
 #undef __BEGIN_C_DECLS
@@ -86,9 +89,6 @@
 #else
 #define __NOEXCEPT
 #endif
-
-#undef _Returns_twice
-#define _Returns_twice __attribute__((returns_twice))
 
 #undef __LLVM_LIBC_CAST
 #define __LLVM_LIBC_CAST(cast, type, value) ((type)(value))
