@@ -23,6 +23,10 @@
 
 namespace clang {
 
+/// Constant discriminator to be used with block descriptor pointers. The value
+/// is ptrauth_string_discriminator("block_descriptor")
+constexpr uint16_t BlockDescriptorConstantDiscriminator = 0xC0BB;
+
 /// Constant discriminator to be used with function pointers in .init_array and
 /// .fini_array. The value is ptrauth_string_discriminator("init_fini")
 constexpr uint16_t InitFiniPointerConstantDiscriminator = 0xD9D4;
@@ -284,6 +288,9 @@ struct PointerAuthOptions {
 
   /// The ABI for __block variable copy/destroy function pointers.
   PointerAuthSchema BlockByrefHelperFunctionPointers;
+
+  /// The ABI for pointers to block descriptors.
+  PointerAuthSchema BlockDescriptorPointers;
 
   /// The ABI for Objective-C method lists.
   PointerAuthSchema ObjCMethodListFunctionPointers;

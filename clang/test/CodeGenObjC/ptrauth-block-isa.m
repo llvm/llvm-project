@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa -fobjc-arc -fblocks -triple arm64e -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa -fobjc-arc -fblocks -triple arm64e -emit-llvm %s -o - | FileCheck %s
 
 void (^globalblock)(void) = ^{};
 // CHECK: @_NSConcreteGlobalBlock.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @_NSConcreteGlobalBlock, i32 2, i64 ptrtoint (ptr [[GLOBAL_BLOCK_1:@.*]] to i64), i64 27361 }, section "llvm.ptrauth", align 8
