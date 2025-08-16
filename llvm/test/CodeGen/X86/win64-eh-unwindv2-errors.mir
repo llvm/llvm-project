@@ -97,38 +97,6 @@ body:             |
     RET64
 ...
 
-;--- double_dealloc.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/double_dealloc.mir \
-# RUN:    -run-pass=x86-wineh-unwindv2 2>&1 | FileCheck %s \
-# RUN:    --check-prefix=DOUBLE-DEALLOC
-# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/double_dealloc.mir \
-# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
-# RUN:    FileCheck %s --check-prefix=BESTEFFORT
-# DOUBLE-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'double_dealloc':
-# DOUBLE-DEALLOC-SAME: The epilog is deallocating the stack allocation more than once
-
---- |
-  define dso_local void @double_dealloc() local_unnamed_addr {
-  entry:
-    ret void
-  }
-  !llvm.module.flags = !{!0}
-  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
-...
----
-name:            double_dealloc
-body:             |
-  bb.0.entry:
-    $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
-    frame-setup SEH_StackAlloc 40
-    frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
-    $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
-    SEH_EndEpilogue
-    RET64
-...
-
 ;--- dealloc_after_epilog.mir
 # RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
@@ -314,5 +282,40 @@ body:             |
     SEH_BeginEpilogue
     SEH_EndEpilogue
     $ecx = MOV32rr killed $eax
+    RET64
+...
+
+;--- dealloc_pop_dealloc.mir
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/dealloc_pop_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=DEALLOC-POP-DEALLOC
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/dealloc_pop_dealloc.mir \
+# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# DEALLOC-POP-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_pop_dealloc':
+# DEALLOC-POP-DEALLOC-SAME: The epilog is deallocating a stack allocation after popping registers
+
+--- |
+  define dso_local void @dealloc_pop_dealloc() local_unnamed_addr {
+  entry:
+    ret void
+  }
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
+...
+---
+name:            dealloc_pop_dealloc
+body:             |
+  bb.0.entry:
+    frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 55
+    $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 40
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    $rsp = frame-destroy ADD64ri32 $rsp, 20, implicit-def dead $eflags
+    $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rsp = frame-destroy ADD64ri32 $rsp, 20, implicit-def dead $eflags
+    SEH_EndEpilogue
     RET64
 ...

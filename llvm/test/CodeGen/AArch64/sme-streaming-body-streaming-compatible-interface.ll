@@ -18,12 +18,11 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x8, x0, #0x1
-; CHECK-NEXT:    tbnz w8, #0, .LBB0_2
+; CHECK-NEXT:    tbnz w0, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    tbnz w8, #0, .LBB0_4
+; CHECK-NEXT:    tbnz w0, #0, .LBB0_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB0_4:
@@ -50,7 +49,7 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    tbnz w19, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -88,7 +87,7 @@ define void @streaming_body_and_streaming_compatible_interface_multi_basic_block
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    smstart sm
