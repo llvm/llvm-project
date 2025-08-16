@@ -84,6 +84,10 @@ public:
     llvm_unreachable("Unsupported format for long double");
   }
 
+  mlir::Type getPtrToVPtrType() {
+    return getPointerTo(cir::VPtrType::get(getContext()));
+  }
+
   /// Get a CIR record kind from a AST declaration tag.
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
@@ -262,6 +266,9 @@ public:
   //
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     return getConstantInt(loc, getSInt32Ty(), c);
+  }
+  cir::ConstantOp getUInt32(uint32_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt32Ty(), c);
   }
 
   // Creates constant nullptr for pointer type ty.
