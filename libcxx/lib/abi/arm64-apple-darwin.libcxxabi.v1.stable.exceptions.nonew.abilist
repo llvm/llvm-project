@@ -1559,6 +1559,7 @@
 {'is_defined': True, 'name': '__ZNSt3__119__shared_weak_countD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_weak_countD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_weak_countD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__119__text_encoding_rep21__get_locale_encodingEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__thread_local_dataEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
