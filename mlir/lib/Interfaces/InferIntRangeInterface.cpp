@@ -112,6 +112,13 @@ ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
   APInt sminUnion;
   APInt smaxUnion;
 
+  // Union of poisoned range with any other range is the other range.
+  // Union is used when we need to merge ranges from multiple indepdenent
+  // sources, e.g. in `arith.select` or CFG merge. "Observing" a poisoned
+  // value (using it in side-effecting operation) will cause the immediate UB.
+  // Well-formed programs should never observe the immediate UB so we assume
+  // result is either unused or only used in circumstances when it received the
+  // non-poisoned argument.
   if (isUnsignedPoison()) {
     uminUnion = other.umin();
     umaxUnion = other.umax();
@@ -151,6 +158,7 @@ ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
   APInt sminIntersect;
   APInt smaxIntersect;
 
+  // Intersection of poisoned range with any other range is poisoned.
   if (isUnsignedPoison()) {
     uminIntersect = umin();
     umaxIntersect = umax();
