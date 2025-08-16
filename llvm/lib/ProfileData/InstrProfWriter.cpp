@@ -154,10 +154,11 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
 void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
-                                function_ref<void(Error)> Warn) {
+                                function_ref<void(Error)> Warn,
+                                StringRef ObjectFilename) {
   auto Name = I.Name;
   auto Hash = I.Hash;
-  addRecord(Name, Hash, std::move(I), Weight, Warn);
+  addRecord(Name, Hash, std::move(I), Weight, Warn, ObjectFilename);
 }
 
 void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
@@ -193,9 +194,16 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
 
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
-                                function_ref<void(Error)> Warn) {
+                                function_ref<void(Error)> Warn,
+                                StringRef ObjectFilename) {
   auto &ProfileDataMap = FunctionData[Name];
 
+  // Add object file name to hash value if --object-aware-hashing flag is used.
+  if (!ObjectFilename.empty()) {
+    std::string HashStr = std::to_string(Hash) + ":" + ObjectFilename.str();
+    llvm::StringRef HashRef(HashStr);
+    Hash = IndexedInstrProf::ComputeHash(HashRef);
+  }
   auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   InstrProfRecord &Dest = Where->second;
 

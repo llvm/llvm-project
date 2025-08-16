@@ -824,7 +824,8 @@ public:
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-        &ProfileReader) {
+        &ProfileReader,
+    StringRef ObjectFilename, bool MergeBinaryCoverage) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
     return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -837,14 +838,21 @@ Error CoverageMapping::loadFunctionRecord(
 
   CounterMappingContext Ctx(Record.Expressions);
 
+  uint64_t FuncObjectHash = Record.FunctionHash;
+  if (!ObjectFilename.empty() && MergeBinaryCoverage) {
+    std::string HashStr =
+        std::to_string(Record.FunctionHash) + ":" + ObjectFilename.str();
+    llvm::StringRef HashRef(HashStr);
+    FuncObjectHash = IndexedInstrProf::ComputeHash(HashRef);
+  }
   std::vector<uint64_t> Counts;
   if (ProfileReader) {
     if (Error E = ProfileReader.value().get().getFunctionCounts(
-            Record.FunctionName, Record.FunctionHash, Counts)) {
+            Record.FunctionName, FuncObjectHash, Counts)) {
       instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
       if (IPE == instrprof_error::hash_mismatch) {
         FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
-                                        Record.FunctionHash);
+                                        FuncObjectHash);
         return Error::success();
       }
       if (IPE != instrprof_error::unknown_function)
@@ -863,11 +871,11 @@ Error CoverageMapping::loadFunctionRecord(
   BitVector Bitmap;
   if (ProfileReader) {
     if (Error E = ProfileReader.value().get().getFunctionBitmap(
-            Record.FunctionName, Record.FunctionHash, Bitmap)) {
+            Record.FunctionName, FuncObjectHash, Bitmap)) {
       instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
       if (IPE == instrprof_error::hash_mismatch) {
         FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
-                                        Record.FunctionHash);
+                                        FuncObjectHash);
         return Error::success();
       }
       if (IPE != instrprof_error::unknown_function)
@@ -942,11 +950,46 @@ Error CoverageMapping::loadFunctionRecord(
     Function.pushMCDCRecord(std::move(*Record));
   }
 
-  // Don't create records for (filenames, function) pairs we've already seen.
   auto FilenamesHash = hash_combine_range(Record.Filenames);
-  if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
-    return Error::success();
+  std::string HashStr = OrigFuncName.str();
+  auto LogicalFuncKey = std::make_pair(FilenamesHash, hash_value(OrigFuncName));
+  auto It = RecordIndices.find(LogicalFuncKey);
+  if (It != RecordIndices.end()) {
+    auto &ExistingFunction = Functions[It->second];
+    // Create a map of existing regions for lookup.
+    // The key uniquely identifies the source region.
+    using RegionKey =
+        std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>;
+    std::map<RegionKey, CountedRegion *> ExistingRegionsMap;
+    for (auto &ExistingRegion : ExistingFunction.CountedRegions) {
+      RegionKey Key = {ExistingRegion.FileID, ExistingRegion.LineStart,
+                       ExistingRegion.ColumnStart, ExistingRegion.LineEnd,
+                       ExistingRegion.ColumnEnd};
+      ExistingRegionsMap[Key] = &ExistingRegion;
+    }
+    // Merge the new regions into the existing function's regions.
+    for (const auto &NewRegion : Function.CountedRegions) {
+      RegionKey Key = {NewRegion.FileID, NewRegion.LineStart,
+                       NewRegion.ColumnStart, NewRegion.LineEnd,
+                       NewRegion.ColumnEnd};
+      auto MapIt = ExistingRegionsMap.find(Key);
+      if (MapIt != ExistingRegionsMap.end()) {
+        // Region already exists, merge counts by summing the counts.
+        CountedRegion *ExistingRegion = MapIt->second;
+        ExistingRegion->ExecutionCount += NewRegion.ExecutionCount;
+      } else {
+        ExistingFunction.CountedRegions.push_back(NewRegion);
+      }
+    }
 
+    return Error::success();
+  }
+  RecordIndices.insert({LogicalFuncKey, Functions.size()});
+  // Don't create records for (filenames, function) pairs we've already seen.
+  StringRef Hash(HashStr);
+  if (!RecordProvenance[FilenamesHash].insert(hash_value(Hash)).second) {
+    return Error::success();
+  }
   Functions.push_back(std::move(Function));
 
   // Performance optimization: keep track of the indices of the function records
@@ -971,7 +1014,8 @@ Error CoverageMapping::loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
-    CoverageMapping &Coverage) {
+    CoverageMapping &Coverage, StringRef ObjectFilename,
+    bool MergeBinaryCoverage) {
   assert(!Coverage.SingleByteCoverage || !ProfileReader ||
          *Coverage.SingleByteCoverage ==
              ProfileReader.value().get().hasSingleByteCoverage());
@@ -982,7 +1026,8 @@ Error CoverageMapping::loadFromReaders(
       if (Error E = RecordOrErr.takeError())
         return E;
       const auto &Record = *RecordOrErr;
-      if (Error E = Coverage.loadFunctionRecord(Record, ProfileReader))
+      if (Error E = Coverage.loadFunctionRecord(
+              Record, ProfileReader, ObjectFilename, MergeBinaryCoverage))
         return E;
     }
   }
@@ -1013,7 +1058,8 @@ Error CoverageMapping::loadFromFile(
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
     CoverageMapping &Coverage, bool &DataFound,
-    SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
+    SmallVectorImpl<object::BuildID> *FoundBinaryIDs, StringRef ObjectFilename,
+    bool MergeBinaryCoverage) {
   auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
       Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = CovMappingBufOrErr.getError())
@@ -1043,16 +1089,19 @@ Error CoverageMapping::loadFromFile(
                        }));
   }
   DataFound |= !Readers.empty();
-  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage))
+  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage,
+                                ObjectFilename, MergeBinaryCoverage))
     return createFileError(Filename, std::move(E));
   return Error::success();
 }
 
-Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
-    ArrayRef<StringRef> ObjectFilenames,
-    std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
-    ArrayRef<StringRef> Arches, StringRef CompilationDir,
-    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
+Expected<std::unique_ptr<CoverageMapping>>
+CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
+                      std::optional<StringRef> ProfileFilename,
+                      vfs::FileSystem &FS, ArrayRef<StringRef> Arches,
+                      StringRef CompilationDir,
+                      const object::BuildIDFetcher *BIDFetcher,
+                      bool CheckBinaryIDs, bool MergeBinaryCoverage) {
   std::unique_ptr<IndexedInstrProfReader> ProfileReader;
   if (ProfileFilename) {
     auto ProfileReaderOrErr =
@@ -1079,9 +1128,11 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
 
   SmallVector<object::BuildID> FoundBinaryIDs;
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    if (Error E = loadFromFile(File.value(), GetArch(File.index()),
-                               CompilationDir, ProfileReaderRef, *Coverage,
-                               DataFound, &FoundBinaryIDs))
+    if (Error E = loadFromFile(
+            File.value(), GetArch(File.index()), CompilationDir,
+            ProfileReaderRef, *Coverage, DataFound, &FoundBinaryIDs,
+            MergeBinaryCoverage ? ObjectFilenames[File.index()] : "",
+            MergeBinaryCoverage))
       return std::move(E);
   }
 
