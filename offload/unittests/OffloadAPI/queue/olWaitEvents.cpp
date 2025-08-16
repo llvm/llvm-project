@@ -49,18 +49,18 @@ TEST_P(olWaitEventsTest, Success) {
     ASSERT_SUCCESS(olCreateQueue(Device, &Queues[I]));
 
     if (I > 0)
-      ASSERT_SUCCESS(olWaitEvents(Queues[I], &Events[I - 1], 1));
+      EXPECT_SUCCESS(olWaitEvents(Queues[I], &Events[I - 1], 1));
 
-    ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
+    EXPECT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
                                   sizeof(Args), &LaunchArgs));
     ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
   }
 
-  ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
+  EXPECT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 2; i < NUM_KERNELS; i++) {
-    ASSERT_EQ(Data[i], Data[i - 1] + Data[i - 2]);
+    EXPECT_EQ(Data[i], Data[i - 1] + Data[i - 2]);
   }
 }
 
@@ -83,18 +83,18 @@ TEST_P(olWaitEventsTest, SuccessSingleQueue) {
     Args.Idx = I;
 
     if (I > 0)
-      ASSERT_SUCCESS(olWaitEvents(Queue, &Events[I - 1], 1));
+      EXPECT_SUCCESS(olWaitEvents(Queue, &Events[I - 1], 1));
 
-    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+    EXPECT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
                                   &LaunchArgs));
     ASSERT_SUCCESS(olCreateEvent(Queue, &Events[I]));
   }
 
-  ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
+  EXPECT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 2; i < NUM_KERNELS; i++) {
-    ASSERT_EQ(Data[i], Data[i - 1] + Data[i - 2]);
+    EXPECT_EQ(Data[i], Data[i - 1] + Data[i - 2]);
   }
 }
 
@@ -117,35 +117,35 @@ TEST_P(olWaitEventsTest, SuccessMultipleEvents) {
     ASSERT_SUCCESS(olCreateQueue(Device, &Queues[I]));
 
     if (I > 0)
-      ASSERT_SUCCESS(olWaitEvents(Queues[I], Events, I));
+      EXPECT_SUCCESS(olWaitEvents(Queues[I], Events, I));
 
-    ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
+    EXPECT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
                                   sizeof(Args), &LaunchArgs));
     ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
   }
 
-  ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
+  EXPECT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 2; i < NUM_KERNELS; i++) {
-    ASSERT_EQ(Data[i], Data[i - 1] + Data[i - 2]);
+    EXPECT_EQ(Data[i], Data[i - 1] + Data[i - 2]);
   }
 }
 
 TEST_P(olWaitEventsTest, InvalidNullQueue) {
   ol_event_handle_t Event;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvents(nullptr, &Event, 1));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvents(nullptr, &Event, 1));
 }
 
 TEST_P(olWaitEventsTest, InvalidNullEvent) {
   ol_queue_handle_t Queue;
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olWaitEvents(Queue, nullptr, 1));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olWaitEvents(Queue, nullptr, 1));
 }
 
 TEST_P(olWaitEventsTest, InvalidNullInnerEvent) {
   ol_queue_handle_t Queue;
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
   ol_event_handle_t Event = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvents(Queue, &Event, 1));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvents(Queue, &Event, 1));
 }

@@ -16,19 +16,19 @@
 struct olInitTest : ::testing::Test {};
 
 TEST_F(olInitTest, Success) {
-  ASSERT_SUCCESS(olInit());
-  ASSERT_SUCCESS(olShutDown());
+  EXPECT_SUCCESS(olInit());
+  EXPECT_SUCCESS(olShutDown());
 }
 
 TEST_F(olInitTest, Uninitialized) {
-  ASSERT_ERROR(OL_ERRC_UNINITIALIZED,
+  EXPECT_ERROR(OL_ERRC_UNINITIALIZED,
                olIterateDevices(
                    [](ol_device_handle_t, void *) { return false; }, nullptr));
 }
 
 TEST_F(olInitTest, RepeatedInit) {
   for (size_t I = 0; I < 10; I++) {
-    ASSERT_SUCCESS(olInit());
-    ASSERT_SUCCESS(olShutDown());
+    EXPECT_SUCCESS(olInit());
+    EXPECT_SUCCESS(olShutDown());
   }
 }

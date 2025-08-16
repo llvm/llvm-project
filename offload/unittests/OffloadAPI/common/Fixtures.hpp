@@ -15,6 +15,17 @@
 
 #pragma once
 
+#ifndef EXPECT_SUCCESS
+#define EXPECT_SUCCESS(ACTUAL)                                                 \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code != OL_ERRC_SUCCESS) {                                 \
+      ADD_FAILURE() << #ACTUAL " returned " << Res->Code << ": "               \
+                    << Res->Details;                                           \
+    }                                                                          \
+  } while (0)
+#endif
+
 #ifndef ASSERT_SUCCESS
 #define ASSERT_SUCCESS(ACTUAL)                                                 \
   do {                                                                         \
@@ -27,19 +38,19 @@
 #endif
 
 // TODO: rework this so the EXPECTED/ACTUAL results are readable
-#ifndef ASSERT_ERROR
-#define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
+#ifndef EXPECT_ERROR
+#define EXPECT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
-    ASSERT_TRUE(Res && (Res->Code == EXPECTED));                               \
+    EXPECT_TRUE(Res && (Res->Code == EXPECTED));                               \
   } while (0)
 #endif
 
-#ifndef ASSERT_ANY_ERROR
-#define ASSERT_ANY_ERROR(ACTUAL)                                               \
+#ifndef EXPECT_ANY_ERROR
+#define EXPECT_ANY_ERROR(ACTUAL)                                               \
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
-    ASSERT_TRUE(Res);                                                          \
+    EXPECT_TRUE(Res);                                                          \
   } while (0)
 #endif
 
@@ -127,14 +138,14 @@ struct OffloadProgramTest : OffloadDeviceTest {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
     ASSERT_TRUE(
         TestEnvironment::loadDeviceBinary(ProgramName, Device, DeviceBin));
-    ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+    EXPECT_GE(DeviceBin->getBufferSize(), 0lu);
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
   }
 
   void TearDown() override {
     if (Program) {
-      olDestroyProgram(Program);
+      EXPECT_SUCCESS(olDestroyProgram(Program));
     }
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
   }
@@ -178,7 +189,7 @@ struct OffloadQueueTest : OffloadDeviceTest {
 
   void TearDown() override {
     if (Queue) {
-      olDestroyQueue(Queue);
+      EXPECT_SUCCESS(olDestroyQueue(Queue));
     }
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
   }
@@ -190,12 +201,12 @@ struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
     ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
-    ASSERT_SUCCESS(olSyncQueue(Queue));
+    EXPECT_SUCCESS(olSyncQueue(Queue));
   }
 
   void TearDown() override {
     if (Event)
-      olDestroyEvent(Event);
+      EXPECT_SUCCESS(olDestroyEvent(Event));
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::TearDown());
   }
 

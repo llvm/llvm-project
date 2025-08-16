@@ -15,15 +15,15 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olCreateEventTest);
 
 TEST_P(olCreateEventTest, Success) {
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
-  ASSERT_NE(Event, nullptr);
+  EXPECT_SUCCESS(olCreateEvent(Queue, &Event));
+  EXPECT_NE(Event, nullptr);
 }
 
 TEST_P(olCreateEventTest, InvalidNullQueue) {
   ol_event_handle_t Event;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olCreateEvent(nullptr, &Event));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olCreateEvent(nullptr, &Event));
 }
 
 TEST_P(olCreateEventTest, InvalidNullDest) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olCreateEvent(Queue, nullptr));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olCreateEvent(Queue, nullptr));
 }

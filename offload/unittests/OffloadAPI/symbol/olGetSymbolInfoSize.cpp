@@ -18,43 +18,43 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetSymbolInfoSizeGlobalTest);
 
 TEST_P(olGetSymbolInfoSizeKernelTest, SuccessKind) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_KIND, &Size));
-  ASSERT_EQ(Size, sizeof(ol_symbol_kind_t));
+  EXPECT_SUCCESS(olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_KIND, &Size));
+  EXPECT_EQ(Size, sizeof(ol_symbol_kind_t));
 }
 
 TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessKind) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_KIND, &Size));
-  ASSERT_EQ(Size, sizeof(ol_symbol_kind_t));
+  EXPECT_SUCCESS(olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_KIND, &Size));
+  EXPECT_EQ(Size, sizeof(ol_symbol_kind_t));
 }
 
 TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessAddress) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetSymbolInfoSize(
+  EXPECT_SUCCESS(olGetSymbolInfoSize(
       Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS, &Size));
-  ASSERT_EQ(Size, sizeof(void *));
+  EXPECT_EQ(Size, sizeof(void *));
 }
 
 TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessSize) {
   size_t Size = 0;
-  ASSERT_SUCCESS(
+  EXPECT_SUCCESS(
       olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE, &Size));
-  ASSERT_EQ(Size, sizeof(size_t));
+  EXPECT_EQ(Size, sizeof(size_t));
 }
 
 TEST_P(olGetSymbolInfoSizeKernelTest, InvalidNullHandle) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetSymbolInfoSize(nullptr, OL_SYMBOL_INFO_KIND, &Size));
 }
 
 TEST_P(olGetSymbolInfoSizeKernelTest, InvalidSymbolInfoEnumeration) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
+  EXPECT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_FORCE_UINT32, &Size));
 }
 
 TEST_P(olGetSymbolInfoSizeKernelTest, InvalidNullPointer) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_KIND, nullptr));
 }
