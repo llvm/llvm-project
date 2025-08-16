@@ -11,3 +11,7 @@ Foo::~Foo() { std::puts(__func__); }
 Bar::Bar() { std::puts(__func__); }
 
 Bar::~Bar() { std::puts(__func__); }
+
+Base::Base() { std::puts(__func__); }
+
+Base::~Base() { std::puts(__func__); }
