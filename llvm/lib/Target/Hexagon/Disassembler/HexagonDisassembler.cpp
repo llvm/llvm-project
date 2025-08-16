@@ -526,6 +526,9 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     MI.insert(MI.begin() + 1,
               MCOperand::createExpr(MCConstantExpr::create(-1, getContext())));
     break;
+  case Hexagon::Y4_crswap10:
+    MI.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
+    break;
   default:
     break;
   }
