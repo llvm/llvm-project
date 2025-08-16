@@ -146,7 +146,7 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
     SmallVector<Value> flattenedAdaptor = flattenValues(adaptor.getOperands());
     FailureOr<Block *> convertedBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getSuccessor(),
-                          TypeRange(flattenedAdaptor));
+                          TypeRange(ValueRange(flattenedAdaptor)));
     if (failed(convertedBlock))
       return failure();
     DictionaryAttr attrs = op->getAttrDictionary();
@@ -178,12 +178,12 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
                                          "expected single element condition");
     FailureOr<Block *> convertedTrueBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getTrueDest(),
-                          TypeRange(flattenedAdaptorTrue));
+                          TypeRange(ValueRange(flattenedAdaptorTrue)));
     if (failed(convertedTrueBlock))
       return failure();
     FailureOr<Block *> convertedFalseBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getFalseDest(),
-                          TypeRange(flattenedAdaptorFalse));
+                          TypeRange(ValueRange(flattenedAdaptorFalse)));
     if (failed(convertedFalseBlock))
       return failure();
     DictionaryAttr attrs = op->getDiscardableAttrDictionary();
