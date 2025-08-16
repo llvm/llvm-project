@@ -13,12 +13,13 @@ function get_tabulator_hexa_formatter(padding: number): (cell: CellComponent) =>
 }
 
 const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
-  { title: "User ID", field: "userId", sorter: "number", widthGrow: 0.8 },
+  { title: "User ID", field: "userId", headerTooltip: true, sorter: "number", widthGrow: 0.8 },
   {
     title: "Name",
     field: "name",
+    headerTooltip: true,
     sorter: "string",
-    widthGrow: 3,
+    widthGrow: 2.5,
     minWidth: 200,
     tooltip : (_event: MouseEvent, cell: CellComponent) => {
       const rowData = cell.getRow().getData();
@@ -26,29 +27,46 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     }
   },
   {
-    title: "DSX",
+    title: "Debug",
+    field: "isDebug",
+    headerTooltip: true,
     hozAlign: "center",
     widthGrow: 0.8,
-    headerTooltip : "Debug / Synthetic / External",
-    formatter: (cell: CellComponent) => {
-      const rowData = cell.getRow().getData();
-      let label = "";
-      label += rowData.isDebug ? "D" : "";
-      label += rowData.isSynthetic ? "S" : "";
-      label += rowData.isExternal ? "X" : "";
-      return label;
-    },
-    sorter: (_a, _b, aRow, bRow) => {
-      const valuesA = [aRow.getData().isDebug, aRow.getData().isSynthetic, aRow.getData().isExternal];
-      const valuesB = [bRow.getData().isDebug, bRow.getData().isSynthetic, bRow.getData().isExternal];
-
-      return valuesA < valuesB ? -1 : valuesA > valuesB ? 1 : 0;
+    formatter: "tickCross",
+    formatterParams: {
+      tickElement: "✔",
+      crossElement: false,
+    }
+  },
+  {
+    title: "Synthetic",
+    field: "isSynthetic",
+    headerTooltip: true,
+    hozAlign: "center",
+    widthGrow: 0.8,
+    formatter: "tickCross",
+    formatterParams: {
+      tickElement: "✔",
+      crossElement: false,
+    }
+  },
+  {
+    title: "External",
+    field: "isExternal",
+    headerTooltip: true,
+    hozAlign: "center",
+    widthGrow: 0.8,
+    formatter: "tickCross",
+    formatterParams: {
+      tickElement: "✔",
+      crossElement: false,
     }
   },
   { title: "Type", field: "type", sorter: "string" },
   {
     title: "File Address",
     field: "fileAddress",
+    headerTooltip: true,
     sorter: "number",
     widthGrow : 1.25,
     formatter: get_tabulator_hexa_formatter(16),
@@ -56,11 +74,12 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
   {
     title: "Load Address",
     field: "loadAddress",
+    headerTooltip: true,
     sorter: "number",
     widthGrow : 1.25,
     formatter: get_tabulator_hexa_formatter(16),
   },
-  { title: "Size", field: "size", sorter: "number", formatter: get_tabulator_hexa_formatter(8) },
+  { title: "Size", field: "size", headerTooltip: true, sorter: "number", formatter: get_tabulator_hexa_formatter(8) },
 ];
 
 const vscode = acquireVsCodeApi();
