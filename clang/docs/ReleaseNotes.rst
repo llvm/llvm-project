@@ -168,6 +168,10 @@ Improvements to Clang's diagnostics
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
   
+- Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
+  potential misaligned members get processed before they can get discarded.
+  (#GH144729)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

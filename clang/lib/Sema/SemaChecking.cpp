@@ -14198,7 +14198,6 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
     CheckUnsequencedOperations(E);
   if (!IsConstexpr && !E->isValueDependent())
     CheckForIntOverflow(E);
-  DiagnoseMisalignedMembers();
 }
 
 void Sema::CheckBitFieldInitialization(SourceLocation InitLoc,
@@ -15650,11 +15649,12 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
 
 void Sema::AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
                                          CharUnits Alignment) {
-  MisalignedMembers.emplace_back(E, RD, MD, Alignment);
+  currentEvaluationContext().MisalignedMembers.emplace_back(E, RD, MD,
+                                                            Alignment);
 }
 
 void Sema::DiagnoseMisalignedMembers() {
-  for (MisalignedMember &m : MisalignedMembers) {
+  for (MisalignedMember &m : currentEvaluationContext().MisalignedMembers) {
     const NamedDecl *ND = m.RD;
     if (ND->getName().empty()) {
       if (const TypedefNameDecl *TD = m.RD->getTypedefNameForAnonDecl())
@@ -15663,7 +15663,7 @@ void Sema::DiagnoseMisalignedMembers() {
     Diag(m.E->getBeginLoc(), diag::warn_taking_address_of_packed_member)
         << m.MD << ND << m.E->getSourceRange();
   }
-  MisalignedMembers.clear();
+  currentEvaluationContext().MisalignedMembers.clear();
 }
 
 void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
@@ -15681,13 +15681,15 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
       cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf) {
     auto *Op = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
     if (isa<MemberExpr>(Op)) {
-      auto *MA = llvm::find(MisalignedMembers, MisalignedMember(Op));
-      if (MA != MisalignedMembers.end() &&
+      auto &MisalignedMembersForExpr =
+          currentEvaluationContext().MisalignedMembers;
+      auto *MA = llvm::find(MisalignedMembersForExpr, MisalignedMember(Op));
+      if (MA != MisalignedMembersForExpr.end() &&
           (T->isDependentType() || T->isIntegerType() ||
            (T->isPointerType() && (T->getPointeeType()->isIncompleteType() ||
                                    Context.getTypeAlignInChars(
                                        T->getPointeeType()) <= MA->Alignment))))
-        MisalignedMembers.erase(MA);
+        MisalignedMembersForExpr.erase(MA);
     }
   }
 }
