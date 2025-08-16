@@ -3291,6 +3291,39 @@ void Darwin::addClangTargetOptions(
     if (!RequiresSubdirectorySearch)
       CC1Args.push_back("-fno-modulemap-allow-subdirectory-search");
   }
+
+  if (getTriple().isArm64e()) {
+    auto EnsureDefaultPtrauthFlag = [&](OptSpecifier Pos, OptSpecifier Neg) {
+      assert(Pos != Neg);
+      if (const Arg *Opt = DriverArgs.getLastArg(Pos, Neg);
+          Opt && Opt->getOption().matches(Neg))
+        return;
+      Option PosOpt = getDriverOptTable().getOption(Pos);
+      CC1Args.push_back(PosOpt.getPrefixedName().data());
+    };
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_calls,
+                             options::OPT_fno_ptrauth_calls);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_returns,
+                             options::OPT_fno_ptrauth_returns);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_intrinsics,
+                             options::OPT_fno_ptrauth_intrinsics);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_indirect_gotos,
+                             options::OPT_fno_ptrauth_indirect_gotos);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_auth_traps,
+                             options::OPT_fno_ptrauth_auth_traps);
+    EnsureDefaultPtrauthFlag(
+        options::OPT_fptrauth_vtable_pointer_address_discrimination,
+        options::OPT_fno_ptrauth_vtable_pointer_address_discrimination);
+    EnsureDefaultPtrauthFlag(
+        options::OPT_fptrauth_vtable_pointer_type_discrimination,
+        options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_objc_isa,
+                             options::OPT_fno_ptrauth_objc_isa);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_objc_class_ro,
+                             options::OPT_fno_ptrauth_objc_class_ro);
+    EnsureDefaultPtrauthFlag(options::OPT_fptrauth_objc_interface_sel,
+                             options::OPT_fno_ptrauth_objc_interface_sel);
+  }
 }
 
 void Darwin::addClangCC1ASTargetOptions(
