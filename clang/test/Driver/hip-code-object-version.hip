@@ -7,7 +7,6 @@
 
 // V4: "-mcode-object-version=4"
 // V4: "-mllvm" "--amdhsa-code-object-version=4"
-// V4: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version 5.
 
@@ -18,7 +17,6 @@
 
 // V5: "-mcode-object-version=5"
 // V5: "-mllvm" "--amdhsa-code-object-version=5"
-// V5: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version 6.
 
@@ -29,11 +27,10 @@
 
 // V6: "-mcode-object-version=6"
 // V6: "-mllvm" "--amdhsa-code-object-version=6"
-// V6: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version default
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -nogpuinc -nogpulib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=VD %s
 
