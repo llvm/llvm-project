@@ -303,6 +303,10 @@ class ProfiledBinary {
 
   bool IsCOFF = false;
 
+  std::vector<PGOAnalysisMap> PGOAnalysisMaps;
+
+  std::vector<BBAddrMap> BBAddrMaps;
+
   void setPreferredTextSegmentAddresses(const ObjectFile *O);
 
   template <class ELFT>
@@ -612,6 +616,12 @@ public:
   bool getMissingMMapWarned() { return MissingMMapWarned; }
 
   void setMissingMMapWarned(bool Value) { MissingMMapWarned = Value; }
+
+  const std::vector<BBAddrMap> &getBBAddrMaps() const { return BBAddrMaps; }
+
+  const std::vector<PGOAnalysisMap> &getPGOAnalysisMaps() const {
+    return PGOAnalysisMaps;
+  }
 };
 
 } // end namespace sampleprof
