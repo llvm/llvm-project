@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
+
+using testing::HasSubstr;
 
 /// Mock implementations of a Type hierarchy
 struct LeafType;
@@ -68,4 +73,24 @@ TEST(Type, Casting) {
   EXPECT_FALSE(static_cast<bool>(dyn_cast_if_present<IntegerType>(nullTy)));
 
   EXPECT_EQ(8u, cast<IntegerType>(intTy).getWidth());
+}
+
+TEST(Type, UserAlias) {
+  MLIRContext ctx;
+  ctx.allowUnregisteredDialects();
+
+  Type intTy = IntegerType::get(&ctx, 8);
+  AsmState state(&ctx);
+  state.addAlias(intTy, "test.alias");
+  Operation *op = Operation::create(
+      UnknownLoc::get(&ctx), OperationName("test.op", &ctx), TypeRange(intTy),
+      ValueRange(), NamedAttrList(), OpaqueProperties(nullptr), BlockRange(),
+      /*numRegions=*/0);
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  op->print(os, state);
+  EXPECT_THAT(str, HasSubstr("!test.alias = i8"));
+  EXPECT_THAT(str, HasSubstr("\"test.op\"() : () -> !test.alias\n"));
+  op->erase();
 }
