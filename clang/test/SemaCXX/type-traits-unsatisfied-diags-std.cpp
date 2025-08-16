@@ -43,6 +43,14 @@ static constexpr bool value = __is_standard_layout(T);
 template <typename T>
 constexpr bool is_standard_layout_v = __is_standard_layout(T);
 
+template <typename T>
+struct is_trivially_default_constructible {
+    static constexpr bool value = __is_trivially_default_constructible(T);
+};
+
+template <typename T>
+constexpr bool is_trivially_default_constructible_v = __is_trivially_default_constructible(T);
+
 template <typename... Args>
 struct is_constructible {
     static constexpr bool value = __is_constructible(Args...);
@@ -106,6 +114,17 @@ using is_standard_layout = __details_is_standard_layout<T>;
 template <typename T>
 constexpr bool is_standard_layout_v = __is_standard_layout(T);
 
+template <typename T>
+struct __details_is_trivially_default_constructible {
+    static constexpr bool value = __is_trivially_default_constructible(T);
+};
+
+template <typename T>
+using is_trivially_default_constructible = __details_is_trivially_default_constructible<T>;
+
+template <typename T>
+constexpr bool is_trivially_default_constructible_v = __is_trivially_default_constructible(T);
+
 template <typename... Args>
 struct __details_is_constructible{
     static constexpr bool value = __is_constructible(Args...);
@@ -145,6 +164,15 @@ using is_trivially_copyable  = __details_is_trivially_copyable<T>;
 
 template <typename T>
 constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
+
+template <typename T>
+struct __details_is_trivially_default_constructible : bool_constant<__is_trivially_default_constructible(T)> {};
+
+template <typename T>
+using is_trivially_default_constructible = __details_is_trivially_default_constructible<T>;
+
+template <typename T>
+constexpr bool is_trivially_default_constructible_v = is_trivially_default_constructible<T>::value;
 
 template <typename T, typename U>
 struct __details_is_assignable : bool_constant<__is_assignable(T, U)> {};
@@ -300,6 +328,15 @@ namespace test_namespace {
     static_assert(is_constructible_v<void>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_constructible_v<void>'}} \
     // expected-note@-1 {{because it is a cv void type}}
+
+    static_assert(is_trivially_default_constructible<int&>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_trivially_default_constructible<int &>::value'}} \
+    // expected-note@-1 {{'int &' is not trivially default constructible}} \
+    // expected-note@-1 {{because it is a reference type}}
+    static_assert(is_trivially_default_constructible_v<int&>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_trivially_default_constructible_v<int &>'}} \
+    // expected-note@-1 {{'int &' is not trivially default constructible}} \
+    // expected-note@-1 {{because it is a reference type}}
 }
 
 
@@ -319,6 +356,14 @@ template <typename T>
 concept C2 = std::is_trivially_copyable_v<T>; // #concept4
 
 template <C2 T> void g2();  // #cand4
+
+template <typename T>
+requires std::is_trivially_default_constructible<T>::value void f5();  // #cand5
+
+template <typename T>
+concept C5 = std::is_trivially_default_constructible_v<T>; // #concept6
+
+template <C5 T> void g5();  // #cand6
 
 template <typename T, typename U>
 requires std::is_assignable<T, U>::value void f4();  // #cand7
@@ -390,9 +435,24 @@ void test() {
     g3<void>();
     // expected-error@-1 {{no matching function for call to 'g3'}} \
     // expected-note@#cand6 {{candidate template ignored: constraints not satisfied [with T = void]}} \
-    // expected-note@#cand6 {{because 'void' does not satisfy 'C3'}} \
+    // expected-note@#concept6 {{because 'void' does not satisfy 'C3'}} \
     // expected-note@#concept6 {{because 'std::is_constructible_v<void>' evaluated to false}} \
     // expected-note@#concept6 {{because it is a cv void type}}
+
+    f5<void>();
+    // expected-error@-1 {{no matching function for call to 'f5'}} \
+    // expected-note@#cand5 {{candidate template ignored: constraints not satisfied [with T = void]}} \
+    // expected-note-re@#cand5 {{because '{{.*}}is_trivially_default_constructible<void>::value' evaluated to false}} \
+    // expected-note@#cand5 {{'void' is not trivially default constructible}} \
+    // expected-note@#cand5 {{because it is a cv void type}}
+
+    g5<void>();
+    // expected-error@-1 {{no matching function for call to 'g5'}} \
+    // expected-note@#cand6 {{candidate template ignored: constraints not satisfied [with T = void]}} \
+    // expected-note@#cand6 {{because 'void' does not satisfy 'C5'}} \
+    // expected-note@#concept6 {{because 'std::is_trivially_default_constructible_v<void>' evaluated to false}} \
+    // expected-note@#cand6 {{'void' is not trivially default constructible}} \
+    // expected-note@#cand6 {{because it is a cv void type}}
 }
 }
 
