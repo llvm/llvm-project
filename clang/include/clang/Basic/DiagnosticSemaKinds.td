@@ -13241,6 +13241,8 @@ def err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union
     : Error<"not supported with the multivalue ABI for "
             "function pointers with a struct/union as %select{return "
             "value|parameter}0">;
+def err_wasm_builtin_arg_must_be_pointer_to_integer_type
+    : Error<"%ordinal0 argument must be a pointer to an integer">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented

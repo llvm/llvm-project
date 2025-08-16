@@ -280,6 +280,24 @@ bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(const TargetInfo &TI,
   return false;
 }
 
+bool SemaWasm::BuiltinWasmJsCatch(CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 1))
+    return true;
+
+  Expr *PtrArg = TheCall->getArg(0);
+  QualType ArgType = PtrArg->getType();
+
+  // Check that the argument is a pointer
+  const PointerType *PtrTy = ArgType->getAs<PointerType>();
+  if (!PtrTy || !PtrTy->getPointeeType()->isIntegerType()) {
+    return Diag(PtrArg->getBeginLoc(),
+                diag::err_wasm_builtin_arg_must_be_pointer_to_integer_type)
+           << 1 << PtrArg->getSourceRange();
+  }
+  TheCall->setType(getASTContext().getWebAssemblyExternrefType());
+  return false;
+}
+
 bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
                                                    unsigned BuiltinID,
                                                    CallExpr *TheCall) {
@@ -304,6 +322,8 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinWasmTableCopy(TheCall);
   case WebAssembly::BI__builtin_wasm_test_function_pointer_signature:
     return BuiltinWasmTestFunctionPointerSignature(TI, TheCall);
+  case WebAssembly::BI__builtin_wasm_js_catch:
+    return BuiltinWasmJsCatch(TheCall);
   }
 
   return false;
