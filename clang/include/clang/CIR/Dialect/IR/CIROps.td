@@ -3061,7 +3061,7 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp
+// ComplexMulOp & ComplexDivOp
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32EnumAttr<
@@ -3080,8 +3080,8 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    Range is used to select the implementation used when the operation
-    is lowered to the LLVM dialect. For multiplication, 'improved',
+    The `range` attribute is used to select the algorithm used when the
+    operation is lowered to the LLVM dialect. For multiplication, 'improved',
     'promoted', and 'basic' are all handled equivalently, producing the
     algebraic formula with no special handling for NaN value. If 'full' is
     used, a runtime-library function is called if one of the intermediate
@@ -3092,6 +3092,47 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     ```mlir
     %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
     %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexDivOp : CIR_Op<"complex.div", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "Complex division";
+  let description = [{
+    The `cir.complex.div` operation takes two complex numbers and returns
+    their quotient.
+
+    The `range` attribute is used to select the algorithm used when
+    the operation is lowered to the LLVM dialect. For division, 'improved'
+    producing the Smith's algorithms for Complex division with no special
+    handling for NaN values. If 'promoted' is used, the values are promoted
+    to a higher precision type, if possible,  and the calculation is performed
+    using the algebraic formula. We only fall back on Smith's algorithm when
+    the target does not support a higher precision type. Also, this only
+    applies to floating-point types with no special handling for NaN values.
+    If 'full' is used, a runtime-library function is called if one of the
+    intermediate calculations produced a NaN value. and for 'basic' algebraic
+    formula with no special handling for the NaN value will be used.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 
