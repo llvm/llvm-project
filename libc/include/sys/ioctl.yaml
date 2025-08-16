@@ -5,4 +5,10 @@ macros: []
 types: []
 enums: []
 objects: []
-functions: []
+functions:
+  - name: ioctl
+    return_type: int
+    arguments:
+      - type: int
+      - type: unsigned long
+      - type: '...'
