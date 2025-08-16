@@ -33,8 +33,7 @@ llvm::json::Value toJSON(const SourceLLDBData &SLD) {
   return result;
 }
 
-bool fromJSON(const llvm::json::Value &Params, Symbol &DS,
-              llvm::json::Path P) {
+bool fromJSON(const llvm::json::Value &Params, Symbol &DS, llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("userId", DS.userId) && O.map("isDebug", DS.isDebug) &&
          O.map("isSynthetic", DS.isSynthetic) &&
