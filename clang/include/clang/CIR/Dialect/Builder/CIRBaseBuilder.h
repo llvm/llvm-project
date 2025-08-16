@@ -504,8 +504,7 @@ public:
   static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          // TODO: Add LabelOp missing feature here
-          return mlir::isa<cir::AllocaOp>(&op);
+          return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);
         });
 
     if (last != block->rend())
