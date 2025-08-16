@@ -50,6 +50,9 @@ Improvements and New Features
 - The performance of ``map::erase`` and ``set::erase`` has been improved by up to 2x
 - The performance of ``find(key)`` in ``map``, ``set``, ``multimap`` and ``multiset`` has been improved by up to 2.3x
 
+- ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
+  in chunks into a buffer.
+
 Deprecations and Removals
 -------------------------
 
