@@ -178,6 +178,8 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
