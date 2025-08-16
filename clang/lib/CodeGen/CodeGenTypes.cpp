@@ -27,13 +27,15 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 
 using namespace clang;
 using namespace CodeGen;
 
 CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
     : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
-      Target(cgm.getTarget()) {
+      Target(cgm.getTarget()), TB(Alloc), Mapper(cgm.getContext(), Alloc),
+      ReverseMapper(getLLVMContext()) {
   SkippedLayout = false;
   LongDoubleReferenced = false;
 }
