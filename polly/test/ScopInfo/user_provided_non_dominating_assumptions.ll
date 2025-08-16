@@ -5,8 +5,8 @@
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [i, N, M] -> {  : N <= i or (N > i and N >= 0) }
 ; CHECK-NEXT: remark: <unknown>:0:0: Inbounds assumption:    [i, N, M] -> {  : N <= i or (N > i and M <= 100) }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
-;
-;    void f(int *restrict A, int *restrict B, int i, int N, int M, int C[100][100]) {
+;    int C[100][100];
+;    void f(int *restrict A, int *restrict B, int i, int N, int M) {
 ;      for (; i < N; i++) {
 ;        __builtin_assume(N >= 0);
 ;        for (int j = 0; j != M; j++) {
@@ -52,8 +52,9 @@
 ; YAML: ...
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+@C = local_unnamed_addr global [100 x [100 x i32]] zeroinitializer
 
-define void @f(ptr noalias %A, ptr noalias %B, i32 %i, i32 %N, i32 %M, ptr %C) {
+define void @f(ptr noalias %A, ptr noalias %B, i32 %i, i32 %N, i32 %M) {
 entry:
   %tmp = zext i32 %M to i64
   %tmp6 = sext i32 %i to i64
@@ -85,7 +86,7 @@ for.body.4:                                       ; preds = %for.cond.2
   %arrayidx8 = getelementptr inbounds i32, ptr %B, i64 %tmp12
   %tmp13 = load i32, ptr %arrayidx8, align 4
   %add9 = add nsw i32 %tmp11, %tmp13
-  %arrayidx13 = getelementptr inbounds [100 x i32], ptr %C, i64 %indvars.iv3, i64 %indvars.iv
+  %arrayidx13 = getelementptr inbounds [100 x i32], ptr @C, i64 %indvars.iv3, i64 %indvars.iv
   %tmp14 = load i32, ptr %arrayidx13, align 4
   %add14 = add nsw i32 %tmp14, %add9
   store i32 %add14, ptr %arrayidx13, align 4

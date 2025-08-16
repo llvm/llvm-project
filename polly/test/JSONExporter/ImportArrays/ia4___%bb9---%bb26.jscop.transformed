@@ -2,12 +2,12 @@
    "arrays" : [
        {
          "name" : "MemRef_B",
-         "sizes" : [ "*", "1024" ],
+         "sizes" : [ "1056", "1024" ],
 	 "type" : "doble"
       },
       {
          "name" : "MemRef_A",
-         "sizes" : [ "*", "1056" ],
+         "sizes" : [ "1056", "1056" ],
          "type" : "double"
       },
       {

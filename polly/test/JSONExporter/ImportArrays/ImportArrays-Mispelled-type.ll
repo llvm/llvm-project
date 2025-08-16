@@ -1,4 +1,4 @@
-  ; RUN: not --crash opt %loadNPMPolly -passes=polly-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
+; RUN: not --crash opt %loadNPMPolly -passes=polly-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Array has not a valid type.
 ;
@@ -11,11 +11,10 @@
 ;
 ;
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-unknown"
+@A = common global [1056 x [1056 x double]] zeroinitializer
+@B = common global [1056 x [1024 x double]] zeroinitializer
 
-; Function Attrs: nounwind uwtable
-define internal void @ia4(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, ptr %A, ptr %B, ptr %arg7) #0 {
+define internal void @ia4(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, ptr %A, ptr %B, ptr %arg7) {
 bb:
   br label %bb8
 
@@ -32,10 +31,10 @@ bb10:                                             ; preds = %bb20, %bb9
 
 bb12:                                             ; preds = %bb12, %bb10
   %tmp13 = phi i64 [ 0, %bb10 ], [ %tmp18, %bb12 ]
-  %tmp14 = getelementptr inbounds [1024 x double], ptr %B, i64 %tmp, i64 %tmp13
+  %tmp14 = getelementptr inbounds [1024 x double], ptr @B, i64 %tmp, i64 %tmp13
   %tmp15 = load double, ptr %tmp14, align 8
   %tmp16 = fmul double %tmp15, %beta
-  %tmp17 = getelementptr inbounds [1056 x double], ptr %A, i64 %tmp, i64 %tmp11
+  %tmp17 = getelementptr inbounds [1056 x double], ptr @A, i64 %tmp, i64 %tmp11
   store double %tmp16, ptr %tmp17, align 8
   %tmp18 = add nuw nsw i64 %tmp13, 1
   %tmp19 = icmp ne i64 %tmp18, 1024
@@ -54,5 +53,3 @@ bb23:                                             ; preds = %bb20
 bb26:                                             ; preds = %bb23
   ret void
 }
-
-attributes #0 = { nounwind uwtable "target-cpu"="x86-64" "target-features"="+aes,+avx,+cmov,+cx16,+fxsr,+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt" }

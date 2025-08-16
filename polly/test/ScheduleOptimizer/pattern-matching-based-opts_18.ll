@@ -12,10 +12,13 @@
 ;
 ; CHECK: The tensor contraction pattern was detected
 ;
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @kernel_tc(i32 %ni, i32 %nj, i32 %nk, i32 %nl, i32 %nq, i32 %nw, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) {
+@A = common global [32 x [32 x [32 x [32 x double]]]] zeroinitializer
+@B = common global [32 x [32 x [32 x [32 x double]]]] zeroinitializer
+@C = common global [32 x [32 x [32 x [32 x double]]]] zeroinitializer
+
+
+define internal void @kernel_tc(i32 %ni, i32 %nj, i32 %nk, i32 %nl, i32 %nq, i32 %nw, double %alpha, double %beta) {
 entry:
   br label %for.cond1.preheader
 
@@ -41,12 +44,12 @@ for.cond13.preheader:                             ; preds = %for.inc38, %for.con
 
 for.body15:                                       ; preds = %for.body15, %for.cond13.preheader
   %indvars.iv = phi i64 [ 0, %for.cond13.preheader ], [ %indvars.iv.next, %for.body15 ]
-  %arrayidx21 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr %A, i64 %indvars.iv71, i64 %indvars.iv62, i64 %indvars.iv68, i64 %indvars.iv
+  %arrayidx21 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr @A, i64 %indvars.iv71, i64 %indvars.iv62, i64 %indvars.iv68, i64 %indvars.iv
   %i = load double, ptr %arrayidx21, align 8
-  %arrayidx29 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr %B, i64 %indvars.iv, i64 %indvars.iv59, i64 %indvars.iv62, i64 %indvars.iv65
+  %arrayidx29 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr @B, i64 %indvars.iv, i64 %indvars.iv59, i64 %indvars.iv62, i64 %indvars.iv65
   %i1 = load double, ptr %arrayidx29, align 8
   %mul = fmul fast double %i1, %i
-  %arrayidx37 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr %C, i64 %indvars.iv71, i64 %indvars.iv68, i64 %indvars.iv65, i64 %indvars.iv59
+  %arrayidx37 = getelementptr inbounds [32 x [32 x [32 x double]]], ptr @C, i64 %indvars.iv71, i64 %indvars.iv68, i64 %indvars.iv65, i64 %indvars.iv59
   %i2 = load double, ptr %arrayidx37, align 8
   %add = fadd fast double %i2, %mul
   store double %add, ptr %arrayidx37, align 8

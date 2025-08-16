@@ -169,9 +169,12 @@
 ; CHECK-NEXT:              }
 ; CHECK-NEXT:            }
 ; CHECK-NEXT:          }
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(ptr %A, ptr %B, ptr %C) {
+@A = common global [3000 x [3000 x i32]] zeroinitializer
+@B = common global [3000 x [3000 x i32]] zeroinitializer
+@C = common global [3000 x [3000 x i32]] zeroinitializer
+
+define void @f() {
 entry:
   br label %for.cond
 
@@ -189,7 +192,7 @@ for.cond1:                                        ; preds = %for.inc21, %for.bod
   br i1 %exitcond3, label %for.body3, label %for.end23
 
 for.body3:                                        ; preds = %for.cond1
-  %arrayidx5 = getelementptr inbounds [3000 x i32], ptr %A, i64 %indvars.iv4, i64 %indvars.iv1
+  %arrayidx5 = getelementptr inbounds [3000 x i32], ptr @A, i64 %indvars.iv4, i64 %indvars.iv1
   store i32 0, ptr %arrayidx5, align 4
   br label %for.cond6
 
@@ -199,12 +202,12 @@ for.cond6:                                        ; preds = %for.inc, %for.body3
   br i1 %exitcond, label %for.body8, label %for.end
 
 for.body8:                                        ; preds = %for.cond6
-  %arrayidx12 = getelementptr inbounds [3000 x i32], ptr %B, i64 %indvars.iv4, i64 %indvars.iv
+  %arrayidx12 = getelementptr inbounds [3000 x i32], ptr @B, i64 %indvars.iv4, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx12, align 4
-  %arrayidx16 = getelementptr inbounds [3000 x i32], ptr %C, i64 %indvars.iv, i64 %indvars.iv1
+  %arrayidx16 = getelementptr inbounds [3000 x i32], ptr @C, i64 %indvars.iv, i64 %indvars.iv1
   %tmp7 = load i32, ptr %arrayidx16, align 4
   %mul = mul nsw i32 %tmp, %tmp7
-  %arrayidx20 = getelementptr inbounds [3000 x i32], ptr %A, i64 %indvars.iv4, i64 %indvars.iv1
+  %arrayidx20 = getelementptr inbounds [3000 x i32], ptr @A, i64 %indvars.iv4, i64 %indvars.iv1
   %tmp8 = load i32, ptr %arrayidx20, align 4
   %add = add nsw i32 %tmp8, %mul
   store i32 %add, ptr %arrayidx20, align 4

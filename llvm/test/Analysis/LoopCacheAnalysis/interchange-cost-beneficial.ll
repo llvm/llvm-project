@@ -1,9 +1,16 @@
 ; RUN: opt <  %s  -cache-line-size=64 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck  %s
 
-;; This test checks the effect of rounding cache cost to 1 when it is 
+; Global arrays to replace array_info operand bundles
+@test_array_A_2x3 = global [2 x [3 x i32]] zeroinitializer
+@test_array_B_2 = global [2 x i32] zeroinitializer
+@test_array_C_2 = global [2 x i32] zeroinitializer
+@test_array_D_2 = global [2 x i32] zeroinitializer
+@test_array_E_2 = global [2 x i32] zeroinitializer
+
+;; This test checks the effect of rounding cache cost to 1 when it is
 ;; evaluated to 0 because at least 1 cache line is accessed by the loopnest.
 ;; It does not make sense to output that zero cache lines are used.
-;; The cost of reference group for B[j], C[j], D[j] and E[j] were 
+;; The cost of reference group for B[j], C[j], D[j] and E[j] were
 ;; calculted 0 before but now they are 1 which makes each loop cost more reasonable.
 ;
 ; void test(int n, int m, int o, int A[2][3], int B[2], int C[2], int D[2], int E[2]) {
@@ -19,9 +26,14 @@
 ; CHECK: Loop 'for.j' has cost = 18
 ; CHECK-NEXT: Loop 'for.i' has cost = 10
 
-define void @test(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E) {
+define void @test() {
 
 entry:
+  %A = getelementptr inbounds [2 x [3 x i32]], ptr @test_array_A_2x3, i32 0, i32 0
+  %B = getelementptr inbounds [2 x i32], ptr @test_array_B_2, i32 0, i32 0
+  %C = getelementptr inbounds [2 x i32], ptr @test_array_C_2, i32 0, i32 0
+  %D = getelementptr inbounds [2 x i32], ptr @test_array_D_2, i32 0, i32 0
+  %E = getelementptr inbounds [2 x i32], ptr @test_array_E_2, i32 0, i32 0
   br label %for.i.preheader.split
 
 for.i.preheader.split:                            ; preds = %for.i.preheader

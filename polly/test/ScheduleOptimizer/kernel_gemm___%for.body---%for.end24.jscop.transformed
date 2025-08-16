@@ -1,23 +1,23 @@
 {
    "arrays" : [
       {
-         "name" : "MemRef_C1",
-         "sizes" : [ "*" ],
-         "type" : "double"
-      },
-      {
          "name" : "MemRef_A",
-         "sizes" : [ "*", "1024" ],
+         "sizes" : [ "1024", "1024" ],
          "type" : "double"
       },
       {
          "name" : "MemRef_B",
-         "sizes" : [ "*", "1024" ],
+         "sizes" : [ "1024", "1024" ],
          "type" : "double"
       },
       {
          "name" : "MemRef_C",
-         "sizes" : [ "*", "1024" ],
+         "sizes" : [ "1024", "1024" ],
+         "type" : "double"
+      },
+      {
+         "name" : "MemRef_C1",
+         "sizes" : [ "*" ],
          "type" : "double"
       }
    ],

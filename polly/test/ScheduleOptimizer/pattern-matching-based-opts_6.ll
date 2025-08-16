@@ -124,11 +124,12 @@
 ; AUTO-VECTORIZATION: 146 licm             - Number of instructions hoisted out of loop
 ; AUTO-VECTORIZATION: 1 licm             - Number of load insts hoisted or sunk
 ; AUTO-VECTORIZATION: 32 licm             - Number of memory locations promoted to registers
-;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-unknown"
 
-define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) #0 {
+@A = common global [1024 x [1020 x double]] zeroinitializer
+@B = common global [1024 x [1020 x double]] zeroinitializer
+@C = common global [1024 x [1020 x double]] zeroinitializer
+
+define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta) {
 entry:
   br label %entry.split
 
@@ -145,12 +146,12 @@ for.cond4.preheader:                              ; preds = %for.inc17, %for.con
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %indvars.iv = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [1020 x double], ptr %A, i64 %indvars.iv41, i64 %indvars.iv
+  %arrayidx8 = getelementptr inbounds [1020 x double], ptr @A, i64 %indvars.iv41, i64 %indvars.iv
   %tmp = load double, ptr %arrayidx8, align 8
-  %arrayidx12 = getelementptr inbounds [1020 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv38
+  %arrayidx12 = getelementptr inbounds [1020 x double], ptr @B, i64 %indvars.iv, i64 %indvars.iv38
   %tmp1 = load double, ptr %arrayidx12, align 8
   %mul = fmul double %tmp, %tmp1
-  %arrayidx16 = getelementptr inbounds [1020 x double], ptr %C, i64 %indvars.iv41, i64 %indvars.iv38
+  %arrayidx16 = getelementptr inbounds [1020 x double], ptr @C, i64 %indvars.iv41, i64 %indvars.iv38
   %tmp2 = load double, ptr %arrayidx16, align 8
   %add = fadd double %tmp2, %mul
   store double %add, ptr %arrayidx16, align 8
@@ -171,5 +172,3 @@ for.inc20:                                        ; preds = %for.inc17
 for.end22:                                        ; preds = %for.inc20
   ret void
 }
-
-attributes #0 = { nounwind uwtable "target-cpu"="x86-64" "target-features"="+aes,+avx,+cmov,+cx16,+fxsr,+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt" }

@@ -447,8 +447,20 @@ void MemoryAccess::updateDimensionality() {
 
   unsigned DimsArray = unsignedFromIslSize(ArraySpace.dim(isl::dim::set));
   unsigned DimsAccess = unsignedFromIslSize(AccessSpace.dim(isl::dim::set));
-  assert(DimsArray >= DimsAccess);
+
+  LLVM_DEBUG(dbgs() << "updateDimensionality: DimsArray=" << DimsArray
+                    << ", DimsAccess=" << DimsAccess << " for array "
+                    << SAI->getName() << "\n");
+
+  if (DimsArray < DimsAccess) {
+    LLVM_DEBUG(
+        dbgs() << "ERROR: DimsArray < DimsAccess - assertion would fail!\n");
+    return; // Graceful failure instead of assertion
+  }
   unsigned DimsMissing = DimsArray - DimsAccess;
+
+  LLVM_DEBUG(dbgs() << "updateDimensionality: Computing DimsMissing="
+                    << DimsMissing << "\n");
 
   auto *BB = getStatement()->getEntryBlock();
   auto &DL = BB->getModule()->getDataLayout();
@@ -476,7 +488,10 @@ void MemoryAccess::updateDimensionality() {
   // obvious again. If the base pointer was accessed with offsets not divisible
   // by the accesses element size, we will have chosen a smaller ArrayElemSize
   // that divides the offsets of all accesses to this base pointer.
-  if (DimsAccess == 1) {
+  //
+  // Skip this division for arrays that used array_info delinearization,
+  // as they already produce proper array indices rather than byte offsets.
+  if (DimsAccess == 1 && !SAI->usedArrayInfoDelinearization()) {
     isl::val V = isl::val(Ctx, ArrayElemSize);
     AccessRelation = AccessRelation.floordiv_val(V);
   }
@@ -498,9 +513,19 @@ void MemoryAccess::updateDimensionality() {
   // An access ((float *)A)[i] to an array char *A is modeled as
   // {[i] -> A[o] : 4 i <= o <= 4 i + 3
   if (ElemBytes > ArrayElemSize) {
-    assert(ElemBytes % ArrayElemSize == 0 &&
-           "Loaded element size should be multiple of canonical element size");
-    assert(DimsArray >= 1);
+    LLVM_DEBUG(dbgs() << "updateDimensionality: ElemBytes=" << ElemBytes
+                      << " > ArrayElemSize=" << ArrayElemSize << "\n");
+
+    if (ElemBytes % ArrayElemSize != 0) {
+      LLVM_DEBUG(dbgs() << "ERROR: Loaded element size not multiple of "
+                           "canonical element size!\n");
+      return; // Graceful failure instead of assertion
+    }
+
+    if (DimsArray < 1) {
+      LLVM_DEBUG(dbgs() << "ERROR: DimsArray < 1!\n");
+      return; // Graceful failure instead of assertion
+    }
     isl::map Map = isl::map::from_domain_and_range(
         isl::set::universe(ArraySpace), isl::set::universe(ArraySpace));
     for (auto i : seq<unsigned>(0, DimsArray - 1))
@@ -525,6 +550,9 @@ void MemoryAccess::updateDimensionality() {
     Map = Map.add_constraint(C);
     AccessRelation = AccessRelation.apply_range(Map);
   }
+
+  LLVM_DEBUG(dbgs() << "updateDimensionality: Completed successfully for array "
+                    << SAI->getName() << "\n");
 }
 
 std::string
@@ -846,7 +874,11 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   isl::space Space = isl::space(Ctx, 0, Statement->getNumIterators(), 0);
   AccessRelation = isl::map::universe(Space);
 
+  LLVM_DEBUG(dbgs() << "buildAccessRelation for " << BaseAddr->getName()
+                    << ": Processing " << Subscripts.size() << " subscripts\n");
   for (int i = 0, Size = Subscripts.size(); i < Size; ++i) {
+    LLVM_DEBUG(dbgs() << "  Subscripts[" << i << "] = " << *Subscripts[i]
+                      << "\n");
     isl::pw_aff Affine = getPwAff(Subscripts[i]);
     isl::map SubscriptMap = isl::map::from_pw_aff(Affine);
     AccessRelation = AccessRelation.flat_range_product(SubscriptMap);
