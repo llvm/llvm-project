@@ -10,6 +10,9 @@ class CPUFeature:
         self.cpu_info_flag = linux_cpu_info_flag
         self.sysctl_key = darwin_sysctl_key
 
+    def __str__(self):
+        return self.cpu_info_flag
+
     def is_supported(self, triple, cmd_runner):
         if re.match(".*-.*-linux", triple):
             err_msg, res = self._is_supported_linux(cmd_runner)
