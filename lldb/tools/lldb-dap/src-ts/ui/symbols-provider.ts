@@ -37,7 +37,7 @@ export class SymbolsProvider extends DisposableContext {
     this.tracker.onDidInitializeSession((session) => {
       this.GetLLDBServerVersion(session).then((version) => {
         if (version !== undefined) {
-          if (version[0] >= 23) {
+          if (version[0] >= 22) {
             vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", true);
           }
         }
