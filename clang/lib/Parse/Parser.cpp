@@ -1442,6 +1442,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // parameter list was specified.
     CurTemplateDepthTracker.addDepth(1);
 
+  // Late attributes are parsed in the same scope as the function body.
+  if (LateParsedAttrs)
+    ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
+
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
@@ -1475,9 +1479,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (BoundsSafetyLateAttrs->size() > 0)
     ParseLexedCAttributeList(*BoundsSafetyLateAttrs, false);
   /*TO_UPSTREAM(BoundsSafety) OFF*/
-
-  if (LateParsedAttrs)
-    ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
 
   return ParseFunctionStatementBody(Res, BodyScope);
 }
