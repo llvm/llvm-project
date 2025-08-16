@@ -85,7 +85,9 @@ struct RuntimeLibcallsInfo {
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
     if (CallImpl == RTLIB::Unsupported)
       return StringRef();
-    return RuntimeLibcallImplNameTable[RuntimeLibcallNameOffsetTable[CallImpl]];
+    return StringRef(RuntimeLibcallImplNameTable.getCString(
+                         RuntimeLibcallNameOffsetTable[CallImpl]),
+                     RuntimeLibcallNameSizeTable[CallImpl]);
   }
 
   /// Return the lowering's selection of implementation call for \p Call
@@ -182,6 +184,7 @@ private:
   LLVM_ABI static const char RuntimeLibcallImplNameTableStorage[];
   LLVM_ABI static const StringTable RuntimeLibcallImplNameTable;
   LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
+  LLVM_ABI static const uint8_t RuntimeLibcallNameSizeTable[];
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];

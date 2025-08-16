@@ -108,3 +108,29 @@ def : Function {
     Return<"OL_ERRC_INVALID_QUEUE">
   ];
 }
+
+def : FptrTypedef {
+  let name = "ol_host_function_cb_t";
+  let desc = "Host function for use by `olLaunchHostFunction`.";
+  let params = [
+    Param<"void *", "UserData", "user specified data passed into `olLaunchHostFunction`.", PARAM_IN>,
+  ];
+  let return = "void";
+}
+
+def : Function {
+  let name = "olLaunchHostFunction";
+  let desc = "Enqueue a callback function on the host.";
+  let details = [
+    "The provided function will be called from the same process as the one that called `olLaunchHostFunction`.",
+    "The callback will not run until all previous work submitted to the queue has completed.",
+    "The callback must return before any work submitted to the queue after it is started.",
+    "The callback must not call any liboffload API functions or any backend specific functions (such as Cuda or HSA library functions).",
+  ];
+  let params = [
+    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"ol_host_function_cb_t", "Callback", "the callback function to call on the host", PARAM_IN>,
+    Param<"void *", "UserData", "a pointer that will be passed verbatim to the callback function", PARAM_IN_OPTIONAL>,
+  ];
+  let returns = [];
+}

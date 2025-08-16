@@ -2,7 +2,6 @@
 # if the user has requested it.
 
 include(DetermineGCCCompatible)
-include(CheckIncludeFiles)
 
 if(NOT DEFINED LLVM_STDLIB_HANDLED)
   set(LLVM_STDLIB_HANDLED ON)
@@ -20,17 +19,7 @@ if(NOT DEFINED LLVM_STDLIB_HANDLED)
     if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
       check_cxx_compiler_flag("-stdlib=libc++" CXX_COMPILER_SUPPORTS_STDLIB)
       check_linker_flag(CXX "-stdlib=libc++" CXX_LINKER_SUPPORTS_STDLIB)
-
-      # Check whether C++ include files are available
-      # runtimes/CMakeLists.txt adds -nostdlib++ and -nostdinc++ to
-      # CMAKE_REQUIRED_FLAGS, which are incompatible with -stdlib=libc++; use
-      # a fresh CMAKE_REQUIRED_FLAGS environment.
-      cmake_push_check_state(RESET)
-      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -stdlib=libc++")
-      check_include_files("chrono" CXX_COMPILER_SUPPORTS_STDLIB_CHRONO LANGUAGE CXX)
-      cmake_pop_check_state()
-
-      if(CXX_COMPILER_SUPPORTS_STDLIB AND CXX_LINKER_SUPPORTS_STDLIB AND CXX_COMPILER_SUPPORTS_STDLIB_CHRONO)
+      if(CXX_COMPILER_SUPPORTS_STDLIB AND CXX_LINKER_SUPPORTS_STDLIB)
         append("-stdlib=libc++"
           CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS
           CMAKE_MODULE_LINKER_FLAGS)

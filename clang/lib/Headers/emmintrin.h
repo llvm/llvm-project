@@ -17,7 +17,6 @@
 #include <xmmintrin.h>
 
 typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
-typedef long long __m128i __attribute__((__vector_size__(16), __aligned__(16)));
 
 typedef double __m128d_u __attribute__((__vector_size__(16), __aligned__(1)));
 typedef long long __m128i_u
@@ -25,13 +24,9 @@ typedef long long __m128i_u
 
 /* Type defines.  */
 typedef double __v2df __attribute__((__vector_size__(16)));
-typedef long long __v2di __attribute__((__vector_size__(16)));
-typedef short __v8hi __attribute__((__vector_size__(16)));
-typedef char __v16qi __attribute__((__vector_size__(16)));
 
 /* Unsigned types */
 typedef unsigned long long __v2du __attribute__((__vector_size__(16)));
-typedef unsigned short __v8hu __attribute__((__vector_size__(16)));
 typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 
 /* We need an explicitly signed variant for char. Note that this shouldn't

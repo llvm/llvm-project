@@ -485,6 +485,22 @@ public:
     addLocalFloorDiv(getDynamicAPIntVec(dividend), DynamicAPInt(divisor));
   }
 
+  /// Adds a new local variable as the modulus of an affine function of other
+  /// variables, the coefficients of which are provided in `exprs`. The modulus
+  /// is with respect to a positive constant `modulus`. The function returns the
+  /// absolute index of the new local variable representing the result of the
+  /// modulus operation. Two new local variables are added to the system, one
+  /// representing the floor div with respect to the modulus and one
+  /// representing the mod. Three constraints are added to the system to capture
+  /// the equivalance. The first two are required to compute the result of the
+  /// floor division `q`, and the third computes the equality relation:
+  /// result =  exprs - modulus * q.
+  unsigned addLocalModulo(ArrayRef<DynamicAPInt> exprs,
+                          const DynamicAPInt &modulus);
+  unsigned addLocalModulo(ArrayRef<int64_t> exprs, int64_t modulus) {
+    return addLocalModulo(getDynamicAPIntVec(exprs), DynamicAPInt(modulus));
+  }
+
   /// Projects out (aka eliminates) `num` variables starting at position
   /// `pos`. The resulting constraint system is the shadow along the dimensions
   /// that still exist. This method may not always be integer exact.

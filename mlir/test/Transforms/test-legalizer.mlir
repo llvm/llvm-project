@@ -439,3 +439,24 @@ func.func @test_lookup_without_converter() {
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
+
+// -----
+// expected-remark@-1 {{applyPartialConversion failed}}
+
+func.func @test_skip_1to1_pattern(%arg0: f32) {
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  "test.type_consumer"(%arg0) : (f32) -> ()
+  return
+}
+
+// -----
+
+// Demonstrate that the pattern generally works, but only for 1:1 type
+// conversions.
+
+// CHECK-LABEL: @test_working_1to1_pattern(
+func.func @test_working_1to1_pattern(%arg0: f16) {
+  // CHECK-NEXT: "test.return"() : () -> ()
+  "test.type_consumer"(%arg0) : (f16) -> ()
+  "test.return"() : () -> ()
+}

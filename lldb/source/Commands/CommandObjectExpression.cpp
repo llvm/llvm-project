@@ -202,7 +202,7 @@ EvaluateExpressionOptions
 CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
   EvaluateExpressionOptions options;
-  options.SetCoerceToId(display_opts.use_objc);
+  options.SetCoerceToId(display_opts.use_object_desc);
   options.SetUnwindOnError(unwind_on_error);
   options.SetIgnoreBreakpoints(ignore_breakpoints);
   options.SetKeepInMemory(true);
@@ -241,11 +241,11 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
 bool CommandObjectExpression::CommandOptions::ShouldSuppressResult(
     const OptionGroupValueObjectDisplay &display_opts) const {
   // Explicitly disabling persistent results takes precedence over the
-  // m_verbosity/use_objc logic.
+  // m_verbosity/use_object_desc logic.
   if (suppress_persistent_result != eLazyBoolCalculate)
     return suppress_persistent_result == eLazyBoolYes;
 
-  return display_opts.use_objc &&
+  return display_opts.use_object_desc &&
          m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact;
 }
 
@@ -332,7 +332,7 @@ Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
 void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   EvaluateExpressionOptions options;
-  options.SetCoerceToId(m_varobj_options.use_objc);
+  options.SetCoerceToId(m_varobj_options.use_object_desc);
   options.SetLanguage(m_command_options.language);
   options.SetExecutionPolicy(lldb_private::eExecutionPolicyNever);
   options.SetAutoApplyFixIts(false);

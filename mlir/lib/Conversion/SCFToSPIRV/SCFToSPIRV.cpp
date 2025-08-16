@@ -178,8 +178,14 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     // Generate the rest of the loop header.
     rewriter.setInsertionPointToEnd(header);
     auto *mergeBlock = loopOp.getMergeBlock();
-    auto cmpOp = spirv::SLessThanOp::create(rewriter, loc, rewriter.getI1Type(),
-                                            newIndVar, adaptor.getUpperBound());
+    Value cmpOp;
+    if (forOp.getUnsignedCmp()) {
+      cmpOp = spirv::ULessThanOp::create(rewriter, loc, rewriter.getI1Type(),
+                                         newIndVar, adaptor.getUpperBound());
+    } else {
+      cmpOp = spirv::SLessThanOp::create(rewriter, loc, rewriter.getI1Type(),
+                                         newIndVar, adaptor.getUpperBound());
+    }
 
     spirv::BranchConditionalOp::create(rewriter, loc, cmpOp, body,
                                        ArrayRef<Value>(), mergeBlock,

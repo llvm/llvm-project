@@ -128,6 +128,7 @@ LLVM_ABI void initializeGCEmptyBasicBlocksPass(PassRegistry &);
 LLVM_ABI void initializeGCMachineCodeAnalysisPass(PassRegistry &);
 LLVM_ABI void initializeGCModuleInfoPass(PassRegistry &);
 LLVM_ABI void initializeGVNLegacyPassPass(PassRegistry &);
+LLVM_ABI void initializeGlobalDCELegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeGlobalMergeFuncPassWrapperPass(PassRegistry &);
 LLVM_ABI void initializeGlobalMergePass(PassRegistry &);
 LLVM_ABI void initializeGlobalsAAWrapperPassPass(PassRegistry &);

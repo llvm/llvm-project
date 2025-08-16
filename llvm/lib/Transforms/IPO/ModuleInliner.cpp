@@ -284,6 +284,10 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
           return Call.first->getCaller() == &Callee;
         });
+
+        // Report inlining decision BEFORE deleting function contents, so we
+        // can still access e.g. the DebugLoc
+        Advice->recordInliningWithCalleeDeleted();
         // Clear the body and queue the function itself for deletion when we
         // finish inlining.
         // Note that after this point, it is an error to do anything other
@@ -295,9 +299,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         CalleeWasDeleted = true;
       }
     }
-    if (CalleeWasDeleted)
-      Advice->recordInliningWithCalleeDeleted();
-    else
+    if (!CalleeWasDeleted)
       Advice->recordInlining();
   }
 

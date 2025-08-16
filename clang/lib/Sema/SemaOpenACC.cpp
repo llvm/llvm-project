@@ -2604,31 +2604,120 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
+  IdentifierInfo *VarName = [&]() {
+    switch (CK) {
+    case OpenACCClauseKind::Private:
+      return &getASTContext().Idents.get("openacc.private.init");
+    case OpenACCClauseKind::FirstPrivate:
+      return &getASTContext().Idents.get("openacc.firstprivate.init");
+    case OpenACCClauseKind::Reduction:
+      return &getASTContext().Idents.get("openacc.reduction.init");
+    default:
+      llvm_unreachable("Unknown clause kind?");
+    }
+  }();
+
   VarDecl *Recipe = VarDecl::Create(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
-      VarExpr->getBeginLoc(),
-      &getASTContext().Idents.get("openacc.private.init"), VarTy,
+      VarExpr->getBeginLoc(), VarName, VarTy,
       getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
 
   ExprResult Init;
   VarDecl *Temporary = nullptr;
-
-  if (CK == OpenACCClauseKind::Private) {
+  {
     // Trap errors so we don't get weird ones here. If we can't init, we'll just
     // swallow the errors.
     Sema::TentativeAnalysisScope Trap{SemaRef};
     InitializedEntity Entity = InitializedEntity::InitializeVariable(Recipe);
-    InitializationKind Kind =
-        InitializationKind::CreateDefault(Recipe->getLocation());
 
-    InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
-    Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
-  } else if (CK == OpenACCClauseKind::FirstPrivate) {
-    // TODO: OpenACC: Implement this to do a 'copy' operation.
-  } else if (CK == OpenACCClauseKind::Reduction) {
-    // TODO: OpenACC: Implement this for whatever reduction needs.
-  } else {
-    llvm_unreachable("Unknown clause kind in CreateInitRecipe");
+    if (CK == OpenACCClauseKind::Private) {
+      InitializationKind Kind =
+          InitializationKind::CreateDefault(Recipe->getLocation());
+
+      InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
+      Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
+
+    } else if (CK == OpenACCClauseKind::FirstPrivate) {
+      // Create a VarDecl to be the 'copied-from' for the copy section of the
+      // recipe. This allows us to make the association so that we can use the
+      // standard 'generation' ability of the init.
+      Temporary = VarDecl::Create(
+          getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+          VarExpr->getBeginLoc(), &getASTContext().Idents.get("openacc.temp"),
+          VarTy, getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
+      auto *TemporaryDRE = DeclRefExpr::Create(
+          getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{},
+          Temporary,
+          /*ReferstoEnclosingVariableOrCapture=*/false,
+          DeclarationNameInfo{DeclarationName{Temporary->getDeclName()},
+                              VarExpr->getBeginLoc()},
+          VarTy, clang::VK_LValue, Temporary, nullptr, NOUR_None);
+
+      Expr *InitExpr = nullptr;
+
+      if (const auto *ArrTy = getASTContext().getAsConstantArrayType(VarTy)) {
+        // Arrays need to have each individual element initialized as there
+        // isn't a normal 'equals' feature in C/C++. This section sets these up
+        // as an init list after 'initializing' each individual element.
+        llvm::SmallVector<Expr *> Args;
+
+        // Decay to pointer for the array subscript expression.
+        auto *CastToPtr = ImplicitCastExpr::Create(
+            getASTContext(),
+            getASTContext().getPointerType(ArrTy->getElementType()),
+            CK_ArrayToPointerDecay, TemporaryDRE, /*BasePath=*/nullptr,
+            clang::VK_LValue, FPOptionsOverride{});
+
+        for (std::size_t I = 0; I < ArrTy->getLimitedSize(); ++I) {
+          // Each element needs to be some sort of copy initialization from an
+          // array-index of the original temporary (referenced via a
+          // DeclRefExpr).
+
+          auto *Idx = IntegerLiteral::Create(
+              getASTContext(), llvm::APInt(sizeof(std::size_t) * 8, I),
+              getASTContext().getSizeType(), VarExpr->getBeginLoc());
+
+          Expr *Subscript = new (getASTContext()) ArraySubscriptExpr(
+              CastToPtr, Idx, ArrTy->getElementType(), clang::VK_LValue,
+              OK_Ordinary, VarExpr->getBeginLoc());
+
+          // Generate a simple copy from the result of the subscript. This will
+          // do a bitwise copy or a copy-constructor, as necessary.
+          InitializedEntity CopyEntity =
+              InitializedEntity::InitializeElement(getASTContext(), I, Entity);
+          InitializationKind CopyKind =
+              InitializationKind::CreateCopy(VarExpr->getBeginLoc(), {});
+          InitializationSequence CopySeq(SemaRef.SemaRef, CopyEntity, CopyKind,
+                                         Subscript,
+                                         /*TopLevelOfInitList=*/true);
+
+          ExprResult ElemRes =
+              CopySeq.Perform(SemaRef.SemaRef, CopyEntity, CopyKind, Subscript);
+          Args.push_back(ElemRes.get());
+        }
+
+        InitExpr = new (getASTContext())
+            InitListExpr(getASTContext(), VarExpr->getBeginLoc(), Args,
+                         VarExpr->getEndLoc());
+        InitExpr->setType(VarTy);
+
+      } else {
+        // If this isn't an array, we can just do normal copy init from a simple
+        // variable reference, so set that up.
+        InitExpr = TemporaryDRE;
+      }
+
+      InitializationKind Kind = InitializationKind::CreateForInit(
+          Recipe->getLocation(), /*DirectInit=*/true, InitExpr);
+      InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, InitExpr,
+                                     /*TopLevelOfInitList=*/false,
+                                     /*TreatUnavailableAsInvalid=*/false);
+      Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
+    } else if (CK == OpenACCClauseKind::Reduction) {
+      // TODO: OpenACC: Implement this for whatever reduction needs.
+    } else {
+      llvm_unreachable("Unknown clause kind in CreateInitRecipe");
+    }
   }
 
   if (Init.get()) {

@@ -721,6 +721,28 @@ def hlfir_CShiftOp
   let hasVerifier = 1;
 }
 
+def hlfir_EOShiftOp
+    : hlfir_Op<
+          "eoshift", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "EOSHIFT transformational intrinsic";
+  let description = [{
+    End-off shift of an array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array,
+      AnyFortranIntegerScalarOrArrayObject:$shift,
+      Optional<AnyFortranEntity>:$boundary, Optional<AnyIntegerType>:$dim);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $shift (`boundary` $boundary^)? (`dim` $dim^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ReshapeOp
     : hlfir_Op<
           "reshape", [AttrSizedOperandSegments,

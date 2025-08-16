@@ -698,6 +698,9 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+  if (auto DestroyOp = Info.SwiftDestroyOp)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "destroy:" + DestroyOp.value()));
   if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
     D->addAttr(SwiftAttrAttr::Create(
         S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -93,9 +94,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
 }
 
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
-  OS << enumToStringRef(dxil::ResourceClass(llvm::to_underlying(Type)),
-                        dxil::getResourceClasses());
-
+  OS << dxil::getResourceClassName(Type);
   return OS;
 }
 
