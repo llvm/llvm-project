@@ -1,0 +1,140 @@
+# RUN: yaml2obj %s -o %t.in.o
+# RUN: llvm-readobj -r -s  -x '.gfids$y' -x '.giats$y' -x '.gljmp$y' %t.in.o | FileCheck %s --check-prefix=ORIG
+# RUN: not llvm-objcopy --strip-debug %t.in.o %t.out.o 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ORIG:      Relocations [
+# ORIG-NEXT:   Section (1) .text {
+# ORIG-NEXT:     0x3 IMAGE_REL_AMD64_REL32 foo (10)
+# ORIG-NEXT:   }
+# ORIG-NEXT: ]
+# ORIG:      Symbols [
+# ORIG:          Name: .gfids$y
+# ORIG:          Section: .gfids$y
+# ORIG:          AuxSymbolCount: 1
+# ORIG:          AuxSectionDef {
+# ORIG:            Checksum: 0x459345AD
+# ORIG:          }
+# ORIG:          Name: .giats$y
+# ORIG:          Section: .giats$y
+# ORIG:          AuxSymbolCount: 1
+# ORIG:          AuxSectionDef {
+# ORIG:            Checksum: 0x0
+# ORIG:          }
+# ORIG:          Name: .gljmp$y
+# ORIG:          Section: .gljmp$y
+# ORIG:          AuxSymbolCount: 1
+# ORIG:          AuxSectionDef {
+# ORIG:            Checksum: 0x0
+# ORIG:          }
+# ORIG:      ]
+# ORIG:      Hex dump of section '.gfids$y':
+# ORIG-NEXT: 0x00000000 0a000000 10000000                   ........
+# ORIG:      Hex dump of section '.giats$y':
+# ORIG-EMPTY-NEXT:
+# ORIG:      Hex dump of section '.gljmp$y':
+# ORIG-EMPTY-NEXT:
+
+# ERROR: section '.gfids$y' contains a .symidx (16) that is incorrect or was stripped
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     488D0500000000488D0D00000000488D0500000000488D0500000000
+    SizeOfRawData:   28
+    Relocations:
+      - VirtualAddress:  3
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     04000000F100000044656275672073656374696F6E20746F20626520737472697070656400
+    SizeOfRawData:   37
+  - Name:            '.gfids$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0A00000010000000'
+    SizeOfRawData:   8
+  - Name:            '.giats$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+    SizeOfRawData:   0
+  - Name:            '.gljmp$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+    SizeOfRawData:   0
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          28
+      NumberOfRelocations: 4
+      NumberOfLinenumbers: 0
+      CheckSum:        3583480811
+      Number:          1
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          37
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2941632545
+      Number:          4
+  - Name:            '.gfids$y'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1167279533
+      Number:          5
+  - Name:            '.giats$y'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          6
+  - Name:            '.gljmp$y'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          7
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
