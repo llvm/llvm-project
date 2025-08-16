@@ -541,12 +541,12 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     if (Symbol.isAbsolute()) {
       MSD.SectionIndex = ELF::SHN_ABS;
     } else if (Symbol.isCommon()) {
-      if (Symbol.isTargetCommon()) {
-        MSD.SectionIndex = Symbol.getIndex();
-      } else {
+      auto Shndx = Symbol.getIndex();
+      if (!Shndx) {
         assert(!Local);
-        MSD.SectionIndex = ELF::SHN_COMMON;
+        Shndx = ELF::SHN_COMMON;
       }
+      MSD.SectionIndex = Shndx;
     } else if (Symbol.isUndefined()) {
       if (Symbol.isSignature() && !Symbol.isUsedInReloc()) {
         MSD.SectionIndex = RevGroupMap.lookup(&Symbol);

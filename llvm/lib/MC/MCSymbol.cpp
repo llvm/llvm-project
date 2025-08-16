@@ -48,12 +48,11 @@ void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
 }
 
 void MCSymbol::setVariableValue(const MCExpr *Value) {
-  assert(Value && "Invalid variable value!");
-  assert((SymbolContents == SymContentsUnset ||
-          SymbolContents == SymContentsVariable) &&
-         "Cannot give common/offset symbol a variable value");
+  assert(Value && "Invalid equated expression");
+  assert((kind == Kind::Regular || kind == Kind::Equated) &&
+         "Cannot equate a common symbol");
   this->Value = Value;
-  SymbolContents = SymContentsVariable;
+  kind = Kind::Equated;
   setUndefined();
 }
 

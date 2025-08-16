@@ -886,7 +886,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
 
-  if (SymbolELF->declareCommon(Size, Alignment, true)) {
+  if (SymbolELF->declareCommon(Size, Alignment)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
                        " redeclared as different type");
   }
