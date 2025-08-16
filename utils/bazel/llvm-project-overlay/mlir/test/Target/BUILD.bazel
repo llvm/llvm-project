@@ -10,6 +10,7 @@ package(default_visibility = ["//visibility:public"])
         srcs = [src],
         data = [
             "//llvm:split-file",
+            "//llvm:yaml2obj",
             "//mlir:mlir-opt",
             "//mlir:mlir-translate",
             "//mlir/test:lit_data",

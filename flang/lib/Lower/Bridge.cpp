@@ -474,12 +474,10 @@ public:
       createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
-            getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::CUDA),
-            getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::AmdMemoryAllocator));
-//                              getFoldingContext().languageFeatures().IsEnabled(
-//                                  Fortran::common::LanguageFeature::CUDA));
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::CUDA),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::Coarray));
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
