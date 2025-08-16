@@ -3532,34 +3532,11 @@ static TargetDirective getTargetDirectiveFromOp(Operation *op) {
 
 } // namespace
 
-// In certain cases, we can be provided less bounds than there are nested array
-// types, but still be provided bounds, in these cases we try to compute the
-// size up to the point of the bounds provided and then let the bounds x size
-// computation do the rest of the work. This is most common in Flang where
-// character arrays provided character lengths (C/C++ string esque), represent
-// the internal string as a byte array with the length of this string
-// unrepresented by bounds.
-uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl,
-                                   int boundsCount) {
-  if (boundsCount == 0)
-    return dl.getTypeSizeInBits(arrTy);
+uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
   if (auto nestedArrTy = llvm::dyn_cast_if_present<LLVM::LLVMArrayType>(
           arrTy.getElementType()))
-    return getArrayElementSizeInBits(nestedArrTy, dl, --boundsCount);
+    return getArrayElementSizeInBits(nestedArrTy, dl);
   return dl.getTypeSizeInBits(arrTy.getElementType());
-}
-
-// It is possible for a 1-D array type to provide N-D bounds to index
-// with instead of 1-D Bounds. this is common to do with byte arrays
-// that are representing other data types, e.g. an N-D char array, we
-// support this use case.
-// TODO: Extend to just check if we have more bounds than array
-// dimensions
-static bool is1DArrayWithNDBounds(llvm::Type *type, size_t numBounds) {
-  if (type->isArrayTy() && !type->getArrayElementType()->isArrayTy() &&
-      numBounds > 1)
-    return true;
-  return false;
 }
 
 // This function calculates the size to be offloaded for a specified type, given
@@ -3607,10 +3584,7 @@ llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
       // the size in inconsistent byte or bit format.
       uint64_t underlyingTypeSzInBits = dl.getTypeSizeInBits(type);
       if (auto arrTy = llvm::dyn_cast_if_present<LLVM::LLVMArrayType>(type))
-        if (!is1DArrayWithNDBounds(moduleTranslation.convertType(type),
-                                   memberClause.getBounds().size()))
-          underlyingTypeSzInBits = getArrayElementSizeInBits(
-              arrTy, dl, memberClause.getBounds().size());
+        underlyingTypeSzInBits = getArrayElementSizeInBits(arrTy, dl);
 
       // The size in bytes x number of elements, the sizeInBytes stored is
       // the underyling types size, e.g. if ptr<i32>, it'll be the i32's
@@ -4443,10 +4417,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
       case omp::VariableCaptureKind::ByRef: {
         llvm::Value *newV = mapData.Pointers[i];
         std::vector<llvm::Value *> offsetIdx = calculateBoundsOffset(
-            moduleTranslation, builder,
-            mapData.BaseType[i]->isArrayTy() &&
-                !is1DArrayWithNDBounds(mapData.BaseType[i],
-                                       mapOp.getBounds().size()),
+            moduleTranslation, builder, mapData.BaseType[i]->isArrayTy(),
             mapOp.getBounds());
         if (isPtrTy)
           newV = builder.CreateLoad(builder.getPtrTy(), newV);
