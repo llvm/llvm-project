@@ -42,10 +42,9 @@ define i32 @"test_zext_pcd_i16_to_i32"() {
   ret i32 %val2
 }
 
-define i16 @"test_anyext_pcd_i8_to_i16"() {
+define i16 @test_anyext_pcd_i8_to_i16() nounwind {
 ; CHECK-LABEL: test_anyext_pcd_i8_to_i16:
-; CHECK:         .cfi_startproc
-; CHECK-NEXT:  ; %bb.0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.b (__unnamed_1+4,%pc), %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    lsl.w #8, %d0
@@ -57,10 +56,9 @@ define i16 @"test_anyext_pcd_i8_to_i16"() {
   ret i16 %insert_shift
 }
 
-define i32 @"test_anyext_pcd_i8_to_i32"() {
+define i32 @test_anyext_pcd_i8_to_i32() nounwind {
 ; CHECK-LABEL: test_anyext_pcd_i8_to_i32:
-; CHECK:         .cfi_startproc
-; CHECK-NEXT:  ; %bb.0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    moveq #24, %d1
 ; CHECK-NEXT:    move.b (__unnamed_1+4,%pc), %d0
 ; CHECK-NEXT:    and.l #255, %d0
@@ -72,10 +70,9 @@ define i32 @"test_anyext_pcd_i8_to_i32"() {
   ret i32 %insert_shift
 }
 
-define i32 @"test_anyext_pcd_i16_to_i32"() {
+define i32 @test_anyext_pcd_i16_to_i32() nounwind {
 ; CHECK-LABEL: test_anyext_pcd_i16_to_i32:
-; CHECK:         .cfi_startproc
-; CHECK-NEXT:  ; %bb.0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    moveq #16, %d1
 ; CHECK-NEXT:    move.w (__unnamed_1+4,%pc), %d0
 ; CHECK-NEXT:    and.l #65535, %d0
