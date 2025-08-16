@@ -118,6 +118,7 @@ Changes to the RISC-V Backend
 * `llvm-objdump` now has basic support for switching between disassembling code
   and data using mapping symbols such as `$x` and `$d`. Switching architectures
   using `$x` with an architecture string suffix is not yet supported.
+* Ssctr and Smctr extensions are no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
