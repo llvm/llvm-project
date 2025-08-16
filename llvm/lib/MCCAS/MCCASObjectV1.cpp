@@ -83,25 +83,18 @@ class AbbrevSetWriter;
 /// debug info.
 class InMemoryCASDWARFObject : public DWARFObject {
   ArrayRef<char> DebugAbbrevSection;
-  DWARFSection DebugStringOffsetsSection;
   bool IsLittleEndian;
   uint8_t AddressSize;
 
 public:
-  InMemoryCASDWARFObject(ArrayRef<char> AbbrevContents,
-                         ArrayRef<char> StringOffsetsContents,
-                         bool IsLittleEndian, uint8_t AddressSize)
-      : DebugAbbrevSection(AbbrevContents),
-        DebugStringOffsetsSection({toStringRef(StringOffsetsContents)}),
-        IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
+  InMemoryCASDWARFObject(ArrayRef<char> AbbrevContents, bool IsLittleEndian,
+                         uint8_t AddressSize)
+      : DebugAbbrevSection(AbbrevContents), IsLittleEndian(IsLittleEndian),
+        AddressSize(AddressSize) {}
   bool isLittleEndian() const override { return IsLittleEndian; }
 
   StringRef getAbbrevSection() const override {
     return toStringRef(DebugAbbrevSection);
-  }
-
-  const DWARFSection &getStrOffsetsSection() const override {
-    return DebugStringOffsetsSection;
   }
 
   std::optional<RelocAddrEntry> find(const DWARFSection &Sec,
@@ -2159,7 +2152,7 @@ Expected<SmallVector<char, 0>>
 MCCASBuilder::mergeMCFragmentContents(const MCSection *Section,
                                       bool IsDebugLineSection) {
   SmallVector<char, 0> mergedData;
-  if (!Section->curFragList())
+  if (!Section)
     return mergedData;
   for (const MCFragment &Fragment : *Section) {
     if (Fragment.getKind() == MCFragment::FT_Dwarf) {
@@ -2443,15 +2436,7 @@ Error MCCASBuilder::splitDebugInfoAndAbbrevSections() {
   if (!FullAbbrevData)
     return FullAbbrevData.takeError();
 
-  const MCSection *StringOffsetsFragmentList = DwarfSections.StrOffsets;
-
-  Expected<SmallVector<char, 0>> FullStringOffsetsData =
-      mergeMCFragmentContents(StringOffsetsFragmentList);
-
-  if (!FullStringOffsetsData)
-    return FullStringOffsetsData.takeError();
-
-  InMemoryCASDWARFObject CASObj(*FullAbbrevData, *FullStringOffsetsData,
+  InMemoryCASDWARFObject CASObj(*FullAbbrevData,
                                 Asm.getBackend().Endian == endianness::little,
                                 ObjectWriter.getAddressSize());
   auto DWARFObj = std::make_unique<InMemoryCASDWARFObject>(CASObj);
