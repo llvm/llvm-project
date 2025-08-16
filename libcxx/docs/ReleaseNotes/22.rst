@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 
 - P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially implemented. ``zip_transform_view`` is implemented in this release)
+- P2542R8: ``views::concat`` (`Github <https://github.com/llvm/llvm-project/issues/105419>`__)
 
 Improvements and New Features
 -----------------------------

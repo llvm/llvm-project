@@ -41,7 +41,6 @@ Implemented Papers
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
 - P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
-- P2542R8: ``views::concat`` (`Github <https://github.com/llvm/llvm-project/issues/105419>`__)
 - P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
 - P2372R3: Fixing locale handling in chrono formatters (`Github <https://github.com/llvm/llvm-project/issues/100043>`__)
 - P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
@@ -56,7 +55,6 @@ Implemented Papers
 - P2655R3: ``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type (`Github <https://github.com/llvm/llvm-project/issues/105260>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://github.com/llvm/llvm-project/issues/105424>`__)
 - P3379R0: Constrain ``std::expected equality`` operators (`Github <https://github.com/llvm/llvm-project/issues/118135>`__)
-
 
 Improvements and New Features
 -----------------------------
