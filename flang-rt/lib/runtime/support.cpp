@@ -48,6 +48,30 @@ void RTDEF(CopyAndUpdateDescriptor)(Descriptor &to, const Descriptor &from,
   }
 }
 
+void *RTDEF(DescriptorGetBaseAddress)(
+    const Descriptor &desc, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  void *baseAddr = desc.raw().base_addr;
+  if (!baseAddr) {
+    terminator.Crash("Could not retrieve Descriptor's base address");
+  }
+  return baseAddr;
+}
+
+std::size_t RTDEF(DescriptorGetDataSizeInBytes)(
+    const Descriptor &desc, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  std::size_t descElements{desc.Elements()};
+  if (!descElements) {
+    terminator.Crash("Could not retrieve Descriptor's Elements");
+  }
+  std::size_t descElementBytes{desc.ElementBytes()};
+  if (!descElementBytes) {
+    terminator.Crash("Could not retrieve Descriptor's ElementBytes");
+  }
+  return descElements * descElementBytes;
+}
+
 RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime
