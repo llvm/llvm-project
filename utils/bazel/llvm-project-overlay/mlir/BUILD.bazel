@@ -7956,6 +7956,7 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":XeGPUDialect",
+        ":XeGPUUtils",
         "//llvm:Support",
     ],
 )
