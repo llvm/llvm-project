@@ -329,3 +329,12 @@ void foo3 (void)
  void* x = 0;
  void* y = &*x;
 }
+
+static void *FooTable[1] = {
+    [0] = (void *[1]) { // 1
+        [0] = (void *[1]) { // 2
+            [0] = (void *[1]) {} // pedantic-warning {{use of an empty initializer}}
+        },
+    }
+};
+
