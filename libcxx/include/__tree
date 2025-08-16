@@ -23,6 +23,7 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
+#include <__new/launder.h>
 #include <__type_traits/can_extract_key.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
@@ -605,7 +606,12 @@ public:
 
   template <class _Alloc, class... _Args>
   explicit __tree_node(_Alloc& __na, _Args&&... __args) {
+
+#ifndef _LIBCPP_CXX03_LANG
     allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
+#else
+    allocator_traits<_Alloc>::construct(__na, reinterpret_cast<__node_value_type*>(std::addressof(__buffer_)), std::forward<_Args>(__args)...);
+#endif
   }
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
