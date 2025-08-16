@@ -608,7 +608,7 @@ public:
 #endif
 
   template <class _Alloc, class... _Args>
-  explicit __tree_node(_Alloc& __na, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI explicit __tree_node(_Alloc& __na, _Args&&... __args) {
 #ifndef _LIBCPP_CXX03_LANG
     allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
 #else
