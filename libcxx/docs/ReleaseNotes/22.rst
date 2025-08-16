@@ -49,6 +49,7 @@ Improvements and New Features
 - The performance of ``unordered_set::operator=(const unordered_set&)`` has been improved by up to 5x.
 - The performance of ``map::erase`` and ``set::erase`` has been improved by up to 2x
 - The performance of ``find(key)`` in ``map``, ``set``, ``multimap`` and ``multiset`` has been improved by up to 2.3x
+- P3372R3: ``constexpr map``(`Github <https://github.com/llvm/llvm-project/issues/128660>`__) (The paper is partially implemented. ``constexpr map`` is implemented in this release)
 
 Deprecations and Removals
 -------------------------
