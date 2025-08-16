@@ -5707,27 +5707,6 @@ let Predicates = [HasFullFP16] in {
 // Advanced SIMD two vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl", abdu>;
-// Match UABDL in log2-shuffle patterns.
-def : Pat<(abs (v8i16 (sub (zext (v8i8 V64:$opA)),
-                           (zext (v8i8 V64:$opB))))),
-          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
-                           (zext (extract_high_v16i8 (v16i8 V128:$opB)))))),
-          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
-def : Pat<(abs (v4i32 (sub (zext (v4i16 V64:$opA)),
-                           (zext (v4i16 V64:$opB))))),
-          (UABDLv4i16_v4i32 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v4i32 (sub (zext (extract_high_v8i16 (v8i16 V128:$opA))),
-                           (zext (extract_high_v8i16 (v8i16 V128:$opB)))))),
-          (UABDLv8i16_v4i32 V128:$opA, V128:$opB)>;
-def : Pat<(abs (v2i64 (sub (zext (v2i32 V64:$opA)),
-                           (zext (v2i32 V64:$opB))))),
-          (UABDLv2i32_v2i64 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v2i64 (sub (zext (extract_high_v4i32 (v4i32 V128:$opA))),
-                           (zext (extract_high_v4i32 (v4i32 V128:$opB)))))),
-          (UABDLv4i32_v2i64 V128:$opA, V128:$opB)>;
-
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", abs>;
 defm CLS    : SIMDTwoVectorBHS<0, 0b00100, "cls", int_aarch64_neon_cls>;
 defm CLZ    : SIMDTwoVectorBHS<1, 0b00100, "clz", ctlz>;
@@ -6810,7 +6789,8 @@ defm RSUBHN : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn
 let isCommutable = 1 in
 defm PMULL  : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL  : SIMDLongThreeVectorTiedBHSabal<0,0b0101,"sabal", abds>;
-defm SABDL   : SIMDLongThreeVectorBHSabdl<0, 0b0111, "sabdl", abds>;
+defm SABDL   : SIMDLongThreeVectorBHS<0, 0b0111, "sabdl",
+                 BinOpFrag<(zext (abds node:$LHS, node:$RHS))>>;
 defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
             BinOpFrag<(add (sext node:$LHS), (sext node:$RHS))>>;
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
@@ -6830,6 +6810,8 @@ defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
 defm UABAL   : SIMDLongThreeVectorTiedBHSabal<1, 0b0101, "uabal", abdu>;
+defm UABDL   : SIMDLongThreeVectorBHS<1, 0b0111, "uabdl",
+                 BinOpFrag<(zext (abdu node:$LHS, node:$RHS))>>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
                  BinOpFrag<(add (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
