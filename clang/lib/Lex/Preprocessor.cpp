@@ -43,6 +43,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/NoTrivialPPDirectiveTracer.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/PreprocessorLexer.h"
@@ -50,7 +51,6 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
-#include "clang/Lex/TrivialPPDirectiveTracer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -576,7 +576,7 @@ void Preprocessor::EnterMainSourceFile() {
     // export module M; // error: module declaration must occur
     //                  //        at the start of the translation unit.
     if (getLangOpts().CPlusPlusModules) {
-      auto Tracer = std::make_unique<TrivialPPDirectiveTracer>(*this);
+      auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
       addPPCallbacks(std::move(Tracer));
       std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
@@ -1693,25 +1693,25 @@ bool Preprocessor::hasSeenNoTrivialPPDirective() const {
   return DirTracer && DirTracer->hasSeenNoTrivialPPDirective();
 }
 
-bool TrivialPPDirectiveTracer::hasSeenNoTrivialPPDirective() const {
+bool NoTrivialPPDirectiveTracer::hasSeenNoTrivialPPDirective() const {
   return SeenNoTrivialPPDirective;
 }
 
-void TrivialPPDirectiveTracer::setSeenNoTrivialPPDirective() {
+void NoTrivialPPDirectiveTracer::setSeenNoTrivialPPDirective() {
   if (InMainFile && !SeenNoTrivialPPDirective)
     SeenNoTrivialPPDirective = true;
 }
 
-void TrivialPPDirectiveTracer::LexedFileChanged(
+void NoTrivialPPDirectiveTracer::LexedFileChanged(
     FileID FID, LexedFileChangeReason Reason,
     SrcMgr::CharacteristicKind FileType, FileID PrevFID, SourceLocation Loc) {
   InMainFile = (FID == PP.getSourceManager().getMainFileID());
 }
 
-void TrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
-                                            const MacroDefinition &MD,
-                                            SourceRange Range,
-                                            const MacroArgs *Args) {
+void NoTrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
+                                              const MacroDefinition &MD,
+                                              SourceRange Range,
+                                              const MacroArgs *Args) {
   // FIXME: Does only enable builtin macro expansion make sense?
   if (!MD.getMacroInfo()->isBuiltinMacro())
     setSeenNoTrivialPPDirective();

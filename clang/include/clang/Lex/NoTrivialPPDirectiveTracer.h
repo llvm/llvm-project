@@ -1,4 +1,4 @@
-//===--- TrivialPPDirectiveTracer.h -----------------------------*- C++ -*-===//
+//===--- NoTrivialPPDirectiveTracer.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the TrivialPPDirectiveTracer interface.
+//  This file defines the NoTrivialPPDirectiveTracer interface.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LEX_TRIVIAL_PPDIRECTIVE_TRACER_H
-#define LLVM_CLANG_LEX_TRIVIAL_PPDIRECTIVE_TRACER_H
+#ifndef LLVM_CLANG_LEX_NO_TRIVIAL_PPDIRECTIVE_TRACER_H
+#define LLVM_CLANG_LEX_NO_TRIVIAL_PPDIRECTIVE_TRACER_H
 
 #include "clang/Lex/PPCallbacks.h"
 
@@ -52,7 +52,7 @@ class Preprocessor;
 ///
 /// FIXME: Once the wording of the standard is revised, we need to follow the
 /// wording of the standard. Currently this is just a workaround
-class TrivialPPDirectiveTracer : public PPCallbacks {
+class NoTrivialPPDirectiveTracer : public PPCallbacks {
   Preprocessor &PP;
 
   /// Whether preprocessing main file. We only focus on the main file.
@@ -65,7 +65,7 @@ class TrivialPPDirectiveTracer : public PPCallbacks {
   void setSeenNoTrivialPPDirective();
 
 public:
-  TrivialPPDirectiveTracer(Preprocessor &P) : PP(P) {}
+  NoTrivialPPDirectiveTracer(Preprocessor &P) : PP(P) {}
 
   bool hasSeenNoTrivialPPDirective() const;
 
@@ -307,4 +307,4 @@ public:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_LEX_TRIVIAL_PPDIRECTIVE_TRACER_H
+#endif // LLVM_CLANG_LEX_NO_TRIVIAL_PPDIRECTIVE_TRACER_H

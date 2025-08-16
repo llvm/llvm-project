@@ -82,7 +82,7 @@ class PreprocessorLexer;
 class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
-class TrivialPPDirectiveTracer;
+class NoTrivialPPDirectiveTracer;
 
 namespace Builtin {
 class Context;
@@ -357,7 +357,7 @@ private:
   /// A preprocessor directive tracer to trace whether the preprocessing
   /// state changed. These changes would mean most semantically observable
   /// preprocessor state, particularly anything that is order dependent.
-  TrivialPPDirectiveTracer *DirTracer = nullptr;
+  NoTrivialPPDirectiveTracer *DirTracer = nullptr;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
