@@ -696,6 +696,7 @@ public:
   RT_API_ATTRS ChildListIoStatementState(
       ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
 };
 
