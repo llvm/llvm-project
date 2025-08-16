@@ -1,6 +1,5 @@
-; Tests that coro-split will optimize the lifetime.start maker of each local variable,
-; sink them to the places after the suspend block.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
+; Test lifetime-move and coro-split correctly optimize allocas that do not cross suspension points
+; RUN: opt < %s -passes='cgscc(lifetime-move,coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 ; CHECK: %a.Frame = type { ptr, ptr, i1 }
 ; CHECK: %a_optnone.Frame = type { ptr, ptr, i32, i1 }
@@ -46,8 +45,8 @@ exit:
 ; CHECK:         call void @llvm.lifetime.start.p0(ptr %testval)
 ; CHECK-NEXT:    %val = load i32, ptr %ref.tmp7
 ; CHECK-NEXT:    %test = load i32, ptr %testval
-; CHECK-NEXT:    call void @print(i32 %test)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr %testval)
+; CHECK-NEXT:    call void @print(i32 %test)
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void
 
