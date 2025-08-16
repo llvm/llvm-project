@@ -582,8 +582,8 @@ class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
-// We allow starting the lifetime of nodes without initializing the value held by the node,
-// since that is handled by the map itself in order to be allocator-aware.
+// We use a union to avoid initialization during member initialization, which allows us
+// to use the allocator from the container to allocate the node itself
 #ifndef _LIBCPP_CXX03_LANG
 
 private:
