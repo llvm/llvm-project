@@ -2288,7 +2288,11 @@ public:
                               const CXXRecordDecl *Decl);
 
   Qualifiers getMethodQualifiers() const {
-    return getType()->castAs<FunctionProtoType>()->getMethodQuals();
+    if (isExplicitObjectMemberFunction()) {
+      return getFunctionObjectParameterType().getQualifiers();
+    } else {
+      return getType()->castAs<FunctionProtoType>()->getMethodQuals();
+    }
   }
 
   /// Retrieve the ref-qualifier associated with this method.
