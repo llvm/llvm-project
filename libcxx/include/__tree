@@ -582,11 +582,25 @@ class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
-  union {
-  __node_value_type __value_;
-  };
+  // We allow starting the lifetime of nodes without initializing the value held by the node,
+  // since that is handled by the map itself in order to be allocator-aware.
+  #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
+  private:
+    union {
+      __node_value_type __value_;
+    };
+
+  public:
+    _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
+  #  else
+
+  private:
+    _ALIGNAS_TYPE(__node_value_type) unsigned char __buffer_[sizeof(__node_value_type)];
+
+  public:
+    _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_)); }
+  #  endif
 
   template <class _Alloc, class... _Args>
   explicit __tree_node(_Alloc& __na, _Args&&... __args) {
