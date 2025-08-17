@@ -1749,7 +1749,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0x0fff);
+      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
 
   return true;
 }
@@ -1799,7 +1799,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
         SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-         I.getOperand(0).getImm() == 0x0fff))
+         AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
       return HazardExpired;
 
     // Track registers writes
