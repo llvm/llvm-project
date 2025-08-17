@@ -13,9 +13,7 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -66,7 +64,7 @@ template <typename F, typename T>
   uint64_t stop = gpu::processor_clock();
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
-  volatile T output = result;
+  volatile auto output = result;
 
   // Return the time elapsed.
   return stop - start;
