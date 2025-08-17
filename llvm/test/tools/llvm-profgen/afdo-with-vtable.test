@@ -1,4 +1,4 @@
-RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-profile=%p/Inputs/dap-perf-trace.txt \
+RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-perftrace=%p/Inputs/dap-perf-trace.txt \
 RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 

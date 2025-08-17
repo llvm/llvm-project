@@ -1,6 +1,5 @@
-
 RUN: llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
-RUN: --data-access-profile=%p/Inputs/pie-dap-perf.txt  \
+RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
 RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 
