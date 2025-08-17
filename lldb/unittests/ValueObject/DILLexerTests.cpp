@@ -176,7 +176,7 @@ TEST(DILLexerTests, NumbersTest) {
     SCOPED_TRACE(str);
     EXPECT_THAT_EXPECTED(ExtractTokenData(str),
                          llvm::HasValue(testing::ElementsAre(
-                             testing::Pair(Token::floating_constant, str))));
+                             testing::Pair(Token::float_constant, str))));
   }
   // Verify that none of the invalid numbers come out as numeric tokens.
   for (auto &str : invalid_numbers) {
@@ -200,7 +200,7 @@ TEST(DILLexerTests, NumbersTest) {
     DILLexer lexer(*maybe_lexer);
     Token token = lexer.GetCurrentToken();
     EXPECT_TRUE(
-        token.IsOneOf({Token::integer_constant, Token::floating_constant}));
+        token.IsOneOf({Token::integer_constant, Token::float_constant}));
     lexer.Advance();
     token = lexer.GetCurrentToken();
     EXPECT_TRUE(token.IsOneOf({Token::plus, Token::minus}));
