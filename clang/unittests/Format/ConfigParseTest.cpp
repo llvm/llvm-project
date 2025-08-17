@@ -775,6 +775,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BraceWrapping:\n"
               "  WrapEmptyRecord: false",
               BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  SplitEmptyRecord: true",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Default);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  SplitEmptyRecord: false",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  SplitEmptyRecord: true\n"
+              "  WrapEmptyRecord: Never",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Never);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: BeforeBrace\n"
+              "  SplitEmptyRecord: true",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
 
   Style.BreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
