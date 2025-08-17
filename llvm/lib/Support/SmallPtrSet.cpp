@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include <algorithm>
@@ -190,7 +191,7 @@ void SmallPtrSetImplBase::copyHelper(const SmallPtrSetImplBase &RHS) {
   CurArraySize = RHS.CurArraySize;
 
   // Copy over the contents from the other set
-  std::copy(RHS.CurArray, RHS.EndPointer(), CurArray);
+  llvm::copy(RHS.buckets(), CurArray);
 
   NumEntries = RHS.NumEntries;
   NumTombstones = RHS.NumTombstones;
@@ -214,7 +215,7 @@ void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
     CurArray = SmallStorage;
-    std::copy(RHS.CurArray, RHS.CurArray + RHS.NumEntries, CurArray);
+    llvm::copy(RHS.small_buckets(), CurArray);
   } else {
     CurArray = RHS.CurArray;
     RHS.CurArray = RHSSmallStorage;
@@ -252,7 +253,7 @@ void SmallPtrSetImplBase::swap(const void **SmallStorage,
   // If only RHS is small, copy the small elements into LHS and move the pointer
   // from LHS to RHS.
   if (!this->isSmall() && RHS.isSmall()) {
-    std::copy(RHS.CurArray, RHS.CurArray + RHS.NumEntries, SmallStorage);
+    llvm::copy(RHS.small_buckets(), SmallStorage);
     std::swap(RHS.CurArraySize, this->CurArraySize);
     std::swap(this->NumEntries, RHS.NumEntries);
     std::swap(this->NumTombstones, RHS.NumTombstones);
@@ -266,8 +267,7 @@ void SmallPtrSetImplBase::swap(const void **SmallStorage,
   // If only LHS is small, copy the small elements into RHS and move the pointer
   // from RHS to LHS.
   if (this->isSmall() && !RHS.isSmall()) {
-    std::copy(this->CurArray, this->CurArray + this->NumEntries,
-              RHSSmallStorage);
+    llvm::copy(this->small_buckets(), RHSSmallStorage);
     std::swap(RHS.CurArraySize, this->CurArraySize);
     std::swap(RHS.NumEntries, this->NumEntries);
     std::swap(RHS.NumTombstones, this->NumTombstones);
