@@ -6450,6 +6450,24 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   setValue(&I, Result);
 }
 
+static SDValue createMask(SelectionDAG &DAG, const SDLoc &DL, SDValue Cond,
+                          EVT WorkingVT, const SDNodeFlags &Flag) {
+  if (WorkingVT.isVector())
+    return DAG.getSExtOrTrunc(Cond, DL, WorkingVT);
+
+  // Extend cond to WorkingVT and normalize to 0 or 1
+  if (Cond.getValueType() != WorkingVT)
+    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, WorkingVT, Cond, Flag);
+
+  // Normalize
+  SDValue One = DAG.getConstant(1, DL, WorkingVT);
+  SDValue Norm = DAG.getNode(ISD::AND, DL, WorkingVT, Cond, One, Flag);
+
+  // Mask = 0 - Norm
+  SDValue Zero = DAG.getConstant(0, DL, WorkingVT);
+  return DAG.getNode(ISD::SUB, DL, WorkingVT, Zero, Norm, Flag);
+}
+
 /// Fallback implementation is an alternative approach for managing architectures that don't have 
 /// native support for Constant-Time Select.
 SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
@@ -6462,23 +6480,29 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   SDValue WorkingF = F;
   EVT WorkingVT = VT;
 
+  if (VT.isVector() && !Cond.getValueType().isVector()) {
+    unsigned NumElems = VT.getVectorNumElements();
+    EVT CondVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElems);
+    Cond = DAG.getSplatBuildVector(CondVT, DL, Cond);
+  }
+
   if (VT.isFloatingPoint()) {
-    unsigned int BitWidth = VT.getSizeInBits();
-    WorkingVT = EVT::getIntegerVT(*DAG.getContext(), BitWidth);
+    if (VT.isVector()) {
+      // float vector -> int vector
+      EVT ElemVT = VT.getVectorElementType();
+      unsigned int ElemBitWidth = ElemVT.getSizeInBits();
+      EVT IntElemVT = EVT::getIntegerVT(*DAG.getContext(), ElemBitWidth);
+      WorkingVT = EVT::getVectorVT(*DAG.getContext(), IntElemVT,
+                                   VT.getVectorNumElements());
+    } else {
+      WorkingVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+    }
+
     WorkingT = DAG.getBitcast(WorkingVT, T);
     WorkingF = DAG.getBitcast(WorkingVT, F);
   }
 
-  // Extend cond to WorkingVT and normalize to 0 or 1
-  if (Cond.getValueType() != WorkingVT)
-    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, WorkingVT, Cond, ProtectedFlag);
-
-  SDValue One = DAG.getConstant(1, DL, WorkingVT);
-  SDValue Norm = DAG.getNode(ISD::AND, DL, WorkingVT, Cond, One, ProtectedFlag);
-
-  // Mask = 0 - Norm
-  SDValue Zero = DAG.getConstant(0, DL, WorkingVT);
-  SDValue Mask = DAG.getNode(ISD::SUB, DL, WorkingVT, Zero, Norm, ProtectedFlag);
+  SDValue Mask = createMask(DAG, DL, Cond, WorkingVT, ProtectedFlag);
 
   SDValue AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
   SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes, ProtectedFlag);
@@ -6488,8 +6512,8 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   SDValue FM = DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF, ProtectedFlag);
   SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM, ProtectedFlag);
 
-  // Convert back to Float if needed
-  if (VT.isFloatingPoint()) {
+  // Convert back if needed
+  if (WorkingVT != VT) {
     Result = DAG.getBitcast(VT, Result);
   }
 
@@ -6719,8 +6743,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     EVT VT = A.getValueType();
     EVT CondVT = Cond.getValueType();
 
+    // For now we'll only support scalar predicates
     // assert if Cond type is Vector
-    assert(!CondVT.isVector() && "Vector type cond not supported yet");
+    // TODO: Maybe look into supporting vector predicates?
+    assert(!CondVT.isVector() &&
+           "ct.select fallback only supports scalar conditions");
 
     // Handle scalar types
     if (TLI.isSelectSupported(
@@ -6731,14 +6758,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
     }
 
-    // assert if Payloads type are Vector
-    assert(!VT.isVector() &&
-           "Vector type not supported yet for fallback implementation");
-
-    // // We don't support floating points yet
-    // assert(!VT.isFloatingPoint() &&
-    //        "Float point type not supported yet fallback implementation");
-
+    // We don't support non-integral pointers
     Type *CurrType = VT.getTypeForEVT(*Context);
     if (CurrType->isPointerTy()) {
       unsigned AS = CurrType->getPointerAddressSpace();
@@ -6747,6 +6767,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
             "llvm.ct.select: non-integral pointers are not supported");
       }
     }
+
+    // We don't support scalable vector types yet, for now it'll only be
+    // fix-width vector
+    // TODO: Add support for scalable vectors
+    assert(!VT.isScalableVector() &&
+           "ct.select fallback doesn't supports scalable vectors");
 
     setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
     return;

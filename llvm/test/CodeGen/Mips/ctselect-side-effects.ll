@@ -166,7 +166,8 @@ define i32 @test_normal_ops(i32 %x) {
 ; This simulates what the reviewer is worried about
 define i32 @test_xor_with_const_operands() {
 ; M32-LABEL: test_xor_with_const_operands:
-; M32:       # %bb.0: M32-NEXT:    jr $ra
+; M32:       # %bb.0:
+; M32-NEXT:    jr $ra
 ; M32-NEXT:    addiu $2, $zero, 0
 ;
 ; M64-LABEL: test_xor_with_const_operands:
