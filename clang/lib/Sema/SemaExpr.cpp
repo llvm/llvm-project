@@ -6312,30 +6312,36 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   unsigned i = 0;
   SmallVector<QualType, 8> OverloadParams;
 
-  for (QualType ParamType : FT->param_types()) {
+  {
+    // Push an evaluation context since the lvalue conversions in this loop
+    // are only for type resolution and don't actually occur.
+    EnterExpressionEvaluationContext Unevaluated(
+        *Sema, Sema::ExpressionEvaluationContext::Unevaluated);
+    for (QualType ParamType : FT->param_types()) {
 
-    // Convert array arguments to pointer to simplify type lookup.
-    ExprResult ArgRes =
-        Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
-    if (ArgRes.isInvalid())
-      return nullptr;
-    Expr *Arg = ArgRes.get();
-    QualType ArgType = Arg->getType();
-    if (!ParamType->isPointerType() ||
-        ParamType->getPointeeType().hasAddressSpace() ||
-        !ArgType->isPointerType() ||
-        !ArgType->getPointeeType().hasAddressSpace() ||
-        isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
-      OverloadParams.push_back(ParamType);
-      continue;
+      // Convert array arguments to pointer to simplify type lookup.
+      ExprResult ArgRes =
+          Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
+      if (ArgRes.isInvalid())
+        return nullptr;
+      Expr *Arg = ArgRes.get();
+      QualType ArgType = Arg->getType();
+      if (!ParamType->isPointerType() ||
+          ParamType->getPointeeType().hasAddressSpace() ||
+          !ArgType->isPointerType() ||
+          !ArgType->getPointeeType().hasAddressSpace() ||
+          isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
+        OverloadParams.push_back(ParamType);
+        continue;
+      }
+
+      QualType PointeeType = ParamType->getPointeeType();
+      NeedsNewDecl = true;
+      LangAS AS = ArgType->getPointeeType().getAddressSpace();
+
+      PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
+      OverloadParams.push_back(Context.getPointerType(PointeeType));
     }
-
-    QualType PointeeType = ParamType->getPointeeType();
-    NeedsNewDecl = true;
-    LangAS AS = ArgType->getPointeeType().getAddressSpace();
-
-    PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
-    OverloadParams.push_back(Context.getPointerType(PointeeType));
   }
 
   if (!NeedsNewDecl)
