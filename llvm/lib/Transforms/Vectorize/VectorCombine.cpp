@@ -56,9 +56,9 @@ STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
-static cl::opt<bool> DisableVectorCombine(
-    "disable-vector-combine", cl::init(false), cl::Hidden,
-    cl::desc("Disable all vector combine transforms"));
+static cl::opt<bool>
+    DisableVectorCombine("disable-vector-combine", cl::init(false), cl::Hidden,
+                         cl::desc("Disable all vector combine transforms"));
 
 static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
@@ -1074,8 +1074,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
 
   // Determine scalar opcode
-  std::optional<unsigned> FunctionalOpcode =
-      VPI.getFunctionalOpcode();
+  std::optional<unsigned> FunctionalOpcode = VPI.getFunctionalOpcode();
   std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
   if (!FunctionalOpcode) {
     ScalarIntrID = VPI.getFunctionalIntrinsicID();
@@ -1098,8 +1097,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
       (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
   InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
 
-  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI << "\n");
   LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
                     << ", Cost of scalarizing:" << NewCost << "\n");
 
@@ -1820,11 +1818,11 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     Builder.SetInsertPoint(EI);
     Value *GEP =
         Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
-    auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
-        ElemType, GEP, EI->getName() + ".scalar"));
+    auto *NewLoad = cast<LoadInst>(
+        Builder.CreateLoad(ElemType, GEP, EI->getName() + ".scalar"));
 
-    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
-        LI->getAlign(), ElemType, Idx, *DL);
+    Align ScalarOpAlignment =
+        computeAlignmentAfterScalarization(LI->getAlign(), ElemType, Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
 
     if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx)) {
@@ -2078,10 +2076,12 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
 
   unsigned NumOpElts = Op0Ty->getNumElements();
-  bool IsIdentity0 = ShuffleDstTy == Op0Ty &&
+  bool IsIdentity0 =
+      ShuffleDstTy == Op0Ty &&
       all_of(NewMask0, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
-  bool IsIdentity1 = ShuffleDstTy == Op1Ty &&
+  bool IsIdentity1 =
+      ShuffleDstTy == Op1Ty &&
       all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
 
