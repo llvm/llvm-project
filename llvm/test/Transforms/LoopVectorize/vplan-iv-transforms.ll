@@ -96,8 +96,7 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:     EMIT vp<[[BROADCAST_1:%.+]]> = broadcast ir<1>
 ; CHECK-NEXT:     EMIT vp<[[MUL:%.+]]> = mul vp<[[STEP_VECTOR]]>, vp<[[BROADCAST_1]]>
 ; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = add vp<[[BROADCAST_0]]>, vp<[[MUL]]>
-; CHECK-NEXT:     EMIT vp<[[INC:%.+]]> = mul ir<1>, ir<8>
-; CHECK-NEXT:     EMIT vp<[[BROADCAST_INC:%.+]]> = broadcast vp<[[INC]]>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST_INC:%.+]]> = broadcast ir<8>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
