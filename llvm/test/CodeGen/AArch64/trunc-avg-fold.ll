@@ -27,7 +27,7 @@ define <8 x i8> @test_avgceil_s(<8 x i8> %a, <8 x i8> %b) {
 }
 
 define <8 x i8> @avgfloor_u_i8_to_i16(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: avgfloor_u_from_intrin:
+; CHECK-LABEL: avgfloor_u_i8_to_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
