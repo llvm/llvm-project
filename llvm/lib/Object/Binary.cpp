@@ -75,6 +75,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::xcoff_object_32:
   case file_magic::xcoff_object_64:
   case file_magic::wasm_object:
+  case file_magic::dxcontainer_object:
     return ObjectFile::createSymbolicFile(Buffer, Type, Context, InitContent);
   case file_magic::macho_universal_binary:
     return MachOUniversalBinary::create(Buffer);
@@ -87,7 +88,6 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::clang_ast:
   case file_magic::cuda_fatbinary:
   case file_magic::coff_cl_gl_object:
-  case file_magic::dxcontainer_object:
   case file_magic::offload_bundle:
   case file_magic::offload_bundle_compressed:
   case file_magic::spirv_object:

@@ -184,8 +184,11 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
   if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
     // TODO(cir): maybe we should use cir.unary for pointers here instead.
     if (uo->getOpcode() == UO_AddrOf) {
-      cgm.errorNYI(expr->getSourceRange(), "emitPointerWithAlignment: unary &");
-      return Address::invalid();
+      LValue lv = emitLValue(uo->getSubExpr());
+      if (baseInfo)
+        *baseInfo = lv.getBaseInfo();
+      assert(!cir::MissingFeatures::opTBAA());
+      return lv.getAddress();
     }
   }
 
@@ -322,22 +325,28 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
+// TODO: Replace this with a proper TargetInfo function call.
+/// Helper method to check if the underlying ABI is AAPCS
+static bool isAAPCS(const TargetInfo &targetInfo) {
+  return targetInfo.getABI().starts_with("aapcs");
+}
+
 mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                                                            LValue dst) {
-
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 
   const CIRGenBitFieldInfo &info = dst.getBitFieldInfo();
   mlir::Type resLTy = convertTypeForMem(dst.getType());
   Address ptr = dst.getBitFieldAddress();
 
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  bool useVoaltile = cgm.getCodeGenOpts().AAPCSBitfieldWidth &&
+                     dst.isVolatileQualified() &&
+                     info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
 
   return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
-                                   dst.isVolatileQualified());
+                                   dst.isVolatileQualified(), useVoaltile);
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -347,10 +356,12 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   mlir::Type resLTy = convertType(lv.getType());
   Address ptr = lv.getBitFieldAddress();
 
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  bool useVoaltile = lv.isVolatileQualified() && info.volatileOffset != 0 &&
+                     isAAPCS(cgm.getTarget());
 
-  mlir::Value field = builder.createGetBitfield(
-      getLoc(loc), resLTy, ptr, ptr.getElementType(), info, lv.isVolatile());
+  mlir::Value field =
+      builder.createGetBitfield(getLoc(loc), resLTy, ptr, ptr.getElementType(),
+                                info, lv.isVolatile(), useVoaltile);
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
@@ -375,10 +386,10 @@ LValue CIRGenFunction::emitLValueForBitField(LValue base,
   const CIRGenRecordLayout &layout =
       cgm.getTypes().getCIRGenRecordLayout(field->getParent());
   const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
-  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
-  unsigned idx = layout.getCIRFieldNo(field);
 
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+
+  unsigned idx = layout.getCIRFieldNo(field);
   Address addr = getAddrOfBitFieldStorage(base, field, info.storageType, idx);
 
   mlir::Location loc = getLoc(field->getLocation());
@@ -580,6 +591,12 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
             ? emitLoadOfReferenceLValue(addr, getLoc(e->getSourceRange()),
                                         vd->getType(), AlignmentSource::Decl)
             : makeAddrLValue(addr, ty, AlignmentSource::Decl);
+
+    // Statics are defined as globals, so they are not include in the function's
+    // symbol table.
+    assert((vd->isStaticLocal() || symbolTable.count(vd)) &&
+           "non-static locals should be already mapped");
+
     return lv;
   }
 
@@ -1005,7 +1022,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_DerivedToBase: {
     const auto *derivedClassTy =
         e->getSubExpr()->getType()->castAs<clang::RecordType>();
-    auto *derivedClassDecl = cast<CXXRecordDecl>(derivedClassTy->getDecl());
+    auto *derivedClassDecl =
+        cast<CXXRecordDecl>(derivedClassTy->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     LValue lv = emitLValue(e->getSubExpr());
     Address thisAddr = lv.getAddress();
@@ -1159,9 +1178,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
                                         ->getBaseElementTypeUnsafe()
                                         ->getAs<clang::RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *classDecl = cast<CXXRecordDecl>(rt->getDecl());
+    auto *classDecl =
+        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
     if (!classDecl->hasTrivialDestructor())
-      referenceTemporaryDtor = classDecl->getDestructor();
+      referenceTemporaryDtor =
+          classDecl->getDefinitionOrSelf()->getDestructor();
   }
 
   if (!referenceTemporaryDtor)
@@ -1532,9 +1553,9 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitCallee: call to member function is NYI");
     return {};
+  } else if (auto *pde = dyn_cast<CXXPseudoDestructorExpr>(e)) {
+    return CIRGenCallee::forPseudoDestructor(pde);
   }
-
-  assert(!cir::MissingFeatures::opCallPseudoDtor());
 
   // Otherwise, we have an indirect reference.
   mlir::Value calleePtr;
@@ -1587,10 +1608,8 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
     return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,
                            returnValue);
 
-  if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
-    cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
-  }
-  assert(!cir::MissingFeatures::opCallPseudoDtor());
+  if (callee.isPseudoDestructor())
+    return emitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
 
   return emitCall(e->getCallee()->getType(), callee, e, returnValue);
 }
@@ -1823,7 +1842,7 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   }
 
   bool hasQualifier = me->hasQualifier();
-  NestedNameSpecifier *qualifier = hasQualifier ? me->getQualifier() : nullptr;
+  NestedNameSpecifier qualifier = me->getQualifier();
   bool isArrow = me->isArrow();
   const Expr *base = me->getBase();
 
@@ -1929,6 +1948,20 @@ LValue CIRGenFunction::emitLoadOfReferenceLValue(Address refAddr,
   Address pointeeAddr = emitLoadOfReference(refLVal, loc, &pointeeBaseInfo);
   return makeAddrLValue(pointeeAddr, refLVal.getType()->getPointeeType(),
                         pointeeBaseInfo);
+}
+
+void CIRGenFunction::emitTrap(mlir::Location loc, bool createNewBlock) {
+  cir::TrapOp::create(builder, loc);
+  if (createNewBlock)
+    builder.createBlock(builder.getBlock()->getParent());
+}
+
+void CIRGenFunction::emitUnreachable(clang::SourceLocation loc,
+                                     bool createNewBlock) {
+  assert(!cir::MissingFeatures::sanitizers());
+  cir::UnreachableOp::create(builder, getLoc(loc));
+  if (createNewBlock)
+    builder.createBlock(builder.getBlock()->getParent());
 }
 
 mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,

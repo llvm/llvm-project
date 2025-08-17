@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "check-acc-structure.h"
+#include "resolve-names-utils.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
@@ -106,18 +107,25 @@ bool AccStructureChecker::IsComputeConstruct(
       directive == llvm::acc::ACCD_kernels_loop;
 }
 
-bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1) {
-    return false;
-  }
+bool AccStructureChecker::IsLoopConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::Directive::ACCD_loop ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
 
+std::optional<llvm::acc::Directive>
+AccStructureChecker::getParentComputeConstruct() const {
   // Check all nested context skipping the first one.
-  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
-    if (IsComputeConstruct(dirContext_[i - 1].directive)) {
-      return true;
-    }
-  }
-  return false;
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i)
+    if (IsComputeConstruct(dirContext_[i - 1].directive))
+      return dirContext_[i - 1].directive;
+  return std::nullopt;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  return getParentComputeConstruct().has_value();
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
@@ -126,6 +134,14 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
         "Directive %s may not be called within a compute region"_err_en_US,
         ContextDirectiveAsFortran());
   }
+}
+
+bool AccStructureChecker::IsInsideParallelConstruct() const {
+  if (auto directive = getParentComputeConstruct())
+    if (*directive == llvm::acc::ACCD_parallel ||
+        *directive == llvm::acc::ACCD_parallel_loop)
+      return true;
+  return false;
 }
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
@@ -250,6 +266,85 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   dirContext_.pop_back();
 }
 
+std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
+    DirectiveContext &dirContext) {
+  for (auto it : dirContext.clauseInfo) {
+    const auto *clause{it.second};
+    if (const auto *gangClause{
+            std::get_if<parser::AccClause::Gang>(&clause->u)})
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x{*gangClause->v};
+        for (const Fortran::parser::AccGangArg &gangArg : x.v)
+          if (const auto *dim{
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)})
+            if (const auto v{EvaluateInt64(context_, dim->v)})
+              return *v;
+      }
+  }
+  return std::nullopt;
+}
+
+void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    auto &parent{dirContext_[i - 1]};
+    if (IsLoopConstruct(parent.directive)) {
+      for (auto parentClause : parent.actualClauses) {
+        for (auto cl : GetContext().actualClauses) {
+          bool invalid{false};
+          if (parentClause == llvm::acc::Clause::ACCC_gang &&
+              cl == llvm::acc::Clause::ACCC_gang) {
+            if (IsInsideParallelConstruct()) {
+              auto parentDim = getGangDimensionSize(parent);
+              auto currentDim = getGangDimensionSize(GetContext());
+              std::int64_t parentDimNum = 1, currentDimNum = 1;
+              if (parentDim)
+                parentDimNum = *parentDim;
+              if (currentDim)
+                currentDimNum = *currentDim;
+              if (parentDimNum <= currentDimNum) {
+                std::string parentDimStr, currentDimStr;
+                if (parentDim)
+                  parentDimStr = "(dim:" + std::to_string(parentDimNum) + ")";
+                if (currentDim)
+                  currentDimStr = "(dim:" + std::to_string(currentDimNum) + ")";
+                context_.Say(GetContext().clauseSource,
+                    "%s%s clause is not allowed in the region of a loop with the %s%s clause"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(cl).str()),
+                    currentDimStr,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(parentClause).str()),
+                    parentDimStr);
+                continue;
+              }
+            } else {
+              invalid = true;
+            }
+          } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker)) {
+            invalid = true;
+          } else if (parentClause == llvm::acc::Clause::ACCC_vector &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker ||
+                  cl == llvm::acc::Clause::ACCC_vector)) {
+            invalid = true;
+          }
+          if (invalid)
+            context_.Say(GetContext().clauseSource,
+                "%s clause is not allowed in the region of a loop with the %s clause"_err_en_US,
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(cl).str()),
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(parentClause).str()));
+        }
+      }
+    }
+    if (IsComputeConstruct(parent.directive))
+      break;
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
@@ -267,6 +362,8 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
+    // Restriction - 2.9.2, 2.9.3, 2.9.4
+    CheckNotInSameOrSubLevelLoopConstruct();
   }
   dirContext_.pop_back();
 }

@@ -277,22 +277,13 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
           descOp, "the tensor descriptor lacks layout attribute");
 
     SmallVector<size_t> newRetIndices;
-    SmallVector<Value> newYieldValues;
-    SmallVector<Type> newYieldTypes;
-
-    for (Value operand : descOp->getOperands()) {
-      newYieldValues.push_back(operand);
-      newYieldTypes.push_back(operand.getType());
-    }
     rewriter.setInsertionPoint(warpOp);
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, /* new yieled values = */ newYieldValues,
-        /* new yielded types = */ newYieldTypes, newRetIndices);
+        rewriter, warpOp, /* new yieled values = */ descOp->getOperands(),
+        /* new yielded types = */ descOp.getOperandTypes(), newRetIndices);
 
-    SmallVector<Value> newDescOperands;
-    for (size_t i : newRetIndices) {
-      newDescOperands.push_back(newWarpOp.getResult(i));
-    }
+    SmallVector<Value> newDescOperands = llvm::map_to_vector(
+        newRetIndices, [&](size_t i) { return newWarpOp.getResult(i); });
     rewriter.setInsertionPointAfter(newWarpOp);
     xegpu::TensorDescType distributedTensorDescTy =
         descOp.getType().dropLayouts(); // Distributed tensor descriptor type
@@ -696,39 +687,30 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
           warpOp, "warp result is not a xegpu::UpdateNdOffset op");
     auto updateOp = operand->get().getDefiningOp<xegpu::UpdateNdOffsetOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    // new update op does not have layout attribute.
-    xegpu::TensorDescType newTensorDescTy =
-        updateOp.getTensorDescType().dropLayouts();
 
-    SmallVector<Value, 3> newYieldValues;
-    SmallVector<Type, 3> newYieldTypes;
-    for (Value operand : updateOp->getOperands()) {
-      newYieldValues.push_back(operand);
-      if (isa<xegpu::TensorDescType>(operand.getType())) {
-        newYieldTypes.push_back(newTensorDescTy);
-      } else {
-        newYieldTypes.push_back(operand.getType());
-      }
-    }
     SmallVector<size_t> newRetIndices;
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, newYieldValues, newYieldTypes, newRetIndices);
+        rewriter, warpOp, updateOp->getOperands(), updateOp.getOperandTypes(),
+        newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    SmallVector<Value> newUpdateOperands;
-    for (size_t i : newRetIndices) {
-      // For the tensor descriptor operand, the layout attribute is dropped
-      // after distribution. Types needs to be resolved in this case.
-      if (isa<xegpu::TensorDescType>(newWarpOp.getResult(i).getType())) {
-        newUpdateOperands.push_back(resolveDistributedTy(
-            newWarpOp.getResult(i), newTensorDescTy, rewriter));
-      } else {
-        newUpdateOperands.push_back(newWarpOp.getResult(i));
-      }
-    }
+    // new update op does not have layout attribute.
+    xegpu::TensorDescType distributedTensorDescTy =
+        updateOp.getTensorDescType().dropLayouts();
+    SmallVector<Value> newUpdateOperands =
+        llvm::map_to_vector(newRetIndices, [&](size_t i) {
+          // For the tensor descriptor operand, the layout attribute is
+          // dropped after distribution. Types needs to be resolved in this
+          // case.
+          if (isa<xegpu::TensorDescType>(newWarpOp.getResult(i).getType())) {
+            return resolveDistributedTy(newWarpOp.getResult(i),
+                                        distributedTensorDescTy, rewriter);
+          }
+          return newWarpOp.getResult(i);
+        });
     // Create a new update op outside the warp op.
     auto newUpdateOp = xegpu::UpdateNdOffsetOp::create(
-        rewriter, newWarpOp.getLoc(), newTensorDescTy, newUpdateOperands,
-        updateOp->getAttrs());
+        rewriter, newWarpOp.getLoc(), distributedTensorDescTy,
+        newUpdateOperands, updateOp->getAttrs());
     xegpu::removeLayoutAttrs(newUpdateOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);
     // Resolve the distributed type with the original type.

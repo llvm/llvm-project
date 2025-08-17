@@ -29,7 +29,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
     void printProperties(::mlir::MLIRContext *ctx,
             ::mlir::OpAsmPrinter &p, const Properties &prop,
             ::mlir::ArrayRef<::llvm::StringRef> elidedProps) {
-      
+
       DictionaryAttr propAttr = dyn_cast_if_present<mlir::DictionaryAttr>(getPropertiesAsAttr(ctx, prop));
 
       // filter out the elidedProps from propAttr, and get the resultAttr
@@ -43,7 +43,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
       }
 
       if (!filteredAttrs.empty()) {
-        p << "<" << DictionaryAttr::get(ctx, filteredAttrs) << ">"; 
+        p << "<" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
       }
     }
 
@@ -60,8 +60,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
 }
 
 
-def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface,
-                        AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
+def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface, AttrSizedOperandSegments]> {
 
   let summary = "Create nd-tensor descriptor operation";
   let description = [{
@@ -143,11 +142,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
   let builders = [
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source)>,
 
-    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType> ": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $shape,
-                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
-
-    OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source,
+    OpBuilder<(ins "Type": $tdesc, "Value ": $source,
                    "llvm::ArrayRef<OpFoldResult>": $shape,
                    "llvm::ArrayRef<OpFoldResult>": $strides)>,
 
@@ -181,82 +176,38 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return getType().getShape();
     }
 
-    /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    OperandRange getSizes() {
-      return getShape();
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
+      auto dynamics = getOffsets();
+      if (statics.size() == 0 && dynamics.size() == 0)
+        return {};
+      return getMixedValues(statics, dynamics, getContext());
     }
 
-    ArrayRef<int64_t> getStaticOffsets(){
-      auto attr = getConstOffsetsAttr();
+    SmallVector<OpFoldResult> getMixedSizes() {
+      SmallVector<int64_t> statics;
 
-      if (attr) 
-        return attr;
+      /// Get the static sizes/shape, the value passed to const_shape
+      /// will overide the value in memref shape.
+      if (auto memrefTy = llvm::dyn_cast<MemRefType>(getSourceType()))
+        statics = llvm::to_vector(memrefTy.getShape());
+      if (auto attr = getConstShapeAttr())
+        statics = llvm::to_vector(attr.asArrayRef());
 
-      int64_t rank = getMixedSizes().size();
-      
-      setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, 0));
-
-      attr = getConstOffsetsAttr();
-      return attr;
+      return getMixedValues(statics, getShape(), getContext());
     }
 
-    /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    /// If source is IntegerType or `const_shape` is filled,
-    /// it will return `const_shape`, such that mixes of `shape`
-    /// and `const_shape` will be used to represent the shape of
-    /// source operand. They overide static shape from source memref type.
-    ArrayRef<int64_t> getStaticSizes() {
-      /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
-      static  llvm::SmallVector<int64_t, 4> emptyShape;
+    SmallVector<OpFoldResult> getMixedStrides() {
+      SmallVector<int64_t> statics;
 
-      auto attr = getConstShapeAttr();
-      if (attr)
-        return attr;
+      /// Get the static strides, the value passed to const_strides
+      /// will overide the value in memref.
+      if (auto memrefTy = llvm::dyn_cast<MemRefType>(getSourceType()))
+        statics = memrefTy.getStridesAndOffset().first;
+      if (auto attr = getConstStridesAttr())
+        statics = llvm::to_vector(attr.asArrayRef());
 
-      if (llvm::isa<IntegerType>(getSourceType()))
-        return emptyShape;
-
-      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
-      assert(memrefType && "Incorrect use of getStaticSizes");
-      return memrefType.getShape();
-    }
-
-    /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    /// If source is IntegerType or `const_strides` is filled, it
-    /// will return `const_strides`, such that mixes of `strides`
-    /// and `const_strides` will be used to represent the strides of
-    /// source operand. They overide static strides from source memref type.
-    ArrayRef<int64_t> getStaticStrides() {
-      /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
-      static llvm::SmallVector<int64_t, 4> emptyStrides;
-
-      auto attr = getConstStridesAttr();
-      if (attr)
-        return attr;
-      
-      if (llvm::isa<IntegerType>(getSourceType()))
-        return emptyStrides;
-
-      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
-      assert(memrefType && "Incorrect use of getStaticStrides");
-      auto [strides, _] = memrefType.getStridesAndOffset();
-      // reuse the storage of ConstStridesAttr since strides from
-      // memref is not persistant
-      setConstStrides(strides);
-      attr = getConstStridesAttr();
-      return attr;
-    }
-
-    /// Return the expected rank of each of the`static_offsets`,
-    /// `static_shape` and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrMaxRanks() {
-      unsigned rank;
-      if (auto ty = llvm::dyn_cast<MemRefType>(getSourceType())) {
-        rank = ty.getRank();
-      } else {
-        rank = (unsigned)getMixedOffsets().size();
-      }
-      return {rank, rank, rank};
+      return getMixedValues(statics, getStrides(), getContext());
     }
 
     /// Return the number of leading operands before the `offsets`,
@@ -314,15 +265,15 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
   }];
 
   let assemblyFormat = [{
-    $TensorDesc `` 
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets) 
+    $TensorDesc ``
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:` qualified(type($TensorDesc))
   }];
 
   let builders = [
-    OpBuilder<(ins "Value": $TensorDesc, 
-                   "xegpu::CachePolicyAttr": $l1_hint, 
-                   "xegpu::CachePolicyAttr": $l2_hint, 
+    OpBuilder<(ins "Value": $TensorDesc,
+                   "xegpu::CachePolicyAttr": $l1_hint,
+                   "xegpu::CachePolicyAttr": $l2_hint,
                    "xegpu::CachePolicyAttr": $l3_hint)>
   ];
 
@@ -370,7 +321,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,  
+                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
                        OptionalAttr<UnitAttr>: $packed,
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
@@ -390,16 +341,16 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
   }];
 
   let assemblyFormat = [{
-    $TensorDesc `` 
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets) 
+    $TensorDesc ``
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)
   }];
 
   let builders = [
-    OpBuilder<(ins "Type": $value, "Value": $TensorDesc, 
+    OpBuilder<(ins "Type": $value, "Value": $TensorDesc,
                     "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
-                    "xegpu::CachePolicyAttr": $l1_hint, 
-                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>
   ];
 
@@ -442,7 +393,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
   let arguments = (ins XeGPU_ValueType: $value,
                        XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,  
+                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -458,16 +409,16 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
   }];
 
    let assemblyFormat = [{
-    $value `,` 
-    $TensorDesc `` 
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets) 
+    $value `,`
+    $TensorDesc ``
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:`  type($value) `,` qualified(type($TensorDesc))
   }];
 
   let builders = [
-    OpBuilder<(ins "Value": $value, "Value": $TensorDesc, 
-                   "xegpu::CachePolicyAttr": $l1_hint, 
-                   "xegpu::CachePolicyAttr": $l2_hint, 
+    OpBuilder<(ins "Value": $value, "Value": $TensorDesc,
+                   "xegpu::CachePolicyAttr": $l1_hint,
+                   "xegpu::CachePolicyAttr": $l2_hint,
                    "xegpu::CachePolicyAttr": $l3_hint)>
   ];
 
@@ -635,12 +586,12 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
                              l3_hint = #xegpu.cache_hint<cached>}
         : !xegpu.tensor_desc<16xf16>
     ```
-    
+
     Example 2:
     A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
     It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc".
     The source operand could be a raw pointer (uint64_t).
-    Please refer to create_tdesc for the restriction of memref. 
+    Please refer to create_tdesc for the restriction of memref.
     ```mlir
       %a = memref.alloc() : memref<1024xf32>
       %0 = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
@@ -676,16 +627,16 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
   }];
 
   let assemblyFormat = [{
-    $source 
+    $source
     (`[` $offsets^ `]`)?
     prop-dict
-    attr-dict `:` type(operands) 
+    attr-dict `:` type(operands)
   }];
-    
+
   let builders = [
     OpBuilder<(ins "Value": $source,
-                    "xegpu::CachePolicyAttr": $l1_hint, 
-                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>
   ];
 
@@ -723,7 +674,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
             vector<16xi1> -> vector<16x8xf32>
   ```
-  
+
   Example 3 (SIMT mode):
   ```mlir
     %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
@@ -732,12 +683,12 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>
             vector<16xi1> -> vector<8xf32>
   ```
-  
+
   Example 4:
   A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
   It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc".
   The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc
-  for the restriction of memref. 
+  for the restriction of memref.
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %offsets = vector.step : vector<16xindex>
@@ -794,14 +745,14 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   let assemblyFormat = [{
     $source
     (`[` $offsets^ `]`)? `,`
-    $mask prop-dict 
+    $mask prop-dict
     attr-dict `:` type(operands) `->` type($value)
   }];
 
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
-                    "xegpu::CachePolicyAttr": $l1_hint, 
-                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>
    ];
 
@@ -848,7 +799,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
   It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc".
   The dest operand could be a raw pointer (uint64_t).
-  Please refer to create_tdesc for the restriction of memref. 
+  Please refer to create_tdesc for the restriction of memref.
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %val = arith.constant dense<0.0> : vector<16xf32>
@@ -901,15 +852,15 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     $value `,`
     $dest
     (`[` $offsets^ `]`)? `,`
-    $mask 
-    prop-dict 
+    $mask
+    prop-dict
     attr-dict `:`  type(operands)
   }];
 
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,
-                    "xegpu::CachePolicyAttr": $l1_hint, 
-                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>
    ];
 
@@ -1145,5 +1096,153 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasVerifier = 1;
     let hasCanonicalizer = 1;
 }
+
+def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+class StaticShared1DMemRefOf<list<Type> allowedTypes> :
+  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
+     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
+     "mlir::MemRefType">;
+
+class SizeInBits<string name> :
+  StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
+          "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
+class AllMemSizesMatch<list<string> names> :
+    AllMatchSameOperatorTrait<names, SizeInBits<"_self">.result,
+                              "size in bits">;
+
+def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
+      AllMemSizesMatch<["source", "mem_desc"]>]>  {
+  let summary = "Create a memory descriptor.";
+  let description = [{
+    Creates a memory descriptor from a shared local memory (SLM) buffer, and xegpu
+    specific memory layout. The resulting memory descriptor has to have the same size
+    as the underlying shared local memory.
+
+    Arguments:
+     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
+    Results:
+     - `mem_desc` : the memory descriptor.
+  }];
+  let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
+  let results = (outs XeGPU_MemDesc:$mem_desc);
+  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+}
+
+def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
+                              AllElementTypesMatch<["mem_desc", "res"]>,
+                              AllRanksMatch<["mem_desc", "res"]>]>  {
+  let arguments = (ins XeGPU_MemDesc:$mem_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<LayoutTrait>:$layout
+  );
+  let results = (outs XeGPU_ValueType:$res);
+  let assemblyFormat = [{
+    $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+    prop-dict attr-dict `` `:` type(operands) `->` type(results)
+  }];
+
+  let description = [{
+    This operation loads a 2D block of data from shared local memory (SLM) as specified
+    by the provided 2D `mem_desc`. Only 2D memory descriptors are supported; use the
+    subview operation to obtain a compatible 2D `mem_desc` from a higher-rank descriptor if needed.
+
+    Arguments:
+     - `mem_desc`: the memory descriptor identifying the SLM region.
+     - `offsets`: the coordinates within the matrix to read from.
+     - `layout`: [optional] An attribute for guiding distributions among
+                 subgroups and/or work-items. It currently can accept either
+                 LayoutAttr or SliceAttr.
+    Results:
+     - `res`: the matrix elements loaded from SLM.
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Type":$res, "TypedValue<MemDescType>": $mem_desc,
+                    "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
+  ];
+  let extraClassDeclaration = [{
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
+                              AllElementTypesMatch<["mem_desc", "data"]>,
+                              AllRanksMatch<["mem_desc", "data"]>]> {
+  let arguments = (ins
+    XeGPU_ValueType:$data,
+    XeGPU_MemDesc:$mem_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<LayoutTrait>:$layout
+  );
+  let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+                          prop-dict attr-dict `` `:` type(operands)}];
+  let description = [{
+    This operation stores a 2D `data` fragment into the shared local memory region
+    specified by a 2D `mem_desc`. Only 2D memory descriptors are supported; use the
+    subview operation to obtain a 2D `mem_desc` from a higher-rank descriptor if needed.
+
+    Arguments:
+     - `mem_desc`: the memory descriptor specifying the SLM region.
+     - `offsets`: the coordinates within the matrix where the data will be written.
+     - `data`: the values to be stored in the matrix.
+     - `layout`: [optional] An attribute for guiding distributions among
+                 subgroups and/or work-items. It currently can accept either
+                 LayoutAttr or SliceAttr.
+  }];
+  let builders = [
+    OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
+  ];
+  let extraClassDeclaration = [{
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
+          [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
+  let description = [{
+    Creates a subview of a memory descriptor. The resulting memory descriptor can have
+    a lower rank than the source; in this case, the result dimensions correspond to the
+    higher-order dimensions of the source memory descriptor.
+
+    Arguments:
+     - `src` : a memory descriptor.
+     - `offsets` : the coordinates within the matrix the subview will be created from.
+
+    Results:
+    - `res` : a memory descriptor with smaller size.
+
+  }];
+  let arguments = (ins XeGPU_MemDesc:$src,
+                       Variadic<Index>:$offsets,
+                       DenseI64ArrayAttr:$const_offsets);
+  let results = (outs XeGPU_MemDesc:$res);
+  let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
+                         attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
+  let builders = [
+    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets)>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Value getViewSource() { return getSrc(); }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

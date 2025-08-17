@@ -390,3 +390,15 @@ finally:
   %val3 = phi <8 x i32> [ %val1, %then ], [ %val2, %else ]
   ret <8 x i32> %val3
 }
+
+define <16 x i8> @shuffle_v16_v16i8_r0_31(ptr %arg) {
+; CHECK-LABEL: define <16 x i8> @shuffle_v16_v16i8_r0_31(
+; CHECK-SAME: ptr [[ARG:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ARG]], align 1
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <16 x i8> [[LOAD]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    ret <16 x i8> [[SHUF]]
+;
+  %load= load <16 x i8>, ptr %arg, align 1
+  %shuf = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <16 x i8> %shuf
+}

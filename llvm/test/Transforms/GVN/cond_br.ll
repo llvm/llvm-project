@@ -53,3 +53,22 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 declare void @bar(i32)
+
+define void @indirectbr_could_not_split() {
+; CHECK-LABEL: define void @indirectbr_could_not_split() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[IBR:.*]], label %[[EXIT:.*]]
+; CHECK:       [[IBR]]:
+; CHECK-NEXT:    indirectbr ptr null, [label %[[EXIT]], label %exit]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 false, label %ibr, label %exit
+
+ibr:
+  indirectbr ptr null, [label %exit, label %exit]
+
+exit:
+  ret void
+}

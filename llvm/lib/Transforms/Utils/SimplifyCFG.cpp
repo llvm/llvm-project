@@ -810,11 +810,15 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
     if (!SI->getParent()->hasNPredecessorsOrMore(128 / SI->getNumSuccessors()))
       CV = SI->getCondition();
   } else if (BranchInst *BI = dyn_cast<BranchInst>(TI))
-    if (BI->isConditional() && BI->getCondition()->hasOneUse())
+    if (BI->isConditional() && BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
         if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
           CV = ICI->getOperand(0);
+      } else if (auto *Trunc = dyn_cast<TruncInst>(BI->getCondition())) {
+        if (Trunc->hasNoUnsignedWrap())
+          CV = Trunc->getOperand(0);
       }
+    }
 
   // Unwrap any lossless ptrtoint cast.
   if (CV) {
@@ -840,11 +844,20 @@ BasicBlock *SimplifyCFGOpt::getValueEqualityComparisonCases(
   }
 
   BranchInst *BI = cast<BranchInst>(TI);
-  ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
-  BasicBlock *Succ = BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_NE);
-  Cases.push_back(ValueEqualityComparisonCase(
-      getConstantInt(ICI->getOperand(1), DL), Succ));
-  return BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_EQ);
+  Value *Cond = BI->getCondition();
+  ICmpInst::Predicate Pred;
+  ConstantInt *C;
+  if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
+    Pred = ICI->getPredicate();
+    C = getConstantInt(ICI->getOperand(1), DL);
+  } else {
+    Pred = ICmpInst::ICMP_NE;
+    auto *Trunc = cast<TruncInst>(Cond);
+    C = ConstantInt::get(cast<IntegerType>(Trunc->getOperand(0)->getType()), 0);
+  }
+  BasicBlock *Succ = BI->getSuccessor(Pred == ICmpInst::ICMP_NE);
+  Cases.push_back(ValueEqualityComparisonCase(C, Succ));
+  return BI->getSuccessor(Pred == ICmpInst::ICMP_EQ);
 }
 
 /// Given a vector of bb/value pairs, remove any entries
@@ -1106,7 +1119,10 @@ static void getBranchWeights(Instruction *TI,
   // default weight to be the first entry.
   if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
     assert(Weights.size() == 2);
-    ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
+    auto *ICI = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!ICI)
+      return;
+
     if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
       std::swap(Weights.front(), Weights.back());
   }
@@ -3321,12 +3337,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign :
+         at::getDVRAssignmentMarkers(SpeculatedStore))
       if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
         DbgAssign->replaceVariableLocationOp(OrigV, S);
-    };
-    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
-    for_each(at::getDVRAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -6641,16 +6655,20 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
   }
   case ArrayKind: {
     Type *IndexTy = DL.getIndexType(Array->getType());
+    auto *ArrayTy = cast<ArrayType>(Array->getValueType());
 
-    if (Index->getType() != IndexTy)
+    if (Index->getType() != IndexTy) {
+      unsigned OldBitWidth = Index->getType()->getIntegerBitWidth();
       Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+      if (auto *Zext = dyn_cast<ZExtInst>(Index))
+        Zext->setNonNeg(
+            isUIntN(OldBitWidth - 1, ArrayTy->getNumElements() - 1));
+    }
 
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
-    Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
-                                           GEPIndices, "switch.gep");
-    return Builder.CreateLoad(
-        cast<ArrayType>(Array->getValueType())->getElementType(), GEP,
-        "switch.load");
+    Value *GEP =
+        Builder.CreateInBoundsGEP(ArrayTy, Array, GEPIndices, "switch.gep");
+    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
   }
   }
   llvm_unreachable("Unknown lookup table kind!");

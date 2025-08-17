@@ -192,11 +192,11 @@ QualType ObjCIvarRegion::getValueType() const {
 }
 
 QualType CXXBaseObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType CXXDerivedObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType ParamVarRegion::getValueType() const {

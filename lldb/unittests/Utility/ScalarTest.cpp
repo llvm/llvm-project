@@ -191,6 +191,24 @@ TEST(ScalarTest, GetData) {
   EXPECT_THAT(
       get_data(llvm::APSInt::getMaxValue(/*numBits=*/9, /*Unsigned=*/true)),
       vec({0x01, 0xff}));
+
+  auto get_data_with_size = [](llvm::APInt v, size_t size) {
+    DataExtractor data;
+    Scalar(v).GetData(data, size);
+    return data.GetData().vec();
+  };
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(16, 0x0123), 8),
+              vec({0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x23}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(32, 0x01234567), 4),
+              vec({0x01, 0x23, 0x45, 0x67}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(48, 0xABCD01234567UL), 4),
+              vec({0x01, 0x23, 0x45, 0x67}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(64, 0xABCDEF0123456789UL), 2),
+              vec({0x67, 0x89}));
 }
 
 TEST(ScalarTest, SetValueFromData) {
