@@ -7,6 +7,8 @@ enums: []
 objects: []
 functions:
   - name: ioctl
+    standards:
+      - Linux
     return_type: int
     arguments:
       - type: int
