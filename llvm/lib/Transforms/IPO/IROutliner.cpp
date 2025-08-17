@@ -2237,10 +2237,8 @@ static void fillOverallFunction(
   // Transfer the attributes from the function to the new function.
   for (Attribute A :
        CurrentOS->ExtractedFunction->getAttributes().getFnAttrs()) {
-    // QC-Specific - Begin
     if (M.getTargetTriple().isRISCV() && A.getKindAsString() == "interrupt")
       continue;
-    // QC-Specific - End
 
     CurrentGroup.OutlinedFunction->addFnAttr(A);
   }
