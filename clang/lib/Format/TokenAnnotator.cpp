@@ -6272,7 +6272,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   }
 
   if (Right.is(tok::colon) &&
-      !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon)) {
+      !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon,
+                     TT_BitFieldColon)) {
     return false;
   }
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
