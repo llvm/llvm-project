@@ -33,7 +33,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 using namespace llvm;
@@ -3561,4 +3564,26 @@ void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   // If the result is dead, replace it with %g0.
   if (!Node->hasAnyUseOfValue(0))
     MI.getOperand(0).setReg(SP::G0);
+}
+
+Instruction *SparcTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  bool HasStoreSemantics = isa<AtomicRMWInst>(Inst) || isa<StoreInst>(Inst);
+  if (HasStoreSemantics && isReleaseOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Release);
+  return nullptr;
+}
+
+Instruction *SparcTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  bool HasLoadSemantics = isa<AtomicRMWInst>(Inst) || isa<LoadInst>(Inst);
+  if (HasLoadSemantics && isAcquireOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+
+  // SC plain stores would need a trailing full barrier.
+  if (isa<StoreInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
+    return Builder.CreateFence(Ord);
+  return nullptr;
 }
