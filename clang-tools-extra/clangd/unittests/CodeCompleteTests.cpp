@@ -4478,11 +4478,14 @@ TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
   Annotations Code(R"cpp(
     struct A {
       int member {};
+      int memberFnA(int a);
+      int memberFnA(this A&, float a);
 
       void foo(this A& self) {
-        // Should not offer `member` here, since it needs to be 
-        // referenced as `self.member`.
+        // Should not offer any members here, since 
+        // it needs to be referenced through `self`.
         mem$c1^;
+        // should offer all results
         self.mem$c2^;
       }
     };
@@ -4509,7 +4512,13 @@ TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
     auto Result = codeComplete(testPath(TU.Filename), Code.point("c2"),
                                Preamble.get(), Inputs, Opts);
 
-    EXPECT_THAT(Result.Completions, ElementsAre(named("member")));
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(named("member"),
+                             AllOf(named("memberFnA"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("memberFnA"), signature("(float a)"),
+                                   snippetSuffix("(${1:float a})"))));
   }
 }
 } // namespace

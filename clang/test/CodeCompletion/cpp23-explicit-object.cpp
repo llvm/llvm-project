@@ -49,16 +49,24 @@ int func4() {
 
 struct C {
   int member {};
+  int memberFnA(int a);
+  int memberFnA(this C&, float a);
+
   void foo(this C& self) {
-    // Should not offer `member` here, since it needs to be 
-    // referenced as `self.member`.
+    // Should not offer any members here, since 
+    // it needs to be referenced through `self`.
     mem
   }
   void bar(this C& self) {
+    // should offer all results
     self.mem
   }
 };
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-8):8 -std=c++23 %s | FileCheck --allow-empty %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-7):8 -std=c++23 %s | FileCheck --allow-empty %s
 // CHECK-NOT: COMPLETION: member : [#int#]member
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-5):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC6 %s
+// CHECK-NOT: COMPLETION: memberFnA : [#int#]memberFnA(<#int a#>)
+// CHECK-NOT: COMPLETION: memberFnA : [#int#]memberFnA(<#float a#>)
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-7):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC6 %s
 // CHECK-CC6: COMPLETION: member : [#int#]member
+// CHECK-CC6: COMPLETION: memberFnA : [#int#]memberFnA(<#int a#>)
+// CHECK-CC6: COMPLETION: memberFnA : [#int#]memberFnA(<#float a#>)
