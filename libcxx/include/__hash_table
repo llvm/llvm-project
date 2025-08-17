@@ -97,7 +97,7 @@ struct __hash_node_base {
   __next_pointer __next_;
 
   _LIBCPP_HIDE_FROM_ABI __next_pointer __ptr() _NOEXCEPT {
-    return static_cast<__next_pointer>(pointer_traits<__node_base_pointer>::pointer_to(*this));
+    return pointer_traits<__node_base_pointer>::pointer_to(*this);
   }
 
   _LIBCPP_HIDE_FROM_ABI __node_pointer __upcast() _NOEXCEPT {
@@ -1606,9 +1606,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(const_iterator __p
     while (__pp->__next_ != __np)
       __pp = __pp->__next_;
     __cp->__next_ = __np;
-    __pp->__next_ = static_cast<__next_pointer>(__cp);
+    __pp->__next_ = __cp;
     ++size();
-    return iterator(static_cast<__next_pointer>(__cp));
+    return iterator(__cp);
   }
   return __node_insert_multi(__cp);
 }
@@ -1654,9 +1654,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         __bucket_list_[std::__constrain_hash(__h->__next_->__hash(), __bc)] = __h.get()->__ptr();
     } else {
       __h->__next_  = __pn->__next_;
-      __pn->__next_ = static_cast<__next_pointer>(__h.get());
+      __pn->__next_ = __h.get();
     }
-    __nd = static_cast<__next_pointer>(__h.release());
+    __nd = __h.release();
     // increment size
     ++size();
     __inserted = true;
