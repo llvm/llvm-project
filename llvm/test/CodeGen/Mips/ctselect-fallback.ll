@@ -376,9 +376,263 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
   ret i32 %result
 }
 
+; Test float (32-bit)
+define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
+; M32-LABEL: test_ctselect_f32:
+; M32:       # %bb.0:
+; M32-NEXT:    andi $1, $4, 1
+; M32-NEXT:    andi $1, $1, 1
+; M32-NEXT:    negu $1, $1
+; M32-NEXT:    and $2, $1, $5
+; M32-NEXT:    not $1, $1
+; M32-NEXT:    and $1, $1, $6
+; M32-NEXT:    or $1, $2, $1
+; M32-NEXT:    jr $ra
+; M32-NEXT:    mtc1 $1, $f0
+;
+; M64-LABEL: test_ctselect_f32:
+; M64:       # %bb.0:
+; M64-NEXT:    sll $1, $4, 0
+; M64-NEXT:    mfc1 $2, $f13
+; M64-NEXT:    mfc1 $3, $f14
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    negu $1, $1
+; M64-NEXT:    and $2, $1, $2
+; M64-NEXT:    not $1, $1
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    or $1, $2, $1
+; M64-NEXT:    jr $ra
+; M64-NEXT:    mtc1 $1, $f0
+  %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
+  ret float %result
+}
+
+; Test double (64-bit)
+define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
+; M32-LABEL: test_ctselect_f64:
+; M32:       # %bb.0:
+; M32-NEXT:    addiu $sp, $sp, -16
+; M32-NEXT:    .cfi_def_cfa_offset 16
+; M32-NEXT:    mtc1 $6, $f0
+; M32-NEXT:    mtc1 $7, $f1
+; M32-NEXT:    andi $1, $4, 1
+; M32-NEXT:    lw $3, 36($sp)
+; M32-NEXT:    addiu $2, $1, -1
+; M32-NEXT:    negu $1, $1
+; M32-NEXT:    sdc1 $f0, 8($sp)
+; M32-NEXT:    and $3, $2, $3
+; M32-NEXT:    lw $4, 12($sp)
+; M32-NEXT:    and $4, $1, $4
+; M32-NEXT:    or $3, $4, $3
+; M32-NEXT:    sw $3, 4($sp)
+; M32-NEXT:    lw $3, 32($sp)
+; M32-NEXT:    and $2, $2, $3
+; M32-NEXT:    lw $3, 8($sp)
+; M32-NEXT:    and $1, $1, $3
+; M32-NEXT:    or $1, $1, $2
+; M32-NEXT:    sw $1, 0($sp)
+; M32-NEXT:    ldc1 $f0, 0($sp)
+; M32-NEXT:    jr $ra
+; M32-NEXT:    addiu $sp, $sp, 16
+;
+; M64-LABEL: test_ctselect_f64:
+; M64:       # %bb.0:
+; M64-NEXT:    andi $1, $4, 1
+; M64-NEXT:    dmfc1 $2, $f13
+; M64-NEXT:    daddiu $3, $zero, -1
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    dnegu $1, $1
+; M64-NEXT:    and $2, $1, $2
+; M64-NEXT:    xor $1, $1, $3
+; M64-NEXT:    dmfc1 $3, $f14
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    or $1, $2, $1
+; M64-NEXT:    jr $ra
+; M64-NEXT:    dmtc1 $1, $f0
+  %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
+  ret double %result
+}
+
+
+; Test chained float selects
+define float @test_ctselect_f32_chain(i1 %cond1, i1 %cond2, float %a, float %b, float %c) {
+; M32-LABEL: test_ctselect_f32_chain:
+; M32:       # %bb.0:
+; M32-NEXT:    andi $1, $4, 1
+; M32-NEXT:    lw $3, 16($sp)
+; M32-NEXT:    andi $1, $1, 1
+; M32-NEXT:    negu $1, $1
+; M32-NEXT:    and $2, $1, $6
+; M32-NEXT:    not $1, $1
+; M32-NEXT:    and $1, $1, $7
+; M32-NEXT:    or $1, $2, $1
+; M32-NEXT:    andi $2, $5, 1
+; M32-NEXT:    andi $2, $2, 1
+; M32-NEXT:    negu $2, $2
+; M32-NEXT:    and $1, $2, $1
+; M32-NEXT:    not $2, $2
+; M32-NEXT:    and $2, $2, $3
+; M32-NEXT:    or $1, $1, $2
+; M32-NEXT:    jr $ra
+; M32-NEXT:    mtc1 $1, $f0
+;
+; M64-LABEL: test_ctselect_f32_chain:
+; M64:       # %bb.0:
+; M64-NEXT:    sll $1, $4, 0
+; M64-NEXT:    mfc1 $2, $f14
+; M64-NEXT:    mfc1 $3, $f15
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    negu $1, $1
+; M64-NEXT:    and $2, $1, $2
+; M64-NEXT:    not $1, $1
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    mfc1 $3, $f16
+; M64-NEXT:    or $1, $2, $1
+; M64-NEXT:    sll $2, $5, 0
+; M64-NEXT:    andi $2, $2, 1
+; M64-NEXT:    andi $2, $2, 1
+; M64-NEXT:    negu $2, $2
+; M64-NEXT:    and $1, $2, $1
+; M64-NEXT:    not $2, $2
+; M64-NEXT:    and $2, $2, $3
+; M64-NEXT:    or $1, $1, $2
+; M64-NEXT:    jr $ra
+; M64-NEXT:    mtc1 $1, $f0
+  %tmp = call float @llvm.ct.select.f32(i1 %cond1, float %a, float %b)
+  %result = call float @llvm.ct.select.f32(i1 %cond2, float %tmp, float %c)
+  ret float %result
+}
+
+; Test with float load
+define float @test_ctselect_f32_load(i1 %cond, ptr %p1, ptr %p2) {
+; M32-LABEL: test_ctselect_f32_load:
+; M32:       # %bb.0:
+; M32-NEXT:    andi $1, $4, 1
+; M32-NEXT:    lw $2, 0($5)
+; M32-NEXT:    lw $3, 0($6)
+; M32-NEXT:    andi $1, $1, 1
+; M32-NEXT:    negu $1, $1
+; M32-NEXT:    and $2, $1, $2
+; M32-NEXT:    not $1, $1
+; M32-NEXT:    and $1, $1, $3
+; M32-NEXT:    or $1, $2, $1
+; M32-NEXT:    jr $ra
+; M32-NEXT:    mtc1 $1, $f0
+;
+; M64-LABEL: test_ctselect_f32_load:
+; M64:       # %bb.0:
+; M64-NEXT:    sll $1, $4, 0
+; M64-NEXT:    lw $2, 0($5)
+; M64-NEXT:    lw $3, 0($6)
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    negu $1, $1
+; M64-NEXT:    and $2, $1, $2
+; M64-NEXT:    not $1, $1
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    or $1, $2, $1
+; M64-NEXT:    jr $ra
+; M64-NEXT:    mtc1 $1, $f0
+  %a = load float, ptr %p1
+  %b = load float, ptr %p2
+  %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
+  ret float %result
+}
+
+; Test with double load
+define double @test_ctselect_f64_load(i1 %cond, ptr %p1, ptr %p2) {
+; M32-LABEL: test_ctselect_f64_load:
+; M32:       # %bb.0:
+; M32-NEXT:    addiu $sp, $sp, -8
+; M32-NEXT:    .cfi_def_cfa_offset 8
+; M32-NEXT:    andi $2, $4, 1
+; M32-NEXT:    lw $1, 4($6)
+; M32-NEXT:    lw $4, 4($5)
+; M32-NEXT:    addiu $3, $2, -1
+; M32-NEXT:    negu $2, $2
+; M32-NEXT:    and $1, $3, $1
+; M32-NEXT:    and $4, $2, $4
+; M32-NEXT:    or $1, $4, $1
+; M32-NEXT:    sw $1, 4($sp)
+; M32-NEXT:    lw $1, 0($6)
+; M32-NEXT:    and $1, $3, $1
+; M32-NEXT:    lw $3, 0($5)
+; M32-NEXT:    and $2, $2, $3
+; M32-NEXT:    or $1, $2, $1
+; M32-NEXT:    sw $1, 0($sp)
+; M32-NEXT:    ldc1 $f0, 0($sp)
+; M32-NEXT:    jr $ra
+; M32-NEXT:    addiu $sp, $sp, 8
+;
+; M64-LABEL: test_ctselect_f64_load:
+; M64:       # %bb.0:
+; M64-NEXT:    andi $1, $4, 1
+; M64-NEXT:    ld $2, 0($5)
+; M64-NEXT:    daddiu $3, $zero, -1
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    dnegu $1, $1
+; M64-NEXT:    and $2, $1, $2
+; M64-NEXT:    xor $1, $1, $3
+; M64-NEXT:    ld $3, 0($6)
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    or $1, $2, $1
+; M64-NEXT:    jr $ra
+; M64-NEXT:    dmtc1 $1, $f0
+  %a = load double, ptr %p1
+  %b = load double, ptr %p2
+  %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
+  ret double %result
+}
+
+; Test mixed with arithmetic
+define float @test_ctselect_f32_arithmetic(i1 %cond, float %x, float %y) {
+; M32-LABEL: test_ctselect_f32_arithmetic:
+; M32:       # %bb.0:
+; M32-NEXT:    mtc1 $6, $f0
+; M32-NEXT:    mtc1 $5, $f1
+; M32-NEXT:    andi $1, $4, 1
+; M32-NEXT:    andi $1, $1, 1
+; M32-NEXT:    add.s $f2, $f1, $f0
+; M32-NEXT:    sub.s $f0, $f1, $f0
+; M32-NEXT:    negu $1, $1
+; M32-NEXT:    mfc1 $2, $f2
+; M32-NEXT:    mfc1 $3, $f0
+; M32-NEXT:    and $2, $1, $2
+; M32-NEXT:    not $1, $1
+; M32-NEXT:    and $1, $1, $3
+; M32-NEXT:    or $1, $2, $1
+; M32-NEXT:    jr $ra
+; M32-NEXT:    mtc1 $1, $f0
+;
+; M64-LABEL: test_ctselect_f32_arithmetic:
+; M64:       # %bb.0:
+; M64-NEXT:    add.s $f0, $f13, $f14
+; M64-NEXT:    sll $1, $4, 0
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    negu $1, $1
+; M64-NEXT:    mfc1 $2, $f0
+; M64-NEXT:    sub.s $f0, $f13, $f14
+; M64-NEXT:    and $2, $1, $2
+; M64-NEXT:    not $1, $1
+; M64-NEXT:    mfc1 $3, $f0
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    or $1, $2, $1
+; M64-NEXT:    jr $ra
+; M64-NEXT:    mtc1 $1, $f0
+  %sum = fadd float %x, %y
+  %diff = fsub float %x, %y
+  %result = call float @llvm.ct.select.f32(i1 %cond, float %sum, float %diff)
+  ret float %result
+}
+
+; Declare the intrinsics
 ; Declare the intrinsics
 declare i8 @llvm.ct.select.i8(i1, i8, i8)
 declare i16 @llvm.ct.select.i16(i1, i16, i16)
 declare i32 @llvm.ct.select.i32(i1, i32, i32)
-declare i64 @llvm.ct.select.i64(i1, i64, i64)
 declare ptr @llvm.ct.select.p0(i1, ptr, ptr)
+declare i64 @llvm.ct.select.i64(i1, i64, i64)
+declare double @llvm.ct.select.f64(i1, double, double)

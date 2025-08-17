@@ -15,6 +15,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -6449,30 +6450,50 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   setValue(&I, Result);
 }
 
+/// Fallback implementation is an alternative approach for managing architectures that don't have 
+/// native support for Constant-Time Select.
 SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
     EVT VT) {
   SDNodeFlags ProtectedFlag;
   ProtectedFlag.setNoMerge(true);
 
-  // Extend cond to VT and normalize to 0 or 1
-  if (Cond.getValueType() != VT)
-    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond, ProtectedFlag);
+  SDValue WorkingT = T;
+  SDValue WorkingF = F;
+  EVT WorkingVT = VT;
 
-  SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue Norm = DAG.getNode(ISD::AND, DL, VT, Cond, One, ProtectedFlag);
+  if (VT.isFloatingPoint()) {
+    unsigned int BitWidth = VT.getSizeInBits();
+    WorkingVT = EVT::getIntegerVT(*DAG.getContext(), BitWidth);
+    WorkingT = DAG.getBitcast(WorkingVT, T);
+    WorkingF = DAG.getBitcast(WorkingVT, F);
+  }
+
+  // Extend cond to WorkingVT and normalize to 0 or 1
+  if (Cond.getValueType() != WorkingVT)
+    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, WorkingVT, Cond, ProtectedFlag);
+
+  SDValue One = DAG.getConstant(1, DL, WorkingVT);
+  SDValue Norm = DAG.getNode(ISD::AND, DL, WorkingVT, Cond, One, ProtectedFlag);
 
   // Mask = 0 - Norm
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, Zero, Norm, ProtectedFlag);
+  SDValue Zero = DAG.getConstant(0, DL, WorkingVT);
+  SDValue Mask = DAG.getNode(ISD::SUB, DL, WorkingVT, Zero, Norm, ProtectedFlag);
 
-  SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
-  SDValue Invert = DAG.getNode(ISD::XOR, DL, VT, Mask, AllOnes, ProtectedFlag);
+  SDValue AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
+  SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes, ProtectedFlag);
 
-  // (or (and T, Mask), (and F, ~Mask))
-  SDValue TM = DAG.getNode(ISD::AND, DL, VT, Mask, T, ProtectedFlag);
-  SDValue FM = DAG.getNode(ISD::AND, DL, VT, Invert, F, ProtectedFlag);
-  return DAG.getNode(ISD::OR, DL, VT, TM, FM, ProtectedFlag);
+  // (or (and WorkingT, Mask), (and F, ~Mask))
+  SDValue TM = DAG.getNode(ISD::AND, DL, WorkingVT, Mask, WorkingT, ProtectedFlag);
+  SDValue FM = DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF, ProtectedFlag);
+  SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM, ProtectedFlag);
+
+  // Convert back to Float if needed
+  if (VT.isFloatingPoint()) {
+    Result = DAG.getBitcast(VT, Result);
+  }
+
+  return Result;
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -6714,9 +6735,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(!VT.isVector() &&
            "Vector type not supported yet for fallback implementation");
 
-    // We don't support floating points yet
-    assert(!VT.isFloatingPoint() &&
-           "Float point type not supported yet fallback implementation");
+    // // We don't support floating points yet
+    // assert(!VT.isFloatingPoint() &&
+    //        "Float point type not supported yet fallback implementation");
 
     Type *CurrType = VT.getTypeForEVT(*Context);
     if (CurrType->isPointerTy()) {

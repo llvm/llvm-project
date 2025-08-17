@@ -342,9 +342,273 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
   ret i32 %result
 }
 
+; Test float (32-bit)
+define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
+; RV64-LABEL: test_ctselect_f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    addi a3, a0, -1
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_ctselect_f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    and a1, a0, a1
+; RV32-NEXT:    not a0, a0
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    ret
+  %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
+  ret float %result
+}
+
+; Test double (64-bit)
+define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
+; RV64-LABEL: test_ctselect_f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    slli a0, a0, 63
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    and a1, a0, a1
+; RV64-NEXT:    not a0, a0
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_ctselect_f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    addi a5, a0, -1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    and a3, a5, a3
+; RV32-NEXT:    and a1, a0, a1
+; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    and a2, a0, a2
+; RV32-NEXT:    or a0, a1, a3
+; RV32-NEXT:    or a1, a2, a4
+; RV32-NEXT:    ret
+  %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
+  ret double %result
+}
+
+
+; Test chained float selects
+define float @test_ctselect_f32_chain(i1 %cond1, i1 %cond2, float %a, float %b, float %c) {
+; RV64-LABEL: test_ctselect_f32_chain:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    andi a1, a1, 1
+; RV64-NEXT:    addi a5, a0, -1
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    and a3, a5, a3
+; RV64-NEXT:    neg a5, a1
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    or a0, a0, a3
+; RV64-NEXT:    and a0, a5, a0
+; RV64-NEXT:    and a1, a1, a4
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_ctselect_f32_chain:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    srai a1, a1, 31
+; RV32-NEXT:    and a2, a0, a2
+; RV32-NEXT:    not a0, a0
+; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    not a3, a1
+; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    and a3, a3, a4
+; RV32-NEXT:    or a0, a0, a3
+; RV32-NEXT:    ret
+  %tmp = call float @llvm.ct.select.f32(i1 %cond1, float %a, float %b)
+  %result = call float @llvm.ct.select.f32(i1 %cond2, float %tmp, float %c)
+  ret float %result
+}
+
+; Test with float load
+define float @test_ctselect_f32_load(i1 %cond, ptr %p1, ptr %p2) {
+; RV64-LABEL: test_ctselect_f32_load:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lw a1, 0(a1)
+; RV64-NEXT:    lw a2, 0(a2)
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    addi a3, a0, -1
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_ctselect_f32_load:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    lw a2, 0(a2)
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    and a1, a0, a1
+; RV32-NEXT:    not a0, a0
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    ret
+  %a = load float, ptr %p1
+  %b = load float, ptr %p2
+  %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
+  ret float %result
+}
+
+; Test with double load
+define double @test_ctselect_f64_load(i1 %cond, ptr %p1, ptr %p2) {
+; RV64-LABEL: test_ctselect_f64_load:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a1, 0(a1)
+; RV64-NEXT:    ld a2, 0(a2)
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    slli a0, a0, 63
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    and a1, a0, a1
+; RV64-NEXT:    not a0, a0
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_ctselect_f64_load:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a3, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a2, 4(a2)
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    addi a5, a0, -1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    and a3, a0, a3
+; RV32-NEXT:    and a2, a5, a2
+; RV32-NEXT:    and a1, a0, a1
+; RV32-NEXT:    or a0, a3, a4
+; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    ret
+  %a = load double, ptr %p1
+  %b = load double, ptr %p2
+  %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
+  ret double %result
+}
+
+; Test mixed with arithmetic
+define float @test_ctselect_f32_arithmetic(i1 %cond, float %x, float %y) {
+; RV64-LABEL: test_ctselect_f32_arithmetic:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    .cfi_offset s1, -24
+; RV64-NEXT:    .cfi_offset s2, -32
+; RV64-NEXT:    .cfi_offset s3, -40
+; RV64-NEXT:    mv s0, a2
+; RV64-NEXT:    mv s1, a1
+; RV64-NEXT:    mv s2, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:    call __addsf3
+; RV64-NEXT:    mv s3, a0
+; RV64-NEXT:    mv a0, s1
+; RV64-NEXT:    mv a1, s0
+; RV64-NEXT:    call __subsf3
+; RV64-NEXT:    andi a1, s2, 1
+; RV64-NEXT:    neg a2, a1
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    and a2, a2, s3
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore s1
+; RV64-NEXT:    .cfi_restore s2
+; RV64-NEXT:    .cfi_restore s3
+; RV64-NEXT:    addi sp, sp, 48
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_ctselect_f32_arithmetic:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    .cfi_offset s1, -12
+; RV32-NEXT:    .cfi_offset s2, -16
+; RV32-NEXT:    .cfi_offset s3, -20
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a1
+; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    call __addsf3
+; RV32-NEXT:    mv s3, a0
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:    mv a1, s0
+; RV32-NEXT:    call __subsf3
+; RV32-NEXT:    andi a1, s2, 1
+; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    srai a1, a1, 31
+; RV32-NEXT:    and a2, a1, s3
+; RV32-NEXT:    not a1, a1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
+; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+  %sum = fadd float %x, %y
+  %diff = fsub float %x, %y
+  %result = call float @llvm.ct.select.f32(i1 %cond, float %sum, float %diff)
+  ret float %result
+}
+
+; Declare the intrinsics
 ; Declare the intrinsics
 declare i8 @llvm.ct.select.i8(i1, i8, i8)
 declare i16 @llvm.ct.select.i16(i1, i16, i16)
 declare i32 @llvm.ct.select.i32(i1, i32, i32)
 declare i64 @llvm.ct.select.i64(i1, i64, i64)
 declare ptr @llvm.ct.select.p0(i1, ptr, ptr)
+declare float @llvm.ct.select.f32(i1, float, float)
+declare double @llvm.ct.select.f64(i1, double, double)
