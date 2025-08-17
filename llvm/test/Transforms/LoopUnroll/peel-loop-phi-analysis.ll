@@ -197,3 +197,101 @@ for.body:
   %exitcond = icmp eq i32 %inc, 100000
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
+
+; Check that phi analysis can handle a binary operator with induction variable.
+define void @_Z6binaryv_induction() {
+; The phis become invariant through the chain of phis, with a unary
+; instruction on a loop invariant.  Check that the phis for x, a, and y
+; are removed since x is based on y, which is based on a, which is based
+; on a binary add of a phi and a constant.
+; Consider the calls to g:
+; First iteration: g(0), x=0, g(0), y=1, a=2
+; Second iteration: g(0), x=1, g(2), y=3(binary operator), a=3
+; Third iteration: g(1), x=3, g(3), y=4, a=4
+; Fourth iteration (and subsequent): g(3), x=4, g(4), y=5, a=6
+; Therefore, peeling 3 times removes the phi nodes.
+;
+; void g(int);
+; void binary() {
+;   int x = 0;
+;   int y = 0;
+;   int a = 0;
+;   for(int i = 0; i <100000; ++i) {
+;     g(x);
+;     x = y;
+;     g(a);
+;     y = a + 1;
+;     a = i + 2;
+;   }
+; }
+; CHECK-LABEL: @_Z6binaryv_induction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
+; CHECK-NEXT:    [[ADD_PEEL:%.*]] = add nuw nsw i32 0, 2
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw nsw i32 0, 1
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp ne i32 [[INC_PEEL]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
+; CHECK:       for.body.peel2:
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[ADD_PEEL]])
+; CHECK-NEXT:    [[ADD_PEEL3:%.*]] = add nuw nsw i32 [[INC_PEEL]], 2
+; CHECK-NEXT:    [[INC_PEEL4:%.*]] = add nuw nsw i32 [[INC_PEEL]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL5:%.*]] = icmp ne i32 [[INC_PEEL4]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL5]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_COND_CLEANUP]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL7:%.*]]
+; CHECK:       for.body.peel7:
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[ADD_PEEL3]])
+; CHECK-NEXT:    [[ADD_PEEL8:%.*]] = add nuw nsw i32 [[INC_PEEL4]], 2
+; CHECK-NEXT:    [[INC_PEEL9:%.*]] = add nuw nsw i32 [[INC_PEEL4]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL10:%.*]] = icmp ne i32 [[INC_PEEL9]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL10]], label [[FOR_BODY_PEEL_NEXT6:%.*]], label [[FOR_COND_CLEANUP]]
+; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT11:%.*]]
+; CHECK:       for.body.peel.next11:
+; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
+; CHECK:       entry.peel.newph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC_PEEL9]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[ADD_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[Y:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[ADD_PEEL8]], [[ENTRY_PEEL_NEWPH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[Y]] = phi i32 [ [[ADD_PEEL3]], [[ENTRY_PEEL_NEWPH]] ], [ [[A]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[X]])
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[A]])
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I]], 2
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+;
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %x = phi i32 [ 0, %entry ], [ %y, %for.body ]
+  %a = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %y = phi i32 [ 0, %entry ], [ %a, %for.body ]
+  tail call void @_Z1gi(i32 signext %x)
+  tail call void @_Z1gi(i32 signext %a)
+  %add = add nuw nsw i32 %i, 2
+  %inc = add nuw nsw i32 %i, 1
+  %exitcond = icmp ne i32 %inc, 100000
+  br i1 %exitcond, label %for.body, label %for.cond.cleanup
+}
+
