@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/DiagnosticSema.h"
-#include "llvm/ADT/StringExtras.h"
-
 #include "CIRGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -39,20 +35,18 @@ static void collectClobbers(const CIRGenFunction &cgf, const AsmStmt &s,
 
   // Clobbers
   for (unsigned i = 0, e = s.getNumClobbers(); i != e; i++) {
-    std::string clobberStr = s.getClobber(i);
-    StringRef clobber{clobberStr};
-    if (clobber == "memory")
+    std::string clobber = s.getClobber(i);
+    if (clobber == "memory") {
       readOnly = readNone = false;
-    else if (clobber == "unwind") {
+    } else if (clobber == "unwind") {
       hasUnwindClobber = true;
       continue;
     } else if (clobber != "cc") {
       clobber = cgf.getTarget().getNormalizedGCCRegisterName(clobber);
       if (cgm.getCodeGenOpts().StackClashProtector &&
-          cgf.getTarget().isSPRegName(clobber)) {
+          cgf.getTarget().isSPRegName(clobber))
         cgm.getDiags().Report(s.getAsmLoc(),
                               diag::warn_stack_clash_protection_inline_asm);
-      }
     }
 
     if (isa<MSAsmStmt>(&s)) {
@@ -60,7 +54,7 @@ static void collectClobbers(const CIRGenFunction &cgf, const AsmStmt &s,
         if (constraints.find("=&A") != std::string::npos)
           continue;
         std::string::size_type position1 =
-            constraints.find("={" + clobber.str() + "}");
+            constraints.find("={" + clobber + "}");
         if (position1 != std::string::npos) {
           constraints.insert(position1 + 1, "&");
           continue;
@@ -93,7 +87,12 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   // Assemble the final asm string.
   std::string asmString = s.generateAsmString(getContext());
 
+  bool isGCCAsmGoto = false;
+
   std::string constraints;
+  std::vector<mlir::Value> outArgs;
+  std::vector<mlir::Value> inArgs;
+  std::vector<mlir::Value> inOutArgs;
 
   // An inline asm can be marked readonly if it meets the following conditions:
   //  - it doesn't have any sideeffects
@@ -112,7 +111,8 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   bool hasUnwindClobber = false;
   collectClobbers(*this, s, constraints, hasUnwindClobber, readOnly, readNone);
 
-  llvm::SmallVector<mlir::ValueRange, 8> operands;
+  std::array<mlir::ValueRange, 3> operands = {outArgs, inArgs, inOutArgs};
+
   mlir::Type resultType;
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
@@ -121,7 +121,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       getLoc(s.getAsmLoc()), resultType, operands, asmString, constraints,
       hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
 
-  if (false /*IsGCCAsmGoto*/) {
+  if (isGCCAsmGoto) {
     assert(!cir::MissingFeatures::asmGoto());
   } else if (hasUnwindClobber) {
     assert(!cir::MissingFeatures::asmUnwindClobber());

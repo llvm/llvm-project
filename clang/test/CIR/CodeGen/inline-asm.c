@@ -5,6 +5,9 @@
 
 void f1() {
   // CIR: cir.asm(x86_att, 
+  // CIR:   out = [],
+  // CIR:   in = [],
+  // CIR:   in_out = [],
   // CIR:   {"" "~{dirflag},~{fpsr},~{flags}"}) side_effects
   // LLVM: call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"()
   __asm__ volatile("" : : : );
@@ -12,6 +15,9 @@ void f1() {
 
 void f2() {
   // CIR: cir.asm(x86_att,
+  // CIR:   out = [],
+  // CIR:   in = [],
+  // CIR:   in_out = [],
   // CIR:   {"nop" "~{dirflag},~{fpsr},~{flags}"}) side_effects
   // LLVM: call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"()
   __asm__ volatile("nop" : : : );
