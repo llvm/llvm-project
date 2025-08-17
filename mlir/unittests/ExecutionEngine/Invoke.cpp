@@ -331,7 +331,7 @@ TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
   // crash for AArch64 see related issue #71963.
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   ASSERT_TRUE(!!tmBuilderOrError);
-  if (!tmBuilderOrError->getTargetTriple().isAArch64()) {
+  if (tmBuilderOrError->getTargetTriple().isAArch64()) {
     return;
   }
   std::string moduleStr = R"mlir(
