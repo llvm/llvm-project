@@ -1649,8 +1649,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 }
 
-// TODO(CIR): The properties of functions that require verification haven't
-// been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() {
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
@@ -1664,11 +1662,13 @@ mlir::LogicalResult cir::FuncOp::verify() {
     }
   });
 
-  llvm::SmallSet<llvm::StringRef, 16> mismatched =
-      llvm::set_difference(gotos, labels);
+  if (!labels.empty() || !gotos.empty()) {
+    llvm::SmallSet<llvm::StringRef, 16> mismatched =
+        llvm::set_difference(gotos, labels);
 
-  if (!mismatched.empty())
-    return emitOpError() << "goto/label mismatch";
+    if (!mismatched.empty())
+      return emitOpError() << "goto/label mismatch";
+  }
   return success();
 }
 
