@@ -1510,18 +1510,23 @@ let hasSideEffects = false in {
                                     "mov.b64 \t$d, __local_depot$num;">;
 }
 
-
-// copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
-let hasSideEffects = false, isAsCheapAsAMove = true in {
-  let isMoveReg = true in
+let hasSideEffects = false in {
+  let isMoveReg = true, isAsCheapAsAMove = true in
     class MOVr<RegisterClass RC, string OpStr> :
       BasicNVPTXInst<(outs RC:$dst), (ins RC:$src), "mov." # OpStr>;
 
-  let isMoveImm = true in
+  let isMoveImm = true, isAsCheapAsAMove = true in
     class MOVi<RegTyInfo t, string suffix> :
       BasicNVPTXInst<(outs t.RC:$dst), (ins t.Imm:$src),
               "mov." # suffix,
               [(set t.Ty:$dst, t.ImmNode:$src)]>;
+
+  // We don't want to set isAsCheapAsAMove to true for these instructions as
+  // this would prevent CSE and resulted in regressions (see discussion after
+  // PR-145581 in llvm-project).
+  class MovSymInst<RegTyInfo t> :
+    BasicNVPTXInst<(outs t.RC:$dst), (ins Operand<t.Ty>:$src),
+                   "mov.b" # t.Size>;
 }
 
 def MOV_B1_r : MOVr<B1, "pred">;
@@ -1539,6 +1544,9 @@ def MOV_BF16_i : MOVi<BF16RT, "b16">;
 def MOV_F32_i  : MOVi<F32RT, "b32">;
 def MOV_F64_i  : MOVi<F64RT, "b64">;
 
+def MOV_B32_sym : MovSymInst<I32RT>;
+def MOV_B64_sym : MovSymInst<I64RT>;
+
 
 def to_tglobaladdr : SDNodeXForm<globaladdr, [{
   return CurDAG->getTargetGlobalAddress(N->getGlobal(), SDLoc(N),
@@ -1555,11 +1563,11 @@ def to_tframeindex : SDNodeXForm<frameindex, [{
   return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
 }]>;
 
-def : Pat<(i32 globaladdr:$dst), (MOV_B32_i (to_tglobaladdr $dst))>;
-def : Pat<(i64 globaladdr:$dst), (MOV_B64_i (to_tglobaladdr $dst))>;
+def : Pat<(i32 globaladdr:$dst), (MOV_B32_sym (to_tglobaladdr $dst))>;
+def : Pat<(i64 globaladdr:$dst), (MOV_B64_sym (to_tglobaladdr $dst))>;
 
-def : Pat<(i32 externalsym:$dst), (MOV_B32_i (to_texternsym $dst))>;
-def : Pat<(i64 externalsym:$dst), (MOV_B64_i (to_texternsym $dst))>;
+def : Pat<(i32 externalsym:$dst), (MOV_B32_sym (to_texternsym $dst))>;
+def : Pat<(i64 externalsym:$dst), (MOV_B64_sym (to_texternsym $dst))>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs B32:$dst), (ins ADDR:$addr),
