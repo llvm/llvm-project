@@ -126,6 +126,9 @@ clang-format is turned off or back on.
   // clang-format on
   void formatted_code_again;
 
+In addition, the ``OneLineFormatOffRegex`` option gives you a concise way to
+disable formatting for all of the lines that match the regular expression.
+
 
 Configuring Style in Code
 =========================
