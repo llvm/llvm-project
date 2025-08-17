@@ -607,18 +607,20 @@ struct __is_std_optional : false_type {};
 template <class _Tp>
 struct __is_std_optional<optional<_Tp>> : true_type {};
 
-template <class _Tp, class = void>
-struct __optional_iterator_aliases {};
-
-#    if _LIBCPP_STD_VER >= 26
-// disallow T (&)() and T (&)[]
 template <class _Tp>
-struct __optional_iterator_aliases<
-    _Tp,
-    __enable_if_t<!(is_reference<_Tp>::value && (is_function<__libcpp_remove_reference_t<_Tp>>::value ||
-                                                 is_unbounded_array<__libcpp_remove_reference_t<_Tp>>::value))> > {
+class _LIBCPP_DECLSPEC_EMPTY_BASES optional
+    : private __optional_move_assign_base<_Tp>,
+      private __optional_sfinae_ctor_base_t<_Tp>,
+      private __optional_sfinae_assign_base_t<_Tp> {
+  using __base _LIBCPP_NODEBUG = __optional_move_assign_base<_Tp>;
+
   using __pointer _LIBCPP_NODEBUG       = std::add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = std::add_pointer_t<const _Tp>;
+
+public:
+  using value_type = _Tp;
+
+#    if _LIBCPP_STD_VER >= 26
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
   using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
@@ -626,29 +628,6 @@ struct __optional_iterator_aliases<
   using iterator       = __wrap_iter<__pointer>;
   using const_iterator = __wrap_iter<__const_pointer>;
 #      endif
-};
-
-#    endif
-
-template <class _Tp>
-class _LIBCPP_DECLSPEC_EMPTY_BASES optional
-    : private __optional_move_assign_base<_Tp>,
-      private __optional_sfinae_ctor_base_t<_Tp>,
-      private __optional_sfinae_assign_base_t<_Tp>,
-      public __optional_iterator_aliases<_Tp> {
-  using __base _LIBCPP_NODEBUG         = __optional_move_assign_base<_Tp>;
-  using __iter_aliases _LIBCPP_NODEBUG = __optional_iterator_aliases<_Tp>;
-#    if _LIBCPP_STD_VER >= 26
-  using typename __iter_aliases::__const_pointer;
-  using typename __iter_aliases::__pointer;
-#    endif
-
-public:
-  using value_type = _Tp;
-
-#    if _LIBCPP_STD_VER >= 26
-  using typename __iter_aliases::const_iterator;
-  using typename __iter_aliases::iterator;
 #    endif
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
