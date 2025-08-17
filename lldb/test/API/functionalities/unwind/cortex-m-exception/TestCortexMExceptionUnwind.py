@@ -20,6 +20,7 @@ class TestCortexMExceptionUnwind(TestBase):
         f = open(exe)
         exe_json = json.load(f)
         exe_uuid = exe_json["uuid"]
+        f.close()
         target.AddModule(exe, "", exe_uuid)
         self.assertTrue(target.IsValid())
 
