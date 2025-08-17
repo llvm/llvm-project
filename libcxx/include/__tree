@@ -613,7 +613,7 @@ public:
     allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
 #else
     allocator_traits<_Alloc>::construct(
-        __na, reinterpret_cast<__node_value_type*>(std::addressof(__buffer_)), std::forward<_Args>(__args)...);
+        __na, reinterpret_cast<__node_value_type*>(__buffer_), std::forward<_Args>(__args)...);
 #endif
   }
   ~__tree_node()                             = delete;
