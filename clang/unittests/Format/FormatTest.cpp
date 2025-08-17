@@ -8618,13 +8618,21 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyFormat("extern \"C\" //\n"
                "    void f();");
 
-  FormatStyle Style = getLLVMStyle();
+  auto Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaa* const aaaaaaaaaaaa) {}",
                Style);
   verifyFormat("void aaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*\n"
                "                 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}",
+               Style);
+
+  Style = getLLVMStyleWithColumns(45);
+  Style.PenaltyReturnTypeOnItsOwnLine = 400;
+  verifyFormat("template <bool abool, // a comment\n"
+               "          bool anotherbool>\n"
+               "static inline std::pair<size_t, MyCustomType>\n"
+               "myfunc(const char *buf, const char *&err);",
                Style);
 }
 
