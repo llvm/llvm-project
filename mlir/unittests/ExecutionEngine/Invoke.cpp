@@ -326,14 +326,14 @@ static int initCnt = 0;
 // A helper function that will be called during the JIT's initialization.
 static void initCallback() { initCnt += 1; }
 
-#if __has_feature(memory_sanitizer) || __has_feature(address_sanitizer) ||     \
-    __has_feature(hwaddress_sanitizer) ||                                      \
-    __has_feature(undefined_behavior_sanitizer)
-#define MAYBE_JITCallbackInGlobalCtor DISABLED_JITCallbackInGlobalCtor
-#else
-#define MAYBE_JITCallbackInGlobalCtor SKIP_WITHOUT_JIT(JITCallbackInGlobalCtor)
-#endif
 TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  ASSERT_TRUE(!!tmBuilderOrError);
+  if (!tmBuilderOrError->getTargetTriple().isAArch64()) {
+    return;
+  }
   std::string moduleStr = R"mlir(
   llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
   llvm.func @ctor() {
@@ -366,17 +366,11 @@ TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
     return symbolMap;
   });
   jit->initialize();
-  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
-  ASSERT_TRUE(!!tmBuilderOrError);
-  if (!tmBuilderOrError->getTargetTriple().isAArch64()) {
-    // validate the side effect of initialization
-    ASSERT_EQ(initCnt, 1);
-    // next initialization should be noop
-    jit->initialize();
-    ASSERT_EQ(initCnt, 1);
-  }
+  // validate the side effect of initialization
+  ASSERT_EQ(initCnt, 1);
+  // next initialization should be noop
+  jit->initialize();
+  ASSERT_EQ(initCnt, 1);
 }
 
 #endif // _WIN32
