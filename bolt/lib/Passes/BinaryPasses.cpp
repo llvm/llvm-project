@@ -662,7 +662,7 @@ Error CleanMCState::runOnFunctions(BinaryContext &BC) {
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");
-      const_cast<MCSymbol *>(S)->setUndefined();
+      const_cast<MCSymbol *>(S)->setFragment(nullptr);
     }
     if (S->isRegistered()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
