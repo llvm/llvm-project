@@ -7453,9 +7453,9 @@ static bool mayAlias(const MachineInstr &MIa,
 ///   - 32-bit elements (LD1i32, 4 lanes total)
 ///   - 16-bit elements (LD1i16, 8 lanes total)
 ///   - 8-bit elements (LD1i8, 16 lanes total)
-static bool getGatherPattern(MachineInstr &Root,
-                             SmallVectorImpl<unsigned> &Patterns,
-                             unsigned LoadLaneOpCode, unsigned NumLanes) {
+static bool getGatherLanePattern(MachineInstr &Root,
+                                 SmallVectorImpl<unsigned> &Patterns,
+                                 unsigned LoadLaneOpCode, unsigned NumLanes) {
   const MachineFunction *MF = Root.getMF();
 
   // Early exit if optimizing for size.
@@ -7561,11 +7561,11 @@ static bool getLoadPatterns(MachineInstr &Root,
   // The pattern searches for loads into single lanes.
   switch (Root.getOpcode()) {
   case AArch64::LD1i32:
-    return getGatherPattern(Root, Patterns, Root.getOpcode(), 4);
+    return getGatherLanePattern(Root, Patterns, Root.getOpcode(), 4);
   case AArch64::LD1i16:
-    return getGatherPattern(Root, Patterns, Root.getOpcode(), 8);
+    return getGatherLanePattern(Root, Patterns, Root.getOpcode(), 8);
   case AArch64::LD1i8:
-    return getGatherPattern(Root, Patterns, Root.getOpcode(), 16);
+    return getGatherLanePattern(Root, Patterns, Root.getOpcode(), 16);
   default:
     return false;
   }
@@ -7576,11 +7576,11 @@ static bool getLoadPatterns(MachineInstr &Root,
 /// sequential NEON lane loads into parallel vector loads that can execute
 /// concurrently.
 static void
-generateGatherPattern(MachineInstr &Root,
-                      SmallVectorImpl<MachineInstr *> &InsInstrs,
-                      SmallVectorImpl<MachineInstr *> &DelInstrs,
-                      DenseMap<Register, unsigned> &InstrIdxForVirtReg,
-                      unsigned Pattern, unsigned NumLanes) {
+generateGatherLanePattern(MachineInstr &Root,
+                          SmallVectorImpl<MachineInstr *> &InsInstrs,
+                          SmallVectorImpl<MachineInstr *> &DelInstrs,
+                          DenseMap<Register, unsigned> &InstrIdxForVirtReg,
+                          unsigned Pattern, unsigned NumLanes) {
   MachineFunction &MF = *Root.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -9037,18 +9037,18 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     break;
   }
   case AArch64MachineCombinerPattern::GATHER_LANE_i32: {
-    generateGatherPattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
-                          Pattern, 4);
+    generateGatherLanePattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
+                              Pattern, 4);
     break;
   }
   case AArch64MachineCombinerPattern::GATHER_LANE_i16: {
-    generateGatherPattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
-                          Pattern, 8);
+    generateGatherLanePattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
+                              Pattern, 8);
     break;
   }
   case AArch64MachineCombinerPattern::GATHER_LANE_i8: {
-    generateGatherPattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
-                          Pattern, 16);
+    generateGatherLanePattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
+                              Pattern, 16);
     break;
   }
 
