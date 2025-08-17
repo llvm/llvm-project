@@ -496,6 +496,7 @@ public:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
       break;
+    case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
       break;
     }
@@ -862,53 +863,6 @@ public:
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedShort;
     this->UseMicrosoftManglingForC = true;
-  }
-};
-
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY NaClTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
-
-    DefineStd(Builder, "unix", Opts);
-    Builder.defineMacro("__native_client__");
-  }
-
-public:
-  NaClTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    this->LongAlign = 32;
-    this->LongWidth = 32;
-    this->PointerAlign = 32;
-    this->PointerWidth = 32;
-    this->IntMaxType = TargetInfo::SignedLongLong;
-    this->Int64Type = TargetInfo::SignedLongLong;
-    this->DoubleAlign = 64;
-    this->LongDoubleWidth = 64;
-    this->LongDoubleAlign = 64;
-    this->LongLongWidth = 64;
-    this->LongLongAlign = 64;
-    this->SizeType = TargetInfo::UnsignedInt;
-    this->PtrDiffType = TargetInfo::SignedInt;
-    this->IntPtrType = TargetInfo::SignedInt;
-    // RegParmMax is inherited from the underlying architecture.
-    this->LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    if (Triple.getArch() == llvm::Triple::arm) {
-      // Handled in ARM's setABI().
-    } else if (Triple.getArch() == llvm::Triple::x86) {
-      this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-n8:16:32-S128");
-    } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-n8:16:32:64-S128");
-    } else if (Triple.getArch() == llvm::Triple::mipsel) {
-      // Handled on mips' setDataLayout.
-    }
   }
 };
 

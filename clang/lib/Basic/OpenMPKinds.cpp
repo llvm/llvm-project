@@ -378,7 +378,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
       return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
-    llvm_unreachable("Invalid OpenMP 'schedule' clause type");
+    llvm_unreachable("Invalid OpenMP 'defaultmap' clause type");
   case OMPC_atomic_default_mem_order:
     switch (Type) {
     case OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown:

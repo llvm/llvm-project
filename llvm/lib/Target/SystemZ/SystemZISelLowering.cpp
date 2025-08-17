@@ -1423,8 +1423,9 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 }
 
 bool SystemZTargetLowering::findOptimalMemOpLowering(
-    std::vector<EVT> &MemOps, unsigned Limit, const MemOp &Op, unsigned DstAS,
-    unsigned SrcAS, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
   const int MVCFastLen = 16;
 
   if (Limit != ~unsigned(0)) {
@@ -1437,12 +1438,13 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
       return false; // Memset zero: Use XC
   }
 
-  return TargetLowering::findOptimalMemOpLowering(MemOps, Limit, Op, DstAS,
-                                                  SrcAS, FuncAttributes);
+  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
+                                                  DstAS, SrcAS, FuncAttributes);
 }
 
-EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                   const AttributeList &FuncAttributes) const {
+EVT SystemZTargetLowering::getOptimalMemOpType(
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   return Subtarget.hasVector() ? MVT::v2i64 : MVT::Other;
 }
 
@@ -2458,10 +2460,9 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
 
-  TargetLowering::ArgListEntry Entry;
   for (SDValue Op : Ops) {
-    Entry.Node = Op;
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Op, Op.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = shouldSignExtendTypeInLibCall(Entry.Ty, IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
@@ -9042,7 +9043,7 @@ static unsigned detectEvenOddMultiplyOperand(const SelectionDAG &DAG,
         if (unsigned(ShuffleMask[Elt]) != 2 * Elt)
           CanUseEven = false;
         if (unsigned(ShuffleMask[Elt]) != 2 * Elt + 1)
-          CanUseEven = true;
+          CanUseOdd = false;
       }
       Op = Op.getOperand(0);
       if (CanUseEven)

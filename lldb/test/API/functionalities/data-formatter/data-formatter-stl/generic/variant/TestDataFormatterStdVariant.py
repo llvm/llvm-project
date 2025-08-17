@@ -83,3 +83,9 @@ class StdVariantDataFormatterTestCase(TestBase):
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test()

@@ -10,6 +10,14 @@
 
 #define __IMPL_FUNCTION(x) __CLC_CONCAT(__clc_, x)
 
-_CLC_OVERLOAD _CLC_DEF __CLC_INTN FUNCTION(__CLC_FLOATN a, __CLC_FLOATN b) {
+#if __CLC_VECSIZE_OR_1 == 1
+#define __RETTYPE __CLC_INTN
+#else
+#define __RETTYPE __CLC_BIT_INTN
+#endif
+
+_CLC_OVERLOAD _CLC_DEF __RETTYPE FUNCTION(__CLC_GENTYPE a, __CLC_GENTYPE b) {
   return __IMPL_FUNCTION(FUNCTION)(a, b);
 }
+
+#undef __RETTYPE

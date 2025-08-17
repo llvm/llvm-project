@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 
 ; Test that materialization constants that are the bit reversed of

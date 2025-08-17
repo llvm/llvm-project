@@ -13,7 +13,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !2 = !{ ptr @main, !3, i32 1 } ; function, root signature
 !3 = !{ !5 } ; list of root signature elements
 !5 = !{ !"DescriptorTable", i32 0, !6, !7 }
-!6 = !{ !"Sampler", i32 0, i32 1, i32 0, i32 -1, i32 1 }
+!6 = !{ !"Sampler", i32 1, i32 1, i32 0, i32 -1, i32 1 }
 !7 = !{ !"UAV", i32 5, i32 1, i32 10, i32 5, i32 3 }
 
 
@@ -33,7 +33,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:             RangesOffset:    44
 ; DXC-NEXT:             Ranges:
 ; DXC-NEXT:               - RangeType:       3
-; DXC-NEXT:                 NumDescriptors:  0
+; DXC-NEXT:                 NumDescriptors:  1
 ; DXC-NEXT:                 BaseShaderRegister: 1
 ; DXC-NEXT:                 RegisterSpace:   0
 ; DXC-NEXT:                 OffsetInDescriptorsFromTableStart: 4294967295

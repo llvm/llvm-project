@@ -44,20 +44,37 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             "'{0}' does not exist".format(program), response["body"]["error"]["format"]
         )
 
-    def test_failing_launch_commands_and_run_in_terminal(self):
+    def test_failing_launch_commands_and_console(self):
         """
-        Tests launching with an invalid program.
+        Tests launching with launch commands in an integrated terminal.
         """
         program = self.getBuildArtifact("a.out")
         self.create_debug_adapter()
         response = self.launch(
-            program, launchCommands=["a b c"], runInTerminal=True, expectFailure=True
+            program,
+            launchCommands=["a b c"],
+            console="integratedTerminal",
+            expectFailure=True,
         )
         self.assertFalse(response["success"])
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
         self.assertEqual(
-            "'launchCommands' and 'runInTerminal' are mutually exclusive",
+            "'launchCommands' and non-internal 'console' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
+        )
+
+    def test_failing_console(self):
+        """
+        Tests launching in console with an invalid terminal type.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(program, console="invalid", expectFailure=True)
+        self.assertFalse(response["success"])
+        self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
+        self.assertRegex(
+            response["body"]["error"]["format"],
+            r"unexpected value, expected 'internalConsole\', 'integratedTerminal\' or 'externalTerminal\' at arguments.console",
         )
 
     @skipIfWindows
@@ -414,6 +431,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    # Flakey on 32-bit Arm Linux.
+    @skipIf(oslist=["linux"], archs=["arm$"])
     def test_extra_launch_commands(self):
         """
         Tests the "launchCommands" with extra launching settings

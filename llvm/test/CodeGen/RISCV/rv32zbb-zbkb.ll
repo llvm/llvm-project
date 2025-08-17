@@ -128,13 +128,19 @@ define i32 @disjoint_or_xnor_i32(i32 %a, i32 %b) nounwind {
 }
 
 define i64 @disjoint_or_xnor_i64(i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: disjoint_or_xnor_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: disjoint_or_xnor_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:    ret
   %or = or disjoint i64 %a, %b
   %not = xor i64 %or, -1
   ret i64 %not
@@ -199,8 +205,7 @@ define i32 @inverted_masked_merge_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32ZBB-ZBKB:       # %bb.0:
 ; RV32ZBB-ZBKB-NEXT:    and a1, a0, a1
 ; RV32ZBB-ZBKB-NEXT:    andn a0, a2, a0
-; RV32ZBB-ZBKB-NEXT:    or a0, a1, a0
-; RV32ZBB-ZBKB-NEXT:    not a0, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
 ; RV32ZBB-ZBKB-NEXT:    ret
   %a = and i32 %x, %y
   %notx = xor i32 %x, -1
@@ -225,14 +230,12 @@ define i64 @inverted_masked_merge_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; RV32ZBB-ZBKB-LABEL: inverted_masked_merge_i64:
 ; RV32ZBB-ZBKB:       # %bb.0:
-; RV32ZBB-ZBKB-NEXT:    and a2, a0, a2
 ; RV32ZBB-ZBKB-NEXT:    and a3, a1, a3
-; RV32ZBB-ZBKB-NEXT:    andn a0, a4, a0
+; RV32ZBB-ZBKB-NEXT:    and a2, a0, a2
 ; RV32ZBB-ZBKB-NEXT:    andn a1, a5, a1
-; RV32ZBB-ZBKB-NEXT:    or a1, a3, a1
-; RV32ZBB-ZBKB-NEXT:    or a0, a2, a0
-; RV32ZBB-ZBKB-NEXT:    not a0, a0
-; RV32ZBB-ZBKB-NEXT:    not a1, a1
+; RV32ZBB-ZBKB-NEXT:    andn a0, a4, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a2, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a3, a1
 ; RV32ZBB-ZBKB-NEXT:    ret
   %a = and i64 %x, %y
   %notx = xor i64 %x, -1
@@ -428,7 +431,7 @@ define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, -32
 ; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    slti a1, a1, 0
+; CHECK-NEXT:    srli a1, a1, 31
 ; CHECK-NEXT:    sll a0, a2, a0
 ; CHECK-NEXT:    neg a2, a1
 ; CHECK-NEXT:    addi a1, a1, -1

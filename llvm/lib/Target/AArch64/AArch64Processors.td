@@ -21,40 +21,49 @@ def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
                                    "Cortex-A320 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
-                                   FeaturePostRAScheduler]>;
+                                   FeaturePostRAScheduler,
+                                   FeatureUseWzrToVecMove,
+                                   FeatureUseFixedOverScalableIfEqualCost]>;
 
 def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
                                    FeatureBalanceFPOps,
-                                   FeaturePostRAScheduler]>;
+                                   FeaturePostRAScheduler,
+                                   FeatureUseWzrToVecMove]>;
 
 def TuneA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    "Cortex-A55 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler,
-                                   FeatureFuseAddress]>;
+                                   FeatureFuseAddress,
+                                   FeatureUseWzrToVecMove]>;
 
 def TuneA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
                                    "Cortex-A510 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
-                                   FeaturePostRAScheduler
+                                   FeaturePostRAScheduler,
+                                   FeatureUseWzrToVecMove,
+                                   FeatureUseFixedOverScalableIfEqualCost
                                    ]>;
 
 def TuneA520    : SubtargetFeature<"a520", "ARMProcFamily", "CortexA520",
                                    "Cortex-A520 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
-                                   FeaturePostRAScheduler]>;
+                                   FeaturePostRAScheduler,
+                                   FeatureUseWzrToVecMove,
+                                   FeatureUseFixedOverScalableIfEqualCost]>;
 
 def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520",
                                    "Cortex-A520AE ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
-                                   FeaturePostRAScheduler]>;
+                                   FeaturePostRAScheduler,
+                                   FeatureUseWzrToVecMove]>;
 
 def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", [
@@ -750,7 +759,6 @@ def ProcessorFeatures {
                                  FeatureSB, FeaturePAuth, FeatureSSBS, FeatureSVE, FeatureSVE2,
                                  FeatureComplxNum, FeatureCRC, FeatureDotProd,
                                  FeatureFPARMv8,FeatureFullFP16, FeatureJS, FeatureLSE,
-                                 FeatureUseFixedOverScalableIfEqualCost,
                                  FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC];
   list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVEBitPerm,
@@ -760,7 +768,6 @@ def ProcessorFeatures {
                                  FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                  FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS,
                                  FeatureNEON, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
-                                 FeatureUseFixedOverScalableIfEqualCost,
                                  FeatureDotProd, FeatureFPAC];
   list<SubtargetFeature> A520AE = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVEBitPerm,

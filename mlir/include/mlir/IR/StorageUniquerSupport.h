@@ -200,7 +200,7 @@ public:
     // If the construction invariants fail then we return a null attribute.
     if (failed(ConcreteT::verifyInvariants(emitErrorFn, args...)))
       return ConcreteT();
-    return UniquerT::template get<ConcreteT>(ctx, args...);
+    return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
   /// Get an instance of the concrete type from a void pointer.

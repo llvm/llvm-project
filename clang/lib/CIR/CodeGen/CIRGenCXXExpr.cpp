@@ -75,7 +75,7 @@ static MemberCallInfo commonBuildCXXMemberOrOperatorCall(
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *ce, const CXXMethodDecl *md, ReturnValueSlot returnValue,
-    bool hasQualifier, NestedNameSpecifier *qualifier, bool isArrow,
+    bool hasQualifier, NestedNameSpecifier qualifier, bool isArrow,
     const Expr *base) {
   assert(isa<CXXMemberCallExpr>(ce) || isa<CXXOperatorCallExpr>(ce));
 
@@ -169,7 +169,7 @@ CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
   assert(md->isInstance() &&
          "Trying to emit a member call expr on a static method!");
   return emitCXXMemberOrOperatorMemberCallExpr(
-      e, md, returnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      e, md, returnValue, /*HasQualifier=*/false, /*Qualifier=*/std::nullopt,
       /*IsArrow=*/false, e->getArg(0));
 }
 
@@ -244,6 +244,29 @@ static void emitNewInitializer(CIRGenFunction &cgf, const CXXNewExpr *e,
     storeAnyExprIntoOneUnit(cgf, init, e->getAllocatedType(), newPtr,
                             AggValueSlot::DoesNotOverlap);
   }
+}
+
+RValue CIRGenFunction::emitCXXDestructorCall(
+    GlobalDecl dtor, const CIRGenCallee &callee, mlir::Value thisVal,
+    QualType thisTy, mlir::Value implicitParam, QualType implicitParamTy,
+    const CallExpr *ce) {
+  const CXXMethodDecl *dtorDecl = cast<CXXMethodDecl>(dtor.getDecl());
+
+  assert(!thisTy.isNull());
+  assert(thisTy->getAsCXXRecordDecl() == dtorDecl->getParent() &&
+         "Pointer/Object mixup");
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  CallArgList args;
+  commonBuildCXXMemberOrOperatorCall(*this, dtorDecl, thisVal, implicitParam,
+                                     implicitParamTy, ce, args, nullptr);
+  assert((ce || dtor.getDecl()) && "expected source location provider");
+  assert(!cir::MissingFeatures::opCallMustTail());
+  return emitCall(cgm.getTypes().arrangeCXXStructorDeclaration(dtor), callee,
+                  ReturnValueSlot(), args, nullptr,
+                  ce ? getLoc(ce->getExprLoc())
+                     : getLoc(dtor.getDecl()->getSourceRange()));
 }
 
 /// Emit a call to an operator new or operator delete function, as implicitly

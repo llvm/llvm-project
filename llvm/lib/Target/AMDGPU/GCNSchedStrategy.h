@@ -250,9 +250,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // limit. Register pressure in these regions usually will result in spilling.
   BitVector RegionsWithExcessRP;
 
-  // Regions that has the same occupancy as the latest MinOccupancy
-  BitVector RegionsWithMinOcc;
-
   // Regions that have IGLP instructions (SCHED_GROUP_BARRIER or IGLP_OPT).
   BitVector RegionsWithIGLPInstrs;
 
@@ -473,15 +470,12 @@ private:
   /// After successful stage initialization, indicates which regions should be
   /// rescheduled.
   BitVector RescheduleRegions;
-  /// Target occupancy the stage estimates is reachable through
-  /// rematerialization. Greater than or equal to the pre-stage min occupancy.
-  unsigned TargetOcc;
+  /// The target occupancy the stage is trying to achieve. Empty when the
+  /// objective is spilling reduction.
+  std::optional<unsigned> TargetOcc;
   /// Achieved occupancy *only* through rematerializations (pre-rescheduling).
   /// Smaller than or equal to the target occupancy.
   unsigned AchievedOcc;
-  /// Whether the stage is attempting to increase occupancy in the abscence of
-  /// spilling.
-  bool IncreaseOccupancy;
 
   /// Returns whether remat can reduce spilling or increase function occupancy
   /// by 1 through rematerialization. If it can do one, collects instructions in

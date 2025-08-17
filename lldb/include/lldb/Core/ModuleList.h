@@ -17,6 +17,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -351,6 +352,14 @@ public:
   // UUID values is very efficient and accurate.
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 
+  /// Find a module by LLDB-specific unique identifier.
+  ///
+  /// \param[in] uid The UID of the module assigned to it on construction.
+  ///
+  /// \returns ModuleSP of module with \c uid. Returns nullptr if no such
+  /// module could be found.
+  lldb::ModuleSP FindModule(lldb::user_id_t uid) const;
+
   /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
@@ -488,8 +497,9 @@ public:
   /// be non-null.
   ///
   /// This function is thread-safe.
-  void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
-                   &callback) const;
+  void
+  ForEach(std::function<IterationAction(const lldb::ModuleSP &module_sp)> const
+              &callback) const;
 
   /// Returns true if 'callback' returns true for one of the modules
   /// in this ModuleList.

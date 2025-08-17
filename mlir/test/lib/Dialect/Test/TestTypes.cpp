@@ -392,6 +392,14 @@ getCustomAssemblyFormatDynamicType(TestDialect *testDialect) {
                                     std::move(parser), std::move(printer));
 }
 
+test::detail::TestCustomStorageCtorTypeStorage *
+test::detail::TestCustomStorageCtorTypeStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//

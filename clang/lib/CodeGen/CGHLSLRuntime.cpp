@@ -103,13 +103,6 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
-// Returns true if the type is an HLSL resource class or an array of them
-static bool isResourceRecordTypeOrArrayOf(const clang::Type *Ty) {
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
-    Ty = CAT->getArrayElementTypeNoTypeQual();
-  return Ty->isHLSLResourceRecord();
-}
-
 // Emits constant global variables for buffer constants declarations
 // and creates metadata linking the constant globals with the buffer global.
 void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
@@ -146,7 +139,7 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
     if (VDTy.getAddressSpace() != LangAS::hlsl_constant) {
       if (VD->getStorageClass() == SC_Static ||
           VDTy.getAddressSpace() == LangAS::hlsl_groupshared ||
-          isResourceRecordTypeOrArrayOf(VDTy.getTypePtr())) {
+          VDTy->isHLSLResourceRecord() || VDTy->isHLSLResourceRecordArray()) {
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);
@@ -186,8 +179,7 @@ static const clang::HLSLAttributedResourceType *
 createBufferHandleType(const HLSLBufferDecl *BufDecl) {
   ASTContext &AST = BufDecl->getASTContext();
   QualType QT = AST.getHLSLAttributedResourceType(
-      AST.HLSLResourceTy,
-      QualType(BufDecl->getLayoutStruct()->getTypeForDecl(), 0),
+      AST.HLSLResourceTy, AST.getCanonicalTagType(BufDecl->getLayoutStruct()),
       HLSLAttributedResourceType::Attributes(ResourceClass::CBuffer));
   return cast<HLSLAttributedResourceType>(QT.getTypePtr());
 }
@@ -273,10 +265,14 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
 
   // Initialize cbuffer from binding (implicit or explicit)
-  HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
-  assert(RBA &&
-         "cbuffer/tbuffer should always have resource binding attribute");
-  initializeBufferFromBinding(BufDecl, BufGV, RBA);
+  if (HLSLVkBindingAttr *VkBinding = BufDecl->getAttr<HLSLVkBindingAttr>()) {
+    initializeBufferFromBinding(BufDecl, BufGV, VkBinding);
+  } else {
+    HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
+    assert(RBA &&
+           "cbuffer/tbuffer should always have resource binding attribute");
+    initializeBufferFromBinding(BufDecl, BufGV, RBA);
+  }
 }
 
 llvm::TargetExtType *
@@ -591,6 +587,31 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
+}
+
+static Value *buildNameForResource(llvm::StringRef BaseName,
+                                   CodeGenModule &CGM) {
+  std::string Str(BaseName);
+  std::string GlobalName(Str + ".str");
+  return CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+}
+
+void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                                llvm::GlobalVariable *GV,
+                                                HLSLVkBindingAttr *VkBinding) {
+  assert(VkBinding && "expect a nonnull binding attribute");
+  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
+  auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
+  auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
+  auto *Set = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getSet());
+  auto *Binding = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getBinding());
+  Value *Name = buildNameForResource(BufDecl->getName(), CGM);
+  llvm::Intrinsic::ID IntrinsicID =
+      CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+
+  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, NonUniform, Name};
+  initializeBuffer(CGM, GV, IntrinsicID, Args);
 }
 
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,

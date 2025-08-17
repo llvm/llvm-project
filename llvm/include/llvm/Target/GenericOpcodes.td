@@ -1267,6 +1267,12 @@ def G_READSTEADYCOUNTER : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_GET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------

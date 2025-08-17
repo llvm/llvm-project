@@ -27,9 +27,6 @@ define half @add_v2HalfH(<2 x half> %bin.rdx)  {
 ; CHECK-SD-FP16-LABEL: add_v2HalfH:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-FP16-NEXT:    mov v0.h[2], wzr
-; CHECK-SD-FP16-NEXT:    mov v0.h[3], wzr
-; CHECK-SD-FP16-NEXT:    faddp v0.4h, v0.4h, v0.4h
 ; CHECK-SD-FP16-NEXT:    faddp h0, v0.2h
 ; CHECK-SD-FP16-NEXT:    ret
 ;
@@ -66,8 +63,9 @@ define half @add_v3HalfH(<3 x half> %bin.rdx)  {
 ;
 ; CHECK-SD-FP16-LABEL: add_v3HalfH:
 ; CHECK-SD-FP16:       // %bb.0:
+; CHECK-SD-FP16-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-FP16-NEXT:    mov v0.h[3], wzr
+; CHECK-SD-FP16-NEXT:    mov v0.h[3], v1.h[0]
 ; CHECK-SD-FP16-NEXT:    faddp v0.4h, v0.4h, v0.4h
 ; CHECK-SD-FP16-NEXT:    faddp h0, v0.2h
 ; CHECK-SD-FP16-NEXT:    ret

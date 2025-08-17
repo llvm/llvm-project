@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !CHECK-LABEL: vec_insert_testf32i64
@@ -31,6 +31,7 @@ subroutine vec_insert_testi64i8(v, x, i1, i2, i4, i8)
 ! LLVMIR: %[[i1:.*]] = load i8, ptr %{{[0-9]}}, align 1
 ! LLVMIR: %[[urem:.*]] = urem i8 %[[i1]], 2
 ! LLVMIR: %[[sub:.*]] = sub i8 1, %[[urem]]
-! LLVMIR: %[[r:.*]] = insertelement <2 x i64> %[[x]], i64 %[[v]], i8 %[[sub]]
+! LLVMIR: %[[idx:.*]] = zext i8 %[[sub]] to i64
+! LLVMIR: %[[r:.*]] = insertelement <2 x i64> %[[x]], i64 %[[v]], i64 %[[idx]]
 ! LLVMIR: store <2 x i64> %[[r]], ptr %{{[0-9]}}, align 16
 end subroutine vec_insert_testi64i8

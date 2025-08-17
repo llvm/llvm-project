@@ -24,6 +24,8 @@ std::unique_ptr<Pass> createCIRCanonicalizePass();
 std::unique_ptr<Pass> createCIRFlattenCFGPass();
 std::unique_ptr<Pass> createCIRSimplifyPass();
 std::unique_ptr<Pass> createHoistAllocasPass();
+std::unique_ptr<Pass> createLoweringPreparePass();
+std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
 
 void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 

@@ -440,6 +440,11 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
       ".amdhsa_user_sgpr_private_segment_size");
+  if (isGFX1250(STI))
+    PrintField(KD.kernel_code_properties,
+               amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES_SHIFT,
+               amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES,
+               ".amdhsa_uses_cu_stores");
   if (IVersion.Major >= 10)
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
@@ -558,11 +563,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PrintField(KD.compute_pgm_rsrc3,
                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, ".amdhsa_tg_split");
-  if (IVersion.Major >= 10) {
+  if (AMDGPU::supportsWGP(STI))
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
                ".amdhsa_workgroup_processor_mode");
+  if (IVersion.Major >= 10) {
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED,
@@ -867,20 +873,20 @@ void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
 
 void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
                                                    unsigned Type) {
-  MCSymbolELF *Symbol = cast<MCSymbolELF>(
+  auto *Symbol = static_cast<MCSymbolELF *>(
       getStreamer().getContext().getOrCreateSymbol(SymbolName));
   Symbol->setType(Type);
 }
 
 void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
                                             Align Alignment) {
-  MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
+  auto *SymbolELF = static_cast<MCSymbolELF *>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
   if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
 
-  if (SymbolELF->declareCommon(Size, Alignment, true)) {
+  if (SymbolELF->declareCommon(Size, Alignment)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
                        " redeclared as different type");
   }
@@ -969,9 +975,9 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 
-  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
-      Context.getOrCreateSymbol(Twine(KernelName)));
-  MCSymbolELF *KernelDescriptorSymbol = cast<MCSymbolELF>(
+  auto *KernelCodeSymbol =
+      static_cast<MCSymbolELF *>(Context.getOrCreateSymbol(Twine(KernelName)));
+  auto *KernelDescriptorSymbol = static_cast<MCSymbolELF *>(
       Context.getOrCreateSymbol(Twine(KernelName) + Twine(".kd")));
 
   // Copy kernel descriptor symbol's binding, other and visibility from the
