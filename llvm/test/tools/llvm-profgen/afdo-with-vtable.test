@@ -1,8 +1,15 @@
-RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-profile=%p/Inputs/dap-perf-trace.txt \
+RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-perftrace=%p/Inputs/dap-perf-trace.txt \
 RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 
 RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s
+
+RUN: not llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-perftrace=%p/Inputs/dap-perf-trace.txt \
+RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
+RUN: -ignore-stack-samples -use-dwarf-correlation=false -o - 2>&1 | FileCheck %s --check-prefix=PSEUDOERR
+
+;; COM: Generate a context-sensitive LBR perf script for the tested binary and provide it to llvm-profgen.
+;; Test that llvm-profgen emits error like above when provided with a context-sensitive profile.
 
 CHECK:       Function: _Z9loop_funciii: 958, 15, 5 sampled lines
 CHECK-NEXT:  Samples collected in the function's body {
@@ -16,3 +23,4 @@ CHECK-NEXT:    7: 12
 CHECK-NEXT:  }
 CHECK-NEXT:  No inlined callsites in this function
 
+PSEUDOERR: Symbolizing vtables from data access profiles is not yet supported for context-sensitive perf traces or when pseudo-probe based mapping is enabled.

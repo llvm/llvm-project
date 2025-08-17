@@ -182,6 +182,8 @@ private:
   populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void populateBoundarySamplesWithProbesForAllFunctions(
       const BranchSample &BranchCounters);
+  void
+  populateTypeSamplesForAllFunctions(const DataAccessSample &DataAccessSamples);
   void postProcessProfiles();
   void trimColdProfiles(const SampleProfileMap &Profiles,
                         uint64_t ColdCntThreshold);

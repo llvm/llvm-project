@@ -1,10 +1,17 @@
-
 RUN: llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
-RUN: --data-access-profile=%p/Inputs/pie-dap-perf.txt  \
+RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
 RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 
 RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s --dump-input=always
+
+RUN: not llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
+RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
+RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
+RUN: -ignore-stack-samples -use-dwarf-correlation=false -o - 2>&1 | FileCheck %s --dump-input=always --check-prefix=PSEUDOERR
+
+;; COM: Generate a context-sensitive LBR perf script for the tested binary and provide it to llvm-profgen.
+;; Test that llvm-profgen emits error like above when provided with a context-sensitive profile.
 
 CHECK:      Function: _Z9loop_funciii: 746, 14, 5 sampled lines
 CHECK-NEXT: Samples collected in the function's body {
@@ -17,3 +24,5 @@ CHECK-NEXT:   5.1: vtables: _ZTV8Derived1:3 _ZTVN12_GLOBAL__N_18Derived2E:9
 CHECK-NEXT:   7: 13
 CHECK-NEXT: }
 CHECK-NEXT: No inlined callsites in this function
+
+PSEUDOERR: Symbolizing vtables from data access profiles is not yet supported for context-sensitive perf traces or when pseudo-probe based mapping is enabled.
