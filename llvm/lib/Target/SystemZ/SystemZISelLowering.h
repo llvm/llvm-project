@@ -796,7 +796,10 @@ private:
   SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue combineSELECT_CC_CCIPMMask(SDNode *N, DAGCombinerInfo &DCI) const;
+  SmallVector<SDValue, 4> simplifyAssumingCCVal(SDValue &Val, SDValue &CC,
+                                                DAGCombinerInfo &DCI) const;
+  bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
+                     DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
