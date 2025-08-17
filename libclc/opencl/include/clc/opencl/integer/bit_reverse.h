@@ -13,12 +13,12 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION bit_reverse
+#define __CLC_FUNCTION bit_reverse
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // cl_khr_extended_bit_ops
 

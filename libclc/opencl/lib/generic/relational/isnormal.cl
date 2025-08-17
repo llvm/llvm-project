@@ -9,7 +9,7 @@
 #include <clc/opencl/relational/isnormal.h>
 #include <clc/relational/clc_isnormal.h>
 
-#define FUNCTION isnormal
+#define __CLC_FUNCTION isnormal
 #define __CLC_BODY "unary_def.inc"
 
 #include <clc/math/gentype.inc>

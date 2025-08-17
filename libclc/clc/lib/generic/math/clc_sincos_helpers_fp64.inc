@@ -67,11 +67,11 @@ __clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
 
   // The following extracts 192 consecutive bits of 2/pi aligned on an arbitrary
   // byte boundary
-  __CLC_ULONGN q0 = USE_TABLE(pibits_tbl, j16);
-  __CLC_ULONGN q1 = USE_TABLE(pibits_tbl, (j16 + 8));
-  __CLC_ULONGN q2 = USE_TABLE(pibits_tbl, (j16 + 16));
-  __CLC_ULONGN q3 = USE_TABLE(pibits_tbl, (j16 + 24));
-  __CLC_ULONGN q4 = USE_TABLE(pibits_tbl, (j16 + 32));
+  __CLC_ULONGN q0 = __CLC_USE_TABLE(pibits_tbl, j16);
+  __CLC_ULONGN q1 = __CLC_USE_TABLE(pibits_tbl, (j16 + 8));
+  __CLC_ULONGN q2 = __CLC_USE_TABLE(pibits_tbl, (j16 + 16));
+  __CLC_ULONGN q3 = __CLC_USE_TABLE(pibits_tbl, (j16 + 24));
+  __CLC_ULONGN q4 = __CLC_USE_TABLE(pibits_tbl, (j16 + 32));
 
   __CLC_UINTN q0s0 = __CLC_CONVERT_UINTN(q0);
   __CLC_UINTN q0s1 = __CLC_CONVERT_UINTN(q0 >> 32);

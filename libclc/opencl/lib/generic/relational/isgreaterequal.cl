@@ -9,7 +9,7 @@
 #include <clc/opencl/relational/isgreaterequal.h>
 #include <clc/relational/clc_isgreaterequal.h>
 
-#define FUNCTION isgreaterequal
+#define __CLC_FUNCTION isgreaterequal
 #define __CLC_BODY "binary_def.inc"
 
 #include <clc/math/gentype.inc>

@@ -11,7 +11,7 @@
 #include <clc/integer/clc_ctz.h>
 #include <clc/opencl/integer/ctz.h>
 
-#define FUNCTION ctz
+#define __CLC_FUNCTION ctz
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/integer/gentype.inc>

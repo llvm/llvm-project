@@ -9,7 +9,7 @@
 #include <clc/math/clc_acospi.h>
 #include <clc/opencl/math/acospi.h>
 
-#define FUNCTION acospi
+#define __CLC_FUNCTION acospi
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

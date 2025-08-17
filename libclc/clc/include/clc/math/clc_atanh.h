@@ -10,10 +10,10 @@
 #define __CLC_MATH_CLC_ATANH_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define FUNCTION __clc_atanh
+#define __CLC_FUNCTION __clc_atanh
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_MATH_CLC_ATANH_H__

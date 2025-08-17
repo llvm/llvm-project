@@ -9,7 +9,7 @@
 #include <clc/geometric/clc_fast_distance.h>
 #include <clc/opencl/geometric/fast_distance.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION fast_distance
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION fast_distance
 #define __CLC_BODY <clc/geometric/binary_def.inc>
 #include <clc/math/gentype.inc>
