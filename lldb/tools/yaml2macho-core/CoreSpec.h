@@ -8,6 +8,8 @@
 
 #ifndef YAML2MACHOCOREFILE_CORESPEC_H
 #define YAML2MACHOCOREFILE_CORESPEC_H
+
+#include <cstdint>
 #include <string>
 #include <vector>
 
