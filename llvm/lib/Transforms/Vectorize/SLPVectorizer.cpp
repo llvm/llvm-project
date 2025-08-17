@@ -20975,11 +20975,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         continue;
       }
       ScheduledBundles.find(I)->getSecond().pop_back();
-      if (!ControlDependentMembers.empty()) {
-        ScheduleBundle Invalid = ScheduleBundle::invalid();
-        calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
-                              ControlDependentMembers);
-      }
+    }
+    if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
+                            ControlDependentMembers);
     }
     return std::nullopt;
   }
