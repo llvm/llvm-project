@@ -31,8 +31,7 @@ public:
                                     AddressClass addr_class) const override;
 
   lldb::UnwindPlanSP GetArchitectureUnwindPlan(
-      lldb_private::Thread &thread, lldb::addr_t callers_return_address,
-      lldb::addr_t cfa,
+      lldb_private::Thread &thread, lldb_private::RegisterContextUnwind *regctx,
       std::shared_ptr<const UnwindPlan> current_unwindplan) override;
 
 private:

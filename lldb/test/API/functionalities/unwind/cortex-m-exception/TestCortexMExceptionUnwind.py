@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCortexMExceptionUnwind(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
     def test_no_fpu(self):
         """Test that we can backtrace correctly through an ARM Cortex-M Exception return stack"""
 

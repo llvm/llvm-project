@@ -1734,46 +1734,10 @@ UnwindPlanSP RegisterContextUnwind::AdoptArchitectureUnwindPlan() {
     return {};
 
   UnwindPlanSP arch_override_plan_sp;
+  if (Architecture *arch = process_sp->GetTarget().GetArchitecturePlugin())
+    arch_override_plan_sp =
+        arch->GetArchitectureUnwindPlan(m_thread, this, m_full_unwind_plan_sp);
 
-  RegisterNumber ra_regnum(m_thread, eRegisterKindGeneric,
-                           LLDB_REGNUM_GENERIC_RA);
-  uint32_t ra_regnum_lldb = ra_regnum.GetAsKind(eRegisterKindLLDB);
-  // The only Architecture UnwindPlan today requires the value of
-  // the return address register.
-  if (ra_regnum_lldb == LLDB_INVALID_REGNUM)
-    return {};
-
-  UnwindLLDB::ConcreteRegisterLocation regloc = {};
-  bool got_concrete_location = false;
-  if (SavedLocationForRegister(ra_regnum_lldb, regloc) ==
-      UnwindLLDB::RegisterSearchResult::eRegisterFound) {
-    got_concrete_location = true;
-  } else {
-    RegisterNumber pc_regnum(m_thread, eRegisterKindGeneric,
-                             LLDB_REGNUM_GENERIC_PC);
-    uint32_t pc_regnum_lldb = pc_regnum.GetAsKind(eRegisterKindLLDB);
-    if (SavedLocationForRegister(pc_regnum_lldb, regloc) ==
-        UnwindLLDB::RegisterSearchResult::eRegisterFound)
-      got_concrete_location = true;
-  }
-
-  if (got_concrete_location) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(ra_regnum_lldb);
-    if (reg_info) {
-      RegisterValue reg_value;
-      if (ReadRegisterValueFromRegisterLocation(regloc, reg_info, reg_value)) {
-        addr_t ra;
-        if (process_sp->GetTarget().GetArchitecture().GetAddressByteSize() == 4)
-          ra = reg_value.GetAsUInt32();
-        else
-          ra = reg_value.GetAsUInt64();
-        if (Architecture *arch =
-                process_sp->GetTarget().GetArchitecturePlugin())
-          arch_override_plan_sp = arch->GetArchitectureUnwindPlan(
-              m_thread, ra, m_cfa, m_full_unwind_plan_sp);
-      }
-    }
-  }
   if (arch_override_plan_sp) {
     m_full_unwind_plan_sp = arch_override_plan_sp;
     PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);

@@ -14,10 +14,13 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -168,11 +171,53 @@ addr_t ArchitectureArm::GetOpcodeLoadAddress(addr_t opcode_addr,
 // the current_unwindplan has for these registers; they are
 // not correct when we're invoked this way.
 UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
-    Thread &thread, addr_t callers_return_address, addr_t cfa,
+    Thread &thread, RegisterContextUnwind *regctx,
     std::shared_ptr<const UnwindPlan> current_unwindplan) {
 
   ProcessSP process_sp = thread.GetProcess();
   if (!process_sp)
+    return {};
+
+  // Get the caller's LR value from regctx (the LR value
+  // at function entry to this function).
+  RegisterNumber ra_regnum(thread, eRegisterKindGeneric,
+                           LLDB_REGNUM_GENERIC_RA);
+  uint32_t ra_regnum_lldb = ra_regnum.GetAsKind(eRegisterKindLLDB);
+
+  if (ra_regnum_lldb == LLDB_INVALID_REGNUM)
+    return {};
+
+  UnwindLLDB::ConcreteRegisterLocation regloc = {};
+  bool got_concrete_location = false;
+  if (regctx->SavedLocationForRegister(ra_regnum_lldb, regloc) ==
+      UnwindLLDB::RegisterSearchResult::eRegisterFound) {
+    got_concrete_location = true;
+  } else {
+    RegisterNumber pc_regnum(thread, eRegisterKindGeneric,
+                             LLDB_REGNUM_GENERIC_PC);
+    uint32_t pc_regnum_lldb = pc_regnum.GetAsKind(eRegisterKindLLDB);
+    if (regctx->SavedLocationForRegister(pc_regnum_lldb, regloc) ==
+        UnwindLLDB::RegisterSearchResult::eRegisterFound)
+      got_concrete_location = true;
+  }
+
+  addr_t callers_return_address = LLDB_INVALID_ADDRESS;
+  if (got_concrete_location) {
+    const RegisterInfo *reg_info =
+        regctx->GetRegisterInfoAtIndex(ra_regnum_lldb);
+    if (reg_info) {
+      RegisterValue reg_value;
+      if (regctx->ReadRegisterValueFromRegisterLocation(regloc, reg_info,
+                                                        reg_value)) {
+        if (process_sp->GetTarget().GetArchitecture().GetAddressByteSize() == 4)
+          callers_return_address = reg_value.GetAsUInt32();
+        else
+          callers_return_address = reg_value.GetAsUInt64();
+      }
+    }
+  }
+
+  if (callers_return_address == LLDB_INVALID_ADDRESS)
     return {};
 
   const ArchSpec arch = process_sp->GetTarget().GetArchitecture();
@@ -227,6 +272,10 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
       saved_regs.push_back(regno);
     }
   }
+
+  addr_t cfa;
+  if (!regctx->GetCFA(cfa))
+    return {};
 
   // PSR bit 9 indicates that the stack pointer was unaligned (to
   // an 8-byte alignment) when the exception happened, and we must
