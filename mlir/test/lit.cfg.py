@@ -190,6 +190,7 @@ tools = [
     "mlir-translate",
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
+    "mlir-capi-global-constructors-test",
     "mlir-capi-ir-test",
     "mlir-capi-irdl-test",
     "mlir-capi-llvm-test",
