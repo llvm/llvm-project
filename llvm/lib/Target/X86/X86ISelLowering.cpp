@@ -2756,8 +2756,10 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
       !Subtarget.hasBWI())
     return TypeSplitVector;
 
+  // Since v8f16 is legal, widen anything over v4f16.
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
-      !Subtarget.hasF16C() && VT.getVectorElementType() == MVT::f16)
+      VT.getVectorNumElements() <= 4 && !Subtarget.hasF16C() &&
+      VT.getVectorElementType() == MVT::f16)
     return TypeSplitVector;
 
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&

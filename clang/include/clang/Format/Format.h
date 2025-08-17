@@ -4813,14 +4813,45 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeRangeBasedForLoopColon;
 
-  /// If ``true``, spaces will be inserted into ``{}``.
-  /// \code
-  ///    true:                                false:
-  ///    void f() { }                   vs.   void f() {}
-  ///    while (true) { }                     while (true) {}
-  /// \endcode
+  /// This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
   /// \version 10
-  bool SpaceInEmptyBlock;
+  // bool SpaceInEmptyBlock;
+
+  /// Style of when to insert a space in empty braces.
+  enum SpaceInEmptyBracesStyle : int8_t {
+    /// Always insert a space in empty braces.
+    /// \code
+    ///    void f() { }
+    ///    class Unit { };
+    ///    auto a = [] { };
+    ///    int x{ };
+    /// \endcode
+    SIEB_Always,
+    /// Only insert a space in empty blocks.
+    /// \code
+    ///    void f() { }
+    ///    class Unit { };
+    ///    auto a = [] { };
+    ///    int x{};
+    /// \endcode
+    SIEB_Block,
+    /// Never insert a space in empty braces.
+    /// \code
+    ///    void f() {}
+    ///    class Unit {};
+    ///    auto a = [] {};
+    ///    int x{};
+    /// \endcode
+    SIEB_Never
+  };
+
+  /// Specifies when to insert a space in empty braces.
+  /// \note
+  ///  This option doesn't apply to initializer braces if
+  ///  ``Cpp11BracedListStyle`` is set to ``true``.
+  /// \endnote
+  /// \version 22
+  SpaceInEmptyBracesStyle SpaceInEmptyBraces;
 
   /// If ``true``, spaces may be inserted into ``()``.
   /// This option is **deprecated**. See ``InEmptyParentheses`` of
@@ -5494,7 +5525,7 @@ struct FormatStyle {
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
-           SpaceInEmptyBlock == R.SpaceInEmptyBlock &&
+           SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
