@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -7413,35 +7414,51 @@ static bool getMiscPatterns(MachineInstr &Root,
   return false;
 }
 
-/// Check if there are any stores or calls between two instructions in the same
-/// basic block.
-static bool hasInterveningStoreOrCall(const MachineInstr *First,
-                                      const MachineInstr *Last) {
+/// Collect all loads, stores and calls between `First` and `Last`.
+/// `First` and `Last` must be within the same MBB.
+static void getMemOps(const MachineInstr *First, const MachineInstr *Last,
+                      SmallVectorImpl<const MachineInstr *> &MemOps) {
   if (!First || !Last || First == Last)
-    return false;
+    return;
 
   // Both instructions must be in the same basic block.
   if (First->getParent() != Last->getParent())
-    return false;
+    return;
 
-  // Sanity check that First comes before Last.
   const MachineBasicBlock *MBB = First->getParent();
   auto InstrIt = First->getIterator();
   auto LastIt = Last->getIterator();
+  MemOps.push_back(First);
 
   for (; InstrIt != MBB->end(); ++InstrIt) {
     if (InstrIt == LastIt)
       break;
 
     // Check for stores or calls that could interfere
-    if (InstrIt->mayStore() || InstrIt->isCall())
-      return true;
+    if (InstrIt->mayLoadOrStore() || InstrIt->isCall())
+      MemOps.push_back(&*InstrIt);
   }
 
-  // If we reached the end of the basic block, our instructions must have not
-  // been ordered correctly and the analysis is invalid.
-  assert(InstrIt != MBB->end() &&
+  // If we have not iterated to `Last` the instructions must have not been
+  // ordered correctly.
+  assert(&*InstrIt == Last &&
          "Got bad machine instructions, First should come before Last!");
+
+  MemOps.push_back(Last);
+}
+
+/// Check if a given MachineInstr `MIa` may alias with any of the instructions
+/// in `MemInstrs`.
+static bool mayAlias(const MachineInstr &MIa,
+                     SmallVectorImpl<const MachineInstr *> &MemInstrs,
+                     AliasAnalysis *AA) {
+  for (const MachineInstr *MIb : MemInstrs) {
+    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false)) {
+      MIb->dump();
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -7539,9 +7556,14 @@ static bool getGatherPattern(MachineInstr &Root,
 
   const MachineInstr *FirstLoad = SortedLoads.front();
   const MachineInstr *LastLoad = SortedLoads.back();
+  SmallVector<const MachineInstr *, 16> MemOps = {};
+  getMemOps(FirstLoad, LastLoad, MemOps);
 
-  if (hasInterveningStoreOrCall(FirstLoad, LastLoad))
-    return false;
+  // If there is any chance of aliasing, do not apply the pattern.
+  for (const MachineInstr *MemInstr : MemOps) {
+    if (mayAlias(*MemInstr, MemOps, nullptr))
+      return false;
+  }
 
   switch (NumLanes) {
   case 4:
