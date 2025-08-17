@@ -1068,3 +1068,60 @@ if:
 else:
   ret void
 }
+
+define void @trunc_nuw_i1_condition(i32 %V) {
+; CHECK-LABEL: @trunc_nuw_i1_condition(
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
+; CHECK-NEXT:      i32 2, label [[T:%.*]]
+; CHECK-NEXT:      i32 0, label [[T]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %C1 = icmp eq i32 %V, 2
+  br i1 %C1, label %T, label %N
+N:
+  %C2 = trunc nuw i32 %V to i1
+  br i1 %C2, label %F, label %T
+T:
+  call void @foo1( )
+  ret void
+F:
+  call void @foo2( )
+  ret void
+}
+
+define void @neg_trunc_i1_condition(i32 %V) {
+; CHECK-LABEL: @neg_trunc_i1_condition(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[V:%.*]], 2
+; CHECK-NEXT:    [[C2:%.*]] = trunc i32 [[V]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %C1 = icmp eq i32 %V, 2
+  br i1 %C1, label %T, label %N
+N:
+  %C2 = trunc i32 %V to i1
+  br i1 %C2, label %F, label %T
+T:
+  call void @foo1( )
+  ret void
+F:
+  call void @foo2( )
+  ret void
+}
+
