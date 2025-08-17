@@ -3513,6 +3513,8 @@ def err_typecheck_vector_lengths_not_equal : Error<
 def warn_typecheck_vector_element_sizes_not_equal : Warning<
   "vector operands do not have the same elements sizes (%0 and %1)">,
   InGroup<DiagGroup<"vec-elem-size">>, DefaultError;
+def err_typecheck_scalable_fixed_vector_mismatch : Error<
+  "vectors must both be scalable or fixed-sized vectors">;
 def err_ext_vector_component_exceeds_length : Error<
   "vector component access exceeds type %0">;
 def err_ext_vector_component_name_illegal : Error<

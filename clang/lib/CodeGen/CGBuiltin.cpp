@@ -3926,6 +3926,24 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_experimental_vectorcompress: {
+    QualType VecTy = E->getArg(0)->getType();
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    Value *Mask = EmitScalarExpr(E->getArg(1));
+    Value *Passthru = E->getNumArgs() == 3
+                          ? EmitScalarExpr(E->getArg(2))
+                          : llvm::UndefValue::get(ConvertType(VecTy));
+
+    // Cast svbool_t to right number of elements.
+    if (VecTy->isSVESizelessBuiltinType())
+      Mask = EmitSVEPredicateCast(
+          Mask, cast<llvm::ScalableVectorType>(Vec->getType()));
+
+    Function *F = CGM.getIntrinsic(Intrinsic::experimental_vector_compress,
+                                   Vec->getType());
+    return RValue::get(Builder.CreateCall(F, {Vec, Mask, Passthru}));
+  }
+
   case Builtin::BI__builtin_elementwise_abs: {
     Value *Result;
     QualType QT = E->getArg(0)->getType();

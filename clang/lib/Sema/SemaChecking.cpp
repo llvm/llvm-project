@@ -3080,6 +3080,60 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Magnitude.get()->getType());
     break;
   }
+  case Builtin::BI__builtin_experimental_vectorcompress: {
+    unsigned NumArgs = TheCall->getNumArgs();
+    if (NumArgs < 2)
+      return Diag(TheCall->getEndLoc(),
+                  diag::err_typecheck_call_too_few_args_at_least)
+             << /*function*/ 0 << /*at least*/ 2 << /*got*/ NumArgs
+             << /*is non object*/ 0;
+
+    if (NumArgs > 3)
+      return Diag(TheCall->getEndLoc(),
+                  diag::err_typecheck_call_too_many_args_at_most)
+             << /*function*/ 0 << /*at most*/ 3 << /*got*/ NumArgs
+             << /*is non object*/ 0;
+
+    Expr *VecArg = TheCall->getArg(0);
+    QualType VecTy = VecArg->getType();
+    if (!VecTy->isVectorType() && !VecTy->isSizelessVectorType())
+      return Diag(VecArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+             << 1 << /* vector ty*/ 4 << VecTy;
+
+    Expr *MaskArg = TheCall->getArg(1);
+    QualType MaskTy = MaskArg->getType();
+    if (!MaskTy->isVectorType() && !MaskTy->isSizelessVectorType())
+      return Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+             << 2 << /* vector ty*/ 4 << MaskTy;
+
+    if (VecTy->isVectorType() != MaskTy->isVectorType())
+      return Diag(MaskArg->getBeginLoc(),
+                  diag::err_typecheck_scalable_fixed_vector_mismatch);
+
+    if (VecTy->isVectorType() &&
+        VecTy->getAs<VectorType>()->getNumElements() !=
+            MaskTy->getAs<VectorType>()->getNumElements())
+      return Diag(VecArg->getBeginLoc(),
+                  diag::err_typecheck_vector_lengths_not_equal)
+             << VecTy->getAs<VectorType>()->getNumElements()
+             << MaskTy->getAs<VectorType>()->getNumElements();
+
+    // TODO: find way to compare MinKnownElements for sizeless vectors.
+    // if (VecTy->isSizelessVectorType() &&
+    // VecTy->getAs<VectorType>()->getNumElements() !=
+    // MaskTy->getAs<VectorType>()->getNumElements()) {}
+
+    if (NumArgs == 3) {
+      Expr *PassthruArg = TheCall->getArg(2);
+      QualType PassthruTy = PassthruArg->getType();
+      if (PassthruTy != VecTy)
+        return Diag(PassthruArg->getBeginLoc(),
+                    diag::err_typecheck_call_different_arg_types)
+               << VecTy << PassthruTy;
+    }
+    TheCall->setType(VecTy);
+    break;
+  }
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
