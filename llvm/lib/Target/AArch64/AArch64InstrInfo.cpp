@@ -85,6 +85,11 @@ static cl::opt<unsigned>
     BDisplacementBits("aarch64-b-offset-bits", cl::Hidden, cl::init(26),
                       cl::desc("Restrict range of B instructions (DEBUG)"));
 
+static cl::opt<unsigned> GatherOptSearchLimit(
+    "aarch64-search-limit", cl::Hidden, cl::init(2048),
+    cl::desc("Restrict range of instructions to search for the "
+             "machine-combiner gather pattern optimization"));
+
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP,
                           AArch64::CATCHRET),
@@ -7414,39 +7419,6 @@ static bool getMiscPatterns(MachineInstr &Root,
   return false;
 }
 
-/// Collect all loads, stores and calls between `First` and `Last`.
-/// `First` and `Last` must be within the same MBB.
-static void getMemOps(const MachineInstr *First, const MachineInstr *Last,
-                      SmallVectorImpl<const MachineInstr *> &MemOps) {
-  if (!First || !Last || First == Last)
-    return;
-
-  // Both instructions must be in the same basic block.
-  if (First->getParent() != Last->getParent())
-    return;
-
-  const MachineBasicBlock *MBB = First->getParent();
-  auto InstrIt = First->getIterator();
-  auto LastIt = Last->getIterator();
-  MemOps.push_back(First);
-
-  for (; InstrIt != MBB->end(); ++InstrIt) {
-    if (InstrIt == LastIt)
-      break;
-
-    // Check for stores or calls that could interfere
-    if (InstrIt->mayLoadOrStore() || InstrIt->isCall())
-      MemOps.push_back(&*InstrIt);
-  }
-
-  // If we have not iterated to `Last` the instructions must have not been
-  // ordered correctly.
-  assert(&*InstrIt == Last &&
-         "Got bad machine instructions, First should come before Last!");
-
-  MemOps.push_back(Last);
-}
-
 /// Check if a given MachineInstr `MIa` may alias with any of the instructions
 /// in `MemInstrs`.
 static bool mayAlias(const MachineInstr &MIa,
@@ -7505,13 +7477,13 @@ static bool getGatherPattern(MachineInstr &Root,
   auto *CurrInstr = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
   auto Range = llvm::seq<unsigned>(1, NumLanes - 1);
   SmallSet<unsigned, 16> RemainingLanes(Range.begin(), Range.end());
-  SmallSet<const MachineInstr *, 16> LoadInstrs = {};
+  SmallVector<const MachineInstr *, 16> LoadInstrs = {};
   while (!RemainingLanes.empty() && CurrInstr &&
          CurrInstr->getOpcode() == LoadLaneOpCode &&
          MRI.hasOneNonDBGUse(CurrInstr->getOperand(0).getReg()) &&
          CurrInstr->getNumOperands() == 4) {
     RemainingLanes.erase(CurrInstr->getOperand(2).getImm());
-    LoadInstrs.insert(CurrInstr);
+    LoadInstrs.push_back(CurrInstr);
     CurrInstr = MRI.getUniqueVRegDef(CurrInstr->getOperand(1).getReg());
   }
 
@@ -7533,37 +7505,37 @@ static bool getGatherPattern(MachineInstr &Root,
   if (!MRI.hasOneNonDBGUse(Lane0LoadReg))
     return false;
 
-  LoadInstrs.insert(MRI.getUniqueVRegDef(Lane0LoadReg));
-
-  // Check for intervening stores or calls between the first and last load.
-  // Sort load instructions by program order.
-  SmallVector<const MachineInstr *, 16> SortedLoads(LoadInstrs.begin(),
-                                                    LoadInstrs.end());
-  llvm::sort(SortedLoads, [](const MachineInstr *A, const MachineInstr *B) {
-    if (A->getParent() != B->getParent()) {
-      // If in different blocks, this shouldn't happen for gather patterns.
-      return false;
-    }
-    // Compare positions within the same basic block.
-    for (const MachineInstr &MI : *A->getParent()) {
-      if (&MI == A)
-        return true;
-      if (&MI == B)
-        return false;
-    }
-    return false;
-  });
-
-  const MachineInstr *FirstLoad = SortedLoads.front();
-  const MachineInstr *LastLoad = SortedLoads.back();
-  SmallVector<const MachineInstr *, 16> MemOps = {};
-  getMemOps(FirstLoad, LastLoad, MemOps);
+  LoadInstrs.push_back(MRI.getUniqueVRegDef(Lane0LoadReg));
 
   // If there is any chance of aliasing, do not apply the pattern.
-  for (const MachineInstr *MemInstr : MemOps) {
-    if (mayAlias(*MemInstr, MemOps, nullptr))
+  // Walk backward through the MBB starting from Root.
+  // Exit early if we've encountered all load instructions or hit the search
+  // limit.
+  auto MBBItr = Root.getIterator();
+  unsigned RemainingSteps = GatherOptSearchLimit;
+  SmallSet<const MachineInstr *, 16> RemainingLoadInstrs;
+  RemainingLoadInstrs.insert(LoadInstrs.begin(), LoadInstrs.end());
+  const MachineBasicBlock *MBB = Root.getParent();
+
+  for (; MBBItr != MBB->begin() && RemainingSteps > 0 &&
+         !RemainingLoadInstrs.empty();
+       --MBBItr, --RemainingSteps) {
+    const MachineInstr &CurrInstr = *MBBItr;
+
+    // Remove this instruction from remaining loads if it's one we're tracking.
+    RemainingLoadInstrs.erase(&CurrInstr);
+
+    // Check for potential aliasing with any of the load instructions to
+    // optimize.
+    if ((CurrInstr.mayLoadOrStore() || CurrInstr.isCall()) &&
+        mayAlias(CurrInstr, LoadInstrs, nullptr))
       return false;
   }
+
+  // If we hit the search limit without finding all load instructions,
+  // don't match the pattern.
+  if (RemainingSteps == 0 && !RemainingLoadInstrs.empty())
+    return false;
 
   switch (NumLanes) {
   case 4:
