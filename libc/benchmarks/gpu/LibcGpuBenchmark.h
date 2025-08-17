@@ -1,18 +1,16 @@
 #ifndef LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H
 #define LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H
 
-#include "benchmarks/gpu/BenchmarkLogger.h"
 #include "benchmarks/gpu/timing/timing.h"
+
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/config.h"
-#include "src/time/clock.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
