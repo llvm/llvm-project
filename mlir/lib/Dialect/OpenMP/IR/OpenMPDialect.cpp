@@ -2341,9 +2341,9 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                  /*private_needs_barrier=*/nullptr, clauses.reductionMod,
                  clauses.reductionVars,
                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit, clauses.modifierFirst,
-                 clauses.modifierSecond, clauses.dynGroupprivateSize);
+                 makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimit,
+                 clauses.modifierFirst, clauses.modifierSecond,
+                 clauses.dynGroupprivateSize);
 }
 
 LogicalResult TeamsOp::verify() {

@@ -298,19 +298,19 @@ def AllocatorHandleAttr : OpenMP_EnumAttr<AllocatorHandle, "allocator_handle">;
 // dyn_groupprivate enum.
 //===----------------------------------------------------------------------===//
 
-def DynGroupPrivateCGroup : I32EnumAttrCase<"cgroup", 0>;
-def DynGroupPrivateStrict : I32EnumAttrCase<"strict", 1>;
-def DynGroupPrivateFallback : I32EnumAttrCase<"fallback", 2>;
+def DynGroupprivateCGroup : I32EnumAttrCase<"cgroup", 0>;
+def DynGroupprivateStrict : I32EnumAttrCase<"strict", 1>;
+def DynGroupprivateFallback : I32EnumAttrCase<"fallback", 2>;
 
-def DynGroupPrivateModifier : OpenMP_I32EnumAttr<
-    "DynGroupPrivateModifier",
+def DynGroupprivateModifier : OpenMP_I32EnumAttr<
+    "DynGroupprivateModifier",
     "reduction modifier", [
-      DynGroupPrivateCGroup,
-      DynGroupPrivateStrict,
-      DynGroupPrivateFallback
+      DynGroupprivateCGroup,
+      DynGroupprivateStrict,
+      DynGroupprivateFallback
     ]>;
 
-def DynGroupPrivateModifierAttr : OpenMP_EnumAttr<DynGroupPrivateModifier,
+def DynGroupprivateModifierAttr : OpenMP_EnumAttr<DynGroupprivateModifier,
                                             "dyn_groupprivate_modifier"> {
   let assemblyFormat = "`(` $value `)`";
 }

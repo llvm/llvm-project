@@ -1474,15 +1474,15 @@ def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
 // V6.1 `dyn_groupprivate` clause
 //===----------------------------------------------------------------------===//
 
-class OpenMP_DynGroupPrivateClauseSkip<
+class OpenMP_DynGroupprivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
 
   let arguments = (ins
-    OptionalAttr<DynGroupPrivateModifierAttr>:$modifier_first,
-    OptionalAttr<DynGroupPrivateModifierAttr>:$modifier_second,
+    OptionalAttr<DynGroupprivateModifierAttr>:$modifier_first,
+    OptionalAttr<DynGroupprivateModifierAttr>:$modifier_second,
     Optional<AnyInteger>:$dyn_groupprivate_size
   );
 
@@ -1512,6 +1512,6 @@ class OpenMP_DynGroupPrivateClauseSkip<
   }];
 }
 
-def OpenMP_DynGroupPrivateClause : OpenMP_DynGroupPrivateClauseSkip<>;
+def OpenMP_DynGroupprivateClause : OpenMP_DynGroupprivateClauseSkip<>;
 
 #endif // OPENMP_CLAUSES
