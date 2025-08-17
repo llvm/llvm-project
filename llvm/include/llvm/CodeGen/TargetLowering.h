@@ -300,9 +300,9 @@ public:
 
   class ArgListEntry {
   public:
-    Value *Val = nullptr;
-    SDValue Node = SDValue();
-    Type *Ty = nullptr;
+    Value *Val;
+    SDValue Node;
+    Type *Ty;
     bool IsSExt : 1;
     bool IsZExt : 1;
     bool IsNoExt : 1;
@@ -322,12 +322,18 @@ public:
     MaybeAlign Alignment = std::nullopt;
     Type *IndirectType = nullptr;
 
-    ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
-          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
-          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
-          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
-          IsSwiftCoro(false), IsCFGuardTarget(false) {}
+    ArgListEntry(Value *Val, SDValue Node, Type *Ty)
+        : Val(Val), Node(Node), Ty(Ty), IsSExt(false), IsZExt(false),
+          IsNoExt(false), IsInReg(false), IsSRet(false), IsNest(false),
+          IsByVal(false), IsByRef(false), IsInAlloca(false),
+          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
+          IsSwiftAsync(false), IsSwiftError(false), IsSwiftCoro(false),
+          IsCFGuardTarget(false) {}
+
+    explicit ArgListEntry(Value *Val, SDValue Node = SDValue())
+        : ArgListEntry(Val, Node, Val->getType()) {}
+
+    ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
