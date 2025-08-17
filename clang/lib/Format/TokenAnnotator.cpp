@@ -2590,6 +2590,9 @@ private:
     if (!Tok.Previous || Tok.isNot(tok::identifier) || Tok.is(TT_ClassHeadName))
       return false;
 
+    if (Tok.endsSequence(Keywords.kw_final, TT_ClassHeadName))
+      return false;
+
     if ((Style.isJavaScript() || Style.isJava()) && Tok.is(Keywords.kw_extends))
       return false;
 
