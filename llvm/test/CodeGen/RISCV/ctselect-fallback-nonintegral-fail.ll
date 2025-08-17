@@ -9,8 +9,10 @@ target triple = "riscv64-unknown-linux-gnu"
 define i32 addrspace(200)* @test_ctselect_ptr(i1 %c, 
                                               i32 addrspace(200)* %a, 
                                               i32 addrspace(200)* %b) {
-  %r = call i32 addrspace(200)* @llvm.ct.select.p200i32(i1 %c, 
+  %r = call i32 addrspace(200)* @llvm.ct.select.p0(i1 %c, 
                                                      i32 addrspace(200)* %a, 
                                                      i32 addrspace(200)* %b)
   ret i32 addrspace(200)* %r
 }
+
+declare i32 @llvm.ct.select.p0(i1, i32, i32)
