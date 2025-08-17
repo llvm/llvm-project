@@ -21,12 +21,14 @@ def run(f):
     gc.collect()
     assert Context._get_live_count() == 0
 
+
 def lowerToLLVM(module):
     pm = PassManager.parse(
         "builtin.module(convert-func-to-llvm,reconcile-unrealized-casts)"
     )
     pm.run(module.operation)
     return module
+
 
 # Test JIT callback in global constructor
 # CHECK-LABEL: TEST: testJITCallbackInGlobalCtor
