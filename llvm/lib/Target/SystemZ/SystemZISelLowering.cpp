@@ -8926,18 +8926,33 @@ bool SystemZTargetLowering::combineCCMask(SDValue &CCReg, int &CCValid,
         return SmallVector<int, 4>();
     return CCVals;
   };
+  const auto getMSBPosSet = [](unsigned int Mask) {
+    int NumBits = std::numeric_limits<unsigned int>::digits;
+    int count = 0;
+    // Keep target search space to the left.
+    while (NumBits > 0) {
+      NumBits /= 2;
+      // Upper half zeros.
+      if (!(Mask >> NumBits)) {
+        count += NumBits;
+        // Search lower half.
+        Mask <<= NumBits;
+      }
+    }
+    return count;
+  };
+
   if (CCNode->getOpcode() == SystemZISD::TM) {
     if (CCValid != SystemZ::CCMASK_TM)
       return false;
-    const auto emulateTMCCMask = [](int CCVal, int Mask) {
+    const auto emulateTMCCMask = [&](int CCVal, int Mask) {
       if (!Mask)
-        return -1;
+        return std::numeric_limits<unsigned int>::digits;
       int Result = CCVal & Mask;
       bool AllOnes = Result == Mask;
       bool AllZeros = Result == 0;
       bool MixedZerosOnes = (!AllOnes && !AllZeros);
-      int MSBPos = (std::numeric_limits<unsigned int>::digits - 1) -
-                   __builtin_clz(static_cast<unsigned int>(Mask));
+      int MSBPos = getMSBPosSet(static_cast<unsigned int>(Mask));
       bool IsLeftMostBitSet = (Result & (1 << MSBPos)) != 0;
       return AllOnes                                ? 3
              : AllZeros                             ? 0
