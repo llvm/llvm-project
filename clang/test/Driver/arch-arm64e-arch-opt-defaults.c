@@ -1,6 +1,8 @@
-// Check that we can manually enable specific ptrauth features.
+// REQUIRES: system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}
+// Check the correct ptrauth features are enabled when simply using the -arch
+// option
 
-// RUN: %clang -target arm64-apple-darwin -c %s -### 2>&1 | FileCheck %s --check-prefix NONE
+// RUN: %clang -arch arm64 -c %s -### 2>&1 | FileCheck %s --check-prefix NONE
 // NONE: "-cc1"
 
 // NONE-NOT: "-fptrauth-calls"
@@ -17,60 +19,53 @@
 // Final catch all if any new flags are added
 // NONE-NOT: "-fptrauth"
 
-// RUN: %clang -target arm64-apple-darwin -fptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix CALL
+// RUN: %clang -arch arm64 -fptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix CALL
 // CALL: "-cc1"{{.*}} {{.*}} "-fptrauth-calls"
 
-// RUN: %clang -target arm64-apple-darwin -fptrauth-intrinsics -c %s -### 2>&1 | FileCheck %s --check-prefix INTRIN
+// RUN: %clang -arch arm64 -fptrauth-intrinsics -c %s -### 2>&1 | FileCheck %s --check-prefix INTRIN
 // INTRIN: "-cc1"{{.*}} {{.*}} "-fptrauth-intrinsics"
 
-// RUN: %clang -target arm64-apple-darwin -fptrauth-returns -c %s -### 2>&1 | FileCheck %s --check-prefix RETURN
+// RUN: %clang -arch arm64 -fptrauth-returns -c %s -### 2>&1 | FileCheck %s --check-prefix RETURN
 // RETURN: "-cc1"{{.*}} {{.*}} "-fptrauth-returns"
 
-// RUN: %clang -target arm64-apple-darwin -fptrauth-indirect-gotos -c %s -### 2>&1 | FileCheck %s --check-prefix INDGOTO
+// RUN: %clang -arch arm64 -fptrauth-indirect-gotos -c %s -### 2>&1 | FileCheck %s --check-prefix INDGOTO
 // INDGOTO: "-cc1"{{.*}} {{.*}} "-fptrauth-indirect-gotos"
 
-// RUN: %clang -target arm64-apple-darwin -fptrauth-auth-traps -c %s -### 2>&1 | FileCheck %s --check-prefix TRAPS
+// RUN: %clang -arch arm64 -fptrauth-auth-traps -c %s -### 2>&1 | FileCheck %s --check-prefix TRAPS
 // TRAPS: "-cc1"{{.*}} {{.*}} "-fptrauth-auth-traps"
 
 
-// Check the arm64e defaults.
+// Check the `-arch arm64e` defaults.
 
-// RUN: %clang -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
-// RUN: %clang -target arm64e-apple-macos -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
+// RUN: %clang -arch arm64e -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // DEFAULT: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
 
-// RUN: %clang -target arm64e-apple-none-macho -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-MACHO
-// DEFAULT-MACHO: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
-
-
-// RUN: %clang -target arm64e-apple-ios -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
+// RUN: %clang -arch arm64e -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
 // DEFAULT-NOCALL-NOT: "-fptrauth-calls"
 // DEFAULT-NOCALL: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
 
 
-// RUN: %clang -target arm64e-apple-ios -fno-ptrauth-returns -c %s -### 2>&1 | FileCheck %s --check-prefix NORET
+// RUN: %clang -arch arm64e -fno-ptrauth-returns -c %s -### 2>&1 | FileCheck %s --check-prefix NORET
 
 // NORET-NOT: "-fptrauth-returns"
 // NORET: "-fptrauth-calls" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
 
-// RUN: %clang -target arm64e-apple-ios -fno-ptrauth-intrinsics -c %s -### 2>&1 | FileCheck %s --check-prefix NOINTRIN
+// RUN: %clang -arch arm64e -fno-ptrauth-intrinsics -c %s -### 2>&1 | FileCheck %s --check-prefix NOINTRIN
 
 // NOINTRIN-NOT: "-fptrauth-intrinsics"
 // NOINTRIN: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
 
 
-// RUN: %clang -target arm64e-apple-ios -fno-ptrauth-auth-traps -c %s -### 2>&1 | FileCheck %s --check-prefix NOTRAP
+// RUN: %clang -arch arm64e -fno-ptrauth-auth-traps -c %s -### 2>&1 | FileCheck %s --check-prefix NOTRAP
 // NOTRAP: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
 
 // Check that the default driver flags correctly propogate through to the compiler
 
-// RUN: %clang -target arm64-apple-macosx      -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
-// RUN: %clang -target arm64-apple-ios         -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
-// RUN: %clang -target arm64e-apple-macosx     -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
-// RUN: %clang -target arm64e-apple-ios        -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
+// RUN: %clang -arch arm64                   -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
+// RUN: %clang -arch arm64e                  -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
 
 // A simple test case to test basic override logic
-// RUN: %clang -target arm64e-apple-macosx     -DDARWIN_DEFAULT_PTRAUTH_OVERRIDE -fno-ptrauth-calls %s -fsyntax-only -Xclang -verify=darwin_ptrauth_override
+// RUN: %clang -arch arm64e                  -DDARWIN_DEFAULT_PTRAUTH_OVERRIDE -fno-ptrauth-calls %s -fsyntax-only -Xclang -verify=darwin_ptrauth_override
 
 
 #define ASSERT_MODE_AND_KIND(feature, enabled, kind)                           \
