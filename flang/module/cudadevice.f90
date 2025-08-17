@@ -738,7 +738,7 @@ implicit none
   end interface
 
   interface __int2double_rn
-    attributes(device) double precision function __int2double_rn(i) bind(c)
+    attributes(device) double precision function __int2double_rn(i) bind(c, name='__nv_int2double_rn')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
