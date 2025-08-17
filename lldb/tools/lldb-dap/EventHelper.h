@@ -38,6 +38,8 @@ void SendInvalidatedEvent(
     DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas);
 
 void SendMemoryEvent(DAP &dap, lldb::SBValue variable);
+// FB-ONLY Support pinned thread request
+void SendThreadPinnedOrUnpinnedEvent(DAP &dap, lldb::tid_t tid);
 
 } // namespace lldb_dap
 

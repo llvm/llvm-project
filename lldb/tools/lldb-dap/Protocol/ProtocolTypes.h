@@ -281,6 +281,8 @@ enum AdapterFeature : unsigned {
   eAdapterFeatureLogPoints,
   /// The debug adapter supports the `modules` request.
   eAdapterFeatureModulesRequest,
+  /// The debugger adaptper supports the `setPinnedThread` request.
+  eAdapterFeaturePinnedThreads,
   /// The debug adapter supports the `readMemory` request.
   eAdapterFeatureReadMemoryRequest,
   /// The debug adapter supports restarting a frame.

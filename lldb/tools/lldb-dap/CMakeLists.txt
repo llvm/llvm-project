@@ -57,6 +57,7 @@ add_lldb_library(lldbDAP
   Handler/SetExceptionBreakpointsRequestHandler.cpp
   Handler/SetFunctionBreakpointsRequestHandler.cpp
   Handler/SetInstructionBreakpointsRequestHandler.cpp
+  Handler/SetPinnedThreadRequestHandler.cpp
   Handler/SetVariableRequestHandler.cpp
   Handler/SourceRequestHandler.cpp
   Handler/StackTraceRequestHandler.cpp

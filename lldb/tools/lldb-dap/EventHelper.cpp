@@ -37,6 +37,25 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   body.try_emplace("reason", "exited");
   body.try_emplace("threadId", (int64_t)tid);
   event.try_emplace("body", std::move(body));
+  // Make sure we unpinned the exiting thread if its pinned
+  if (tid == dap.pinned_tid) {
+    dap.pinned_tid = LLDB_INVALID_THREAD_ID;
+    // No need to send unpinned event as thread exited should result in removal
+    // of the thread in client UI
+  }
+  dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
+
+void SendThreadPinnedOrUnpinnedEvent(DAP &dap, lldb::tid_t tid) {
+  llvm::json::Object event(CreateEventObject("thread"));
+  llvm::json::Object body;
+  // Only one pinned thread is currently supported.
+  // LLDB_INVALID_THREAD_ID indicates client wants to unpin
+  std::string reason = tid == LLDB_INVALID_THREAD_ID ? "unpinned" : "pinned";
+  body.try_emplace("reason", reason);
+  body.try_emplace("threadId", (int64_t)tid);
+  event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 

@@ -1051,6 +1051,18 @@ struct ModuleSymbolsResponseBody {
 };
 llvm::json::Value toJSON(const ModuleSymbolsResponseBody &);
 
+/// Arguments for `setPinnedThread` request.
+struct SetPinnedThreadArguments {
+  /// Specifies the thread for which to pin for subsequent breakpoing requests.
+  std::optional<lldb::tid_t> threadId;
+};
+bool fromJSON(const llvm::json::Value &, SetPinnedThreadArguments &,
+              llvm::json::Path);
+
+/// Response to `setPinnedThread` request. VSCode does not listen to a response,
+/// so no body field is required.
+using SetPinnedThreadResponse = VoidResponse;
+
 } // namespace lldb_dap::protocol
 
 #endif

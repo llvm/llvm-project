@@ -115,6 +115,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// The focused thread for this DAP session.
   lldb::tid_t focus_tid = LLDB_INVALID_THREAD_ID;
+  /// The pinned thread for this DAP session. Currently only allow one tid
+  /// This is the tid that will be filtered on new setBreakpoint requests
+  lldb::tid_t pinned_tid = LLDB_INVALID_THREAD_ID;
 
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;

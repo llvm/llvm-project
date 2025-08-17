@@ -422,6 +422,8 @@ static llvm::StringLiteral ToString(AdapterFeature feature) {
     return "supportsLogPoints";
   case eAdapterFeatureModulesRequest:
     return "supportsModulesRequest";
+  case eAdapterFeaturePinnedThreads:
+    return "supportsPinnedThreads";
   case eAdapterFeatureReadMemoryRequest:
     return "supportsReadMemoryRequest";
   case eAdapterFeatureRestartFrame:

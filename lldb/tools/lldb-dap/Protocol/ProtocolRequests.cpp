@@ -628,4 +628,10 @@ llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, SetPinnedThreadArguments &SPTA,
+              json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.mapOptional("threadId", SPTA.threadId);
+}
+
 } // namespace lldb_dap::protocol

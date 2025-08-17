@@ -1566,8 +1566,9 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
       // Set thread id filter to focus_tid if the mode is "threadFocused"
       const auto breakpoint_mode = bp.mode.value_or("");
       if (breakpoint_mode == "threadFocused" &&
-          this->focus_tid != LLDB_INVALID_THREAD_ID)
+          this->focus_tid != LLDB_INVALID_THREAD_ID) {
         iv->second.SetThreadID(this->focus_tid);
+      }
       // We check if this breakpoint already exists to update it.
       if (inserted) {
         if (llvm::Error error = iv->second.SetBreakpoint(source)) {
@@ -1577,6 +1578,12 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
           response_breakpoints.push_back(std::move(invalid_breakpoint));
           existing_breakpoints.erase(iv);
           continue;
+        }
+        // For any newly inserted breakpoint that is not threadFocused,
+        // set thread id to pinned_tid if there is a pinned thread
+        if (breakpoint_mode != "threadFocused" &&
+            this->pinned_tid != LLDB_INVALID_THREAD_ID) {
+          iv->second.SetThreadID(this->pinned_tid);
         }
       } else {
         iv->second.UpdateBreakpoint(src_bp);
@@ -1642,6 +1649,7 @@ void DAP::RegisterRequests() {
   RegisterRequest<SetExceptionBreakpointsRequestHandler>();
   RegisterRequest<SetFunctionBreakpointsRequestHandler>();
   RegisterRequest<SetInstructionBreakpointsRequestHandler>();
+  RegisterRequest<SetPinnedThreadRequestHandler>();
   RegisterRequest<SetVariableRequestHandler>();
   RegisterRequest<SourceRequestHandler>();
   RegisterRequest<StackTraceRequestHandler>();

@@ -611,6 +611,18 @@ public:
   Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
+class SetPinnedThreadRequestHandler
+    : public RequestHandler<protocol::SetPinnedThreadArguments,
+                            protocol::SetPinnedThreadResponse> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "setPinnedThread"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeaturePinnedThreads};
+  }
+  llvm::Error Run(const protocol::SetPinnedThreadArguments &args) const override;
+};
+
 /// A request used in testing to get the details on all breakpoints that are
 /// currently set in the target. This helps us to test "setBreakpoints" and
 /// "setFunctionBreakpoints" requests to verify we have the correct set of
