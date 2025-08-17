@@ -864,7 +864,7 @@ std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
   auto [It, Inserted] =
       SeenLinkDecl.insert(std::make_pair(Library, LD.Location));
   if (!Inserted) {
-    Diags.Report(LD.Location, diag::err_mmap_link_redecalration) << Library;
+    Diags.Report(LD.Location, diag::warn_mmap_link_redeclaration) << Library;
     Diags.Report(It->second, diag::note_mmap_prev_link_declaration);
     HadError = true;
     return std::nullopt;
