@@ -8,7 +8,7 @@
 
 #include "FromfpxTest.h"
 
-#include "src/math/fromfpxbf16.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/fromfpxbf16.h"
 
 LIST_FROMFPX_TESTS(bfloat16, LIBC_NAMESPACE::fromfpxbf16)
