@@ -1771,32 +1771,9 @@ void FilterChooser::doFilter() {
       filterProcessor(BitAttrs, /*AllowMixed=*/true, /*Greedy=*/false))
     return;
 
-  // If we come to here, the instruction decoding has failed.
-  assert(!BestFilter);
-}
-
-// emitTableEntries - Emit state machine entries to decode our share of
-// instructions.
-void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
-  if (Opcodes.size() == 1) {
-    // There is only one instruction in the set, which is great!
-    // Call emitSingletonDecoder() to see whether there are any remaining
-    // encodings bits.
-    emitSingletonTableEntry(TableInfo, Opcodes[0]);
-    return;
-  }
-
-  // Choose the best filter to do the decodings!
-  if (BestFilter) {
-    if (BestFilter->getNumFiltered() == 1)
-      emitSingletonTableEntry(TableInfo, *BestFilter);
-    else
-      BestFilter->emitTableEntry(TableInfo);
-    return;
-  }
-
   // We don't know how to decode these instructions! Dump the
   // conflict set and bail.
+  assert(!BestFilter);
 
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
@@ -1810,6 +1787,24 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
     errs() << '\n';
   }
   PrintFatalError("Decoding conflict encountered");
+}
+
+// emitTableEntries - Emit state machine entries to decode our share of
+// instructions.
+void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
+  if (Opcodes.size() == 1) {
+    // There is only one instruction in the set, which is great!
+    // Call emitSingletonDecoder() to see whether there are any remaining
+    // encodings bits.
+    emitSingletonTableEntry(TableInfo, Opcodes[0]);
+    return;
+  }
+
+  // Use the best filter to do the decoding!
+  if (BestFilter->getNumFiltered() == 1)
+    emitSingletonTableEntry(TableInfo, *BestFilter);
+  else
+    BestFilter->emitTableEntry(TableInfo);
 }
 
 static std::string findOperandDecoderMethod(const Record *Record) {
