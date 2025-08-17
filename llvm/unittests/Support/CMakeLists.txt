@@ -31,6 +31,7 @@ add_llvm_unittest(SupportTests
   DataExtractorTest.cpp
   DebugCounterTest.cpp
   DebugTest.cpp
+  DebugLogTest.cpp
   DivisionByConstantTest.cpp
   DJBTest.cpp
   EndianStreamTest.cpp
@@ -88,6 +89,7 @@ add_llvm_unittest(SupportTests
   SuffixTreeTest.cpp
   SwapByteOrderTest.cpp
   TarWriterTest.cpp
+  TextEncodingTest.cpp
   ThreadPool.cpp
   ThreadSafeAllocatorTest.cpp
   Threading.cpp

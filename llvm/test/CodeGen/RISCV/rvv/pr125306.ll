@@ -43,24 +43,24 @@ define <2 x i32> @main(ptr %0) {
 ; CHECK-NEXT:    sh zero, -1710(a5)
 ; CHECK-NEXT:    sh zero, -784(a5)
 ; CHECK-NEXT:    sh zero, 142(a5)
-; CHECK-NEXT:    lw a5, -304(a1)
+; CHECK-NEXT:    lw a5, 1244(a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vadd.vi v9, v11, -1
 ; CHECK-NEXT:    vse32.v v10, (a3)
+; CHECK-NEXT:    lw a3, -188(a1)
 ; CHECK-NEXT:    sh zero, 0(a0)
-; CHECK-NEXT:    lw a0, -188(a1)
+; CHECK-NEXT:    lw a0, -304(a1)
+; CHECK-NEXT:    vadd.vi v9, v11, -1
 ; CHECK-NEXT:    vse32.v v10, (a2)
 ; CHECK-NEXT:    lw a2, -188(a1)
+; CHECK-NEXT:    vmv.v.x v8, a3
 ; CHECK-NEXT:    lw a3, 1244(a1)
-; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    lw a0, 1244(a1)
 ; CHECK-NEXT:    lw a1, -304(a1)
-; CHECK-NEXT:    vmv.v.x v10, a3
-; CHECK-NEXT:    vmv.v.x v11, a5
+; CHECK-NEXT:    vmv.v.x v10, a5
+; CHECK-NEXT:    vmv.v.x v11, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
 ; CHECK-NEXT:    vslide1down.vx v10, v10, zero
 ; CHECK-NEXT:    vmin.vv v8, v10, v8
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv.s.x v10, a3
 ; CHECK-NEXT:    vslide1down.vx v11, v11, zero
 ; CHECK-NEXT:    vmin.vx v10, v10, a2
 ; CHECK-NEXT:    vmin.vx v10, v10, a1

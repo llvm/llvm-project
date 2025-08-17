@@ -9,7 +9,7 @@
 #include "hdr/types/struct_itimerval.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -22,9 +22,9 @@ LLVM_LIBC_FUNCTION(int, setitimer,
     // There is no SYS_setitimer_time64 call, so we can't use time_t directly,
     // and need to convert it to long first.
     long new_value32[4] = {static_cast<long>(new_value->it_interval.tv_sec),
-                           new_value->it_interval.tv_usec,
+                           static_cast<long>(new_value->it_interval.tv_usec),
                            static_cast<long>(new_value->it_value.tv_sec),
-                           new_value->it_value.tv_usec};
+                           static_cast<long>(new_value->it_value.tv_usec)};
     long old_value32[4];
 
     ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_setitimer, which, new_value32,

@@ -46,17 +46,12 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
     def setup_debuggee(self):
         program = self.getBuildArtifact("a.out")
         source = "main.cpp"
-        self.build_and_launch(
-            program,
-            stopOnEntry=True,
-            sourceBreakpoints=[
-                (
-                    source,
-                    [
-                        line_number(source, "// breakpoint 1"),
-                        line_number(source, "// breakpoint 2"),
-                    ],
-                ),
+        self.build_and_launch(program)
+        self.set_source_breakpoints(
+            source,
+            [
+                line_number(source, "// breakpoint 1"),
+                line_number(source, "// breakpoint 2"),
             ],
         )
 
@@ -194,7 +189,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.get_completions("str"),
             [
                 {"text": "struct", "label": "struct"},
-                {"text": "str1", "label": "str1 -- string &"},
+                {"text": "str1", "label": "str1 -- std::string &"},
             ],
         )
 

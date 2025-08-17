@@ -15,13 +15,17 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
 
+#include "src/__support/macros/properties/compiler.h"
+
 // Workaround for missing __has_builtin in < GCC 10.
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
 
 // Workaround for missing __builtin_is_constant_evaluated in < GCC 10.
-#ifndef __builtin_is_constant_evaluated
+// Also this builtin is defined for GCC 9.
+#if !(__has_builtin(__builtin_is_constant_evaluated) ||                        \
+      (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)))
 #define __builtin_is_constant_evaluated(x) 0
 #endif
 

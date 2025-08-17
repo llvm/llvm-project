@@ -519,7 +519,7 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
-  /// Return true if the instructions is a SEH instruciton used for unwinding
+  /// Return true if the instructions is a SEH instruction used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
@@ -820,7 +820,8 @@ enum DestructiveInstType {
   DestructiveBinaryComm         = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
   DestructiveBinaryCommWithRev  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
-  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
 };
 
 enum FalseLaneType {

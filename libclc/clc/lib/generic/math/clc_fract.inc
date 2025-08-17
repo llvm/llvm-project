@@ -34,5 +34,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_fract(__CLC_GENTYPE x,
 
 FRACT_DEF(local);
 FRACT_DEF(global);
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+FRACT_DEF(generic);
+#endif
 
 #undef MIN_CONSTANT

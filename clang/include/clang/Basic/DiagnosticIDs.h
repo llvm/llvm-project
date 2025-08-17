@@ -272,6 +272,11 @@ public:
   DiagnosticIDs();
   ~DiagnosticIDs();
 
+  // Convenience method to construct a new refcounted DiagnosticIDs.
+  static llvm::IntrusiveRefCntPtr<DiagnosticIDs> create() {
+    return llvm::makeIntrusiveRefCnt<DiagnosticIDs>();
+  }
+
   /// Return an ID for a diagnostic with the specified format string and
   /// level.
   ///
@@ -283,7 +288,10 @@ public:
   // writing, nearly all callers of this function were invalid.
   unsigned getCustomDiagID(CustomDiagDesc Diag);
 
-  // TODO: Deprecate this once all uses are removed from LLVM
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level Level, StringRef Message) {
     return getCustomDiagID([&]() -> CustomDiagDesc {
@@ -482,18 +490,6 @@ private:
                         const DiagnosticsEngine &Diag) const LLVM_READONLY;
 
   Class getDiagClass(unsigned DiagID) const;
-
-  /// Used to report a diagnostic that is finally fully formed.
-  ///
-  /// \returns \c true if the diagnostic was emitted, \c false if it was
-  /// suppressed.
-  bool ProcessDiag(DiagnosticsEngine &Diag,
-                   const DiagnosticBuilder &DiagBuilder) const;
-
-  /// Used to emit a diagnostic that is finally fully formed,
-  /// ignoring suppression.
-  void EmitDiag(DiagnosticsEngine &Diag, const DiagnosticBuilder &DiagBuilder,
-                Level DiagLevel) const;
 
   /// Whether the diagnostic may leave the AST in a state where some
   /// invariants can break.

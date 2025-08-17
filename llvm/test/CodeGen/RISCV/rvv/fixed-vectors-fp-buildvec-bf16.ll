@@ -94,10 +94,12 @@ define <2 x bfloat> @vid_v2bf16() {
 define <2 x bfloat> @vid_addend1_v2bf16() {
 ; CHECK-LABEL: vid_addend1_v2bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 262148
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    vsll.vi v8, v8, 7
 ; CHECK-NEXT:    addi a0, a0, -128
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   ret <2 x bfloat> <bfloat 1.0, bfloat 2.0>
 }
@@ -105,10 +107,12 @@ define <2 x bfloat> @vid_addend1_v2bf16() {
 define <2 x bfloat> @vid_denominator2_v2bf16() {
 ; CHECK-LABEL: vid_denominator2_v2bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 260100
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    vsll.vi v8, v8, 7
 ; CHECK-NEXT:    addi a0, a0, -256
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   ret <2 x bfloat> <bfloat 0.5, bfloat 1.0>
 }

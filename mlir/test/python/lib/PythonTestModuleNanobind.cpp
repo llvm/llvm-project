@@ -113,8 +113,10 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       .attr(MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR)(
           mlirRankedTensorTypeID)(
           nanobind::cpp_function([valueCls](const nb::object &valueObj) {
-            nb::object capsule = mlirApiObjectToCapsule(valueObj);
-            MlirValue v = mlirPythonCapsuleToValue(capsule.ptr());
+            std::optional<nb::object> capsule =
+                mlirApiObjectToCapsule(valueObj);
+            assert(capsule.has_value() && "capsule is not null");
+            MlirValue v = mlirPythonCapsuleToValue(capsule.value().ptr());
             MlirType t = mlirValueGetType(v);
             // This is hyper-specific in order to exercise/test registering a
             // value caster from cpp (but only for a single test case; see

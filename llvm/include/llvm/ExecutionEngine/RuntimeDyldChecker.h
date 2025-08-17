@@ -11,6 +11,7 @@
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -159,23 +160,22 @@ public:
   using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef GOTContainer, StringRef TargetName)>;
 
-  RuntimeDyldChecker(IsSymbolValidFunction IsSymbolValid,
-                     GetSymbolInfoFunction GetSymbolInfo,
-                     GetSectionInfoFunction GetSectionInfo,
-                     GetStubInfoFunction GetStubInfo,
-                     GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness,
-                     Triple TT, StringRef CPU, SubtargetFeatures TF,
-                     raw_ostream &ErrStream);
-  ~RuntimeDyldChecker();
+  LLVM_ABI RuntimeDyldChecker(
+      IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
+      GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
+      GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
+      StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream);
+  LLVM_ABI ~RuntimeDyldChecker();
 
   /// Check a single expression against the attached RuntimeDyld
   ///        instance.
-  bool check(StringRef CheckExpr) const;
+  LLVM_ABI bool check(StringRef CheckExpr) const;
 
   /// Scan the given memory buffer for lines beginning with the string
   ///        in RulePrefix. The remainder of the line is passed to the check
   ///        method to be evaluated as an expression.
-  bool checkAllRulesInBuffer(StringRef RulePrefix, MemoryBuffer *MemBuf) const;
+  LLVM_ABI bool checkAllRulesInBuffer(StringRef RulePrefix,
+                                      MemoryBuffer *MemBuf) const;
 
   /// Returns the address of the requested section (or an error message
   ///        in the second element of the pair if the address cannot be found).
@@ -183,13 +183,13 @@ public:
   /// if 'LocalAddress' is true, this returns the address of the section
   /// within the linker's memory. If 'LocalAddress' is false it returns the
   /// address within the target process (i.e. the load address).
-  std::pair<uint64_t, std::string> getSectionAddr(StringRef FileName,
-                                                  StringRef SectionName,
-                                                  bool LocalAddress);
+  LLVM_ABI std::pair<uint64_t, std::string>
+  getSectionAddr(StringRef FileName, StringRef SectionName, bool LocalAddress);
 
   /// If there is a section at the given local address, return its load
   /// address, otherwise return std::nullopt.
-  std::optional<uint64_t> getSectionLoadAddress(void *LocalAddress) const;
+  LLVM_ABI std::optional<uint64_t>
+  getSectionLoadAddress(void *LocalAddress) const;
 
 private:
   std::unique_ptr<RuntimeDyldCheckerImpl> Impl;

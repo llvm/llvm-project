@@ -184,7 +184,7 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def step(self):
+    def step_in(self):
         pass
 
     @abc.abstractmethod

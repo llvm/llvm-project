@@ -723,7 +723,7 @@ void StackFrameList::SelectMostRelevantFrame() {
   // Don't call into the frame recognizers on the private state thread as
   // they can cause code to run in the target, and that can cause deadlocks
   // when fetching stop events for the expression.
-  if (m_thread.GetProcess()->CurrentThreadIsPrivateStateThread())
+  if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
     return;
 
   Log *log = GetLog(LLDBLog::Thread);
@@ -783,6 +783,8 @@ void StackFrameList::SelectMostRelevantFrame() {
 
 uint32_t
 StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
+  std::lock_guard<std::recursive_mutex> guard(m_selected_frame_mutex);
+
   if (!m_selected_frame_idx && select_most_relevant)
     SelectMostRelevantFrame();
   if (!m_selected_frame_idx) {
@@ -798,6 +800,8 @@ StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
   std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  std::lock_guard<std::recursive_mutex> selected_frame_guard(
+      m_selected_frame_mutex);
 
   const_iterator pos;
   const_iterator begin = m_frames.begin();
@@ -851,6 +855,8 @@ void StackFrameList::Clear() {
   std::unique_lock<std::shared_mutex> guard(m_list_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
+  std::lock_guard<std::recursive_mutex> selected_frame_guard(
+      m_selected_frame_mutex);
   m_selected_frame_idx.reset();
 }
 

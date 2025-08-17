@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -167,7 +166,7 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
     // We can't easily get the order of the current one, so compare against
     // the first one and adjust offset.
     const unsigned offset = (&MO == &MI.getOperand(0)) ? 0 : 4;
-    Fixups.push_back(MCFixup::create(offset, MO.getExpr(), FK_SecRel_4, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(offset, MO.getExpr(), FK_SecRel_4));
     return 0;
   }
 

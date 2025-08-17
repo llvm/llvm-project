@@ -10,14 +10,14 @@
 // CHECK-SAME: ptr noundef [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] !type [[META16:![0-9]+]] !type [[META17:![0-9]+]] !type [[META18:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:      #dbg_value(ptr [[F]], [[META15:![0-9]+]], !DIExpression(), [[META19:![0-9]+]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[F]], metadata !"_ZTSFvvE"), !dbg [[DBG20:![0-9]+]], !nosanitize [[META21:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !dbg [[DBG20]], !prof [[PROF22:![0-9]+]], !nosanitize [[META21]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[F]], metadata !"_ZTSFvvE"), !dbg [[DBG20:![0-9]+]], !nosanitize [[META24:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !dbg [[DBG20]], !prof [[PROF25:![0-9]+]], !nosanitize [[META24]]
 // CHECK:       [[CFI_SLOWPATH]]:
-// CHECK-NEXT:    tail call void @__cfi_slowpath(i64 9080559750644022485, ptr [[F]]) #[[ATTR6:[0-9]+]], !dbg [[DBG20]], !nosanitize [[META21]]
-// CHECK-NEXT:    br label %[[CFI_CONT]], !dbg [[DBG20]], !nosanitize [[META21]]
+// CHECK-NEXT:    tail call void @__cfi_slowpath(i64 9080559750644022485, ptr [[F]]) #[[ATTR6:[0-9]+]], !dbg [[DBG20]], !nosanitize [[META24]]
+// CHECK-NEXT:    br label %[[CFI_CONT]], !dbg [[DBG20]], !nosanitize [[META24]]
 // CHECK:       [[CFI_CONT]]:
-// CHECK-NEXT:    tail call void [[F]]() #[[ATTR6]], !dbg [[DBG20]]
-// CHECK-NEXT:    ret void, !dbg [[DBG23:![0-9]+]]
+// CHECK-NEXT:    tail call void [[F]]() #[[ATTR6]], !dbg [[DBG23:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
 //
 void caller(void (*f)(void)) {
   f();
@@ -38,8 +38,11 @@ void caller(void (*f)(void)) {
 // CHECK: [[META17]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // CHECK: [[META18]] = !{i64 0, i64 2451761621477796417}
 // CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG7]])
-// CHECK: [[DBG20]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
-// CHECK: [[META21]] = !{}
-// CHECK: [[PROF22]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[DBG23]] = !DILocation(line: 24, column: 1, scope: [[DBG7]])
+// CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[DBG23]])
+// CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META22]] = !DISubroutineType(types: null)
+// CHECK: [[DBG23]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
+// CHECK: [[META24]] = !{}
+// CHECK: [[PROF25]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[DBG26]] = !DILocation(line: 24, column: 1, scope: [[DBG7]])
 //.

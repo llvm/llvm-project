@@ -389,8 +389,9 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
       }
       // Otherwise there just wasn't enough space.
       result.resize_for_overwrite(result.capacity() * 2);
-    } else
+    } else {
       break;
+    }
   }
 
   result.truncate(strlen(result.data()));
@@ -875,6 +876,12 @@ void mapped_file_region::unmapImpl() {
     ::munmap(Mapping, Size);
 }
 
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
+}
+
 void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
@@ -938,8 +945,9 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
         (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
       return directory_iterator_increment(It);
     It.CurrentEntry.replace_filename(Name, direntType(CurDir));
-  } else
+  } else {
     return directory_iterator_destruct(It);
+  }
 
   return std::error_code();
 }
@@ -1095,14 +1103,14 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::enableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
-      if (auto EC = llvm::disablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
@@ -1188,7 +1196,7 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
-  if (ssize_t(NumRead) == -1)
+  if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
 // for reading in more cases than other platforms.

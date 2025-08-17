@@ -18,7 +18,7 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -30,15 +30,9 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
@@ -117,7 +111,7 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
                                          getLoc());
 }
 
-LogicalResult CvtFloatToTF32Op::verify() {
+LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
   case RndMode::RNA:
@@ -129,12 +123,12 @@ LogicalResult CvtFloatToTF32Op::verify() {
     break;
   default:
     return emitError(
-        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+        "Only {rn,rz,rna} rounding modes supported for ConvertFloatToTF32Op.");
   }
   return success();
 }
 
-LogicalResult CvtF32x2ToF8x2Op::verify() {
+LogicalResult ConvertF32x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   using SatMode = NVVM::SaturationMode;
 
@@ -146,8 +140,8 @@ LogicalResult CvtF32x2ToF8x2Op::verify() {
   bool hasRelu = getRelu();
 
   switch (getType()) {
-  case CVTFP8Type::E4M3:
-  case CVTFP8Type::E5M2:
+  case ConvertFP8Type::E4M3:
+  case ConvertFP8Type::E5M2:
     if (!isRoundingModeRN)
       return emitOpError("Only RN rounding mode is supported for conversions "
                          "from f32x2 to .e4m3x2 or .e5m2x2 types");
@@ -155,7 +149,7 @@ LogicalResult CvtF32x2ToF8x2Op::verify() {
       return emitOpError("Only SATFINITE saturation mode is supported for "
                          "conversions from f32x2 to .e4m3x2 or .e5m2x2 types");
     break;
-  case CVTFP8Type::UE8M0:
+  case ConvertFP8Type::UE8M0:
     if (!(isRoundingModeRZ || isRoundingModeRP))
       return emitOpError("Only RZ or RP rounding modes are supported for "
                          "conversions from f32x2 to .ue8m0x2 type");
@@ -166,18 +160,18 @@ LogicalResult CvtF32x2ToF8x2Op::verify() {
   return success();
 }
 
-LogicalResult CvtF16x2ToF8x2Op::verify() {
-  if (getType() == CVTFP8Type::UE8M0)
+LogicalResult ConvertF16x2ToF8x2Op::verify() {
+  if (getType() == ConvertFP8Type::UE8M0)
     return emitOpError("Only .e4m3 or .e5m2 types are supported for "
                        "conversions from f16x2 to f8x2.");
 
   return success();
 }
 
-LogicalResult CvtBF16x2ToF8x2Op::verify() {
+LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
 
-  if (getType() != CVTFP8Type::UE8M0)
+  if (getType() != ConvertFP8Type::UE8M0)
     return emitOpError(
         "Only .ue8m0 type is supported for conversions from bf16x2 to f8x2.");
 
@@ -193,6 +187,26 @@ LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
   return success();
+}
+
+LogicalResult PMEventOp::verify() {
+  auto eventId = getEventId();
+  auto maskedEventId = getMaskedEventId();
+  if (!maskedEventId && !eventId) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (maskedEventId && eventId) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (eventId) {
+    if (eventId < 0 || eventId > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -797,36 +811,81 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 }
 
 LogicalResult NVVM::LdMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
-  if (getNum() != 1 && getNum() != 2 && getNum() != 4)
-    return emitOpError("expected num attribute to be 1, 2 or 4");
+  uint32_t num = getNum(), m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x8 "
+                         "matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be b16 for 8x8 matrix");
+    }
+  } else if (m == 8 && n == 16) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::row) {
+      return emitOpError("expected layout to be row for 8x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 8x16 matrix");
+    }
+  } else if (m == 16 && n == 16) {
+    if (num != 1 && num != 2) {
+      return emitOpError("expected num attribute to be 1 or 2 for 16x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8 &&
+        getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8, b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 16x16 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8, 8x16 or 16x16");
+  }
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (getNum() == 1 && getType() != i32)
+  uint32_t numElements = (m == 16 && n == 16 ? num * 2 : num);
+  if (numElements == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (getNum() == 2 || getNum() == 4) {
+  if (numElements == 2 || numElements == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(getNum(), i32));
+        getContext(), SmallVector<Type>(numElements, i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << getNum() << " elements of type i32";
+             << numElements << " elements of type i32";
   }
+
   return success();
 }
 
 LogicalResult NVVM::StMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  int m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be B16 for 8x8 matrix");
+    }
+  } else if (m == 16 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
+      return emitOpError("expected element type to be B8 for 16x8 matrix");
+    }
+    if (getLayout() != NVVM::MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x8 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8 or 16x8");
+  }
 
   return success();
 }
@@ -1204,11 +1263,84 @@ LogicalResult NVVM::VoteSyncOp::verify() {
   return success();
 }
 
-llvm::Value *
-NVVM::DotAccumulate4WayOp::getPackedArg(llvm::Value *arg,
-                                        llvm::IRBuilderBase &builder) {
-  return builder.CreateBitCast(arg,
-                               llvm::Type::getInt32Ty(builder.getContext()));
+LogicalResult NVVM::PrefetchOp::verify() {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority = getEvictPriority();
+
+  if (getUniform()) {
+    if (getCacheLevel() != CacheLevel::L1)
+      return emitOpError("unsupported cache level, the only supported uniform "
+                         "cache level is L1");
+
+    if (addressSpace != MemSpace::kGenericMemorySpace)
+      return emitOpError(
+          "prefetch to uniform cache requires a generic pointer");
+  }
+
+  if (evictPriority) {
+    if (getCacheLevel() != CacheLevel::L2)
+      return emitOpError(
+          "cache eviction priority supported only for cache level L2");
+
+    if (addressSpace != MemSpace::kGlobalMemorySpace)
+      return emitOpError("cache eviction priority requires a global pointer");
+
+    if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
+        *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
+      return emitOpError(
+          "unsupported cache eviction priority, only evict_last and "
+          "evict_normal are supported");
+  }
+
+  return success();
+}
+
+/// Packs the given `field` into the `result`.
+/// The `result` is 64-bits and each `field` can be 32-bits or narrower.
+static llvm::Value *
+packValInto64Bits(llvm::IRBuilderBase &builder,
+                  llvm::Value *result, // the `result` (unset bits are zero)
+                  llvm::Value *field,  // `field` to pack into `result`
+                  unsigned sizeInBits, // Size of `field` in bits
+                  unsigned start) {    // Starting bit within `result`
+  field = builder.CreateZExtOrBitCast(field, builder.getInt32Ty());
+
+  unsigned mask = (sizeInBits < 32 ? ((1u << sizeInBits) - 1) : 0xffffffffu);
+  if (mask != 0xffffffffu)
+    field = builder.CreateAnd(field, builder.getInt32(mask));
+
+  field = builder.CreateZExtOrBitCast(field, builder.getInt64Ty());
+  field = builder.CreateShl(field, start);
+
+  return builder.CreateOr(result, field);
+}
+
+void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
+                                                LLVM::ModuleTranslation &mt,
+                                                llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05MmaSmemDescOp>(op);
+  llvm::Value *smemDesc = builder.getInt64(0);
+
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getStartAddr()), 14, 0);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimOffset()), 14, 16);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getStrideDimOffset()), 14, 32);
+
+  smemDesc = packValInto64Bits(builder, smemDesc, builder.getInt32(1), 3, 46);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getBaseOffset()), 3, 49);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimMode()), 1, 52);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getSwizzleMode()), 3, 61);
+
+  mt.mapValue(thisOp.getRes()) = smemDesc;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1251,6 +1383,54 @@ CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
     args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
 
   return id;
+}
+
+mlir::NVVM::IDArgPair CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkPrefetchOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::nvvm_cp_async_bulk_prefetch_L2;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id =
+      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  // Choose the bytemask variant
+  if (mlir::Value byteMask = thisOp.getByteMask()) {
+    args.push_back(mt.lookupValue(byteMask));
+    id = llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global_bytemask;
+  }
+
+  return {id, std::move(args)};
 }
 
 llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
@@ -1336,9 +1516,9 @@ llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
   hasSatFinite ? CVT_F2TF32_ID_IMPL(rnd, relu, sf)                             \
                : CVT_F2TF32_ID_IMPL(rnd, relu, )
 
-llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                                     NVVM::SaturationMode sat,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                     NVVM::SaturationMode sat, bool hasRelu) {
   using RndMode = NVVM::FPRoundingMode;
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   switch (rnd) {
@@ -1357,14 +1537,15 @@ llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
 
-llvm::Intrinsic::ID CvtF32x2ToF6x2Op::getIntrinsicID(NVVM::CVTFP6Type type,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF32x2ToF6x2Op::getIntrinsicID(NVVM::ConvertFP6Type type, bool hasRelu) {
   switch (type) {
-  case NVVM::CVTFP6Type::E2M3:
+  case NVVM::ConvertFP6Type::E2M3:
     return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
-  case NVVM::CVTFP6Type::E3M2:
+  case NVVM::ConvertFP6Type::E3M2:
     return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
   }
+  llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
 }
 
 #define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
@@ -1375,20 +1556,20 @@ llvm::Intrinsic::ID CvtF32x2ToF6x2Op::getIntrinsicID(NVVM::CVTFP6Type type,
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu                      \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn
 
-llvm::Intrinsic::ID CvtF32x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
-                                                     NVVM::FPRoundingMode rnd,
-                                                     NVVM::SaturationMode sat,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF32x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type,
+                                     NVVM::FPRoundingMode rnd,
+                                     NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   bool hasRoundingModeRZ = (rnd == NVVM::FPRoundingMode::RZ);
   bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
 
   switch (type) {
-  case NVVM::CVTFP8Type::E4M3:
+  case NVVM::ConvertFP8Type::E4M3:
     return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
-  case NVVM::CVTFP8Type::E5M2:
+  case NVVM::ConvertFP8Type::E5M2:
     return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
-  case NVVM::CVTFP8Type::UE8M0:
+  case NVVM::ConvertFP8Type::UE8M0:
     if (hasRoundingModeRZ)
       return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
     else if (hasRoundingModeRP)
@@ -1401,15 +1582,15 @@ llvm::Intrinsic::ID CvtF32x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
   has_relu ? llvm::Intrinsic::nvvm_f16x2_to_##type##_rn_relu                   \
            : llvm::Intrinsic::nvvm_f16x2_to_##type##_rn
 
-llvm::Intrinsic::ID CvtF16x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF16x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type, bool hasRelu) {
   switch (type) {
-  case NVVM::CVTFP8Type::E4M3:
+  case NVVM::ConvertFP8Type::E4M3:
     return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
-  case NVVM::CVTFP8Type::E5M2:
+  case NVVM::ConvertFP8Type::E5M2:
     return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
   default:
-    llvm_unreachable("Invalid CVTFP8Type for CvtF16x2ToF8x2Op");
+    llvm_unreachable("Invalid ConvertFP8Type for CvtF16x2ToF8x2Op");
   }
 }
 
@@ -1418,8 +1599,8 @@ llvm::Intrinsic::ID CvtF16x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
            : llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd
 
 llvm::Intrinsic::ID
-CvtBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                  NVVM::SaturationMode sat) {
+ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                      NVVM::SaturationMode sat) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   switch (rnd) {
   case NVVM::FPRoundingMode::RZ:
@@ -1598,23 +1779,94 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   }
 }
 
-llvm::Intrinsic::ID
-DotAccumulate4WayOp::getIntrinsicID(NVVM::DotAccumulate4WayType a_type,
-                                    NVVM::DotAccumulate4WayType b_type) {
-  bool is_a_siext = a_type == NVVM::DotAccumulate4WayType::S8;
-  bool is_b_siext = b_type == NVVM::DotAccumulate4WayType::S8;
-  unsigned type = (is_a_siext << 1) | is_b_siext;
-  switch (type) {
-  case 0:
-    return llvm::Intrinsic::nvvm_idp4a_u_u;
-  case 1:
-    return llvm::Intrinsic::nvvm_idp4a_u_s;
-  case 2:
-    return llvm::Intrinsic::nvvm_idp4a_s_u;
-  case 3:
-    return llvm::Intrinsic::nvvm_idp4a_s_s;
+static llvm::Value *getAsPackedI32(llvm::Value *arg,
+                                   llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(arg,
+                               llvm::Type::getInt32Ty(builder.getContext()));
+}
+
+NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate4WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp4a_u_u,
+      llvm::Intrinsic::nvvm_idp4a_u_s,
+      llvm::Intrinsic::nvvm_idp4a_s_u,
+      llvm::Intrinsic::nvvm_idp4a_s_s,
+  };
+  return {ids[type], args};
+}
+
+NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate2WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(builder.getInt1(curOp.getBHi()));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp2a_u_u,
+      llvm::Intrinsic::nvvm_idp2a_u_s,
+      llvm::Intrinsic::nvvm_idp2a_s_u,
+      llvm::Intrinsic::nvvm_idp2a_s_s,
+  };
+  return {ids[type], args};
+}
+
+llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(NVVM::PrefetchOp &op) {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  NVVM::PrefetchCacheLevel cacheLevel = op.getCacheLevel();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority =
+      op.getEvictPriority();
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType())
+          .getAddressSpace();
+
+  if (op.getUniform() && cacheLevel == CacheLevel::L1)
+    return llvm::Intrinsic::nvvm_prefetchu_L1;
+
+  if (evictPriority && cacheLevel == CacheLevel::L2) {
+    switch (*evictPriority) {
+    case NVVM::CacheEvictionPriority::EvictLast:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last;
+    case NVVM::CacheEvictionPriority::EvictNormal:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal;
+    default:
+      llvm_unreachable("Invalid cache eviction priority");
+    }
+  }
+
+  switch (addressSpace) {
+  case MemSpace::kGenericMemorySpace:
+    return cacheLevel == CacheLevel::L1 ? llvm::Intrinsic::nvvm_prefetch_L1
+                                        : llvm::Intrinsic::nvvm_prefetch_L2;
+  case MemSpace::kGlobalMemorySpace:
+    return cacheLevel == CacheLevel::L1
+               ? llvm::Intrinsic::nvvm_prefetch_global_L1
+               : llvm::Intrinsic::nvvm_prefetch_global_L2;
+  case MemSpace::kLocalMemorySpace:
+    return cacheLevel == CacheLevel::L1
+               ? llvm::Intrinsic::nvvm_prefetch_local_L1
+               : llvm::Intrinsic::nvvm_prefetch_local_L2;
   default:
-    llvm_unreachable("Invalid DP4a type");
+    llvm_unreachable("Invalid pointer address space");
   }
 }
 
@@ -1710,7 +1962,7 @@ LogicalResult
 NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
                        StringRef features, DictionaryAttr flags,
-                       ArrayAttr files) {
+                       ArrayAttr files, bool verifyTarget) {
   if (optLevel < 0 || optLevel > 3) {
     emitError() << "The optimization level must be a number between 0 and 3.";
     return failure();
@@ -1729,6 +1981,37 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "All the elements in the `link` array must be strings.";
     return failure();
   }
+  return success();
+}
+
+LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
+  if (!getVerifyTarget())
+    return success();
+
+  auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
+  if (!gpuModuleOp) {
+    return emitError(gpuModule->getLoc(),
+                     "NVVM target attribute must be attached to a GPU module");
+  }
+
+  const NVVMCheckSMVersion targetSMVersion =
+      NVVMCheckSMVersion::getTargetSMVersionFromStr(getChip());
+  if (!targetSMVersion.isMinimumSMVersion()) {
+    return emitError(gpuModule->getLoc(),
+                     "Minimum NVVM target SM version is sm_20");
+  }
+
+  gpuModuleOp->walk([&](Operation *op) {
+    if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
+      const NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
+      if (!requirement.isCompatibleWith(targetSMVersion)) {
+        op->emitOpError() << "is not supported on " << getChip();
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+
   return success();
 }
 

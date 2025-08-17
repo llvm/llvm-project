@@ -20,7 +20,7 @@ module {
     }
     cir.return
   }
-  // CHECK:      cir.func @l1
+  // CHECK:      cir.func{{.*}} @l1
   // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -55,7 +55,7 @@ module {
     }
     cir.return
   }
-  // CHECK:      cir.func @l2
+  // CHECK:      cir.func{{.*}} @l2
   // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.for : cond {
@@ -92,7 +92,7 @@ module {
     }
     cir.return
   }
-  // CHECK:      cir.func @l3
+  // CHECK:      cir.func{{.*}} @l3
   // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.for : cond {

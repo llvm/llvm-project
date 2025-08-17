@@ -1490,9 +1490,9 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   }];
 
   let arguments = (ins
-    Tosa_I1Tensor:$input1,
-    Tosa_Tensor:$input2,
-    Tosa_Tensor:$input3
+    Tosa_I1Tensor:$input1,  // pred
+    Tosa_Tensor:$input2,    // on true
+    Tosa_Tensor:$input3     // on false
   );
 
   let results = (outs
@@ -1511,6 +1511,13 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   let assemblyFormat = [{
     operands attr-dict `:` `(` type($input1) `,` type($input2) `,` type($input3)
     `)` `->` type($output)
+  }];
+
+  let extraClassDeclaration = [{
+    // Custom getters for readability
+    ::mlir::TypedValue<::mlir::TensorType> getPred() { return getInput1(); }
+    ::mlir::TypedValue<::mlir::TensorType> getOnTrue() { return getInput2(); }
+    ::mlir::TypedValue<::mlir::TensorType> getOnFalse() { return getInput3(); }
   }];
 }
 
@@ -1959,7 +1966,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_Tensor:$output
   );
 
   list<Availability> availability = [
@@ -2125,7 +2132,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values,
-    TosaTensorRankOf<[Tosa_Int32], [2]>:$indices
+    Tosa_Int32Tensor2D:$indices
   );
 
   let results = (outs
@@ -2159,7 +2166,7 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values_in,
-    TosaTensorRankOf<[Tosa_Int32], [2]>:$indices,
+    Tosa_Int32Tensor2D:$indices,
     Tosa_Tensor3D:$input
   );
 

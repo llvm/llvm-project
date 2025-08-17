@@ -220,7 +220,7 @@ public:
 
 /// Represents the result of a call to sys::fs::status().
 class file_status : public basic_file_status {
-  LLVM_ABI_FRIEND friend bool equivalent(file_status A, file_status B);
+  LLVM_ABI friend bool equivalent(file_status A, file_status B);
 
 #if defined(LLVM_ON_UNIX)
   dev_t fs_st_dev = 0;
@@ -1341,6 +1341,11 @@ public:
 
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;
+
+  /// Write changes to disk and synchronize. Equivalent to POSIX msync. This
+  /// will wait for flushing memory-mapped region back to disk and can be very
+  /// slow.
+  LLVM_ABI std::error_code sync() const;
 
   /// Get a const view of the data. Modifying this memory has undefined
   /// behavior.

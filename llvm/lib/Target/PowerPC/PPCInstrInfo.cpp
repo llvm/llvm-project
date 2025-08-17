@@ -1108,7 +1108,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::CRSET:
   case PPC::CRUNSET:
   case PPC::XXSETACCZ:
-  case PPC::XXSETACCZW:
+  case PPC::DMXXSETACCZ:
     return true;
   }
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
@@ -1921,6 +1921,14 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     OpcodeIndex = SOK_PairedVecSpill;
   } else if (PPC::G8pRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_PairedG8Spill;
+  } else if (PPC::DMRROWRCRegClass.hasSubClassEq(RC)) {
+    llvm_unreachable("TODO: Implement spill DMRROW regclass!");
+  } else if (PPC::DMRROWpRCRegClass.hasSubClassEq(RC)) {
+    llvm_unreachable("TODO: Implement spill DMRROWp regclass!");
+  } else if (PPC::DMRpRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_DMRpSpill;
+  } else if (PPC::DMRRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_DMRSpill;
   } else {
     llvm_unreachable("Unknown regclass!");
   }

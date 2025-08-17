@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include <set>
 #include <string>
@@ -106,6 +107,7 @@ enum class LVAttributeKind {
   Generated,     // --attribute=generated
   Global,        // --attribute=global
   Inserted,      // --attribute=inserted
+  Language,      // --attribute=language
   Level,         // --attribute=level
   Linkage,       // --attribute=linkage
   Local,         // --attribute=local
@@ -119,6 +121,7 @@ enum class LVAttributeKind {
   Range,         // --attribute=range
   Reference,     // --attribute=reference
   Register,      // --attribute=register
+  Size,          // --attribute=size
   Standard,      // --attribute=standard
   Subrange,      // --attribute=subrange
   System,        // --attribute=system
@@ -292,8 +295,8 @@ public:
   }
 
   // Access to command line options, pattern and printing information.
-  static LVOptions *getOptions();
-  static void setOptions(LVOptions *Options);
+  LLVM_ABI static LVOptions *getOptions();
+  LLVM_ABI static void setOptions(LVOptions *Options);
 
   LVOptions() = default;
   LVOptions(const LVOptions &) = default;
@@ -306,7 +309,7 @@ public:
   // In the case of logical view comparison, some options related to
   // attributes must be set or reset for a proper comparison.
   // Resolve any dependencies between command line options.
-  void resolveDependencies();
+  LLVM_ABI void resolveDependencies();
   size_t indentationSize() const { return IndentationSize; }
 
   LVAttribute Attribute;
@@ -336,6 +339,7 @@ public:
   ATTRIBUTE_OPTION(Generated);
   ATTRIBUTE_OPTION(Global);
   ATTRIBUTE_OPTION(Inserted);
+  ATTRIBUTE_OPTION(Language);
   ATTRIBUTE_OPTION(Level);
   ATTRIBUTE_OPTION(Linkage);
   ATTRIBUTE_OPTION(Location);
@@ -349,6 +353,7 @@ public:
   ATTRIBUTE_OPTION(Range);
   ATTRIBUTE_OPTION(Reference);
   ATTRIBUTE_OPTION(Register);
+  ATTRIBUTE_OPTION(Size);
   ATTRIBUTE_OPTION(Standard);
   ATTRIBUTE_OPTION(Subrange);
   ATTRIBUTE_OPTION(System);
@@ -433,7 +438,7 @@ public:
   // General shortcuts to some combinations.
   BOOL_FUNCTION(General, CollectRanges);
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }
@@ -503,7 +508,7 @@ class LVPatterns final {
     }
   }
 
-  void addElement(LVElement *Element);
+  LLVM_ABI void addElement(LVElement *Element);
 
   template <typename T, typename U>
   void resolveGenericPatternMatch(T *Element, const U &Requests) {
@@ -546,7 +551,7 @@ class LVPatterns final {
                          bool IgnoreCase, bool UseRegex);
 
 public:
-  static LVPatterns *getPatterns();
+  LLVM_ABI static LVPatterns *getPatterns();
 
   LVPatterns() {
     ElementDispatch = LVElement::getDispatch();
@@ -590,9 +595,9 @@ public:
     addRequest(Selection, TypeDispatch, TypeRequest);
   }
 
-  void updateReportOptions();
+  LLVM_ABI void updateReportOptions();
 
-  bool matchPattern(StringRef Input, const LVMatchInfo &MatchInfo);
+  LLVM_ABI bool matchPattern(StringRef Input, const LVMatchInfo &MatchInfo);
   // Match a pattern (--select='pattern').
   bool matchGenericPattern(StringRef Input) {
     return matchPattern(Input, GenericMatchInfo);
@@ -617,20 +622,20 @@ public:
     resolveGenericPatternMatch(Type, TypeRequest);
   }
 
-  void addPatterns(StringSet<> &Patterns, LVMatchInfo &Filters);
+  LLVM_ABI void addPatterns(StringSet<> &Patterns, LVMatchInfo &Filters);
 
   // Add generic and offset patterns info.
-  void addGenericPatterns(StringSet<> &Patterns);
-  void addOffsetPatterns(const LVOffsetSet &Patterns);
+  LLVM_ABI void addGenericPatterns(StringSet<> &Patterns);
+  LLVM_ABI void addOffsetPatterns(const LVOffsetSet &Patterns);
 
   // Conditions to print an object.
-  bool printElement(const LVLine *Line) const;
-  bool printObject(const LVLocation *Location) const;
-  bool printElement(const LVScope *Scope) const;
-  bool printElement(const LVSymbol *Symbol) const;
-  bool printElement(const LVType *Type) const;
+  LLVM_ABI bool printElement(const LVLine *Line) const;
+  LLVM_ABI bool printObject(const LVLocation *Location) const;
+  LLVM_ABI bool printElement(const LVScope *Scope) const;
+  LLVM_ABI bool printElement(const LVSymbol *Symbol) const;
+  LLVM_ABI bool printElement(const LVType *Type) const;
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }

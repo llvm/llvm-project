@@ -13,7 +13,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/MachO.h"

@@ -32,8 +32,6 @@
 
 #include <clc/math/gentype.inc>
 
-#undef __FLOAT_ONLY
-
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -51,7 +49,5 @@
 #define __CLC_BODY <clc_sincos_helpers_fp64.inc>
 
 #include <clc/math/gentype.inc>
-
-#undef __DOUBLE_ONLY
 
 #endif

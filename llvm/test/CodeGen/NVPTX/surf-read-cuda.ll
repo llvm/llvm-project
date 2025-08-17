@@ -13,8 +13,7 @@ declare i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1))
 define ptx_kernel void @foo(i64 %img, ptr %red, i32 %idx) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -23,8 +22,8 @@ define ptx_kernel void @foo(i64 %img, ptr %red, i32 %idx) {
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; CHECK-NEXT:    ld.param.b32 %r1, [foo_param_2];
 ; CHECK-NEXT:    suld.b.1d.b32.trap {%r2}, [%rd1, {%r1}];
-; CHECK-NEXT:    cvt.rn.f32.s32 %f1, %r2;
-; CHECK-NEXT:    st.global.b32 [%rd3], %f1;
+; CHECK-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-NEXT:    st.global.b32 [%rd3], %r3;
 ; CHECK-NEXT:    ret;
   %val = tail call i32 @llvm.nvvm.suld.1d.i32.trap(i64 %img, i32 %idx)
   %ret = sitofp i32 %val to float
@@ -37,8 +36,7 @@ define ptx_kernel void @foo(i64 %img, ptr %red, i32 %idx) {
 define ptx_kernel void @bar(ptr %red, i32 %idx) {
 ; CHECK-LABEL: bar(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -46,8 +44,8 @@ define ptx_kernel void @bar(ptr %red, i32 %idx) {
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; CHECK-NEXT:    ld.param.b32 %r1, [bar_param_1];
 ; CHECK-NEXT:    suld.b.1d.b32.trap {%r2}, [surf0, {%r1}];
-; CHECK-NEXT:    cvt.rn.f32.s32 %f1, %r2;
-; CHECK-NEXT:    st.global.b32 [%rd2], %f1;
+; CHECK-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-NEXT:    st.global.b32 [%rd2], %r3;
 ; CHECK-NEXT:    ret;
   %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf0)
   %val = tail call i32 @llvm.nvvm.suld.1d.i32.trap(i64 %surfHandle, i32 %idx)

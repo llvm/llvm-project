@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -15,7 +15,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -30,8 +29,6 @@ using namespace llvm;
 namespace {
 
 class AArch64AsmBackend : public MCAsmBackend {
-  static const unsigned PCRelFlagVal =
-      MCFixupKindInfo::FKF_IsAlignedDownTo32Bits | MCFixupKindInfo::FKF_IsPCRel;
 protected:
   Triple TheTriple;
 
@@ -50,27 +47,27 @@ public:
         // in AArch64FixupKinds.h.
         //
         // Name                           Offset (bits) Size (bits)     Flags
-        {"fixup_aarch64_pcrel_adr_imm21", 0, 32, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_adrp_imm21", 0, 32, PCRelFlagVal},
+        {"fixup_aarch64_pcrel_adr_imm21", 0, 32, 0},
+        {"fixup_aarch64_pcrel_adrp_imm21", 0, 32, 0},
         {"fixup_aarch64_add_imm12", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale1", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale2", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale4", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale8", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale16", 10, 12, 0},
-        {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, PCRelFlagVal},
+        {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, 0},
         {"fixup_aarch64_movw", 5, 16, 0},
-        {"fixup_aarch64_pcrel_branch9", 5, 9,  PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch14", 5, 14, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch16", 5, 16, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch19", 5, 19, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch26", 0, 26, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal}};
+        {"fixup_aarch64_pcrel_branch9", 5, 9, 0},
+        {"fixup_aarch64_pcrel_branch14", 5, 14, 0},
+        {"fixup_aarch64_pcrel_branch16", 5, 16, 0},
+        {"fixup_aarch64_pcrel_branch19", 5, 19, 0},
+        {"fixup_aarch64_pcrel_branch26", 0, 26, 0},
+        {"fixup_aarch64_pcrel_call26", 0, 26, 0}};
 
     // Fixup kinds from raw relocation types and .reloc directives force
     // relocations and do not need these fields.
     if (mc::isRelocation(Kind))
-      return MCAsmBackend::getFixupKindInfo(FK_NONE);
+      return {};
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
@@ -81,23 +78,15 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
 };
 
 } // end anonymous namespace
@@ -152,7 +141,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                                  uint64_t Value, MCContext &Ctx,
                                  const Triple &TheTriple, bool IsResolved) {
   int64_t SignedValue = static_cast<int64_t>(Value);
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case AArch64::fixup_aarch64_pcrel_adr_imm21:
@@ -221,10 +210,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 16-byte aligned");
     return Value >> 4;
   case AArch64::fixup_aarch64_movw: {
-    AArch64MCExpr::Specifier RefKind =
-        static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-    if (AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_ABS &&
-        AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_SABS) {
+    AArch64::Specifier RefKind =
+        static_cast<AArch64::Specifier>(Target.getSpecifier());
+    if (AArch64::getSymbolLoc(RefKind) != AArch64::S_ABS &&
+        AArch64::getSymbolLoc(RefKind) != AArch64::S_SABS) {
       if (!RefKind) {
         // The fixup is an expression
         if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
@@ -252,17 +241,17 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       return Value;
     }
 
-    if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
-      switch (AArch64MCExpr::getAddressFrag(RefKind)) {
-      case AArch64MCExpr::VK_G0:
+    if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS) {
+      switch (AArch64::getAddressFrag(RefKind)) {
+      case AArch64::S_G0:
         break;
-      case AArch64MCExpr::VK_G1:
+      case AArch64::S_G1:
         SignedValue = SignedValue >> 16;
         break;
-      case AArch64MCExpr::VK_G2:
+      case AArch64::S_G2:
         SignedValue = SignedValue >> 32;
         break;
-      case AArch64MCExpr::VK_G3:
+      case AArch64::S_G3:
         SignedValue = SignedValue >> 48;
         break;
       default:
@@ -270,16 +259,16 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       }
 
     } else {
-      switch (AArch64MCExpr::getAddressFrag(RefKind)) {
-      case AArch64MCExpr::VK_G0:
+      switch (AArch64::getAddressFrag(RefKind)) {
+      case AArch64::S_G0:
         break;
-      case AArch64MCExpr::VK_G1:
+      case AArch64::S_G1:
         Value = Value >> 16;
         break;
-      case AArch64MCExpr::VK_G2:
+      case AArch64::S_G2:
         Value = Value >> 32;
         break;
-      case AArch64MCExpr::VK_G3:
+      case AArch64::S_G3:
         Value = Value >> 48;
         break;
       default:
@@ -287,10 +276,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       }
     }
 
-    if (RefKind & AArch64MCExpr::VK_NC) {
+    if (RefKind & AArch64::S_NC) {
       Value &= 0xFFFF;
-    }
-    else if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
+    } else if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS) {
       if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
         Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
 
@@ -298,8 +286,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       if (SignedValue < 0)
         SignedValue = ~SignedValue;
       Value = static_cast<uint64_t>(SignedValue);
-    }
-    else if (Value > 0xFFFF) {
+    } else if (Value > 0xFFFF) {
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     }
     return Value;
@@ -416,24 +403,40 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
   }
 }
 
-void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                                   const MCValue &Target,
-                                   MutableArrayRef<char> Data, uint64_t Value,
-                                   bool IsResolved,
-                                   const MCSubtargetInfo *STI) const {
+static bool shouldForceRelocation(const MCFixup &Fixup) {
+  // The ADRP instruction adds some multiple of 0x1000 to the current PC &
+  // ~0xfff. This means that the required offset to reach a symbol can vary by
+  // up to one step depending on where the ADRP is in memory. For example:
+  //
+  //     ADRP x0, there
+  //  there:
+  //
+  // If the ADRP occurs at address 0xffc then "there" will be at 0x1000 and
+  // we'll need that as an offset. At any other address "there" will be in the
+  // same page as the ADRP and the instruction should encode 0x0. Assuming the
+  // section isn't 0x1000-aligned, we therefore need to delegate this decision
+  // to the linker -- a relocation!
+  return Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21;
+}
+
+void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                   const MCValue &Target, uint8_t *Data,
+                                   uint64_t Value, bool IsResolved) {
+  if (shouldForceRelocation(Fixup))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
 
-  if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
-    auto RefKind = static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-    AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
-    if (SymLoc == AArch64AuthMCExpr::VK_AUTH ||
-        SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
+  if (Fixup.getKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
+    auto RefKind = static_cast<AArch64::Specifier>(Target.getSpecifier());
+    AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
+    if (SymLoc == AArch64::S_AUTH || SymLoc == AArch64::S_AUTHADDR) {
       const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
       if (!Expr) {
-        Asm.getContext().reportError(Fixup.getValue()->getLoc(),
-                                     "expected relocatable expression");
+        getContext().reportError(Fixup.getValue()->getLoc(),
+                                 "expected relocatable expression");
         return;
       }
       assert(Value == 0);
@@ -447,7 +450,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     return; // Doesn't change encoding.
   unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   int64_t SignedValue = static_cast<int64_t>(Value);
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Target, Value, Ctx, TheTriple, IsResolved);
@@ -455,8 +458,8 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FulleSizeInBytes = getFixupKindContainereSizeInBytes(Fixup.getKind());
@@ -466,30 +469,31 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   if (FulleSizeInBytes == 0) {
     // Handle as little-endian
     for (unsigned i = 0; i != NumBytes; ++i) {
-      Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+      Data[i] |= uint8_t((Value >> (i * 8)) & 0xff);
     }
   } else {
     // Handle as big-endian
-    assert((Offset + FulleSizeInBytes) <= Data.size() && "Invalid fixup size!");
+    assert(Fixup.getOffset() + FulleSizeInBytes <= F.getSize() &&
+           "Invalid fixup size!");
     assert(NumBytes <= FulleSizeInBytes && "Invalid fixup size!");
     for (unsigned i = 0; i != NumBytes; ++i) {
       unsigned Idx = FulleSizeInBytes - 1 - i;
-      Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+      Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
     }
   }
 
   // FIXME: getFixupKindInfo() and getFixupKindNumBytes() could be fixed to
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
-  AArch64MCExpr::Specifier RefKind =
-      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-  if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS ||
-      (!RefKind && Fixup.getTargetKind() == AArch64::fixup_aarch64_movw)) {
+  AArch64::Specifier RefKind =
+      static_cast<AArch64::Specifier>(Target.getSpecifier());
+  if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS ||
+      (!RefKind && Fixup.getKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.
     // (Bit 30 = 0) ==> MOVN, (Bit 30 = 1) ==> MOVZ.
     if (SignedValue < 0)
-      Data[Offset + 3] &= ~(1 << 6);
+      Data[3] &= ~(1 << 6);
     else
-      Data[Offset + 3] |= (1 << 6);
+      Data[3] |= (1 << 6);
   }
 }
 
@@ -500,11 +504,6 @@ bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   //
   // Relax if the value is too big for a (signed) i8.
   return int64_t(Value) != int64_t(int8_t(Value));
-}
-
-void AArch64AsmBackend::relaxInstruction(MCInst &Inst,
-                                         const MCSubtargetInfo &STI) const {
-  llvm_unreachable("AArch64AsmBackend::relaxInstruction() unimplemented");
 }
 
 bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -519,25 +518,6 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   for (uint64_t i = 0; i != Count; ++i)
     OS.write("\x1f\x20\x03\xd5", 4);
   return true;
-}
-
-bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                              const MCFixup &Fixup,
-                                              const MCValue &Target,
-                                              const MCSubtargetInfo *STI) {
-  // The ADRP instruction adds some multiple of 0x1000 to the current PC &
-  // ~0xfff. This means that the required offset to reach a symbol can vary by
-  // up to one step depending on where the ADRP is in memory. For example:
-  //
-  //     ADRP x0, there
-  //  there:
-  //
-  // If the ADRP occurs at address 0xffc then "there" will be at 0x1000 and
-  // we'll need that as an offset. At any other address "there" will be in the
-  // same page as the ADRP and the instruction should encode 0x0. Assuming the
-  // section isn't 0x1000-aligned, we therefore need to delegate this decision
-  // to the linker -- a relocation!
-  return Fixup.getTargetKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21;
 }
 
 namespace {

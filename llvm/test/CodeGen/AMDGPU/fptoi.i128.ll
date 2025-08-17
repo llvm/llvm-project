@@ -1433,15 +1433,25 @@ define i128 @fptoui_f32_to_i128(float %x) {
 }
 
 define i128 @fptosi_f16_to_i128(half %x) {
-; GCN-LABEL: fptosi_f16_to_i128:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GCN-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-LABEL: fptosi_f16_to_i128:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: fptosi_f16_to_i128:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GISEL-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GISEL-NEXT:    v_mov_b32_e32 v2, v1
+; GISEL-NEXT:    v_mov_b32_e32 v3, v1
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptosi half %x to i128
   ret i128 %cvt
 }

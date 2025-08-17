@@ -44,20 +44,37 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             "'{0}' does not exist".format(program), response["body"]["error"]["format"]
         )
 
-    def test_failing_launch_commands_and_run_in_terminal(self):
+    def test_failing_launch_commands_and_console(self):
         """
-        Tests launching with an invalid program.
+        Tests launching with launch commands in an integrated terminal.
         """
         program = self.getBuildArtifact("a.out")
         self.create_debug_adapter()
         response = self.launch(
-            program, launchCommands=["a b c"], runInTerminal=True, expectFailure=True
+            program,
+            launchCommands=["a b c"],
+            console="integratedTerminal",
+            expectFailure=True,
         )
         self.assertFalse(response["success"])
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
         self.assertEqual(
-            "'launchCommands' and 'runInTerminal' are mutually exclusive",
+            "'launchCommands' and non-internal 'console' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
+        )
+
+    def test_failing_console(self):
+        """
+        Tests launching in console with an invalid terminal type.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(program, console="invalid", expectFailure=True)
+        self.assertFalse(response["success"])
+        self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
+        self.assertRegex(
+            response["body"]["error"]["format"],
+            r"unexpected value, expected 'internalConsole\', 'integratedTerminal\' or 'externalTerminal\' at arguments.console",
         )
 
     @skipIfWindows
@@ -87,7 +104,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
-
+        self.dap_server.request_configurationDone()
+        self.dap_server.wait_for_stopped()
         self.assertTrue(
             len(self.dap_server.thread_stop_reasons) > 0,
             "expected stopped event during launch",
@@ -329,7 +347,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIf(
-        archs=["arm", "aarch64"]
+        archs=["arm$", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         """
@@ -357,7 +375,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.build_and_launch(
             program,
-            stopOnEntry=True,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
             postRunCommands=postRunCommands,
@@ -414,6 +431,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    # Flakey on 32-bit Arm Linux.
+    @skipIf(oslist=["linux"], archs=["arm$"])
     def test_extra_launch_commands(self):
         """
         Tests the "launchCommands" with extra launching settings
@@ -519,7 +538,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertRegex(output, re.escape(bad_path) + r".*does not exist")
 
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(archs=["arm", "aarch64"], oslist=["linux"])
+    @skipIf(archs=["arm$", "aarch64"], oslist=["linux"])
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
@@ -566,7 +585,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         version_eval_output = version_eval_response["body"]["result"]
 
-        version_string = self.dap_server.get_initialize_value("$__lldb_version")
+        version_string = self.dap_server.get_capability("$__lldb_version")
         self.assertEqual(
             version_eval_output.splitlines(),
             version_string.splitlines(),

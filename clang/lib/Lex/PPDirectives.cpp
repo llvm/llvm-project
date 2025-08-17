@@ -183,9 +183,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenLParen();
+      return PP.isNextPPTokenOneOf(tok::l_paren);
 
-    return !PP.isNextPPTokenLParen() ||
+    return !PP.isNextPPTokenOneOf(tok::l_paren) ||
            AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
@@ -252,8 +252,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
     .Cases("assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", true)
     .Cases("float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h", true)
     .Cases("math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", true)
-    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stddef.h", true)
-    .Cases("stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
+    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stdcountof.h", true)
+    .Cases("stddef.h", "stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
     .Cases("string.h", "tgmath.h", "threads.h", "time.h", "uchar.h", true)
     .Cases("wchar.h", "wctype.h", true)
 
@@ -373,8 +373,10 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   // Macro names with reserved identifiers are accepted if built-in or passed
   // through the command line (the later may be present if -dD was used to
   // generate the preprocessed file).
-  if (!SourceMgr.isInPredefinedFile(MacroNameLoc) &&
-      !SourceMgr.isInSystemHeader(MacroNameLoc)) {
+  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
+  // of the condition.
+  if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
+      !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
     MacroDiag D = MD_NoWarn;
     if (isDefineUndef == MU_Define) {
       D = shouldWarnOnMacroDef(*this, II);
@@ -3302,23 +3304,6 @@ void Preprocessor::HandleDefineDirective(
   // If the callbacks want to know, tell them about the macro definition.
   if (Callbacks)
     Callbacks->MacroDefined(MacroNameTok, MD);
-
-  // If we're in MS compatibility mode and the macro being defined is the
-  // assert macro, implicitly add a macro definition for static_assert to work
-  // around their broken assert.h header file in C. Only do so if there isn't
-  // already a static_assert macro defined.
-  if (!getLangOpts().CPlusPlus && getLangOpts().MSVCCompat &&
-      MacroNameTok.getIdentifierInfo()->isStr("assert") &&
-      !isMacroDefined("static_assert")) {
-    MacroInfo *MI = AllocateMacroInfo(SourceLocation());
-
-    Token Tok;
-    Tok.startToken();
-    Tok.setKind(tok::kw__Static_assert);
-    Tok.setIdentifierInfo(getIdentifierInfo("_Static_assert"));
-    MI->setTokens({Tok}, BP);
-    (void)appendDefMacroDirective(getIdentifierInfo("static_assert"), MI);
-  }
 }
 
 /// HandleUndefDirective - Implements \#undef.
@@ -3808,9 +3793,13 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
             [[fallthrough]];
           case tok::r_brace:
           case tok::r_square: {
+            if (BracketStack.empty()) {
+              ExpectOrDiagAndSkipToEOD(tok::r_paren);
+              return false;
+            }
             tok::TokenKind Matching =
                 GetMatchingCloseBracket(BracketStack.back().first);
-            if (BracketStack.empty() || CurTok.getKind() != Matching) {
+            if (CurTok.getKind() != Matching) {
               DiagMismatchedBracesAndSkipToEOD(Matching, BracketStack.back());
               return false;
             }

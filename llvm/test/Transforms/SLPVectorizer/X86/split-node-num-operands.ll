@@ -15,8 +15,8 @@ define i64 @Foo(ptr align 8 dereferenceable(344) %0, i64 %1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 0, i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    br label %[[BB16:.*]]
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x i64> [ [[TMP11]], [[TMP2:%.*]] ], [ zeroinitializer, %[[TMP25:.*]] ]

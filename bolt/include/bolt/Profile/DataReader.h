@@ -32,18 +32,6 @@ namespace bolt {
 
 class BinaryFunction;
 
-struct LBREntry {
-  uint64_t From;
-  uint64_t To;
-  bool Mispred;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const LBREntry &LBR) {
-  OS << "0x" << Twine::utohexstr(LBR.From) << " -> 0x"
-     << Twine::utohexstr(LBR.To);
-  return OS;
-}
-
 struct Location {
   bool IsSymbol;
   StringRef Name;
@@ -109,15 +97,16 @@ struct FuncBranchData {
   /// Total execution count for the function.
   int64_t ExecutionCount{0};
 
+  /// Total entry count from external code for the function.
+  uint64_t ExternEntryCount{0};
+
   /// Indicate if the data was used.
   bool Used{false};
 
   FuncBranchData() {}
 
-  FuncBranchData(StringRef Name, ContainerTy Data)
-      : Name(Name), Data(std::move(Data)) {}
-
-  FuncBranchData(StringRef Name, ContainerTy Data, ContainerTy EntryData)
+  FuncBranchData(StringRef Name, ContainerTy Data = ContainerTy(),
+                 ContainerTy EntryData = ContainerTy())
       : Name(Name), Data(std::move(Data)), EntryData(std::move(EntryData)) {}
 
   ErrorOr<const BranchInfo &> getBranch(uint64_t From, uint64_t To) const;
@@ -205,7 +194,7 @@ struct FuncMemData {
 
   FuncMemData() {}
 
-  FuncMemData(StringRef Name, ContainerTy Data)
+  FuncMemData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 };
 
@@ -241,7 +230,7 @@ struct FuncBasicSampleData {
   StringRef Name;
   ContainerTy Data;
 
-  FuncBasicSampleData(StringRef Name, ContainerTy Data)
+  FuncBasicSampleData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 
   /// Get the number of samples recorded in [Start, End)

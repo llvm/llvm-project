@@ -133,7 +133,7 @@ struct SimpleValue {
         }
         }
       }
-      return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy() &&
+      return CI->doesNotAccessMemory() &&
              // FIXME: Currently the calls which may access the thread id may
              // be considered as not accessing the memory. But this is
              // problematic for coroutines, since coroutines may resume in a
@@ -400,7 +400,9 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     return LII->getArgOperand(0) == RII->getArgOperand(1) &&
            LII->getArgOperand(1) == RII->getArgOperand(0) &&
            std::equal(LII->arg_begin() + 2, LII->arg_end(),
-                      RII->arg_begin() + 2, RII->arg_end());
+                      RII->arg_begin() + 2, RII->arg_end()) &&
+           LII->hasSameSpecialState(RII, /*IgnoreAlignment=*/false,
+                                    /*IntersectAttrs=*/true);
   }
 
   // See comment above in `getHashValue()`.
@@ -490,12 +492,8 @@ struct CallValue {
   }
 
   static bool canHandle(Instruction *Inst) {
-    // Don't value number anything that returns void.
-    if (Inst->getType()->isVoidTy())
-      return false;
-
     CallInst *CI = dyn_cast<CallInst>(Inst);
-    if (!CI || !CI->onlyReadsMemory() ||
+    if (!CI || (!CI->onlyReadsMemory() && !CI->onlyWritesMemory()) ||
         // FIXME: Currently the calls which may access the thread id may
         // be considered as not accessing the memory. But this is
         // problematic for coroutines, since coroutines may resume in a
@@ -960,7 +958,8 @@ private:
   bool overridingStores(const ParseMemoryInst &Earlier,
                         const ParseMemoryInst &Later);
 
-  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType,
+                           bool CanCreate) const {
     // TODO: We could insert relevant casts on type mismatch.
     // The load or the store's first operand.
     Value *V;
@@ -973,7 +972,8 @@ private:
         V = II->getOperand(0);
         break;
       default:
-        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType,
+                                                     CanCreate);
       }
     } else {
       V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
@@ -1257,9 +1257,10 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
 
   // For stores check the result values before checking memory generation
   // (otherwise isSameMemGeneration may crash).
-  Value *Result = MemInst.isStore()
-                      ? getOrCreateResult(Matching, Other->getType())
-                      : nullptr;
+  Value *Result =
+      MemInst.isStore()
+          ? getOrCreateResult(Matching, Other->getType(), /*CanCreate=*/false)
+          : nullptr;
   if (MemInst.isStore() && InVal.DefInst != Result)
     return nullptr;
 
@@ -1280,7 +1281,7 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
     return nullptr;
 
   if (!Result)
-    Result = getOrCreateResult(Matching, Other->getType());
+    Result = getOrCreateResult(Matching, Other->getType(), /*CanCreate=*/true);
   return Result;
 }
 
@@ -1523,6 +1524,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       }
     }
 
+    // Make sure stores prior to a potential unwind are not removed, as the
+    // caller may read the memory.
+    if (Inst.mayThrow())
+      LastStore = nullptr;
+
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
       if ([[maybe_unused]] auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
@@ -1614,24 +1620,28 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
-    // If this instruction may read from memory or throw (and potentially read
-    // from memory in the exception handler), forget LastStore.  Load/store
+    // If this instruction may read from memory, forget LastStore.  Load/store
     // intrinsics will indicate both a read and a write to memory.  The target
     // may override this (e.g. so that a store intrinsic does not read from
     // memory, and thus will be treated the same as a regular store for
     // commoning purposes).
-    if ((Inst.mayReadFromMemory() || Inst.mayThrow()) &&
+    if (Inst.mayReadFromMemory() &&
         !(MemInst.isValid() && !MemInst.mayReadFromMemory()))
       LastStore = nullptr;
 
-    // If this is a read-only call, process it.
-    if (CallValue::canHandle(&Inst)) {
+    // If this is a read-only or write-only call, process it. Skip store
+    // MemInsts, as they will be more precisely handled later on. Also skip
+    // memsets, as DSE may be able to optimize them better by removing the
+    // earlier rather than later store.
+    if (CallValue::canHandle(&Inst) &&
+        (!MemInst.isValid() || !MemInst.isStore()) && !isa<MemSetInst>(&Inst)) {
       // If we have an available version of this call, and if it is the right
       // generation, replace this instruction.
       std::pair<Instruction *, unsigned> InVal = AvailableCalls.lookup(&Inst);
       if (InVal.first != nullptr &&
           isSameMemGeneration(InVal.second, CurrentGeneration, InVal.first,
-                              &Inst)) {
+                              &Inst) &&
+          InVal.first->mayReadFromMemory() == Inst.mayReadFromMemory()) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE CALL: " << Inst
                           << "  to: " << *InVal.first << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
@@ -1648,6 +1658,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         ++NumCSECall;
         continue;
       }
+
+      // Increase memory generation for writes. Do this before inserting
+      // the call, so it has the generation after the write occurred.
+      if (Inst.mayWriteToMemory())
+        ++CurrentGeneration;
 
       // Otherwise, remember that we have this instruction.
       AvailableCalls.insert(&Inst, std::make_pair(&Inst, CurrentGeneration));
@@ -1698,16 +1713,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (MemInst.isValid() && MemInst.isStore()) {
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
       if (InVal.DefInst &&
-          InVal.DefInst == getMatchingValue(InVal, MemInst, CurrentGeneration)) {
-        // It is okay to have a LastStore to a different pointer here if MemorySSA
-        // tells us that the load and store are from the same memory generation.
-        // In that case, LastStore should keep its present value since we're
-        // removing the current store.
-        assert((!LastStore ||
-                ParseMemoryInst(LastStore, TTI).getPointerOperand() ==
-                    MemInst.getPointerOperand() ||
-                MSSA) &&
-               "can't have an intervening store if not using MemorySSA!");
+          InVal.DefInst ==
+              getMatchingValue(InVal, MemInst, CurrentGeneration)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << Inst << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");

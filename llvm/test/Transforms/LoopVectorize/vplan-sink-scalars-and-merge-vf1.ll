@@ -14,7 +14,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<1024> + vp<[[VEC_TC]]> * ir<-1>
@@ -54,18 +54,18 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.end>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<1024>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME1:%.+]]> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = phi [ vp<[[END]]>, middle.block ], [ ir<1024>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %tmp0 = phi i64 [ %tmp6, %for.inc ], [ 0, %entry ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %tmp1 = phi i64 [ %tmp7, %for.inc ], [ 1024, %entry ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %tmp5 = trunc i32 %tmp4 to i8
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.end>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;

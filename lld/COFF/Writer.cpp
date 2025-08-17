@@ -24,12 +24,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -204,7 +202,8 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(c.e.outputBuffer), delayIdata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), strtab(StringTableBuilder::WinCOFF),
+        delayIdata(c), ctx(c) {}
   void run();
 
 private:
@@ -284,7 +283,7 @@ private:
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
-  std::vector<char> strtab;
+  StringTableBuilder strtab;
   std::vector<llvm::object::coff_symbol16> outputSymtab;
   std::vector<ECCodeMapEntry> codeMap;
   IdataContents idata;
@@ -315,6 +314,7 @@ private:
   uint32_t dataDirOffset64;
 
   OutputSection *textSec;
+  OutputSection *wowthkSec;
   OutputSection *hexpthkSec;
   OutputSection *bssSec;
   OutputSection *rdataSec;
@@ -1077,8 +1077,10 @@ void Writer::createSections() {
 
   // Try to match the section order used by link.exe.
   textSec = createSection(".text", code | r | x);
-  if (isArm64EC(ctx.config.machine))
+  if (isArm64EC(ctx.config.machine)) {
+    wowthkSec = createSection(".wowthk", code | r | x);
     hexpthkSec = createSection(".hexpthk", code | r | x);
+  }
   bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
@@ -1129,6 +1131,9 @@ void Writer::createSections() {
 
   if (hasIdata)
     locateImportTables();
+
+  for (auto thunk : ctx.symtab.sameAddressThunks)
+    wowthkSec->addChunk(thunk);
 
   // Then create an OutputSection for each section.
   // '$' and all following characters in input section names are
@@ -1437,14 +1442,6 @@ void Writer::assignOutputSectionIndices() {
           sc->setOutputSectionIdx(mc->getOutputSectionIdx());
 }
 
-size_t Writer::addEntryToStringTable(StringRef str) {
-  assert(str.size() > COFF::NameSize);
-  size_t offsetOfEntry = strtab.size() + 4; // +4 for the size field
-  strtab.insert(strtab.end(), str.begin(), str.end());
-  strtab.push_back('\0');
-  return offsetOfEntry;
-}
-
 std::optional<coff_symbol16> Writer::createSymbol(Defined *def) {
   coff_symbol16 sym;
   switch (def->kind()) {
@@ -1485,7 +1482,8 @@ std::optional<coff_symbol16> Writer::createSymbol(Defined *def) {
   StringRef name = def->getName();
   if (name.size() > COFF::NameSize) {
     sym.Name.Offset.Zeroes = 0;
-    sym.Name.Offset.Offset = addEntryToStringTable(name);
+    sym.Name.Offset.Offset = 0; // Filled in later.
+    strtab.add(name);
   } else {
     memset(sym.Name.ShortName, 0, COFF::NameSize);
     memcpy(sym.Name.ShortName, name.data(), name.size());
@@ -1517,6 +1515,7 @@ void Writer::createSymbolAndStringTable() {
   // solution where discardable sections have long names preserved and
   // non-discardable sections have their names truncated, to ensure that any
   // section which is mapped at runtime also has its name mapped at runtime.
+  SmallVector<OutputSection *> longNameSections;
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->name.size() <= COFF::NameSize)
       continue;
@@ -1528,9 +1527,13 @@ void Writer::createSymbolAndStringTable() {
           << " is longer than 8 characters and will use a non-standard string "
              "table";
     }
-    sec->setStringTableOff(addEntryToStringTable(sec->name));
+    // Put the section name in the begin of strtab so that its offset is less
+    // than Max7DecimalOffset otherwise lldb/gdb will not read it.
+    strtab.add(sec->name, /*Priority=*/UINT8_MAX);
+    longNameSections.push_back(sec);
   }
 
+  std::vector<std::pair<size_t, StringRef>> longNameSymbols;
   if (ctx.config.writeSymtab) {
     for (ObjFile *file : ctx.objFileInstances) {
       for (Symbol *b : file->getSymbols()) {
@@ -1545,15 +1548,22 @@ void Writer::createSymbolAndStringTable() {
             continue;
         }
 
-        if (std::optional<coff_symbol16> sym = createSymbol(d))
+        if (std::optional<coff_symbol16> sym = createSymbol(d)) {
+          if (d->getName().size() > COFF::NameSize)
+            longNameSymbols.emplace_back(outputSymtab.size(), d->getName());
           outputSymtab.push_back(*sym);
+        }
 
         if (auto *dthunk = dyn_cast<DefinedImportThunk>(d)) {
           if (!dthunk->wrappedSym->writtenToSymtab) {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
-                    createSymbol(dthunk->wrappedSym))
+                    createSymbol(dthunk->wrappedSym)) {
+              if (d->getName().size() > COFF::NameSize)
+                longNameSymbols.emplace_back(outputSymtab.size(),
+                                             dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);
+            }
           }
         }
       }
@@ -1563,11 +1573,19 @@ void Writer::createSymbolAndStringTable() {
   if (outputSymtab.empty() && strtab.empty())
     return;
 
+  strtab.finalize();
+  for (OutputSection *sec : longNameSections)
+    sec->setStringTableOff(strtab.getOffset(sec->name));
+  for (auto P : longNameSymbols) {
+    coff_symbol16 &sym = outputSymtab[P.first];
+    sym.Name.Offset.Offset = strtab.getOffset(P.second);
+  }
+
   // We position the symbol table to be adjacent to the end of the last section.
   uint64_t fileOff = fileSize;
   pointerToSymbolTable = fileOff;
   fileOff += outputSymtab.size() * sizeof(coff_symbol16);
-  fileOff += 4 + strtab.size();
+  fileOff += strtab.getSize();
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
@@ -1948,9 +1966,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // Create the string table, it follows immediately after the symbol table.
   // The first 4 bytes is length including itself.
   buf = reinterpret_cast<uint8_t *>(&symbolTable[numberOfSymbols]);
-  write32le(buf, strtab.size() + 4);
-  if (!strtab.empty())
-    memcpy(buf + 4, strtab.data(), strtab.size());
+  strtab.write(buf);
 }
 
 void Writer::openFile(StringRef path) {
@@ -2300,6 +2316,14 @@ void Writer::createECChunks() {
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
   replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
                                   entryPoints);
+
+  for (auto thunk : ctx.symtab.sameAddressThunks) {
+    // Relocation values are set later in setECSymbols.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           thunk);
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           Arm64XRelocVal(thunk, sizeof(uint32_t)));
+  }
 }
 
 // MinGW specific. Gather all relocations that are imported from a DLL even
@@ -2498,23 +2522,20 @@ void Writer::setECSymbols() {
               offsetof(data_directory, Size),
           ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
               ctx.symtab.edataEnd->getSize());
-    if (hybridPdata.first) {
+    if (hybridPdata.first)
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
           hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
               hybridPdata.last->getSize());
-      if (chpeSym) {
-        size_t size = 0;
-        if (pdata.first)
-          size = pdata.last->getRVA() + pdata.last->getSize() -
-                 pdata.first->getRVA();
-        ctx.dynamicRelocs->set(chpeSym->getRVA() +
-                                   offsetof(chpe_metadata, ExtraRFETableSize),
-                               size);
-      }
-    }
+    if (chpeSym && pdata.first)
+      ctx.dynamicRelocs->set(
+          chpeSym->getRVA() + offsetof(chpe_metadata, ExtraRFETableSize),
+          pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA());
   }
+
+  for (SameAddressThunkARM64EC *thunk : ctx.symtab.sameAddressThunks)
+    thunk->setDynamicRelocs(ctx);
 }
 
 // Write section contents to a mmap'ed file.
@@ -2540,7 +2561,15 @@ void Writer::writeSections() {
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {
-      c->writeTo(secBuf + c->getRVA() - sec->getRVA());
+      uint8_t *buf = secBuf + c->getRVA() - sec->getRVA();
+      c->writeTo(buf);
+
+      // Write the offset to EC entry thunk preceding section contents. The low
+      // bit is always set, so it's effectively an offset from the last byte of
+      // the offset.
+      if (Defined *entryThunk = c->getEntryThunk())
+        write32le(buf - sizeof(uint32_t),
+                  entryThunk->getRVA() - c->getRVA() + 1);
     });
   }
 }

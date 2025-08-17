@@ -14,6 +14,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -23,11 +24,7 @@
 using namespace llvm;
 using namespace llvm::memprof;
 
-extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
-extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
-extern cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
-extern cl::opt<bool> MemProfUseHotHints;
-extern cl::opt<bool> MemProfKeepAllNotColdContexts;
+LLVM_ABI extern cl::opt<bool> MemProfKeepAllNotColdContexts;
 
 namespace {
 
@@ -61,70 +58,6 @@ protected:
     return nullptr;
   }
 };
-
-// Test getAllocType helper.
-// Basic checks on the allocation type for values just above and below
-// the thresholds.
-TEST_F(MemoryProfileInfoTest, GetAllocType) {
-  const uint64_t AllocCount = 2;
-  // To be cold we require that
-  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
-  //    MemProfLifetimeAccessDensityColdThreshold
-  // so compute the ColdTotalLifetimeAccessDensityThreshold at the threshold.
-  const uint64_t ColdTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfLifetimeAccessDensityColdThreshold * AllocCount * 100);
-  // To be cold we require that
-  // ((float)TotalLifetime) / AllocCount >=
-  //    MemProfAveLifetimeColdThreshold * 1000
-  // so compute the TotalLifetime right at the threshold.
-  const uint64_t ColdTotalLifetimeThreshold =
-      MemProfAveLifetimeColdThreshold * AllocCount * 1000;
-  // To be hot we require that
-  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-  //    MemProfMinAveLifetimeAccessDensityHotThreshold
-  // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
-  const uint64_t HotTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
-                 100);
-
-  // Make sure the option for detecting hot allocations is set.
-  bool OrigMemProfUseHotHints = MemProfUseHotHints;
-  MemProfUseHotHints = true;
-
-  // Test Hot
-  // More accesses per byte per sec than hot threshold is hot.
-  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::Hot);
-
-  // Restore original option value.
-  MemProfUseHotHints = OrigMemProfUseHotHints;
-
-  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
-  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::NotCold);
-
-  // Test Cold
-  // Long lived with less accesses per byte per sec than cold threshold is cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::Cold);
-  
-  // Test NotCold
-  // Long lived with more accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::NotCold);  
-  // Short lived with more accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold - 1),
-            AllocationType::NotCold);
-  // Short lived with less accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1, AllocCount,
-                         ColdTotalLifetimeThreshold - 1),
-            AllocationType::NotCold);
-}
 
 // Test the hasSingleAllocType helper.
 TEST_F(MemoryProfileInfoTest, SingleAllocType) {

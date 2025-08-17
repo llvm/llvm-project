@@ -23,11 +23,14 @@ void DynamicAllocator::cleanup() {
   for (auto &Iter : AllocationSites) {
     auto &AllocSite = Iter.second;
     for (auto &Alloc : AllocSite.Allocations) {
-      Block *B = reinterpret_cast<Block *>(Alloc.Memory.get());
+      Block *B = Alloc.block();
+      assert(!B->isDead());
+      assert(B->isInitialized());
       B->invokeDtor();
+
       if (B->hasPointers()) {
         while (B->Pointers) {
-          Pointer *Next = B->Pointers->Next;
+          Pointer *Next = B->Pointers->asBlockPointer().Next;
           B->Pointers->PointeeStorage.BS.Pointee = nullptr;
           B->Pointers = Next;
         }
@@ -70,6 +73,12 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   assert(D);
   assert(D->asExpr());
 
+  // Garbage collection. Remove all dead allocations that don't have pointers to
+  // them anymore.
+  llvm::erase_if(DeadAllocations, [](Allocation &Alloc) -> bool {
+    return !Alloc.block()->hasPointers();
+  });
+
   auto Memory =
       std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
@@ -85,6 +94,12 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   ID->IsConst = false;
   ID->IsInitialized = false;
   ID->IsVolatile = false;
+
+  if (D->isCompositeArray())
+    ID->LifeState = Lifetime::Started;
+  else
+    ID->LifeState =
+        AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
   B->IsDynamic = true;
 
@@ -103,23 +118,39 @@ bool DynamicAllocator::deallocate(const Expr *Source,
     return false;
 
   auto &Site = It->second;
-  assert(Site.size() > 0);
+  assert(!Site.empty());
 
   // Find the Block to delete.
-  auto AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
-    const Block *B = reinterpret_cast<const Block *>(A.Memory.get());
-    return BlockToDelete == B;
+  auto *AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
+    return BlockToDelete == A.block();
   });
 
   assert(AllocIt != Site.Allocations.end());
 
-  Block *B = reinterpret_cast<Block *>(AllocIt->Memory.get());
+  Block *B = AllocIt->block();
+  assert(B->isInitialized());
+  assert(!B->isDead());
   B->invokeDtor();
 
-  S.deallocate(B);
-  Site.Allocations.erase(AllocIt);
+  // Almost all our dynamic allocations have a pointer pointing to them
+  // when we deallocate them, since otherwise we can't call delete() at all.
+  // This means that we would usually need to create DeadBlocks for all of them.
+  // To work around that, we instead mark them as dead without moving the data
+  // over to a DeadBlock and simply keep the block in a separate DeadAllocations
+  // list.
+  if (B->hasPointers()) {
+    B->AccessFlags |= Block::DeadFlag;
+    DeadAllocations.push_back(std::move(*AllocIt));
+    Site.Allocations.erase(AllocIt);
 
-  if (Site.size() == 0)
+    if (Site.size() == 0)
+      AllocationSites.erase(It);
+    return true;
+  }
+
+  // Get rid of the allocation altogether.
+  Site.Allocations.erase(AllocIt);
+  if (Site.empty())
     AllocationSites.erase(It);
 
   return true;

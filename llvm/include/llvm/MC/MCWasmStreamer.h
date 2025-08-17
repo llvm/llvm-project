@@ -42,10 +42,8 @@ public:
 
   void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
                       uint64_t Offset) override;
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
@@ -60,8 +58,6 @@ public:
   void finishImpl() override;
 
 private:
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
-
   bool SeenIdent;
 };
 

@@ -18,6 +18,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+namespace {
+
 AST_MATCHER(CXXRecordDecl, hasPublicVirtualOrProtectedNonVirtualDestructor) {
   // We need to call Node.getDestructor() instead of matching a
   // CXXDestructorDecl. Otherwise, tests will fail for class templates, since
@@ -32,6 +34,8 @@ AST_MATCHER(CXXRecordDecl, hasPublicVirtualOrProtectedNonVirtualDestructor) {
           ((Destructor->getAccess() == AccessSpecifier::AS_protected) &&
            !Destructor->isVirtual()));
 }
+
+} // namespace
 
 void VirtualClassDestructorCheck::registerMatchers(MatchFinder *Finder) {
   ast_matchers::internal::Matcher<CXXRecordDecl> InheritsVirtualMethod =

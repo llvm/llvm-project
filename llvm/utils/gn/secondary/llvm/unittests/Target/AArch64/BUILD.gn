@@ -8,6 +8,7 @@ unittest("AArch64Tests") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/Target/AArch64:AArch64GenSDNodeInfo",
     "//llvm/lib/Target/AArch64:LLVMAArch64CodeGen",
     "//llvm/lib/Target/AArch64/MCTargetDesc",
     "//llvm/lib/Target/AArch64/TargetInfo",
@@ -18,6 +19,7 @@ unittest("AArch64Tests") {
   sources = [
     "AArch64InstPrinterTest.cpp",
     "AArch64RegisterInfoTest.cpp",
+    "AArch64SelectionDAGTest.cpp",
     "AArch64SVESchedPseudoTest.cpp",
     "AddressingModes.cpp",
     "DecomposeStackOffsetTest.cpp",

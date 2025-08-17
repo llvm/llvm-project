@@ -7,19 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -50,13 +47,13 @@ void EmitCDialect::initialize() {
 Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  return builder.create<emitc::ConstantOp>(loc, type, value);
+  return emitc::ConstantOp::create(builder, loc, type, value);
 }
 
 /// Default callback for builders of ops carrying a region. Inserts a yield
 /// without arguments.
 void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
-  builder.create<emitc::YieldOp>(loc);
+  emitc::YieldOp::create(builder, loc);
 }
 
 bool mlir::emitc::isSupportedEmitCType(Type type) {
@@ -117,11 +114,8 @@ bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
-    case 16: {
-      if (llvm::isa<Float16Type, BFloat16Type>(type))
-        return true;
-      return false;
-    }
+    case 16:
+      return llvm::isa<Float16Type, BFloat16Type>(type);
     case 32:
     case 64:
       return true;
@@ -174,10 +168,9 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 /// In the format string, all `{}` are replaced by Placeholders, except if the
 /// `{` is escaped by `{{` - then it doesn't start a placeholder.
 template <class ArgType>
-FailureOr<SmallVector<ReplacementItem>>
-parseFormatString(StringRef toParse, ArgType fmtArgs,
-                  std::optional<llvm::function_ref<mlir::InFlightDiagnostic()>>
-                      emitError = {}) {
+FailureOr<SmallVector<ReplacementItem>> parseFormatString(
+    StringRef toParse, ArgType fmtArgs,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = {}) {
   SmallVector<ReplacementItem> items;
 
   // If there are not operands, the format string is not interpreted.
@@ -200,8 +193,7 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
     if (toParse.size() < 2) {
-      return (*emitError)()
-             << "expected '}' after unescaped '{' at end of string";
+      return emitError() << "expected '}' after unescaped '{' at end of string";
     }
     // toParse contains at least two characters and starts with `{`.
     char nextChar = toParse[1];
@@ -217,8 +209,8 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
 
-    if (emitError.has_value()) {
-      return (*emitError)() << "expected '}' after unescaped '{'";
+    if (emitError) {
+      return emitError() << "expected '}' after unescaped '{'";
     }
     return failure();
   }
@@ -386,9 +378,7 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
-  Operation *rootOp = yieldedValue.getDefiningOp();
-  assert(rootOp && "Yielded value not defined within expression");
-  return rootOp;
+  return yieldedValue.getDefiningOp();
 }
 
 LogicalResult ExpressionOp::verify() {
@@ -406,13 +396,21 @@ LogicalResult ExpressionOp::verify() {
   if (!yieldResult)
     return emitOpError("must yield a value at termination");
 
+  Operation *rootOp = yieldResult.getDefiningOp();
+
+  if (!rootOp)
+    return emitOpError("yielded value has no defining op");
+
+  if (rootOp->getParentOp() != getOperation())
+    return emitOpError("yielded value not defined within expression");
+
   Type yieldType = yieldResult.getType();
 
   if (resultType != yieldType)
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!op.hasTrait<OpTrait::emitc::CExpression>())
+    if (!isa<emitc::CExpressionInterface>(op))
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
@@ -595,7 +593,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
     return;
   assert(type.getNumInputs() == argAttrs.size());
   call_interface_impl::addArgAndResultAttrs(
-      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      builder, state, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
@@ -1395,8 +1393,99 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 }
 
 //===----------------------------------------------------------------------===//
+// FieldOp
+//===----------------------------------------------------------------------===//
+
+static void printEmitCFieldOpTypeAndInitialValue(OpAsmPrinter &p, FieldOp op,
+                                                 TypeAttr type,
+                                                 Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForField(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCFieldOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                     Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForField(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
+LogicalResult FieldOp::verify() {
+  if (!isSupportedEmitCType(getType()))
+    return emitOpError("expected valid emitc type");
+
+  Operation *parentOp = getOperation()->getParentOp();
+  if (!parentOp || !isa<emitc::ClassOp>(parentOp))
+    return emitOpError("field must be nested within an emitc.class operation");
+
+  StringAttr symName = getSymNameAttr();
+  if (!symName || symName.getValue().empty())
+    return emitOpError("field must have a non-empty symbol name");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetFieldOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GetFieldOp::verify() {
+  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
+  if (!parentClassOp.getOperation())
+    return emitOpError(" must be nested within an emitc.class operation");
+
+  return success();
+}
+
+LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
+  FieldOp fieldOp =
+      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, fieldNameAttr);
+  if (!fieldOp)
+    return emitOpError("field '")
+           << fieldNameAttr << "' not found in the class";
+
+  Type getFieldResultType = getResult().getType();
+  Type fieldType = fieldOp.getType();
+
+  if (fieldType != getFieldResultType)
+    return emitOpError("result type ")
+           << getFieldResultType << " does not match field '" << fieldNameAttr
+           << "' type " << fieldType;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"

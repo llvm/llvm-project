@@ -106,7 +106,7 @@ class BlockRange final
           Block *, Block *, Block *> {
 public:
   using RangeBaseT::RangeBaseT;
-  BlockRange(ArrayRef<Block *> blocks = std::nullopt);
+  BlockRange(ArrayRef<Block *> blocks = {});
   BlockRange(SuccessorRange successors);
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Block *>, Arg>::value>>

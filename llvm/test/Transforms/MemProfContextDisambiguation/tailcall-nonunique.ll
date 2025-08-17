@@ -6,10 +6,19 @@
 ; REQUIRES: asserts
 
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -stats -debug %s -S 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=IR --check-prefix=DEBUG
 
 ; DEBUG: Not found through unique tail call chain: _Z3barv from main that actually called xyz (found multiple possible chains)
+
+;; Graph fixup should have nulled the call in the node that could not be
+;; resolved via tail call fixup. That happens in between the initial
+;; stack update and the end of graph building.
+; RUN:  cat %t.ccg.poststackupdate.dot | FileCheck %s --check-prefix=DOTPOSTSTACKUPDATE
+; DOTPOSTSTACKUPDATE: {OrigId: 15025054523792398438\nmain -\> xyz}
+; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOSTBUILD
+; DOTPOSTBUILD: {OrigId: 15025054523792398438\nnull call (external)}
 
 ;; Check that all calls in the IR are to the original functions, leading to a
 ;; non-cold operator new call.

@@ -21,8 +21,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Strings.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
 

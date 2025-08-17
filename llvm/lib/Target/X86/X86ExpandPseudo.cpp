@@ -51,8 +51,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {
@@ -274,6 +273,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64: {
     bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
@@ -301,8 +301,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       X86FL->emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue=*/true);
     }
 
+    // Use this predicate to set REX prefix for X86_64 targets.
+    bool IsX64 = STI->isTargetWin64() || STI->isTargetUEFI64();
     // Jump to label or value in register.
-    bool IsWin64 = STI->isTargetWin64();
     if (Opcode == X86::TCRETURNdi || Opcode == X86::TCRETURNdicc ||
         Opcode == X86::TCRETURNdi64 || Opcode == X86::TCRETURNdi64cc) {
       unsigned Op;
@@ -341,16 +342,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64) {
       unsigned Op = (Opcode == X86::TCRETURNmi)
                         ? X86::TAILJMPm
-                        : (IsWin64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
+                        : (IsX64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if (Opcode == X86::TCRETURNri64) {
+    } else if ((Opcode == X86::TCRETURNri64) ||
+               (Opcode == X86::TCRETURNri64_ImpCall)) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
-              TII->get(IsWin64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
+              TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
     } else {
+      assert(!IsX64 && "Win64 and UEFI64 require REX for indirect jumps.");
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
           .add(JumpTarget);
@@ -373,8 +376,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::EH_RETURN64: {
     MachineOperand &DestAddr = MBBI->getOperand(0);
     assert(DestAddr.isReg() && "Offset should be in register!");
-    const bool Uses64BitFramePtr =
-        STI->isTarget64BitLP64() || STI->isTargetNaCl64();
+    const bool Uses64BitFramePtr = STI->isTarget64BitLP64();
     Register StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
@@ -874,6 +876,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::CALL64r_RVMARKER:
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
+    return true;
+  case X86::CALL64r_ImpCall:
+    MI.setDesc(TII->get(X86::CALL64r));
     return true;
   case X86::ADD32mi_ND:
   case X86::ADD64mi32_ND:

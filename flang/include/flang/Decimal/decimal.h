@@ -65,6 +65,9 @@ enum DecimalConversionFlags {
 #define EXTRA_DECIMAL_CONVERSION_SPACE (1 + 1 + 2 * 16 - 1)
 
 #ifdef __cplusplus
+
+RT_OFFLOAD_API_GROUP_BEGIN
+
 template <int PREC>
 RT_API_ATTRS ConversionToDecimalResult ConvertToDecimal(char *, size_t,
     DecimalConversionFlags, int digits, enum FortranRounding rounding,
@@ -110,6 +113,9 @@ extern template RT_API_ATTRS ConversionToBinaryResult<64> ConvertToBinary<64>(
     const char *&, enum FortranRounding, const char *end);
 extern template RT_API_ATTRS ConversionToBinaryResult<113> ConvertToBinary<113>(
     const char *&, enum FortranRounding, const char *end);
+
+RT_OFFLOAD_API_GROUP_END
+
 } // namespace Fortran::decimal
 extern "C" {
 #define NS(x) Fortran::decimal::x

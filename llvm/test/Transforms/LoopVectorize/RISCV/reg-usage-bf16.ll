@@ -1,9 +1,13 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfbfmin -debug-only=loop-vectorize --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfbfmin -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize,vplan --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s
+
+; TODO: -prefer-predicate-over-epilogue=scalar-epilogue was added to allow
+; unrolling. Calculate register pressure for all VPlans, not just unrolled ones,
+; and remove.
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add
-; CHECK:       LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item

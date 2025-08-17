@@ -62,6 +62,7 @@ class VarDecl;
 class ParmVarDecl;
 class InitListExpr;
 class HLSLBufferDecl;
+class HLSLVkBindingAttr;
 class HLSLResourceBindingAttr;
 class Type;
 class RecordType;
@@ -107,6 +108,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
@@ -152,6 +154,7 @@ public:
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
+  void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
@@ -164,6 +167,12 @@ public:
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLVkBindingAttr *VkBinding);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLResourceBindingAttr *RBA);
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;

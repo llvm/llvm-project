@@ -9,7 +9,6 @@
 #include "OutputSections.h"
 #include "DWARFLinkerCompileUnit.h"
 #include "DWARFLinkerTypeUnit.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
 using namespace dwarf_linker;

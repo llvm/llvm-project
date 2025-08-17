@@ -205,7 +205,7 @@ void EvaluateRequestHandler::operator()(
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
       if (error_cstr && error_cstr[0])
-        EmplaceSafeString(response, "message", std::string(error_cstr));
+        EmplaceSafeString(response, "message", error_cstr);
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {

@@ -486,7 +486,7 @@ public:
     return Idx;
   }
 
-  bool hasBody() const { return Body && !Body->getValues().empty(); }
+  bool hasBody() const { return Body && !Body->empty(); }
 
   void setNeededEarly() { NeededEarly = true; }
 
@@ -1401,14 +1401,12 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       if (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling())) {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-      } else if (LocalCK == ClassI) {
-        if (CastToType.isInteger()) {
-          CastToType.makeSigned();
-          Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-        }
+      } else if (LocalCK == ClassI &&
+                 (CastToType.isInteger() || CastToType.isPoly())) {
+        CastToType.makeSigned();
+        Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
     }
-
     S += Arg + ", ";
   }
 
@@ -1436,14 +1434,14 @@ void Intrinsic::emitBodyAsBuiltinCall() {
 void Intrinsic::emitBody(StringRef CallPrefix) {
   std::vector<std::string> Lines;
 
-  if (!Body || Body->getValues().empty()) {
+  if (!Body || Body->empty()) {
     // Nothing specific to output - must output a builtin.
     emitBodyAsBuiltinCall();
     return;
   }
 
   // We have a list of "things to output". The last should be returned.
-  for (auto *I : Body->getValues()) {
+  for (auto *I : Body->getElements()) {
     if (const auto *SI = dyn_cast<StringInit>(I)) {
       Lines.push_back(replaceParamsIn(SI->getAsString()));
     } else if (const auto *DI = dyn_cast<DagInit>(I)) {
@@ -2417,7 +2415,11 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#ifndef __ARM_NEON_H\n";
   OS << "#define __ARM_NEON_H\n\n";
 
-  OS << "#ifndef __ARM_FP\n";
+  OS << "#if !defined(__arm__) && !defined(__aarch64__) && "
+        "!defined(__arm64ec__)\n";
+  OS << "#error \"<arm_neon.h> is intended only for ARM and AArch64 "
+        "targets\"\n";
+  OS << "#elif !defined(__ARM_FP)\n";
   OS << "#error \"NEON intrinsics not available with the soft-float ABI. "
         "Please use -mfloat-abi=softfp or -mfloat-abi=hard\"\n";
   OS << "#else\n\n";

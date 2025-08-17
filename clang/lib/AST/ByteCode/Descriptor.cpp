@@ -21,14 +21,31 @@
 using namespace clang;
 using namespace clang::interp;
 
+template <typename T> static constexpr bool needsCtor() {
+  if constexpr (std::is_same_v<T, Integral<8, true>> ||
+                std::is_same_v<T, Integral<8, false>> ||
+                std::is_same_v<T, Integral<16, true>> ||
+                std::is_same_v<T, Integral<16, false>> ||
+                std::is_same_v<T, Integral<32, true>> ||
+                std::is_same_v<T, Integral<32, false>> ||
+                std::is_same_v<T, Integral<64, true>> ||
+                std::is_same_v<T, Integral<64, false>> ||
+                std::is_same_v<T, Boolean>)
+    return false;
+
+  return true;
+}
+
 template <typename T>
 static void ctorTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                    const Descriptor *) {
+  static_assert(needsCtor<T>());
   new (Ptr) T();
 }
 
 template <typename T>
 static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
+  static_assert(needsCtor<T>());
   reinterpret_cast<T *>(Ptr)->~T();
 }
 
@@ -45,9 +62,11 @@ static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                         const Descriptor *D) {
   new (Ptr) InitMapPtr(std::nullopt);
 
-  Ptr += sizeof(InitMapPtr);
-  for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    new (&reinterpret_cast<T *>(Ptr)[I]) T();
+  if constexpr (needsCtor<T>()) {
+    Ptr += sizeof(InitMapPtr);
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      new (&reinterpret_cast<T *>(Ptr)[I]) T();
+    }
   }
 }
 
@@ -57,9 +76,12 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 
   if (IMP)
     IMP = std::nullopt;
-  Ptr += sizeof(InitMapPtr);
-  for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    reinterpret_cast<T *>(Ptr)[I].~T();
+
+  if constexpr (needsCtor<T>()) {
+    Ptr += sizeof(InitMapPtr);
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      reinterpret_cast<T *>(Ptr)[I].~T();
+    }
   }
 }
 
@@ -74,10 +96,14 @@ static void moveArrayTy(Block *, std::byte *Src, std::byte *Dst,
   }
   Src += sizeof(InitMapPtr);
   Dst += sizeof(InitMapPtr);
-  for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
-    auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
-    new (DstPtr) T(std::move(*SrcPtr));
+  if constexpr (!needsCtor<T>()) {
+    std::memcpy(Dst, Src, D->getNumElems() * D->getElemSize());
+  } else {
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
+      auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
+      new (DstPtr) T(std::move(*SrcPtr));
+    }
   }
 }
 
@@ -127,28 +153,6 @@ static void dtorArrayDesc(Block *B, std::byte *Ptr, const Descriptor *D) {
   }
 }
 
-static void moveArrayDesc(Block *B, std::byte *Src, std::byte *Dst,
-                          const Descriptor *D) {
-  const unsigned NumElems = D->getNumElems();
-  const unsigned ElemSize =
-      D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
-
-  unsigned ElemOffset = 0;
-  for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
-    auto *SrcPtr = Src + ElemOffset;
-    auto *DstPtr = Dst + ElemOffset;
-
-    auto *SrcDesc = reinterpret_cast<InlineDescriptor *>(SrcPtr);
-    auto *SrcElemLoc = reinterpret_cast<std::byte *>(SrcDesc + 1);
-    auto *DstDesc = reinterpret_cast<InlineDescriptor *>(DstPtr);
-    auto *DstElemLoc = reinterpret_cast<std::byte *>(DstDesc + 1);
-
-    *DstDesc = *SrcDesc;
-    if (auto Fn = D->ElemDesc->MoveFn)
-      Fn(B, SrcElemLoc, DstElemLoc, D->ElemDesc);
-  }
-}
-
 static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                       bool IsVolatile, bool IsActive, bool IsUnionField,
                       bool InUnion, const Descriptor *D, unsigned FieldOffset) {
@@ -162,6 +166,8 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
   Desc->IsVolatile = IsVolatile || D->IsVolatile;
+  // True if this field is const AND the parent is mutable.
+  Desc->IsConstInMutable = Desc->IsConst && IsMutable;
 
   if (auto Fn = D->CtorFn)
     Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
@@ -240,45 +246,6 @@ static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
     destroyBase(B, Ptr, F.Desc, F.Offset);
 }
 
-static void moveRecord(Block *B, std::byte *Src, std::byte *Dst,
-                       const Descriptor *D) {
-  assert(D);
-  assert(D->ElemRecord);
-
-  // FIXME: Code duplication.
-  for (const auto &F : D->ElemRecord->fields()) {
-    auto FieldOffset = F.Offset;
-    const auto *SrcDesc =
-        reinterpret_cast<const InlineDescriptor *>(Src + FieldOffset) - 1;
-    auto *DestDesc =
-        reinterpret_cast<InlineDescriptor *>(Dst + FieldOffset) - 1;
-    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
-
-    if (auto Fn = F.Desc->MoveFn)
-      Fn(B, Src + FieldOffset, Dst + FieldOffset, F.Desc);
-  }
-
-  for (const auto &Base : D->ElemRecord->bases()) {
-    auto BaseOffset = Base.Offset;
-    const auto *SrcDesc =
-        reinterpret_cast<const InlineDescriptor *>(Src + BaseOffset) - 1;
-    auto *DestDesc = reinterpret_cast<InlineDescriptor *>(Dst + BaseOffset) - 1;
-    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
-
-    if (auto Fn = Base.Desc->MoveFn)
-      Fn(B, Src + BaseOffset, Dst + BaseOffset, Base.Desc);
-  }
-
-  for (const auto &VBase : D->ElemRecord->virtual_bases()) {
-    auto VBaseOffset = VBase.Offset;
-    const auto *SrcDesc =
-        reinterpret_cast<const InlineDescriptor *>(Src + VBaseOffset) - 1;
-    auto *DestDesc =
-        reinterpret_cast<InlineDescriptor *>(Dst + VBaseOffset) - 1;
-    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
-  }
-}
-
 static BlockCtorFn getCtorPrim(PrimType Type) {
   // Floating types are special. They are primitives, but need their
   // constructor called.
@@ -309,18 +276,6 @@ static BlockDtorFn getDtorPrim(PrimType Type) {
   COMPOSITE_TYPE_SWITCH(Type, return dtorTy<T>, return nullptr);
 }
 
-static BlockMoveFn getMovePrim(PrimType Type) {
-  if (Type == PT_Float)
-    return moveTy<PrimConv<PT_Float>::T>;
-  if (Type == PT_IntAP)
-    return moveTy<PrimConv<PT_IntAP>::T>;
-  if (Type == PT_IntAPS)
-    return moveTy<PrimConv<PT_IntAPS>::T>;
-  if (Type == PT_MemberPtr)
-    return moveTy<PrimConv<PT_MemberPtr>::T>;
-  COMPOSITE_TYPE_SWITCH(Type, return moveTy<T>, return nullptr);
-}
-
 static BlockCtorFn getCtorArrayPrim(PrimType Type) {
   TYPE_SWITCH(Type, return ctorArrayTy<T>);
   llvm_unreachable("unknown Expr");
@@ -328,11 +283,6 @@ static BlockCtorFn getCtorArrayPrim(PrimType Type) {
 
 static BlockDtorFn getDtorArrayPrim(PrimType Type) {
   TYPE_SWITCH(Type, return dtorArrayTy<T>);
-  llvm_unreachable("unknown Expr");
-}
-
-static BlockMoveFn getMoveArrayPrim(PrimType Type) {
-  TYPE_SWITCH(Type, return moveArrayTy<T>);
   llvm_unreachable("unknown Expr");
 }
 
@@ -344,7 +294,7 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
       MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
       IsVolatile(IsVolatile), CtorFn(getCtorPrim(Type)),
-      DtorFn(getDtorPrim(Type)), MoveFn(getMovePrim(Type)) {
+      DtorFn(getDtorPrim(Type)) {
   assert(AllocSize >= Size);
   assert(Source && "Missing source");
 }
@@ -358,7 +308,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
       AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
-      DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
+      DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
   assert(NumElems <= (MaxArrayElemBytes / ElemSize));
 }
@@ -368,10 +318,10 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsTemporary, bool IsConst, UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
       MDSize(MD.value_or(0)),
-      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)),
+      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)), PrimT(Type),
       IsConst(IsConst), IsMutable(false), IsTemporary(IsTemporary),
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
-      DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
+      DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
@@ -386,7 +336,7 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
       AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
       ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
       IsTemporary(IsTemporary), IsArray(true), CtorFn(ctorArrayDesc),
-      DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
+      DtorFn(dtorArrayDesc) {
   assert(Source && "Missing source");
 }
 
@@ -397,7 +347,7 @@ Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
       Size(UnknownSizeMark), MDSize(MD.value_or(0)),
       AllocSize(MDSize + alignof(void *)), ElemDesc(Elem), IsConst(true),
       IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
-      CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
+      CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc) {
   assert(Source && "Missing source");
 }
 
@@ -409,7 +359,7 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
       Size(ElemSize), MDSize(MD.value_or(0)), AllocSize(Size + MDSize),
       ElemRecord(R), IsConst(IsConst), IsMutable(IsMutable),
       IsTemporary(IsTemporary), IsVolatile(IsVolatile), CtorFn(ctorRecord),
-      DtorFn(dtorRecord), MoveFn(moveRecord) {
+      DtorFn(dtorRecord) {
   assert(Source && "Missing source");
 }
 
@@ -417,7 +367,7 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
     : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
       AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
-      IsTemporary(false), IsDummy(true) {
+      IsTemporary(false) {
   assert(Source && "Missing source");
 }
 
@@ -427,12 +377,14 @@ QualType Descriptor::getType() const {
   if (const auto *D = asValueDecl())
     return D->getType();
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
-    return QualType(T->getTypeForDecl(), 0);
+    return T->getASTContext().getTypeDeclType(T);
 
   // The Source sometimes has a different type than the once
   // we really save. Try to consult the Record first.
-  if (isRecord())
-    return QualType(ElemRecord->getDecl()->getTypeForDecl(), 0);
+  if (isRecord()) {
+    const RecordDecl *RD = ElemRecord->getDecl();
+    return RD->getASTContext().getCanonicalTagType(RD);
+  }
   if (const auto *E = asExpr())
     return E->getType();
   llvm_unreachable("Invalid descriptor type");
@@ -502,12 +454,26 @@ SourceInfo Descriptor::getLoc() const {
   llvm_unreachable("Invalid descriptor type");
 }
 
+bool Descriptor::hasTrivialDtor() const {
+  if (isPrimitive() || isPrimitiveArray())
+    return true;
+
+  if (isRecord()) {
+    assert(ElemRecord);
+    const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+    return !Dtor || Dtor->isTrivial();
+  }
+
+  if (!ElemDesc)
+    return true;
+  // Composite arrays.
+  return ElemDesc->hasTrivialDtor();
+}
+
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 
 InitMap::InitMap(unsigned N)
-    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {
-  std::fill_n(data(), numFields(N), 0);
-}
+    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {}
 
 bool InitMap::initializeElement(unsigned I) {
   unsigned Bucket = I / PER_FIELD;

@@ -59,4 +59,26 @@ void more(void) {
   b3 = (char *)0;
   b3 = nullptr;
   b3 = 0;
+
+  // Note that we explicitly silence the diagnostic if the RHS is from a macro
+  // expansion. This allows for things like NULL expanding to different token
+  // sequences depending on language mode, but applies to any macro that
+  // expands to a valid null pointer constant.
+#if defined(__cplusplus)
+  #define NULL 0
+#else
+  #define NULL ((void *)0)
+#endif
+  #define SOMETHING_NOT_SPELLED_NULL nullptr
+  #define SOMETHING_THAT_IS_NOT_NULL (void *)12
+
+  char *ptr1 = NULL; // Ok
+  char *ptr2 = SOMETHING_NOT_SPELLED_NULL; // Ok
+  char *ptr3 = SOMETHING_THAT_IS_NOT_NULL; // c-warning {{implicit conversion when initializing 'char *' with an expression of type 'void *' is not permitted in C++}} \
+                                              cxx-error {{cannot initialize a variable of type 'char *' with an rvalue of type 'void *'}}
+
+  ptr1 = NULL; // Ok
+  ptr2 = SOMETHING_NOT_SPELLED_NULL; // Ok
+  ptr3 = SOMETHING_THAT_IS_NOT_NULL; // c-warning {{implicit conversion when assigning to 'char *' from type 'void *' is not permitted in C++}} \
+                                        cxx-error {{assigning to 'char *' from incompatible type 'void *'}}
 }

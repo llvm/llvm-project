@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_MC_DXCONTAINERROOTSIGNATURE_H
+#define LLVM_MC_DXCONTAINERROOTSIGNATURE_H
+
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <limits>
 
@@ -16,58 +20,79 @@ class raw_ostream;
 namespace mcdxbc {
 
 struct RootParameterInfo {
-  dxbc::RootParameterHeader Header;
+  dxbc::RTS0::v1::RootParameterHeader Header;
   size_t Location;
 
   RootParameterInfo() = default;
 
-  RootParameterInfo(dxbc::RootParameterHeader Header, size_t Location)
+  RootParameterInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location)
       : Header(Header), Location(Location) {}
+};
+
+struct DescriptorTable {
+  SmallVector<dxbc::RTS0::v2::DescriptorRange> Ranges;
+  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator begin() const {
+    return Ranges.begin();
+  }
+  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator end() const {
+    return Ranges.end();
+  }
 };
 
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
-  SmallVector<dxbc::RootConstants> Constants;
+  SmallVector<dxbc::RTS0::v1::RootConstants> Constants;
   SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
+  SmallVector<DescriptorTable> Tables;
 
-  void addInfo(dxbc::RootParameterHeader Header, size_t Location) {
+  void addInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location) {
     ParametersInfo.push_back(RootParameterInfo(Header, Location));
   }
 
-  void addParameter(dxbc::RootParameterHeader Header,
-                    dxbc::RootConstants Constant) {
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
+                    dxbc::RTS0::v1::RootConstants Constant) {
     addInfo(Header, Constants.size());
     Constants.push_back(Constant);
   }
 
-  void addInvalidParameter(dxbc::RootParameterHeader Header) {
+  void addInvalidParameter(dxbc::RTS0::v1::RootParameterHeader Header) {
     addInfo(Header, -1);
   }
 
-  void addParameter(dxbc::RootParameterHeader Header,
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
                     dxbc::RTS0::v2::RootDescriptor Descriptor) {
     addInfo(Header, Descriptors.size());
     Descriptors.push_back(Descriptor);
   }
 
-  const std::pair<uint32_t, uint32_t>
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
+                    DescriptorTable Table) {
+    addInfo(Header, Tables.size());
+    Tables.push_back(Table);
+  }
+
+  std::pair<uint32_t, uint32_t>
   getTypeAndLocForParameter(uint32_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
     return {Info.Header.ParameterType, Info.Location};
   }
 
-  const dxbc::RootParameterHeader &getHeader(size_t Location) const {
+  const dxbc::RTS0::v1::RootParameterHeader &getHeader(size_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
     return Info.Header;
   }
 
-  const dxbc::RootConstants &getConstant(size_t Index) const {
+  const dxbc::RTS0::v1::RootConstants &getConstant(size_t Index) const {
     return Constants[Index];
   }
 
   const dxbc::RTS0::v2::RootDescriptor &getRootDescriptor(size_t Index) const {
     return Descriptors[Index];
+  }
+
+  const DescriptorTable &getDescriptorTable(size_t Index) const {
+    return Tables[Index];
   }
 
   size_t size() const { return ParametersInfo.size(); }
@@ -87,10 +112,13 @@ struct RootSignatureDesc {
   uint32_t StaticSamplersOffset = 0u;
   uint32_t NumStaticSamplers = 0u;
   mcdxbc::RootParametersContainer ParametersContainer;
+  SmallVector<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
 
-  void write(raw_ostream &OS) const;
+  LLVM_ABI void write(raw_ostream &OS) const;
 
-  size_t getSize() const;
+  LLVM_ABI size_t getSize() const;
 };
 } // namespace mcdxbc
 } // namespace llvm
+
+#endif // LLVM_MC_DXCONTAINERROOTSIGNATURE_H

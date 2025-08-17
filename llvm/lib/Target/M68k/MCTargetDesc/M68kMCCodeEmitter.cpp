@@ -103,6 +103,11 @@ template <unsigned Size> static unsigned getBytePosition(unsigned BitPos) {
   }
 }
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind, bool PCRel = false) {
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 // We need special handlings for relocatable & pc-relative operands that are
 // larger than a word.
 // A M68k instruction is aligned by word (16 bits). That means, 32-bit
@@ -139,9 +144,7 @@ void M68kMCCodeEmitter::encodeRelocImm(const MCInst &MI, unsigned OpIdx,
 
     // Relocatable address
     unsigned InsertByte = getBytePosition<Size>(InsertPos);
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/false),
-                                     MI.getLoc()));
+    addFixup(Fixups, InsertByte, Expr, MCFixup::getDataKindForSize(Size / 8));
   }
 }
 
@@ -175,9 +178,8 @@ void M68kMCCodeEmitter::encodePCRelImm(const MCInst &MI, unsigned OpIdx,
             Expr, MCConstantExpr::create(LabelOffset, Ctx), Ctx);
     }
 
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/true),
-                                     MI.getLoc()));
+    addFixup(Fixups, InsertByte, Expr, MCFixup::getDataKindForSize(Size / 8),
+             true);
   }
 }
 

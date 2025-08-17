@@ -16,17 +16,15 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, realloc, (void *ptr, size_t size)) {
-  if (ptr == nullptr)
-    return gpu::allocate(size);
-
-  void *newmem = gpu::allocate(size);
-  if (newmem == nullptr)
-    return nullptr;
-
-  // This will copy garbage if it goes beyond the old allocation size.
-  inline_memcpy(newmem, ptr, size);
-  gpu::deallocate(ptr);
-  return newmem;
+  // FIXME: NVIDIA targets currently use the built-in 'malloc' which we cannot
+  // reason with. But we still need to provide this function for compatibility.
+#ifndef LIBC_TARGET_ARCH_IS_NVPTX
+  return gpu::reallocate(ptr, size);
+#else
+  (void)ptr;
+  (void)size;
+  return nullptr;
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

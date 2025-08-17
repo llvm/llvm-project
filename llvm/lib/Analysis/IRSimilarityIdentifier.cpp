@@ -1306,12 +1306,11 @@ static void findCandidateStructures(
        CandIt != CandEndIt; CandIt++) {
 
     // Determine if it has an assigned structural group already.
-    CandToGroupIt = CandToGroup.find(&*CandIt);
-    if (CandToGroupIt == CandToGroup.end()) {
-      // If not, we assign it one, and add it to our mapping.
-      std::tie(CandToGroupIt, Inserted) =
-          CandToGroup.insert(std::make_pair(&*CandIt, CurrentGroupNum++));
-    }
+    // If not, we assign it one, and add it to our mapping.
+    std::tie(CandToGroupIt, Inserted) =
+        CandToGroup.try_emplace(&*CandIt, CurrentGroupNum);
+    if (Inserted)
+      ++CurrentGroupNum;
 
     // Get the structural group number from the iterator.
     OuterGroupNum = CandToGroupIt->second;

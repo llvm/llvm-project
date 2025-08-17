@@ -50,7 +50,8 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      IgnoreCoroutines(Options.get("IgnoreCoroutines", true)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
@@ -61,12 +62,14 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
                            matchers::matchesAnyListedName(AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
-                       unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                       has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                       decl().bind("functionDecl"))),
+      traverse(TK_AsIs,
+               functionDecl(
+                   hasBody(IgnoreCoroutines ? stmt(unless(coroutineBodyStmt()))
+                                            : stmt()),
+                   isDefinition(), unless(isImplicit()),
+                   unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
+                   has(typeLoc(forEach(ExpensiveValueParamDecl))),
+                   decl().bind("functionDecl"))),
       this);
 }
 
@@ -123,6 +126,7 @@ void UnnecessaryValueParamCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "IgnoreCoroutines", IgnoreCoroutines);
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
@@ -139,10 +143,12 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
 
   auto Diag =
       diag(Param.getLocation(),
-           "the %select{|const qualified }0parameter %1 is copied for each "
+           "the %select{|const qualified }0parameter %1 of type %2 is copied "
+           "for each "
            "invocation%select{ but only used as a const reference|}0; consider "
            "making it a %select{const |}0reference")
-      << IsConstQualified << paramNameOrIndex(Param.getName(), Index);
+      << IsConstQualified << paramNameOrIndex(Param.getName(), Index)
+      << Param.getType();
   // Do not propose fixes when:
   // 1. the ParmVarDecl is in a macro, since we cannot place them correctly
   // 2. the function is virtual as it might break overrides
@@ -169,10 +175,11 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Param,
                                                const DeclRefExpr &CopyArgument,
                                                ASTContext &Context) {
-  auto Diag = diag(CopyArgument.getBeginLoc(),
-                   "parameter %0 is passed by value and only copied once; "
-                   "consider moving it to avoid unnecessary copies")
-              << &Param;
+  auto Diag =
+      diag(CopyArgument.getBeginLoc(),
+           "parameter %0 of type %1 is passed by value and only copied once; "
+           "consider moving it to avoid unnecessary copies")
+      << &Param << Param.getType();
   // Do not propose fixes in macros since we cannot place them correctly.
   if (CopyArgument.getBeginLoc().isMacroID())
     return;

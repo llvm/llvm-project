@@ -22,7 +22,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -43,13 +42,6 @@ using namespace mlir::gpu;
 
 // The functions below provide interface-like verification, but are too specific
 // to barrier elimination to become interfaces.
-
-/// Implement the MemoryEffectsOpInterface in the suitable way.
-static bool isKnownNoEffectsOpWithoutInterface(Operation *op) {
-  // memref::AssumeAlignment is conceptually pure, but marking it as such would
-  // make DCE immediately remove it.
-  return isa<memref::AssumeAlignmentOp>(op);
-}
 
 /// Returns `true` if the op is defines the parallel region that is subject to
 /// barrier synchronization.
@@ -99,10 +91,6 @@ collectEffects(Operation *op,
   // Skip over barriers to avoid infinite recursion (those barriers would ask
   // this barrier again).
   if (ignoreBarriers && isa<BarrierOp>(op))
-    return true;
-
-  // Skip over ops that we know have no effects.
-  if (isKnownNoEffectsOpWithoutInterface(op))
     return true;
 
   // Collect effect instances the operation. Note that the implementation of
@@ -170,7 +158,7 @@ getEffectsBefore(Operation *op,
 
   // If there is a non-structured control flow, bail.
   Region *region = op->getBlock()->getParent();
-  if (region && !llvm::hasSingleElement(region->getBlocks())) {
+  if (region && !region->hasOneBlock()) {
     addAllValuelessEffects(effects);
     return false;
   }
@@ -262,7 +250,7 @@ getEffectsAfter(Operation *op,
 
   // If there is a non-structured control flow, bail.
   Region *region = op->getBlock()->getParent();
-  if (region && !llvm::hasSingleElement(region->getBlocks())) {
+  if (region && !region->hasOneBlock()) {
     addAllValuelessEffects(effects);
     return false;
   }

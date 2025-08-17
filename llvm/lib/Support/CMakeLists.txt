@@ -182,6 +182,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DXILABI.cpp
   DynamicAPInt.cpp
   ELFAttributes.cpp
   ELFAttrParserCompact.cpp
@@ -257,6 +258,7 @@ add_llvm_component_library(LLVMSupport
   SuffixTree.cpp
   SystemUtils.cpp
   TarWriter.cpp
+  TextEncoding.cpp
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp
@@ -316,6 +318,14 @@ add_llvm_component_library(LLVMSupport
   Demangle
   )
 
+# Link ICU library if it is an external library.
+if(ICU_FOUND)
+  target_link_libraries(LLVMSupport
+  PRIVATE
+  ${ICU_LIBRARIES}
+  )
+endif()
+
 set(llvm_system_libs ${system_libs})
 
 # This block is only needed for llvm-config. When we deprecate llvm-config and
@@ -370,3 +380,8 @@ if(LLVM_WITH_Z3)
     ${Z3_INCLUDE_DIR}
     )
 endif()
+
+target_include_directories(LLVMSupport
+  PRIVATE
+  ${LLVM_THIRD_PARTY_DIR}/siphash/include
+)

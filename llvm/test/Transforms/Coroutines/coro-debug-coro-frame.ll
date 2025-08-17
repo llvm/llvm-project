@@ -37,7 +37,7 @@
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN]] = !DIDerivedType(tag: DW_TAG_member, name: "_6",{{.*}}baseType: ![[UNALIGNED_UNKNOWN_BASE:[0-9]+]], size: 9
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN_BASE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[UNKNOWN_TYPE_BASE]], size: 16,{{.*}} elements: ![[UNALIGNED_UNKNOWN_ELEMENTS:[0-9]+]])
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN_ELEMENTS]] = !{![[UNALIGNED_UNKNOWN_SUBRANGE:[0-9]+]]}
-; CHECk-DAG: ![[UNALIGNED_UNKNOWN_SUBRANGE]] = !DISubrange(count: 2, lowerBound: 0)
+; CHECK-DAG: ![[UNALIGNED_UNKNOWN_SUBRANGE]] = !DISubrange(count: 2, lowerBound: 0)
 ; CHECK-DAG: ![[STRUCT]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_7", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[CORO_FRAME_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}, align: 64, flags: DIFlagArtificial, elements: ![[STRUCT_ELEMENTS:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_ELEMENTS]] = !{![[MEM_TYPE:[0-9]+]]}

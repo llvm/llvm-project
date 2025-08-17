@@ -18,7 +18,6 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 

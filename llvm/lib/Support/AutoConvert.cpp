@@ -14,7 +14,6 @@
 #ifdef __MVS__
 
 #include "llvm/Support/AutoConvert.h"
-#include "llvm/Support/Error.h"
 #include <cassert>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -81,27 +80,6 @@ int enablezOSAutoConversion(int FD) {
   // Assume untagged files to be IBM-1047 encoded.
   Query.fccsid = (Query.fccsid == FT_UNTAGGED) ? CCSID_IBM_1047 : Query.fccsid;
   return fcntl(FD, F_CONTROL_CVT, &Query);
-}
-
-std::error_code llvm::disablezOSAutoConversion(int FD) {
-  if (::disablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::enablezOSAutoConversion(int FD) {
-  if (::enablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::restorezOSStdHandleAutoConversion(int FD) {
-  if (::restorezOSStdHandleAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
 }
 
 std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {

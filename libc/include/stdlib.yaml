@@ -4,7 +4,9 @@ standards:
   - stdc
 merge_yaml_files:
   - stdlib-malloc.yaml
-macros: []
+macros:
+  - macro_name: NULL
+    macro_header: null-macro.h
 types:
   - type_name: __atexithandler_t
   - type_name: __qsortcompare_t

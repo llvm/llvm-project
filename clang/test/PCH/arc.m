@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // Test this without pch.
+
 // RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin11 -fobjc-arc -include %S/Inputs/arc.h -emit-llvm-only %s
 
 // Test with pch.
@@ -14,5 +15,5 @@
 array0 a0;
 array1 a1;
 
-// CHECK-ERR1: Objective-C automated reference counting was enabled in AST file '{{.*}}' but is currently disabled
-// CHECK-ERR2: Objective-C automated reference counting was disabled in AST file '{{.*}}' but is currently enabled
+// CHECK-ERR1: Objective-C automated reference counting was enabled in precompiled file '{{.*}}' but is currently disabled
+// CHECK-ERR2: Objective-C automated reference counting was disabled in precompiled file '{{.*}}' but is currently enabled

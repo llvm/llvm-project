@@ -7,20 +7,23 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 
 %__cblayout_CB1 = type <{ float, i32, double, <2 x i32> }>
 @CB1.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB1, 24, 0, 4, 8, 16)) poison
+@CB1.str = private unnamed_addr constant [4 x i8] c"CB1\00", align 1
 
 %__cblayout_CB2 = type <{ float, double, float, half, i16, i64, i32 }>
 @CB2.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB2, 36, 0, 8, 16, 20, 22, 24, 32)) poison
+@CB2.str = private unnamed_addr constant [4 x i8] c"CB2\00", align 1
 
-%__cblayout_CB3 = type <{ double, <3 x float>, float, <3 x double>, half, <2 x double>, float, <3 x half>, <3 x half> }>
-@CB3.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB3, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90)) poison
+%__cblayout_MyConstants = type <{ double, <3 x float>, float, <3 x double>, half, <2 x double>, float, <3 x half>, <3 x half> }>
+@MyConstants.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_MyConstants, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90)) poison
+@MyConstants.str = private unnamed_addr constant [12 x i8] c"MyConstants\00", align 1
 
 ; PRINT:; Resource Bindings:
 ; PRINT-NEXT:;
 ; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind  Count
 ; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ------
-; PRINT-NEXT:;                                   cbuffer      NA          NA     CB0            cb0     1
-; PRINT-NEXT:;                                   cbuffer      NA          NA     CB1            cb1     1
-; PRINT-NEXT:;                                   cbuffer      NA          NA     CB2    cb5,space15     1
+; PRINT-NEXT:; CB1                               cbuffer      NA          NA     CB0            cb0     1
+; PRINT-NEXT:; CB2                               cbuffer      NA          NA     CB1            cb1     1
+; PRINT-NEXT:; MyConstants                       cbuffer      NA          NA     CB2    cb5,space15     1
 
 define void @test() #0 {
 
@@ -31,9 +34,7 @@ define void @test() #0 {
   ;   int2 d;
   ; }
   %CB1.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB1, 24, 0, 4, 8, 16))
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB1, 24, 0, 4, 8, 16)) %CB1.cb_h, ptr @CB1.cb, align 4
-
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @CB1.str)
   ; cbuffer CB2 : register(b0) {
   ;   float a;
   ;   double b;
@@ -45,9 +46,7 @@ define void @test() #0 {
   ;}
 
   %CB2.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB2, 36, 0, 8, 16, 20, 22, 24, 32))
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB2, 36, 0, 8, 16, 20, 22, 24, 32)) %CB2.cb_h, ptr @CB2.cb, align 4
-
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr @CB2.str)
   ; cbuffer CB3 : register(b5) {
   ;   double B0;
   ;   float3 B1;
@@ -59,19 +58,22 @@ define void @test() #0 {
   ;   half3 B7;
   ;   half3 B8;
   ; }
-  %CB3.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB3, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90))
-            @llvm.dx.resource.handlefrombinding(i32 15, i32 5, i32 1, i32 0, i1 false)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB3, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90)) %CB3.cb_h, ptr @CB3.cb, align 4
+  %CB3.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_MyConstants, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90))
+            @llvm.dx.resource.handlefrombinding(i32 15, i32 5, i32 1, i32 0, i1 false, ptr @MyConstants.str)
 
   ret void
 }
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
+; CHECK: @CB1 = external constant %CBuffer.CB1
+; CHECK: @CB2 = external constant %CBuffer.CB2
+; CHECK: @MyConstants = external constant %CBuffer.MyConstants
+
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 
 ; CHECK: [[ResList]] = !{null, null, [[CBList:[!][0-9]+]], null}
-; CHECK: [[CBList]] = !{![[CB1:[0-9]+]], ![[CB2:[0-9]+]], ![[CB3:[0-9]+]]}
-; CHECK: ![[CB1]] = !{i32 0, ptr @0, !"", i32 0, i32 0, i32 1, i32 24, null}
-; CHECK: ![[CB2]] = !{i32 1, ptr @1, !"", i32 0, i32 1, i32 1, i32 36, null}
-; CHECK: ![[CB3]] = !{i32 2, ptr @2, !"", i32 15, i32 5, i32 1, i32 96, null}
+; CHECK: [[CBList]] = !{![[CB1:[0-9]+]], ![[CB2:[0-9]+]], ![[MYCONSTANTS:[0-9]+]]}
+; CHECK: ![[CB1]] = !{i32 0, ptr @CB1, !"CB1", i32 0, i32 0, i32 1, i32 24, null}
+; CHECK: ![[CB2]] = !{i32 1, ptr @CB2, !"CB2", i32 0, i32 1, i32 1, i32 36, null}
+; CHECK: ![[MYCONSTANTS]] = !{i32 2, ptr @MyConstants, !"MyConstants", i32 15, i32 5, i32 1, i32 96, null}

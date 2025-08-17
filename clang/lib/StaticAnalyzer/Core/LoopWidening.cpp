@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
-#include "clang/AST/AST.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 

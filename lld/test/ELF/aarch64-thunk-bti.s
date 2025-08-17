@@ -176,7 +176,7 @@ pacibsp_target:
  pacibsp
  ret
 
-// CHECk-PADS-LABEL: <bti_c_target>:
+// CHECK-PADS-LABEL: <bti_c_target>:
 // CHECK-PADS: 18001000:      bti     c
 // CHECK-PADS-NEXT:           ret
 

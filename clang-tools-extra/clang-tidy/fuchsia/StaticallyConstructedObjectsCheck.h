@@ -14,7 +14,7 @@
 namespace clang::tidy::fuchsia {
 
 /// Constructing global, non-trivial objects with static storage is
-/// disallowed, unless the object is statically initialized with a constexpr 
+/// disallowed, unless the object is statically initialized with a constexpr
 /// constructor or has no explicit constructor.
 ///
 /// For the user-facing documentation see:

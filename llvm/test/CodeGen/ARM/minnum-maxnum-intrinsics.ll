@@ -1362,7 +1362,7 @@ define void @pr65820(ptr %y, <4 x float> %splat) {
 ; ARMV7-NEXT:    vmov d16, r2, r3
 ; ARMV7-NEXT:    vdup.32 q8, d16[0]
 ; ARMV7-NEXT:    vcgt.f32 q9, q8, #0
-; ARMV7-NEXT:    vand q8, q8, q9
+; ARMV7-NEXT:    vand q8, q9, q8
 ; ARMV7-NEXT:    vst1.32 {d16, d17}, [r0]
 ; ARMV7-NEXT:    bx lr
 ;

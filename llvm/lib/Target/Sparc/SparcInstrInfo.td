@@ -24,7 +24,8 @@ include "SparcInstrFormats.td"
 def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
 
 // True when generating 64-bit code. This also implies HasV9.
-def Is64Bit : Predicate<"Subtarget->is64Bit()">;
+def Is64Bit : Predicate<"Subtarget->is64Bit()">,
+              AssemblerPredicate<(all_of FeatureV9)>;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
               AssemblerPredicate<(all_of FeatureSoftMulDiv)>;
@@ -54,6 +55,14 @@ def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
 // HasUA2007 - This is true when the target processor has UA 2007 extensions.
 def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
                 AssemblerPredicate<(all_of FeatureUA2007)>;
+
+// HasOSA2011 - This is true when the target processor has OSA 2011 extensions.
+def HasOSA2011 : Predicate<"Subtarget->isOSA2011()">,
+                AssemblerPredicate<(all_of FeatureOSA2011)>;
+
+// HasCrypto - This is true when the target processor has cryptographic extensions.
+def HasCrypto : Predicate<"Subtarget->isCrypto()">,
+                AssemblerPredicate<(all_of FeatureCrypto)>;
 
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
@@ -92,6 +101,8 @@ def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
+
+def simm5  : PatLeaf<(imm), [{ return isInt<5>(N->getSExtValue()); }]>;
 
 def simm10  : PatLeaf<(imm), [{ return isInt<10>(N->getSExtValue()); }]>;
 
@@ -151,6 +162,12 @@ def SparcMEMrrAsmOperand : AsmOperandClass {
 def SparcMEMriAsmOperand : AsmOperandClass {
   let Name = "MEMri";
   let ParserMethod = "parseMEMOperand";
+}
+
+def simm5Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM5";
+  let EncoderMethod = "getSImm5OpValue";
 }
 
 def simm13Op : Operand<iPTR> {
@@ -227,14 +244,30 @@ def PrefetchTag : Operand<i32> {
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<22>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchPredTargetOpValue";
+  let DecoderMethod = "DecodeDisp<19>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
+  let DecoderMethod = "DecodeDisp<16>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
+}
+
+def cbtarget : Operand<OtherVT> {
+  let EncoderMethod = "getCompareAndBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<10>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SparcCallTargetAsmOperand : AsmOperandClass {
@@ -246,6 +279,8 @@ def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
   let ParserMatchClass = SparcCallTargetAsmOperand;
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 // Operand for printing out a condition code.
@@ -1980,4 +2015,5 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"
 include "SparcInstrUAOSA.td"
+include "SparcInstrCrypto.td"
 include "SparcInstrAliases.td"

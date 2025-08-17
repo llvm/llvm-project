@@ -442,6 +442,12 @@ generic-hardening-mode-extensive)
     check-runtimes
     check-abi-list
 ;;
+generic-hardening-mode-extensive-observe-semantic)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-extensive-observe-semantic.cmake"
+    check-runtimes
+    check-abi-list
+;;
 generic-hardening-mode-debug)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-debug.cmake"

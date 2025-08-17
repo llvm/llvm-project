@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // TODO FMT __builtin_memcpy isn't constexpr in GCC
-// UNSUPPORTED: gcc-14
+// UNSUPPORTED: gcc-14, gcc-15
 
 // <format>
 

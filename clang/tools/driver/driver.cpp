@@ -305,7 +305,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
     // FIXME: Driver shouldn't take extra initial argument.
     driver::applyOverrideOptions(Args, OverrideStr, SavedStrings,
-                                 &llvm::errs());
+                                 "CCC_OVERRIDE_OPTIONS", &llvm::errs());
   }
 
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
@@ -321,25 +321,22 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                            .Case("-fintegrated-cc1", false)
                            .Default(UseNewCC1Process);
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(Args);
+  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(Args);
   // Driver's diagnostics don't use suppression mappings, so don't bother
   // parsing them. CC1 still receives full args, so this doesn't impact other
   // actions.
   DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagClient);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {
     auto SerializedConsumer =
         clang::serialized_diags::create(DiagOpts->DiagnosticSerializationFile,
-                                        &*DiagOpts, /*MergeChildRecords=*/true);
+                                        *DiagOpts, /*MergeChildRecords=*/true);
     Diags.setClient(new ChainedDiagnosticConsumer(
         Diags.takeClient(), std::move(SerializedConsumer)));
   }

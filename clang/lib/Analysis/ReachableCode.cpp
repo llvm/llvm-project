@@ -25,7 +25,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 using namespace clang;
@@ -461,9 +460,8 @@ static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
   const Stmt *CoroStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
   bool AfterDeadStmt = false;
-  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
-       ++I)
-    if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+  for (const CFGElement &Elem : *Block)
+    if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
       if (S == DeadStmt)
         AfterDeadStmt = true;

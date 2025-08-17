@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -21,6 +22,11 @@ bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
                 [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
+}
+
+bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
+  return all_of(Def->users(),
+                [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
@@ -72,8 +78,11 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
-  if (V->isLiveIn())
-    return SE.getSCEV(V->getLiveInIRValue());
+  if (V->isLiveIn()) {
+    if (Value *LiveIn = V->getLiveInIRValue())
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
+  }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
@@ -125,4 +134,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                                           // unless proven otherwise.
         return false;
       });
+}
+
+VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
+  auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
+  auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {
+    return VPBlockUtils::isHeader(VPB, VPDT);
+  });
+  return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }

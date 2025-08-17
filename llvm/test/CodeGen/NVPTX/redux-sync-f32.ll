@@ -6,14 +6,13 @@ declare float @llvm.nvvm.redux.sync.fmin(float, i32)
 define float @redux_sync_fmin(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmin(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmin_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_param_1];
-; CHECK-NEXT:    redux.sync.min.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmin_param_1];
+; CHECK-NEXT:    redux.sync.min.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmin(float %src, i32 %mask)
   ret float %val
@@ -23,14 +22,13 @@ declare float @llvm.nvvm.redux.sync.fmin.abs(float, i32)
 define float @redux_sync_fmin_abs(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmin_abs(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmin_abs_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_abs_param_1];
-; CHECK-NEXT:    redux.sync.min.abs.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_abs_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmin_abs_param_1];
+; CHECK-NEXT:    redux.sync.min.abs.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmin.abs(float %src, i32 %mask)
   ret float %val
@@ -40,14 +38,13 @@ declare float @llvm.nvvm.redux.sync.fmin.NaN(float, i32)
 define float @redux_sync_fmin_NaN(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmin_NaN(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmin_NaN_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_NaN_param_1];
-; CHECK-NEXT:    redux.sync.min.NaN.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_NaN_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmin_NaN_param_1];
+; CHECK-NEXT:    redux.sync.min.NaN.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmin.NaN(float %src, i32 %mask)
   ret float %val
@@ -57,14 +54,13 @@ declare float @llvm.nvvm.redux.sync.fmin.abs.NaN(float, i32)
 define float @redux_sync_fmin_abs_NaN(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmin_abs_NaN(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmin_abs_NaN_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_abs_NaN_param_1];
-; CHECK-NEXT:    redux.sync.min.abs.NaN.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmin_abs_NaN_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmin_abs_NaN_param_1];
+; CHECK-NEXT:    redux.sync.min.abs.NaN.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmin.abs.NaN(float %src, i32 %mask)
   ret float %val
@@ -74,14 +70,13 @@ declare float @llvm.nvvm.redux.sync.fmax(float, i32)
 define float @redux_sync_fmax(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmax(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmax_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_param_1];
-; CHECK-NEXT:    redux.sync.max.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmax_param_1];
+; CHECK-NEXT:    redux.sync.max.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmax(float %src, i32 %mask)
   ret float %val
@@ -91,14 +86,13 @@ declare float @llvm.nvvm.redux.sync.fmax.abs(float, i32)
 define float @redux_sync_fmax_abs(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmax_abs(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmax_abs_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_abs_param_1];
-; CHECK-NEXT:    redux.sync.max.abs.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_abs_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmax_abs_param_1];
+; CHECK-NEXT:    redux.sync.max.abs.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmax.abs(float %src, i32 %mask)
   ret float %val
@@ -108,14 +102,13 @@ declare float @llvm.nvvm.redux.sync.fmax.NaN(float, i32)
 define float @redux_sync_fmax_NaN(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmax_NaN(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmax_NaN_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_NaN_param_1];
-; CHECK-NEXT:    redux.sync.max.NaN.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_NaN_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmax_NaN_param_1];
+; CHECK-NEXT:    redux.sync.max.NaN.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmax.NaN(float %src, i32 %mask)
   ret float %val
@@ -125,14 +118,13 @@ declare float @llvm.nvvm.redux.sync.fmax.abs.NaN(float, i32)
 define float @redux_sync_fmax_abs_NaN(float %src, i32 %mask) {
 ; CHECK-LABEL: redux_sync_fmax_abs_NaN(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [redux_sync_fmax_abs_NaN_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_abs_NaN_param_1];
-; CHECK-NEXT:    redux.sync.max.abs.NaN.f32 %f2, %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [redux_sync_fmax_abs_NaN_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [redux_sync_fmax_abs_NaN_param_1];
+; CHECK-NEXT:    redux.sync.max.abs.NaN.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %src, i32 %mask)
   ret float %val

@@ -13,20 +13,17 @@
 #include "mlir/Pass/Pass.h"
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include <optional>
 
 using namespace mlir;
@@ -80,14 +77,19 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 }
 
 /// Prints out the pass in the textual representation of pipelines. If this is
-/// an adaptor pass, print its pass managers.
-void Pass::printAsTextualPipeline(raw_ostream &os) {
+/// an adaptor pass, print its pass managers. When `pretty` is true, the
+/// printed pipeline is formatted for readability.
+void Pass::printAsTextualPipeline(raw_ostream &os, bool pretty) {
   // Special case for adaptors to print its pass managers.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleave(
         adaptor->getPassManagers(),
-        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os); },
-        [&] { os << ","; });
+        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os, pretty); },
+        [&] {
+          os << ",";
+          if (pretty)
+            os << "\n";
+        });
     return;
   }
   // Otherwise, print the pass argument followed by its options. If the pass
@@ -390,27 +392,51 @@ StringRef OpPassManager::getOpAnchorName() const {
 }
 
 /// Prints out the passes of the pass manager as the textual representation
-/// of pipelines.
+/// of pipelines. When `pretty` is true, the printed pipeline is formatted for
+/// readability.
 void printAsTextualPipeline(
-    raw_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
+    raw_indented_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false) {
   os << anchorName << "(";
+  if (pretty) {
+    os << "\n";
+    os.indent();
+  }
   llvm::interleave(
-      passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os); },
-      [&]() { os << ","; });
+      passes,
+      [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os, pretty); },
+      [&]() {
+        os << ",";
+        if (pretty)
+          os << "\n";
+      });
+  if (pretty) {
+    os << "\n";
+    os.unindent();
+  }
   os << ")";
 }
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
+void printAsTextualPipeline(
+    raw_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty) {
+  raw_indented_ostream indentedOS(os);
+  printAsTextualPipeline(indentedOS, anchorName, passes, pretty);
+}
+void OpPassManager::printAsTextualPipeline(raw_ostream &os, bool pretty) const {
   StringRef anchorName = getOpAnchorName();
+  raw_indented_ostream indentedOS(os);
   ::printAsTextualPipeline(
-      os, anchorName,
+      indentedOS, anchorName,
       {MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin(),
-       MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()});
+       MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()},
+      pretty);
 }
 
 void OpPassManager::dump() {
   llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
-  printAsTextualPipeline(llvm::errs());
+  printAsTextualPipeline(llvm::errs(), /*pretty=*/true);
   llvm::errs() << "\n";
 }
 
@@ -465,7 +491,6 @@ llvm::hash_code OpPassManager::hash() {
   }
   return hashCode;
 }
-
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
@@ -800,7 +825,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
 
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
+  llvm::fill(activePMs, false);
   std::atomic<bool> hasFailure = false;
   parallelForEach(context, opInfos, [&](OpPMInfo &opInfo) {
     // Find an executor for this operation.
@@ -871,11 +896,12 @@ LogicalResult PassManager::run(Operation *op) {
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   llvm::hash_code pipelineKey = hash();
-  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
+  if (newInitKey != initializationKey ||
+      pipelineKey != pipelineInitializationKey) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;
-    pipelineKey = pipelineInitializationKey;
+    pipelineInitializationKey = pipelineKey;
   }
 
   // Construct a top level analysis manager for the pipeline.

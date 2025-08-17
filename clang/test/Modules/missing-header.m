@@ -8,9 +8,6 @@
 @import missing_unavailable_headers.not_missing; // OK
 // CHECK-NOT: missing_unavailable_headers
 
-@import missing_textual_header; // OK
-// CHECK-NOT: missing_textual_header
-
 @import missing_headers;
 // CHECK: module.modulemap:15:27: error: header 'missing.h' not found
 // CHECK: could not build module 'missing_headers'

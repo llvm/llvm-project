@@ -527,7 +527,7 @@ void MemoryAccess::updateDimensionality() {
   }
 }
 
-const std::string
+std::string
 MemoryAccess::getReductionOperatorStr(MemoryAccess::ReductionType RT) {
   switch (RT) {
   case MemoryAccess::RT_NONE:
@@ -910,7 +910,7 @@ void MemoryAccess::realignParams() {
   AccessRelation = AccessRelation.align_params(CtxSpace);
 }
 
-const std::string MemoryAccess::getReductionOperatorStr() const {
+std::string MemoryAccess::getReductionOperatorStr() const {
   return MemoryAccess::getReductionOperatorStr(getReductionType());
 }
 
