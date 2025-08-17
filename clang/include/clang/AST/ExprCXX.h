@@ -5266,6 +5266,7 @@ public:
       : Expr(SC, Resume->getType(), Resume->getValueKind(),
              Resume->getObjectKind()),
         KeywordLoc(KeywordLoc), OpaqueValue(OpaqueValue) {
+    CoroutineSuspendExprBits.UseAwaitSuspendDestroy = false;
     SubExprs[SubExpr::Operand] = Operand;
     SubExprs[SubExpr::Common] = Common;
     SubExprs[SubExpr::Ready] = Ready;
@@ -5279,6 +5280,7 @@ public:
       : Expr(SC, Ty, VK_PRValue, OK_Ordinary), KeywordLoc(KeywordLoc) {
     assert(Common->isTypeDependent() && Ty->isDependentType() &&
            "wrong constructor for non-dependent co_await/co_yield expression");
+    CoroutineSuspendExprBits.UseAwaitSuspendDestroy = false;
     SubExprs[SubExpr::Operand] = Operand;
     SubExprs[SubExpr::Common] = Common;
     SubExprs[SubExpr::Ready] = nullptr;
@@ -5288,11 +5290,20 @@ public:
   }
 
   CoroutineSuspendExpr(StmtClass SC, EmptyShell Empty) : Expr(SC, Empty) {
+    CoroutineSuspendExprBits.UseAwaitSuspendDestroy = false;
     SubExprs[SubExpr::Operand] = nullptr;
     SubExprs[SubExpr::Common] = nullptr;
     SubExprs[SubExpr::Ready] = nullptr;
     SubExprs[SubExpr::Suspend] = nullptr;
     SubExprs[SubExpr::Resume] = nullptr;
+  }
+
+  bool useAwaitSuspendDestroy() const {
+    return CoroutineSuspendExprBits.UseAwaitSuspendDestroy;
+  }
+
+  void setUseAwaitSuspendDestroy(bool Use) {
+    CoroutineSuspendExprBits.UseAwaitSuspendDestroy = Use;
   }
 
   Expr *getCommonExpr() const {

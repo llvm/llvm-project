@@ -174,66 +174,6 @@ static bool StmtCanThrow(const Stmt *S) {
   return false;
 }
 
-// Check if this suspend should be calling `await_suspend_destroy`
-static bool useCoroAwaitSuspendDestroy(const CoroutineSuspendExpr &S) {
-  // This can only be an `await_suspend_destroy` suspend expression if it
-  // returns void -- `buildCoawaitCalls` in `SemaCoroutine.cpp` asserts this.
-  // Moreover, when `await_suspend` returns a handle, the outermost method call
-  // is `.address()` -- making it harder to get the actual class or method.
-  if (S.getSuspendReturnType() !=
-      CoroutineSuspendExpr::SuspendReturnType::SuspendVoid) {
-    return false;
-  }
-
-  // `CGCoroutine.cpp` & `SemaCoroutine.cpp` must agree on whether this suspend
-  // expression uses `[[clang::coro_await_suspend_destroy]]`.
-  //
-  // Any mismatch is a serious bug -- we would either double-free, or fail to
-  // destroy the promise type. For this reason, we make our decision based on
-  // the method name, and fatal outside of the happy path -- including on
-  // failure to find a method name.
-  //
-  // As a debug-only check we also try to detect the `AwaiterClass`. This is
-  // secondary, because  detection of the awaiter type can be silently broken by
-  // small `buildCoawaitCalls` AST changes.
-  StringRef SuspendMethodName;           // Primary
-  CXXRecordDecl *AwaiterClass = nullptr; // Debug-only, best-effort
-  if (auto *SuspendCall =
-          dyn_cast<CallExpr>(S.getSuspendExpr()->IgnoreImplicit())) {
-    if (auto *SuspendMember = dyn_cast<MemberExpr>(SuspendCall->getCallee())) {
-      if (auto *BaseExpr = SuspendMember->getBase()) {
-        // `IgnoreImplicitAsWritten` is critical since `await_suspend...` can be
-        // invoked on the base of the actual awaiter, and the base need not have
-        // the attribute. In such cases, the AST will show the true awaiter
-        // being upcast to the base.
-        AwaiterClass = BaseExpr->IgnoreImplicitAsWritten()
-                           ->getType()
-                           ->getAsCXXRecordDecl();
-      }
-      if (auto *SuspendMethod =
-              dyn_cast<CXXMethodDecl>(SuspendMember->getMemberDecl())) {
-        SuspendMethodName = SuspendMethod->getName();
-      }
-    }
-  }
-  if (SuspendMethodName == "await_suspend_destroy") {
-    assert(!AwaiterClass ||
-           AwaiterClass->hasAttr<CoroAwaitSuspendDestroyAttr>());
-    return true;
-  } else if (SuspendMethodName == "await_suspend") {
-    assert(!AwaiterClass ||
-           !AwaiterClass->hasAttr<CoroAwaitSuspendDestroyAttr>());
-    return false;
-  } else {
-    llvm::report_fatal_error(
-        "Wrong method in [[clang::coro_await_suspend_destroy]] check: "
-        "expected 'await_suspend' or 'await_suspend_destroy', but got '" +
-        SuspendMethodName + "'");
-  }
-
-  return false;
-}
-
 // Emit suspend expression which roughly looks like:
 //
 //   auto && x = CommonExpr();
@@ -391,10 +331,10 @@ static void emitStandardAwaitSuspend(
   CGF.EmitBranchThroughCleanup(Coro.CleanupJD);
 }
 
-static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Coro,
-                                    CoroutineSuspendExpr const &S,
-                                    AwaitKind Kind, AggValueSlot aggSlot,
-                                    bool ignoreResult, bool forLValue) {
+static LValueOrRValue
+emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Coro,
+                      CoroutineSuspendExpr const &S, AwaitKind Kind,
+                      AggValueSlot aggSlot, bool ignoreResult, bool forLValue) {
   auto *E = S.getCommonExpr();
 
   auto CommonBinder =
@@ -429,7 +369,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
       CGF.getOrCreateOpaqueLValueMapping(S.getOpaqueValue()).getPointer(CGF);
   llvm::Value *Frame = CGF.CurCoro.Data->CoroBegin;
 
-  if (useCoroAwaitSuspendDestroy(S)) { // Call `await_suspend_destroy` & cleanup
+  if (S.useAwaitSuspendDestroy()) { // Call `await_suspend_destroy` & cleanup
     emitAwaitSuspendDestroy(CGF, Coro, SuspendWrapper, Awaiter, Frame,
                             AwaitSuspendCanThrow);
   } else { // Normal suspend path -- can actually suspend, uses intrinsics

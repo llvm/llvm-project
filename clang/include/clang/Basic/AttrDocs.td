@@ -9364,101 +9364,109 @@ Example:
 }
 
 def CoroAwaitSuspendDestroyDoc : Documentation {
-  let Category = DocCatDecl;
+  let Category = DocCatFunction;
   let Content = [{
 
-The ``[[clang::coro_await_suspend_destroy]]`` attribute may be applied to a C++
-coroutine awaiter type.  When this attribute is present, the awaiter must
-implement ``void await_suspend_destroy(Promise&)``.  If ``await_ready()``
-returns ``false`` at a suspension point, ``await_suspend_destroy`` will be
-called directly.  The coroutine being suspended will then be immediately
-destroyed.
+The ``[[clang::coro_await_suspend_destroy]]`` attribute applies to an
+``await_suspend(std::coroutine_handle<Promise>)`` member function of a
+coroutine awaiter.  When applied, suspensions into the awaiter use an optimized
+call path that bypasses standard suspend intrinsics, and immediately destroys
+the suspending coro.
 
-The new behavior is equivalent to this standard code:
+Each annotated ``await_suspend`` member must contain a compatibility stub:
 
 .. code-block:: c++
 
-  void await_suspend_destroy(YourPromise&) { ... }
-  void await_suspend(auto handle) {
+  [[clang::coro_await_suspend_destroy]]
+  void await_suspend(std::coroutine_handle<Promise> handle) {
     await_suspend_destroy(handle.promise());
     handle.destroy();
   }
 
-This enables `await_suspend_destroy()` usage in portable awaiters — just add a
-stub ``await_suspend()`` as above.  Without ``coro_await_suspend_destroy``
-support, the awaiter will behave nearly identically, with the only difference
-being heap allocation instead of stack allocation for the coroutine frame.
+An awaiter type may provide both annotated and non-annotated overloads of
+`await_suspend()`, as long as each invocation of an annotated overload has a
+corresponding `await_suspend_destroy(Promise&)` overload.
 
-This attribute helps optimize short-circuiting coroutines.
+Instead of calling the annotated ``await_suspend()``, the coroutine calls
+``await_suspend_destroy(Promise&)`` and immediately destroys the coroutine
+``await_suspend_destroy()`` must return ``void`` (Note: if desired, it
+would be straightforward to also support the "symmetric transfer"
+`std::coroutine_handle` return type.)
 
-A short-circuiting coroutine is one where every ``co_await`` or ``co_yield``
-either immediately produces a value, or exits the coroutine.  In other words,
-they use coroutine syntax to concisely branch out of a synchronous function. 
-Here are close analogs in other languages:
+This optimization improves code speed and size for "short-circuiting"
+coroutines — those that use coroutine syntax **exclusively** for early returns
+and control flow rather than true asynchronous operations.
+
+Specifically, a short-circuiting awaiter is one that either proceeds
+immediately (``await_ready()`` returns ``true``, skipping to
+``await_resume()``) or terminates the coroutine execution.
+
+Then, a short-circuiting coroutine is one where **all** the awaiters (including
+``co_await``, ``co_yield``, initial, and final suspend) are short-circuiting.
+
+The short-circuiting coroutine concept introduced above has close analogs in
+other languages:
 
 - Rust has ``Result<T>`` and a ``?`` operator to unpack it, while
-  ``folly::result<T>`` is a C++ short-circuiting coroutine, with ``co_await``
-  acting just like ``?``.
+  ``folly::result<T>`` is a C++ short-circuiting coroutine, within which
+  ``co_await or_unwind(someResult())`` acts just like ``someResult()?``.
 
 - Haskell has ``Maybe`` & ``Error`` monads.  A short-circuiting ``co_await``
   loosely corresponds to the monadic ``>>=``, whereas a short-circuiting
   ``std::optional`` coro would be an exact analog of ``Maybe``.
 
-The C++ implementation relies on short-circuiting awaiters.  These either
-resume synchronously, or immediately destroy the awaiting coroutine and return
-control to the parent:
+Returning to C++, even non-short-circuiting coroutines, including asynchronous
+ones that suspend, may contain short-circuiting awaiters, and those might still
+see some performance benefit if annotated.
+
+Marking your ``await_suspend_destroy`` as ``noexcept`` can sometimes further
+improve optimization.
+
+However, if **all** awaiters within a coroutine are short-circuiting, then the
+coro frame **can reliably be allocated on-stack**, making short-circuiting
+coros behave qualitatively more like plain functions -- with better
+optimization & more predictable behavior under memory pressure.
+
+Technical aside: Heap elision becomes reliable because LLVM is allowed to elide
+heap allocations whenever it can prove that the handle doesn't "escape" from
+the coroutine.  User code can only access the handle via suspend intrinsics,
+and annotated short-circuiting awaiters simply don't use any.
+
+Note that a short-circuiting coroutine differs in one important way from a
+function that replaced each `co_await awaiter` with explicit control flow:
 
 .. code-block:: c++
 
-  T val;
+  T value;
   if (awaiter.await_ready()) {
-    val = awaiter.await_resume();
+    value = awaiter.await_resume();
   } else {
-    awaiter.await_suspend();
-    return /* value representing the "execution short-circuited" outcome */;
+    // ... content of `await_suspend_destroy` ...
+    return /* early-termination return object */;
   }
 
-Then, a short-ciruiting coroutine is one where all the suspend points are
-either (i) trivial (like ``std::suspend_never``), or (ii) short-circuiting.
+That key difference is that `unhandled_exception()` lets the promise type wrap
+the function body in an implicit try-catch.  This automatic exception boundary
+behavior can be desirable in robust, return-value-oriented programs that
+benefit from short-circuiting coroutines.  If not, the promise can re-throw.
 
-Although the coroutine machinery makes them harder to optimize, logically,
-short-circuiting coroutines are like syntax sugar for regular functions where:
-
-- `co_await` allows expressions to return early.
-
-- `unhandled_exception()` lets the coroutine promise type wrap the function
-  body in an implicit try-catch.  This mandatory exception boundary behavior
-  can be desirable in robust, return-value-oriented programs that benefit from
-  short-circuiting coroutines.  If not, the promise can always re-throw.
-
-This attribute improves short-circuiting coroutines in a few ways:
-
-- **Avoid heap allocations for coro frames**: Allocating short-circuiting
-  coros on the stack makes code more predictable under memory pressure.
-  Without this attribute, LLVM cannot elide heap allocation even when all
-  awaiters are short-circuiting.
-
-- **Performance**: Significantly faster execution and smaller code size.
-
-- **Build time**: Faster compilation due to less IR being generated.
-
-Marking your ``await_suspend_destroy`` method as ``noexcept`` can sometimes
-further improve optimization.
-
-Here is a toy example of a portable short-circuiting awaiter:
+Here is an example of a short-circuiting awaiter for a hypothetical
+`std::optional` coroutine:
 
 .. code-block:: c++
 
   template <typename T>
-  struct [[clang::coro_await_suspend_destroy]] optional_awaiter {
+  struct optional_awaiter {
     std::optional<T> opt_;
     bool await_ready() const noexcept { return opt_.has_value(); }
     T await_resume() { return std::move(opt_).value(); }
     void await_suspend_destroy(auto& promise) {
-      // Assume the return object of the outer coro defaults to "empty".
+      // The return object of `promise`'s coro should default to "empty".
+      assert(!promise.returned_optional_ptr_->has_value());
     }
-    // Fallback for when `coro_await_suspend_destroy` is unavailable.
+    [[clang::coro_await_suspend_destroy]]
     void await_suspend(auto handle) {
+      // Fallback for when `coro_await_suspend_destroy` is unavailable.
       await_suspend_destroy(handle.promise());
       handle.destroy();
     }

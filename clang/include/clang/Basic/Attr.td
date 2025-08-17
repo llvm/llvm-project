@@ -1354,7 +1354,7 @@ def CoroAwaitElidableArgument : InheritableAttr {
 
 def CoroAwaitSuspendDestroy: InheritableAttr {
   let Spellings = [Clang<"coro_await_suspend_destroy">];
-  let Subjects = SubjectList<[CXXRecord]>;
+  let Subjects = SubjectList<[CXXMethod]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroAwaitSuspendDestroyDoc];
   let SimpleHandler = 1;

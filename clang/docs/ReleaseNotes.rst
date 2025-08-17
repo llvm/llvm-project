@@ -154,10 +154,12 @@ Attribute Changes in Clang
 --------------------------
 
 - Introduced a new attribute ``[[clang::coro_await_suspend_destroy]]``.  When
-  applied to a coroutine awaiter class, it causes suspensions into this awaiter
-  to use a new `await_suspend_destroy(Promise&)` method instead of the standard
-  `await_suspend(std::coroutine_handle<...>)`.  The coroutine is then destroyed.
-  This improves code speed & size for "short-circuiting" coroutines.
+  applied to an `await_suspend(std::coroutine_handle<Promise>)` member of a
+  coroutine awaiter, it causes suspensions into this awaiter to use a new
+  `await_suspend_destroy(Promise&)` method.  The coroutine is then immediately
+  destroyed.  This flow bypasses the original `await_suspend()` (though it
+  must contain a compatibility stub), and omits suspend intrinsics.  The net
+  effect is improved code speed & size for "short-circuiting" coroutines.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -179,7 +181,7 @@ Improvements to Clang's diagnostics
   "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
-  
+
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
