@@ -848,11 +848,15 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
 
   // Since lldb does not call bindExtensions, must ensure that any enclosing
   // extension is bound
+  // FIXME: This won't correctly handle cases that rely on other extensions
+  // being bound first, e.g for nested types defined in extensions.
   for (auto *context = containing_context; context;
        context = context->getParent()) {
     if (auto *d = context->getAsDecl()) {
-      if (auto *ext = swift::dyn_cast<swift::ExtensionDecl>(d))
-        ext->computeExtendedNominal();
+      if (auto *ext = swift::dyn_cast<swift::ExtensionDecl>(d)) {
+        if (!ext->hasBeenBound())
+          ext->setExtendedNominal(ext->computeExtendedNominal());
+      }
     }
   }
   swift::Type type = containing_context->mapTypeIntoContext(
