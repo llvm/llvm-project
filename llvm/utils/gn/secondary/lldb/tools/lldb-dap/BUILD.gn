@@ -5,6 +5,7 @@ static_library("lib") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     "//lldb/source/API:liblldb",
+    "//lldb/source/Host",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
@@ -14,7 +15,6 @@ static_library("lib") {
 
   include_dirs = [ "." ]
 
-  # FIXME: link in //lldb/source/Host on Win (and netbsd)
   # FIXME: link in pthread
   # FIXME: rpath/install_name stuff on macOS for framework on macOS
 

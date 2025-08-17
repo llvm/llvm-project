@@ -46,10 +46,9 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 99, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC7:%.*]], [[FOR_LATCH:%.*]] ]
+; CHECK-NEXT:    [[I_07:%.*]] = phi i16 [ 99, [[SCALAR_PH]] ], [ [[INC7:%.*]], [[FOR_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr @v_38, align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[LV]], 32767
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[COND_END:%.*]], label [[COND_END]]
