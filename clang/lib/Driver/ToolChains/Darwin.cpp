@@ -3191,35 +3191,33 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   // ABI
   if (getTriple().isArm64e()) {
     auto EnsureDefaultPtrauthFlag = [&](OptSpecifier Pos, OptSpecifier Neg,
-                                        const char* param_name) {
+                                        const char *FlagText) {
       if (DriverArgs.hasArg(Pos, Neg))
         return;
-      CC1Args.push_back(param_name);
+      CC1Args.push_back(FlagText);
     };
 
     // Core platform ABI
     EnsureDefaultPtrauthFlag(options::OPT_fptrauth_calls,
-                             options::OPT_fno_ptrauth_calls,
-                            "-fptrauth-calls");
+                             options::OPT_fno_ptrauth_calls, "-fptrauth-calls");
     EnsureDefaultPtrauthFlag(options::OPT_fptrauth_returns,
                              options::OPT_fno_ptrauth_returns,
-                            "-fptrauth-returns");
+                             "-fptrauth-returns");
     EnsureDefaultPtrauthFlag(options::OPT_fptrauth_intrinsics,
                              options::OPT_fno_ptrauth_intrinsics,
-                            "-fptrauth-intrinsics");
+                             "-fptrauth-intrinsics");
     EnsureDefaultPtrauthFlag(options::OPT_fptrauth_indirect_gotos,
                              options::OPT_fno_ptrauth_indirect_gotos,
-                            "-fptrauth-indirect-gotos");
+                             "-fptrauth-indirect-gotos");
     EnsureDefaultPtrauthFlag(options::OPT_fptrauth_auth_traps,
                              options::OPT_fno_ptrauth_auth_traps,
-                            "-fptrauth-auth-traps");
+                             "-fptrauth-auth-traps");
 
     // C++ v-table ABI
     EnsureDefaultPtrauthFlag(
         options::OPT_fptrauth_vtable_pointer_address_discrimination,
         options::OPT_fno_ptrauth_vtable_pointer_address_discrimination,
-        "-fptrauth-vtable-pointer-address-discrimination"
-      );
+        "-fptrauth-vtable-pointer-address-discrimination");
     EnsureDefaultPtrauthFlag(
         options::OPT_fptrauth_vtable_pointer_type_discrimination,
         options::OPT_fno_ptrauth_vtable_pointer_type_discrimination,
