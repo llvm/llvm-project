@@ -160,8 +160,8 @@ TEST(DILLexerTests, NumbersTest) {
   std::vector<std::string> valid_integers = {"123", "0x123", "0123", "0b101"};
   std::vector<std::string> valid_floats = {
       "1.2",    ".2",    "2.f",     "0x1.2",    "0x.2",      ".2e1f",
-      "2.e+1f", "0x1.f", "0x1.2p1", "0x1.p-1f", "0x1.2p+3f", "1e1",
-      "1e+1",   "0x1p1", "0x1p+1",  "0xf.fp1f"};
+      "2.e+1f", "0x1.f", "0x1.2P1", "0x1.p-1f", "0x1.2P+3f", "1E1",
+      "1E+1",   "0x1p1", "0x1p+1",  "0xf.fp1f"};
 
   // The lexer can lex these strings, but they should not be numbers.
   std::vector<std::string> invalid_numbers = {"", "x123", "b123", "a.b"};
@@ -192,7 +192,7 @@ TEST(DILLexerTests, NumbersTest) {
   // Verify that '-' and '+' are not lexed if they're not part of a number
   std::vector<std::string> expressions = {"1+e",     "0x1+p",      "1.1+e",
                                           "1.1e1+e", "0x1.1p-1-p", "1e-1+e",
-                                          "1e1+e",   "0x1p-1-p"};
+                                          "1e1+e",   "0x1p-1-p",   "0xe+e"};
   for (auto &str : expressions) {
     SCOPED_TRACE(str);
     llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(str);
