@@ -319,8 +319,8 @@ static raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
 }
 
 // Prints the bit value for each position.
-static void dumpBits(raw_ostream &OS, const BitsInit &Bits) {
-  for (const Init *Bit : reverse(Bits.getBits()))
+static void dumpBits(raw_ostream &OS, const BitsInit &Bits, unsigned BitWidth) {
+  for (const Init *Bit : reverse(Bits.getBits().take_front(BitWidth)))
     OS << BitValue(Bit);
 }
 
@@ -389,16 +389,16 @@ class FilterChooser;
 ///
 /// An example of a conflict is
 ///
-/// Conflict:
-///                     111101000.00........00010000....
-///                     111101000.00........0001........
-///                     1111010...00........0001........
-///                     1111010...00....................
-///                     1111010.........................
-///                     1111............................
-///                     ................................
-///     VST4q8a         111101000_00________00010000____
-///     VST4q8b         111101000_00________00010000____
+/// Decoding Conflict:
+///     ................................
+///     1111............................
+///     1111010.........................
+///     1111010...00....................
+///     1111010...00........0001........
+///     111101000.00........0001........
+///     111101000.00........00010000....
+///     111101000_00________00010000____  VST4q8a
+///     111101000_00________00010000____  VST4q8b
 ///
 /// The Debug output shows the path that the decoding tree follows to reach the
 /// the conclusion that there is a conflict.  VST4q8a is a vst4 to double-spaced
@@ -582,7 +582,7 @@ protected:
 
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
-  void dumpStack(raw_ostream &OS, const char *prefix) const;
+  void dumpStack(raw_ostream &OS, indent Indent) const;
 
   bool PositionFiltered(unsigned Idx) const {
     return FilterBitValues[Idx].isSet();
@@ -701,9 +701,8 @@ void Filter::recurse() {
   std::vector<BitValue> BitValueArray(Owner.FilterBitValues);
 
   if (!VariableInstructions.empty()) {
-    // Conservatively marks each segment position as BIT_UNSET.
     for (unsigned bitIndex = 0; bitIndex < NumBits; ++bitIndex)
-      BitValueArray[StartBit + bitIndex] = BitValue::BIT_UNSET;
+      BitValueArray[StartBit + bitIndex] = BitValue::BIT_UNFILTERED;
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
@@ -1118,15 +1117,12 @@ void FilterChooser::dumpFilterArray(raw_ostream &OS,
 
 /// dumpStack - dumpStack traverses the filter chooser chain and calls
 /// dumpFilterArray on each filter chooser up to the top level one.
-void FilterChooser::dumpStack(raw_ostream &OS, const char *prefix) const {
-  const FilterChooser *current = this;
-
-  while (current) {
-    OS << prefix;
-    dumpFilterArray(OS, current->FilterBitValues);
-    OS << '\n';
-    current = current->Parent;
-  }
+void FilterChooser::dumpStack(raw_ostream &OS, indent Indent) const {
+  if (Parent)
+    Parent->dumpStack(OS, Indent);
+  OS << Indent;
+  dumpFilterArray(OS, FilterBitValues);
+  OS << '\n';
 }
 
 // Calculates the island(s) needed to decode the instruction.
@@ -1765,13 +1761,16 @@ void FilterChooser::doFilter() {
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
 
-  dumpStack(errs(), "\t\t");
+  // Dump filters.
+  indent Indent(4);
+  dumpStack(errs(), Indent);
 
-  for (auto Opcode : Opcodes) {
+  // Dump encodings.
+  for (EncodingIDAndOpcode Opcode : Opcodes) {
     const EncodingAndInst &Enc = AllInstructions[Opcode.EncodingID];
-    errs() << '\t' << Enc << ' ';
-    dumpBits(errs(), getBitsField(*Enc.EncodingDef, "Inst"));
-    errs() << '\n';
+    errs() << Indent;
+    dumpBits(errs(), getBitsField(*Enc.EncodingDef, "Inst"), BitWidth);
+    errs() << "  " << Enc << '\n';
   }
   PrintFatalError("Decoding conflict encountered");
 }
