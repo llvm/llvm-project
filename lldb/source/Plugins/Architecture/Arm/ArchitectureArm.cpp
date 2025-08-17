@@ -213,10 +213,7 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
       RegisterValue reg_value;
       if (regctx->ReadRegisterValueFromRegisterLocation(regloc, reg_info,
                                                         reg_value)) {
-        if (process_sp->GetTarget().GetArchitecture().GetAddressByteSize() == 4)
-          callers_return_address = reg_value.GetAsUInt32();
-        else
-          callers_return_address = reg_value.GetAsUInt64();
+        callers_return_address = reg_value.GetAsUInt32();
       }
     }
   }
