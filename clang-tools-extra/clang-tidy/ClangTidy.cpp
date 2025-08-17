@@ -96,8 +96,7 @@ public:
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), DiagOpts)),
-        Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
-              DiagPrinter),
+        Diags(DiagnosticIDs::create(), DiagOpts, DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes) {
     DiagOpts.ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
@@ -425,6 +424,10 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
 
+  // Avoid processing system headers, unless the user explicitly requests it
+  if (!Context.getOptions().SystemHeaders.value_or(false))
+    FinderOptions.IgnoreSystemHeaders = true;
+
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));
 
@@ -570,7 +573,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer,
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
                        /*ShouldOwnClient=*/false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   Tool.setDiagnosticConsumer(&DiagConsumer);

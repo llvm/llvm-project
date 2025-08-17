@@ -16,7 +16,7 @@ define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    subw s0, a1, a0
+; RV64I-NEXT:    sub s0, a1, a0
 ; RV64I-NEXT:  .LBB0_2: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call hoge

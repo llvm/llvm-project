@@ -11,8 +11,13 @@ a filter program. This script is intended to mimic that workflow.
 import lldb
 import subprocess
 
-filter_program = "crustfilt"
 
+class Program(list):
+    def __str__(self):
+        return " ".join(self)
+
+
+filter_program = Program(["crustfilt"])
 
 def __lldb_init_module(debugger, dict):
     debugger.HandleCommand("command script add -f filter_disasm.fdis fdis")
@@ -51,13 +56,20 @@ def fdis(debugger, args, exe_ctx, result, dict):
     result.Clear()
 
     if len(args_list) == 1 and args_list[0] == "get":
-        result.PutCString(filter_program)
+        result.PutCString(str(filter_program))
         result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
         return
 
-    if len(args_list) == 2 and args_list[0] == "set":
-        filter_program = args_list[1]
-        result.PutCString("Filter program set to %s" % filter_program)
+    if args_list[0] == "set":
+        # Assume the rest is a program to run and any arguments to be passed to
+        # it.
+        if len(args_list) <= 1:
+            result.PutCString('"set" command requires a program argument')
+            result.SetStatus(lldb.eReturnStatusFailed)
+            return
+
+        filter_program = Program(args_list[1:])
+        result.PutCString('Filter program set to "{}"'.format(filter_program))
         result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
         return
 
@@ -70,7 +82,9 @@ def fdis(debugger, args, exe_ctx, result, dict):
     output = res.GetOutput()
 
     try:
-        proc = subprocess.run([filter_program], capture_output=True, text=True, input=output)
+        proc = subprocess.run(
+            filter_program, capture_output=True, text=True, input=output
+        )
     except (subprocess.SubprocessError, OSError) as e:
         result.PutCString("Error occurred. Original disassembly:\n\n" + output)
         result.SetError(str(e))

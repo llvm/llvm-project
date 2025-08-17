@@ -85,7 +85,7 @@ TEST(DependencyScanner, ScanDepsReuseFilemanager) {
   StringRef CWD = "/root";
   FixedCompilationDatabase CDB(CWD, Compilation);
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory(CWD);
   auto Sept = llvm::sys::path::get_separator();
   std::string HeaderPath =
@@ -134,7 +134,7 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerSkippedFile) {
   StringRef CWD = "/root";
   FixedCompilationDatabase CDB(CWD, Compilation);
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory(CWD);
   auto Sept = llvm::sys::path::get_separator();
   std::string HeaderPath =
@@ -176,7 +176,7 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
   StringRef CWD = "/root";
   FixedCompilationDatabase CDB(CWD, Compilation);
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory(CWD);
   auto Sept = llvm::sys::path::get_separator();
   std::string HeaderPath =
@@ -218,7 +218,7 @@ TEST(DependencyScanner, ScanDepsWithFS) {
                                           "test.cpp.o"};
   StringRef CWD = "/root";
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory(CWD);
   auto Sept = llvm::sys::path::get_separator();
   std::string HeaderPath =
@@ -256,7 +256,7 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   };
   StringRef CWD = "/root";
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory(CWD);
   auto Sept = llvm::sys::path::get_separator();
   std::string OtherPath =
@@ -306,7 +306,7 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
   StringRef CWD = "/root";
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->setCurrentWorkingDirectory(CWD);
   auto Sept = llvm::sys::path::get_separator();
   std::string HeaderPath =

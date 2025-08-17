@@ -225,20 +225,6 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableWriteOp op) {
   return success();
 }
 
-template <>
-LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::IfOp op) {
-  addValue(op.getCondition());
-  return success();
-}
-
-template <>
-LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::WhileOp op) {
-  Block *block = &op.getCondGraph().front();
-  Operation *terminator = block->getTerminator();
-  addValue(terminator->getOperands().front());
-  return success();
-}
-
 LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 // This helper function only populates the info for the customised operands.
 #define POPULATE_PROFILE_INFO_CUSTOM(tosaOp)                                   \
@@ -280,8 +266,6 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
   POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
-  POPULATE_PROFILE_INFO_CUSTOM(If)
-  POPULATE_PROFILE_INFO_CUSTOM(While)
 
   // For the most of tosa operators, all operands are profile/extension related
   // and hence are all considered in this profile-based compilance check.
@@ -340,6 +324,8 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // constraint for those operations.
   POPULATE_PROFILE_INFO_SKIP(ConstShape)
   POPULATE_PROFILE_INFO_SKIP(Yield)
+  POPULATE_PROFILE_INFO_SKIP(If)
+  POPULATE_PROFILE_INFO_SKIP(While)
 
   return failure();
 }
@@ -478,9 +464,12 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
   CheckCondition condition = CheckCondition::invalid;
   const auto maybeProfDef = getOperatorDefinition<Profile>(op, condition);
   const auto maybeExtDef = getOperatorDefinition<Extension>(op, condition);
+  if (failed(maybeProfDef) && failed(maybeExtDef))
+    return success();
 
-  if (!failed(maybeProfDef) && !failed(maybeExtDef) &&
-      !maybeProfDef.value().size() && !maybeExtDef.value().size()) {
+  const bool hasEntry = (succeeded(maybeProfDef) && !maybeProfDef->empty()) ||
+                        (succeeded(maybeExtDef) && !maybeExtDef->empty());
+  if (!hasEntry) {
     std::string message;
     llvm::raw_string_ostream os(message);
     os << "illegal: operation operand/result data types did not align with any "

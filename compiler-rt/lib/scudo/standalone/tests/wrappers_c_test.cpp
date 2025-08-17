@@ -183,7 +183,8 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
   // process doing free(P) is not a double free.
   EXPECT_DEATH(
       {
-        void *Ptr = malloc(Size);
+        // Note: volatile here prevents the calls from being optimized out.
+        void *volatile Ptr = malloc(Size);
         free(Ptr);
         free(Ptr);
       },

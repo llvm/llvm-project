@@ -21,6 +21,7 @@
 #include "mlir/Support/LLVM.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -55,6 +56,33 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
     result = builder.createIntCast(result, exprTy);
 
   return RValue::get(result);
+}
+
+RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
+  mlir::Value input = emitScalarExpr(e->getArg(0));
+  mlir::Value amount = emitScalarExpr(e->getArg(1));
+
+  // TODO(cir): MSVC flavor bit rotate builtins use different types for input
+  // and amount, but cir.rotate requires them to have the same type. Cast amount
+  // to the type of input when necessary.
+  assert(!cir::MissingFeatures::msvcBuiltins());
+
+  auto r = builder.create<cir::RotateOp>(getLoc(e->getSourceRange()), input,
+                                         amount, isRotateLeft);
+  return RValue::get(r);
+}
+
+template <class Operation>
+static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
+                                                 const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
+
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
 }
 
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
@@ -97,6 +125,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   default:
     break;
 
+  case Builtin::BIfabs:
+  case Builtin::BIfabsf:
+  case Builtin::BIfabsl:
+  case Builtin::BI__builtin_fabs:
+  case Builtin::BI__builtin_fabsf:
+  case Builtin::BI__builtin_fabsf16:
+  case Builtin::BI__builtin_fabsl:
+  case Builtin::BI__builtin_fabsf128:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *e);
+
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))
@@ -107,11 +145,36 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__builtin_assume_separate_storage: {
+    mlir::Value value0 = emitScalarExpr(e->getArg(0));
+    mlir::Value value1 = emitScalarExpr(e->getArg(1));
+    builder.create<cir::AssumeSepStorageOp>(loc, value0, value1);
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_assume_aligned: {
+    const Expr *ptrExpr = e->getArg(0);
+    mlir::Value ptrValue = emitScalarExpr(ptrExpr);
+    mlir::Value offsetValue =
+        (e->getNumArgs() > 2) ? emitScalarExpr(e->getArg(2)) : nullptr;
+
+    std::optional<llvm::APSInt> alignment =
+        e->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(alignment.has_value() &&
+           "the second argument to __builtin_assume_aligned must be an "
+           "integral constant expression");
+
+    mlir::Value result =
+        emitAlignmentAssumption(ptrValue, ptrExpr, ptrExpr->getExprLoc(),
+                                alignment->getSExtValue(), offsetValue);
+    return RValue::get(result);
+  }
+
   case Builtin::BI__builtin_complex: {
     mlir::Value real = emitScalarExpr(e->getArg(0));
     mlir::Value imag = emitScalarExpr(e->getArg(1));
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
-    return RValue::get(complex);
+    return RValue::getComplex(complex);
   }
 
   case Builtin::BI__builtin_creal:
@@ -136,6 +199,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(imag);
   }
 
+  case Builtin::BI__builtin_conj:
+  case Builtin::BI__builtin_conjf:
+  case Builtin::BI__builtin_conjl:
+  case Builtin::BIconj:
+  case Builtin::BIconjf:
+  case Builtin::BIconjl: {
+    mlir::Value complex = emitComplexExpr(e->getArg(0));
+    mlir::Value conj = builder.createUnaryOp(getLoc(e->getExprLoc()),
+                                             cir::UnaryOpKind::Not, complex);
+    return RValue::getComplex(conj);
+  }
+
   case Builtin::BI__builtin_clrsb:
   case Builtin::BI__builtin_clrsbl:
   case Builtin::BI__builtin_clrsbll:
@@ -156,6 +231,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_clzg:
     assert(!cir::MissingFeatures::builtinCheckKind());
     return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/true);
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    return emitBuiltinBitOp<cir::BitFfsOp>(*this, e);
 
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
@@ -219,6 +299,40 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value arg = emitScalarExpr(e->getArg(0));
     return RValue::get(builder.create<cir::BitReverseOp>(loc, arg));
   }
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+    return emitRotate(e, /*isRotateLeft=*/true);
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+    return emitRotate(e, /*isRotateLeft=*/false);
+
+  case Builtin::BI__builtin_return_address:
+  case Builtin::BI__builtin_frame_address: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
+    if (builtinID == Builtin::BI__builtin_return_address) {
+      return RValue::get(cir::ReturnAddrOp::create(
+          builder, loc,
+          builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+    }
+    return RValue::get(cir::FrameAddrOp::create(
+        builder, loc,
+        builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+  }
+
+  case Builtin::BI__builtin_trap:
+    emitTrap(loc, /*createNewBlock=*/true);
+    return RValue::get(nullptr);
+
+  case Builtin::BI__builtin_unreachable:
+    emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
+    return RValue::get(nullptr);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

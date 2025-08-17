@@ -54,23 +54,25 @@ struct GpuSubgroupIdRewriter final : OpRewritePattern<gpu::SubgroupIdOp> {
     Location loc = op->getLoc();
     Type indexType = rewriter.getIndexType();
 
-    Value dimX = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::x);
-    Value dimY = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::y);
-    Value tidX = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::x);
-    Value tidY = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::y);
-    Value tidZ = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::z);
+    Value dimX = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::x);
+    Value dimY = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::y);
+    Value tidX = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::x);
+    Value tidY = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::y);
+    Value tidZ = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::z);
 
-    Value dimYxIdZ = rewriter.create<arith::MulIOp>(loc, indexType, dimY, tidZ);
+    Value dimYxIdZ =
+        arith::MulIOp::create(rewriter, loc, indexType, dimY, tidZ);
     Value dimYxIdZPlusIdY =
-        rewriter.create<arith::AddIOp>(loc, indexType, dimYxIdZ, tidY);
+        arith::AddIOp::create(rewriter, loc, indexType, dimYxIdZ, tidY);
     Value dimYxIdZPlusIdYTimesDimX =
-        rewriter.create<arith::MulIOp>(loc, indexType, dimX, dimYxIdZPlusIdY);
-    Value IdXPlusDimYxIdZPlusIdYTimesDimX = rewriter.create<arith::AddIOp>(
-        loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX);
-    Value subgroupSize = rewriter.create<gpu::SubgroupSizeOp>(
-        loc, rewriter.getIndexType(), /*upper_bound = */ nullptr);
-    Value subgroupIdOp = rewriter.create<arith::DivUIOp>(
-        loc, indexType, IdXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
+        arith::MulIOp::create(rewriter, loc, indexType, dimX, dimYxIdZPlusIdY);
+    Value IdXPlusDimYxIdZPlusIdYTimesDimX = arith::AddIOp::create(
+        rewriter, loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX);
+    Value subgroupSize = gpu::SubgroupSizeOp::create(
+        rewriter, loc, rewriter.getIndexType(), /*upper_bound = */ nullptr);
+    Value subgroupIdOp =
+        arith::DivUIOp::create(rewriter, loc, indexType,
+                               IdXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
     rewriter.replaceOp(op, {subgroupIdOp});
     return success();
   }

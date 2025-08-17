@@ -245,7 +245,6 @@ void StandardConversionSequence::setAsIdentityConversion() {
   IsLvalueReference = true;
   BindsToFunctionLvalue = false;
   BindsToRvalue = false;
-  IsImplicitObjectArgumentQualificationConversion = false;
   BindsImplicitObjectArgumentWithoutRefQualifier = false;
   ObjCLifetimeConversionBinding = false;
   FromBracedInitList = false;
@@ -371,7 +370,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
   // the underlying type is narrowing. This only arises for expressions of
   // the form 'Enum{init}'.
   if (auto *ET = ToType->getAs<EnumType>())
-    ToType = ET->getDecl()->getIntegerType();
+    ToType = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   switch (Second) {
   // 'bool' is an integral type; dispatch to the right place to handle it.
@@ -1064,7 +1063,8 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
       return true;
     LookupResult Members(S, NotEqOp, OpLoc,
                          Sema::LookupNameKind::LookupMemberName);
-    S.LookupQualifiedName(Members, RHSRec->getDecl());
+    S.LookupQualifiedName(Members,
+                          RHSRec->getOriginalDecl()->getDefinitionOrSelf());
     Members.suppressAccessDiagnostics();
     for (NamedDecl *Op : Members)
       if (FunctionsCorrespond(S.Context, EqFD, Op->getAsFunction()))
@@ -1269,7 +1269,7 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       //
       // Exception: if the scope is dependent and this is not a class
       // member, the using declaration can only introduce an enumerator.
-      if (UUD->getQualifier()->isDependent() && !UUD->isCXXClassMember()) {
+      if (UUD->getQualifier().isDependent() && !UUD->isCXXClassMember()) {
         Match = *I;
         return OverloadKind::NonFunction;
       }
@@ -1472,9 +1472,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
     if (OldMethod->isImplicitObjectMemberFunction() &&
         OldMethod->getParent() != NewMethod->getParent()) {
-      QualType ParentType =
-          SemaRef.Context.getTypeDeclType(OldMethod->getParent())
-              .getCanonicalType();
+      CanQualType ParentType =
+          SemaRef.Context.getCanonicalTagType(OldMethod->getParent());
       if (ParentType.getTypePtr() != BS.Ty)
         return false;
       BS.Ty = DS.Ty;
@@ -1980,7 +1979,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   }
 
   // Drop 'noexcept' if not present in target type.
-  if (FromFPT) {
+  if (FromFPT && ToFPT) {
     if (FromFPT->isNothrow() && !ToFPT->isNothrow()) {
       FromFn = cast<FunctionType>(
           Context.getFunctionTypeWithExceptionSpec(QualType(FromFPT, 0),
@@ -2294,7 +2293,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                == UO_AddrOf &&
                "Non-address-of operator on non-static member address");
         FromType = S.Context.getMemberPointerType(
-            FromType, /*Qualifier=*/nullptr, Method->getParent());
+            FromType, /*Qualifier=*/std::nullopt, Method->getParent());
       } else if (isa<UnaryOperator>(From->IgnoreParens())) {
         assert(cast<UnaryOperator>(From->IgnoreParens())->getOpcode() ==
                UO_AddrOf &&
@@ -2603,10 +2602,12 @@ IsTransparentUnionStandardConversion(Sema &S, Expr* From,
                                      bool CStyle) {
 
   const RecordType *UT = ToType->getAsUnionType();
-  if (!UT || !UT->getDecl()->hasAttr<TransparentUnionAttr>())
+  if (!UT)
     return false;
   // The field to initialize within the transparent union.
-  RecordDecl *UD = UT->getDecl();
+  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  if (!UD->hasAttr<TransparentUnionAttr>())
+    return false;
   // It's compatible if the expression matches any of the fields.
   for (const auto *it : UD->fields()) {
     if (IsStandardConversion(S, From, it->getType(), InOverloadResolution, SCS,
@@ -2664,15 +2665,17 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   if (const EnumType *FromEnumType = FromType->getAs<EnumType>()) {
     // C++0x 7.2p9: Note that this implicit enum to int conversion is not
     // provided for a scoped enumeration.
-    if (FromEnumType->getDecl()->isScoped())
+    const EnumDecl *FromED =
+        FromEnumType->getOriginalDecl()->getDefinitionOrSelf();
+    if (FromED->isScoped())
       return false;
 
     // We can perform an integral promotion to the underlying type of the enum,
     // even if that's not the promoted type. Note that the check for promoting
     // the underlying type is based on the type alone, and does not consider
     // the bitfield-ness of the actual source expression.
-    if (FromEnumType->getDecl()->isFixed()) {
-      QualType Underlying = FromEnumType->getDecl()->getIntegerType();
+    if (FromED->isFixed()) {
+      QualType Underlying = FromED->getIntegerType();
       return Context.hasSameUnqualifiedType(Underlying, ToType) ||
              IsIntegralPromotion(nullptr, Underlying, ToType);
     }
@@ -2680,8 +2683,7 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
     // We have already pre-calculated the promotion type, so this is trivial.
     if (ToType->isIntegerType() &&
         isCompleteType(From->getBeginLoc(), FromType))
-      return Context.hasSameUnqualifiedType(
-          ToType, FromEnumType->getDecl()->getPromotionType());
+      return Context.hasSameUnqualifiedType(ToType, FromED->getPromotionType());
 
     // C++ [conv.prom]p5:
     //   If the bit-field has an enumerated type, it is treated as any other
@@ -3348,12 +3350,12 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                             ToMember->getMostRecentCXXRecordDecl())) {
       PDiag << ft_different_class;
       if (ToMember->isSugared())
-        PDiag << Context.getTypeDeclType(
+        PDiag << Context.getCanonicalTagType(
             ToMember->getMostRecentCXXRecordDecl());
       else
         PDiag << ToMember->getQualifier();
       if (FromMember->isSugared())
-        PDiag << Context.getTypeDeclType(
+        PDiag << Context.getCanonicalTagType(
             FromMember->getMostRecentCXXRecordDecl());
       else
         PDiag << FromMember->getQualifier();
@@ -3637,12 +3639,12 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
   CXXRecordDecl *FromClass = FromPtrType->getMostRecentCXXRecordDecl(),
                 *ToClass = ToPtrType->getMostRecentCXXRecordDecl();
 
-  auto DiagCls = [](PartialDiagnostic &PD, NestedNameSpecifier *Qual,
-                    const CXXRecordDecl *Cls) {
-    if (declaresSameEntity(Qual->getAsRecordDecl(), Cls))
+  auto DiagCls = [&](PartialDiagnostic &PD, NestedNameSpecifier Qual,
+                     const CXXRecordDecl *Cls) {
+    if (declaresSameEntity(Qual.getAsRecordDecl(), Cls))
       PD << Qual;
     else
-      PD << QualType(Cls->getTypeForDecl(), 0);
+      PD << Context.getCanonicalTagType(Cls);
   };
   auto DiagFromTo = [&](PartialDiagnostic &PD) -> PartialDiagnostic & {
     DiagCls(PD, FromPtrType->getQualifier(), FromClass);
@@ -3659,8 +3661,7 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
   if (!IsDerivedFrom(OpRange.getBegin(), Derived, Base, Paths))
     return MemberPointerConversionResult::NotDerived;
 
-  if (Paths.isAmbiguous(
-          Base->getTypeForDecl()->getCanonicalTypeUnqualified())) {
+  if (Paths.isAmbiguous(Context.getCanonicalTagType(Base))) {
     PartialDiagnostic PD = PDiag(diag::err_ambiguous_memptr_conv);
     PD << int(Direction);
     DiagFromTo(PD) << getAmbiguousPathsDisplayString(Paths) << OpRange;
@@ -3688,8 +3689,8 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
             ? diag::err_upcast_to_inaccessible_base
             : diag::err_downcast_from_inaccessible_base,
         [&](PartialDiagnostic &PD) {
-          NestedNameSpecifier *BaseQual = FromPtrType->getQualifier(),
-                              *DerivedQual = ToPtrType->getQualifier();
+          NestedNameSpecifier BaseQual = FromPtrType->getQualifier(),
+                              DerivedQual = ToPtrType->getQualifier();
           if (Direction == MemberPointerConversionDirection::Upcast)
             std::swap(BaseQual, DerivedQual);
           DiagCls(PD, DerivedQual, Derived);
@@ -3984,8 +3985,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
     if (!S.isCompleteType(From->getExprLoc(), ToType)) {
       // We're not going to find any constructors.
-    } else if (CXXRecordDecl *ToRecordDecl
-                 = dyn_cast<CXXRecordDecl>(ToRecordType->getDecl())) {
+    } else if (auto *ToRecordDecl =
+                   dyn_cast<CXXRecordDecl>(ToRecordType->getOriginalDecl())) {
+      ToRecordDecl = ToRecordDecl->getDefinitionOrSelf();
 
       Expr **Args = &From;
       unsigned NumArgs = 1;
@@ -4058,8 +4060,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     // No conversion functions from incomplete types.
   } else if (const RecordType *FromRecordType =
                  From->getType()->getAs<RecordType>()) {
-    if (CXXRecordDecl *FromRecordDecl
-         = dyn_cast<CXXRecordDecl>(FromRecordType->getDecl())) {
+    if (auto *FromRecordDecl =
+            dyn_cast<CXXRecordDecl>(FromRecordType->getOriginalDecl())) {
+      FromRecordDecl = FromRecordDecl->getDefinitionOrSelf();
       // Add all of the conversion functions as candidates.
       const auto &Conversions = FromRecordDecl->getVisibleConversionFunctions();
       for (auto I = Conversions.begin(), E = Conversions.end(); I != E; ++I) {
@@ -4510,7 +4513,8 @@ getFixedEnumPromtion(Sema &S, const StandardConversionSequence &SCS) {
   if (!FromType->isEnumeralType())
     return FixedEnumPromotion::None;
 
-  EnumDecl *Enum = FromType->castAs<EnumType>()->getDecl();
+  EnumDecl *Enum =
+      FromType->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
   if (!Enum->isFixed())
     return FixedEnumPromotion::None;
 
@@ -5146,7 +5150,9 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
                          Expr *Init, QualType T2, bool AllowRvalues,
                          bool AllowExplicit) {
   assert(T2->isRecordType() && "Can only find conversions of record types.");
-  auto *T2RecordDecl = cast<CXXRecordDecl>(T2->castAs<RecordType>()->getDecl());
+  auto *T2RecordDecl =
+      cast<CXXRecordDecl>(T2->castAs<RecordType>()->getOriginalDecl())
+          ->getDefinitionOrSelf();
 
   OverloadCandidateSet CandidateSet(
       DeclLoc, OverloadCandidateSet::CSK_InitByUserDefinedConversion);
@@ -5318,7 +5324,6 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.Standard.DirectBinding = BindsDirectly;
     ICS.Standard.IsLvalueReference = !isRValRef;
     ICS.Standard.BindsToFunctionLvalue = T2->isFunctionType();
-    ICS.Standard.IsImplicitObjectArgumentQualificationConversion = false;
     ICS.Standard.BindsToRvalue = InitCategory.isRValue();
     ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.Standard.ObjCLifetimeConversionBinding =
@@ -5498,7 +5503,6 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.Standard.IsLvalueReference = !isRValRef;
     ICS.Standard.BindsToFunctionLvalue = false;
     ICS.Standard.BindsToRvalue = true;
-    ICS.Standard.IsImplicitObjectArgumentQualificationConversion = false;
     ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.Standard.ObjCLifetimeConversionBinding = false;
   } else if (ICS.isUserDefined()) {
@@ -5521,8 +5525,6 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.UserDefined.After.IsLvalueReference = !isRValRef;
     ICS.UserDefined.After.BindsToFunctionLvalue = false;
     ICS.UserDefined.After.BindsToRvalue = !LValRefType;
-    ICS.UserDefined.After.IsImplicitObjectArgumentQualificationConversion =
-        false;
     ICS.UserDefined.After.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.UserDefined.After.ObjCLifetimeConversionBinding = false;
     ICS.UserDefined.After.FromBracedInitList = false;
@@ -5807,7 +5809,6 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       StandardConversionSequence &SCS = Result.isStandard() ? Result.Standard :
                                             Result.UserDefined.After;
       SCS.ReferenceBinding = true;
-      SCS.IsImplicitObjectArgumentQualificationConversion = false;
       SCS.IsLvalueReference = ToType->isLValueReferenceType();
       SCS.BindsToRvalue = true;
       SCS.BindsToFunctionLvalue = false;
@@ -5940,7 +5941,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
 
   assert(FromType->isRecordType());
 
-  QualType ClassType = S.Context.getTypeDeclType(ActingContext);
+  CanQualType ClassType = S.Context.getCanonicalTagType(ActingContext);
   // C++98 [class.dtor]p2:
   //   A destructor can be invoked for a const, volatile or const volatile
   //   object.
@@ -6005,12 +6006,8 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   // affects the conversion rank.
   QualType ClassTypeCanon = S.Context.getCanonicalType(ClassType);
   ImplicitConversionKind SecondKind;
-  bool IsQualificationConversion = false;
-  if (ImplicitParamType.getCanonicalType() == FromTypeCanon) {
+  if (ClassTypeCanon == FromTypeCanon.getLocalUnqualifiedType()) {
     SecondKind = ICK_Identity;
-  } else if (ClassTypeCanon == FromTypeCanon.getLocalUnqualifiedType()) {
-    SecondKind = ICK_Identity;
-    IsQualificationConversion = true;
   } else if (S.IsDerivedFrom(Loc, FromType, ClassType)) {
     SecondKind = ICK_Derived_To_Base;
   } else if (!Method->isExplicitObjectMemberFunction()) {
@@ -6051,8 +6048,6 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   ICS.Standard.setFromType(FromType);
   ICS.Standard.setAllToTypes(ImplicitParamType);
   ICS.Standard.ReferenceBinding = true;
-  ICS.Standard.IsImplicitObjectArgumentQualificationConversion =
-      IsQualificationConversion;
   ICS.Standard.DirectBinding = true;
   ICS.Standard.IsLvalueReference = Method->getRefQualifier() != RQ_RValue;
   ICS.Standard.BindsToFunctionLvalue = false;
@@ -6067,7 +6062,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
 /// the implicit object parameter for the given Method with the given
 /// expression.
 ExprResult Sema::PerformImplicitObjectArgumentInitialization(
-    Expr *From, NestedNameSpecifier *Qualifier, NamedDecl *FoundDecl,
+    Expr *From, NestedNameSpecifier Qualifier, NamedDecl *FoundDecl,
     CXXMethodDecl *Method) {
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
@@ -6280,7 +6275,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
                                                    QualType T, CCEKind CCE,
                                                    NamedDecl *Dest,
                                                    APValue &PreNarrowingValue) {
-  assert((S.getLangOpts().CPlusPlus11 || CCE == CCEKind::TempArgStrict) &&
+  [[maybe_unused]] bool isCCEAllowedPreCXX11 =
+      (CCE == CCEKind::TempArgStrict || CCE == CCEKind::ExplicitBool);
+  assert((S.getLangOpts().CPlusPlus11 || isCCEAllowedPreCXX11) &&
          "converted constant expression outside C++11 or TTP matching");
 
   if (checkPlaceholderForOverload(S, From))
@@ -6852,8 +6849,9 @@ ExprResult Sema::PerformContextualImplicitConversion(
   UnresolvedSet<4>
       ViableConversions; // These are *potentially* viable in C++1y.
   UnresolvedSet<4> ExplicitConversions;
-  const auto &Conversions =
-      cast<CXXRecordDecl>(RecordTy->getDecl())->getVisibleConversionFunctions();
+  const auto &Conversions = cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
+                                ->getDefinitionOrSelf()
+                                ->getVisibleConversionFunctions();
 
   bool HadMultipleCandidates =
       (std::distance(Conversions.begin(), Conversions.end()) > 1);
@@ -7172,7 +7170,8 @@ void Sema::AddOverloadCandidate(
     // C++ [class.copy]p3:
     //   A member function template is never instantiated to perform the copy
     //   of a class object to an object of its class type.
-    QualType ClassType = Context.getTypeDeclType(Constructor->getParent());
+    CanQualType ClassType =
+        Context.getCanonicalTagType(Constructor->getParent());
     if (Args.size() == 1 && Constructor->isSpecializationCopyingObject() &&
         (Context.hasSameUnqualifiedType(ClassType, Args[0]->getType()) ||
          IsDerivedFrom(Args[0]->getBeginLoc(), Args[0]->getType(),
@@ -7193,8 +7192,8 @@ void Sema::AddOverloadCandidate(
     if (Shadow && Args.size() == 1 && Constructor->getNumParams() >= 1 &&
         Constructor->getParamDecl(0)->getType()->isReferenceType()) {
       QualType P = Constructor->getParamDecl(0)->getType()->getPointeeType();
-      QualType C = Context.getRecordType(Constructor->getParent());
-      QualType D = Context.getRecordType(Shadow->getParent());
+      CanQualType C = Context.getCanonicalTagType(Constructor->getParent());
+      CanQualType D = Context.getCanonicalTagType(Shadow->getParent());
       SourceLocation Loc = Args.front()->getExprLoc();
       if ((Context.hasSameUnqualifiedType(P, C) || IsDerivedFrom(Loc, P, C)) &&
           (Context.hasSameUnqualifiedType(D, P) || IsDerivedFrom(Loc, D, P))) {
@@ -7415,7 +7414,7 @@ static bool convertArgsForAvailabilityChecks(
            "Shouldn't have `this` for ctors!");
     assert(!Method->isStatic() && "Shouldn't have `this` for static methods!");
     ExprResult R = S.PerformImplicitObjectArgumentInitialization(
-        ThisArg, /*Qualifier=*/nullptr, Method, Method);
+        ThisArg, /*Qualifier=*/std::nullopt, Method, Method);
     if (R.isInvalid())
       return false;
     ConvertedThis = R.get();
@@ -8054,8 +8053,8 @@ static void AddTemplateOverloadCandidateImmediately(
 
     Candidate.IgnoreObjectArgument =
         isa<CXXMethodDecl>(Candidate.Function) &&
-        cast<CXXMethodDecl>(Candidate.Function)
-            ->isImplicitObjectMemberFunction() &&
+        !cast<CXXMethodDecl>(Candidate.Function)
+             ->isExplicitObjectMemberFunction() &&
         !isa<CXXConstructorDecl>(Candidate.Function);
 
     Candidate.ExplicitCallArguments = Args.size();
@@ -8171,29 +8170,24 @@ bool Sema::CheckNonDependentConversions(
       ArgType = ArgType->getPointeeType();
     }
 
-    if (auto *RT = ParamType->getAs<RecordType>())
-      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-          RD && RD->hasDefinition()) {
-        if (llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
-              auto Info = getConstructorInfo(ND);
-              if (!Info)
-                return false;
-              CXXConstructorDecl *Ctor = Info.Constructor;
-              /// isConvertingConstructor takes copy/move constructors into
-              /// account!
-              return !Ctor->isCopyOrMoveConstructor() &&
-                     Ctor->isConvertingConstructor(
-                         /*AllowExplicit=*/true);
-            }))
-          return true;
-      }
-
-    if (auto *RT = ArgType->getAs<RecordType>())
-      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-          RD && RD->hasDefinition() &&
-          !RD->getVisibleConversionFunctions().empty()) {
-        return true;
-      }
+    if (auto *RD = ParamType->getAsCXXRecordDecl();
+        RD && RD->hasDefinition() &&
+        llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
+          auto Info = getConstructorInfo(ND);
+          if (!Info)
+            return false;
+          CXXConstructorDecl *Ctor = Info.Constructor;
+          /// isConvertingConstructor takes copy/move constructors into
+          /// account!
+          return !Ctor->isCopyOrMoveConstructor() &&
+                 Ctor->isConvertingConstructor(
+                     /*AllowExplicit=*/true);
+        }))
+      return true;
+    if (auto *RD = ArgType->getAsCXXRecordDecl();
+        RD && RD->hasDefinition() &&
+        !RD->getVisibleConversionFunctions().empty())
+      return true;
 
     return false;
   };
@@ -8348,7 +8342,8 @@ void Sema::AddConversionCandidate(
   if (const auto *FromPtrType = ObjectType->getAs<PointerType>())
     ObjectType = FromPtrType->getPointeeType();
   const auto *ConversionContext =
-      cast<CXXRecordDecl>(ObjectType->castAs<RecordType>()->getDecl());
+      cast<CXXRecordDecl>(ObjectType->castAs<RecordType>()->getOriginalDecl())
+          ->getDefinitionOrSelf();
 
   // C++23 [over.best.ics.general]
   // However, if the target is [...]
@@ -8748,15 +8743,16 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
   //        qualified lookup of T1::operator@ (13.3.1.1.1); otherwise,
   //        the set of member candidates is empty.
   if (const RecordType *T1Rec = T1->getAs<RecordType>()) {
+    bool IsComplete = isCompleteType(OpLoc, T1);
+    CXXRecordDecl *T1RD =
+        cast<CXXRecordDecl>(T1Rec->getOriginalDecl())->getDefinition();
     // Complete the type if it can be completed.
-    if (!isCompleteType(OpLoc, T1) && !T1Rec->isBeingDefined())
-      return;
     // If the type is neither complete nor being defined, bail out now.
-    if (!T1Rec->getDecl()->getDefinition())
+    if (!T1RD || (!IsComplete && !T1RD->isBeingDefined()))
       return;
 
     LookupResult Operators(*this, OpName, OpLoc, LookupOrdinaryName);
-    LookupQualifiedName(Operators, T1Rec->getDecl());
+    LookupQualifiedName(Operators, T1RD);
     Operators.suppressAccessDiagnostics();
 
     for (LookupResult::iterator Oper = Operators.begin(),
@@ -9021,8 +9017,8 @@ BuiltinCandidateTypeSet::AddMemberPointerWithMoreQualifiedTypeVariants(
     if ((CVR | BaseCVR) != CVR) continue;
 
     QualType QPointeeTy = Context.getCVRQualifiedType(PointeeTy, CVR);
-    MemberPointerTypes.insert(
-        Context.getMemberPointerType(QPointeeTy, /*Qualifier=*/nullptr, Cls));
+    MemberPointerTypes.insert(Context.getMemberPointerType(
+        QPointeeTy, /*Qualifier=*/std::nullopt, Cls));
   }
 
   return true;
@@ -9099,7 +9095,8 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     if (!SemaRef.isCompleteType(Loc, Ty))
       return;
 
-    CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
+    auto *ClassDecl =
+        cast<CXXRecordDecl>(TyRec->getOriginalDecl())->getDefinitionOrSelf();
     for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
       if (isa<UsingShadowDecl>(D))
         D = cast<UsingShadowDecl>(D)->getTargetDecl();
@@ -10211,7 +10208,7 @@ public:
 
       if (S.getLangOpts().CPlusPlus11) {
         for (QualType EnumTy : CandidateTypes[ArgIdx].enumeration_types()) {
-          if (!EnumTy->castAs<EnumType>()->getDecl()->isScoped())
+          if (!EnumTy->castAs<EnumType>()->getOriginalDecl()->isScoped())
             continue;
 
           if (!AddedTypes.insert(S.Context.getCanonicalType(EnumTy)).second)
@@ -10967,9 +10964,9 @@ bool clang::isBetterOverloadCandidate(
             isa<CXXConversionDecl>(Cand1.Function) ? TPOC_Conversion
                                                    : TPOC_Call,
             Cand1.ExplicitCallArguments,
-            Obj1Context ? QualType(Obj1Context->getTypeForDecl(), 0)
+            Obj1Context ? S.Context.getCanonicalTagType(Obj1Context)
                         : QualType{},
-            Obj2Context ? QualType(Obj2Context->getTypeForDecl(), 0)
+            Obj2Context ? S.Context.getCanonicalTagType(Obj2Context)
                         : QualType{},
             Cand1.isReversed() ^ Cand2.isReversed(), PartialOverloading)) {
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
@@ -11366,53 +11363,16 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
 
   if (TwoPhaseResolution) {
-
-    PerfectViableFunction(S, Loc, Best);
-    if (Best != end())
-      return ResultForBestCandidate(Best);
+    OverloadingResult Res = BestViableFunctionImpl(S, Loc, Best);
+    if (Best != end() && Best->isPerfectMatch(S.Context)) {
+      if (!(HasDeferredTemplateConstructors &&
+            isa_and_nonnull<CXXConversionDecl>(Best->Function)))
+        return Res;
+    }
   }
 
   InjectNonDeducedTemplateCandidates(S);
   return BestViableFunctionImpl(S, Loc, Best);
-}
-
-void OverloadCandidateSet::PerfectViableFunction(
-    Sema &S, SourceLocation Loc, OverloadCandidateSet::iterator &Best) {
-
-  Best = end();
-  for (auto It = Candidates.begin(); It != Candidates.end(); ++It) {
-
-    if (!It->isPerfectMatch(S.getASTContext()))
-      continue;
-
-    // We found a suitable conversion function
-    // but if there is a template constructor in the target class
-    // we might prefer that instead.
-    if (HasDeferredTemplateConstructors &&
-        isa_and_nonnull<CXXConversionDecl>(It->Function)) {
-      Best = end();
-      break;
-    }
-
-    if (Best == end()) {
-      Best = It;
-      continue;
-    }
-    if (Best->Function && It->Function) {
-      FunctionDecl *D =
-          S.getMoreConstrainedFunction(Best->Function, It->Function);
-      if (D == nullptr) {
-        Best = end();
-        break;
-      }
-      if (D == It->Function)
-        Best = It;
-      continue;
-    }
-    // ambiguous
-    Best = end();
-    break;
-  }
 }
 
 OverloadingResult OverloadCandidateSet::BestViableFunctionImpl(
@@ -14912,8 +14872,8 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
   if (Method->isExplicitObjectMemberFunction())
     Exp = InitializeExplicitObjectArgument(*this, E, Method);
   else
-    Exp = PerformImplicitObjectArgumentInitialization(E, /*Qualifier=*/nullptr,
-                                                      FoundDecl, Method);
+    Exp = PerformImplicitObjectArgumentInitialization(
+        E, /*Qualifier=*/std::nullopt, FoundDecl, Method);
   if (Exp.isInvalid())
     return true;
 
@@ -15074,7 +15034,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
           InputInit = InitializeExplicitObjectArgument(*this, Input, Method);
         else
           InputInit = PerformImplicitObjectArgumentInitialization(
-              Input, /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+              Input, /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
         if (InputInit.isInvalid())
           return ExprError();
         Base = Input = InputInit.get();
@@ -15457,7 +15417,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             ParamIdx = 1;
           } else {
             Arg0 = PerformImplicitObjectArgumentInitialization(
-                Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+                Args[0], /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
           }
           Arg1 = PerformCopyInitialization(
               InitializedEntity::InitializeParameter(
@@ -15927,7 +15887,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
           ArgExpr = Args;
         } else {
           ExprResult Arg0 = PerformImplicitObjectArgumentInitialization(
-              Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+              Args[0], /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
           if (Arg0.isInvalid())
             return ExprError();
 
@@ -16123,7 +16083,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   CXXMethodDecl *Method = nullptr;
   bool HadMultipleCandidates = false;
   DeclAccessPair FoundDecl = DeclAccessPair::make(nullptr, AS_public);
-  NestedNameSpecifier *Qualifier = nullptr;
+  NestedNameSpecifier Qualifier = std::nullopt;
   if (isa<MemberExpr>(NakedMemExpr)) {
     MemExpr = cast<MemberExpr>(NakedMemExpr);
     Method = cast<CXXMethodDecl>(MemExpr->getMemberDecl());
@@ -16395,7 +16355,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   const auto *Record = Object.get()->getType()->castAs<RecordType>();
   LookupResult R(*this, OpName, LParenLoc, LookupOrdinaryName);
-  LookupQualifiedName(R, Record->getDecl());
+  LookupQualifiedName(R, Record->getOriginalDecl()->getDefinitionOrSelf());
   R.suppressAccessDiagnostics();
 
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
@@ -16439,8 +16399,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   //   functions for each conversion function declared in an
   //   accessible base class provided the function is not hidden
   //   within T by another intervening declaration.
-  const auto &Conversions =
-      cast<CXXRecordDecl>(Record->getDecl())->getVisibleConversionFunctions();
+  const auto &Conversions = cast<CXXRecordDecl>(Record->getOriginalDecl())
+                                ->getDefinitionOrSelf()
+                                ->getVisibleConversionFunctions();
   for (auto I = Conversions.begin(), E = Conversions.end();
        !IgnoreSurrogateFunctions && I != E; ++I) {
     NamedDecl *D = *I;
@@ -16590,7 +16551,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     IsError |= PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
   } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
-        Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+        Object.get(), /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
     if (ObjRes.isInvalid())
       IsError = true;
     else
@@ -16661,7 +16622,10 @@ ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
     return ExprError();
 
   LookupResult R(*this, OpName, OpLoc, LookupOrdinaryName);
-  LookupQualifiedName(R, Base->getType()->castAs<RecordType>()->getDecl());
+  LookupQualifiedName(R, Base->getType()
+                             ->castAs<RecordType>()
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf());
   R.suppressAccessDiagnostics();
 
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
@@ -16735,7 +16699,7 @@ ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
     Base = R.get();
   } else {
     ExprResult BaseResult = PerformImplicitObjectArgumentInitialization(
-        Base, /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+        Base, /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
     if (BaseResult.isInvalid())
       return ExprError();
     Base = BaseResult.get();
@@ -16989,7 +16953,7 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
 
         assert(isa<DeclRefExpr>(SubExpr.get()) &&
                "fixed to something other than a decl ref");
-        NestedNameSpecifier *Qualifier =
+        NestedNameSpecifier Qualifier =
             cast<DeclRefExpr>(SubExpr.get())->getQualifier();
         assert(Qualifier &&
                "fixed to a member ref with no nested name qualifier");

@@ -279,13 +279,15 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
     if (mustDeallocateLHS) {
       // Convert the LHS into a temporary, then make it look deallocated.
       toDeallocate_ = &tempDescriptor_.descriptor();
-      persist_ = true; // tempDescriptor_ state must outlive child tickets
       std::memcpy(
           reinterpret_cast<void *>(toDeallocate_), &to_, to_.SizeInBytes());
       to_.set_base_addr(nullptr);
       if (toDerived_ && (flags_ & NeedFinalization)) {
-        if (int status{workQueue.BeginFinalize(*toDeallocate_, *toDerived_)};
-            status != StatOk && status != StatContinue) {
+        int status{workQueue.BeginFinalize(*toDeallocate_, *toDerived_)};
+        if (status == StatContinue) {
+          // tempDescriptor_ state must outlive pending child ticket
+          persist_ = true;
+        } else if (status != StatOk) {
           return status;
         }
         flags_ &= ~NeedFinalization;
@@ -304,6 +306,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       if (int stat{ReturnError(
               workQueue.terminator(), newFrom.Allocate(kNoAsyncObject))};
           stat != StatOk) {
+        if (stat == StatContinue) {
+          persist_ = true;
+        }
         return stat;
       }
       if (HasDynamicComponent(*from_)) {
@@ -364,6 +369,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
         return status;
       }
     } else if (!toDerived_->noDestructionNeeded()) {
+      // F'2023 9.7.3.2 p7: "When an intrinsic assignment statement (10.2.1.3)
+      // is executed, any noncoarray allocated allocatable subobject of the
+      // variable is deallocated before the assignment takes place."
       if (int status{
               workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false)};
           status != StatOk && status != StatContinue) {
@@ -507,6 +515,7 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
     }
   }
   if (persist_) {
+    // tempDescriptor_ must outlive pending child ticket(s)
     done_ = true;
     return StatContinue;
   } else {

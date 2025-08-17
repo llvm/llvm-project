@@ -94,7 +94,6 @@ def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode()
 def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def IEEEModeEnabled : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
 def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
-def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 }
 
 def FMA : Predicate<"Subtarget->hasFMA()">;

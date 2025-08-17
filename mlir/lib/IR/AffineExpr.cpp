@@ -8,7 +8,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <limits>
 #include <utility>
 
 #include "AffineExprDetail.h"
@@ -16,7 +15,6 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>

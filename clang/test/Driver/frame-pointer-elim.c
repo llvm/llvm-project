@@ -162,7 +162,7 @@
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
 // RUN: %clang -### --target=riscv64-linux-android -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-// RUN: not %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
+// RUN: %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 
 // On ARM backend bare metal targets, frame pointer is omitted

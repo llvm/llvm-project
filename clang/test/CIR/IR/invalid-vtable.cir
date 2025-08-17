@@ -1,0 +1,9 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+cir.func @reference_unknown_vtable() {
+  // expected-error @below {{'cir.vtable.address_point' op 'some_vtable' does not reference a valid cir.global}}
+  %0 = cir.vtable.address_point(@some_vtable, address_point = <index = 0, offset = 2>) : !cir.vptr
+  cir.return
+}
