@@ -112,8 +112,8 @@ Improvements to clang-tidy
 - Improved documentation of the `-line-filter` command-line flag of
   :program:`clang-tidy` and :program:`run-clang-tidy.py`.
 
-- Improved :program:`clang-tidy` option `quiet` to suppresses diagnostic count
-  messages.
+- Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
+  count messages.
 
 New checks
 ^^^^^^^^^^
