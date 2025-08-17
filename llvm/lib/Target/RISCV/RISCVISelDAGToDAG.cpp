@@ -720,6 +720,74 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   return true;
 }
 
+// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
+// being inserted only sets known zero bits.
+bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
+  // Supported only in Xqcibm for now.
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+  if (!N1C)
+    return false;
+
+  SDValue And = Node->getOperand(0);
+
+  if (And.getOpcode() != ISD::AND)
+    return false;
+
+  auto *N2C = dyn_cast<ConstantSDNode>(And->getOperand(1));
+  if (!And.hasOneUse() || !N2C)
+    return false;
+
+  int32_t OrImm = N1C->getSExtValue();
+
+  // Compute the Known Zero for the AND as this allows us to catch more general
+  // cases than just looking for AND with imm.
+  KnownBits Known = CurDAG->computeKnownBits(And);
+
+  // Non-zero in the sense that they're not provably zero, which is the key
+  // point if we want to use this value.
+  uint64_t NotKnownZero = (~Known.Zero).getZExtValue();
+
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!isShiftedMask_32(Known.Zero.getZExtValue()))
+    return false;
+
+  // The bits being inserted must only set those bits that are known to be zero.
+  if ((OrImm & NotKnownZero) != 0) {
+    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
+    // currently handle this case.
+    return false;
+  }
+
+  // QC_INSB(I) dst, src, #width, #shamt.
+  MVT VT = Node->getSimpleValueType(0);
+  unsigned BitWidth = VT.getSizeInBits();
+  const unsigned ShAmt = llvm::countr_one(NotKnownZero);
+  const unsigned Width = BitWidth - APInt(BitWidth, NotKnownZero).popcount();
+
+  SDLoc DL(Node);
+  SDValue ImmNode;
+  auto Opc = RISCV::QC_INSB;
+
+  int32_t LIImm = OrImm >> ShAmt;
+
+  if (isInt<5>(LIImm)) {
+    Opc = RISCV::QC_INSBI;
+    ImmNode = CurDAG->getSignedTargetConstant(LIImm, DL, MVT::i32);
+  } else {
+    ImmNode = selectImm(CurDAG, DL, MVT::i32, LIImm, *Subtarget);
+  }
+
+  SDValue Ops[] = {And.getOperand(0), ImmNode,
+                   CurDAG->getTargetConstant(Width, DL, VT),
+                   CurDAG->getTargetConstant(ShAmt, DL, VT)};
+  SDNode *BitIns = CurDAG->getMachineNode(Opc, DL, VT, Ops);
+  ReplaceNode(Node, BitIns);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
@@ -1382,6 +1450,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::OR: {
     if (trySignedBitfieldInsertInMask(Node))
+      return;
+
+    if (tryBitfieldInsertOpFromOrAndImm(Node))
       return;
 
     if (tryShrinkShlLogicImm(Node))
