@@ -327,12 +327,11 @@ static int initCnt = 0;
 static void initCallback() { initCnt += 1; }
 
 TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
-  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   ASSERT_TRUE(!!tmBuilderOrError);
   if (tmBuilderOrError->getTargetTriple().isAArch64()) {
-    GTEST_SKIP() << "Skipping global ctor initialization test on Aarch64 because of bug #71963";
+    GTEST_SKIP() << "Skipping global ctor initialization test on Aarch64 "
+                    "because of bug #71963";
     return;
   }
   std::string moduleStr = R"mlir(
