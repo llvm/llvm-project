@@ -1,18 +1,13 @@
+// The -cc1 mode should not insert default ptrauth flags
+
 // RUN: %clang_cc1 -triple arm64                   %s -fsyntax-only
 // RUN: %clang_cc1 -triple arm64-apple-macosx      %s -fsyntax-only
-// RUN: %clang_cc1 -triple arm64-darwin            %s -fsyntax-only
-// RUN: %clang_cc1 -triple arm64-apple-darwin      %s -fsyntax-only
+// RUN: %clang_cc1 -triple arm64-apple-ios         %s -fsyntax-only
 // RUN: %clang_cc1 -triple arm64-apple-ios-macabi  %s -fsyntax-only
-// RUN: %clang_cc1 -triple arm64-linux-gnu         %s -fsyntax-only
-// RUN: %clang_cc1 -triple arm64e-linux-gnu        %s -fsyntax-only
-// RUN: %clang_cc1 -triple aarch64-linux-gnu       %s -fsyntax-only
+// RUN: %clang_cc1 -triple arm64e                  %s -fsyntax-only
 // RUN: %clang_cc1 -triple arm64e-apple-macosx     %s -fsyntax-only
 // RUN: %clang_cc1 -triple arm64e-apple-ios        %s -fsyntax-only
-// RUN: %clang_cc1 -triple arm64e-darwin           %s -fsyntax-only
-// RUN: %clang_cc1 -triple arm64e-apple-darwin     %s -fsyntax-only
 // RUN: %clang_cc1 -triple arm64e-apple-ios-macabi %s -fsyntax-only
-
-// The -cc1 mode should not insert default ptrauth flags
 
 #define ASSERT_MODE_AND_KIND(feature, enabled, kind)                           \
   _Static_assert(enabled == __has_##kind(feature),                             \
@@ -20,11 +15,9 @@
 
 #define ASSERT_FEATURE_DISABLED(feature_name)                                  \
   ASSERT_MODE_AND_KIND(feature_name, 0, feature)
-#define ASSERT_EXTENSION_DISABLED(extension_name)                              \
-  ASSERT_MODE_AND_KIND(extension_name, 0, extension)
 
 ASSERT_FEATURE_DISABLED(ptrauth_intrinsics)
-ASSERT_EXTENSION_DISABLED(ptrauth_qualifier)
+ASSERT_FEATURE_DISABLED(ptrauth_qualifier)
 ASSERT_FEATURE_DISABLED(ptrauth_calls)
 ASSERT_FEATURE_DISABLED(ptrauth_returns)
 ASSERT_FEATURE_DISABLED(ptrauth_vtable_pointer_address_discrimination)

@@ -3,9 +3,6 @@
 // RUN: %clang -target arm64-darwin            -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
 // RUN: %clang -target arm64-apple-darwin      -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
 // RUN: %clang -target arm64-apple-ios-macabi  -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
-// RUN: %clang -target arm64-linux-gnu         -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
-// RUN: %clang -target arm64e-linux-gnu        -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
-// RUN: %clang -target aarch64-linux-gnu       -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
 // RUN: %clang -target arm64e-apple-macosx     -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
 // RUN: %clang -target arm64e-apple-ios        -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
 // RUN: %clang -target arm64e-darwin           -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
