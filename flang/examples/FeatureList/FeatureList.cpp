@@ -554,7 +554,6 @@ public:
   READ_FEATURE(OpenMPDeclareSimdConstruct)
   READ_FEATURE(OpenMPDeclareTargetConstruct)
   READ_FEATURE(OmpMemoryOrderType)
-  READ_FEATURE(OmpMemoryOrderClause)
   READ_FEATURE(OmpAtomicDefaultMemOrderClause)
   READ_FEATURE(OpenMPFlushConstruct)
   READ_FEATURE(OpenMPLoopConstruct)

@@ -123,7 +123,7 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
@@ -165,6 +165,10 @@ endif()
 
 if(MLIR_ENABLE_SYCL_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
+endif()
+
+if(MLIR_ENABLE_LEVELZERO_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_levelzero_runtime)
 endif()
 
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)

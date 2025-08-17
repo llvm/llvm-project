@@ -20,11 +20,8 @@
 #include "nanobind/nanobind.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
-#include <system_error>
-#include <utility>
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -1523,7 +1520,7 @@ nb::object PyOperation::create(std::string_view name,
                                llvm::ArrayRef<MlirValue> operands,
                                std::optional<nb::dict> attributes,
                                std::optional<std::vector<PyBlock *>> successors,
-                               int regions, DefaultingPyLocation location,
+                               int regions, PyLocation &location,
                                const nb::object &maybeIp, bool inferType) {
   llvm::SmallVector<MlirType, 4> mlirResults;
   llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
@@ -1627,7 +1624,7 @@ nb::object PyOperation::create(std::string_view name,
   if (!operation.ptr)
     throw nb::value_error("Operation creation failed");
   PyOperationRef created =
-      PyOperation::createDetached(location->getContext(), operation);
+      PyOperation::createDetached(location.getContext(), operation);
   maybeInsertOperation(created, maybeIp);
 
   return created.getObject();
@@ -1937,9 +1934,9 @@ nb::object PyOpView::buildGeneric(
     std::optional<nb::list> resultTypeList, nb::list operandList,
     std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
-    std::optional<int> regions, DefaultingPyLocation location,
+    std::optional<int> regions, PyLocation &location,
     const nb::object &maybeIp) {
-  PyMlirContextRef context = location->getContext();
+  PyMlirContextRef context = location.getContext();
 
   // Class level operation construction metadata.
   // Operand and result segment specs are either none, which does no
@@ -2789,6 +2786,156 @@ private:
   PyOperationRef operation;
 };
 
+// see
+// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
+
+#ifndef _Py_CAST
+#define _Py_CAST(type, expr) ((type)(expr))
+#endif
+
+// Static inline functions should use _Py_NULL rather than using directly NULL
+// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
+// _Py_NULL is defined as nullptr.
+#ifndef _Py_NULL
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
+    (defined(__cplusplus) && __cplusplus >= 201103)
+#define _Py_NULL nullptr
+#else
+#define _Py_NULL NULL
+#endif
+#endif
+
+// Python 3.10.0a3
+#if PY_VERSION_HEX < 0x030A00A3
+
+// bpo-42262 added Py_XNewRef()
+#if !defined(Py_XNewRef)
+[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
+  Py_XINCREF(obj);
+  return obj;
+}
+#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
+#endif
+
+// bpo-42262 added Py_NewRef()
+#if !defined(Py_NewRef)
+[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
+  Py_INCREF(obj);
+  return obj;
+}
+#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
+#endif
+
+#endif // Python 3.10.0a3
+
+// Python 3.9.0b1
+#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
+
+// bpo-40429 added PyThreadState_GetFrame()
+PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
+  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
+  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
+}
+
+// bpo-40421 added PyFrame_GetBack()
+PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
+  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
+  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
+}
+
+// bpo-40421 added PyFrame_GetCode()
+PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
+  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
+  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
+  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
+}
+
+#endif // Python 3.9.0b1
+
+MlirLocation tracebackToLocation(MlirContext ctx) {
+  size_t framesLimit =
+      PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
+  // Use a thread_local here to avoid requiring a large amount of space.
+  thread_local std::array<MlirLocation, PyGlobals::TracebackLoc::kMaxFrames>
+      frames;
+  size_t count = 0;
+
+  nb::gil_scoped_acquire acquire;
+  PyThreadState *tstate = PyThreadState_GET();
+  PyFrameObject *next;
+  PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
+  // In the increment expression:
+  // 1. get the next prev frame;
+  // 2. decrement the ref count on the current frame (in order that it can get
+  //    gc'd, along with any objects in its closure and etc);
+  // 3. set current = next.
+  for (; pyFrame != nullptr && count < framesLimit;
+       next = PyFrame_GetBack(pyFrame), Py_XDECREF(pyFrame), pyFrame = next) {
+    PyCodeObject *code = PyFrame_GetCode(pyFrame);
+    auto fileNameStr =
+        nb::cast<std::string>(nb::borrow<nb::str>(code->co_filename));
+    llvm::StringRef fileName(fileNameStr);
+    if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
+      continue;
+
+    // co_qualname and PyCode_Addr2Location added in py3.11
+#if PY_VERSION_HEX < 0x030B00F0
+    std::string name =
+        nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
+    llvm::StringRef funcName(name);
+    int startLine = PyFrame_GetLineNumber(pyFrame);
+    MlirLocation loc =
+        mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
+#else
+    std::string name =
+        nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
+    llvm::StringRef funcName(name);
+    int startLine, startCol, endLine, endCol;
+    int lasti = PyFrame_GetLasti(pyFrame);
+    if (!PyCode_Addr2Location(code, lasti, &startLine, &startCol, &endLine,
+                              &endCol)) {
+      throw nb::python_error();
+    }
+    MlirLocation loc = mlirLocationFileLineColRangeGet(
+        ctx, wrap(fileName), startLine, startCol, endLine, endCol);
+#endif
+
+    frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
+    ++count;
+  }
+  // When the loop breaks (after the last iter), current frame (if non-null)
+  // is leaked without this.
+  Py_XDECREF(pyFrame);
+
+  if (count == 0)
+    return mlirLocationUnknownGet(ctx);
+
+  MlirLocation callee = frames[0];
+  assert(!mlirLocationIsNull(callee) && "expected non-null callee location");
+  if (count == 1)
+    return callee;
+
+  MlirLocation caller = frames[count - 1];
+  assert(!mlirLocationIsNull(caller) && "expected non-null caller location");
+  for (int i = count - 2; i >= 1; i--)
+    caller = mlirLocationCallSiteGet(frames[i], caller);
+
+  return mlirLocationCallSiteGet(callee, caller);
+}
+
+PyLocation
+maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
+  if (location.has_value())
+    return location.value();
+  if (!PyGlobals::get().getTracebackLoc().locTracebacksEnabled())
+    return DefaultingPyLocation::resolve();
+
+  PyMlirContext &ctx = DefaultingPyMlirContext::resolve();
+  MlirLocation mlirLoc = tracebackToLocation(ctx.get());
+  PyMlirContextRef ref = PyMlirContext::forContext(ctx.get());
+  return {ref, mlirLoc};
+}
+
 } // namespace
 
 //------------------------------------------------------------------------------
@@ -3052,10 +3199,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def("__eq__", [](PyLocation &self, nb::object other) { return false; })
       .def_prop_ro_static(
           "current",
-          [](nb::object & /*class*/) {
+          [](nb::object & /*class*/) -> std::optional<PyLocation *> {
             auto *loc = PyThreadContextEntry::getDefaultLocation();
             if (!loc)
-              throw nb::value_error("No current Location");
+              return std::nullopt;
             return loc;
           },
           "Gets the Location bound to the current thread or raises ValueError")
@@ -3240,8 +3387,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kModuleParseDocstring)
       .def_static(
           "create",
-          [](DefaultingPyLocation loc) {
-            MlirModule module = mlirModuleCreateEmpty(loc);
+          [](const std::optional<PyLocation> &loc) {
+            PyLocation pyLoc = maybeGetTracebackLocation(loc);
+            MlirModule module = mlirModuleCreateEmpty(pyLoc.get());
             return PyModule::forModule(module).releaseObject();
           },
           nb::arg("loc").none() = nb::none(), "Creates an empty module")
@@ -3442,6 +3590,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return operation.createOpView();
           },
           "Detaches the operation from its parent block.")
+      .def_prop_ro(
+          "attached",
+          [](PyOperationBase &self) {
+            PyOperation &operation = self.getOperation();
+            operation.checkValid();
+            return operation.isAttached();
+          },
+          "Reports if the operation is attached to its parent block.")
       .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); })
       .def("walk", &PyOperationBase::walk, nb::arg("callback"),
            nb::arg("walk_order") = MlirWalkPostOrder);
@@ -3454,8 +3610,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              std::optional<std::vector<PyValue *>> operands,
              std::optional<nb::dict> attributes,
              std::optional<std::vector<PyBlock *>> successors, int regions,
-             DefaultingPyLocation location, const nb::object &maybeIp,
-             bool inferType) {
+             const std::optional<PyLocation> &location,
+             const nb::object &maybeIp, bool inferType) {
             // Unpack/validate operands.
             llvm::SmallVector<MlirValue, 4> mlirOperands;
             if (operands) {
@@ -3467,8 +3623,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               }
             }
 
+            PyLocation pyLoc = maybeGetTracebackLocation(location);
             return PyOperation::create(name, results, mlirOperands, attributes,
-                                       successors, regions, location, maybeIp,
+                                       successors, regions, pyLoc, maybeIp,
                                        inferType);
           },
           nb::arg("name"), nb::arg("results").none() = nb::none(),
@@ -3512,12 +3669,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                  std::optional<nb::list> resultTypeList, nb::list operandList,
                  std::optional<nb::dict> attributes,
                  std::optional<std::vector<PyBlock *>> successors,
-                 std::optional<int> regions, DefaultingPyLocation location,
+                 std::optional<int> regions,
+                 const std::optional<PyLocation> &location,
                  const nb::object &maybeIp) {
+                PyLocation pyLoc = maybeGetTracebackLocation(location);
                 new (self) PyOpView(PyOpView::buildGeneric(
                     name, opRegionSpec, operandSegmentSpecObj,
                     resultSegmentSpecObj, resultTypeList, operandList,
-                    attributes, successors, regions, location, maybeIp));
+                    attributes, successors, regions, pyLoc, maybeIp));
               },
               nb::arg("name"), nb::arg("opRegionSpec"),
               nb::arg("operandSegmentSpecObj").none() = nb::none(),
@@ -3551,17 +3710,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       [](nb::handle cls, std::optional<nb::list> resultTypeList,
          nb::list operandList, std::optional<nb::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors,
-         std::optional<int> regions, DefaultingPyLocation location,
+         std::optional<int> regions, std::optional<PyLocation> location,
          const nb::object &maybeIp) {
         std::string name = nb::cast<std::string>(cls.attr("OPERATION_NAME"));
         std::tuple<int, bool> opRegionSpec =
             nb::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
         nb::object operandSegmentSpec = cls.attr("_ODS_OPERAND_SEGMENTS");
         nb::object resultSegmentSpec = cls.attr("_ODS_RESULT_SEGMENTS");
+        PyLocation pyLoc = maybeGetTracebackLocation(location);
         return PyOpView::buildGeneric(name, opRegionSpec, operandSegmentSpec,
                                       resultSegmentSpec, resultTypeList,
                                       operandList, attributes, successors,
-                                      regions, location, maybeIp);
+                                      regions, pyLoc, maybeIp);
       },
       nb::arg("cls"), nb::arg("results").none() = nb::none(),
       nb::arg("operands").none() = nb::none(),

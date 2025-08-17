@@ -2781,6 +2781,38 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   return Bytes == MFI.getObjectSize(FI);
 }
 
+static bool
+mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
+                            Register CallerSRetReg) {
+  const auto &Outs = CLI.Outs;
+  const auto &OutVals = CLI.OutVals;
+
+  // We know the caller has a sret pointer argument (CallerSRetReg). Locate the
+  // operand index within the callee that may have a sret pointer too.
+  unsigned Pos = 0;
+  for (unsigned E = Outs.size(); Pos != E; ++Pos)
+    if (Outs[Pos].Flags.isSRet())
+      break;
+  // Bail out if the callee has not any sret argument.
+  if (Pos == Outs.size())
+    return false;
+
+  // At this point, either the caller is forwarding its sret argument to the
+  // callee, or the callee is being passed a different sret pointer. We now look
+  // for a CopyToReg, where the callee sret argument is written into a new vreg
+  // (which should later be %rax/%eax, if this is returned).
+  SDValue SRetArgVal = OutVals[Pos];
+  for (SDNode *User : SRetArgVal->users()) {
+    if (User->getOpcode() != ISD::CopyToReg)
+      continue;
+    Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+    if (Reg == CallerSRetReg && User->getOperand(2) == SRetArgVal)
+      return true;
+  }
+
+  return false;
+}
+
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
 /// Note that the x86 backend does not check musttail calls for eligibility! The
@@ -2802,6 +2834,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
   // If -tailcallopt is specified, make fastcc functions tail-callable.
   MachineFunction &MF = DAG.getMachineFunction();
+  X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   const Function &CallerF = MF.getFunction();
 
   // If the function return type is x86_fp80 and the callee return type is not,
@@ -2838,14 +2871,15 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (RegInfo->hasStackRealignment(MF))
     return false;
 
-  // Also avoid sibcall optimization if we're an sret return fn and the callee
-  // is incompatible. See comment in LowerReturn about why hasStructRetAttr is
-  // insufficient.
-  if (MF.getInfo<X86MachineFunctionInfo>()->getSRetReturnReg()) {
+  // Avoid sibcall optimization if we are an sret return function and the callee
+  // is incompatible, unless such premises are proven wrong. See comment in
+  // LowerReturn about why hasStructRetAttr is insufficient.
+  if (Register SRetReg = FuncInfo->getSRetReturnReg()) {
     // For a compatible tail call the callee must return our sret pointer. So it
     // needs to be (a) an sret function itself and (b) we pass our sret as its
     // sret. Condition #b is harder to determine.
-    return false;
+    if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
+      return false;
   } else if (IsCalleePopSRet)
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't
     // expect that.
@@ -2967,8 +3001,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       X86::isCalleePop(CalleeCC, Subtarget.is64Bit(), isVarArg,
                        MF.getTarget().Options.GuaranteedTailCallOpt);
 
-  if (unsigned BytesToPop =
-          MF.getInfo<X86MachineFunctionInfo>()->getBytesToPopOnReturn()) {
+  if (unsigned BytesToPop = FuncInfo->getBytesToPopOnReturn()) {
     // If we have bytes to pop, the callee must pop them.
     bool CalleePopMatches = CalleeWillPop && BytesToPop == StackArgsSize;
     if (!CalleePopMatches)

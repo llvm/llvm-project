@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -20,6 +22,17 @@
 
 namespace mlir {
 namespace xegpu {
+
+bool isSharedMemory(const MemRefType &memrefTy) {
+  Attribute attr = memrefTy.getMemorySpace();
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
+    return intAttr.getInt() == 3;
+  if (auto memrefSpace = llvm::dyn_cast<MemorySpaceAttr>(attr))
+    return memrefSpace.getValue() == MemorySpace::SLM;
+  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
+    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
+  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
+}
 
 template <typename T>
 static std::string makeString(T array, bool breakline = false) {
@@ -121,12 +134,20 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1) {
-    if (valueTy.getNumElements() != chunkSize)
-      return emitError() << "value elements must match chunk size " << chunkSize
-                         << " for SIMT code.";
-    return success();
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  if (!maskVecTy)
+    return emitError() << "Expecting a vector type mask.";
+  int64_t maskSize = maskVecTy.getNumElements();
+
+  auto valueSize = valueTy.getNumElements();
+  if (chunkSize > 1) {
+    if ((valueTy.getRank() == 1) && (valueSize != chunkSize))
+      return emitError() << "value elements must match chunk size "
+                         << chunkSize;
+  } else {
+    if (valueSize != maskSize)
+      return emitError()
+             << "Mask should match value except the chunk size dim.";
   }
 
   llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
@@ -156,17 +177,18 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<MemRefType> source,
+                           Type tdesc, Value source,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
-         "Shape and strides must be present and of equal size for ui64 "
-         "initialization.");
+  Type srcTy = source.getType();
+  assert((isa<IntegerType, MemRefType>(srcTy)) &&
+         "Source has to be either int or memref.");
+
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
 
   llvm::SmallVector<int64_t> staticShape;
   llvm::SmallVector<int64_t> staticStrides;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
 
   dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
@@ -174,29 +196,17 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
   auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
 
-  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
-        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
-        staticStridesAttr);
-}
+  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
+    auto memrefShape = memrefTy.getShape();
+    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<IntegerType> source,
-                           llvm::ArrayRef<OpFoldResult> shape,
-                           llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
-         "Shape and strides must be present and of equal size for ui64 "
-         "initialization.");
-
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
-
-  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
-  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+    // if shape and strides are from Memref, we don't need attributes for them
+    // to keep the IR print clean.
+    if (staticShape == memrefShape && staticStrides == memrefStrides) {
+      staticShapeAttr = DenseI64ArrayAttr();
+      staticStridesAttr = DenseI64ArrayAttr();
+    }
+  }
 
   build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
         dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
@@ -265,8 +275,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  auto rank = (int64_t)getMixedOffsets().size();
-  bool invalidRank = false;
+  size_t rank = getMixedSizes().size();
+  bool invalidRank = rank != getMixedStrides().size();
   bool invalidElemTy = false;
 
   // Memory space of created TensorDesc should match with the source.
@@ -280,31 +290,28 @@ LogicalResult CreateNdDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
+  if (size_t offsetRank = getMixedOffsets().size())
+    invalidRank |= (offsetRank != rank);
+
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
-  auto memrefTy = dyn_cast<MemRefType>(getSourceType());
-  if (memrefTy) {
-    invalidRank |= (memrefTy.getRank() != rank);
+  if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
     invalidElemTy |= memrefTy.getElementType() != getElementType();
-  }
 
   if (llvm::isa<IntegerType>(getSourceType())) {
     // strides and shape must present for integer source.
     if (getMixedStrides().empty() || getMixedSizes().empty())
-      return emitOpError("Expecting strides and shape to be present for "
+      return emitOpError("expecting strides and shape to be present for "
                          "integer source.");
   }
 
-  // mismatches among shape, strides, and offsets are
-  // already handeled by OffsetSizeAndStrideOpInterface.
-  // So they are not check here.
   if (invalidRank)
     return emitOpError(
         "Expecting the rank of shape, strides, offsets, and source (if source "
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
-  if (getType().getRank() > rank)
+  if (getType().getRank() > (int64_t)rank)
     return emitOpError(
         "Expecting the TensorDesc rank is not greater than the "
         "ranks of shape, strides, offsets or the memref source.");
@@ -360,13 +367,10 @@ ParseResult parseOptionalDynamicIndexList(
 void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    OperandRange values,
                                    DenseI64ArrayAttr integers) {
-
-  if (!integers)
+  if (!integers || integers.empty())
     return;
-
-  return printDynamicIndexList(printer, op, values, integers,
-                               /*scalableFlags=*/{}, {},
-                               AsmParser::Delimiter::Square);
+  printDynamicIndexList(printer, op, values, integers,
+                        /*scalableFlags=*/{}, {}, AsmParser::Delimiter::Square);
 }
 //===----------------------------------------------------------------------===//
 // XeGPU_PrefetchNdOp
@@ -674,7 +678,7 @@ LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getSource()) > 1)
     return emitOpError(
@@ -755,7 +759,7 @@ LogicalResult StoreScatterOp::verify() {
   auto valueTy = getValueType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getDest()) > 1)
     return emitOpError(
@@ -928,9 +932,107 @@ void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<FoldConvertLayoutOp>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// XeGPU_LoadMatrixOp
+//===----------------------------------------------------------------------===//
+void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
+                         TypedValue<MemDescType> memDesc,
+                         llvm::ArrayRef<OpFoldResult> offsets,
+                         LayoutTrait layout) {
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
+        layout);
+}
+
+LogicalResult LoadMatrixOp::verify() {
+  VectorType resTy = getRes().getType();
+  MemDescType mdescTy = getMemDesc().getType();
+
+  if (mdescTy.getRank() != 2)
+    return emitOpError("mem_desc must be 2D.");
+
+  ArrayRef<int64_t> valueShape = resTy.getShape();
+  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
+  if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
+                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+    return emitOpError("result shape must not exceed mem_desc shape.");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_StoreMatrixOp
+//===----------------------------------------------------------------------===//
+void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
+                          TypedValue<MemDescType> memDesc,
+                          llvm::ArrayRef<OpFoldResult> offsets,
+                          LayoutTrait layout) {
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  build(builder, state, data, memDesc, dynamicOffsets, staticOffsetsAttr,
+        layout);
+}
+
+LogicalResult StoreMatrixOp::verify() {
+  VectorType dataTy = getData().getType();
+  MemDescType mdescTy = getMemDesc().getType();
+
+  if (mdescTy.getRank() != 2)
+    return emitOpError("mem_desc must be 2D.");
+
+  ArrayRef<int64_t> dataShape = dataTy.getShape();
+  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
+  if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
+                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+    return emitOpError("data shape must not exceed mem_desc shape.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_MemDescSubviewOp
+//===----------------------------------------------------------------------===//
+
+void MemDescSubviewOp::build(OpBuilder &builder, OperationState &state,
+                             Type resTy, Value src,
+                             llvm::ArrayRef<OpFoldResult> offsets) {
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr);
+}
+
+LogicalResult MemDescSubviewOp::verify() {
+  MemDescType srcTy = getSrc().getType();
+  MemDescType resTy = getRes().getType();
+  ArrayRef<int64_t> srcShape = srcTy.getShape();
+  ArrayRef<int64_t> resShape = resTy.getShape();
+
+  if (srcTy.getRank() < resTy.getRank())
+    return emitOpError("result rank must not exceed source rank.");
+
+  if (llvm::any_of(
+          llvm::zip_equal(resShape, srcShape.take_back(resShape.size())),
+          [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+    return emitOpError("result shape must not exceed source shape.");
+
+  if (srcTy.getStrides() != resTy.getStrides())
+    return emitOpError("result must inherit the source strides.");
+
+  return success();
+}
+
 } // namespace xegpu
 } // namespace mlir
 
+namespace mlir {
+#include <mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.cpp.inc>
+} // namespace mlir
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.cpp.inc>
 #define GET_OP_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPU.cpp.inc>

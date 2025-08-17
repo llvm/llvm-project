@@ -1812,7 +1812,10 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}"
+           "%sub{select_special_member_kind}1}|"
+           "%FunctionType{is a function type}|"
+           "%CVVoidType{is a cv void type}|"
+           "%IncompleteArrayType{is an incomplete array type}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -5438,8 +5441,10 @@ def err_template_arg_must_be_expr : Error<
   "template argument for non-type template parameter must be an expression">;
 def err_template_arg_nontype_ambig : Error<
   "template argument for non-type template parameter is treated as function type %0">;
-def err_template_arg_must_be_template : Error<
-  "template argument for template template parameter must be a class template%select{| or type alias template}0">;
+def err_template_arg_must_be_template
+    : Error<"template argument for template template parameter must be a "
+            "%select{class template%select{| or type alias template}1|variable "
+            "template|concept}0">;
 def ext_template_arg_local_type : ExtWarn<
   "template argument uses local type %0">, InGroup<LocalTypeTemplateArgs>;
 def ext_template_arg_unnamed_type : ExtWarn<
@@ -5454,11 +5459,14 @@ def note_template_unnamed_type_here : Note<
   "unnamed type used in template argument was declared here">;
 def err_template_arg_overload_type : Error<
   "template argument is the type of an unresolved overloaded function">;
-def err_template_arg_not_valid_template : Error<
-  "template argument does not refer to a class or alias template, or template "
-  "template parameter">;
-def note_template_arg_refers_here_func : Note<
-  "template argument refers to function template %0, here">;
+def err_template_arg_not_valid_template
+    : Error<"template argument does not refer to a %select{class or alias "
+            "template|variable template|concept}0, or template "
+            "template parameter">;
+
+def note_template_arg_refers_to_template_here
+    : Note<"template argument refers to a %select{function template|class "
+           "template|variable template|concept}0 %1, here">;
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
@@ -10415,9 +10423,10 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
-def warn_format_conversion_argument_type_mismatch_signedness : Warning<
-  warn_format_conversion_argument_type_mismatch.Summary>,
-  InGroup<FormatSignedness>, DefaultIgnore;
+def warn_format_conversion_argument_type_mismatch_signedness: Warning<
+      "format specifies type %0 but the argument has %select{type|underlying "
+      "type}2 %1, which differs in signedness" >
+    , InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;
@@ -10529,8 +10538,10 @@ def warn_format_cmp_sensitivity_mismatch : Warning<
   "it should be %select{unspecified|private|public|sensitive}1">, InGroup<Format>;
 def warn_format_cmp_specifier_mismatch : Warning<
   "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
-def warn_format_cmp_specifier_sign_mismatch : Warning<
-  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_sign_mismatch
+    : Warning<"signedness of format specifier '%0' is incompatible with '%1'">,
+      InGroup<FormatSignedness>,
+      DefaultIgnore;
 def warn_format_cmp_specifier_mismatch_pedantic : Extension<
   warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
 def note_format_cmp_with : Note<
@@ -13226,9 +13237,9 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
-def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
-    : Error<"not supported for "
-            "function pointers with a reference type %select{return "
+def err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union
+    : Error<"not supported with the multivalue ABI for "
+            "function pointers with a struct/union as %select{return "
             "value|parameter}0">;
 
 // OpenACC diagnostics.
@@ -13521,12 +13532,18 @@ def err_acc_invalid_modifier
 def err_acc_invalid_default_type
     : Error<"invalid value %0 in '%1' clause; valid values are %2">;
 def err_acc_device_type_multiple_archs
-    : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
+    : Error<"OpenACC 'device_type' clause on a '%0' construct only permits "
             "one architecture">;
+def warn_acc_var_referenced_non_const_array
+    : Warning<"variable of array type %0 referenced in OpenACC '%1' clause "
+              "does not have constant bounds; initialization will happen after "
+              "decay to pointer">,
+      InGroup<DiagGroup<"openacc-var-non-const-array">>;
 def warn_acc_var_referenced_lacks_op
     : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
               "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
-              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+              "constructor}|%CopyCtor{copy constructor}|%Dtor{destructor}}2; "
+              "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
 
