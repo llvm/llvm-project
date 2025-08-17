@@ -178,6 +178,10 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
   if (!process_sp)
     return {};
 
+  const ArchSpec arch = process_sp->GetTarget().GetArchitecture();
+  if (!arch.GetTriple().isArmMClass() || arch.GetAddressByteSize() != 4)
+    return {};
+
   // Get the caller's LR value from regctx (the LR value
   // at function entry to this function).
   RegisterNumber ra_regnum(thread, eRegisterKindGeneric,
@@ -218,10 +222,6 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
   }
 
   if (callers_return_address == LLDB_INVALID_ADDRESS)
-    return {};
-
-  const ArchSpec arch = process_sp->GetTarget().GetArchitecture();
-  if (!arch.GetTriple().isArmMClass() || arch.GetAddressByteSize() != 4)
     return {};
 
   if (callers_return_address != 0xFFFFFFF1 &&
