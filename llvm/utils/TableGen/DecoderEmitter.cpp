@@ -487,8 +487,8 @@ protected:
   // Lookup table for the operand decoding of instructions.
   const std::map<unsigned, std::vector<OperandInfo>> &Operands;
 
-  // Vector of candidate filters.
-  std::vector<Filter> Filters;
+  // The selected filter, if any.
+  std::unique_ptr<Filter> BestFilter;
 
   // Array of bit values passed down from our parent.
   // Set to all BIT_UNFILTERED's for Parent == NULL.
@@ -496,9 +496,6 @@ protected:
 
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
-
-  // Index of the best filter from Filters.
-  int BestIndex;
 
   // Width of instructions
   unsigned BitWidth;
@@ -519,7 +516,7 @@ public:
                 unsigned BW, const DecoderEmitter *E)
       : AllInstructions(Insts), Opcodes(IDs), Operands(Ops),
         FilterBitValues(BW, BitValue::BIT_UNFILTERED), Parent(nullptr),
-        BestIndex(-1), BitWidth(BW), Emitter(E) {
+        BitWidth(BW), Emitter(E) {
     doFilter();
   }
 
@@ -529,7 +526,7 @@ public:
                 const std::vector<BitValue> &ParentFilterBitValues,
                 const FilterChooser &parent)
       : AllInstructions(Insts), Opcodes(IDs), Operands(Ops),
-        FilterBitValues(ParentFilterBitValues), Parent(&parent), BestIndex(-1),
+        FilterBitValues(ParentFilterBitValues), Parent(&parent),
         BitWidth(parent.BitWidth), Emitter(parent.Emitter) {
     doFilter();
   }
@@ -578,11 +575,6 @@ protected:
   /// dumpFilterArray on each filter chooser up to the top level one.
   void dumpStack(raw_ostream &OS, const char *prefix) const;
 
-  Filter &bestFilter() {
-    assert(BestIndex != -1 && "BestIndex not set");
-    return Filters[BestIndex];
-  }
-
   bool PositionFiltered(unsigned Idx) const {
     return FilterBitValues[Idx].isSet();
   }
@@ -625,8 +617,8 @@ protected:
 
   // reportRegion is a helper function for filterProcessor to mark a region as
   // eligible for use as a filter region.
-  void reportRegion(bitAttr_t RA, unsigned StartBit, unsigned BitIndex,
-                    bool AllowMixed);
+  void reportRegion(std::vector<std::unique_ptr<Filter>> &Filters, bitAttr_t RA,
+                    unsigned StartBit, unsigned BitIndex, bool AllowMixed);
 
   // FilterProcessor scans the well-known encoding bits of the instructions and
   // builds up a list of candidate filters.  It chooses the best filter and
@@ -1522,18 +1514,18 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 // Assign a single filter and run with it.  Top level API client can initialize
 // with a single filter to start the filtering process.
 void FilterChooser::runSingleFilter(unsigned startBit, unsigned numBit) {
-  Filters.clear();
-  Filters.emplace_back(*this, startBit, numBit);
-  BestIndex = 0; // Sole Filter instance to choose from.
-  bestFilter().recurse();
+  BestFilter = std::make_unique<Filter>(*this, startBit, numBit);
+  BestFilter->recurse();
 }
 
 // reportRegion is a helper function for filterProcessor to mark a region as
 // eligible for use as a filter region.
-void FilterChooser::reportRegion(bitAttr_t RA, unsigned StartBit,
+void FilterChooser::reportRegion(std::vector<std::unique_ptr<Filter>> &Filters,
+                                 bitAttr_t RA, unsigned StartBit,
                                  unsigned BitIndex, bool AllowMixed) {
   if (AllowMixed ? RA == ATTR_MIXED : RA == ATTR_ALL_SET)
-    Filters.emplace_back(*this, StartBit, BitIndex - StartBit);
+    Filters.push_back(
+        std::make_unique<Filter>(*this, StartBit, BitIndex - StartBit));
 }
 
 // FilterProcessor scans the well-known encoding bits of the instructions and
@@ -1541,9 +1533,6 @@ void FilterChooser::reportRegion(bitAttr_t RA, unsigned StartBit,
 // recursively descends down the decoding tree.
 bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
                                     bool AllowMixed, bool Greedy) {
-  Filters.clear();
-  BestIndex = -1;
-
   assert(Opcodes.size() >= 2 && "Nothing to filter");
 
   // Heuristics.  See also doFilter()'s "Heuristics" comment when num of
@@ -1587,6 +1576,7 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   bitAttr_t RA = ATTR_NONE;
   unsigned StartBit = 0;
 
+  std::vector<std::unique_ptr<Filter>> Filters;
   for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
     bitAttr_t bitAttr = BitAttrs[BitIndex];
 
@@ -1614,17 +1604,17 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
     case ATTR_ALL_SET:
       switch (bitAttr) {
       case ATTR_FILTERED:
-        reportRegion(RA, StartBit, BitIndex, AllowMixed);
+        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         RA = ATTR_NONE;
         break;
       case ATTR_ALL_SET:
         break;
       case ATTR_ALL_UNSET:
-        reportRegion(RA, StartBit, BitIndex, AllowMixed);
+        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         RA = ATTR_NONE;
         break;
       case ATTR_MIXED:
-        reportRegion(RA, StartBit, BitIndex, AllowMixed);
+        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         StartBit = BitIndex;
         RA = ATTR_MIXED;
         break;
@@ -1635,17 +1625,17 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
     case ATTR_MIXED:
       switch (bitAttr) {
       case ATTR_FILTERED:
-        reportRegion(RA, StartBit, BitIndex, AllowMixed);
+        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         StartBit = BitIndex;
         RA = ATTR_NONE;
         break;
       case ATTR_ALL_SET:
-        reportRegion(RA, StartBit, BitIndex, AllowMixed);
+        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         StartBit = BitIndex;
         RA = ATTR_ALL_SET;
         break;
       case ATTR_ALL_UNSET:
-        reportRegion(RA, StartBit, BitIndex, AllowMixed);
+        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         RA = ATTR_NONE;
         break;
       case ATTR_MIXED:
@@ -1668,23 +1658,23 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(RA, StartBit, BitWidth, AllowMixed);
+    reportRegion(Filters, RA, StartBit, BitWidth, AllowMixed);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(RA, StartBit, BitWidth, AllowMixed);
+    reportRegion(Filters, RA, StartBit, BitWidth, AllowMixed);
     break;
   }
 
   // We have finished with the filter processings.  Now it's time to choose
   // the best performing filter.
-  BestIndex = 0;
+  unsigned BestIndex = 0;
   bool AllUseless = true;
   unsigned BestScore = 0;
 
   for (const auto &[Idx, Filter] : enumerate(Filters)) {
-    unsigned Usefulness = Filter.usefulness();
+    unsigned Usefulness = Filter->usefulness();
 
     if (Usefulness)
       AllUseless = false;
@@ -1695,10 +1685,13 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
     }
   }
 
-  if (!AllUseless)
-    bestFilter().recurse();
+  if (AllUseless)
+    return false;
 
-  return !AllUseless;
+  BestFilter = std::move(Filters[BestIndex]);
+  BestFilter->recurse();
+  return true;
+
 } // end of FilterChooser::filterProcessor(bool)
 
 // Decides on the best configuration of filter(s) to use in order to decode
@@ -1779,8 +1772,7 @@ void FilterChooser::doFilter() {
     return;
 
   // If we come to here, the instruction decoding has failed.
-  // Set the BestIndex to -1 to indicate so.
-  BestIndex = -1;
+  assert(!BestFilter);
 }
 
 // emitTableEntries - Emit state machine entries to decode our share of
@@ -1795,12 +1787,11 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   }
 
   // Choose the best filter to do the decodings!
-  if (BestIndex != -1) {
-    const Filter &Best = Filters[BestIndex];
-    if (Best.getNumFiltered() == 1)
-      emitSingletonTableEntry(TableInfo, Best);
+  if (BestFilter) {
+    if (BestFilter->getNumFiltered() == 1)
+      emitSingletonTableEntry(TableInfo, *BestFilter);
     else
-      Best.emitTableEntry(TableInfo);
+      BestFilter->emitTableEntry(TableInfo);
     return;
   }
 
