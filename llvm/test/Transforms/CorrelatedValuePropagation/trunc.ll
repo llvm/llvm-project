@@ -114,7 +114,7 @@ define i1 @trunc_nuw_infere_false_for_icmp_ne_1(i8 %x)  {
 ; CHECK-NEXT:    br i1 [[ICMP]], label %[[IFTRUE:.*]], label %[[IFFALSE:.*]]
 ; CHECK:       [[IFTRUE]]:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    ret i1 [[TRUNC]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IFFALSE]]:
 ; CHECK-NEXT:    ret i1 true
 ;
