@@ -23354,6 +23354,9 @@ std::pair<unsigned, const TargetRegisterClass *>
 RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
                                                   MVT VT) const {
+  if (Subtarget.useRVVForFixedLengthVectors() && VT.isFixedLengthVector() &&
+      useRVVForFixedLengthVectorVT(VT))
+    VT = getContainerForFixedLengthVector(VT);
   // First, see if this is a constraint that directly corresponds to a RISC-V
   // register class.
   if (Constraint.size() == 1) {
