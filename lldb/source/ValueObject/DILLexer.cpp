@@ -88,20 +88,18 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
     return std::nullopt;
   if (IsDigit(body.front()) || (body[0] == '.' && IsDigit(body[1]))) {
     isFloat = dots == 1;
-    char last = body.back();
     tail = tail.drop_front(body.size());
-    if (last == 'e' || last == 'E' || last == 'p' || last == 'P') {
-      if (tail.consume_front("+") || tail.consume_front("-")) {
-        tail = tail.drop_while(IsNumberBodyChar);
-        isFloat = true;
-      }
+    bool isHex = body.contains_insensitive('x');
+    bool hasExp = !isHex && body.contains_insensitive('e');
+    bool hasHexExp = isHex && body.contains_insensitive('p');
+    if (hasExp || hasHexExp) {
+      isFloat = true; // This marks numbers like 0x1p1 and 1e1 as float
+      if (body.ends_with_insensitive("e") || body.ends_with_insensitive("p"))
+        if (tail.consume_front("+") || tail.consume_front("-"))
+          tail = tail.drop_while(IsNumberBodyChar);
     }
     size_t number_length = remainder.size() - tail.size();
     llvm::StringRef number = remainder.take_front(number_length);
-    if (!isFloat) {
-      isFloat = number.contains('p') ||                          // 0x1p1 = 2.0
-                (!number.contains('x') && number.contains('e')); // 1e1 = 10.0
-    }
     remainder = remainder.drop_front(number_length);
     return number;
   }
