@@ -4036,6 +4036,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asinpif16
+  SRCS
+    asinpif16.cpp
+  HDRS
+    ../asinpif16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
   atanhf
   SRCS
     atanhf.cpp
