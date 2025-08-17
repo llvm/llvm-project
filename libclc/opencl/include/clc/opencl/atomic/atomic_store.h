@@ -9,7 +9,7 @@
 #ifndef __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
 #define __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
 
-#define FUNCTION atomic_store
+#define __CLC_FUNCTION atomic_store
 #define __CLC_RETURN_VOID
 
 #define __CLC_BODY <clc/opencl/atomic/atomic_decl.inc>
@@ -19,6 +19,6 @@
 #include <clc/math/gentype.inc>
 
 #undef __CLC_RETURN_VOID
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
