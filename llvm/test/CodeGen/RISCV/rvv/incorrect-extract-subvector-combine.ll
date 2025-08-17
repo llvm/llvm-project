@@ -4,11 +4,11 @@
 ; Previously, an incorrect (extract_subvector (extract_subvector X, C), 0) DAG combine crashed
 ; this snippet.
 
-define <8 x i16> @gsm_encode() {
+define <8 x i16> @gsm_encode(ptr %p) {
 ; CHECK-LABEL: gsm_encode:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 19, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (zero)
+; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 12
 ; CHECK-NEXT:    vmv.x.s a0, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
@@ -29,7 +29,7 @@ define <8 x i16> @gsm_encode() {
 ; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load <19 x i16>, ptr null, align 2
+  %0 = load <19 x i16>, ptr %p, align 2
   %1 = shufflevector <19 x i16> zeroinitializer, <19 x i16> %0, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 28, i32 31, i32 poison, i32 poison>
   %2 = shufflevector <9 x i16> %1, <9 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
   ret <8 x i16> %2
