@@ -58,7 +58,7 @@ STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
-                         cl::desc("Disable all vector combine transforms"));
+    cl::desc("Disable all vector combine transforms"));
 
 static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
