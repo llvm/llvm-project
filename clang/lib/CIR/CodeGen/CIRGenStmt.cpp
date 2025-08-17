@@ -25,6 +25,44 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
+static mlir::LogicalResult emitStmtWithResult(CIRGenFunction &cgf,
+                                              const Stmt *exprResult,
+                                              AggValueSlot slot,
+                                              Address *lastValue) {
+  // We have to special case labels here. They are statements, but when put
+  // at the end of a statement expression, they yield the value of their
+  // subexpression. Handle this by walking through all labels we encounter,
+  // emitting them before we evaluate the subexpr.
+  // Similar issues arise for attributed statements.
+  while (!isa<Expr>(exprResult)) {
+    if (const auto *ls = dyn_cast<LabelStmt>(exprResult)) {
+      if (cgf.emitLabel(*ls->getDecl()).failed())
+        return mlir::failure();
+      exprResult = ls->getSubStmt();
+    } else if (const auto *as = dyn_cast<AttributedStmt>(exprResult)) {
+      // FIXME: Update this if we ever have attributes that affect the
+      // semantics of an expression.
+      exprResult = as->getSubStmt();
+    } else {
+      llvm_unreachable("Unknown value statement");
+    }
+  }
+
+  const Expr *e = cast<Expr>(exprResult);
+  QualType exprTy = e->getType();
+  if (cgf.hasAggregateEvaluationKind(exprTy)) {
+    cgf.emitAggExpr(e, slot);
+  } else {
+    // We can't return an RValue here because there might be cleanups at
+    // the end of the StmtExpr.  Because of that, we have to emit the result
+    // here into a temporary alloca.
+    cgf.emitAnyExprToMem(e, *lastValue, Qualifiers(),
+                         /*IsInit*/ false);
+  }
+
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
     const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
   mlir::LogicalResult result = mlir::success();
@@ -34,37 +72,10 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
          "StmtExprResult");
 
   for (const Stmt *curStmt : s.body()) {
-    // We have to special case labels here. They are statements, but when put
-    // at the end of a statement expression, they yield the value of their
-    // subexpression. Handle this by walking through all labels we encounter,
-    // emitting them before we evaluate the subexpr.
-    // Similar issues arise for attributed statements.
-    if (lastValue && exprResult == curStmt) {
-      while (!isa<Expr>(exprResult)) {
-        if (const auto *ls = dyn_cast<LabelStmt>(exprResult)) {
-          if (emitLabel(*ls->getDecl()).failed())
-            return mlir::failure();
-          exprResult = ls->getSubStmt();
-        } else if (const auto *as = dyn_cast<AttributedStmt>(exprResult)) {
-          // FIXME: Update this if we ever have attributes that affect the
-          // semantics of an expression.
-          exprResult = as->getSubStmt();
-        } else {
-          llvm_unreachable("Unknown value statement");
-        }
-      }
-
-      const Expr *e = cast<Expr>(exprResult);
-      QualType exprTy = e->getType();
-      if (hasAggregateEvaluationKind(exprTy)) {
-        emitAggExpr(e, slot);
-      } else {
-        // We can't return an RValue here because there might be cleanups at
-        // the end of the StmtExpr.  Because of that, we have to emit the result
-        // here into a temporary alloca.
-        emitAnyExprToMem(e, *lastValue, Qualifiers(),
-                         /*IsInit*/ false);
-      }
+    const bool saveResult = lastValue && exprResult == curStmt;
+    if (saveResult) {
+      if (emitStmtWithResult(*this, exprResult, slot, lastValue).failed())
+        result = mlir::failure();
     } else {
       if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
         result = mlir::failure();
