@@ -310,7 +310,7 @@ ParseData(SectionSP data_section_sp) {
       return llvm::createStringError("segment flags overflows uint32_t");
 
     const uint64_t segment_size = data.GetULEB128(&offset);
-    if (flags > std::numeric_limits<uint32_t>::max())
+    if (segment_size > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("segment size overflows uint32_t");
 
     segments.emplace_back(data_section_sp, offset, segment_size, flags);
