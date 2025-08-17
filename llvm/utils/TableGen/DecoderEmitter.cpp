@@ -348,6 +348,24 @@ static const BitsInit &getBitsField(const Record &Def, StringRef FieldName) {
 // Representation of the instruction to work on.
 typedef std::vector<BitValue> insn_t;
 
+/// Extracts a NumBits long field from Insn, starting from StartBit.
+/// Returns the value of the field if all bits are well-known,
+/// otherwise std::nullopt.
+static std::optional<uint64_t>
+fieldFromInsn(const insn_t &Insn, unsigned StartBit, unsigned NumBits) {
+  uint64_t Field = 0;
+
+  for (unsigned BitIndex = 0; BitIndex < NumBits; ++BitIndex) {
+    if (Insn[StartBit + BitIndex] == BitValue::BIT_UNSET)
+      return std::nullopt;
+
+    if (Insn[StartBit + BitIndex] == BitValue::BIT_TRUE)
+      Field = Field | (1ULL << BitIndex);
+  }
+
+  return Field;
+}
+
 namespace {
 
 static constexpr uint64_t NO_FIXED_SEGMENTS_SENTINEL =
@@ -558,15 +576,6 @@ protected:
     return Insn;
   }
 
-  // Populates the field of the insn given the start position and the number of
-  // consecutive bits to scan for.
-  //
-  // Returns a pair of values (indicator, field), where the indicator is false
-  // if there exists any uninitialized bit value in the range and true if all
-  // bits are well-known. The second value is the potentially populated field.
-  std::pair<bool, uint64_t> fieldFromInsn(const insn_t &Insn, unsigned StartBit,
-                                          unsigned NumBits) const;
-
   /// dumpFilterArray - dumpFilterArray prints out debugging info for the given
   /// filter array as a series of chars.
   void dumpFilterArray(raw_ostream &OS, ArrayRef<BitValue> Filter) const;
@@ -663,12 +672,12 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     insn_t Insn = Owner.insnWithID(OpcPair.EncodingID);
 
     // Scans the segment for possibly well-specified encoding bits.
-    auto [Ok, Field] = Owner.fieldFromInsn(Insn, StartBit, NumBits);
+    std::optional<uint64_t> Field = fieldFromInsn(Insn, StartBit, NumBits);
 
-    if (Ok) {
+    if (Field) {
       // The encoding bits are well-known.  Lets add the uid of the
       // instruction into the bucket keyed off the constant field value.
-      FilteredInstructions[Field].push_back(OpcPair);
+      FilteredInstructions[*Field].push_back(OpcPair);
       ++NumFiltered;
     } else {
       // Some of the encoding bit(s) are unspecified.  This contributes to
@@ -1097,28 +1106,6 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "  }\n";
   }
   OS << "}\n";
-}
-
-// Populates the field of the insn given the start position and the number of
-// consecutive bits to scan for.
-//
-// Returns a pair of values (indicator, field), where the indicator is false
-// if there exists any uninitialized bit value in the range and true if all
-// bits are well-known. The second value is the potentially populated field.
-std::pair<bool, uint64_t> FilterChooser::fieldFromInsn(const insn_t &Insn,
-                                                       unsigned StartBit,
-                                                       unsigned NumBits) const {
-  uint64_t Field = 0;
-
-  for (unsigned i = 0; i < NumBits; ++i) {
-    if (Insn[StartBit + i] == BitValue::BIT_UNSET)
-      return {false, Field};
-
-    if (Insn[StartBit + i] == BitValue::BIT_TRUE)
-      Field = Field | (1ULL << i);
-  }
-
-  return {true, Field};
 }
 
 /// dumpFilterArray - dumpFilterArray prints out debugging info for the given
