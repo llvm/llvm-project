@@ -5146,7 +5146,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->emitCheckPseudoDtor(E))
       return false;
     const Expr *Base = PD->getBase();
-    if (!Base->isGLValue())
+    // E.g. `using T = int; 0.~T();`.
+    if (OptPrimType BaseT = classify(Base); !BaseT || BaseT != PT_Ptr)
       return this->discard(Base);
     if (!this->visit(Base))
       return false;
