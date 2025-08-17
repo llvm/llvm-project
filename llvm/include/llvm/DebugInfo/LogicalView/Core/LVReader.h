@@ -16,6 +16,7 @@
 
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -40,9 +41,9 @@ public:
   LVSplitContext &operator=(const LVSplitContext &) = delete;
   ~LVSplitContext() = default;
 
-  Error createSplitFolder(StringRef Where);
-  std::error_code open(std::string Name, std::string Extension,
-                       raw_ostream &OS);
+  LLVM_ABI Error createSplitFolder(StringRef Where);
+  LLVM_ABI std::error_code open(std::string Name, std::string Extension,
+                                raw_ostream &OS);
   void close() {
     if (OutputFile) {
       OutputFile->os().close();
@@ -56,8 +57,8 @@ public:
 
 /// The logical reader owns of all the logical elements created during
 /// the debug information parsing. For its creation it uses a specific
-///  bump allocator for each type of logical element.
-class LVReader {
+/// bump allocator for each type of logical element.
+class LLVM_ABI LVReader {
   LVBinaryType BinaryType;
 
   // Context used by '--output=split' command line option.
@@ -104,6 +105,7 @@ class LVReader {
   LV_OBJECT_ALLOCATOR(ScopeFunction)
   LV_OBJECT_ALLOCATOR(ScopeFunctionInlined)
   LV_OBJECT_ALLOCATOR(ScopeFunctionType)
+  LV_OBJECT_ALLOCATOR(ScopeModule)
   LV_OBJECT_ALLOCATOR(ScopeNamespace)
   LV_OBJECT_ALLOCATOR(ScopeRoot)
   LV_OBJECT_ALLOCATOR(ScopeTemplatePack)
@@ -121,7 +123,24 @@ class LVReader {
 
 #undef LV_OBJECT_ALLOCATOR
 
+  // Scopes with ranges for current compile unit. It is used to find a line
+  // giving its exact or closest address. To support comdat functions, all
+  // addresses for the same section are recorded in the same map.
+  using LVSectionRanges = std::map<LVSectionIndex, std::unique_ptr<LVRange>>;
+  LVSectionRanges SectionRanges;
+
 protected:
+  // Current elements during the processing of a DIE/MDNode.
+  LVElement *CurrentElement = nullptr;
+  LVScope *CurrentScope = nullptr;
+  LVSymbol *CurrentSymbol = nullptr;
+  LVType *CurrentType = nullptr;
+  LVLine *CurrentLine = nullptr;
+  LVOffset CurrentOffset = 0;
+
+  // Address ranges collected for current DIE/MDNode/AST Node.
+  std::vector<LVAddressRange> CurrentRanges;
+
   LVScopeRoot *Root = nullptr;
   std::string InputFilename;
   std::string FileFormatName;
@@ -132,10 +151,17 @@ protected:
   // Only for ELF format. The CodeView is handled in a different way.
   LVSectionIndex DotTextSectionIndex = UndefinedSectionIndex;
 
+  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope);
+  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope,
+                       LVAddress LowerAddress, LVAddress UpperAddress);
+  LVRange *getSectionRanges(LVSectionIndex SectionIndex);
+
   // Record Compilation Unit entry.
   void addCompileUnitOffset(LVOffset Offset, LVScopeCompileUnit *CompileUnit) {
     CompileUnits.emplace(Offset, CompileUnit);
   }
+
+  LVElement *createElement(dwarf::Tag Tag);
 
   // Create the Scope Root.
   virtual Error createScopes() {
@@ -210,6 +236,7 @@ public:
   LV_CREATE_OBJECT(ScopeFunction)
   LV_CREATE_OBJECT(ScopeFunctionInlined)
   LV_CREATE_OBJECT(ScopeFunctionType)
+  LV_CREATE_OBJECT(ScopeModule)
   LV_CREATE_OBJECT(ScopeNamespace)
   LV_CREATE_OBJECT(ScopeRoot)
   LV_CREATE_OBJECT(ScopeTemplatePack)

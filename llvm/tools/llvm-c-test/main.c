@@ -101,6 +101,8 @@ int main(int argc, char **argv) {
     return llvm_replace_md_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--is-a-value-as-metadata")) {
     return llvm_is_a_value_as_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--add-globaldebuginfo")) {
+    return llvm_add_globaldebuginfo();
   } else if (argc == 2 && !strcmp(argv[1], "--test-function-attributes")) {
     return llvm_test_function_attributes();
   } else if (argc == 2 && !strcmp(argv[1], "--test-callsite-attributes")) {
@@ -109,8 +111,7 @@ int main(int argc, char **argv) {
     return llvm_echo();
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
     return llvm_test_diagnostic_handler();
-  } else if (argc == 2 &&
-             !strcmp(argv[1], "--test-dibuilder-debuginfo-format")) {
+  } else if (argc == 2 && !strcmp(argv[1], "--test-dibuilder")) {
     return llvm_test_dibuilder();
   } else {
     print_usage();

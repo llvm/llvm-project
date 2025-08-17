@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
@@ -23,12 +22,10 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
@@ -42,9 +39,7 @@ class X86ArgumentStackSlotPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit X86ArgumentStackSlotPass() : MachineFunctionPass(ID) {
-    initializeX86ArgumentStackSlotPassPass(*PassRegistry::getPassRegistry());
-  }
+  explicit X86ArgumentStackSlotPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -132,7 +127,7 @@ bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
           if (!MO.isReg())
             continue;
           Register Reg = MO.getReg();
-          if (!Register::isPhysicalRegister(Reg))
+          if (!Reg.isPhysical())
             continue;
           if (TRI->isSuperOrSubRegisterEq(BasePtr, Reg))
             return true;

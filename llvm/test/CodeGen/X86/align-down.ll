@@ -82,25 +82,40 @@ define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 ; Extra use tests
 
 define i32 @t3_extrause0(i32 %ptr, i32 %alignment, ptr %mask_storage) nounwind {
-; X86-LABEL: t3_extrause0:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal -1(%eax), %edx
-; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    negl %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
+; NOBMI-X86-LABEL: t3_extrause0:
+; NOBMI-X86:       # %bb.0:
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    decl %eax
+; NOBMI-X86-NEXT:    movl %eax, (%ecx)
+; NOBMI-X86-NEXT:    notl %eax
+; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; NOBMI-X86-NEXT:    retl
 ;
-; X64-LABEL: t3_extrause0:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    leal -1(%rax), %ecx
-; X64-NEXT:    movl %ecx, (%rdx)
-; X64-NEXT:    negl %eax
-; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    retq
+; BMI-X86-LABEL: t3_extrause0:
+; BMI-X86:       # %bb.0:
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI-X86-NEXT:    decl %ecx
+; BMI-X86-NEXT:    movl %ecx, (%eax)
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %ecx, %eax
+; BMI-X86-NEXT:    retl
+;
+; NOBMI-X64-LABEL: t3_extrause0:
+; NOBMI-X64:       # %bb.0:
+; NOBMI-X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; NOBMI-X64-NEXT:    leal -1(%rsi), %eax
+; NOBMI-X64-NEXT:    movl %eax, (%rdx)
+; NOBMI-X64-NEXT:    notl %eax
+; NOBMI-X64-NEXT:    andl %edi, %eax
+; NOBMI-X64-NEXT:    retq
+;
+; BMI-X64-LABEL: t3_extrause0:
+; BMI-X64:       # %bb.0:
+; BMI-X64-NEXT:    decl %esi
+; BMI-X64-NEXT:    movl %esi, (%rdx)
+; BMI-X64-NEXT:    andnl %edi, %esi, %eax
+; BMI-X64-NEXT:    retq
   %mask = add i32 %alignment, -1
   store i32 %mask, ptr %mask_storage
   %bias = and i32 %ptr, %mask

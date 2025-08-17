@@ -4,8 +4,8 @@
 Implementation-defined behavior
 ===============================
 
-Contains the implementation details of the implementation-defined behavior in
-libc++. Implementation-defined is mandated to be documented by the Standard.
+This document contains the implementation details of the implementation-defined behavior in libc++.
+The C++ standard mandates that implementation-defined behavior is documented.
 
 .. note:
    This page is far from complete.
@@ -17,7 +17,7 @@ Implementation-defined behavior
 Updating the Time Zone Database
 -------------------------------
 
-The Standard allows implementations to automatically update the
+The C++ standard allows implementations to automatically update the
 *remote time zone database*. Libc++ opts not to do that. Instead calling
 
  - ``std::chrono::remote_version()`` will update the version information of the
@@ -32,7 +32,7 @@ give them full control over the process.
 `[ostream.formatted.print]/3 <http://eel.is/c++draft/ostream.formatted.print#3>`_ A terminal capable of displaying Unicode
 --------------------------------------------------------------------------------------------------------------------------
 
-The Standard specifies that the manner in which a stream is determined to refer
+The C++ standard specifies that the manner in which a stream is determined to refer
 to a terminal capable of displaying Unicode is implementation-defined. This is
 used for ``std::print`` and similar functions taking an ``ostream&`` argument.
 
@@ -50,6 +50,25 @@ Libc++ determines that a stream is Unicode-capable terminal by:
   stream, string_view fmt, format_args args);
   <http://eel.is/c++draft/print.fun#7>`_. This function is used for other
   ``std::print`` overloads that don't take an ``ostream&`` argument.
+
+`[sf.cmath] <https://wg21.link/sf.cmath>`_ Mathematical Special Functions: Large indices
+----------------------------------------------------------------------------------------
+
+Most functions within the Mathematical Special Functions section contain integral indices.
+The C++ standard specifies the result for larger indices as implementation-defined.
+Libc++ pursuits reasonable results by choosing the same formulas as for indices below that threshold.
+E.g.,
+
+- ``std::hermite(unsigned n, T x)`` for ``n >= 128``
+
+
+`[stringbuf.cons] <http://eel.is/c++draft/stringbuf.cons>`_ Whether sequence pointers are initialized to null pointers
+----------------------------------------------------------------------------------------------------------------------
+
+Libc++ does not initialize the pointers to null pointers. It resizes the buffer
+to its capacity and uses that size. This means the SSO buffer of
+``std::string`` is used as initial output buffer.
+
 
 Listed in the index of implementation-defined behavior
 ======================================================

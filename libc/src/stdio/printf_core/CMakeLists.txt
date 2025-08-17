@@ -10,8 +10,23 @@ endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE)
   list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE")
 endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_NO_SPECIALIZE_LD)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_FLOAT320")
+endif()
 if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
+endif()
+if(LIBC_CONF_PRINTF_RUNTIME_DISPATCH)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_RUNTIME_DISPATCH")
 endif()
 if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
@@ -29,6 +44,7 @@ add_header_library(
   HDRS
     core_structs.h
   DEPENDS
+    libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fp_bits
 )
@@ -50,10 +66,8 @@ add_header_library(
     libc.src.__support.common
 )
 
-add_object_library(
+add_header_library(
   writer
-  SRCS
-    writer.cpp
   HDRS
     writer.h
   DEPENDS
@@ -64,10 +78,8 @@ add_object_library(
     libc.src.string.memory_utils.inline_memset
 )
 
-add_object_library(
+add_header_library(
   converter
-  SRCS
-    converter.cpp
   HDRS
     converter.h
     converter_atlas.h
@@ -81,10 +93,12 @@ add_object_library(
     float_hex_converter.h
     float_dec_converter.h
     fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
+    strerror_converter.h
   DEPENDS
     .core_structs
     .printf_config
     .writer
+    libc.include.inttypes
     libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.limits
@@ -97,13 +111,11 @@ add_object_library(
     libc.src.__support.integer_to_string
     libc.src.__support.libc_assert
     libc.src.__support.uint128
+    libc.src.__support.StringUtil.error_to_string
 )
 
-
-add_object_library(
+add_header_library(
   printf_main
-  SRCS
-    printf_main.cpp
   HDRS
     printf_main.h
   DEPENDS
@@ -112,6 +124,19 @@ add_object_library(
     .writer
     .core_structs
     libc.src.__support.arg_list
+)
+
+add_header_library(
+  vasprintf_internal
+  HDRS
+    vasprintf_internal.h
+  DEPENDS
+    libc.hdr.func.malloc
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
@@ -125,7 +150,6 @@ add_header_library(
   HDRS
     vfprintf_internal.h
   DEPENDS
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main

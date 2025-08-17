@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/cospif.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/src/math/sdcomp26094.h"
@@ -19,7 +19,7 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -38,8 +38,10 @@ TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcCospifTest, SpecificBitPatterns) {
-  constexpr int N = 36;
+  constexpr int N = 38;
   constexpr uint32_t INPUTS[N] = {
+      0x3f00'0000U, // x = 0.5
+      0x461d'd600U, // x = 10101.5
       0x3f06'0a92U, // x = pi/6
       0x3f3a'dc51U, // x = 0x1.75b8a2p-1f
       0x3f49'0fdbU, // x = pi/4
@@ -98,7 +100,7 @@ TEST_F(LlvmLibcCospifTest, SmallValues) {
                                  LIBC_NAMESPACE::cospif(x), 0.5);
 }
 
-// SDCOMP-26094: check sinfpi in the cases for which the range reducer
+// SDCOMP-26094: check cospif in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST_F(LlvmLibcCospifTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
@@ -108,13 +110,12 @@ TEST_F(LlvmLibcCospifTest, SDCOMP_26094) {
   }
 }
 
-// sinpi(-n) = -0.0
-// sinpi(+n) = +0.0
+// sinpi(+n + 0.5) = sinpi(-n + 0.5) = +0.0
 TEST_F(LlvmLibcCospifTest, SignedZeros) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(100.5f));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::cospif(-100.5f));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(-100.5f));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(45678.5f));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::cospif(-45678.5f));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(-45678.5f));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(8000000.5f));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::cospif(-8000000.5f));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(-8000000.5f));
 }

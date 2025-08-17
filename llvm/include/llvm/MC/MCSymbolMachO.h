@@ -44,7 +44,10 @@ class MCSymbolMachO : public MCSymbol {
 
 public:
   MCSymbolMachO(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindMachO, Name, isTemporary) {}
+      : MCSymbol(Name, isTemporary) {}
+
+  bool isPrivateExtern() const { return IsPrivateExtern; }
+  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
 
   // Reference type methods.
 
@@ -146,8 +149,6 @@ public:
 
     return Flags;
   }
-
-  static bool classof(const MCSymbol *S) { return S->isMachO(); }
 };
 }
 

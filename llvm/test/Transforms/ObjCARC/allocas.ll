@@ -109,16 +109,16 @@ entry:
 }
 
 
-; CHECK: define void @test1d(ptr %x)
+; CHECK: define void @test1d(ptr %x, i1 %arg)
 ; CHECK: @llvm.objc.retain(ptr %x)
 ; CHECK: @llvm.objc.retain(ptr %x)
 ; CHECK: @llvm.objc.release(ptr %y)
 ; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1d(ptr %x) {
+define void @test1d(ptr %x, i1 %arg) {
 entry:
-  br i1 undef, label %use_allocaA, label %use_allocaB
+  br i1 %arg, label %use_allocaA, label %use_allocaB
 
 use_allocaA:
   %allocaA = alloca ptr
@@ -141,16 +141,16 @@ exit:
   ret void
 }
 
-; CHECK: define void @test1e(ptr %x)
+; CHECK: define void @test1e(ptr %x, i1 %arg)
 ; CHECK: @llvm.objc.retain(ptr %x)
 ; CHECK: @llvm.objc.retain(ptr %x)
 ; CHECK: @llvm.objc.release(ptr %y)
 ; CHECK: @llvm.objc.release(ptr %x)
 ; CHECK: ret void
 ; CHECK: }
-define void @test1e(ptr %x) {
+define void @test1e(ptr %x, i1 %arg) {
 entry:
-  br i1 undef, label %use_allocaA, label %use_allocaB
+  br i1 %arg, label %use_allocaA, label %use_allocaB
 
 use_allocaA:
   %allocaA = alloca ptr, i32 4

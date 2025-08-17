@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -27,7 +28,7 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
 extern cl::opt<bool> Lite;
 
-cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
+static cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
     "name-similarity-function-matching-threshold",
     cl::desc("Match functions using namespace and edit distance"), cl::init(0),
     cl::Hidden, cl::cat(BoltOptCategory));
@@ -37,18 +38,87 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchProfileWithFunctionHash("match-profile-with-function-hash",
                                  cl::desc("Match profile with function hash"),
                                  cl::Hidden, cl::cat(BoltOptCategory));
+static llvm::cl::opt<bool>
+    MatchWithCallGraph("match-with-call-graph",
+                       cl::desc("Match functions with call graph"), cl::Hidden,
+                       cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
+
+extern llvm::cl::opt<bool> StaleMatchingWithPseudoProbes;
 } // namespace opts
 
 namespace llvm {
 namespace bolt {
+
+YAMLProfileReader::CallGraphMatcher::CallGraphMatcher(
+    BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP,
+    ProfileLookupMap &IdToYAMLBF) {
+  constructBFCG(BC, YamlBP);
+  constructYAMLFCG(YamlBP, IdToYAMLBF);
+  computeBFNeighborHashes(BC);
+}
+
+void YAMLProfileReader::CallGraphMatcher::constructBFCG(
+    BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP) {
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    for (const BinaryBasicBlock &BB : BF->blocks()) {
+      for (const MCInst &Instr : BB) {
+        if (!BC.MIB->isCall(Instr))
+          continue;
+        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+        if (!CallSymbol)
+          continue;
+        BinaryData *BD = BC.getBinaryDataByName(CallSymbol->getName());
+        if (!BD)
+          continue;
+        BinaryFunction *CalleeBF = BC.getFunctionForSymbol(BD->getSymbol());
+        if (!CalleeBF)
+          continue;
+
+        BFAdjacencyMap[CalleeBF].insert(BF);
+        BFAdjacencyMap[BF].insert(CalleeBF);
+      }
+    }
+  }
+}
+
+void YAMLProfileReader::CallGraphMatcher::computeBFNeighborHashes(
+    BinaryContext &BC) {
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    auto It = BFAdjacencyMap.find(BF);
+    if (It == BFAdjacencyMap.end())
+      continue;
+    auto &AdjacentBFs = It->second;
+    std::string HashStr;
+    for (BinaryFunction *BF : AdjacentBFs)
+      HashStr += BF->getOneName();
+    uint64_t Hash = std::hash<std::string>{}(HashStr);
+    NeighborHashToBFs[Hash].push_back(BF);
+  }
+}
+
+void YAMLProfileReader::CallGraphMatcher::constructYAMLFCG(
+    yaml::bolt::BinaryProfile &YamlBP, ProfileLookupMap &IdToYAMLBF) {
+
+  for (auto &CallerYamlBF : YamlBP.Functions) {
+    for (auto &YamlBB : CallerYamlBF.Blocks) {
+      for (auto &CallSite : YamlBB.CallSites) {
+        auto IdToYAMLBFIt = IdToYAMLBF.find(CallSite.DestId);
+        if (IdToYAMLBFIt == IdToYAMLBF.end())
+          continue;
+        YamlBFAdjacencyMap[&CallerYamlBF].insert(IdToYAMLBFIt->second);
+        YamlBFAdjacencyMap[IdToYAMLBFIt->second].insert(&CallerYamlBF);
+      }
+    }
+  }
+}
 
 bool YAMLProfileReader::isYAML(const StringRef Filename) {
   if (auto MB = MemoryBuffer::getFileOrSTDIN(Filename)) {
@@ -106,12 +176,13 @@ bool YAMLProfileReader::parseFunctionProfile(
   uint64_t FunctionExecutionCount = 0;
 
   BF.setExecutionCount(YamlBF.ExecCount);
+  BF.setExternEntryCount(YamlBF.ExternEntryCount);
 
   uint64_t FuncRawBranchCount = 0;
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
       FuncRawBranchCount += YamlSI.Count;
-  BF.setRawBranchCount(FuncRawBranchCount);
+  BF.setRawSampleCount(FuncRawBranchCount);
 
   if (BF.empty())
     return true;
@@ -151,7 +222,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 
     // Basic samples profile (without LBR) does not have branches information
     // and needs a special processing.
-    if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+    if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC) {
       if (!YamlBB.EventCount) {
         BB.setExecutionCount(0);
         continue;
@@ -171,9 +242,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     BB.setExecutionCount(YamlBB.ExecCount);
 
     for (const yaml::bolt::CallSiteInfo &YamlCSI : YamlBB.CallSites) {
-      BinaryFunction *Callee = YamlCSI.DestId < YamlProfileToFunction.size()
-                                   ? YamlProfileToFunction[YamlCSI.DestId]
-                                   : nullptr;
+      BinaryFunction *Callee = YamlProfileToFunction.lookup(YamlCSI.DestId);
       bool IsFunction = Callee ? true : false;
       MCSymbol *CalleeSymbol = nullptr;
       if (IsFunction)
@@ -270,7 +339,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
+  if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC)
     BF.setExecutionCount(FunctionExecutionCount);
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
@@ -284,8 +353,13 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (YamlBF.NumBasicBlocks != BF.size())
       ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
 
-    if (opts::InferStaleProfile && inferStaleProfile(BF, YamlBF))
-      ProfileMatched = true;
+    if (!opts::InferStaleProfile)
+      return false;
+    ArrayRef<ProbeMatchSpec> ProbeMatchSpecs;
+    auto BFIt = BFToProbeMatchSpecs.find(&BF);
+    if (BFIt != BFToProbeMatchSpecs.end())
+      ProbeMatchSpecs = BFIt->second;
+    ProfileMatched = inferStaleProfile(BF, YamlBF, ProbeMatchSpecs);
   }
   if (ProfileMatched)
     BF.markProfiled(YamlBP.Header.Flags);
@@ -301,6 +375,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
     return errorCodeToError(EC);
   }
   yaml::Input YamlInput(MB.get()->getBuffer());
+  YamlInput.setAllowUnknownKeys(true);
 
   // Consume YAML file.
   YamlInput >> YamlBP;
@@ -350,7 +425,7 @@ bool YAMLProfileReader::profileMatches(
 }
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
-  if (opts::MatchProfileWithFunctionHash)
+  if (opts::MatchProfileWithFunctionHash || opts::MatchWithCallGraph)
     return true;
   for (StringRef Name : BF.getNames())
     if (ProfileFunctionNames.contains(Name))
@@ -446,6 +521,174 @@ size_t YAMLProfileReader::matchWithLTOCommonName() {
   return MatchedWithLTOCommonName;
 }
 
+size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
+  if (!opts::MatchWithCallGraph)
+    return 0;
+
+  size_t MatchedWithCallGraph = 0;
+  CallGraphMatcher CGMatcher(BC, YamlBP, IdToYamLBF);
+
+  ItaniumPartialDemangler Demangler;
+  auto GetBaseName = [&](std::string &FunctionName) {
+    if (Demangler.partialDemangle(FunctionName.c_str()))
+      return std::string("");
+    size_t BufferSize = 1;
+    char *Buffer = static_cast<char *>(std::malloc(BufferSize));
+    char *BaseName = Demangler.getFunctionBaseName(Buffer, &BufferSize);
+    if (!BaseName) {
+      std::free(Buffer);
+      return std::string("");
+    }
+    if (Buffer != BaseName)
+      Buffer = BaseName;
+    std::string BaseNameStr(Buffer, BufferSize);
+    std::free(Buffer);
+    return BaseNameStr;
+  };
+
+  // Matches YAMLBF to BFs with neighbor hashes.
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
+    auto AdjacentYamlBFsOpt = CGMatcher.getAdjacentYamlBFs(YamlBF);
+    if (!AdjacentYamlBFsOpt)
+      continue;
+    std::set<yaml::bolt::BinaryFunctionProfile *> AdjacentYamlBFs =
+        AdjacentYamlBFsOpt.value();
+    std::string AdjacentYamlBFsHashStr;
+    for (auto *AdjacentYamlBF : AdjacentYamlBFs)
+      AdjacentYamlBFsHashStr += AdjacentYamlBF->Name;
+    uint64_t Hash = std::hash<std::string>{}(AdjacentYamlBFsHashStr);
+    auto BFsWithSameHashOpt = CGMatcher.getBFsWithNeighborHash(Hash);
+    if (!BFsWithSameHashOpt)
+      continue;
+    std::vector<BinaryFunction *> BFsWithSameHash = BFsWithSameHashOpt.value();
+    // Finds the binary function with the longest common prefix to the profiled
+    // function and matches.
+    BinaryFunction *ClosestBF = nullptr;
+    size_t LCP = 0;
+    std::string YamlBFBaseName = GetBaseName(YamlBF.Name);
+    for (BinaryFunction *BF : BFsWithSameHash) {
+      if (ProfiledFunctions.count(BF))
+        continue;
+      std::string BFName = std::string(BF->getOneName());
+      std::string BFBaseName = GetBaseName(BFName);
+      size_t PrefixLength = 0;
+      size_t N = std::min(YamlBFBaseName.size(), BFBaseName.size());
+      for (size_t I = 0; I < N; ++I) {
+        if (YamlBFBaseName[I] != BFBaseName[I])
+          break;
+        ++PrefixLength;
+      }
+      if (PrefixLength >= LCP) {
+        LCP = PrefixLength;
+        ClosestBF = BF;
+      }
+    }
+    if (ClosestBF) {
+      matchProfileToFunction(YamlBF, *ClosestBF);
+      ++MatchedWithCallGraph;
+    }
+  }
+
+  return MatchedWithCallGraph;
+}
+
+size_t YAMLProfileReader::InlineTreeNodeMapTy::matchInlineTrees(
+    const MCPseudoProbeDecoder &Decoder,
+    const std::vector<yaml::bolt::InlineTreeNode> &DecodedInlineTree,
+    const MCDecodedPseudoProbeInlineTree *Root) {
+  // Match inline tree nodes by GUID, checksum, parent, and call site.
+  for (const auto &[InlineTreeNodeId, InlineTreeNode] :
+       llvm::enumerate(DecodedInlineTree)) {
+    uint64_t GUID = InlineTreeNode.GUID;
+    uint64_t Hash = InlineTreeNode.Hash;
+    uint32_t ParentId = InlineTreeNode.ParentIndexDelta;
+    uint32_t CallSiteProbe = InlineTreeNode.CallSiteProbe;
+    const MCDecodedPseudoProbeInlineTree *Cur = nullptr;
+    if (!InlineTreeNodeId) {
+      Cur = Root;
+    } else if (const MCDecodedPseudoProbeInlineTree *Parent =
+                   getInlineTreeNode(ParentId)) {
+      for (const MCDecodedPseudoProbeInlineTree &Child :
+           Parent->getChildren()) {
+        if (Child.Guid == GUID) {
+          if (std::get<1>(Child.getInlineSite()) == CallSiteProbe)
+            Cur = &Child;
+          break;
+        }
+      }
+    }
+    // Don't match nodes if the profile is stale (mismatching binary FuncHash
+    // and YAML Hash)
+    if (Cur && Decoder.getFuncDescForGUID(Cur->Guid)->FuncHash == Hash)
+      mapInlineTreeNode(InlineTreeNodeId, Cur);
+  }
+  return Map.size();
+}
+
+// Decode index deltas and indirection through \p YamlPD. Return modified copy
+// of \p YamlInlineTree with populated decoded fields (GUID, Hash, ParentIndex).
+static std::vector<yaml::bolt::InlineTreeNode>
+decodeYamlInlineTree(const yaml::bolt::ProfilePseudoProbeDesc &YamlPD,
+                     std::vector<yaml::bolt::InlineTreeNode> YamlInlineTree) {
+  uint32_t ParentId = 0;
+  uint32_t PrevGUIDIdx = 0;
+  for (yaml::bolt::InlineTreeNode &InlineTreeNode : YamlInlineTree) {
+    uint32_t GUIDIdx = InlineTreeNode.GUIDIndex;
+    if (GUIDIdx != UINT32_MAX)
+      PrevGUIDIdx = GUIDIdx;
+    else
+      GUIDIdx = PrevGUIDIdx;
+    uint32_t HashIdx = YamlPD.GUIDHashIdx[GUIDIdx];
+    ParentId += InlineTreeNode.ParentIndexDelta;
+    InlineTreeNode.GUID = YamlPD.GUID[GUIDIdx];
+    InlineTreeNode.Hash = YamlPD.Hash[HashIdx];
+    InlineTreeNode.ParentIndexDelta = ParentId;
+  }
+  return YamlInlineTree;
+}
+
+size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
+  if (!opts::StaleMatchingWithPseudoProbes)
+    return 0;
+
+  const MCPseudoProbeDecoder *Decoder = BC.getPseudoProbeDecoder();
+  const yaml::bolt::ProfilePseudoProbeDesc &YamlPD = YamlBP.PseudoProbeDesc;
+
+  // Set existing BF->YamlBF match into ProbeMatchSpecs for (local) probe
+  // matching.
+  assert(Decoder &&
+         "If pseudo probes are in use, pseudo probe decoder should exist");
+  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
+    // BF is preliminary name-matched function to YamlBF
+    // MatchedBF is final matched function
+    BinaryFunction *MatchedBF = YamlProfileToFunction.lookup(YamlBF.Id);
+    if (!BF)
+      BF = MatchedBF;
+    if (!BF)
+      continue;
+    uint64_t GUID = BF->getGUID();
+    if (!GUID)
+      continue;
+    auto It = TopLevelGUIDToInlineTree.find(GUID);
+    if (It == TopLevelGUIDToInlineTree.end())
+      continue;
+    const MCDecodedPseudoProbeInlineTree *Node = It->second;
+    assert(Node && "Malformed TopLevelGUIDToInlineTree");
+    auto &MatchSpecs = BFToProbeMatchSpecs[BF];
+    auto &InlineTreeMap =
+        MatchSpecs.emplace_back(InlineTreeNodeMapTy(), YamlBF).first;
+    std::vector<yaml::bolt::InlineTreeNode> ProfileInlineTree =
+        decodeYamlInlineTree(YamlPD, YamlBF.InlineTree);
+    // Erase unsuccessful match
+    if (!InlineTreeMap.matchInlineTrees(*Decoder, ProfileInlineTree, Node))
+      MatchSpecs.pop_back();
+  }
+
+  return 0;
+}
+
 size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
   if (opts::NameSimilarityFunctionMatchingThreshold == 0)
     return 0;
@@ -502,11 +745,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     // equal number of blocks.
     if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
       continue;
-    auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
-    if (NamespaceToBFsIt == NamespaceToBFs.end())
-      NamespaceToBFs[Namespace] = {BF};
-    else
-      NamespaceToBFsIt->second.push_back(BF);
+    NamespaceToBFs[Namespace].push_back(BF);
   }
 
   // Iterates through all profiled functions and binary functions belonging to
@@ -566,7 +805,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       break;
     }
   }
-  YamlProfileToFunction.resize(YamlBP.Functions.size() + 1);
+  YamlProfileToFunction.reserve(YamlBP.Functions.size());
 
   // Computes hash for binary functions.
   if (opts::MatchProfileWithFunctionHash) {
@@ -581,10 +820,26 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     }
   }
 
+  if (opts::StaleMatchingWithPseudoProbes) {
+    const MCPseudoProbeDecoder *Decoder = BC.getPseudoProbeDecoder();
+    assert(Decoder &&
+           "If pseudo probes are in use, pseudo probe decoder should exist");
+    for (const MCDecodedPseudoProbeInlineTree &TopLev :
+         Decoder->getDummyInlineRoot().getChildren())
+      TopLevelGUIDToInlineTree[TopLev.Guid] = &TopLev;
+  }
+
+  // Map profiled function ids to names.
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
+    IdToYamLBF[YamlBF.Id] = &YamlBF;
+
   const size_t MatchedWithExactName = matchWithExactName();
   const size_t MatchedWithHash = matchWithHash(BC);
   const size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
+  const size_t MatchedWithCallGraph = matchWithCallGraph(BC);
   const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
+  [[maybe_unused]] const size_t MatchedWithPseudoProbes =
+      matchWithPseudoProbes(BC);
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
@@ -603,6 +858,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
            << " functions with hash\n";
     outs() << "BOLT-INFO: matched " << MatchedWithLTOCommonName
            << " functions with matching LTO common names\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithCallGraph
+           << " functions with call graph\n";
     outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
            << " functions with similar names\n";
   }
@@ -610,15 +867,9 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
   NormalizeByCalls = usesEvent("branches");
-
   uint64_t NumUnused = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
-    if (YamlBF.Id >= YamlProfileToFunction.size()) {
-      // Such profile was ignored.
-      ++NumUnused;
-      continue;
-    }
-    if (BinaryFunction *BF = YamlProfileToFunction[YamlBF.Id])
+    if (BinaryFunction *BF = YamlProfileToFunction.lookup(YamlBF.Id))
       parseFunctionProfile(*BF, YamlBF);
     else
       ++NumUnused;
@@ -626,7 +877,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   BC.setNumUnusedProfiledObjects(NumUnused);
 
-  if (opts::Lite && opts::MatchProfileWithFunctionHash) {
+  if (opts::Lite &&
+      (opts::MatchProfileWithFunctionHash || opts::MatchWithCallGraph)) {
     for (BinaryFunction *BF : BC.getAllBinaryFunctions())
       if (!BF->hasProfile())
         BF->setIgnored();
@@ -636,7 +888,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::usesEvent(StringRef Name) const {
-  return YamlBP.Header.EventNames.find(std::string(Name)) != StringRef::npos;
+  return StringRef(YamlBP.Header.EventNames).contains(Name);
 }
 
 } // end namespace bolt

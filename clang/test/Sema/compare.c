@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtautological-constant-in-range-compare %s -Wno-unreachable-code
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtype-limits %s -Wno-unreachable-code
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtautological-constant-in-range-compare %s -Wno-unreachable-code -DTEST=1
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtype-limits %s -Wno-unreachable-code -DTEST=2
 
 int test(char *C) { // nothing here should warn.
   return C != ((void*)0);
@@ -419,3 +419,65 @@ void pr36008(enum PR36008EnumTest lhs) {
   if (x == y) x = y; // no warning
   if (y == x) y = x; // no warning
 }
+
+int test13(unsigned a, int b) {
+  return a > ~(95 != b); // expected-warning {{comparison of integers of different signs}}
+}
+
+int test14(unsigned a, unsigned b) {
+  return a > ~b; // no-warning
+}
+
+int test15(unsigned a, int b) {
+  return a > -(95 != b); // expected-warning {{comparison of integers of different signs}}
+}
+
+int test16(unsigned a, unsigned b) {
+  return a > -b; // no-warning
+}
+
+int test17(int a, unsigned b) {
+  return a > -(-b); // expected-warning {{comparison of integers of different signs}}
+}
+
+int test18(int a) {
+  return a == -(-2147483648); // expected-warning {{result of comparison of constant 2147483648 with expression of type 'int' is always false}}
+}
+
+int test19(int n) {
+  return -(n & 15) <= -15; // no-warning
+}
+
+#if TEST == 1
+int test20(int n) {
+  return -(n & 15) <= -17; // expected-warning {{result of comparison of 5-bit signed value <= -17 is always false}}
+}
+#endif
+
+int test21(short n) {
+  return -n == 32768; // no-warning
+}
+
+#if TEST == 1
+int test22(short n) {
+  return -n == 65536; // expected-warning {{result of comparison of 17-bit signed value == 65536 is always false}}
+}
+#endif
+
+int test23(unsigned short n) {
+  return ~n == 32768; // no-warning
+}
+
+int test24(short n) {
+  return ~n == 32767; // no-warning
+}
+
+#if TEST == 1
+int test25(unsigned short n) {
+  return ~n == 65536; // expected-warning {{result of comparison of 17-bit signed value == 65536 is always false}}
+}
+
+int test26(short n) {
+  return ~n == 32768; // expected-warning {{result of comparison of 16-bit signed value == 32768 is always false}}
+}
+#endif

@@ -8,14 +8,13 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/log1p.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcLog1pTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -101,12 +100,12 @@ TEST_F(LlvmLibcLog1pTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = start; i <= COUNT; ++i, v += step) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      LIBC_NAMESPACE::libc_errno = 0;
+      libc_errno = 0;
       double result = LIBC_NAMESPACE::log1p(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;

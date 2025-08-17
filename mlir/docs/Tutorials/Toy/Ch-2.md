@@ -262,7 +262,7 @@ class ConstantOp : public mlir::Op<
                      mlir::OpTrait::OneResult,
                      /// We also provide a utility `getType` accessor that
                      /// returns the TensorType of the single result.
-                     mlir::OpTraits::OneTypedResult<TensorType>::Impl> {
+                     mlir::OpTrait::OneTypedResult<TensorType>::Impl> {
 
  public:
   /// Inherit the constructors from the base Op class.
@@ -521,7 +521,7 @@ def ConstantOp : Toy_Op<"constant"> {
 
   // Add custom build methods for the constant operation. These methods populate
   // the `state` that MLIR uses to create operations, i.e. these are used when
-  // using `builder.create<ConstantOp>(...)`.
+  // using `ConstantOp::create(builder, ...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
     OpBuilder<(ins "DenseElementsAttr":$value), [{

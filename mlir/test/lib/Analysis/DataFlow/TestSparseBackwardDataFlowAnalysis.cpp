@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -41,7 +40,7 @@ struct WrittenToLatticeValue {
 
   ChangeResult addWrites(const SetVector<StringAttr> &writes) {
     int sizeBefore = this->writes.size();
-    this->writes.insert(writes.begin(), writes.end());
+    this->writes.insert_range(writes);
     int sizeAfter = this->writes.size();
     return sizeBefore == sizeAfter ? ChangeResult::NoChange
                                    : ChangeResult::Change;
@@ -76,8 +75,8 @@ public:
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
         assumeFuncWrites(assumeFuncWrites) {}
 
-  void visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
-                      ArrayRef<const WrittenTo *> results) override;
+  LogicalResult visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
+                               ArrayRef<const WrittenTo *> results) override;
 
   void visitBranchOperand(OpOperand &operand) override;
 
@@ -94,22 +93,23 @@ private:
   bool assumeFuncWrites;
 };
 
-void WrittenToAnalysis::visitOperation(Operation *op,
-                                       ArrayRef<WrittenTo *> operands,
-                                       ArrayRef<const WrittenTo *> results) {
+LogicalResult
+WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
+                                  ArrayRef<const WrittenTo *> results) {
   if (auto store = dyn_cast<memref::StoreOp>(op)) {
     SetVector<StringAttr> newWrites;
     newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
     propagateIfChanged(operands[0],
                        operands[0]->getValue().addWrites(newWrites));
-    return;
+    return success();
   } // By default, every result of an op depends on every operand.
   for (const WrittenTo *r : results) {
     for (WrittenTo *operand : operands) {
       meet(operand, *r);
     }
-    addDependency(const_cast<WrittenTo *>(r), op);
+    addDependency(const_cast<WrittenTo *>(r), getProgramPointAfter(op));
   }
+  return success();
 }
 
 void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
@@ -181,8 +181,7 @@ struct TestWrittenToPass
     SymbolTableCollection symbolTable;
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<WrittenToAnalysis>(symbolTable, assumeFuncWrites);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();

@@ -55,7 +55,7 @@ define i8 @mul8_low_A0_B1(i8 %p, i8 %in1) {
 define i8 @mul8_low_A0_B2(i8 %in0, i8 %p) {
 ; CHECK-LABEL: @mul8_low_A0_B2(
 ; CHECK-NEXT:    [[IN1:%.*]] = call i8 @use8(i8 [[P:%.*]])
-; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN1]], [[IN0:%.*]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN0:%.*]], [[IN1]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
 
@@ -262,7 +262,7 @@ define i32 @mul32_low_A2_B2(i32 %in0, i32 %p) {
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN0LO]], [[IN1HI]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN1]], [[IN0]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %in1 = call i32 @use32(i32 %p) ; thwart complexity-based canonicalization
@@ -287,7 +287,7 @@ define i32 @mul32_low_A2_B3(i32 %in0, i32 %p) {
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN1]], [[IN0]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %in1 = call i32 @use32(i32 %p) ; thwart complexity-based canonicalization
@@ -542,8 +542,8 @@ define <2 x i8> @mul_v2i8_low(<2 x i8> %in0, <2 x i8> %in1) {
 
 define <2 x i8> @mul_v2i8_low_one_extra_user(<2 x i8> %in0, <2 x i8> %in1) {
 ; CHECK-LABEL: @mul_v2i8_low_one_extra_user(
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[IN1LO:%.*]] = and <2 x i8> [[IN1:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0:%.*]], splat (i8 4)
+; CHECK-NEXT:    [[IN1LO:%.*]] = and <2 x i8> [[IN1:%.*]], splat (i8 15)
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw <2 x i8> [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use_v2i8(<2 x i8> [[M01]])
 ; CHECK-NEXT:    [[RETLO:%.*]] = mul <2 x i8> [[IN0]], [[IN1]]
@@ -639,7 +639,7 @@ define i64 @mul64_low_no_and(i64 %in0, i64 %in1) {
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0:%.*]], 32
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1:%.*]], 32
 ; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i64 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i64 [[IN1]], [[IN0HI]]
 ; CHECK-NEXT:    [[M00:%.*]] = mul i64 [[IN1]], [[IN0]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M10]], [[M01]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADDC]], 32
@@ -719,7 +719,7 @@ define i32 @mul32_low_extra_shl_use(i32 %in0, i32 %in1) {
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0:%.*]], 16
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1:%.*]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul i32 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN1]], [[IN0HI]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M10]], [[M01]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
 ; CHECK-NEXT:    call void @use32(i32 [[SHL]])

@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -24,9 +25,9 @@ template <typename T> T *DbgRecordParamRef<T>::get() const {
   return cast<T>(Ref);
 }
 
-template class DbgRecordParamRef<DIExpression>;
-template class DbgRecordParamRef<DILabel>;
-template class DbgRecordParamRef<DILocalVariable>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DIExpression>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILabel>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILocalVariable>;
 
 DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
@@ -371,6 +372,10 @@ bool DbgVariableRecord::isKillLocation() const {
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
+std::optional<DbgVariableFragmentInfo> DbgVariableRecord::getFragment() const {
+  return getExpression()->getFragmentInfo();
+}
+
 std::optional<uint64_t> DbgVariableRecord::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -409,13 +414,13 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   // Work out what sort of intrinsic we're going to produce.
   switch (getType()) {
   case DbgVariableRecord::LocationType::Declare:
-    IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+    IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_declare);
     break;
   case DbgVariableRecord::LocationType::Value:
-    IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
+    IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_value);
     break;
   case DbgVariableRecord::LocationType::Assign:
-    IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
+    IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_assign);
     break;
   case DbgVariableRecord::LocationType::End:
   case DbgVariableRecord::LocationType::Any:
@@ -447,7 +452,7 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   DVI->setTailCall();
   DVI->setDebugLoc(getDebugLoc());
   if (InsertBefore)
-    DVI->insertBefore(InsertBefore);
+    DVI->insertBefore(InsertBefore->getIterator());
 
   return DVI;
 }
@@ -455,7 +460,7 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
 DbgLabelInst *
 DbgLabelRecord::createDebugIntrinsic(Module *M,
                                      Instruction *InsertBefore) const {
-  auto *LabelFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_label);
+  auto *LabelFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_label);
   Value *Args[] = {
       MetadataAsValue::get(getDebugLoc()->getContext(), getLabel())};
   DbgLabelInst *DbgLabel = cast<DbgLabelInst>(
@@ -463,17 +468,18 @@ DbgLabelRecord::createDebugIntrinsic(Module *M,
   DbgLabel->setTailCall();
   DbgLabel->setDebugLoc(getDebugLoc());
   if (InsertBefore)
-    DbgLabel->insertBefore(InsertBefore);
+    DbgLabel->insertBefore(InsertBefore->getIterator());
   return DbgLabel;
 }
 
 Value *DbgVariableRecord::getAddress() const {
   auto *MD = getRawAddress();
-  if (auto *V = dyn_cast<ValueAsMetadata>(MD))
+  if (auto *V = dyn_cast_or_null<ValueAsMetadata>(MD))
     return V->getValue();
 
   // When the value goes to null, it gets replaced by an empty MDNode.
-  assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
+  assert((!MD || !cast<MDNode>(MD)->getNumOperands()) &&
+         "Expected an empty MDNode");
   return nullptr;
 }
 
@@ -487,7 +493,7 @@ void DbgVariableRecord::setAssignId(DIAssignID *New) {
 
 void DbgVariableRecord::setKillAddress() {
   resetDebugValue(
-      1, ValueAsMetadata::get(UndefValue::get(getAddress()->getType())));
+      1, ValueAsMetadata::get(PoisonValue::get(getAddress()->getType())));
 }
 
 bool DbgVariableRecord::isKillAddress() const {
@@ -543,6 +549,24 @@ void DbgRecord::insertAfter(DbgRecord *InsertAfter) {
          "DbgMarker!");
   InsertAfter->getMarker()->insertDbgRecordAfter(this, InsertAfter);
 }
+
+void DbgRecord::insertBefore(self_iterator InsertBefore) {
+  assert(!getMarker() &&
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
+  assert(InsertBefore->getMarker() &&
+         "Cannot insert a DbgRecord before a DbgRecord that does not have a "
+         "DbgMarker!");
+  InsertBefore->getMarker()->insertDbgRecord(this, &*InsertBefore);
+}
+void DbgRecord::insertAfter(self_iterator InsertAfter) {
+  assert(!getMarker() &&
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
+  assert(InsertAfter->getMarker() &&
+         "Cannot insert a DbgRecord after a DbgRecord that does not have a "
+         "DbgMarker!");
+  InsertAfter->getMarker()->insertDbgRecordAfter(this, &*InsertAfter);
+}
+
 void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   assert(getMarker() &&
          "Canot move a DbgRecord that does not currently have a DbgMarker!");
@@ -550,6 +574,19 @@ void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   insertBefore(MoveBefore);
 }
 void DbgRecord::moveAfter(DbgRecord *MoveAfter) {
+  assert(getMarker() &&
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
+  removeFromParent();
+  insertAfter(MoveAfter);
+}
+
+void DbgRecord::moveBefore(self_iterator MoveBefore) {
+  assert(getMarker() &&
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
+  removeFromParent();
+  insertBefore(MoveBefore);
+}
+void DbgRecord::moveAfter(self_iterator MoveAfter) {
   assert(getMarker() &&
          "Canot move a DbgRecord that does not currently have a DbgMarker!");
   removeFromParent();

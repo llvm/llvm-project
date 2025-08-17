@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,26 +16,19 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
@@ -45,7 +36,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -54,7 +45,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
-#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -319,9 +309,7 @@ public:
       : FunctionPass(ID),
         MergeInit(ClMergeInit.getNumOccurrences() ? ClMergeInit : !IsOptNone),
         UseStackSafety(ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                                            : !IsOptNone) {
-    initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
-  }
+                                                            : !IsOptNone) {}
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -351,6 +339,7 @@ private:
       AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 };
 
@@ -362,6 +351,7 @@ INITIALIZE_PASS_BEGIN(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                     false, false)
 
@@ -379,8 +369,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
   unsigned Count = 0;
   for (; Count < ClScanLimit && !BI->isTerminator(); ++BI) {
-    if (!isa<DbgInfoIntrinsic>(*BI))
-      ++Count;
+    ++Count;
 
     if (isNoModRef(AA->getModRefInfo(&*BI, AllocaLoc)))
       continue;
@@ -432,14 +421,13 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
 void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                     Value *Ptr, uint64_t Size) {
-  auto SetTagZeroFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag_zero);
-  auto StgpFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_stgp);
+  auto SetTagZeroFunc = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::aarch64_settag_zero);
+  auto StgpFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                    Intrinsic::aarch64_stgp);
 
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
-  bool LittleEndian =
-      Triple(AI->getModule()->getTargetTriple()).isLittleEndian();
+  bool LittleEndian = AI->getModule()->getTargetTriple().isLittleEndian();
   // Current implementation of initializer merging assumes little endianness.
   if (MergeInit && !F->hasOptNone() && LittleEndian &&
       Size < ClMergeInitSizeLimit) {
@@ -477,18 +465,16 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *IRG_SP =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_irg_sp);
   Instruction *Base =
-      IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
+      IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
+                          {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
-  auto TargetTriple = Triple(M.getTargetTriple());
-  // This is not a stable ABI for now, so only allow in dev builds with API
-  // level 10000.
+  const Triple &TargetTriple = M.getTargetTriple();
+  // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
   if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(10000) &&
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35) &&
       !AllocasToInstrument.empty()) {
     constexpr int StackMteSlot = -3;
     constexpr uint64_t TagMask = 0xFULL << 56;
@@ -503,19 +489,8 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     Value *RecordPtr = IRB.CreateIntToPtr(ThreadLong, IRB.getPtrTy(0));
     IRB.CreateStore(PC, RecordPtr);
     IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
-    // Update the ring buffer. Top byte of ThreadLong defines the size of the
-    // buffer in pages, it must be a power of two, and the start of the buffer
-    // must be aligned by twice that much. Therefore wrap around of the ring
-    // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
-    // The use of AShr instead of LShr is due to
-    //   https://bugs.llvm.org/show_bug.cgi?id=39030
-    // Runtime library makes sure not to use the highest bit.
-    Value *WrapMask = IRB.CreateXor(
-        IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
-        ConstantInt::get(IntptrTy, (uint64_t)-1));
-    Value *ThreadLongNew = IRB.CreateAnd(
-        IRB.CreateAdd(ThreadLong, ConstantInt::get(IntptrTy, 16)), WrapMask);
-    IRB.CreateStore(ThreadLongNew, SlotPtr);
+
+    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16), SlotPtr);
   }
   return Base;
 }
@@ -531,10 +506,12 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   DL = &Fn.getDataLayout();
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  OptimizationRemarkEmitter &ORE =
+      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (Instruction &I : instructions(F))
-    SIB.visit(I);
+    SIB.visit(ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   if (SInfo.AllocasToInstrument.empty())
@@ -569,32 +546,32 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     LI = DeleteLI.get();
   }
 
-  SetTagFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
+  SetTagFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                 Intrinsic::aarch64_settag);
 
   Instruction *Base =
       insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
 
-  int NextTag = 0;
+  unsigned int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
-    assert(Info.AI && SIB.isInterestingAlloca(*Info.AI));
+    assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
+                          llvm::memtag::AllocaInterestingness::kInteresting);
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    int Tag = NextTag;
+    unsigned int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Function *TagP = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+        IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
+                            {Constant::getNullValue(Info.AI->getType()), Base,
+                             ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
     Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !memtag::isLifetimeIntrinsic(U.getUser());
+      return !isa<LifetimeIntrinsic>(U.getUser());
     });
     TagPCall->setOperand(0, Info.AI);
 
@@ -604,13 +581,11 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // statement if return_twice functions are called.
     bool StandardLifetime =
         !SInfo.CallsReturnTwice &&
-        SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    ClMaxLifetimes);
     if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      uint64_t Size =
-          cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
       tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 
@@ -636,13 +611,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         II->eraseFromParent();
     }
 
-    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
+    memtag::annotateDebugRecords(Info, Tag);
   }
-
-  // If we have instrumented at least one alloca, all unrecognized lifetime
-  // intrinsics have to go.
-  for (auto *I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
 
   return true;
 }

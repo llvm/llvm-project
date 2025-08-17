@@ -132,24 +132,6 @@ public:
   virtual ~VariadicABIInfo() = default;
 };
 
-// Module implements getFunction() which returns nullptr on missing declaration
-// and getOrInsertFunction which creates one when absent. Intrinsics.h only
-// implements getDeclaration which creates one when missing. Checking whether
-// an intrinsic exists thus inserts it in the module and it then needs to be
-// deleted again to clean up.
-// The right name for the two functions on intrinsics would match Module::,
-// but doing that in a single change would introduce nullptr dereferences
-// where currently there are none. The minimal collateral damage approach
-// would split the change over a release to help downstream branches. As it
-// is unclear what approach will be preferred, implementing the trivial
-// function here in the meantime to decouple from that discussion.
-Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
-                                    ArrayRef<Type *> Tys = {}) {
-  auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return M->getFunction(Tys.empty() ? Intrinsic::getName(Id)
-                                    : Intrinsic::getName(Id, Tys, M, FT));
-}
-
 class ExpandVariadics : public ModulePass {
 
   // The pass construction sets the default to optimize when called from middle
@@ -200,7 +182,7 @@ public:
     bool Changed = false;
     const DataLayout &DL = M.getDataLayout();
     if (Function *Intrinsic =
-            getPreexistingDeclaration(&M, ID, {IntrinsicArgType})) {
+            Intrinsic::getDeclarationIfExists(&M, ID, {IntrinsicArgType})) {
       for (User *U : make_early_inc_range(Intrinsic->users()))
         if (auto *I = dyn_cast<InstructionType>(U))
           Changed |= expandVAIntrinsicCall(Builder, DL, I);
@@ -238,17 +220,10 @@ public:
 
   FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
     // The type of "FTy" with the ... removed and a va_list appended
-    SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+    SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
     return FunctionType::get(FTy->getReturnType(), ArgTypes,
                              /*IsVarArgs=*/false);
-  }
-
-  static ConstantInt *sizeOfAlloca(LLVMContext &Ctx, const DataLayout &DL,
-                                   AllocaInst *Alloced) {
-    std::optional<TypeSize> AllocaTypeSize = Alloced->getAllocationSize(DL);
-    uint64_t AsInt = AllocaTypeSize ? AllocaTypeSize->getFixedValue() : 0;
-    return ConstantInt::get(Type::getInt64Ty(Ctx), AsInt);
   }
 
   bool expansionApplicableToFunction(Module &M, Function *F) {
@@ -456,8 +431,8 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   // Replace known calls to the variadic with calls to the va_list equivalent
   for (User *U : make_early_inc_range(VariadicWrapper->users())) {
     if (CallBase *CB = dyn_cast<CallBase>(U)) {
-      Value *calledOperand = CB->getCalledOperand();
-      if (VariadicWrapper == calledOperand)
+      Value *CalledOperand = CB->getCalledOperand();
+      if (VariadicWrapper == CalledOperand)
         Changed |=
             expandCall(M, Builder, CB, VariadicWrapper->getFunctionType(),
                        FixedArityReplacement);
@@ -507,7 +482,6 @@ ExpandVariadics::replaceAllUsesWithNewDeclaration(Module &M,
   Function *NF = Function::Create(FTy, F.getLinkage(), F.getAddressSpace());
 
   NF->setName(F.getName() + ".varargs");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
 
@@ -538,7 +512,7 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   const bool FunctionIsDefinition = !F.isDeclaration();
 
   FunctionType *FTy = F.getFunctionType();
-  SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+  SmallVector<Type *> ArgTypes(FTy->params());
   ArgTypes.push_back(ABI->vaListParameterType(M));
 
   FunctionType *NFTy = inlinableVariadicFunctionType(M, FTy);
@@ -549,7 +523,6 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   NF->setComdat(F.getComdat());
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
   NF->setName(F.getName() + ".valist");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   AttrBuilder ParamAttrs(Ctx);
 
@@ -597,15 +570,12 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   AllocaInst *VaListInstance =
       Builder.CreateAlloca(VaListTy, nullptr, "va_start");
 
-  Builder.CreateLifetimeStart(VaListInstance,
-                              sizeOfAlloca(Ctx, DL, VaListInstance));
+  Builder.CreateLifetimeStart(VaListInstance);
 
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
 
-  SmallVector<Value *> Args;
-  for (Argument &A : F.args())
-    Args.push_back(&A);
+  SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
   Type *ParameterType = ABI->vaListParameterType(M);
   if (ABI->vaListPassedInSSARegister())
@@ -617,8 +587,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
 
   Builder.CreateIntrinsic(Intrinsic::vaend, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
-  Builder.CreateLifetimeEnd(VaListInstance,
-                            sizeOfAlloca(Ctx, DL, VaListInstance));
+  Builder.CreateLifetimeEnd(VaListInstance);
 
   if (Result->getType()->isVoidTy())
     Builder.CreateRetVoid();
@@ -748,10 +717,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is an awkward way to guess whether there is a known stack alignment
   // without hitting an assert in DL.getStackAlignment, 1024 is an arbitrary
   // number likely to be greater than the natural stack alignment.
-  // TODO: DL.getStackAlignment could return a MaybeAlign instead of assert
   Align AllocaAlign = MaxFieldAlign;
-  if (DL.exceedsNaturalStackAlignment(Align(1024)))
-    AllocaAlign = std::max(AllocaAlign, DL.getStackAlignment());
+  if (MaybeAlign StackAlign = DL.getStackAlignment();
+      StackAlign && *StackAlign > AllocaAlign)
+    AllocaAlign = *StackAlign;
 
   // Put the alloca to hold the variadic args in the entry basic block.
   Builder.SetInsertPointPastAllocas(CBF);
@@ -768,7 +737,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   // Initialize the fields in the struct
   Builder.SetInsertPoint(CB);
-  Builder.CreateLifetimeStart(Alloced, sizeOfAlloca(Ctx, DL, Alloced));
+  Builder.CreateLifetimeStart(Alloced);
   Frame.initializeStructAlloca(DL, Builder, Alloced);
 
   const unsigned NumArgs = FuncType->getNumParams();
@@ -784,7 +753,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
       Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
       VaList = Builder.CreateAlloca(VaListTy, nullptr, "va_argument");
       Builder.SetInsertPoint(CB);
-      Builder.CreateLifetimeStart(VaList, sizeOfAlloca(Ctx, DL, VaList));
+      Builder.CreateLifetimeStart(VaList);
     }
     Builder.SetInsertPoint(CB);
     Args.push_back(ABI->initializeVaList(M, Ctx, Builder, VaList, Alloced));
@@ -809,7 +778,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     Value *Dst = NF ? NF : CI->getCalledOperand();
     FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
 
-    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI);
+    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
     CallInst::TailCallKind TCK = CI->getTailCallKind();
     assert(TCK != CallInst::TCK_MustTail);
@@ -824,9 +793,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   }
 
   if (VaList)
-    Builder.CreateLifetimeEnd(VaList, sizeOfAlloca(Ctx, DL, VaList));
+    Builder.CreateLifetimeEnd(VaList);
 
-  Builder.CreateLifetimeEnd(Alloced, sizeOfAlloca(Ctx, DL, Alloced));
+  Builder.CreateLifetimeEnd(Alloced);
 
   NewCB->setAttributes(PAL);
   NewCB->takeName(CB);
@@ -938,6 +907,33 @@ struct Amdgpu final : public VariadicABIInfo {
   }
 };
 
+struct NVPTX final : public VariadicABIInfo {
+
+  bool enableForTarget() override { return true; }
+
+  bool vaListPassedInSSARegister() override { return true; }
+
+  Type *vaListType(LLVMContext &Ctx) override {
+    return PointerType::getUnqual(Ctx);
+  }
+
+  Type *vaListParameterType(Module &M) override {
+    return PointerType::getUnqual(M.getContext());
+  }
+
+  Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
+                          AllocaInst *, Value *Buffer) override {
+    return Builder.CreateAddrSpaceCast(Buffer, vaListParameterType(M));
+  }
+
+  VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) override {
+    // NVPTX expects natural alignment in all cases. The variadic call ABI will
+    // handle promoting types to their appropriate size and alignment.
+    Align A = DL.getABITypeAlign(Parameter);
+    return {A, false};
+  }
+};
+
 struct Wasm final : public VariadicABIInfo {
 
   bool enableForTarget() override {
@@ -967,8 +963,8 @@ struct Wasm final : public VariadicABIInfo {
     if (A < MinAlign)
       A = Align(MinAlign);
 
-    if (auto s = dyn_cast<StructType>(Parameter)) {
-      if (s->getNumElements() > 1) {
+    if (auto *S = dyn_cast<StructType>(Parameter)) {
+      if (S->getNumElements() > 1) {
         return {DL.getABITypeAlign(PointerType::getUnqual(Ctx)), true};
       }
     }
@@ -986,6 +982,11 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
 
   case Triple::wasm32: {
     return std::make_unique<Wasm>();
+  }
+
+  case Triple::nvptx:
+  case Triple::nvptx64: {
+    return std::make_unique<NVPTX>();
   }
 
   default:

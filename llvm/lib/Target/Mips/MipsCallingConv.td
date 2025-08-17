@@ -11,8 +11,7 @@
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A, string Invert = "">
     : CCIf<!strconcat(Invert,
-                      "static_cast<const MipsSubtarget&>"
-			"(State.getMachineFunction().getSubtarget()).",
+                      "State.getMachineFunction().getSubtarget<MipsSubtarget>().",
                       F),
            A>;
 
@@ -21,20 +20,14 @@ class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 /// Match if the original argument (before lowering) was a float.
 /// For example, this is true for i32's that were lowered from soft-float.
-class CCIfOrigArgWasNotFloat<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
+class CCIfOrigArgWasFloat<CCAction A>
+    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
            A>;
 
 /// Match if the original argument (before lowering) was a 128-bit float (i.e.
 /// long double).
 class CCIfOrigArgWasF128<CCAction A>
     : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)", A>;
-
-/// Match if this specific argument is a vararg.
-/// This is slightly different fro CCIfIsVarArg which matches if any argument is
-/// a vararg.
-class CCIfArgIsVarArg<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
 
 /// Match if the return was a floating point vector.
 class CCIfOrigArgWasNotVectorFloat<CCAction A>
@@ -135,12 +128,13 @@ def CC_MipsN : CallingConv<[
       CCIfSubtargetNot<"isLittle()",
           CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
-  // All integers (except soft-float integers) are promoted to 64-bit.
-  CCIfType<[i8, i16, i32], CCIfOrigArgWasNotFloat<CCPromoteToType<i64>>>,
+  // First deal with f32s that got turned into i32s due to soft-float
+  CCIfType<[i32],
+      CCIfSubtarget<"useSoftFloat()",
+          CCIfOrigArgWasFloat<CCDelegateTo<CC_MipsN_SoftFloat>>>>,
 
-  // The only i32's we have left are soft-float arguments.
-  CCIfSubtarget<"useSoftFloat()", CCIfType<[i32],
-                CCDelegateTo<CC_MipsN_SoftFloat>>>,
+  // All remaining integers are promoted to 64-bit.
+  CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
 
   // Integer arguments are passed in integer registers.
   CCIfType<[i64], CCAssignToRegWithShadow<[A0_64, A1_64, A2_64, A3_64,
@@ -267,15 +261,8 @@ def CC_Mips_FastCC : CallingConv<[
 
   // Integer arguments are passed in integer registers. All scratch registers,
   // except for AT, V0 and T9, are available to be used as argument registers.
-  CCIfType<[i32], CCIfSubtargetNot<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>>,
-
-  // In NaCl, T6, T7 and T8 are reserved and not available as argument
-  // registers for fastcc.  T6 contains the mask for sandboxing control flow
-  // (indirect jumps and calls).  T7 contains the mask for sandboxing memory
-  // accesses (loads and stores).  T8 contains the thread pointer.
-  CCIfType<[i32], CCIfSubtarget<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, V1]>>>,
+  CCIfType<[i32],
+      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>,
 
   // f32 arguments are passed in single-precision floating pointer registers.
   CCIfType<[f32], CCIfSubtarget<"useOddSPReg()",
@@ -339,7 +326,7 @@ def CC_Mips_FixedArg : CallingConv<[
 
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
-  CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCIfSubtarget<"isABI_O32()", CCIfSubtargetNot<"isGP64bit()", CCDelegateTo<CC_MipsO32_FP>>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 
@@ -351,7 +338,7 @@ def CC_Mips_VarArg : CallingConv<[
 ]>;
 
 def CC_Mips : CallingConv<[
-  CCIfVarArg<CCIfArgIsVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
+  CCIfVarArg<CCIfArgVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
   CCDelegateTo<CC_Mips_FixedArg>
 ]>;
 

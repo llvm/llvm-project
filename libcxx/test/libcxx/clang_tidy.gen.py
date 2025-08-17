@@ -1,10 +1,11 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
+
 
 # Run our custom libc++ clang-tidy checks on all public headers.
 
@@ -15,7 +16,7 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import lit_header_restrictions, lit_header_undeprecations, public_headers
 
 for header in public_headers:
   print(f"""\
@@ -23,17 +24,17 @@ for header in public_headers:
 
 // REQUIRES: has-clang-tidy
 
+// The frozen headers should not be updated to the latest libc++ style, so don't test.
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
 
-// Clang 17 has false positives.
-// UNSUPPORTED: clang-17
-
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 // TODO: run clang-tidy with modules enabled once they are supported
-// RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin -- %{{compile_flags}} -fno-modules
-// RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx-dir}}/.clang-tidy -- -Wweak-vtables %{{compile_flags}} -fno-modules
+// RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx-dir}}/.clang-tidy --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin -- -Wweak-vtables %{{compile_flags}} -fno-modules
 
 #include <{header}>
 """)

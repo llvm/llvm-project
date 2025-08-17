@@ -37,11 +37,6 @@
 //===          and must not be UNIX code
 //===----------------------------------------------------------------------===//
 
-#ifdef __MINGW32__
-// This ban should be lifted when MinGW 1.0+ has defined this value.
-#define _HEAPOK (-2)
-#endif
-
 using namespace llvm;
 
 Process::Pid Process::getProcessId() {
@@ -482,7 +477,8 @@ static RTL_OSVERSIONINFOEXW GetWindowsVer() {
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     assert(hMod);
 
-    auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+    auto getVer =
+        (RtlGetVersionPtr)(void *)::GetProcAddress(hMod, "RtlGetVersion");
     assert(getVer);
 
     RTL_OSVERSIONINFOEXW info{};

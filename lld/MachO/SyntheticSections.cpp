@@ -10,21 +10,20 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "ExportTrie.h"
+#include "ICF.h"
 #include "InputFiles.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 #if defined(__APPLE__)
@@ -544,6 +543,14 @@ static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
   }
 }
 
+static bool needsWeakBind(const Symbol &sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    return dysym->isWeakDef();
+  if (auto *defined = dyn_cast<Defined>(&sym))
+    return defined->isExternalWeakDef();
+  return false;
+}
+
 // Non-weak bindings need to have their dylib ordinal encoded as well.
 static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
   if (config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup())
@@ -553,6 +560,8 @@ static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
 }
 
 static int16_t ordinalForSymbol(const Symbol &sym) {
+  if (config->emitChainedFixups && needsWeakBind(sym))
+    return BIND_SPECIAL_DYLIB_WEAK_LOOKUP;
   if (const auto *dysym = dyn_cast<DylibSymbol>(&sym))
     return ordinalForDylibSymbol(*dysym);
   assert(cast<Defined>(&sym)->interposable);
@@ -938,9 +947,7 @@ uint64_t ObjCStubsSection::getSize() const {
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
   uint64_t stubOffset = 0;
-  for (size_t i = 0, n = symbols.size(); i < n; ++i) {
-    Defined *sym = symbols[i];
-
+  for (Defined *sym : symbols) {
     auto methname = getMethname(sym);
     InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
@@ -1220,25 +1227,24 @@ void SymtabSection::emitStabs() {
         continue;
 
       // Constant-folded symbols go in the executable's symbol table, but don't
-      // get a stabs entry unless --keep-icf-stabs flag is specified
-      if (!config->keepICFStabs && defined->wasIdenticalCodeFolded)
+      // get a stabs entry unless --keep-icf-stabs flag is specified.
+      if (!config->keepICFStabs &&
+          defined->identicalCodeFoldingKind != Symbol::ICFFoldKind::None)
         continue;
 
       ObjFile *file = defined->getObjectFile();
       if (!file || !file->compileUnit)
         continue;
 
-      // We use 'originalIsec' to get the file id of the symbol since 'isec()'
-      // might point to the merged ICF symbol's file
+      // We use the symbol's original InputSection to get the file id,
+      // even for ICF folded symbols, to ensure STABS entries point to the
+      // correct object file where the symbol was originally defined
       symbolsNeedingStabs.emplace_back(defined,
                                        defined->originalIsec->getFile()->id);
     }
   }
 
-  llvm::stable_sort(symbolsNeedingStabs,
-                    [&](const SortingPair &a, const SortingPair &b) {
-                      return a.second < b.second;
-                    });
+  llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
@@ -1246,8 +1252,11 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    // We use 'originalIsec' of the symbol since we care about the actual origin
-    // of the symbol, not the canonical location returned by `isec()`.
+    // When emitting STABS entries for a symbol, always use the original
+    // InputSection of the defined symbol, not the section of the function body
+    // (which might be a different function entirely if ICF folded this
+    // function). This ensures STABS entries point back to the original object
+    // file.
     InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
@@ -1263,12 +1272,30 @@ void SymtabSection::emitStabs() {
     StabsEntry symStab;
     symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
-    symStab.value = defined->getVA();
+
+    // When using --keep-icf-stabs, we need to use the VA of the actual function
+    // body that the linker will place in the binary. This is the function that
+    // the symbol refers to after ICF folding.
+    if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+      // For thunks, we need to get the function they point to
+      Defined *target = getBodyForThunkFoldedSym(defined);
+      symStab.value = target->getVA();
+    } else {
+      symStab.value = defined->getVA();
+    }
 
     if (isCodeSection(isec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
-      emitEndFunStab(defined);
+      // For the end function marker in STABS, we need to use the size of the
+      // actual function body that exists in the output binary
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+        // For thunks, we use the target's size
+        Defined *target = getBodyForThunkFoldedSym(defined);
+        emitEndFunStab(target);
+      } else {
+        emitEndFunStab(defined);
+      }
     } else {
       symStab.type = defined->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));
@@ -1516,7 +1543,14 @@ StringTableSection::StringTableSection()
 
 uint32_t StringTableSection::addString(StringRef str) {
   uint32_t strx = size;
-  strings.push_back(str); // TODO: consider deduplicating strings
+  if (config->dedupSymbolStrings) {
+    llvm::CachedHashStringRef hashedStr(str);
+    auto [it, inserted] = stringMap.try_emplace(hashedStr, strx);
+    if (!inserted)
+      return it->second;
+  }
+
+  strings.push_back(str);
   size += str.size() + 1; // account for null terminator
   return strx;
 }
@@ -1725,26 +1759,25 @@ void DeduplicatedCStringSection::finalizeContents() {
     }
   }
 
-  // Assign an offset for each string and save it to the corresponding
+  // Sort the strings for performance and compression size win, and then
+  // assign an offset for each string and save it to the corresponding
   // StringPieces for easy access.
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      auto s = isec->getCachedHashStringRef(i);
-      auto it = stringOffsetMap.find(s);
-      assert(it != stringOffsetMap.end());
-      StringOffset &offsetInfo = it->second;
-      if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff =
-            alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
-        size =
-            offsetInfo.outSecOff + s.size() + 1; // account for null terminator
-      }
-      piece.outSecOff = offsetInfo.outSecOff;
+  for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
+    auto &piece = isec->pieces[i];
+    auto s = isec->getCachedHashStringRef(i);
+    auto it = stringOffsetMap.find(s);
+    assert(it != stringOffsetMap.end());
+    lld::macho::DeduplicatedCStringSection::StringOffset &offsetInfo =
+        it->second;
+    if (offsetInfo.outSecOff == UINT64_MAX) {
+      offsetInfo.outSecOff =
+          alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
+      size = offsetInfo.outSecOff + s.size() + 1; // account for null terminator
     }
-    isec->isFinal = true;
+    piece.outSecOff = offsetInfo.outSecOff;
   }
+  for (CStringInputSection *isec : inputs)
+    isec->isFinal = true;
 }
 
 void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
@@ -1933,7 +1966,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
     for (const Reloc &rel : isec->relocs) {
-      const Symbol *referent = rel.referent.dyn_cast<Symbol *>();
+      const Symbol *referent = cast<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
       // FIXME: Can we handle this gracefully?
@@ -1965,7 +1998,7 @@ void InitOffsetsSection::setUp() {
       if (rel.addend != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
-      if (rel.referent.is<InputSection *>())
+      if (isa<InputSection *>(rel.referent))
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
@@ -2000,11 +2033,8 @@ void ObjCMethListSection::setUp() {
     while (methodNameOff < isec->data.size()) {
       const Reloc *reloc = isec->getRelocAt(methodNameOff);
       assert(reloc && "Relocation expected at method list name slot");
-      auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
-      assert(def && "Expected valid Defined at method list name slot");
-      auto *cisec = cast<CStringInputSection>(def->isec());
-      assert(cisec && "Expected method name to be in a CStringInputSection");
-      auto methname = cisec->getStringRefAtOffset(def->value);
+
+      StringRef methname = reloc->getReferentString();
       if (!ObjCSelRefsHelper::getSelRef(methname))
         ObjCSelRefsHelper::makeSelRef(methname);
 
@@ -2057,12 +2087,12 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
-    assert(buf - bufStart == long(isec->outSecOff) &&
+    assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
     buf += writtenSize;
   }
-  assert(buf - bufStart == sectionSize &&
+  assert(buf - bufStart == std::ptrdiff_t(sectionSize) &&
          "Written size does not match expected section size");
 }
 
@@ -2104,19 +2134,23 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     uint32_t &outSecOff, bool useSelRef) const {
   const Reloc *reloc = isec->getRelocAt(inSecOff);
   assert(reloc && "Relocation expected at __objc_methlist Offset");
-  auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
-  assert(def && "Expected all syms in __objc_methlist to be defined");
-  uint32_t symVA = def->getVA();
 
+  uint32_t symVA = 0;
   if (useSelRef) {
-    auto *cisec = cast<CStringInputSection>(def->isec());
-    auto methname = cisec->getStringRefAtOffset(def->value);
+    StringRef methname = reloc->getReferentString();
     ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef && "Expected all selector names to already be already be "
                      "present in __objc_selrefs");
     symVA = selRef->getVA();
-    assert(selRef->data.size() == sizeof(target->wordSize) &&
+    assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
+  } else if (auto *sym = dyn_cast<Symbol *>(reloc->referent)) {
+    auto *def = dyn_cast_or_null<Defined>(sym);
+    assert(def && "Expected all syms in __objc_methlist to be defined");
+    symVA = def->getVA();
+  } else {
+    auto *isec = cast<InputSection *>(reloc->referent);
+    symVA = isec->getVA(reloc->addend);
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2276,14 +2310,6 @@ bool ChainedFixupsSection::isNeeded() const {
   return true;
 }
 
-static bool needsWeakBind(const Symbol &sym) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-    return dysym->isWeakDef();
-  if (auto *defined = dyn_cast<Defined>(&sym))
-    return defined->isExternalWeakDef();
-  return false;
-}
-
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
                                       int64_t addend) {
@@ -2312,7 +2338,7 @@ ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
   return {it->second, 0};
 }
 
-static size_t writeImport(uint8_t *buf, int format, uint32_t libOrdinal,
+static size_t writeImport(uint8_t *buf, int format, int16_t libOrdinal,
                           bool weakRef, uint32_t nameOffset, int64_t addend) {
   switch (format) {
   case DYLD_CHAINED_IMPORT: {
@@ -2430,11 +2456,8 @@ void ChainedFixupsSection::writeTo(uint8_t *buf) const {
   uint64_t nameOffset = 0;
   for (auto [import, idx] : bindings) {
     const Symbol &sym = *import.first;
-    int16_t libOrdinal = needsWeakBind(sym)
-                             ? (int64_t)BIND_SPECIAL_DYLIB_WEAK_LOOKUP
-                             : ordinalForSymbol(sym);
-    buf += writeImport(buf, importFormat, libOrdinal, sym.isWeakRef(),
-                       nameOffset, import.second);
+    buf += writeImport(buf, importFormat, ordinalForSymbol(sym),
+                       sym.isWeakRef(), nameOffset, import.second);
     nameOffset += sym.getName().size() + 1;
   }
 
@@ -2459,7 +2482,12 @@ void ChainedFixupsSection::finalizeContents() {
     error("cannot encode chained fixups: imported symbols table size " +
           Twine(symtabSize) + " exceeds 4 GiB");
 
-  if (needsLargeAddend || !isUInt<23>(symtabSize))
+  bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
+    // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
+    return ordinalForSymbol(*p.first.first) > 0xF0;
+  });
+
+  if (needsLargeAddend || !isUInt<23>(symtabSize) || needsLargeOrdinal)
     importFormat = DYLD_CHAINED_IMPORT_ADDEND64;
   else if (needsAddend)
     importFormat = DYLD_CHAINED_IMPORT_ADDEND;

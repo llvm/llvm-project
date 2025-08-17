@@ -274,6 +274,7 @@ static void buildPartialUnswitchConditionalBranch(
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
     const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
+  IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
 
   SmallVector<Value *> FrozenInvariants;
   for (Value *Inv : Invariants) {
@@ -297,6 +298,10 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   for (auto *Val : reverse(ToDuplicate)) {
     Instruction *Inst = cast<Instruction>(Val);
     Instruction *NewInst = Inst->clone();
+
+    if (const DebugLoc &DL = Inst->getDebugLoc())
+      mapAtomInstance(DL, VMap);
+
     NewInst->insertInto(&BB, BB.end());
     RemapInstruction(NewInst, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -326,6 +331,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   }
 
   IRBuilder<> IRB(&BB);
+  IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
   Value *Cond = VMap[ToDuplicate[0]];
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
@@ -632,7 +638,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     } else {
       // Create a new unconditional branch that will continue the loop as a new
       // terminator.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(BI.getDebugLoc());
     }
     BI.setSuccessor(LoopExitSuccIdx, UnswitchedBB);
     BI.setSuccessor(1 - LoopExitSuccIdx, NewPH);
@@ -666,10 +673,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // Finish updating dominator tree and memory ssa for full unswitch.
   if (FullUnswitch) {
     if (MSSAU) {
-      // Remove the cloned branch instruction.
-      ParentBB->getTerminator()->eraseFromParent();
-      // Create unconditional branch now.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *Term = ParentBB->getTerminator();
+      // Remove the cloned branch instruction and create unconditional branch
+      // now.
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(Term->getDebugLoc());
+      Term->eraseFromParent();
       MSSAU->removeEdge(ParentBB, LoopExitBB);
     }
     DT.deleteEdge(ParentBB, LoopExitBB);
@@ -767,8 +776,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     // instruction in the block.
     auto *TI = BBToCheck.getTerminator();
     bool isUnreachable = isa<UnreachableInst>(TI);
-    return !isUnreachable ||
-           (isUnreachable && (BBToCheck.getFirstNonPHIOrDbg() != TI));
+    return !isUnreachable || &*BBToCheck.getFirstNonPHIOrDbg() != TI;
   };
 
   SmallVector<int, 4> ExitCaseIndices;
@@ -861,8 +869,11 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
   OldPH->getTerminator()->eraseFromParent();
 
-  // Now add the unswitched switch.
+  // Now add the unswitched switch. This new switch instruction inherits the
+  // debug location of the old switch, because it semantically replace the old
+  // one.
   auto *NewSI = SwitchInst::Create(LoopCond, NewPH, ExitCases.size(), OldPH);
+  NewSI->setDebugLoc(SIW->getDebugLoc());
   SwitchInstProfUpdateWrapper NewSIW(*NewSI);
 
   // Rewrite the IR for the unswitched basic blocks. This requires two steps.
@@ -972,8 +983,9 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                                       /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
+    Instruction *NewBI = BranchInst::Create(CommonSuccBB, BB);
+    NewBI->setDebugLoc(SIW->getDebugLoc());
     SIW.eraseFromParent();
-    BranchInst::Create(CommonSuccBB, BB);
   } else if (DefaultExitBB) {
     assert(SI.getNumCases() > 0 &&
            "If we had no cases we'd have a common successor!");
@@ -1242,12 +1254,16 @@ static BasicBlock *buildClonedLoopBlocks(
       assert(VMap.lookup(&I) == &ClonedI && "Mismatch in the value map!");
 
       // Forget SCEVs based on exit phis in case SCEV looked through the phi.
-      if (SE && isa<PHINode>(I))
-        SE->forgetValue(&I);
+      if (SE)
+        if (auto *PN = dyn_cast<PHINode>(&I))
+          SE->forgetLcssaPhiWithNewPredecessor(&L, PN);
+
+      BasicBlock::iterator InsertPt = MergeBB->getFirstInsertionPt();
 
       auto *MergePN =
           PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi");
-      MergePN->insertBefore(MergeBB->getFirstInsertionPt());
+      MergePN->insertBefore(InsertPt);
+      MergePN->setDebugLoc(InsertPt->getDebugLoc());
       I.replaceAllUsesWith(MergePN);
       MergePN->addIncoming(&I, ExitBB);
       MergePN->addIncoming(&ClonedI, ClonedExitBB);
@@ -1306,8 +1322,9 @@ static BasicBlock *buildClonedLoopBlocks(
   else if (auto *SI = dyn_cast<SwitchInst>(ClonedTerminator))
     ClonedConditionToErase = SI->getCondition();
 
+  Instruction *BI = BranchInst::Create(ClonedSuccBB, ClonedParentBB);
+  BI->setDebugLoc(ClonedTerminator->getDebugLoc());
   ClonedTerminator->eraseFromParent();
-  BranchInst::Create(ClonedSuccBB, ClonedParentBB);
 
   if (ClonedConditionToErase)
     RecursivelyDeleteTriviallyDeadInstructions(ClonedConditionToErase, nullptr,
@@ -2127,9 +2144,23 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
 void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
                   bool CurrentLoopValid, bool PartiallyInvariant,
                   bool InjectedCondition, ArrayRef<Loop *> NewLoops) {
-  // If we did a non-trivial unswitch, we have added new (cloned) loops.
-  if (!NewLoops.empty())
+  auto RecordLoopAsUnswitched = [&](Loop *TargetLoop, StringRef Tag,
+                                    StringRef DisableTag) {
+    auto &Ctx = TargetLoop->getHeader()->getContext();
+    MDNode *DisableMD = MDNode::get(Ctx, MDString::get(Ctx, DisableTag));
+    MDNode *NewLoopID = makePostTransformationMetadata(
+        Ctx, TargetLoop->getLoopID(), {Tag}, {DisableMD});
+    TargetLoop->setLoopID(NewLoopID);
+  };
+
+  // If we performed a non-trivial unswitch, we have added new cloned loops.
+  // Mark such newly-created loops as visited.
+  if (!NewLoops.empty()) {
+    for (Loop *NL : NewLoops)
+      RecordLoopAsUnswitched(NL, "llvm.loop.unswitch.nontrivial",
+                             "llvm.loop.unswitch.nontrivial.disable");
     U.addSiblingLoops(NewLoops);
+  }
 
   // If the current loop remains valid, we should revisit it to catch any
   // other unswitch opportunities. Otherwise, we need to mark it as deleted.
@@ -2137,24 +2168,12 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
     if (PartiallyInvariant) {
       // Mark the new loop as partially unswitched, to avoid unswitching on
       // the same condition again.
-      auto &Context = L.getHeader()->getContext();
-      MDNode *DisableUnswitchMD = MDNode::get(
-          Context,
-          MDString::get(Context, "llvm.loop.unswitch.partial.disable"));
-      MDNode *NewLoopID = makePostTransformationMetadata(
-          Context, L.getLoopID(), {"llvm.loop.unswitch.partial"},
-          {DisableUnswitchMD});
-      L.setLoopID(NewLoopID);
+      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.partial",
+                             "llvm.loop.unswitch.partial.disable");
     } else if (InjectedCondition) {
       // Do the same for injection of invariant conditions.
-      auto &Context = L.getHeader()->getContext();
-      MDNode *DisableUnswitchMD = MDNode::get(
-          Context,
-          MDString::get(Context, "llvm.loop.unswitch.injection.disable"));
-      MDNode *NewLoopID = makePostTransformationMetadata(
-          Context, L.getLoopID(), {"llvm.loop.unswitch.injection"},
-          {DisableUnswitchMD});
-      L.setLoopID(NewLoopID);
+      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.injection",
+                             "llvm.loop.unswitch.injection.disable");
     } else
       U.revisitCurrentLoop();
   } else
@@ -2334,13 +2353,14 @@ static void unswitchNontrivialInvariants(
   // nuke the initial terminator placed in the split block.
   SplitBB->getTerminator()->eraseFromParent();
   if (FullUnswitch) {
-    // Splice the terminator from the original loop and rewrite its
-    // successors.
-    TI.moveBefore(*SplitBB, SplitBB->end());
-
     // Keep a clone of the terminator for MSSA updates.
     Instruction *NewTI = TI.clone();
     NewTI->insertInto(ParentBB, ParentBB->end());
+
+    // Splice the terminator from the original loop and rewrite its
+    // successors.
+    TI.moveBefore(*SplitBB, SplitBB->end());
+    TI.dropLocation();
 
     // First wire up the moved terminator to the preheaders.
     if (BI) {
@@ -2348,8 +2368,13 @@ static void unswitchNontrivialInvariants(
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
       Value *Cond = skipTrivialSelect(BI->getCondition());
-      if (InsertFreeze)
+      if (InsertFreeze) {
+        // We don't give any debug location to the new freeze, because the
+        // BI (`dyn_cast<BranchInst>(TI)`) is an in-loop instruction hoisted
+        // out of the loop.
         Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI->getIterator());
+        cast<Instruction>(Cond)->setDebugLoc(DebugLoc::getDropped());
+      }
       BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
@@ -2432,12 +2457,13 @@ static void unswitchNontrivialInvariants(
         DTUpdates.push_back({DominatorTree::Delete, ParentBB, SuccBB});
     }
 
-    // After MSSAU update, remove the cloned terminator instruction NewTI.
-    ParentBB->getTerminator()->eraseFromParent();
-
     // Create a new unconditional branch to the continuing block (as opposed to
     // the one cloned).
-    BranchInst::Create(RetainedSuccBB, ParentBB);
+    Instruction *NewBI = BranchInst::Create(RetainedSuccBB, ParentBB);
+    NewBI->setDebugLoc(NewTI->getDebugLoc());
+
+    // After MSSAU update, remove the cloned terminator instruction NewTI.
+    NewTI->eraseFromParent();
   } else {
     assert(BI && "Only branches have partial unswitching.");
     assert(UnswitchedSuccBBs.size() == 1 &&
@@ -2710,6 +2736,7 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
       PHINode::Create(SI->getType(), 2, "unswitched.select", SI->getIterator());
   Phi->addIncoming(SI->getTrueValue(), ThenBB);
   Phi->addIncoming(SI->getFalseValue(), HeadBB);
+  Phi->setDebugLoc(SI->getDebugLoc());
   SI->replaceAllUsesWith(Phi);
   SI->eraseFromParent();
 
@@ -2744,7 +2771,6 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
 static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
                                        DominatorTree &DT, LoopInfo &LI,
                                        MemorySSAUpdater *MSSAU) {
-  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
   LLVM_DEBUG(dbgs() << "Turning " << *GI << " into a branch.\n");
   BasicBlock *CheckBB = GI->getParent();
 
@@ -2768,7 +2794,7 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   if (MSSAU)
     MSSAU->moveAllAfterSpliceBlocks(CheckBB, GuardedBlock, GI);
 
-  GI->moveBefore(DeoptBlockTerm);
+  GI->moveBefore(DeoptBlockTerm->getIterator());
   GI->setArgOperand(0, ConstantInt::getFalse(GI->getContext()));
 
   if (MSSAU) {
@@ -2785,9 +2811,9 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 }
 
 /// Cost multiplier is a way to limit potentially exponential behavior
-/// of loop-unswitch. Cost is multipied in proportion of 2^number of unswitch
-/// candidates available. Also accounting for the number of "sibling" loops with
-/// the idea to account for previous unswitches that already happened on this
+/// of loop-unswitch. Cost is multiplied in proportion of 2^number of unswitch
+/// candidates available. Also consider the number of "sibling" loops with
+/// the idea of accounting for previous unswitches that already happened on this
 /// cluster of loops. There was an attempt to keep this formula simple,
 /// just enough to limit the worst case behavior. Even if it is not that simple
 /// now it is still not an attempt to provide a detailed heuristic size
@@ -2903,8 +2929,8 @@ static bool collectUnswitchCandidates(
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
-    auto *GuardDecl = L.getHeader()->getParent()->getParent()->getFunction(
-        Intrinsic::getName(Intrinsic::experimental_guard));
+    auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+        L.getHeader()->getParent()->getParent(), Intrinsic::experimental_guard);
     if (GuardDecl && !GuardDecl->use_empty())
       CollectGuards = true;
   }
@@ -2972,9 +2998,11 @@ static bool collectUnswitchCandidates(
 /// into its equivalent where `Pred` is something that we support for injected
 /// invariants (so far it is limited to ult), LHS in canonicalized form is
 /// non-invariant and RHS is an invariant.
-static void canonicalizeForInvariantConditionInjection(
-    ICmpInst::Predicate &Pred, Value *&LHS, Value *&RHS, BasicBlock *&IfTrue,
-    BasicBlock *&IfFalse, const Loop &L) {
+static void canonicalizeForInvariantConditionInjection(CmpPredicate &Pred,
+                                                       Value *&LHS, Value *&RHS,
+                                                       BasicBlock *&IfTrue,
+                                                       BasicBlock *&IfFalse,
+                                                       const Loop &L) {
   if (!L.contains(IfTrue)) {
     Pred = ICmpInst::getInversePredicate(Pred);
     std::swap(IfTrue, IfFalse);
@@ -3217,7 +3245,7 @@ static bool collectUnswitchCandidatesWithInjections(
   // other).
   for (auto *DTN = DT.getNode(Latch); L.contains(DTN->getBlock());
        DTN = DTN->getIDom()) {
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *LHS = nullptr, *RHS = nullptr;
     BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
     auto *BB = DTN->getBlock();
@@ -3283,8 +3311,8 @@ static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
   for (auto *ExitBB : ExitBlocks) {
-    auto *I = ExitBB->getFirstNonPHI();
-    if (isa<CleanupPadInst>(I) || isa<CatchSwitchInst>(I)) {
+    auto It = ExitBB->getFirstNonPHIIt();
+    if (isa<CleanupPadInst>(It) || isa<CatchSwitchInst>(It)) {
       LLVM_DEBUG(dbgs() << "Cannot unswitch because of cleanuppad/catchswitch "
                            "in exit block\n");
       return false;
@@ -3481,8 +3509,9 @@ static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SmallVector<NonTrivialUnswitchCandidate, 4> UnswitchCandidates;
   IVConditionInfo PartialIVInfo;
   Instruction *PartialIVCondBranch = nullptr;
-  collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
-                            PartialIVCondBranch, L, LI, AA, MSSAU);
+  if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.nontrivial.disable"))
+    collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+                              PartialIVCondBranch, L, LI, AA, MSSAU);
   if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.injection.disable"))
     collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
                                             PartialIVCondBranch, L, DT, LI, AA,
@@ -3621,14 +3650,12 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     }
     // Next check all loops nested within L.
     SmallVector<const Loop *, 4> Worklist;
-    Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
-                    L->getSubLoops().end());
+    llvm::append_range(Worklist, L->getSubLoops());
     while (!Worklist.empty()) {
       auto *CurLoop = Worklist.pop_back_val();
       if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
         return false;
-      Worklist.insert(Worklist.end(), CurLoop->getSubLoops().begin(),
-                      CurLoop->getSubLoops().end());
+      llvm::append_range(Worklist, CurLoop->getSubLoops());
     }
     return true;
   };

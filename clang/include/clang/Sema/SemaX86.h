@@ -13,14 +13,13 @@
 #ifndef LLVM_CLANG_SEMA_SEMAX86_H
 #define LLVM_CLANG_SEMA_SEMAX86_H
 
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
 class ParsedAttr;
+class TargetInfo;
 
 class SemaX86 : public SemaBase {
 public:
@@ -38,6 +37,10 @@ public:
 
   void handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL);
   void handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL);
+
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
+                             SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &NewParams);
 };
 } // namespace clang
 

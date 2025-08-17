@@ -137,7 +137,7 @@ template<typename T> struct A { A(T); };
 template<typename T> using B = A<T>;
 B b = {1};
 #if __cplusplus <= 201703L
-  // FIXME: diagnose as well
+  // expected-warning@-2 {{class template argument deduction for alias templates is a C++20 extension}}
 #else
   // expected-warning@-4 {{class template argument deduction for alias templates is incompatible with C++ standards before C++20}}
 #endif

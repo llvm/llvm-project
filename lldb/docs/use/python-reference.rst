@@ -153,16 +153,16 @@ pass them to the Python print function:
 
    (lldb) script
    Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
-   >>> print lldb.debugger
+   >>> print(lldb.debugger)
    Debugger (instance: "debugger_1", id: 1)
-   >>> print lldb.target
+   >>> print(lldb.target)
    a.out
-   >>> print lldb.process
-   SBProcess: pid = 59289, state = stopped, threads = 1, executable = a.out
-   >>> print lldb.thread
-   SBThread: tid = 0x1f03
-   >>> print lldb.frame
-   frame #0: 0x0000000100000bb6 a.out main + 54 at main.c:16
+   >>> print(lldb.process)
+   SBProcess: pid = 58842, state = stopped, threads = 1, executable = a.out
+   >>> print(lldb.thread)
+   thread #1: tid = 0x2265ce3, 0x0000000100000334 a.out`main at t.c:2:3, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+   >>> print(lldb.frame)
+   frame #0: 0x0000000100000334 a.out`main at t.c:2:3
 
 
 Running a python script when a breakpoint gets hit
@@ -252,7 +252,7 @@ Here is the code:
    > # Get the name of the function
    > name = frame.GetFunctionName()
    > # Print the order and the function name
-   > print '[%i] %s' % (counter, name)
+   > print('[%i] %s' % (counter, name))
    > # Disable the current breakpoint location so it doesn't get hit again
    > bp_loc.SetEnabled(False)
    > # No need to stop here
@@ -411,7 +411,7 @@ will use your resolver, but will only recurse into or accept new locations in
 the module a.out.
 
 Another option for creating scripted breakpoints is to use the
-SBTarget.CreateBreakpointFromScript API. This one has the advantage that you
+SBTarget.BreakpointCreateFromScript API. This one has the advantage that you
 can pass in an arbitrary SBStructuredData object, so you can create more
 complex parametrizations. SBStructuredData has a handy SetFromJSON method which
 you can use for this purpose. Your __init__ function gets passed this
@@ -551,7 +551,7 @@ command definition form can't do the right thing.
 Since lldb 3.7, Python commands can also be implemented by means of a class
 which should implement the following interface:
 
-::
+.. code-block:: python
 
   class CommandObjectType:
       def __init__(self, debugger, internal_dict):
@@ -562,6 +562,12 @@ which should implement the following interface:
           this call should return the short help text for this command[1]
       def get_long_help(self):
           this call should return the long help text for this command[1]
+      def get_flags(self):
+          this will be called when the command is added to the command interpreter,
+          and should return a flag field made from or-ing together the appropriate
+          elements of the lldb.CommandFlags enum to specify the requirements of this command.
+          The CommandInterpreter will make sure all these requirements are met, and will
+          return the standard lldb error if they are not.[1]
       def get_repeat_command(self, command):
           The auto-repeat command is what will get executed when the user types just
           a return at the next prompt after this command is run.  Even if your command
@@ -580,20 +586,193 @@ which should implement the following interface:
 As a convenience, you can treat the result object as a Python file object, and
 say
 
-::
+.. code-block:: python
 
-  print >>result, "my command does lots of cool stuff"
+  print("my command does lots of cool stuff", file=result)
 
 SBCommandReturnObject and SBStream both support this file-like behavior by
 providing write() and flush() calls at the Python layer.
 
+The commands that are added using this class definition are what lldb calls
+"raw" commands.  The command interpreter doesn't attempt to parse the command,
+doesn't handle option values, neither generating help for them, or their
+completion.  Raw commands are useful when the arguments passed to the command
+are unstructured, and having to protect them against lldb command parsing would
+be onerous.  For instance, "expr" is a raw command.
+
+You can also add scripted commands that implement the "parsed command", where
+the options and their types are specified, as well as the argument and argument
+types.  These commands look and act like the majority of lldb commands, and you
+can also add custom completions for the options and/or the arguments if you have
+special needs.
+
+The easiest way to do this is to derive your new command from the lldb.ParsedCommand
+class.  That responds in the same way to the help & repeat command interfaces, and
+provides some convenience methods, and most importantly an LLDBOptionValueParser,
+accessed through lldb.ParsedCommand.get_parser().  The parser is used to set
+your command definitions, and to retrieve option values in the __call__ method.
+
+To set up the command definition, implement the ParsedCommand abstract method:
+
+.. code-block:: python
+
+   def setup_command_definition(self):
+
+This is called when your command is added to lldb.  In this method you add the
+options and their types, the option help strings, etc. to the command using the API:
+
+.. code-block:: python
+
+    def add_option(self, short_option, long_option, help, default,
+                   dest = None, required=False, groups = None,
+                   value_type=lldb.eArgTypeNone, completion_type=None,
+                   enum_values=None):
+        """
+        short_option: one character, must be unique, not required
+        long_option:  no spaces, must be unique, required
+        help:         a usage string for this option, will print in the command help
+        default:      the initial value for this option (if it has a value)
+        dest:         the name of the property that gives you access to the value for
+                      this value.  Defaults to the long option if not provided.
+        required: if true, this option must be provided or the command will error out
+        groups: Which "option groups" does this option belong to.  This can either be
+                a simple list (e.g. [1, 3, 4, 5]) or you can specify ranges by sublists:
+                so [1, [3,5]] is the same as [1, 3, 4, 5].
+        value_type: one of the lldb.eArgType enum values.  Some of the common arg
+                    types also have default completers, which will be applied automatically.
+        completion_type: currently these are values form the lldb.CompletionType enum.	If
+                         you need custom completions, implement	handle_option_argument_completion.
+        enum_values: An array of duples: ["element_name", "element_help"].  If provided,
+                     only one of the enum elements is allowed.  The value will be the
+                     element_name for the chosen enum element as a string.
+        """
+
+Similarly, you can add argument types to the command:
+
+.. code-block:: python
+
+    def make_argument_element(self, arg_type, repeat = "optional", groups = None):
+        """
+      	arg_type: The argument type, one of the	lldb.eArgType enum values.
+      	repeat:	Choose from the	following options:
+      	      	"plain"	- one value
+      	      	"optional" - zero or more values
+      	      	"plus" - one or	more values
+      	groups:	As with	add_option.
+        """
+
+Then implement the body of the command by defining:
+
+.. code-block:: python
+
+    def __call__(self, debugger, args_array, exe_ctx, result):
+        """This is the command callback.  The option values are
+        provided by the 'dest' properties on the parser.
+
+        args_array: This is the list of arguments provided.
+        exe_ctx: Gives the SBExecutionContext on which the
+                 command should operate.
+        result:  Any results of the command should be
+                 written into this SBCommandReturnObject.
+        """
+
+This differs from the "raw" command's __call__ in that the arguments are already
+parsed into the args_array, and the option values are set in the parser, and
+can be accessed using their property name.  The LLDBOptionValueParser class has
+a couple of other handy methods:
+
+.. code-block:: python
+    def was_set(self, long_option_name):
+
+returns True if the option was specified on the command line.
+
+.. code-block:: python
+
+    def dest_for_option(self, long_option_name):
+    """
+    This will return the value of the dest variable you defined for opt_name.
+    Mostly useful for handle_completion where you get passed the long option.
+    """
+
+lldb will handle completing your option names, and all your enum values
+automatically.  If your option or argument types have associated built-in completers,
+then lldb will also handle that completion for you.  But if you have a need for
+custom completions, either in your arguments or option values, you can handle
+completion by hand as well.  To handle completion of option value arguments,
+your lldb.ParsedCommand subclass should implement:
+
+.. code-block:: python
+
+    def handle_option_argument_completion(self, long_option, cursor_pos):
+    """
+    long_option: The long option name of the option whose value you are
+                 asked to complete.
+    cursor_pos: The cursor position in the value for that option - which
+    you can get from the option parser.
+    """
+
+And to handle the completion of arguments:
+
+.. code-block:: python
+
+    def handle_argument_completion(self, args, arg_pos, cursor_pos):
+    """
+    args: A list of the arguments to the command
+    arg_pos: An index into the args list of the argument with the cursor
+    cursor_pos: The cursor position in the arg specified by arg_pos
+    """
+
+When either of these API's is called, the command line will have been parsed up to
+the word containing the cursor, and any option values set in that part of the command
+string are available from the option value parser.  That's useful for instance
+if you have a --shared-library option that would constrain the completions for,
+say, a symbol name option or argument.
+
+The return value specifies what the completion options are.  You have four
+choices:
+
+- `True`: the completion was handled with no completions.
+
+- `False`: the completion was not handled, forward it to the regular
+completion machinery.
+
+- A dictionary with the key: "completion": there is one candidate,
+whose value is the value of the "completion" key.  Optionally you can pass a
+"mode" key whose value is either "partial" or "complete".  Return partial if
+the "completion" string is a prefix for all the completed value.
+
+For instance, if the string you are completing is "Test" and the available completions are:
+"Test1", "Test11" and "Test111", you should return the dictionary:
+
+.. code-block:: python
+
+   return {"completion": "Test1", "mode" : "partial"}
+
+and then lldb will add the "1" at the cursor and advance it after the added string,
+waiting for more completions.  But if "Test1" is the only completion, return:
+
+.. code-block:: python
+
+   {"completion": "Test1", "mode": "complete"}
+
+and lldb will add "1 " at the cursor, indicating the command string is complete.
+
+The default is "complete", you don't need to specify a "mode" in that case.
+
+- A dictionary with the key: "values" whose value is a list of candidate completion
+strings.  The command interpreter will present those strings as the available choices.
+You can optionally include a "descriptions" key, whose value is a parallel array
+of description strings, and the completion will show the description next to
+each completion.
+
+
 One other handy convenience when defining lldb command-line commands is the
-command command script import which will import a module specified by file
+command "command script import" which will import a module specified by file
 path, so you don't have to change your PYTHONPATH for temporary scripts. It
 also has another convenience that if your new script module has a function of
 the form:
 
-::
+.. code-block python
 
   def __lldb_init_module(debugger, internal_dict):
       # Command Initialization code goes here
@@ -609,7 +788,7 @@ creating scripts that can be run from the command line. However, for command
 line scripts, the debugger instance must be created manually. Sample code would
 look like:
 
-::
+.. code-block:: python
 
   if __name__ == '__main__':
       # Initialize the debugger before making any API calls.
@@ -632,7 +811,7 @@ look like:
 Now we can create a module called ls.py in the file ~/ls.py that will implement
 a function that can be used by LLDB's python command code:
 
-::
+.. code-block:: python
 
   #!/usr/bin/env python
 
@@ -647,7 +826,7 @@ a function that can be used by LLDB's python command code:
   # And the initialization code to add your commands
   def __lldb_init_module(debugger, internal_dict):
       debugger.HandleCommand('command script add -f ls.ls ls')
-      print 'The "ls" python command has been installed and is ready for use.'
+      print('The "ls" python command has been installed and is ready for use.')
 
 Now we can load the module into LLDB and use it
 
@@ -754,7 +933,7 @@ that goal:
 Using the lldb.py module in Python
 ----------------------------------
 
-LLDB has all of its core code build into a shared library which gets used by
+LLDB has all of its core code built into a shared library which gets used by
 the `lldb` command line application. On macOS this shared library is a
 framework: LLDB.framework and on other unix variants the program is a shared
 library: lldb.so. LLDB also provides an lldb.py module that contains the
@@ -777,7 +956,7 @@ For sh and bash:
 
   $ export PYTHONPATH=`lldb -P`
 
-Alternately, you can append the LLDB Python directory to the sys.path list
+Alternatively, you can append the LLDB Python directory to the sys.path list
 directly in your Python code before importing the lldb module.
 
 Now your python scripts are ready to import the lldb module. Below is a python
@@ -785,16 +964,18 @@ script that will launch a program from the current working directory called
 "a.out", set a breakpoint at "main", and then run and hit the breakpoint, and
 print the process, thread and frame objects if the process stopped:
 
-::
+.. code-block:: python
 
-  #!/usr/bin/env python
+  #!/usr/bin/env python3
 
   import lldb
   import os
 
+
   def disassemble_instructions(insts):
       for i in insts:
-          print i
+          print(i)
+
 
   # Set the path to the executable to debug
   exe = "./a.out"
@@ -804,54 +985,56 @@ print the process, thread and frame objects if the process stopped:
 
   # When we step or continue, don't return from the function until the process
   # stops. Otherwise we would have to handle the process events ourselves which, while doable is
-  #a little tricky.  We do this by setting the async mode to false.
-  debugger.SetAsync (False)
+  # a little tricky.  We do this by setting the async mode to false.
+  debugger.SetAsync(False)
 
   # Create a target from a file and arch
-  print "Creating a target for '%s'" % exe
+  print("Creating a target for '%s'" % exe)
 
-  target = debugger.CreateTargetWithFileAndArch (exe, lldb.LLDB_ARCH_DEFAULT)
+  target = debugger.CreateTargetWithFileAndArch(exe, lldb.LLDB_ARCH_DEFAULT)
 
   if target:
       # If the target is valid set a breakpoint at main
-      main_bp = target.BreakpointCreateByName ("main", target.GetExecutable().GetFilename());
+      main_bp = target.BreakpointCreateByName(
+          "main", target.GetExecutable().GetFilename()
+      )
 
-      print main_bp
+      print(main_bp)
 
       # Launch the process. Since we specified synchronous mode, we won't return
       # from this function until we hit the breakpoint at main
-      process = target.LaunchSimple (None, None, os.getcwd())
+      process = target.LaunchSimple(None, None, os.getcwd())
 
       # Make sure the launch went ok
       if process:
           # Print some simple process info
-          state = process.GetState ()
-          print process
+          state = process.GetState()
+          print(process)
           if state == lldb.eStateStopped:
               # Get the first thread
-              thread = process.GetThreadAtIndex (0)
+              thread = process.GetThreadAtIndex(0)
               if thread:
                   # Print some simple thread info
-                  print thread
+                  print(thread)
                   # Get the first frame
-                  frame = thread.GetFrameAtIndex (0)
+                  frame = thread.GetFrameAtIndex(0)
                   if frame:
                       # Print some simple frame info
-                      print frame
+                      print(frame)
                       function = frame.GetFunction()
                       # See if we have debug info (a function)
                       if function:
                           # We do have a function, print some info for the function
-                          print function
+                          print(function)
                           # Now get all instructions for this function and print them
                           insts = function.GetInstructions(target)
-                          disassemble_instructions (insts)
+                          disassemble_instructions(insts)
                       else:
                           # See if we have a symbol in the symbol table for where we stopped
-                          symbol = frame.GetSymbol();
+                          symbol = frame.GetSymbol()
                           if symbol:
                               # We do have a symbol, print some info for the symbol
-                              print symbol
+                              print(symbol)
 
 Writing lldb frame recognizers in Python
 ----------------------------------------
@@ -910,11 +1093,11 @@ Writing Target Stop-Hooks in Python
 
 Stop hooks fire whenever the process stops just before control is returned to the
 user.  Stop hooks can either be a set of lldb command-line commands, or can
-be implemented by a suitably defined Python class.  The Python based stop-hooks
-can also be passed as set of -key -value pairs when they are added, and those
+be implemented by a suitably defined Python class.  The Python-based stop-hooks
+can also be passed as a set of -key -value pairs when they are added, and those
 will get packaged up into a SBStructuredData Dictionary and passed to the
 constructor of the Python object managing the stop hook.  This allows for
-parametrization of the stop hooks.
+parameterization of the stop hooks.
 
 To add a Python-based stop hook, first define a class with the following methods:
 

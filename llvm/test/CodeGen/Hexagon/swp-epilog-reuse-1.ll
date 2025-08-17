@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 < %s
 ; REQUIRES: asserts
 
 ; Test that the pipeliner reuses an existing Phi when generating the epilog

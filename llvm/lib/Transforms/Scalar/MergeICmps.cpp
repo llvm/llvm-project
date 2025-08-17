@@ -479,6 +479,10 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   BaseIdentifier BaseId;
   for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
+    if (Block->hasAddressTaken()) {
+      LLVM_DEBUG(dbgs() << "cannot merge blocks with blockaddress\n");
+      return;
+    }
     std::optional<BCECmpBlock> Comparison = visitCmpBlock(
         Phi.getIncomingValueForBlock(Block), Block, Phi.getParent(), BaseId);
     if (!Comparison) {

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 
+#include "SIShrinkInstructions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -26,19 +27,13 @@ using namespace llvm;
 
 namespace {
 
-class SIShrinkInstructions : public MachineFunctionPass {
+class SIShrinkInstructions {
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
-
-public:
-  static char ID;
-
-public:
-  SIShrinkInstructions() : MachineFunctionPass(ID) {
-  }
+  bool IsPostRA;
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
@@ -62,6 +57,18 @@ public:
   void dropInstructionKeepingImpDefs(MachineInstr &MI) const;
   MachineInstr *matchSwap(MachineInstr &MovT) const;
 
+public:
+  SIShrinkInstructions() = default;
+  bool run(MachineFunction &MF);
+};
+
+class SIShrinkInstructionsLegacy : public MachineFunctionPass {
+
+public:
+  static char ID;
+
+  SIShrinkInstructionsLegacy() : MachineFunctionPass(ID) {}
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override { return "SI Shrink Instructions"; }
@@ -74,13 +81,13 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIShrinkInstructions, DEBUG_TYPE,
+INITIALIZE_PASS(SIShrinkInstructionsLegacy, DEBUG_TYPE,
                 "SI Shrink Instructions", false, false)
 
-char SIShrinkInstructions::ID = 0;
+char SIShrinkInstructionsLegacy::ID = 0;
 
-FunctionPass *llvm::createSIShrinkInstructionsPass() {
-  return new SIShrinkInstructions();
+FunctionPass *llvm::createSIShrinkInstructionsLegacyPass() {
+  return new SIShrinkInstructionsLegacy();
 }
 
 /// This function checks \p MI for operands defined by a move immediate
@@ -152,6 +159,10 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
       if (AMDGPU::VGPR_32RegClass.contains(Reg) &&
           !AMDGPU::VGPR_32_Lo128RegClass.contains(Reg))
         return false;
+
+      if (AMDGPU::VGPR_16RegClass.contains(Reg) &&
+          !AMDGPU::VGPR_16_Lo128RegClass.contains(Reg))
+        return false;
     }
   }
   return true;
@@ -203,12 +214,12 @@ static unsigned canModifyToInlineImmOp32(const SIInstrInfo *TII,
     // that SCC is not live as S_NOT_B32 clobbers it. It's probably not worth
     // it, as the reasonable values are already covered by s_movk_i32.
     ModifiedImm = ~SrcImm;
-    if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+    if (TII->isInlineConstant(APInt(32, ModifiedImm, true)))
       return AMDGPU::V_NOT_B32_e32;
   }
 
   ModifiedImm = reverseBits<int32_t>(SrcImm);
-  if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+  if (TII->isInlineConstant(APInt(32, ModifiedImm, true)))
     return Scalar ? AMDGPU::S_BREV_B32 : AMDGPU::V_BFREV_B32_e32;
 
   return 0;
@@ -407,8 +418,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     return;
 
   // There is no advantage to doing this pre-RA.
-  if (!MF->getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs))
+  if (!IsPostRA)
     return;
 
   if (TII->hasAnyModifiersSet(MI))
@@ -445,8 +455,17 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
-                                          : AMDGPU::V_FMAAK_F16;
+      NewOpcode = AMDGPU::V_FMAAK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_t16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_fake16;
+      break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAAK_F64;
       break;
     }
   }
@@ -474,8 +493,17 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
-                                          : AMDGPU::V_FMAMK_F16;
+      NewOpcode = AMDGPU::V_FMAMK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_t16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_fake16;
+      break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAMK_F64;
       break;
     }
   }
@@ -657,6 +685,7 @@ void SIShrinkInstructions::dropInstructionKeepingImpDefs(
 // although requirements match the pass placement and it reduces code size too.
 MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+         MovT.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
          MovT.getOpcode() == AMDGPU::COPY);
 
   Register T = MovT.getOperand(0).getReg();
@@ -668,7 +697,12 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
 
-  unsigned Size = TII->getOpSize(MovT, 0) / 4;
+  unsigned Size = TII->getOpSize(MovT, 0);
+
+  // We can't match v_swap_b16 pre-RA, because VGPR_16_Lo128 registers
+  // are not allocatble.
+  if (Size == 2 && X.isVirtual())
+    return nullptr;
 
   if (!TRI->isVGPR(*MRI, X))
     return nullptr;
@@ -684,9 +718,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     KilledT = MovY->killsRegister(T, TRI);
 
     if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+         MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
          MovY->getOpcode() != AMDGPU::COPY) ||
-        !MovY->getOperand(1).isReg()        ||
-        MovY->getOperand(1).getReg() != T   ||
+        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
         MovY->getOperand(1).getSubReg() != Tsub)
       continue;
 
@@ -714,6 +748,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
       }
       if (MovX ||
           (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+           I->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
            I->getOpcode() != AMDGPU::COPY) ||
           I->getOperand(0).getReg() != X ||
           I->getOperand(0).getSubReg() != Xsub) {
@@ -721,7 +756,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         break;
       }
 
-      if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
+      if (Size > 4 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
         continue;
 
       MovX = &*I;
@@ -730,23 +765,40 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     if (!MovX)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Matched v_swap_b32:\n" << MovT << *MovX << *MovY);
+    LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
 
-    for (unsigned I = 0; I < Size; ++I) {
-      TargetInstrInfo::RegSubRegPair X1, Y1;
-      X1 = getSubRegForIndex(X, Xsub, I);
-      Y1 = getSubRegForIndex(Y, Ysub, I);
-      MachineBasicBlock &MBB = *MovT.getParent();
-      auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                         TII->get(AMDGPU::V_SWAP_B32))
-        .addDef(X1.Reg, 0, X1.SubReg)
-        .addDef(Y1.Reg, 0, Y1.SubReg)
-        .addReg(Y1.Reg, 0, Y1.SubReg)
-        .addReg(X1.Reg, 0, X1.SubReg).getInstr();
-      if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
-        // Drop implicit EXEC.
-        MIB->removeOperand(MIB->getNumExplicitOperands());
-        MIB->copyImplicitOps(*MBB.getParent(), *MovX);
+    MachineBasicBlock &MBB = *MovT.getParent();
+    SmallVector<MachineInstr *, 4> Swaps;
+    if (Size == 2) {
+      auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                          TII->get(AMDGPU::V_SWAP_B16))
+                      .addDef(X)
+                      .addDef(Y)
+                      .addReg(Y)
+                      .addReg(X)
+                      .getInstr();
+      Swaps.push_back(MIB);
+    } else {
+      assert(Size > 0 && Size % 4 == 0);
+      for (unsigned I = 0; I < Size / 4; ++I) {
+        TargetInstrInfo::RegSubRegPair X1, Y1;
+        X1 = getSubRegForIndex(X, Xsub, I);
+        Y1 = getSubRegForIndex(Y, Ysub, I);
+        auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                            TII->get(AMDGPU::V_SWAP_B32))
+                        .addDef(X1.Reg, 0, X1.SubReg)
+                        .addDef(Y1.Reg, 0, Y1.SubReg)
+                        .addReg(Y1.Reg, 0, Y1.SubReg)
+                        .addReg(X1.Reg, 0, X1.SubReg)
+                        .getInstr();
+        Swaps.push_back(MIB);
+      }
+    }
+    // Drop implicit EXEC.
+    if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
+      for (MachineInstr *Swap : Swaps) {
+        Swap->removeOperand(Swap->getNumExplicitOperands());
+        Swap->copyImplicitOps(*MBB.getParent(), *MovX);
       }
     }
     MovX->eraseFromParent();
@@ -787,24 +839,18 @@ bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
   return true;
 }
 
-bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
+bool SIShrinkInstructions::run(MachineFunction &MF) {
 
   this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  IsPostRA = MF.getProperties().hasNoVRegs();
 
   unsigned VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
 
-  std::vector<unsigned> I1Defs;
-
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-                                                  BI != BE; ++BI) {
-
-    MachineBasicBlock &MBB = *BI;
+  for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator I, Next;
     for (I = MBB.begin(); I != MBB.end(); I = Next) {
       Next = std::next(I);
@@ -818,9 +864,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
         // Test if we are after regalloc. We only want to do this after any
         // optimizations happen because this will confuse them.
-        // XXX - not exactly a check for post-regalloc run.
         MachineOperand &Src = MI.getOperand(1);
-        if (Src.isImm() && MI.getOperand(0).getReg().isPhysical()) {
+        if (Src.isImm() && IsPostRA) {
           int32_t ModImm;
           unsigned ModOpcode =
               canModifyToInlineImmOp32(TII, Src, ModImm, /*Scalar=*/false);
@@ -833,6 +878,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       }
 
       if (ST->hasSwap() && (MI.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+                            MI.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
                             MI.getOpcode() == AMDGPU::COPY)) {
         if (auto *NextMI = matchSwap(MI)) {
           Next = NextMI->getIterator();
@@ -908,10 +954,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           continue;
       }
 
-      if (TII->isMIMG(MI.getOpcode()) &&
-          ST->getGeneration() >= AMDGPUSubtarget::GFX10 &&
-          MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs)) {
+      if (IsPostRA && TII->isMIMG(MI.getOpcode()) &&
+          ST->getGeneration() >= AMDGPUSubtarget::GFX10) {
         shrinkMIMG(MI);
         continue;
       }
@@ -923,16 +967,22 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_t16_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64 ||
+          (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
+           ST->hasFmaakFmamkF64Insts())) {
         shrinkMadFma(MI);
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-        // If there is no chance we will shrink it and use VCC as sdst to get
-        // a 32 bit form try to replace dead sdst with NULL.
+      // If there is no chance we will shrink it and use VCC as sdst to get
+      // a 32 bit form try to replace dead sdst with NULL.
+      if (TII->isVOP3(MI.getOpcode())) {
         tryReplaceDeadSDST(MI);
-        continue;
+        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+          continue;
+        }
       }
 
       if (!TII->canShrink(MI, *MRI)) {
@@ -1018,9 +1068,11 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       // fold an immediate into the shrunk instruction as a literal operand. In
       // GFX10 VOP3 instructions can take a literal operand anyway, so there is
       // no advantage to doing this.
+      // However, if 64-bit literals are allowed we still need to shrink it
+      // for such literal to be able to fold.
       if (ST->hasVOP3Literal() &&
-          !MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs))
+          (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
+          !IsPostRA)
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
@@ -1047,4 +1099,22 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return false;
+}
+
+bool SIShrinkInstructionsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return SIShrinkInstructions().run(MF);
+}
+
+PreservedAnalyses
+SIShrinkInstructionsPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &) {
+  if (MF.getFunction().hasOptNone() || !SIShrinkInstructions().run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

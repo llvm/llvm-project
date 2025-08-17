@@ -89,6 +89,30 @@ static StringRef getDestTypeString(const SourceManager &SM,
                               SM, LangOpts);
 }
 
+static bool sameTypeAsWritten(QualType X, QualType Y) {
+  if (X.getCanonicalType() != Y.getCanonicalType())
+    return false;
+
+  auto TC = X->getTypeClass();
+  if (TC != Y->getTypeClass())
+    return false;
+
+  switch (TC) {
+  case Type::Typedef:
+    return declaresSameEntity(cast<TypedefType>(X)->getDecl(),
+                              cast<TypedefType>(Y)->getDecl());
+  case Type::Pointer:
+    return sameTypeAsWritten(cast<PointerType>(X)->getPointeeType(),
+                             cast<PointerType>(Y)->getPointeeType());
+  case Type::RValueReference:
+  case Type::LValueReference:
+    return sameTypeAsWritten(cast<ReferenceType>(X)->getPointeeType(),
+                             cast<ReferenceType>(Y)->getPointeeType());
+  default:
+    return true;
+  }
+}
+
 void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
 
@@ -120,20 +144,15 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
-      DestTypeAsWritten->isRecordType() &&
-      !DestTypeAsWritten->isElaboratedTypeSpecifier();
+                               DestTypeAsWritten->isRecordType() &&
+                               !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
   if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
     // Function pointer/reference casts may be needed to resolve ambiguities in
     // case of overloaded functions, so detection of redundant casts is trickier
     // in this case. Don't emit "redundant cast" warnings for function
     // pointer/reference types.
-    QualType Src = SourceTypeAsWritten, Dst = DestTypeAsWritten;
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Src))
-      Src = ElTy->getNamedType();
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Dst))
-      Dst = ElTy->getNamedType();
-    if (Src == Dst) {
+    if (sameTypeAsWritten(SourceTypeAsWritten, DestTypeAsWritten)) {
       diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
           << FixItHint::CreateRemoval(ReplaceRange);
       return;

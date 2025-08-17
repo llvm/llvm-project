@@ -47,11 +47,23 @@ public:
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
+  /// Get the raw address type of the memory described by the box.
+  mlir::Type getBaseAddressType() const;
+
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
 
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
+
+  /// Is this a box for a pointer?
+  bool isPointer() const;
+
+  /// Does this box for a pointer or allocatable?
+  bool isPointerOrAllocatable() const;
+
+  /// Is this a box describing volatile memory?
+  bool isVolatile() const;
 
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
@@ -139,6 +151,20 @@ inline bool isa_builtin_cptr_type(mlir::Type t) {
   return false;
 }
 
+// Is `t` type(c_devptr)?
+inline bool isa_builtin_c_devptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
+  return false;
+}
+
+/// Is `t` type(c_devptr)?
+inline bool isa_builtin_cdevptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
+  return false;
+}
+
 /// Is `t` a FIR dialect aggregate type?
 inline bool isa_aggregate(mlir::Type t) {
   return mlir::isa<SequenceType, mlir::TupleType>(t) || fir::isa_derived(t);
@@ -152,10 +178,8 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 /// `t` is not a memory reference or box type, then returns a null `Type`.
 mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t);
 
-/// Is `t` a FIR Real or MLIR Float type?
-inline bool isa_real(mlir::Type t) {
-  return mlir::isa<fir::RealType, mlir::FloatType>(t);
-}
+/// Is `t` a real type?
+inline bool isa_real(mlir::Type t) { return mlir::isa<mlir::FloatType>(t); }
 
 /// Is `t` an integral type?
 inline bool isa_integer(mlir::Type t) {
@@ -175,9 +199,11 @@ void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
 /// Index, or FIR Int). Aborts execution if condition is false.
 void verifyIntegralType(mlir::Type type);
 
-/// Is `t` a FIR or MLIR Complex type?
+/// Is `t` a floating point complex type?
 inline bool isa_complex(mlir::Type t) {
-  return mlir::isa<fir::ComplexType, mlir::ComplexType>(t);
+  return mlir::isa<mlir::ComplexType>(t) &&
+         mlir::isa<mlir::FloatType>(
+             mlir::cast<mlir::ComplexType>(t).getElementType());
 }
 
 /// Is `t` a CHARACTER type? Does not check the length.
@@ -203,6 +229,10 @@ inline bool isa_char_string(mlir::Type t) {
 /// Unknown type are always considered to have the size of derived type box
 /// (since they may hold one), and are not considered to be unknown size.
 bool isa_unknown_size_box(mlir::Type t);
+
+/// Returns true iff `t` is a type capable of representing volatility and has
+/// the volatile attribute set.
+bool isa_volatile_type(mlir::Type t);
 
 /// Returns true iff `t` is a fir.char type and has an unknown length.
 inline bool characterWithDynamicLen(mlir::Type t) {
@@ -261,6 +291,13 @@ inline mlir::Type unwrapPassByRefType(mlir::Type t) {
     return eleTy;
   return t;
 }
+
+/// Extracts the innermost type, T, **potentially** wrapped inside:
+///   <fir.[ref|ptr|heap] <fir.[ref|ptr|heap|box] <fir.array<T>>>
+///
+/// Any element absent from the above pattern does not affect the returned
+/// value: T.
+mlir::Type getFortranElementType(mlir::Type ty);
 
 /// Unwrap either a sequence or a boxed sequence type, returning the element
 /// type of the sequence type.
@@ -429,10 +466,14 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
   return fir::BoxType::get(eleTy);
 }
 
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
+
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
-/// i32 -> none
+/// i32 -> ()
 /// !fir.array<2xf32> -> !fir.array<2xnone>
 /// !fir.heap<!fir.array<2xf32>> -> !fir.heap<!fir.array<2xnone>>
 inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
@@ -449,6 +490,10 @@ inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
     return mlir::NoneType::get(ty.getContext());
   return ty;
 }
+
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
 
 /// Replace the element type of \p type by \p newElementType, preserving
 /// all other layers of the type (fir.ref/ptr/heap/array/box/class).
@@ -474,6 +519,13 @@ inline bool isBoxProcAddressType(mlir::Type t) {
   return t && mlir::isa<fir::BoxProcType>(t);
 }
 
+inline bool isRefOfConstantSizeAggregateType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t &&
+         mlir::isa<fir::CharacterType, fir::RecordType, fir::SequenceType>(t) &&
+         !hasDynamicSize(t);
+}
+
 /// Return a string representation of `ty`.
 ///
 /// fir.array<10x10xf32> -> prefix_10x10xf32
@@ -487,11 +539,18 @@ std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
 /// target dependent type size inquiries in lowering. It would also not be
 /// straightforward given the need for a kind map that would need to be
 /// converted in terms of mlir::DataLayoutEntryKey.
+
+/// This variant terminates the compilation if an unsupported type is passed.
 std::pair<std::uint64_t, unsigned short>
+getTypeSizeAndAlignmentOrCrash(mlir::Location loc, mlir::Type ty,
+                               const mlir::DataLayout &dl,
+                               const fir::KindMapping &kindMap);
+
+/// This variant returns std::nullopt if an unsupported type is passed.
+std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

@@ -1,6 +1,4 @@
 // REQUIRES: lld
-// Is flaky on Windows.
-// UNSUPPORTED: system-windows
 
 // This test will make a type that will be compiled differently into two
 // different .dwo files in a type unit with the same type hash, but with
@@ -30,7 +28,7 @@
 // RUN:   -o "type lookup IntegerType" \
 // RUN:   -o "type lookup FloatType" \
 // RUN:   -o "type lookup CustomType" \
-// RUN:   -b %t | FileCheck %s --check-prefix=NODWP
+// RUN:   -b %t | FileCheck %s --check-prefix=NODWP --match-full-lines
 // NODWP: (lldb) type lookup IntegerType
 // NODWP-DAG: int
 // NODWP-DAG: unsigned int
@@ -58,8 +56,8 @@
 // DWPMAIN-NEXT: struct CustomType {
 // DWPMAIN-NEXT:     typedef int IntegerType;
 // DWPMAIN-NEXT:     typedef double FloatType;
-// DWPMAIN-NEXT:     CustomType::IntegerType x;
-// DWPMAIN-NEXT:     CustomType::FloatType y;
+// DWPMAIN-NEXT:     IntegerType x;
+// DWPMAIN-NEXT:     FloatType y;
 // DWPMAIN-NEXT: }
 
 // Next we check when we make the .dwp file with %t.foo.dwo first so it will
@@ -80,8 +78,8 @@
 // DWPFOO-NEXT: struct CustomType {
 // DWPFOO-NEXT:     typedef unsigned int IntegerType;
 // DWPFOO-NEXT:     typedef float FloatType;
-// DWPFOO-NEXT:     CustomType::IntegerType x;
-// DWPFOO-NEXT:     CustomType::FloatType y;
+// DWPFOO-NEXT:     IntegerType x;
+// DWPFOO-NEXT:     FloatType y;
 // DWPFOO-NEXT: }
 
 struct CustomType {

@@ -10,24 +10,16 @@ define <2 x i64> @load_00123456(ptr nocapture noundef readonly %data) {
 ; SSE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[DATA:%.*]], i64 1
 ; SSE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, ptr [[DATA]], i64 2
 ; SSE-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[DATA]], i64 3
-; SSE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[DATA]], i64 4
-; SSE-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i16, ptr [[DATA]], i64 5
-; SSE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[DATA]], i64 6
 ; SSE-NEXT:    [[T0:%.*]] = load i16, ptr [[DATA]], align 2
 ; SSE-NEXT:    [[T1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
 ; SSE-NEXT:    [[T2:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
-; SSE-NEXT:    [[T3:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
-; SSE-NEXT:    [[T4:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; SSE-NEXT:    [[T5:%.*]] = load i16, ptr [[ARRAYIDX5]], align 2
-; SSE-NEXT:    [[T6:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[ARRAYIDX3]], align 2
 ; SSE-NEXT:    [[VECINIT0_I_I:%.*]] = insertelement <8 x i16> undef, i16 [[T0]], i64 0
 ; SSE-NEXT:    [[VECINIT1_I_I:%.*]] = insertelement <8 x i16> [[VECINIT0_I_I]], i16 [[T0]], i64 1
 ; SSE-NEXT:    [[VECINIT2_I_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I_I]], i16 [[T1]], i64 2
 ; SSE-NEXT:    [[VECINIT3_I_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I_I]], i16 [[T2]], i64 3
-; SSE-NEXT:    [[VECINIT4_I_I:%.*]] = insertelement <8 x i16> [[VECINIT3_I_I]], i16 [[T3]], i64 4
-; SSE-NEXT:    [[VECINIT5_I_I:%.*]] = insertelement <8 x i16> [[VECINIT4_I_I]], i16 [[T4]], i64 5
-; SSE-NEXT:    [[VECINIT6_I_I:%.*]] = insertelement <8 x i16> [[VECINIT5_I_I]], i16 [[T5]], i64 6
-; SSE-NEXT:    [[VECINIT7_I_I:%.*]] = insertelement <8 x i16> [[VECINIT6_I_I]], i16 [[T6]], i64 7
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE-NEXT:    [[VECINIT7_I_I:%.*]] = shufflevector <8 x i16> [[VECINIT3_I_I]], <8 x i16> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; SSE-NEXT:    [[T7:%.*]] = bitcast <8 x i16> [[VECINIT7_I_I]] to <2 x i64>
 ; SSE-NEXT:    ret <2 x i64> [[T7]]
 ;

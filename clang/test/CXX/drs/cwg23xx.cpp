@@ -1,13 +1,23 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus >= 201103L
+namespace std {
+  __extension__ typedef __SIZE_TYPE__ size_t;
+
+  template<typename E> struct initializer_list {
+    const E *p; size_t n;
+    initializer_list(const E *p, size_t n);
+    initializer_list();
+  };
+}
+
 namespace cwg2303 { // cwg2303: 12
+#if __cplusplus >= 201103L
 template <typename... T>
 struct A;
 template <>
@@ -44,8 +54,8 @@ void g() {
     struct cwg2303::F -> B -> A<int, int>
     struct cwg2303::F -> E -> A<int, int>}} */
 }
-} // namespace cwg2303
 #endif
+} // namespace cwg2303
 
 namespace cwg2304 { // cwg2304: 2.8
 template<typename T> void foo(T, int);
@@ -81,7 +91,7 @@ struct Y {};
 struct Z : W,
   X, check_derived_from<Z, X>, // #cwg2310-X
   check_derived_from<Z, Y>, Y  // #cwg2310-Y
-{  
+{
   // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
   //        See https://github.com/llvm/llvm-project/issues/59920
 #if __cplusplus >= 201703L
@@ -94,8 +104,97 @@ struct Z : W,
 // cwg2331: na
 // cwg2335 is in cwg2335.cxx
 
-#if __cplusplus >= 201103L
+namespace cwg2311 {  // cwg2311 is open with no proposed resolution
+#if __cplusplus >= 201707L
+template<typename T>
+void test() {
+  // Ensure none of these try to call a move constructor.
+  T a = T{T(0)};
+  T b{T(0)};
+  auto c{T(0)};
+  T d = {T(0)};
+  auto e = {T(0)};
+#if __cplusplus >= 202302L
+  auto f = auto{T(0)};
+#endif
+  void(*fn)(T);
+  fn({T(0)});
+}
+
+struct NonMovable {
+  NonMovable(int);
+  NonMovable(NonMovable&&) = delete;
+};
+struct NonMovableNonApplicableIList {
+  NonMovableNonApplicableIList(int);
+  NonMovableNonApplicableIList(NonMovableNonApplicableIList&&) = delete;
+  NonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct ExplicitMovable {
+  ExplicitMovable(int);
+  explicit ExplicitMovable(ExplicitMovable&&);
+};
+struct ExplicitNonMovable {
+  ExplicitNonMovable(int);
+  explicit ExplicitNonMovable(ExplicitNonMovable&&) = delete;
+};
+struct ExplicitNonMovableNonApplicableIList {
+  ExplicitNonMovableNonApplicableIList(int);
+  explicit ExplicitNonMovableNonApplicableIList(ExplicitNonMovableNonApplicableIList&&) = delete;
+  ExplicitNonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct CopyOnly {
+  CopyOnly(int);
+  CopyOnly(const CopyOnly&);
+  CopyOnly(CopyOnly&&) = delete;
+};
+struct ExplicitCopyOnly {
+  ExplicitCopyOnly(int);
+  explicit ExplicitCopyOnly(const ExplicitCopyOnly&);
+  explicit ExplicitCopyOnly(ExplicitCopyOnly&&) = delete;
+};
+
+template void test<NonMovable>();
+template void test<NonMovableNonApplicableIList>();
+template void test<ExplicitMovable>();
+template void test<ExplicitNonMovable>();
+template void test<ExplicitNonMovableNonApplicableIList>();
+template void test<CopyOnly>();
+template void test<ExplicitCopyOnly>();
+
+struct any {
+    template<typename T>
+    any(T&&);
+};
+
+template<typename T>
+struct X {
+    X();
+    X(T) = delete; // #cwg2311-X
+};
+
+X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
+// since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
+//   since-cxx17-note@#cwg2311-X {{'X' has been explicitly marked deleted here}}
+
+// Per the currently implemented resolution, this does not apply to std::initializer_list.
+// An initializer list initialized from `{ e }` always has exactly one element constructed
+// from `e`, where previously that could have been a copy of an init list or `e.operator std::initializer_list()`
+struct InitListCtor {
+  InitListCtor(int);
+  InitListCtor(InitListCtor&&) = delete;
+  InitListCtor(std::initializer_list<InitListCtor>) = delete; // #cwg2311-InitListCtor
+};
+
+std::initializer_list<InitListCtor> i;
+auto j = std::initializer_list<InitListCtor>{ i };
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const InitListCtor' invokes a deleted function}}
+//   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
+#endif
+} // namespace cwg2311
+
 namespace cwg2338 { // cwg2338: 12
+#if __cplusplus >= 201103L
 namespace B {
 enum E : bool { Zero, One };
 static_assert((int)(E)2 == 1, "");
@@ -104,15 +203,52 @@ namespace D {
 enum class E : bool { Zero, One };
 static_assert((int)(E)2 == 1, "");
 } // namespace D
-} // namespace cwg2338
 #endif
+} // namespace cwg2338
 
 namespace cwg2346 { // cwg2346: 11
   void test() {
     const int i2 = 0;
     extern void h2b(int x = i2 + 0); // ok, not odr-use
   }
-}
+} // namespace cwg2346
+
+namespace cwg2351 { // cwg2351: 20
+#if __cplusplus >= 201103L
+  static_assert((void{}, true), "");
+
+  void f() {
+    return void{};
+  }
+
+  template<typename T>
+  void g() {
+    return T{};
+  }
+  template void g<void>();
+  template void g<const void>();
+
+  void h() {
+    return {};
+    // since-cxx11-error@-1 {{void function 'h' must not return a value}}
+  }
+
+  template<typename T, int... I>
+  T i() {
+    return T{I...};
+  }
+  template void i<void>();
+  template const void i<const void>();
+
+  static_assert((void({}), true), "");
+  // since-cxx11-error@-1 {{cannot initialize non-class type 'void' with a parenthesized initializer list}}
+#else
+  int I = (void{}, 0);
+  // cxx98-error@-1 {{expected ')'}}
+  //   cxx98-note@-2 {{to match this '('}}
+  // cxx98-error@-3 {{expected expression}}
+#endif
+} // namespace cwg2351
 
 namespace cwg2352 { // cwg2352: 10
   int **p;
@@ -148,39 +284,7 @@ namespace cwg2352 { // cwg2352: 10
 #if __cplusplus >= 201103L
   static_assert(&p == &check_f, "");
 #endif
-}
-
-namespace cwg2353 { // cwg2353: 9
-  struct X {
-    static const int n = 0;
-  };
-
-  // CHECK: FunctionDecl {{.*}} use
-  int use(X x) {
-    // CHECK: MemberExpr {{.*}} .n
-    // CHECK-NOT: non_odr_use
-    // CHECK: DeclRefExpr {{.*}} 'x'
-    // CHECK-NOT: non_odr_use
-    return *&x.n;
-  }
-#pragma clang __debug dump use
-
-  // CHECK: FunctionDecl {{.*}} not_use
-  int not_use(X x) {
-    // CHECK: MemberExpr {{.*}} .n {{.*}} non_odr_use_constant
-    // CHECK: DeclRefExpr {{.*}} 'x'
-    return x.n;
-  }
-#pragma clang __debug dump not_use
-
-  // CHECK: FunctionDecl {{.*}} not_use_2
-  int not_use_2(X *x) {
-    // CHECK: MemberExpr {{.*}} ->n {{.*}} non_odr_use_constant
-    // CHECK: DeclRefExpr {{.*}} 'x'
-    return x->n;
-  }
-#pragma clang __debug dump not_use_2
-}
+} // namespace cwg2352
 
 namespace cwg2354 { // cwg2354: 15
 #if __cplusplus >= 201103L
@@ -214,22 +318,22 @@ B b2 = static_cast<B&&>(b1);      // calls #3: #1, #2, and #4 are not viable
 struct C { operator B&&(); };
 B b3 = C();                       // calls #3
 #endif
-}
+} // namespace cwg2356
 
-#if __cplusplus >= 201402L
 namespace cwg2358 { // cwg2358: 16
+#if __cplusplus >= 201402L
   void f2() {
     int i = 1;
     void g1(int = [xxx=1] { return xxx; }());  // OK
     void g2(int = [xxx=i] { return xxx; }());
     // since-cxx14-error@-1 {{default argument references local variable 'i' of enclosing function}}
   }
-}
 #endif
+} // namespace cwg2358
 
 // CWG2363 was closed as NAD, but its resolution does affirm that
 // a friend declaration cannot have an opaque-enumm-specifier.
-namespace cwg2363 { // cwg2363: yes
+namespace cwg2363 { // cwg2363: 19
 #if __cplusplus >= 201103L
 enum class E0;
 enum E1 : int;
@@ -237,29 +341,58 @@ enum E1 : int;
 struct A {
   friend enum class E0;
   // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
-  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+  // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  //   since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
 
   friend enum E0;
-  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+  // since-cxx11-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  //   since-cxx11-note@-2 {{remove 'enum' to befriend an enum}}
 
   friend enum class E1;
   // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
-  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+  // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  //   since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
 
   friend enum E1;
-  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+  // since-cxx11-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  //   since-cxx11-note@-2 {{remove 'enum' to befriend an enum}}
 
   friend enum class E2;
   // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
-  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+  // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  //   since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
 };
 #endif
 } // namespace cwg2363
+
+namespace cwg2369 { // cwg2369: partial
+#if __cplusplus >= 202002L
+template <class T> struct Z {
+  typedef typename T::x xx;
+};
+
+template <class T>
+concept C = requires { typename T::A; };
+template <C T> typename Z<T>::xx f(void *, T); // #1
+template <class T> void f(int, T);             // #2
+
+struct A {
+} a;
+
+struct ZZ {
+  template <class T, class = typename Z<T>::xx> operator T *();
+  operator int();
+};
+
+void foo() {
+  ZZ zz;
+  f(1, a); // OK, deduction fails for #1 because there is no conversion from int
+           // to void*
+  f(zz, 42); // OK, deduction fails for #1 because C<int> is not satisfied
+}
+
+#endif
+} // namespace cwg2369
 
 namespace cwg2370 { // cwg2370: no
 namespace N {
@@ -275,11 +408,25 @@ class C {
 };
 } // namespace cwg2370
 
-#if __cplusplus >= 201702L
+namespace cwg2376 { // cwg2376: 21
+#if __cplusplus >= 201703L
+template<int = 0> class C {};
+
+C a;
+const volatile C b = C<2>();
+C (c) = {};
+C* d;
+// expected-error@-1 {{cannot form pointer to deduced class template specialization type}}
+C e[1];
+// expected-error@-1 {{cannot form array of deduced class template specialization type}}
+#endif
+}
+
+namespace cwg2386 { // cwg2386: 9
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class
 // type **with a member value**, the expression std::tuple_size<E>::value shall
 // be a well-formed integral constant expression
-namespace cwg2386 { // cwg2386: 9
+#if __cplusplus >= 201702L
 struct Bad1 { int a, b; };
 struct Bad2 { int a, b; };
 } // namespace cwg2386
@@ -294,8 +441,8 @@ namespace cwg2386 {
 void no_value() { auto [x, y] = Bad1(); }
 void wrong_value() { auto [x, y] = Bad2(); }
 // since-cxx17-error@-1 {{type 'Bad2' decomposes into 42 elements, but only 2 names were provided}}
-} // namespace cwg2386
 #endif
+} // namespace cwg2386
 
 // cwg2385: na
 
@@ -315,7 +462,7 @@ namespace cwg2387 { // cwg2387: 9
   extern template int d<int>;
   extern template const int d<const int>;
 #endif
-}
+} // namespace cwg2387
 
 namespace cwg2390 { // cwg2390: 14
 // Test that macro expansion of the builtin argument works.
@@ -363,7 +510,7 @@ const A a;
 struct B { const A a; };
 B b;
 
-}
+} // namespace cwg2394
 
 namespace cwg2396 { // cwg2396: no
   struct A {
@@ -379,16 +526,15 @@ namespace cwg2396 { // cwg2396: no
   // void f(A a) { a.operator B B::*(); }
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
-}
+} // namespace cwg2396
 
-#if __cplusplus >= 201103L
 namespace cwg2397 { // cwg2397: 17
+#if __cplusplus >= 201103L
   void foo() {
     int a[5];
 
     auto (&b)[5] = a;
     auto (*c)[5] = &a;
   }
-} // namespace cwg2397
-
 #endif
+} // namespace cwg2397

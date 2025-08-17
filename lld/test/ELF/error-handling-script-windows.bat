@@ -6,10 +6,10 @@
 :: RUN:   FileCheck --check-prefix=CHECK-SCRIPT-DOES-NOT-EXIST -DFILE=%s.nope %s
 ::
 :: CHECK-LIB:      script: info: called with missing-lib idontexist
-:: CHECK-LIB-NEXT: ld.lld: error: unable to find library -lidontexist
+:: CHECK-LIB-NEXT: error: unable to find library -lidontexist
 
-:: CHECK-SCRIPT-DOES-NOT-EXIST:      ld.lld: error: unable to find library -lidontexist
-:: CHECK-SCRIPT-DOES-NOT-EXIST-NEXT: ld.lld: error: error handling script '[[FILE]]' failed to execute
+:: CHECK-SCRIPT-DOES-NOT-EXIST:      error: unable to find library -lidontexist
+:: CHECK-SCRIPT-DOES-NOT-EXIST-NEXT: error: error handling script '[[FILE]]' failed to execute
 
 @echo off
 echo "script: info: called with %*"

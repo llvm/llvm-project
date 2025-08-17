@@ -58,7 +58,7 @@ template <typename value_type, std::size_t alignment = unaligned>
 [[nodiscard]] inline value_type read(const void *memory, endianness endian) {
   value_type ret;
 
-  memcpy(&ret,
+  memcpy(static_cast<void *>(&ret),
          LLVM_ASSUME_ALIGNED(
              memory, (detail::PickAlignment<value_type, alignment>::value)),
          sizeof(value_type));
@@ -223,10 +223,11 @@ struct packed_endian_specific_integral {
 
   explicit packed_endian_specific_integral(value_type val) { *this = val; }
 
-  operator value_type() const {
+  value_type value() const {
     return endian::read<value_type, endian, alignment>(
       (const void*)Value.buffer);
   }
+  operator value_type() const { return value(); }
 
   void operator=(value_type newValue) {
     endian::write<value_type, endian, alignment>(
@@ -277,6 +278,9 @@ public:
 
 } // end namespace detail
 
+using ulittle8_t =
+    detail::packed_endian_specific_integral<uint8_t, llvm::endianness::little,
+                                            unaligned>;
 using ulittle16_t =
     detail::packed_endian_specific_integral<uint16_t, llvm::endianness::little,
                                             unaligned>;

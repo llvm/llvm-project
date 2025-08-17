@@ -38,7 +38,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFint_scalar_to_assumed_rank_bindcEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.box<i32>) -> !fir.box<!fir.array<*:i32>>
-! CHECK:           fir.call @int_assumed_rank_bindc(%[[VAL_3]]) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<*:i32>>) -> ()
+! CHECK:           fir.call @int_assumed_rank_bindc(%[[VAL_3]]) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()
 
 subroutine int_r1_to_assumed_rank(x)
   use ifaces, only : int_assumed_rank
@@ -94,7 +94,7 @@ end subroutine
 ! CHECK:           %[[VAL_3:.*]] = fir.shift %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shift<2>
 ! CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_1]]#0(%[[VAL_3]]) : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xi32>>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<*:i32>>
-! CHECK:           fir.call @int_assumed_rank_bindc(%[[VAL_5]]) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<*:i32>>) -> ()
+! CHECK:           fir.call @int_assumed_rank_bindc(%[[VAL_5]]) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()
 
 subroutine int_allocatable_to_assumed_rank(x)
   use ifaces, only : int_assumed_rank
@@ -117,7 +117,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPint_allocatable_to_assumed_rank_opt(
 ! CHECK-SAME:                                                      %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFint_allocatable_to_assumed_rank_optEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
-! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?x?xi32>>) -> i64
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i64

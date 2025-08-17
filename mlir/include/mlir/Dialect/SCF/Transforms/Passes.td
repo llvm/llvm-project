@@ -11,13 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def SCFBufferize : Pass<"scf-bufferize"> {
-  let summary = "Bufferize the scf dialect.";
-  let constructor = "mlir::createSCFBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
-}
-
 // Note: Making these canonicalization patterns would require a dependency
 // of the SCF dialect on the Affine/Tensor/MemRef dialects or vice versa.
 def SCFForLoopCanonicalization
@@ -48,6 +41,12 @@ def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
   let constructor = "mlir::createForLoopSpecializationPass()";
 }
 
+def SCFIfConditionPropagation : Pass<"scf-if-condition-propagation"> {
+  let summary = "Replace usages of if condition with true/false constants in "
+                "the conditional regions";
+  let dependentDialects = ["arith::ArithDialect"];
+}
+
 def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
   let summary = "Fuse adjacent parallel loops";
   let constructor = "mlir::createParallelLoopFusionPass()";
@@ -56,6 +55,7 @@ def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
 def TestSCFParallelLoopCollapsing : Pass<"test-scf-parallel-loop-collapsing"> {
   let summary = "Test parallel loops collapsing transformation";
   let constructor = "mlir::createTestSCFParallelLoopCollapsingPass()";
+  let dependentDialects = ["affine::AffineDialect"];
   let description = [{
       This pass is purely for testing the scf::collapseParallelLoops
       transformation. The transformation does not have opinions on how a
@@ -128,6 +128,17 @@ def SCFForallToForLoop : Pass<"scf-forall-to-for"> {
 def SCFForallToParallelLoop : Pass<"scf-forall-to-parallel"> {
   let summary = "Convert SCF forall loops to SCF parallel loops";
   let constructor = "mlir::createForallToParallelLoopPass()";
+}
+
+def SCFParallelForToNestedFors : Pass<"scf-parallel-for-to-nested-fors"> {
+  let summary = "Convert SCF parallel for loops to nested SCF for loops";
+  let constructor = "mlir::createParallelForToNestedForsPass()";
+  let description = [{
+    This pass transforms SCF::ParallelOp operations into a nest of SCF::ForOp
+    operations. The transformation is useful for cases where the parallel loop
+    can be expressed as a series of sequential iterations, allowing for more
+    fine-grained control over the loop execution.
+  }];
 }
 
 def SCFForToWhileLoop : Pass<"scf-for-to-while"> {

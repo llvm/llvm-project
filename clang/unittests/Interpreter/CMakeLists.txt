@@ -1,4 +1,15 @@
-set(LLVM_LINK_COMPONENTS
+if(EMSCRIPTEN)
+set(LLVM_COMPONENTS_TO_LINK
+  ""
+  )
+set(LLVM_LIBS_TO_LINK
+  ""
+  )
+set(CLANG_LIBS_TO_LINK
+  clangInterpreter
+  )
+else()
+set(LLVM_COMPONENTS_TO_LINK
   ${LLVM_TARGETS_TO_BUILD}
   Core
   MC
@@ -6,29 +17,59 @@ set(LLVM_LINK_COMPONENTS
   Support
   TargetParser
   )
-
-add_clang_unittest(ClangReplInterpreterTests
-  IncrementalCompilerBuilderTest.cpp
-  IncrementalProcessingTest.cpp
-  InterpreterTest.cpp
-  InterpreterExtensionsTest.cpp
-  CodeCompletionTest.cpp
+set(LLVM_LIBS_TO_LINK
+  LLVMTestingSupport
   )
-target_link_libraries(ClangReplInterpreterTests PUBLIC
+set(CLANG_LIBS_TO_LINK
   clangAST
   clangBasic
   clangInterpreter
   clangFrontend
   clangSema
-  LLVMTestingSupport
   )
+endif()
+
+add_distinct_clang_unittest(ClangReplInterpreterTests
+  IncrementalCompilerBuilderTest.cpp
+  IncrementalProcessingTest.cpp
+  InterpreterTest.cpp
+  InterpreterExtensionsTest.cpp
+  CodeCompletionTest.cpp
+
+  EXPORT_SYMBOLS
+
+  CLANG_LIBS
+  ${CLANG_LIBS_TO_LINK}
+
+  LINK_LIBS
+  ${LLVM_LIBS_TO_LINK}
+
+  LLVM_COMPONENTS
+  ${LLVM_COMPONENTS_TO_LINK}
+  )
+
+if(EMSCRIPTEN)
+# Without the above you try to link to LLVMSupport twice, and end
+# up with a duplicate symbol error when creating the main module
+get_target_property(LINKED_LIBS ClangReplInterpreterTests LINK_LIBRARIES)
+list(REMOVE_ITEM LINKED_LIBS LLVMSupport)
+set_target_properties(ClangReplInterpreterTests PROPERTIES LINK_LIBRARIES "${LINKED_LIBS}")
+target_link_options(ClangReplInterpreterTests
+  PUBLIC "SHELL: -s MAIN_MODULE=1"
+  PUBLIC "SHELL: -s ALLOW_MEMORY_GROWTH=1"
+  PUBLIC "SHELL: -s STACK_SIZE=32mb"
+  PUBLIC "SHELL: -s INITIAL_MEMORY=128mb"
+  PUBLIC "SHELL: --emrun"
+)
+set_target_properties(ClangReplInterpreterTests PROPERTIES
+  SUFFIX ".html"
+)
+endif()
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
   add_subdirectory(ExceptionTests)
 endif()
-
-export_executable_symbols(ClangReplInterpreterTests)
 
 if(MSVC)
   set_target_properties(ClangReplInterpreterTests PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
@@ -65,10 +106,7 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${ClangReplInterpreterTests_exports})
-    set(ClangReplInterpreterTests_link_str "${ClangReplInterpreterTests_link_str} /EXPORT:${sym}")
-  endforeach(sym ${ClangReplInterpreterTests_exports})
-
-  set_property(TARGET ClangReplInterpreterTests APPEND_STRING PROPERTY LINK_FLAGS ${ClangReplInterpreterTests_link_str})
+  list(TRANSFORM ClangReplInterpreterTests_exports PREPEND "LINKER:/EXPORT:")
+  set_property(TARGET ClangReplInterpreterTests APPEND PROPERTY LINK_OPTIONS ${ClangReplInterpreterTests_exports})
 
 endif(MSVC)

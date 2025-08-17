@@ -3,13 +3,15 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyLLVMModule
+add_clang_library(clangTidyLLVMModule STATIC
   HeaderGuardCheck.cpp
   IncludeOrderCheck.cpp
   LLVMTidyModule.cpp
   PreferIsaOrDynCastInConditionalsCheck.cpp
   PreferRegisterOverUnsignedCheck.cpp
+  PreferStaticOverAnonymousNamespaceCheck.cpp
   TwineLocalCheck.cpp
+  UseNewMLIROpBuilderCheck.cpp
 
   LINK_LIBS
   clangTidy
@@ -28,4 +30,5 @@ clang_target_link_libraries(clangTidyLLVMModule
   clangBasic
   clangLex
   clangTooling
+  clangTransformer
   )

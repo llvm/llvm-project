@@ -229,7 +229,6 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    bl nearbyintf
 ; P8-NEXT:    nop
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs0, vs1, v30
 ; P8-NEXT:    xscvspdpn f1, v31
 ; P8-NEXT:    xvcvdpsp v29, vs0
@@ -240,7 +239,6 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    bl nearbyintf
 ; P8-NEXT:    nop
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs0, v30, vs1
 ; P8-NEXT:    li r3, 160
 ; P8-NEXT:    xvcvdpsp v2, vs0
@@ -278,7 +276,6 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P9-NEXT:    xscvspdpn f1, vs0
 ; P9-NEXT:    bl nearbyintf
 ; P9-NEXT:    nop
-; P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9-NEXT:    xxmrghd vs0, vs1, v30
 ; P9-NEXT:    xscvspdpn f1, v31
 ; P9-NEXT:    xvcvdpsp v29, vs0
@@ -289,7 +286,6 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P9-NEXT:    xscvspdpn f1, vs0
 ; P9-NEXT:    bl nearbyintf
 ; P9-NEXT:    nop
-; P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9-NEXT:    xxmrghd vs0, v30, vs1
 ; P9-NEXT:    lxv v31, 64(r1) # 16-byte Folded Reload
 ; P9-NEXT:    lxv v30, 48(r1) # 16-byte Folded Reload
@@ -327,11 +323,9 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) stric
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlor v30, f1, f1
 ; P8-NEXT:    xxswapd vs1, v31
-; P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P8-NEXT:    bl nearbyint
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 144
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd v2, v30, vs1
 ; P8-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 128
@@ -358,10 +352,8 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) stric
 ; P9-NEXT:    nop
 ; P9-NEXT:    xscpsgndp v30, f1, f1
 ; P9-NEXT:    xxswapd vs1, v31
-; P9-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P9-NEXT:    bl nearbyint
 ; P9-NEXT:    nop
-; P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9-NEXT:    xxmrghd v2, v30, vs1
 ; P9-NEXT:    lxv v31, 48(r1) # 16-byte Folded Reload
 ; P9-NEXT:    lxv v30, 32(r1) # 16-byte Folded Reload

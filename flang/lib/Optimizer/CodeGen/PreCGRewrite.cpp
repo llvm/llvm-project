@@ -13,13 +13,13 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
@@ -103,13 +103,15 @@ public:
     auto idxTy = rewriter.getIndexType();
     for (auto ext : seqTy.getShape()) {
       auto iAttr = rewriter.getIndexAttr(ext);
-      auto extVal = rewriter.create<mlir::arith::ConstantOp>(loc, idxTy, iAttr);
+      auto extVal =
+          mlir::arith::ConstantOp::create(rewriter, loc, idxTy, iAttr);
       shapeOpers.push_back(extVal);
     }
-    auto xbox = rewriter.create<fir::cg::XEmboxOp>(
-        loc, embox.getType(), embox.getMemref(), shapeOpers, std::nullopt,
-        std::nullopt, std::nullopt, std::nullopt, embox.getTypeparams(),
-        embox.getSourceBox());
+    auto xbox = fir::cg::XEmboxOp::create(
+        rewriter, loc, embox.getType(), embox.getMemref(), shapeOpers,
+        mlir::ValueRange{}, mlir::ValueRange{}, mlir::ValueRange{},
+        mlir::ValueRange{}, embox.getTypeparams(), embox.getSourceBox(),
+        embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -142,10 +144,11 @@ public:
         substrOpers.assign(sliceOp.getSubstr().begin(),
                            sliceOp.getSubstr().end());
       }
-    auto xbox = rewriter.create<fir::cg::XEmboxOp>(
-        loc, embox.getType(), embox.getMemref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, substrOpers, embox.getTypeparams(),
-        embox.getSourceBox());
+    auto xbox = fir::cg::XEmboxOp::create(
+        rewriter, loc, embox.getType(), embox.getMemref(), shapeOpers,
+        shiftOpers, sliceOpers, subcompOpers, substrOpers,
+        embox.getTypeparams(), embox.getSourceBox(),
+        embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -200,8 +203,8 @@ public:
                            sliceOp.getSubstr().end());
       }
 
-    auto xRebox = rewriter.create<fir::cg::XReboxOp>(
-        loc, rebox.getType(), rebox.getBox(), shapeOpers, shiftOpers,
+    auto xRebox = fir::cg::XReboxOp::create(
+        rewriter, loc, rebox.getType(), rebox.getBox(), shapeOpers, shiftOpers,
         sliceOpers, subcompOpers, substrOpers);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << rebox << " to " << xRebox << '\n');
@@ -258,9 +261,9 @@ public:
                "Don't allow substring operations on array_coor. This "
                "restriction may be lifted in the future.");
       }
-    auto xArrCoor = rewriter.create<fir::cg::XArrayCoorOp>(
-        loc, arrCoor.getType(), arrCoor.getMemref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, arrCoor.getIndices(),
+    auto xArrCoor = fir::cg::XArrayCoorOp::create(
+        rewriter, loc, arrCoor.getType(), arrCoor.getMemref(), shapeOpers,
+        shiftOpers, sliceOpers, subcompOpers, arrCoor.getIndices(),
         arrCoor.getTypeparams());
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
@@ -300,9 +303,9 @@ public:
         return mlir::failure();
     }
     // FIXME: Add FortranAttrs and CudaAttrs
-    auto xDeclOp = rewriter.create<fir::cg::XDeclareOp>(
-        loc, declareOp.getType(), declareOp.getMemref(), shapeOpers, shiftOpers,
-        declareOp.getTypeparams(), declareOp.getDummyScope(),
+    auto xDeclOp = fir::cg::XDeclareOp::create(
+        rewriter, loc, declareOp.getType(), declareOp.getMemref(), shapeOpers,
+        shiftOpers, declareOp.getTypeparams(), declareOp.getDummyScope(),
         declareOp.getUniqName());
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
@@ -324,6 +327,25 @@ public:
     return mlir::success();
   }
 };
+
+/// Simple DCE to erase fir.shape/shift/slice/unused shape operands after this
+/// pass (fir.shape and like have no codegen).
+/// mlir::RegionDCE is expensive and requires running
+/// mlir::eraseUnreachableBlocks. It does things that are not needed here, like
+/// removing unused block arguments. fir.shape/shift/slice cannot be block
+/// arguments.
+/// This helper does a naive backward walk of the IR. It is not even guaranteed
+/// to walk blocks according to backward dominance, but that is good enough for
+/// what is done here, fir.shape/shift/slice have no usages anymore. The
+/// backward walk allows getting rid of most of the unused operands, it is not a
+/// problem to leave some in the weird cases.
+static void simpleDCE(mlir::RewriterBase &rewriter, mlir::Operation *op) {
+  op->walk<mlir::WalkOrder::PostOrder, mlir::ReverseIterator>(
+      [&](mlir::Operation *subOp) {
+        if (mlir::isOpTriviallyDead(subOp))
+          rewriter.eraseOp(subOp);
+      });
+}
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
@@ -356,7 +378,7 @@ public:
     }
     // Erase any residual (fir.shape, fir.slice...).
     mlir::IRRewriter rewriter(&context);
-    (void)mlir::runRegionDCE(rewriter, mod->getRegions());
+    simpleDCE(rewriter, mod.getOperation());
   }
 };
 

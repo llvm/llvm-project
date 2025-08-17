@@ -1,4 +1,5 @@
 # RUN: llc %s -o - -run-pass=machine-sink -mtriple=x86_64-- | FileCheck %s
+# RUN: llc %s -o - -passes=machine-sink -mtriple=x86_64-- | FileCheck %s
 # This is a copy of test/CodeGen/X86/MachineSink-DbgValue.ll, where we
 # additionally test that when the MOV32rm defining %0 is sunk, it leaves
 # an 'undef' DBG_VALUE behind to terminate earlier location ranges.

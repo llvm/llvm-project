@@ -130,8 +130,11 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
   return nullptr;
 }
 
+static std::atomic<lldb::user_id_t> g_unique_id = 1;
+
 Module::Module(const ModuleSpec &module_spec)
-    : m_file_has_changed(false), m_first_file_changed_log(false) {
+    : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),
+      m_first_file_changed_log(false) {
   // Scope for locker below...
   {
     std::lock_guard<std::recursive_mutex> guard(
@@ -235,10 +238,12 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                ConstString object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
-    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+    : UserID(g_unique_id++),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_arch(arch), m_file(file_spec), m_object_name(object_name),
       m_object_offset(object_offset), m_object_mod_time(object_mod_time),
-      m_file_has_changed(false), m_first_file_changed_log(false) {
+      m_unwind_table(*this), m_file_has_changed(false),
+      m_first_file_changed_log(false) {
   // Scope for locker below...
   {
     std::lock_guard<std::recursive_mutex> guard(
@@ -254,7 +259,9 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
               m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
 }
 
-Module::Module() : m_file_has_changed(false), m_first_file_changed_log(false) {
+Module::Module()
+    : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),
+      m_first_file_changed_log(false) {
   std::lock_guard<std::recursive_mutex> guard(
       GetAllocationModuleCollectionMutex());
   GetModuleCollection().push_back(this);
@@ -294,7 +301,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                         lldb::addr_t header_addr, Status &error,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
-    error.SetErrorString("object file already exists");
+    error = Status::FromErrorString("object file already exists");
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (process_sp) {
@@ -323,15 +330,18 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
           // Augment the arch with the target's information in case
           // we are unable to extract the os/environment from memory.
           m_arch.MergeFrom(process_sp->GetTarget().GetArchitecture());
+
+          m_unwind_table.ModuleWasUpdated();
         } else {
-          error.SetErrorString("unable to find suitable object file plug-in");
+          error = Status::FromErrorString(
+              "unable to find suitable object file plug-in");
         }
       } else {
-        error.SetErrorStringWithFormat("unable to read header from memory: %s",
-                                       readmem_error.AsCString());
+        error = Status::FromErrorStringWithFormat(
+            "unable to read header from memory: %s", readmem_error.AsCString());
       }
     } else {
-      error.SetErrorString("invalid process");
+      error = Status::FromErrorString("invalid process");
     }
   }
   return m_objfile_sp.get();
@@ -476,6 +486,9 @@ uint32_t Module::ResolveSymbolContextForAddress(
       symfile->SetLoadDebugInfoEnabled();
       resolved_flags |=
           symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
+
+      if ((resolve_scope & eSymbolContextLineEntry) && sc.line_entry.IsValid())
+        sc.line_entry.ApplyFileMappings(sc.target_sp);
     }
 
     // Resolve the symbol if requested, but don't re-look it up if we've
@@ -634,98 +647,70 @@ void Module::FindCompileUnits(const FileSpec &path,
 Module::LookupInfo::LookupInfo(ConstString name,
                                FunctionNameType name_type_mask,
                                LanguageType language)
-    : m_name(name), m_lookup_name(), m_language(language) {
-  const char *name_cstr = name.GetCString();
-  llvm::StringRef basename;
-  llvm::StringRef context;
+    : m_name(name), m_lookup_name(name), m_language(language) {
+  std::optional<ConstString> basename;
+
+  std::vector<Language *> languages;
+  {
+    std::vector<LanguageType> lang_types;
+    if (language != eLanguageTypeUnknown)
+      lang_types.push_back(language);
+    else
+      lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+
+    for (LanguageType lang_type : lang_types) {
+      if (Language *lang = Language::FindPlugin(lang_type))
+        languages.push_back(lang);
+    }
+  }
 
   if (name_type_mask & eFunctionNameTypeAuto) {
-    if (CPlusPlusLanguage::IsCPPMangledName(name_cstr))
-      m_name_type_mask = eFunctionNameTypeFull;
-    else if ((language == eLanguageTypeUnknown ||
-              Language::LanguageIsObjC(language)) &&
-             ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
-      m_name_type_mask = eFunctionNameTypeFull;
-    else if (Language::LanguageIsC(language)) {
-      m_name_type_mask = eFunctionNameTypeFull;
-    } else {
-      if ((language == eLanguageTypeUnknown ||
-           Language::LanguageIsObjC(language)) &&
-          ObjCLanguage::IsPossibleObjCSelector(name_cstr))
-        m_name_type_mask |= eFunctionNameTypeSelector;
-
-      CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
-      if (basename.empty()) {
-        if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                           basename))
-          m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
-        else
-          m_name_type_mask |= eFunctionNameTypeFull;
-      } else {
-        m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+    for (Language *lang : languages) {
+      auto info = lang->GetFunctionNameInfo(name);
+      if (info.first != eFunctionNameTypeNone) {
+        m_name_type_mask |= info.first;
+        if (!basename && info.second)
+          basename = info.second;
       }
     }
+
+    // NOTE: There are several ways to get here, but this is a fallback path in
+    // case the above does not succeed at extracting any useful information from
+    // the loaded language plugins.
+    if (m_name_type_mask == eFunctionNameTypeNone)
+      m_name_type_mask = eFunctionNameTypeFull;
+
   } else {
     m_name_type_mask = name_type_mask;
-    if (name_type_mask & eFunctionNameTypeMethod ||
-        name_type_mask & eFunctionNameTypeBase) {
-      // If they've asked for a CPP method or function name and it can't be
-      // that, we don't even need to search for CPP methods or names.
-      CPlusPlusLanguage::MethodName cpp_method(name);
-      if (cpp_method.IsValid()) {
-        basename = cpp_method.GetBasename();
-
-        if (!cpp_method.GetQualifiers().empty()) {
-          // There is a "const" or other qualifier following the end of the
-          // function parens, this can't be a eFunctionNameTypeBase
-          m_name_type_mask &= ~(eFunctionNameTypeBase);
-          if (m_name_type_mask == eFunctionNameTypeNone)
-            return;
-        }
-      } else {
-        // If the CPP method parser didn't manage to chop this up, try to fill
-        // in the base name if we can. If a::b::c is passed in, we need to just
-        // look up "c", and then we'll filter the result later.
-        CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                       basename);
+    for (Language *lang : languages) {
+      auto info = lang->GetFunctionNameInfo(name);
+      if (info.first & m_name_type_mask) {
+        // If the user asked for FunctionNameTypes that aren't possible,
+        // then filter those out. (e.g. asking for Selectors on
+        // C++ symbols, or even if the symbol given can't be a selector in
+        // ObjC)
+        m_name_type_mask &= info.first;
+        basename = info.second;
+        break;
       }
-    }
-
-    if (name_type_mask & eFunctionNameTypeSelector) {
-      if (!ObjCLanguage::IsPossibleObjCSelector(name_cstr)) {
-        m_name_type_mask &= ~(eFunctionNameTypeSelector);
-        if (m_name_type_mask == eFunctionNameTypeNone)
-          return;
-      }
-    }
-
-    // Still try and get a basename in case someone specifies a name type mask
-    // of eFunctionNameTypeFull and a name like "A::func"
-    if (basename.empty()) {
+      // Still try and get a basename in case someone specifies a name type mask
+      // of eFunctionNameTypeFull and a name like "A::func"
       if (name_type_mask & eFunctionNameTypeFull &&
-          !CPlusPlusLanguage::IsCPPMangledName(name_cstr)) {
-        CPlusPlusLanguage::MethodName cpp_method(name);
-        basename = cpp_method.GetBasename();
-        if (basename.empty())
-          CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                         basename);
+          info.first != eFunctionNameTypeNone && !basename && info.second) {
+        basename = info.second;
+        break;
       }
     }
   }
 
-  if (!basename.empty()) {
-    // The name supplied was a partial C++ path like "a::count". In this case
-    // we want to do a lookup on the basename "count" and then make sure any
-    // matching results contain "a::count" so that it would match "b::a::count"
-    // and "a::count". This is why we set "match_name_after_lookup" to true
-    m_lookup_name.SetString(basename);
+  if (basename) {
+    // The name supplied was incomplete for lookup purposes. For example, in C++
+    // we may have gotten something like "a::count". In this case, we want to do
+    // a lookup on the basename "count" and then make sure any matching results
+    // contain "a::count" so that it would match "b::a::count" and "a::count".
+    // This is why we set match_name_after_lookup to true.
+    m_lookup_name.SetString(*basename);
     m_match_name_after_lookup = true;
-  } else {
-    // The name is already correct, just use the exact name as supplied, and we
-    // won't need to check if any matches contain "name"
-    m_lookup_name = name;
-    m_match_name_after_lookup = false;
   }
 }
 
@@ -784,7 +769,8 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
   // "func" and specified eFunctionNameTypeFull, but we might have found
   // "a::func()", "a::b::func()", "c::func()", "func()" and "func". Only
   // "func()" and "func" should end up matching.
-  if (m_name_type_mask == eFunctionNameTypeFull) {
+  auto *lang = Language::FindPlugin(eLanguageTypeC_plus_plus);
+  if (lang && m_name_type_mask == eFunctionNameTypeFull) {
     SymbolContext sc;
     size_t i = start_idx;
     while (i < sc_list.GetSize()) {
@@ -795,20 +781,21 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
       ConstString full_name(sc.GetFunctionName());
       if (mangled_name != m_name && full_name != m_name) {
-        CPlusPlusLanguage::MethodName cpp_method(full_name);
-        if (cpp_method.IsValid()) {
-          if (cpp_method.GetContext().empty()) {
-            if (cpp_method.GetBasename().compare(m_name) != 0) {
+        std::unique_ptr<Language::MethodName> cpp_method =
+            lang->GetMethodName(full_name);
+        if (cpp_method->IsValid()) {
+          if (cpp_method->GetContext().empty()) {
+            if (cpp_method->GetBasename().compare(m_name) != 0) {
               sc_list.RemoveContextAtIndex(i);
               continue;
             }
           } else {
             std::string qualified_name;
             llvm::StringRef anon_prefix("(anonymous namespace)");
-            if (cpp_method.GetContext() == anon_prefix)
-              qualified_name = cpp_method.GetBasename().str();
+            if (cpp_method->GetContext() == anon_prefix)
+              qualified_name = cpp_method->GetBasename().str();
             else
-              qualified_name = cpp_method.GetScopeQualifiedName();
+              qualified_name = cpp_method->GetScopeQualifiedName();
             if (qualified_name != m_name.GetCString()) {
               sc_list.RemoveContextAtIndex(i);
               continue;
@@ -912,9 +899,8 @@ void Module::FindFunctions(const RegularExpression &regex,
               const SymbolContext &sc = sc_list[i];
               if (sc.block)
                 continue;
-              file_addr_to_index[sc.function->GetAddressRange()
-                                     .GetBaseAddress()
-                                     .GetFileAddress()] = i;
+              file_addr_to_index[sc.function->GetAddress().GetFileAddress()] =
+                  i;
             }
 
             FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();
@@ -982,8 +968,7 @@ DebuggersOwningModuleRequestingInterruption(Module &module) {
   for (auto debugger_sp : requestors) {
     if (!debugger_sp->InterruptRequested())
       continue;
-    if (debugger_sp->GetTargetList()
-        .AnyTargetContainsModule(module))
+    if (debugger_sp->GetTargetList().AnyTargetContainsModule(module))
       interruptors.push_back(debugger_sp);
   }
   return interruptors;
@@ -1009,17 +994,16 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
         m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symfile = true;
-        if (m_unwind_table)
-          m_unwind_table->Update();
+        m_unwind_table.ModuleWasUpdated();
       }
     }
   }
   return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 }
 
-Symtab *Module::GetSymtab() {
-  if (SymbolFile *symbols = GetSymbolFile())
-    return symbols->GetSymtab();
+Symtab *Module::GetSymtab(bool can_create) {
+  if (SymbolFile *symbols = GetSymbolFile(can_create))
+    return symbols->GetSymtab(can_create);
   return nullptr;
 }
 
@@ -1087,8 +1071,8 @@ void Module::ReportWarningOptimization(
   ss << file_name
      << " was compiled with optimization - stepping may behave "
         "oddly; variables may not be available.";
-  Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
-                          &m_optimization_warning);
+  llvm::StringRef msg = ss.GetString();
+  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
 }
 
 void Module::ReportWarningUnsupportedLanguage(
@@ -1098,8 +1082,8 @@ void Module::ReportWarningUnsupportedLanguage(
      << Language::GetNameForLanguageType(language)
      << "\". "
         "Inspection of frame variables will be limited.";
-  Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
-                          &m_language_warning);
+  llvm::StringRef msg = ss.GetString();
+  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
 }
 
 void Module::ReportErrorIfModifyDetected(
@@ -1119,20 +1103,29 @@ void Module::ReportErrorIfModifyDetected(
   }
 }
 
+std::once_flag *Module::GetDiagnosticOnceFlag(llvm::StringRef msg) {
+  std::lock_guard<std::recursive_mutex> guard(m_diagnostic_mutex);
+  auto &once_ptr = m_shown_diagnostics[llvm::stable_hash_name(msg)];
+  if (!once_ptr)
+    once_ptr = std::make_unique<std::once_flag>();
+  return once_ptr.get();
+}
+
 void Module::ReportError(const llvm::formatv_object_base &payload) {
   StreamString strm;
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
-  strm.PutChar(' ');
-  strm.PutCString(payload.str());
-  Debugger::ReportError(strm.GetString().str());
+  std::string msg = payload.str();
+  strm << ' ' << msg;
+  Debugger::ReportError(strm.GetString().str(), {}, GetDiagnosticOnceFlag(msg));
 }
 
 void Module::ReportWarning(const llvm::formatv_object_base &payload) {
   StreamString strm;
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
-  strm.PutChar(' ');
-  strm.PutCString(payload.str());
-  Debugger::ReportWarning(std::string(strm.GetString()));
+  std::string msg = payload.str();
+  strm << ' ' << msg;
+  Debugger::ReportWarning(strm.GetString().str(), {},
+                          GetDiagnosticOnceFlag(msg));
 }
 
 void Module::LogMessage(Log *log, const llvm::formatv_object_base &payload) {
@@ -1210,6 +1203,8 @@ ObjectFile *Module::GetObjectFile() {
           // more specific than the generic COFF architecture, only merge in
           // those values that overwrite unspecified unknown values.
           m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
+
+          m_unwind_table.ModuleWasUpdated();
         } else {
           ReportError("failed to load objfile for {0}\nDebugging will be "
                       "degraded for this module.",
@@ -1240,12 +1235,9 @@ void Module::SectionFileAddressesChanged() {
 }
 
 UnwindTable &Module::GetUnwindTable() {
-  if (!m_unwind_table) {
-    if (!m_symfile_spec)
-      SymbolLocator::DownloadSymbolFileAsync(GetUUID());
-    m_unwind_table.emplace(*this);
-  }
-  return *m_unwind_table;
+  if (!m_symfile_spec)
+    SymbolLocator::DownloadSymbolFileAsync(GetUUID());
+  return m_unwind_table;
 }
 
 SectionList *Module::GetUnifiedSectionList() {
@@ -1423,7 +1415,7 @@ bool Module::IsLoadedInTarget(Target *target) {
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
                                            Stream &feedback_stream) {
   if (!target) {
-    error.SetErrorString("invalid destination Target");
+    error = Status::FromErrorString("invalid destination Target");
     return false;
   }
 
@@ -1440,7 +1432,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
     PlatformSP platform_sp(target->GetPlatform());
 
     if (!platform_sp) {
-      error.SetErrorString("invalid Platform");
+      error = Status::FromErrorString("invalid Platform");
       return false;
     }
 
@@ -1472,13 +1464,15 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
             scripting_fspec.Dump(scripting_stream.AsRawOstream());
             LoadScriptOptions options;
             bool did_load = script_interpreter->LoadScriptingModule(
-                scripting_stream.GetData(), options, error);
+                scripting_stream.GetData(), options, error,
+                /*module_sp*/ nullptr, /*extra_path*/ {},
+                target->shared_from_this());
             if (!did_load)
               return false;
           }
         }
       } else {
-        error.SetErrorString("invalid ScriptInterpreter");
+        error = Status::FromErrorString("invalid ScriptInterpreter");
         return false;
       }
     }
@@ -1595,6 +1589,14 @@ bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   return SetArchitecture(merged_arch);
 }
 
+void Module::ResetStatistics() {
+  m_symtab_parse_time.reset();
+  m_symtab_index_time.reset();
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    sym_file->ResetStatistics();
+}
+
 llvm::VersionTuple Module::GetVersion() {
   if (ObjectFile *obj_file = GetObjectFile())
     return obj_file->GetVersion();
@@ -1621,7 +1623,7 @@ uint32_t Module::Hash() {
   const auto mtime = llvm::sys::toTimeT(m_object_mod_time);
   if (mtime > 0)
     id_strm << mtime;
-  return llvm::djbHash(id_strm.str());
+  return llvm::djbHash(identifier);
 }
 
 std::string Module::GetCacheKey() {
@@ -1631,7 +1633,7 @@ std::string Module::GetCacheKey() {
   if (m_object_name)
     strm << '(' << m_object_name << ')';
   strm << '-' << llvm::format_hex(Hash(), 10);
-  return strm.str();
+  return key;
 }
 
 DataFileCache *Module::GetIndexCache() {

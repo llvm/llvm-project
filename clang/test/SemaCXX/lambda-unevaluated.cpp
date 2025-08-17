@@ -70,21 +70,23 @@ void use_g() { g<6>(&"hello"); } // expected-error {{ambiguous}}
 namespace GH51416 {
 
 template <class T>
-struct A {
+struct A { // #defined-here-A
   void spam(decltype([] {}));
 };
 
 template <class T>
 void A<T>::spam(decltype([] {})) // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@#defined-here-A{{defined here}}
 {}
 
-struct B {
+struct B { // #defined-here-B
   template <class T>
   void spam(decltype([] {}));
 };
 
 template <class T>
 void B::spam(decltype([] {})) {} // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@#defined-here-B{{defined here}}
 
 } // namespace GH51416
 
@@ -172,7 +174,7 @@ int* func(T) requires requires { []() { T::foo(); }; }; // expected-error{{type 
 double* func(...);
 
 static_assert(__is_same(decltype(func(0)), double*)); // expected-note {{while checking constraint satisfaction for template 'func<int>' required here}}
-                                                      // expected-note@-1 {{in instantiation of function template specialization 'lambda_in_constraints::func<int>'}}
+                                                      // expected-note@-1 {{while substituting deduced template arguments into function template 'func' [with T = int]}}
 static_assert(__is_same(decltype(func(WithFoo())), int*));
 
 template <class T>
@@ -250,7 +252,7 @@ S s("a"); // #use
 // expected-note@#S-requires {{substituting template arguments into constraint expression here}}
 // expected-note@#S-requires {{in instantiation of requirement here}}
 // expected-note@#use {{checking constraint satisfaction for template 'S<const char *>' required here}}
-// expected-note@#use {{requested here}}
+// expected-note@#use {{while substituting deduced template arguments into function template 'S' [with value:auto = const char *]}}
 // expected-note-re@#S 2{{candidate constructor {{.*}} not viable}}
 // expected-note@#S-ctor {{constraints not satisfied}}
 // expected-note-re@#S-requires {{because {{.*}} would be invalid}}
@@ -264,3 +266,19 @@ void func() {
 }
 
 } // namespace GH88081
+
+namespace GH138018 {
+
+template <typename T> struct vec {};
+
+auto structure_to_typelist(auto)  {
+    return []<template <typename> typename T>(T<int>) {
+        return 0;
+    }(vec<int>{});
+}
+
+template <typename T> using helper = decltype(structure_to_typelist(T{}));
+static_assert(__is_same_as(int, helper<int>));
+
+
+} // namespace GH138018

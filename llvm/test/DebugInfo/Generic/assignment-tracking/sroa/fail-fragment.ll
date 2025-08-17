@@ -1,7 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Check that a dbg.assign for a promoted variable becomes a kill location if
 ;; it used a fragment that can't be split (the first check directive below).

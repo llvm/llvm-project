@@ -79,6 +79,7 @@ clang_tidy_library(
         "//clang:rewrite",
         "//clang:sema",
         "//clang:serialization",
+        "//clang:static_analyzer_checkers_gen",
         "//clang:tooling",
         "//clang:tooling_core",
     ] + select({
@@ -159,6 +160,7 @@ clang_tidy_library(
         ":readability",
         ":utils",
         "//clang:tooling",
+        "//clang:transformer",
     ],
 )
 
@@ -196,7 +198,10 @@ clang_tidy_library(
 
 clang_tidy_library(
     name = "boost",
-    deps = [":lib"],
+    deps = [
+        ":lib",
+        ":utils",
+    ],
 )
 
 clang_tidy_library(
@@ -261,6 +266,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
+        ":bugprone",
         ":lib",
         ":misc",
         ":modernize",
@@ -274,10 +280,10 @@ clang_tidy_library(
 clang_tidy_library(
     name = "bugprone",
     deps = [
-        ":cppcoreguidelines",
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -364,6 +370,7 @@ cc_library(
         ":utils",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

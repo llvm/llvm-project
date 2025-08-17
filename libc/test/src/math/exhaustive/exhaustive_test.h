@@ -61,9 +61,9 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
           TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, Func(x), 0.5, rounding);
       failed += (!correct);
       // Uncomment to print out failed values.
-      // if (!correct) {
-      //   EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
-      // }
+      if (!correct) {
+        EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
+      }
     } while (bits++ < stop);
     return failed;
   }
@@ -97,9 +97,9 @@ struct BinaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
                                                          0.5, rounding);
         failed += (!correct);
         // Uncomment to print out failed values.
-        // if (!correct) {
-        //   EXPECT_MPFR_MATCH_ROUNDING(Op, input, Func(x, y), 0.5, rounding);
-        // }
+        if (!correct) {
+          EXPECT_MPFR_MATCH_ROUNDING(Op, input, Func(x, y), 0.5, rounding);
+        }
       } while (ybits++ < y_stop);
     } while (xbits++ < x_stop);
     return failed;
@@ -164,12 +164,13 @@ struct LlvmLibcExhaustiveMathTest
 
             range_begin = current_value;
             if (stop >= Increment && stop - Increment >= current_value) {
-              range_end = current_value + Increment;
+              range_end = static_cast<StorageType>(current_value + Increment);
             } else {
               range_end = stop;
             }
             current_value = range_end;
-            int pc = 100.0 * (range_end - start) / (stop - start);
+            int pc =
+                static_cast<int>(100.0 * (range_end - start) / (stop - start));
             if (current_percent != pc) {
               new_percent = pc;
               current_percent = pc;
@@ -187,7 +188,8 @@ struct LlvmLibcExhaustiveMathTest
             std::stringstream msg;
             msg << "Test failed for " << std::dec << failed_in_range
                 << " inputs in range: ";
-            explain_failed_range(msg, start, stop, extra_range_bounds...);
+            explain_failed_range(msg, range_begin, range_end,
+                                 extra_range_bounds...);
             msg << "\n";
             std::cerr << msg.str() << std::flush;
 
@@ -224,7 +226,7 @@ struct LlvmLibcExhaustiveMathTest
     std::cout << "-- Testing for FE_TOWARDZERO in range [0x" << std::hex
               << start << ", 0x" << stop << ") --" << std::dec << std::endl;
     test_full_range(mpfr::RoundingMode::TowardZero, start, stop);
-  };
+  }
 
   void test_full_range_all_roundings(StorageType x_start, StorageType x_stop,
                                      StorageType y_start, StorageType y_stop) {
@@ -251,7 +253,7 @@ struct LlvmLibcExhaustiveMathTest
               << ", 0x" << y_stop << ") --" << std::dec << std::endl;
     test_full_range(mpfr::RoundingMode::TowardZero, x_start, x_stop, y_start,
                     y_stop);
-  };
+  }
 };
 
 template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func>

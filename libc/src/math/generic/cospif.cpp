@@ -7,21 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cospif.h"
-#include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/sincosf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);
-  Sign xsign = xbits.sign();
   xbits.set_sign(Sign::POS);
 
   uint32_t x_abs = xbits.uintval();
@@ -50,11 +50,11 @@ LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
   // The exhautive test passes for smaller values
   if (LIBC_UNLIKELY(x_abs < 0x38A2'F984U)) {
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
     return fputil::multiply_add(xbits.get_val(), -0x1.0p-25f, 1.0f);
 #else
     return static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, 1.0));
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
   }
 
   // Numbers greater or equal to 2^23 are always integers or NaN
@@ -66,6 +66,11 @@ LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
 
     // x is inf or nan.
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+
       if (x_abs == 0x7f80'0000U) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
@@ -86,11 +91,11 @@ LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
   sincospif_eval(xd, sin_k, cos_k, sin_y, cosm1_y);
 
   if (LIBC_UNLIKELY(sin_y == 0 && cos_k == 0)) {
-    return FPBits::zero(xsign).get_val();
+    return 0.0f;
   }
 
   return static_cast<float>(fputil::multiply_add(
       sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

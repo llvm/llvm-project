@@ -119,13 +119,12 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
         T->getPointeeType()->isFloatingType()))
     return;
 
-  if (Parameters.find(Parm) != Parameters.end())
+  auto [It, Inserted] = Parameters.try_emplace(Parm);
+  if (!Inserted)
     return;
 
-  ParmInfo PI;
-  PI.IsReferenced = false;
-  PI.CanBeConst = true;
-  Parameters[Parm] = PI;
+  It->second.IsReferenced = false;
+  It->second.CanBeConst = true;
 }
 
 void NonConstParameterCheck::setReferenced(const DeclRefExpr *Ref) {
@@ -157,9 +156,12 @@ void NonConstParameterCheck::diagnoseNonConstParameters() {
     if (!Function)
       continue;
     unsigned Index = Par->getFunctionScopeIndex();
-    for (FunctionDecl *FnDecl : Function->redecls())
+    for (FunctionDecl *FnDecl : Function->redecls()) {
+      if (FnDecl->getNumParams() <= Index)
+        continue;
       Fixes.push_back(FixItHint::CreateInsertion(
           FnDecl->getParamDecl(Index)->getBeginLoc(), "const "));
+    }
 
     diag(Par->getLocation(), "pointer parameter '%0' can be pointer to const")
         << Par->getName() << Fixes;

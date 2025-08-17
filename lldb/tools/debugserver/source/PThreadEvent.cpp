@@ -15,8 +15,8 @@
 #include <cerrno>
 
 PThreadEvent::PThreadEvent(uint32_t bits, uint32_t validBits)
-    : m_mutex(), m_set_condition(), m_reset_condition(), m_bits(bits),
-      m_validBits(validBits), m_reset_ack_mask(0) {
+    : m_mutex(), m_set_condition(), m_bits(bits), m_validBits(validBits),
+      m_reset_ack_mask(0) {
   // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x, 0x%8.8x)",
   // this, __FUNCTION__, bits, validBits);
 }
@@ -27,7 +27,7 @@ PThreadEvent::~PThreadEvent() {
 
 uint32_t PThreadEvent::NewEventBit() {
   // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, LLVM_PRETTY_FUNCTION);
-  PTHREAD_MUTEX_LOCKER(locker, m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   uint32_t mask = 1;
   while (mask & m_validBits)
     mask <<= 1;
@@ -39,7 +39,7 @@ void PThreadEvent::FreeEventBits(const uint32_t mask) {
   // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x)", this,
   // __FUNCTION__, mask);
   if (mask) {
-    PTHREAD_MUTEX_LOCKER(locker, m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     m_bits &= ~mask;
     m_validBits &= ~mask;
   }
@@ -47,7 +47,7 @@ void PThreadEvent::FreeEventBits(const uint32_t mask) {
 
 uint32_t PThreadEvent::GetEventBits() const {
   // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, LLVM_PRETTY_FUNCTION);
-  PTHREAD_MUTEX_LOCKER(locker, m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   uint32_t bits = m_bits;
   return bits;
 }
@@ -56,7 +56,7 @@ uint32_t PThreadEvent::GetEventBits() const {
 void PThreadEvent::ReplaceEventBits(const uint32_t bits) {
   // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x)", this,
   // __FUNCTION__, bits);
-  PTHREAD_MUTEX_LOCKER(locker, m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   // Make sure we have some bits and that they aren't already set...
   if (m_bits != bits) {
     // Figure out which bits are changing
@@ -65,7 +65,7 @@ void PThreadEvent::ReplaceEventBits(const uint32_t bits) {
     m_bits = bits;
     // If any new bits are set, then broadcast
     if (changed_bits & m_bits)
-      m_set_condition.Broadcast();
+      m_set_condition.notify_all();
   }
 }
 
@@ -77,14 +77,14 @@ void PThreadEvent::SetEvents(const uint32_t mask) {
   // __FUNCTION__, mask);
   // Make sure we have some bits to set
   if (mask) {
-    PTHREAD_MUTEX_LOCKER(locker, m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     // Save the old event bit state so we can tell if things change
     uint32_t old = m_bits;
     // Set the all event bits that are set in 'mask'
     m_bits |= mask;
     // Broadcast only if any extra bits got set.
     if (old != m_bits)
-      m_set_condition.Broadcast();
+      m_set_condition.notify_all();
   }
 }
 
@@ -93,94 +93,66 @@ void PThreadEvent::ResetEvents(const uint32_t mask) {
   // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x)", this,
   // __FUNCTION__, mask);
   if (mask) {
-    PTHREAD_MUTEX_LOCKER(locker, m_mutex);
-
-    // Save the old event bit state so we can tell if things change
-    uint32_t old = m_bits;
+    std::lock_guard<std::mutex> guard(m_mutex);
     // Clear the all event bits that are set in 'mask'
     m_bits &= ~mask;
-    // Broadcast only if any extra bits got reset.
-    if (old != m_bits)
-      m_reset_condition.Broadcast();
   }
+}
+
+static std::chrono::nanoseconds ToDuration(timespec ts) {
+  auto duration =
+      std::chrono::seconds{ts.tv_sec} + std::chrono::nanoseconds{ts.tv_nsec};
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+}
+
+static std::chrono::time_point<std::chrono::system_clock,
+                               std::chrono::nanoseconds>
+ToTimePoint(timespec ts) {
+  return std::chrono::time_point<std::chrono::system_clock,
+                                 std::chrono::nanoseconds>{
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          ToDuration(ts))};
 }
 
 // Wait until 'timeout_abstime' for any events that are set in
 // 'mask'. If 'timeout_abstime' is NULL, then wait forever.
 uint32_t
-PThreadEvent::WaitForSetEvents(const uint32_t mask,
-                               const struct timespec *timeout_abstime) const {
+PThreadEvent::WaitForEventsImpl(const uint32_t mask,
+                                const struct timespec *timeout_abstime,
+                                std::function<bool()> predicate) const {
   // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x, %p)", this,
   // __FUNCTION__, mask, timeout_abstime);
-  int err = 0;
-  // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-  // unlock the mutex and wait for the condition to be set. When either
-  // function returns, they will re-lock the mutex. We use an auto lock/unlock
-  // class (PThreadMutex::Locker) to allow us to return at any point in this
-  // function and not have to worry about unlocking the mutex.
-  PTHREAD_MUTEX_LOCKER(locker, m_mutex);
-  do {
-    // Check our predicate (event bits) in case any are already set
-    if (mask & m_bits) {
-      uint32_t bits_set = mask & m_bits;
-      // Our PThreadMutex::Locker will automatically unlock our mutex
-      return bits_set;
-    }
-    if (timeout_abstime) {
-      // Wait for condition to get broadcast, or for a timeout. If we get
-      // a timeout we will drop out of the do loop and return false which
-      // is what we want.
-      err = ::pthread_cond_timedwait(m_set_condition.Condition(),
-                                     m_mutex.Mutex(), timeout_abstime);
-      // Retest our predicate in case of a race condition right at the end
-      // of the timeout.
-      if (err == ETIMEDOUT) {
-        uint32_t bits_set = mask & m_bits;
-        return bits_set;
-      }
-    } else {
-      // Wait for condition to get broadcast. The only error this function
-      // should return is if
-      err = ::pthread_cond_wait(m_set_condition.Condition(), m_mutex.Mutex());
-    }
-  } while (err == 0);
-  return 0;
+  std::unique_lock<std::mutex> lock(m_mutex);
+
+  if (timeout_abstime) {
+    // Wait for condition to get broadcast, or for a timeout. If we get
+    // a timeout we will drop out of the loop on the next iteration and we
+    // will recompute the mask in case of a race between the condition and the
+    // timeout.
+    m_set_condition.wait_until(lock, ToTimePoint(*timeout_abstime), predicate);
+  } else {
+    // Wait for condition to get broadcast.
+    m_set_condition.wait(lock, predicate);
+  }
+
+  // Either the predicate passed, we hit the specified timeout (ETIMEDOUT) or we
+  // encountered an unrecoverable error (EINVAL, EPERM). Regardless of how we
+  // got here, recompute and return the mask indicating which bits (if any) are
+  // set.
+  return GetBitsMasked(mask);
 }
 
-// Wait until 'timeout_abstime' for any events in 'mask' to reset.
-// If 'timeout_abstime' is NULL, then wait forever.
+uint32_t
+PThreadEvent::WaitForSetEvents(const uint32_t mask,
+                               const struct timespec *timeout_abstime) const {
+  auto predicate = [&]() -> uint32_t { return GetBitsMasked(mask) != 0; };
+  return WaitForEventsImpl(mask, timeout_abstime, predicate);
+}
+
 uint32_t PThreadEvent::WaitForEventsToReset(
     const uint32_t mask, const struct timespec *timeout_abstime) const {
-  // DNBLogThreadedIf(LOG_EVENTS, "%p PThreadEvent::%s (0x%8.8x, %p)", this,
-  // __FUNCTION__, mask, timeout_abstime);
-  int err = 0;
-  // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-  // unlock the mutex and wait for the condition to be set. When either
-  // function returns, they will re-lock the mutex. We use an auto lock/unlock
-  // class (PThreadMutex::Locker) to allow us to return at any point in this
-  // function and not have to worry about unlocking the mutex.
-  PTHREAD_MUTEX_LOCKER(locker, m_mutex);
-  do {
-    // Check our predicate (event bits) each time through this do loop
-    if ((mask & m_bits) == 0) {
-      // All the bits requested have been reset, return zero indicating
-      // which bits from the mask were still set (none of them)
-      return 0;
-    }
-    if (timeout_abstime) {
-      // Wait for condition to get broadcast, or for a timeout. If we get
-      // a timeout we will drop out of the do loop and return false which
-      // is what we want.
-      err = ::pthread_cond_timedwait(m_reset_condition.Condition(),
-                                     m_mutex.Mutex(), timeout_abstime);
-    } else {
-      // Wait for condition to get broadcast. The only error this function
-      // should return is if
-      err = ::pthread_cond_wait(m_reset_condition.Condition(), m_mutex.Mutex());
-    }
-  } while (err == 0);
-  // Return a mask indicating which bits (if any) were still set
-  return mask & m_bits;
+  auto predicate = [&]() -> uint32_t { return GetBitsMasked(mask) == 0; };
+  return WaitForEventsImpl(mask, timeout_abstime, predicate);
 }
 
 uint32_t

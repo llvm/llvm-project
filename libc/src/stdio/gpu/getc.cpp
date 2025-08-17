@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/getc.h"
+
 #include "file.h"
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
-#include <stdio.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) {
   unsigned char c;
@@ -22,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) {
   return c;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

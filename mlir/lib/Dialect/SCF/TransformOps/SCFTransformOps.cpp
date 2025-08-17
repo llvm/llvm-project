@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
+
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -47,6 +46,11 @@ void transform::ApplySCFStructuralConversionPatternsOp::
                                   ConversionTarget &conversionTarget) {
   scf::populateSCFStructuralTypeConversionTarget(typeConverter,
                                                  conversionTarget);
+}
+
+void transform::ApplySCFToControlFlowPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateSCFToControlFlowConversionPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -143,6 +147,45 @@ transform::ForallToParallelOp::apply(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// ParallelForToNestedForOps
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ParallelForToNestedForOps::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ParallelOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.parallel";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  if (getNumResults() != 1) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "op expects one result, given "
+                                       << getNumResults();
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  FailureOr<scf::LoopNest> loopNest =
+      scf::parallelForToNestedFors(rewriter, target);
+  if (failed(loopNest)) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "failed to convert parallel into nested fors";
+    return diag;
+  }
+
+  results.set(cast<OpResult>(getTransformed()[0]), {loopNest->loops.front()});
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOutlineOp
 //===----------------------------------------------------------------------===//
 
@@ -156,7 +199,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
   scf::ExecuteRegionOp executeRegionOp =
-      b.create<scf::ExecuteRegionOp>(op->getLoc(), op->getResultTypes());
+      scf::ExecuteRegionOp::create(b, op->getLoc(), op->getResultTypes());
   {
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPointToStart(&executeRegionOp.getRegion().emplaceBlock());
@@ -165,7 +208,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
     assert(clonedRegion.empty() && "expected empty region");
     b.inlineRegionBefore(op->getRegions().front(), clonedRegion,
                          clonedRegion.end());
-    b.create<scf::YieldOp>(op->getLoc(), clonedOp->getResults());
+    scf::YieldOp::create(b, op->getLoc(), clonedOp->getResults());
   }
   b.replaceOp(op, executeRegionOp.getResults());
   return executeRegionOp;
@@ -261,8 +304,10 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
-  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubConstant =
+      getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant =
+      getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -412,7 +457,7 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(RewriterBase &rewriter, Operation *op,
                                 Region &region) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
@@ -428,7 +473,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
   rewriter.setInsertionPoint(ifOp);
   Region &region =
       getTakeElseBranch() ? ifOp.getElseRegion() : ifOp.getThenRegion();
-  if (!llvm::hasSingleElement(region)) {
+  if (!region.hasOneBlock()) {
     return emitDefiniteFailure()
            << "requires an scf.if op with a single-block "
            << ((getTakeElseBranch()) ? "`else`" : "`then`") << " region";
@@ -585,9 +630,10 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
   } else if (isForallWithIdenticalConfiguration(target, source)) {
     fusedLoop = fuseIndependentSiblingForallLoops(
         cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
-  } else
+  } else {
     return emitSilenceableFailure(target->getLoc())
            << "operations cannot be fused";
+  }
 
   assert(fusedLoop && "failed to fuse operations");
 
@@ -604,6 +650,8 @@ class SCFTransformDialectExtension
     : public transform::TransformDialectExtension<
           SCFTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SCFTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

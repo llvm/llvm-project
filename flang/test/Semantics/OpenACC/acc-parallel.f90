@@ -24,7 +24,7 @@ program openacc_parallel_validity
   !$acc parallel device_type(*) num_gangs(2)
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -32,6 +32,17 @@ program openacc_parallel_validity
   !$acc end parallel
 
   !$acc parallel async(1)
+  !$acc end parallel
+
+  !ERROR: At most one ASYNC clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel async(1) async(2)
+  !$acc end parallel
+
+  !$acc parallel async(1) device_type(nvidia) async(3)
+  !$acc end parallel
+
+  !ERROR: At most one ASYNC clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel async(1) device_type(nvidia) async(2) async(3)
   !$acc end parallel
 
   !$acc parallel async(async1)
@@ -138,7 +149,7 @@ program openacc_parallel_validity
   !$acc parallel device_type(*) if(.TRUE.)
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 

@@ -14,9 +14,11 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using testing::UnorderedElementsAre;
 
 TEST(SmallPtrSetTest, Assignment) {
   int buf[8];
@@ -407,4 +409,74 @@ TEST(SmallPtrSetTest, RemoveIf) {
 
   Removed = Set.remove_if([](int *Ptr) { return false; });
   EXPECT_FALSE(Removed);
+}
+
+TEST(SmallPtrSetTest, CtorRange) {
+  int V0 = 0;
+  int V1 = 1;
+  int V2 = 2;
+  int *Args[] = {&V2, &V0, &V1};
+  SmallPtrSet<int *, 4> Set(llvm::from_range, Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&V0, &V1, &V2));
+}
+
+TEST(SmallPtrSetTest, InsertRange) {
+  int V0 = 0;
+  int V1 = 1;
+  int V2 = 2;
+  SmallPtrSet<int *, 4> Set;
+  int *Args[] = {&V2, &V0, &V1};
+  Set.insert_range(Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&V0, &V1, &V2));
+}
+
+TEST(SmallPtrSetTest, Reserve) {
+  // Check that we don't do anything silly when using reserve().
+  SmallPtrSet<int *, 4> Set;
+  int Vals[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
+  Set.insert(&Vals[0]);
+
+  // We shouldn't reallocate when this happens.
+  Set.reserve(4);
+  EXPECT_EQ(Set.capacity(), 4u);
+
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[2]);
+  Set.insert(&Vals[3]);
+
+  // We shouldn't reallocate this time either.
+  Set.reserve(4);
+  EXPECT_EQ(Set.capacity(), 4u);
+  EXPECT_EQ(Set.size(), 4u);
+  EXPECT_THAT(Set,
+              UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
+
+  // Reserving further should lead to a reallocation. And matching the existing
+  // insertion approach, we immediately allocate up to 128 elements.
+  Set.reserve(5);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 4u);
+  EXPECT_THAT(Set,
+              UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
+
+  // And we should be able to insert another two or three elements without
+  // reallocating.
+  Set.insert(&Vals[4]);
+  Set.insert(&Vals[5]);
+
+  // Calling a smaller reserve size should have no effect.
+  Set.reserve(1);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 6u);
+
+  // Reserving zero should have no effect either.
+  Set.reserve(0);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 6u);
+  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3], &Vals[4], &Vals[5]));
+
+  // Reserving 192 should result in 256 buckets.
+  Set.reserve(192);
+  EXPECT_EQ(Set.capacity(), 256u);
 }

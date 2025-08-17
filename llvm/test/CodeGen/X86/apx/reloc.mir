@@ -1,0 +1,322 @@
+# RUN: llc -mattr=+egpr,+ndd -x mir < %s -x86-enable-apx-for-relocation=true -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs -o - | FileCheck %s --check-prefixes=CHECK,APXREL
+# RUN: llc -mattr=+egpr,+ndd -x mir < %s -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs -o - | FileCheck %s --check-prefixes=CHECK,NOAPXREL
+
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  @x = external global i64
+  @i = external thread_local global i32
+
+  define i32 @mov() {
+  entry:
+    ret i32 undef
+  }
+
+  define i8 @test() {
+  entry:
+    ret i8 undef
+  }
+  define i32 @adc() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @add() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @and() {
+  entry:
+    ret i32 undef
+  }
+
+  define i8 @cmp() {
+  entry:
+    ret i8 undef
+  }
+
+  define i32 @or() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @sbb() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @sub() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @xor() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @add64rm_nd_gotpcrel() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @add64rm_nd_gottpoff() {
+  entry:
+    ret i32 undef
+  }
+
+  define i32 @add64mr_nd() {
+  entry:
+    ret i32 undef
+  }
+...
+---
+name: mov
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
+    %1:gr32 = MOV32rm killed %0, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %1
+    RET 0, $eax
+
+# CHECK: name: mov
+# APXREL: %0:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
+# NOAPXREL: %0:gr64_norex2 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
+...
+---
+name: test
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr8 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    TEST64mr $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0:gr64, implicit-def $eflags :: (load (s64))
+    %1:gr8 = SETCCr 5, implicit $eflags
+    $al = COPY %1
+    RET 0, $al
+
+# CHECK: name: test
+# APXREL: %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+# APXREL-NEXT: TEST64mr $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0, implicit-def $eflags :: (load (s64))
+# NOAPXREL: %0:gr64_norex2 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+# NOAPXREL-NEXT: TEST64mr $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0, implicit-def $eflags :: (load (s64))
+
+...
+---
+name: adc
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr64 }
+  - { id: 3, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = OR64ri8 %0, 7, implicit-def $eflags
+    %2:gr64 = ADC64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
+    %3:gr32 = MOV32rm killed %2, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %3
+    RET 0, $eax
+
+# CHECK: name: adc
+# APXREL: %2:gr64 = ADC64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
+# NOAPXREL: %2:gr64_norex2 = ADC64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
+...
+---
+name: add
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = ADD64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+# CHECK: name: add
+# APXREL: %1:gr64 = ADD64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+# NOAPXREL: %1:gr64_norex2 = ADD64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+...
+---
+name: and
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = AND64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: and
+# APXREL: %1:gr64 = AND64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+# NOAPXREL: %1:gr64_norex2 = AND64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+...
+---
+name: or
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = OR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: or
+# APXREL: %1:gr64 = OR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+# NOAPXREL: %1:gr64_norex2 = OR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+...
+---
+name: sbb
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr64 }
+  - { id: 3, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = OR64ri8 %0, 7, implicit-def $eflags
+    %2:gr64 = SBB64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
+    %3:gr32 = MOV32rm killed %2, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %3
+    RET 0, $eax
+
+# CHECK: name: sbb
+# APXREL: %1:gr64 = OR64ri8 %0, 7, implicit-def $eflags
+# APXREL-NEXT: %2:gr64 = SBB64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
+# NOAPXREL: %1:gr64_norex2 = OR64ri8 %0, 7, implicit-def $eflags
+# NOAPXREL-NEXT: %2:gr64_norex2 = SBB64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
+...
+---
+name: sub
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = SUB64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: sub
+# APXREL: %1:gr64 = SUB64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+# NOAPXREL: %1:gr64_norex2 = SUB64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+...
+---
+name: xor
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = XOR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: xor
+# APXREL: %1:gr64 = XOR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+# NOAPXREL: %1:gr64_norex2 = XOR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
+...
+---
+name: add64rm_nd_gotpcrel
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = ADD64rm_ND %0, $rip, 1, $noreg, target-flags(x86-gotpcrel) @i, $noreg, implicit-def dead $eflags :: (load (s64) from got)
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: add64rm_nd_gotpcrel
+# APXREL: %1:gr64 = ADD64rm_ND %0, $rip, 1, $noreg, target-flags(x86-gotpcrel) @i, $noreg, implicit-def dead $eflags :: (load (s64) from got)
+# NOAPXREL: %3:gr64_norex2 = COPY %0
+# NOAPXREL: %1:gr64_norex2 = ADD64rm %3, $rip, 1, $noreg, target-flags(x86-gotpcrel) @i, $noreg, implicit-def dead $eflags
+...
+---
+name: add64rm_nd_gottpoff
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = ADD64rm_ND %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def dead $eflags :: (load (s64) from got)
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: add64rm_nd
+# APXREL: %1:gr64 = ADD64rm_ND %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def dead $eflags :: (load (s64) from got)
+# NOAPXREL: %3:gr64_norex2 = COPY %0
+# NOAPXREL: %1:gr64_norex2 = ADD64rm %3, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def dead $eflags
+...
+---
+name: add64mr_nd
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
+    %1:gr64 = ADD64mr_ND $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0, implicit-def dead $eflags :: (load (s64) from got)
+    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    $eax = COPY %2
+    RET 0, $eax
+
+# CHECK: name: add64mr_nd
+# APXREL: %1:gr64 = ADD64mr_ND $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0, implicit-def dead $eflags :: (load (s64) from got)
+# NOAPXREL: %3:gr64_norex2 = COPY %0
+# NOAPXREL: %1:gr64_norex2 = ADD64rm %3, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def dead $eflags
+...

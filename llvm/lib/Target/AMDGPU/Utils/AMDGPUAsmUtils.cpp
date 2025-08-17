@@ -9,8 +9,7 @@
 #include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 
 //===----------------------------------------------------------------------===//
 // Custom Operands.
@@ -107,7 +106,7 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
   {{"MSG_HS_TESSFACTOR"},       ID_HS_TESSFACTOR_GFX11Plus, isGFX11Plus},
   {{"MSG_DEALLOC_VGPRS"},       ID_DEALLOC_VGPRS_GFX11Plus, isGFX11Plus},
-  {{""}},
+  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1250},
   {{"MSG_SYSMSG"},              ID_SYSMSG},
   {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
   {{"MSG_RTN_GET_DDID"},        ID_RTN_GET_DDID,            isGFX11Plus},
@@ -196,7 +195,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
   {{""}},
   {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA_gfx11, isGFX11},
-  {{""}},
+  {{"HW_REG_IB_STS2"}, ID_IB_STS2, isGFX1250},
   {{"HW_REG_SHADER_CYCLES"},    ID_SHADER_CYCLES,    isGFX10_3_GFX11},
   {{"HW_REG_SHADER_CYCLES_HI"}, ID_SHADER_CYCLES_HI, isGFX12Plus},
   {{"HW_REG_DVGPR_ALLOC_LO"},   ID_DVGPR_ALLOC_LO,   isGFX12Plus},
@@ -217,12 +216,16 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
   {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 
-  // GFX940 specific registers
+  // GFX942 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA"},  ID_SQ_PERF_SNAPSHOT_DATA,  isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_PC_LO"}, ID_SQ_PERF_SNAPSHOT_PC_LO, isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_PC_HI"}, ID_SQ_PERF_SNAPSHOT_PC_HI, isGFX940},
+
+  // GFX1250
+  {{"HW_REG_XNACK_STATE_PRIV"},       ID_XNACK_STATE_PRIV,       isGFX1250},
+  {{"HW_REG_XNACK_MASK"},             ID_XNACK_MASK_gfx1250,     isGFX1250},
 
   // Aliases
   {{"HW_REG_HW_ID"},                  ID_HW_ID1,                 isGFX10},
@@ -646,14 +649,18 @@ unsigned const DfmtNfmt2UFmtGFX11[] = {
 
 namespace Swizzle {
 
+// clang-format off
 // This must be in sync with llvm::AMDGPU::Swizzle::Id enum members, see SIDefines.h.
-const char* const IdSymbolic[] = {
+const char *const IdSymbolic[] = {
   "QUAD_PERM",
   "BITMASK_PERM",
   "SWAP",
   "REVERSE",
   "BROADCAST",
+  "FFT",
+  "ROTATE",
 };
+// clang-format on
 
 } // namespace Swizzle
 
@@ -684,5 +691,4 @@ ArrayRef<GFXVersion> getGFXVersions() {
 
 } // namespace UCVersion
 
-} // namespace AMDGPU
-} // namespace llvm
+} // namespace llvm::AMDGPU

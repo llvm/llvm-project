@@ -35,18 +35,18 @@ class ClangFormatCommand(sublime_plugin.TextCommand):
         regions = []
         command = [binary]
         if style:
-            command.extend(["-style", style])
+            command.extend(["--style", style])
         for region in self.view.sel():
             regions.append(region)
             region_offset = min(region.a, region.b)
             region_length = abs(region.b - region.a)
             command.extend(
                 [
-                    "-offset",
+                    "--offset",
                     str(region_offset),
-                    "-length",
+                    "--length",
                     str(region_length),
-                    "-assume-filename",
+                    "--assume-filename",
                     str(self.view.file_name()),
                 ]
             )

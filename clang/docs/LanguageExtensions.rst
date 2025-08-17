@@ -15,6 +15,7 @@ Clang Language Extensions
    AutomaticReferenceCounting
    PointerAuthentication
    MatrixTypes
+   CXXTypeAwareAllocators
 
 Introduction
 ============
@@ -66,6 +67,9 @@ It can be used like this:
 
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
+
+  When compiling with target offloading, ``__has_builtin`` only considers the
+  currently active target.
 
 ``__has_constexpr_builtin``
 ---------------------------
@@ -137,7 +141,7 @@ for support for non-standardized features, i.e. features not prefixed ``c_``,
 ``cxx_`` or ``objc_``.
 
 Another use of ``__has_feature`` is to check for compiler features not related
-to the language standard, such as e.g. :doc:`AddressSanitizer
+to the language standard, such as :doc:`AddressSanitizer
 <AddressSanitizer>`.
 
 If the ``-pedantic-errors`` option is given, ``__has_extension`` is equivalent
@@ -376,8 +380,8 @@ Builtin Macros
 
 ``__FILE_NAME__``
   Clang-specific extension that functions similar to ``__FILE__`` but only
-  renders the last path component (the filename) instead of an invocation
-  dependent full path to that file.
+  renders the last path component (the filename) instead of an
+  invocation-dependent full path to that file.
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -433,6 +437,112 @@ __datasizeof
 
 ``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
 type ignoring tail padding.
+
+_BitInt, _ExtInt
+----------------
+
+Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
+and in C++. This type was previously implemented in Clang with the same
+semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
+favor of the standard type.
+
+Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
+so this type should not yet be used in interfaces that require ABI stability.
+
+C keywords supported in all language modes
+------------------------------------------
+
+Clang supports ``_Alignas``, ``_Alignof``, ``_Atomic``, ``_Complex``,
+``_Generic``, ``_Imaginary``, ``_Noreturn``, ``_Static_assert``,
+``_Thread_local``, and ``_Float16`` in all language modes with the C semantics.
+
+__alignof, __alignof__
+----------------------
+
+``__alignof`` and ``__alignof__`` return, in contrast to ``_Alignof`` and
+``alignof``, the preferred alignment of a type. This may be larger than the
+required alignment for improved performance.
+
+__extension__
+-------------
+
+``__extension__`` suppresses extension diagnostics in the statement it is
+prepended to.
+
+__auto_type
+-----------
+
+``__auto_type`` behaves the same as ``auto`` in C++11 but is available in all
+language modes.
+
+__imag, __imag__
+----------------
+
+``__imag`` and ``__imag__`` can be used to get the imaginary part of a complex
+value.
+
+__real, __real__
+----------------
+
+``__real`` and ``__real__`` can be used to get the real part of a complex value.
+
+__asm, __asm__
+--------------
+
+``__asm`` and ``__asm__`` are alternate spellings for ``asm``, but available in
+all language modes.
+
+__complex, __complex__
+----------------------
+
+``__complex`` and ``__complex__`` are alternate spellings for ``_Complex``.
+
+__const, __const__, __volatile, __volatile__, __restrict, __restrict__
+----------------------------------------------------------------------
+
+These are alternate spellings for their non-underscore counterparts, but are
+available in all language modes.
+
+__decltype
+----------
+
+``__decltype`` is an alternate spelling for ``decltype``, but is also available
+in C++ modes before C++11.
+
+__inline, __inline__
+--------------------
+
+``__inline`` and ``__inline__`` are alternate spellings for ``inline``, but are
+available in all language modes.
+
+__nullptr
+---------
+
+``__nullptr`` is an alternate spelling for ``nullptr``. It is available in all C and C++ language modes.
+
+__signed, __signed__
+--------------------
+
+``__signed`` and ``__signed__`` are alternate spellings for ``signed``.
+``__unsigned`` and ``__unsigned__`` are **not** supported.
+
+__typeof, __typeof__, __typeof_unqual, __typeof_unqual__
+--------------------------------------------------------
+
+``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
+available in all language modes. These spellings result in the operand,
+retaining all qualifiers.
+
+``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
+C23 ``typeof_unqual`` type specifier, but are available in all language modes.
+These spellings result in the type of the operand, stripping all qualifiers.
+
+__char16_t, __char32_t
+----------------------
+
+``__char16_t`` and ``__char32_t`` are alternate spellings for ``char16_t`` and
+``char32_t`` respectively, but are also available in C++ modes before C++11.
+They are only supported in C++. ``__char8_t`` is not available.
 
 ..
   FIXME: This should list all the keyword extensions
@@ -609,7 +719,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
   conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-  And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
+  And it selects based on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
@@ -647,65 +757,120 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-=========================================== ================================================================ =========================================
-         Name                                Operation                                                        Supported element types
-=========================================== ================================================================ =========================================
- T __builtin_elementwise_abs(T x)            return the absolute value of a number x; the absolute value of   signed integer and floating point types
-                                             the most negative integer remains the most negative integer
- T __builtin_elementwise_fma(T x, T y, T z)  fused multiply add, (x * y) +  z.                                floating point types
- T __builtin_elementwise_ceil(T x)           return the smallest integral value greater than or equal to x    floating point types
- T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
- T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types
- T __builtin_elementwise_tan(T x)            return the tangent of x interpreted as an angle in radians       floating point types
- T __builtin_elementwise_asin(T x)           return the arcsine of x interpreted as an angle in radians       floating point types
- T __builtin_elementwise_acos(T x)           return the arccosine of x interpreted as an angle in radians     floating point types
- T __builtin_elementwise_atan(T x)           return the arctangent of x interpreted as an angle in radians    floating point types
- T __builtin_elementwise_sinh(T x)           return the hyperbolic sine of angle x in radians                 floating point types
- T __builtin_elementwise_cosh(T x)           return the hyperbolic cosine of angle x in radians               floating point types
- T __builtin_elementwise_tanh(T x)           return the hyperbolic tangent of angle x in radians              floating point types
- T __builtin_elementwise_floor(T x)          return the largest integral value less than or equal to x        floating point types
- T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
- T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
- T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
- T __builtin_elementwise_pow(T x, T y)       return x raised to the power of y                                floating point types
- T __builtin_elementwise_bitreverse(T x)     return the integer represented after reversing the bits of x     integer types
- T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
- T __builtin_elementwise_exp2(T x)           returns the base-2 exponential, 2^x, of the specified value      floating point types
+The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
+``__builtin_elementwise_min``, and ``__builtin_elementwise_abs`` 
+can be called in a ``constexpr`` context.
 
- T __builtin_elementwise_sqrt(T x)           return the square root of a floating-point number                floating point types
- T __builtin_elementwise_roundeven(T x)      round x to the nearest integer value in floating point format,   floating point types
-                                             rounding halfway cases to even (that is, to the nearest value
-                                             that is an even integer), regardless of the current rounding
-                                             direction.
- T __builtin_elementwise_round(T x)          round x to the nearest  integer value in floating point format,      floating point types
-                                             rounding halfway cases away from zero, regardless of the
-                                             current rounding direction. May raise floating-point
-                                             exceptions.
- T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
-                                             magnitude than x
+No implicit promotion of integer types takes place. The mixing of integer types
+of different sizes and signs is forbidden in binary and ternary builtins.
 
-  T __builtin_elementwise_nearbyint(T x)     round x to the nearest  integer value in floating point format,      floating point types
-                                             rounding according to the current rounding direction.
-                                             May not raise the inexact floating-point exception. This is
-                                             treated the same as ``__builtin_elementwise_rint`` unless
-                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+============================================== ====================================================================== =========================================
+         Name                                   Operation                                                             Supported element types
+============================================== ====================================================================== =========================================
+ T __builtin_elementwise_abs(T x)               return the absolute value of a number x; the absolute value of         signed integer and floating point types
+                                                the most negative integer remains the most negative integer
+ T __builtin_elementwise_fma(T x, T y, T z)     fused multiply add, (x * y) +  z.                                      floating point types
+ T __builtin_elementwise_ceil(T x)              return the smallest integral value greater than or equal to x          floating point types
+ T __builtin_elementwise_sin(T x)               return the sine of x interpreted as an angle in radians                floating point types
+ T __builtin_elementwise_cos(T x)               return the cosine of x interpreted as an angle in radians              floating point types
+ T __builtin_elementwise_tan(T x)               return the tangent of x interpreted as an angle in radians             floating point types
+ T __builtin_elementwise_asin(T x)              return the arcsine of x interpreted as an angle in radians             floating point types
+ T __builtin_elementwise_acos(T x)              return the arccosine of x interpreted as an angle in radians           floating point types
+ T __builtin_elementwise_atan(T x)              return the arctangent of x interpreted as an angle in radians          floating point types
+ T __builtin_elementwise_atan2(T y, T x)        return the arctangent of y/x                                           floating point types
+ T __builtin_elementwise_sinh(T x)              return the hyperbolic sine of angle x in radians                       floating point types
+ T __builtin_elementwise_cosh(T x)              return the hyperbolic cosine of angle x in radians                     floating point types
+ T __builtin_elementwise_tanh(T x)              return the hyperbolic tangent of angle x in radians                    floating point types
+ T __builtin_elementwise_floor(T x)             return the largest integral value less than or equal to x              floating point types
+ T __builtin_elementwise_log(T x)               return the natural logarithm of x                                      floating point types
+ T __builtin_elementwise_log2(T x)              return the base 2 logarithm of x                                       floating point types
+ T __builtin_elementwise_log10(T x)             return the base 10 logarithm of x                                      floating point types
+ T __builtin_elementwise_popcount(T x)          return the number of 1 bits in x                                       integer types
+ T __builtin_elementwise_pow(T x, T y)          return x raised to the power of y                                      floating point types
+ T __builtin_elementwise_bitreverse(T x)        return the integer represented after reversing the bits of x           integer types
+ T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
+ T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
+ T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
 
- T __builtin_elementwise_rint(T x)           round x to the nearest  integer value in floating point format,      floating point types
-                                             rounding according to the current rounding
-                                             direction. May raise floating-point exceptions. This is treated
-                                             the same as ``__builtin_elementwise_nearbyint`` unless
-                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+ T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
+ T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
+                                                rounding halfway cases to even (that is, to the nearest value
+                                                that is an even integer), regardless of the current rounding
+                                                direction.
+ T __builtin_elementwise_round(T x)             round x to the nearest  integer value in floating point format,        floating point types
+                                                rounding halfway cases away from zero, regardless of the
+                                                current rounding direction. May raise floating-point
+                                                exceptions.
+ T __builtin_elementwise_trunc(T x)             return the integral value nearest to but no larger in                  floating point types
+                                                magnitude than x
 
- T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
-                                             of a floating-point number
- T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
- T __builtin_elementwise_max(T x, T y)       return x or y, whichever is larger                               integer and floating point types
- T __builtin_elementwise_min(T x, T y)       return x or y, whichever is smaller                              integer and floating point types
- T __builtin_elementwise_add_sat(T x, T y)   return the sum of x and y, clamped to the range of               integer types
-                                             representable values for the signed/unsigned integer type.
- T __builtin_elementwise_sub_sat(T x, T y)   return the difference of x and y, clamped to the range of        integer types
-                                             representable values for the signed/unsigned integer type.
-=========================================== ================================================================ =========================================
+  T __builtin_elementwise_nearbyint(T x)        round x to the nearest  integer value in floating point format,        floating point types
+                                                rounding according to the current rounding direction.
+                                                May not raise the inexact floating-point exception. This is
+                                                treated the same as ``__builtin_elementwise_rint`` unless
+                                                :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
+ T __builtin_elementwise_rint(T x)              round x to the nearest  integer value in floating point format,        floating point types
+                                                rounding according to the current rounding
+                                                direction. May raise floating-point exceptions. This is treated
+                                                the same as ``__builtin_elementwise_nearbyint`` unless
+                                                :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
+ T __builtin_elementwise_canonicalize(T x)      return the platform specific canonical encoding                        floating point types
+                                                of a floating-point number
+ T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
+ T __builtin_elementwise_fmod(T x, T y)         return The floating-point remainder of (x/y) whose sign                floating point types
+                                                matches the sign of x.
+ T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
+                                                For floating point types, follows semantics of maxNum
+                                                in IEEE 754-2008. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
+                                                For floating point types, follows semantics of minNum
+                                                in IEEE 754-2008. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
+                                                semantics (maxNum) with +0.0>-0.0. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
+                                                semantics (minNum) with +0.0>-0.0. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
+                                                representable values for the signed/unsigned integer type.
+ T __builtin_elementwise_sub_sat(T x, T y)      return the difference of x and y, clamped to the range of              integer types
+                                                representable values for the signed/unsigned integer type.
+ T __builtin_elementwise_maximum(T x, T y)      return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                left by z, and the most significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+
+T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                right by z, and the least significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+============================================== ====================================================================== =========================================
 
 
 *Reduction Builtins*
@@ -714,11 +879,16 @@ Each builtin returns a scalar equivalent to applying the specified
 operation(x, y) as recursive even-odd pairwise reduction to all vector
 elements. ``operation(x, y)`` is repeatedly applied to each non-overlapping
 even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
-``i in [0, Number of elements / 2)``. If the numbers of elements is not a
+``i in [0, Number of elements / 2)``. If the number of elements is not a
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
+
+The integer reduction intrinsics, including ``__builtin_reduce_max``,
+``__builtin_reduce_min``, ``__builtin_reduce_add``, ``__builtin_reduce_mul``,
+``__builtin_reduce_and``, ``__builtin_reduce_or``, and ``__builtin_reduce_xor``,
+can be called in a ``constexpr`` context.
 
 Example:
 
@@ -730,21 +900,27 @@ Example:
 
 Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
-======================================= ================================================================ ==================================
-         Name                            Operation                                                        Supported element types
-======================================= ================================================================ ==================================
- ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is   integer and floating point types
-                                         a NaN, return the other argument. If both arguments are NaNs,
-                                         fmax() return a NaN.
- ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument     integer and floating point types
-                                         is a NaN, return the other argument. If both arguments are
-                                         NaNs, fmax() return a NaN.
- ET __builtin_reduce_add(VT a)           \+                                                               integer types
- ET __builtin_reduce_mul(VT a)           \*                                                               integer types
- ET __builtin_reduce_and(VT a)           &                                                                integer types
- ET __builtin_reduce_or(VT a)            \|                                                               integer types
- ET __builtin_reduce_xor(VT a)           ^                                                                integer types
-======================================= ================================================================ ==================================
+======================================= ====================================================================== ==================================
+         Name                            Operation                                                              Supported element types
+======================================= ====================================================================== ==================================
+ ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_add(VT a)           \+                                                                     integer types
+ ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
+ ET __builtin_reduce_and(VT a)           &                                                                      integer types
+ ET __builtin_reduce_or(VT a)            \|                                                                     integer types
+ ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
+ ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
+                                         semantics, see `LangRef
+                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         for the comparison.
+ ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
+                                         semantics, see `LangRef
+                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         for the comparison.
+======================================= ====================================================================== ==================================
 
 Matrix Types
 ============
@@ -847,6 +1023,8 @@ to ``float``; see below for more information on this emulation.
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
+  * SystemZ (emulated)
+  * LoongArch (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -854,6 +1032,7 @@ to ``float``; see below for more information on this emulation.
   * 64-bit ARM (AArch64)
   * RISC-V
   * X86 (when SSE2 is available)
+  * LoongArch
 
 (For X86, SSE2 is available on 64-bit and all recent 32-bit processors.)
 
@@ -1334,7 +1513,7 @@ C++14 digit separators
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
-is no corresponding ``__has_feature`` name
+is no corresponding ``__has_feature`` name.
 
 C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1383,6 +1562,13 @@ C++14 variable templates
 Use ``__has_feature(cxx_variable_templates)`` or
 ``__has_extension(cxx_variable_templates)`` to determine if support for
 templated variable declarations is enabled.
+
+C++ type aware allocators
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``__has_extension(cxx_type_aware_allocators)`` to determine the existence of
+support for the future C++2d type aware allocator feature. For full details, see
+:doc:`C++ Type Aware Allocators <CXXTypeAwareAllocators>` for additional details.
 
 C11
 ---
@@ -1457,59 +1643,153 @@ C11 ``_Thread_local``
 Use ``__has_feature(c_thread_local)`` or ``__has_extension(c_thread_local)``
 to determine if support for ``_Thread_local`` variables is enabled.
 
+C2y
+---
+
+The features listed below are part of the C2y standard.  As a result, all these
+features are enabled with the ``-std=c2y`` or ``-std=gnu2y`` option when
+compiling C code.
+
+C2y ``_Countof``
+^^^^^^^^^^^^^^^^
+
+Use ``__has_feature(c_countof)`` (in C2y or later mode) or
+``__has_extension(c_countof)`` (in C23 or earlier mode) to determine if support
+for the ``_Countof`` operator is enabled. This feature is not available in C++
+mode.
+
+
 Modules
 -------
 
 Use ``__has_feature(modules)`` to determine if Modules have been enabled.
 For example, compiling code with ``-fmodules`` enables the use of Modules.
 
-More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
+More information can be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-============================================ ================================ ============= =============
-Feature                                      Feature Test Macro               Introduced In Backported To
-============================================ ================================ ============= =============
-variadic templates                           __cpp_variadic_templates         C++11         C++03
-Alias templates                              __cpp_alias_templates            C++11         C++03
-Non-static data member initializers          __cpp_nsdmi                      C++11         C++03
-Range-based ``for`` loop                     __cpp_range_based_for            C++11         C++03
-RValue references                            __cpp_rvalue_references          C++11         C++03
-Attributes                                   __cpp_attributes                 C++11         C++03
-Lambdas                                      __cpp_lambdas                    C++11         C++03
-Generalized lambda captures                  __cpp_init_captures              C++14         C++03
-Generic lambda expressions                   __cpp_generic_lambdas            C++14         C++03
-variable templates                           __cpp_variable_templates         C++14         C++03
-Binary literals                              __cpp_binary_literals            C++14         C++03
-Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
-Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
-``if constexpr``                             __cpp_if_constexpr               C++17         C++11
-fold expressions                             __cpp_fold_expressions           C++17         C++03
-Lambda capture of \*this by value            __cpp_capture_star_this          C++17         C++03
-Attributes on enums                          __cpp_enumerator_attributes      C++17         C++03
-Guaranteed copy elision                      __cpp_guaranteed_copy_elision    C++17         C++03
-Hexadecimal floating literals                __cpp_hex_float                  C++17         C++03
-``inline`` variables                         __cpp_inline_variables           C++17         C++03
-Attributes on namespaces                     __cpp_namespace_attributes       C++17         C++11
-Structured bindings                          __cpp_structured_bindings        C++17         C++03
-template template arguments                  __cpp_template_template_args     C++17         C++03
-Familiar template syntax for generic lambdas __cpp_generic_lambdas            C++20         C++03
-``static operator[]``                        __cpp_multidimensional_subscript C++20         C++03
-Designated initializers                      __cpp_designated_initializers    C++20         C++03
-Conditional ``explicit``                     __cpp_conditional_explicit       C++20         C++03
-``using enum``                               __cpp_using_enum                 C++20         C++03
-``if consteval``                             __cpp_if_consteval               C++23         C++20
-``static operator()``                        __cpp_static_call_operator       C++23         C++03
-Attributes on Lambda-Expressions                                              C++23         C++11
-Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
-``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
--------------------------------------------- -------------------------------- ------------- -------------
-Designated initializers (N494)                                                C99           C89
-Array & element qualification (N2607)                                         C23           C89
-Attributes (N2335)                                                            C23           C89
-``#embed`` (N3017)                                                            C23           C89, C++
-============================================ ================================ ============= =============
+============================================= ================================ ============= =============
+Feature                                       Feature Test Macro               Introduced In Backported To
+============================================= ================================ ============= =============
+variadic templates                            __cpp_variadic_templates         C++11         C++03
+Alias templates                               __cpp_alias_templates            C++11         C++03
+Non-static data member initializers           __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop                      __cpp_range_based_for            C++11         C++03
+RValue references                             __cpp_rvalue_references          C++11         C++03
+Attributes                                    __cpp_attributes                 C++11         C++03
+Lambdas                                       __cpp_lambdas                    C++11         C++03
+Generalized lambda captures                   __cpp_init_captures              C++14         C++03
+Generic lambda expressions                    __cpp_generic_lambdas            C++14         C++03
+variable templates                            __cpp_variable_templates         C++14         C++03
+Binary literals                               __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                             __cpp_constexpr                  C++14         C++11
+Static assert with no message                 __cpp_static_assert >= 201411L   C++17         C++11
+Pack expansion in generalized lambda-capture  __cpp_init_captures              C++17         C++03
+``if constexpr``                              __cpp_if_constexpr               C++17         C++11
+fold expressions                              __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value             __cpp_capture_star_this          C++17         C++03
+Attributes on enums                           __cpp_enumerator_attributes      C++17         C++03
+Guaranteed copy elision                       __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals                 __cpp_hex_float                  C++17         C++03
+``inline`` variables                          __cpp_inline_variables           C++17         C++03
+Attributes on namespaces                      __cpp_namespace_attributes       C++17         C++11
+Structured bindings                           __cpp_structured_bindings        C++17         C++03
+template template arguments                   __cpp_template_template_args     C++17         C++03
+Familiar template syntax for generic lambdas  __cpp_generic_lambdas            C++20         C++03
+``static operator[]``                         __cpp_multidimensional_subscript C++20         C++03
+Designated initializers                       __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``                      __cpp_conditional_explicit       C++20         C++03
+``using enum``                                __cpp_using_enum                 C++20         C++03
+``if consteval``                              __cpp_if_consteval               C++23         C++20
+``static operator()``                         __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                               C++23         C++11
+Attributes on Structured Bindings             __cpp_structured_bindings        C++26         C++03
+Packs in Structured Bindings                  __cpp_structured_bindings        C++26         C++03
+Structured binding declaration as a condition __cpp_structured_bindings        C++26         C++98
+Static assert with user-generated message     __cpp_static_assert >= 202306L   C++26         C++11
+Pack Indexing                                 __cpp_pack_indexing              C++26         C++03
+``= delete ("should have a reason");``        __cpp_deleted_function           C++26         C++03
+Variadic Friends                              __cpp_variadic_friend            C++26         C++03
+Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
+--------------------------------------------- -------------------------------- ------------- -------------
+Designated initializers (N494)                                                 C99           C89
+``_Complex`` (N693)                                                            C99           C89, C++
+``_Bool`` (N815)                                                               C99           C89
+Variable-length arrays (N683)                                                  C99           C89, C++
+Flexible array members                                                         C99           C89, C++
+static and type quals in arrays                                                C99           C89
+``long long`` (N601)                                                           C99           C89
+Hexadecimal floating constants (N308)                                          C99           C89
+Compound literals (N716)                                                       C99           C89, C++
+``//`` comments (N644)                                                         C99           C89
+Mixed declarations and code (N740)                                             C99           C89
+Variadic macros (N707)                                                         C99           C89
+Empty macro arguments (N570)                                                   C99           C89
+Trailing comma in enum declaration                                             C99           C89
+Implicit ``return 0`` in ``main``                                              C99           C89
+``__func__`` (N611)                                                            C99           C89
+``_Generic`` (N1441)                                                           C11           C89, C++
+``_Static_assert`` (N1330)                                                     C11           C89, C++
+``_Atomic`` (N1485)                                                            C11           C89, C++
+``_Thread_local`` (N1364)                                                      C11           C89, C++
+Array & element qualification (N2607)                                          C23           C89
+Attributes (N2335)                                                             C23           C89
+``#embed`` (N3017)                                                             C23           C89, C++
+Enum with fixed underlying type (N3030)                                        C23           C89
+``#warning`` (N2686)                                                           C23           C89
+``_BitInt`` (N3035)                                                            C23           C89, C++
+Binary literals (N2549)                                                        C23           C89
+Unnamed parameters in a function definition                                    C23           C89
+Free positioning of labels (N2508)                                             C23           C89
+``#elifdef`` (N2645)                                                           C23           C89
+``__has_include`` (N2799)                                                      C23           C89
+Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
+``_Countof`` (N3369, N3469)                                                    C2y           C89
+``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
+``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
+============================================= ================================ ============= =============
+
+Builtin type aliases
+====================
+
+Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
+
+__builtin_common_type
+---------------------
+
+.. code-block:: c++
+
+  template <template <class... Args> class BaseTemplate,
+            template <class TypeMember> class HasTypeMember,
+            class HasNoTypeMember,
+            class... Ts>
+  using __builtin_common_type = ...;
+
+This alias is used for implementing ``std::common_type``. If ``std::common_type`` should contain a ``type`` member,
+it is an alias to ``HasTypeMember<TheCommonType>``. Otherwise it is an alias to ``HasNoTypeMember``. The
+``BaseTemplate`` is usually ``std::common_type``. ``Ts`` are the arguments to ``std::common_type``.
+
+__type_pack_element
+-------------------
+
+.. code-block:: c++
+
+  template <std::size_t Index, class... Ts>
+  using __type_pack_element = ...;
+
+This alias returns the type at ``Index`` in the parameter pack ``Ts``.
+
+__make_integer_seq
+------------------
+
+.. code-block:: c++
+
+  template <template <class IntSeqT, IntSeqT... Ints> class IntSeq, class T, T N>
+  using __make_integer_seq = ...;
+
+This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
 
 Type Trait Primitives
 =====================
@@ -1546,6 +1826,8 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__array_extent(type, dim)`` (Embarcadero):
   The ``dim``'th array bound in the type ``type``, or ``0`` if
   ``dim >= __array_rank(type)``.
+* ``__builtin_is_implicit_lifetime`` (C++, GNU, Microsoft)
+* ``__builtin_is_virtual_base_of`` (C++, GNU, Microsoft)
 * ``__can_pass_in_regs`` (C++)
   Returns whether a class can be passed in registers under the current
   ABI. This type can only be applied to unqualified class types.
@@ -1614,10 +1896,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_nothrow_assignable`` (C++, MSVC 2013)
 * ``__is_nothrow_constructible`` (C++, MSVC 2013)
 * ``__is_nothrow_destructible`` (C++, MSVC 2013)
-* ``__is_nullptr`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true for ``std::nullptr_t`` and false for everything else. The
-  corresponding standard library feature is ``std::is_null_pointer``, but
-  ``__is_null_pointer`` is already in use by some implementations.
 * ``__is_object`` (C++, Embarcadero)
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
@@ -1625,10 +1903,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
-* ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true if a type is referenceable, and false otherwise. A referenceable
-  type is a type that's either an object type, a reference type, or an unqualified
-  function type.
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
 * ``__is_same_as`` (GCC): Synonym for ``__is_same``.
@@ -1646,11 +1920,24 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_constructible`` (C++, GNU, Microsoft)
 * ``__is_trivially_copyable`` (C++, GNU, Microsoft)
 * ``__is_trivially_destructible`` (C++, MSVC 2013)
-* ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
+* ``__is_trivially_relocatable`` (Clang) (Deprecated,
+  use ``__builtin_is_cpp_trivially_relocatable`` instead).
+  Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
-  source object on the floor. This is true of trivial types and types which
+  source object on the floor. This is true of trivial types,
+  C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+  This trait is deprecated and should be replaced by
+  ``__builtin_is_cpp_trivially_relocatable``. Note, however, that it is generally
+  unsafe to relocate a C++-relocatable type with ``memcpy`` or ``memmove``;
+  use ``__builtin_trivially_relocate``.
+* ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
+  is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
+  Note that when relocating the caller code should ensure that if the object is polymorphic,
+  the dynamic type is of the most derived type. Padding bytes should not be copied.
+* ``__builtin_is_replaceable`` (C++): Returns true if an object
+  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -1734,10 +2021,44 @@ A simplistic usage example as might be seen in standard C++ headers follows:
   // Emulate type trait for compatibility with other compilers.
   #endif
 
+
+.. _builtin_structured_binding_size-doc:
+
+__builtin_structured_binding_size (C++)
+---------------------------------------
+
+The ``__builtin_structured_binding_size(T)`` type trait returns
+the *structured binding size* ([dcl.struct.bind]) of type ``T``
+
+This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = declval<T&>();``.
+If the argument cannot be decomposed, ``__builtin_structured_binding_size(T)``
+is not a valid expression (``__builtin_structured_binding_size`` is SFINAE-friendly).
+
+builtin arrays, builtin SIMD vectors,
+builtin complex types, *tuple-like* types, and decomposable class types
+are decomposable types.
+
+A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
+even if there is no valid ``std::tuple_element`` specialization or suitable
+``get`` function for that type.
+
+.. code-block:: c++
+
+  template<std::size_t Idx, typename T>
+  requires (Idx < __builtin_structured_binding_size(T))
+  decltype(auto) constexpr get_binding(T&& obj) {
+      auto && [...p] = std::forward<T>(obj);
+      return p...[Idx];
+  }
+  struct S { int a = 0, b = 42; };
+  static_assert(__builtin_structured_binding_size(S) == 2);
+  static_assert(get_binding<1>(S{}) == 42);
+
+
 Blocks
 ======
 
-The syntax and high level language feature description is in
+The syntax and high-level language feature description is in
 :doc:`BlockLanguageSpec<BlockLanguageSpec>`. Implementation and ABI details for
 the clang implementation are in :doc:`Block-ABI-Apple<Block-ABI-Apple>`.
 
@@ -1781,6 +2102,43 @@ references can be used instead of numeric references.
     err:
       return -1;
   }
+
+ASM Goto versus Branch Target Enforcement
+=========================================
+
+Some target architectures implement branch target enforcement, by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``).
+
+The assembler code inside an ``asm goto`` statement is expected not to use a
+branch instruction of that kind to transfer control to any of its destination
+labels. Therefore, using a label in an ``asm goto`` statement does not cause
+clang to put a ``bti`` or equivalent instruction at the label.
+
+Constexpr strings in GNU ASM statements
+=======================================
+
+In C++11 mode (and greater), Clang supports specifying the template,
+constraints, and clobber strings with a parenthesized constant expression
+producing an object with the following member functions
+
+.. code-block:: c++
+
+  constexpr const char* data() const;
+  constexpr size_t size() const;
+
+such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
+This mechanism follows the same rules as ``static_assert`` messages in
+C++26, see ``[dcl.pre]/p12``.
+
+Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
+
+.. code-block:: c++
+
+   int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+   }
+
 
 Objective-C Features
 ====================
@@ -1922,7 +2280,7 @@ Enumerations with a fixed underlying type
 -----------------------------------------
 
 Clang provides support for C++11 enumerations with a fixed underlying type
-within Objective-C.  For example, one can write an enumeration type as:
+within Objective-C and C `prior to C23 <https://open-std.org/JTC1/SC22/WG14/www/docs/n3030.htm>`_.  For example, one can write an enumeration type as:
 
 .. code-block:: c++
 
@@ -1933,6 +2291,14 @@ value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
 underlying types is available in Objective-C.
+
+Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C prior to C23. This will also report ``true`` in C23
+and later modes as the functionality is available even if it's not an extension in
+those modes.
+
+Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C23 and later.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2009,7 +2375,7 @@ Objective-C Autosynthesis of Properties
 
 Clang provides support for autosynthesis of declared properties.  Using this
 feature, clang provides default synthesis of those properties not declared
-@dynamic and not having user provided backing getter and setter methods.
+@dynamic and not having user-provided backing getter and setter methods.
 ``__has_feature(objc_default_synthesize_properties)`` checks for availability
 of this feature in version of clang being used.
 
@@ -2023,7 +2389,7 @@ In Objective-C, functions and methods are generally assumed to follow the
 <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
-to allow these exceptions to be documented. This are used by ARC and the
+to allow these exceptions to be documented. These are used by ARC and the
 `static analyzer <https://clang-analyzer.llvm.org>`_ Some exceptions may be
 better described using the ``objc_method_family`` attribute instead.
 
@@ -2060,8 +2426,8 @@ method; it specifies that the method expects its ``self`` parameter to have a
   - (void) bar __attribute__((ns_consumes_self));
   - (void) baz:(id) __attribute__((ns_consumed)) x;
 
-Further examples of these attributes are available in the static analyzer's `list of annotations for analysis
-<https://clang-analyzer.llvm.org/annotations.html#cocoa_mem>`_.
+Further examples of these attributes are available in the static analyzer's
+`list of annotations for analysis <analyzer/user-docs/Annotations.html#cocoa-mem>`__.
 
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
@@ -2249,7 +2615,7 @@ Such functionality is not conformant and does not guarantee to compile
 correctly in any circumstances. It can be used if:
 
 - the kernel source does not contain call expressions to (member-) function
-  pointers, or virtual functions. For example this extension can be used in
+  pointers, or virtual functions. For example, this extension can be used in
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
@@ -2287,7 +2653,7 @@ functions with variadic prototypes do not get generated in binary e.g. the
 variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
-This extensions can also be used when the kernel code is intended for targets
+This extension can also be used when the kernel code is intended for targets
 supporting the variadic arguments e.g. majority of CPU targets.
 
 **Example of Use**:
@@ -2376,7 +2742,7 @@ address space qualifiers, therefore, other type qualifiers such as
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 
-Clang allows use of atomic functions from the OpenCL 1.x standards
+Clang allows the use of atomic functions from the OpenCL 1.x standards
 with the generic address space pointer in C++ for OpenCL mode.
 
 This is a non-portable feature and might not be supported by all
@@ -2447,7 +2813,7 @@ with the current table size.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   size_t getSize() {
     return __builtin_wasm_table_size(table);
@@ -2469,10 +2835,10 @@ or -1. It will return -1 if not enough space could be allocated.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   // grow returns the new table size or -1 on error.
-  int grow(__funcref fn, int delta) {
+  int grow(funcref_t fn, int delta) {
     int prevSize = __builtin_wasm_table_grow(table, fn, delta);
     if (prevSize == -1)
       return -1;
@@ -2507,7 +2873,7 @@ to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
 argument is the source WebAssembly table. The third argument is the
 destination index from where the copy starts, the fourth argument is the
-source index from there the copy starts, and the fifth and last argument
+source index from where the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 
 .. code-block:: c++
@@ -2684,6 +3050,47 @@ etc.).
 
 Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``.
 
+``__builtin_assume_dereferenceable``
+-------------------------------------
+
+``__builtin_assume_dereferenceable`` is used to provide the optimizer with the
+knowledge that the pointer argument P is dereferenceable up to at least the
+specified number of bytes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume_dereferenceable(const void *, size_t)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int *x, int y) {
+      __builtin_assume_dereferenceable(x, sizeof(int));
+      int z = 0;
+      if (y == 1) {
+        // The optimizer may execute the load of x unconditionally due to
+        // __builtin_assume_dereferenceable guaranteeing sizeof(int) bytes can
+        // be loaded speculatively without trapping.
+        z = *x;
+      }
+      return z;
+  }
+
+**Description**:
+
+The arguments to this function provide a start pointer ``P`` and a size ``S``.
+``S`` must be at least 1 and a constant. The optimizer may assume that ``S``
+bytes are dereferenceable starting at ``P``. Note that this does not necessarily
+imply that ``P`` is non-null as ``nullptr`` can be dereferenced in some cases.
+The assumption also does not imply that ``P`` is not dereferenceable past ``S``
+bytes.
+
+
+Query for this feature with ``__has_builtin(__builtin_assume_dereferenceable)``.
+
 
 ``__builtin_offsetof``
 ----------------------
@@ -2727,11 +3134,46 @@ following way:
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
 
+``__builtin_get_vtable_pointer``
+--------------------------------
+
+``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
+pointer from an instance of a polymorphic C++ class. This builtin is needed
+for directly loading the vtable pointer when on platforms using
+:doc:`PointerAuthentication`.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_get_vtable_pointer(PolymorphicClass*)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+  };
+
+  PolymorphicClass anInstance;
+  const void* vtablePointer = __builtin_get_vtable_pointer(&anInstance);
+
+**Description**:
+
+The ``__builtin_get_vtable_pointer`` builtin loads the primary vtable
+pointer from a polymorphic C++ type. If the target platform authenticates
+vtable pointers, this builtin will perform the authentication and produce
+the underlying raw pointer. The object being queried must be polymorphic,
+and so must also be a complete type.
+
+Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
+
 ``__builtin_call_with_static_chain``
 ------------------------------------
 
 ``__builtin_call_with_static_chain`` is used to perform a static call while
-setting updating the static chain register.
+updating the static chain register.
 
 **Syntax**:
 
@@ -2843,7 +3285,7 @@ Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
 features specified in string argument. It returns a positive integer if all
 features are supported and 0 otherwise. Feature names are target specific. On
-AArch64 features are combined using ``+`` like this
+AArch64, features are combined using ``+`` like this
 ``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
 If a feature name is not supported, Clang will issue a warning and replace
 builtin by the constant 0.
@@ -3063,7 +3505,7 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 **Description**:
 
 The '``__builtin_bitreverse``' family of builtins is used to reverse
-the bitpattern of an integer value; for example ``0b10110110`` becomes
+the bitpattern of an integer value; for example, ``0b10110110`` becomes
 ``0b01101101``. These builtins can be used within constant expressions.
 
 ``__builtin_rotateleft``
@@ -3401,6 +3843,32 @@ Query for this feature with ``__has_builtin(__builtin_operator_new)`` or
     replaceable global (de)allocation functions, but do support calling at least
     ``::operator new(size_t)`` and ``::operator delete(void*)``.
 
+
+``__builtin_trivially_relocate``
+-----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  T* __builtin_trivially_relocate(T* dest, T* src, size_t count)
+
+Trivially relocates ``count`` objects of relocatable, complete type ``T``
+from ``src`` to ``dest`` and returns ``dest``.
+This builtin is used to implement ``std::trivially_relocate``.
+
+``__builtin_invoke``
+--------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  template <class Callee, class... Args>
+  decltype(auto) __builtin_invoke(Callee&& callee, Args&&... args);
+
+``__builtin_invoke`` is equivalent to ``std::invoke``.
+
 ``__builtin_preserve_access_index``
 -----------------------------------
 
@@ -3540,9 +4008,9 @@ the debugging experience.
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
-``__builtin_allow_runtime_check`` return true if the check at the current
+``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
-``assert`` like checks which can be safely removed by optimizer.
+``assert`` like checks which can be safely removed by the optimizer.
 
 **Syntax**:
 
@@ -3560,28 +4028,25 @@ program location should be executed. It is expected to be used to implement
 
 **Description**
 
-``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+``__builtin_allow_runtime_check`` is lowered to the `llvm.allow.runtime.check
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
-builtin.
+intrinsic.
 
-The ``__builtin_allow_runtime_check()`` is expected to be used with control
-flow conditions such as in ``if`` to guard expensive runtime checks. The
-specific rules for selecting permitted checks can differ and are controlled by
-the compiler options.
+The ``__builtin_allow_runtime_check()`` can be used within control structures
+like ``if`` to guard expensive runtime checks. The return value is determined
+by the following compiler options and may differ per call site:
 
-Flags to control checks:
-* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
-cutoff in range ``[0, 999999]`` to disallow checks in hot code.
-* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
-``[0.0, 1.0]`` representation probability of keeping a check.
-* If both flags are specified, ``-lower-allow-check-random-rate`` takes
-precedence.
-* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
-``true``, allowing all checks.
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N``: Disable checks in hot
+  code marked by the profile summary with a hotness cutoff in the range
+  ``[0, 999999]`` (a larger N disables more checks).
+* ``-mllvm -lower-allow-check-random-rate=P``: Keep a check with probability P,
+  a floating point number in the range ``[0.0, 1.0]``.
+* If both options are specified, a check is disabled if either condition is satisfied.
+* If neither is specified, all checks are allowed.
 
-Parameter ``kind`` is a string literal representing a user selected kind for
-guarded check. It's unused now. It will enable kind-specific lowering in future.
-E.g. a higher hotness cutoff can be used for more expensive kind of check.
+Parameter ``kind``, currently unused, is a string literal specifying the check
+kind. Future compiler versions may use this to allow for more granular control,
+such as applying different hotness cutoffs to different check kinds.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
 
@@ -3714,6 +4179,74 @@ only one argument is provided, then the behavior is undefined.
 type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
 ``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
 as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+
+``__builtin_counted_by_ref``
+----------------------------
+
+``__builtin_counted_by_ref`` returns a pointer to the count field from the
+``counted_by`` attribute.
+
+The argument must be a flexible array member. If the argument isn't a flexible
+array member or doesn't have the ``counted_by`` attribute, the builtin returns
+``(void *)0``.
+
+**Syntax**:
+
+.. code-block:: c
+
+  T *__builtin_counted_by_ref(void *array)
+
+**Examples**:
+
+.. code-block:: c
+
+  #define alloc(P, FAM, COUNT) ({                                 \
+     size_t __ignored_assignment;                                 \
+     typeof(P) __p = NULL;                                        \
+     __p = malloc(MAX(sizeof(*__p),                               \
+                      sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
+                                                                  \
+     *_Generic(                                                   \
+       __builtin_counted_by_ref(__p->FAM),                        \
+         void *: &__ignored_assignment,                           \
+         default: __builtin_counted_by_ref(__p->FAM)) = COUNT;    \
+                                                                  \
+     __p;                                                         \
+  })
+
+**Description**:
+
+The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
+common error associated with the ``counted_by`` attribute. When using the
+``counted_by`` attribute, the ``count`` field **must** be set before the
+flexible array member can be accessed. Otherwise, the sanitizers may view such
+accesses as false positives. For instance, it's not uncommon for programmers to
+initialize the flexible array before setting the ``count`` field:
+
+.. code-block:: c
+
+  struct s {
+    int dummy;
+    short count;
+    long array[] __attribute__((counted_by(count)));
+  };
+
+  struct s *ptr = malloc(sizeof(struct s) + sizeof(long) * COUNT);
+
+  for (int i = 0; i < COUNT; ++i)
+    ptr->array[i] = i;
+
+  ptr->count = COUNT;
+
+Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
+allocation of a struct with a flexible array member with the ``counted_by``
+attribute is prone to failure in large code bases. This builtin mitigates this
+for allocators (like in Linux) that are implemented in a way where the counter
+assignment can happen automatically.
+
+**Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
+to a variable, have its address taken, or passed into or returned from a
+function, because doing so violates bounds safety conventions.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -3920,9 +4453,9 @@ standard:
 - ``4``  - to nearest, ties away from zero
 The effect of passing some other value to ``__builtin_flt_rounds`` is
 implementation-defined. ``__builtin_set_flt_rounds`` is currently only supported
-to work on x86, x86_64, Arm and AArch64 targets. These builtins read and modify
-the floating-point environment, which is not always allowed and may have unexpected
-behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
+to work on x86, x86_64, powerpc, powerpc64, Arm and AArch64 targets. These builtins
+read and modify the floating-point environment, which is not always allowed and may
+have unexpected behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
 
 String builtins
 ---------------
@@ -3977,7 +4510,10 @@ standard library ``<stdarg.h>`` header:
 
 * ``__builtin_va_list``
 
-A predefined typedef for the target-specific ``va_list`` type.
+A predefined typedef for the target-specific ``va_list`` type. It is undefined
+behavior to use a byte-wise copy of this type produced by calling ``memcpy``,
+``memmove``, or similar. Valid explicit copies are only produced by calling
+``va_copy`` or ``__builtin_va_copy``.
 
 * ``void __builtin_va_start(__builtin_va_list list, <parameter-name>)``
 
@@ -3987,7 +4523,18 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
-``__builin_va_list`` object.
+``__builtin_va_list`` object.
+
+* ``void __builtin_c23_va_start(__builtin_va_list list, ...)``
+
+A builtin function for the target-specific ``va_start`` function-like macro,
+available only in C23 and later. The builtin accepts zero or one argument for
+the ellipsis (``...``). If such an argument is provided, it should be the name
+of the parameter preceding the ellipsis, which is used for compatibility with
+C versions before C23. It is an error to provide two or more variadic arguments.
+This function initializes the given ``__builtin_va_list`` object. It is
+undefined behavior to call this function on an already initialized
+``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``
 
@@ -4321,7 +4868,7 @@ an appropriate value during the emission.
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
-token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
+token `none`. If a user calls `__builtin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
 
 Source location builtins
@@ -4382,8 +4929,12 @@ default member initializer, the invocation point is the location of the
 constructor or aggregate initialization used to create the object. Otherwise
 the invocation point is the same as the location of the builtin.
 
-When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope, the
 empty string is returned.
+
+The builtin ``__builtin_COLUMN`` returns the offset from the start of the line,
+beginning from column 1. `This may differ from other implementations.
+<https://eel.is/c++draft/support.srcloc#tab:support.srcloc.current-row-3-column-2-sentence-2>`_
 
 The builtin ``__builtin_source_location`` returns a pointer to constant static
 data of type ``std::source_location::__impl``. This type must have already been
@@ -4643,8 +5194,8 @@ Extensions for Static Analysis
 Clang supports additional attributes that are useful for documenting program
 invariants and rules for static analysis tools, such as the `Clang Static
 Analyzer <https://clang-analyzer.llvm.org/>`_. These attributes are documented
-in the analyzer's `list of source-level annotations
-<https://clang-analyzer.llvm.org/annotations.html>`_.
+in the analyzer's `list of annotations for analysis
+<analyzer/user-docs/Annotations.html>`__.
 
 
 Extensions for Dynamic Analysis
@@ -5146,6 +5697,166 @@ third argument, can only occur at file scope.
     a = b[i] * c[i] + e;
   }
 
+Extensions for controlling atomic code generation
+=================================================
+
+The ``[[clang::atomic]]`` statement attribute enables users to control how
+atomic operations are lowered in LLVM IR by conveying additional metadata to
+the backend. The primary goal is to allow users to specify certain options,
+like whether the affected atomic operations might be used with specific types of memory or
+whether to ignore denormal mode correctness in floating-point operations,
+without affecting the correctness of code that does not rely on these properties.
+
+In LLVM, lowering of atomic operations (e.g., ``atomicrmw``) can differ based
+on the target's capabilities. Some backends support native atomic instructions
+only for certain operation types or alignments, or only in specific memory
+regions. Likewise, floating-point atomic instructions may or may not respect
+IEEE denormal requirements. When the user is unconcerned about denormal-mode
+compliance (for performance reasons) or knows that certain atomic operations
+will not be performed on a particular type of memory, extra hints are needed to
+tell the backend how to proceed.
+
+A classic example is an architecture where floating-point atomic add does not
+fully conform to IEEE denormal-mode handling. If the user does not mind ignoring
+that aspect, they would prefer to emit a faster hardware atomic instruction,
+rather than a fallback or CAS loop. Conversely, on certain GPUs (e.g., AMDGPU),
+memory accessed via PCIe may only support a subset of atomic operations. To ensure
+correct and efficient lowering, the compiler must know whether the user needs
+the atomic operations to work with that type of memory.
+
+The allowed atomic attribute values are now ``remote_memory``, ``fine_grained_memory``,
+and ``ignore_denormal_mode``, each optionally prefixed with ``no_``. The meanings
+are as follows:
+
+- ``remote_memory`` means atomic operations may be performed on remote
+  memory, i.e. memory accessed through off-chip interconnects (e.g., PCIe).
+  On ROCm platforms using HIP, remote memory refers to memory accessed via
+  PCIe and is subject to specific atomic operation support. See
+  `ROCm PCIe Atomics <https://rocm.docs.amd.com/en/latest/conceptual/
+  pcie-atomics.html>`_ for further details. Prefixing with ``no_remote_memory`` indicates that
+  atomic operations should not be performed on remote memory.
+- ``fine_grained_memory`` means atomic operations may be performed on fine-grained
+  memory, i.e. memory regions that support fine-grained coherence, where updates to
+  memory are visible to other parts of the system even while modifications are ongoing.
+  For example, in HIP, fine-grained coherence ensures that host and device share
+  up-to-date data without explicit synchronization (see
+  `HIP Definition <https://rocm.docs.amd.com/projects/HIP/en/docs-6.3.3/how-to/hip_runtime_api/memory_management/coherence_control.html#coherence-control>`_).
+  Similarly, OpenCL 2.0 provides fine-grained synchronization in shared virtual memory
+  allocations, allowing concurrent modifications by host and device (see
+  `OpenCL 2.0 Overview <https://www.intel.com/content/www/us/en/developer/articles/technical/opencl-20-shared-virtual-memory-overview.html>`_).
+  Prefixing with ``no_fine_grained_memory`` indicates that atomic operations should not
+  be performed on fine-grained memory.
+- ``ignore_denormal_mode`` means that atomic operations are allowed to ignore
+  correctness for denormal mode in floating-point operations, potentially improving
+  performance on architectures that handle denormals inefficiently. The negated form,
+  if specified as ``no_ignore_denormal_mode``, would enforce strict denormal mode
+  correctness.
+
+Any unspecified option is inherited from the global defaults, which can be set
+by a compiler flag or the target's built-in defaults.
+
+Within the same atomic attribute, duplicate and conflicting values are accepted,
+and the last of any conflicting values wins. Multiple atomic attributes are
+allowed for the same compound statement, and the last atomic attribute wins.
+
+Without any atomic metadata, LLVM IR defaults to conservative settings for
+correctness: atomic operations enforce denormal mode correctness and are assumed
+to potentially use remote and fine-grained memory (i.e., the equivalent of
+``remote_memory``, ``fine_grained_memory``, and ``no_ignore_denormal_mode``).
+
+The attribute may be applied only to a compound statement and looks like:
+
+.. code-block:: c++
+
+   [[clang::atomic(remote_memory, fine_grained_memory, ignore_denormal_mode)]]
+   {
+       // Atomic instructions in this block carry extra metadata reflecting
+       // these user-specified options.
+   }
+
+A new compiler option now globally sets the defaults for these atomic-lowering
+options. The command-line format has changed to:
+
+.. code-block:: console
+
+   $ clang -fatomic-remote-memory -fno-atomic-fine-grained-memory -fatomic-ignore-denormal-mode file.cpp
+
+Each option has a corresponding flag:
+``-fatomic-remote-memory`` / ``-fno-atomic-remote-memory``,
+``-fatomic-fine-grained-memory`` / ``-fno-atomic-fine-grained-memory``,
+and ``-fatomic-ignore-denormal-mode`` / ``-fno-atomic-ignore-denormal-mode``.
+
+Code using the ``[[clang::atomic]]`` attribute can then selectively override
+the command-line defaults on a per-block basis. For instance:
+
+.. code-block:: c++
+
+   // Suppose the global defaults assume:
+   //   remote_memory, fine_grained_memory, and no_ignore_denormal_mode
+   // (for conservative correctness)
+
+   void example() {
+       // Locally override the settings: disable remote_memory and enable
+       // fine_grained_memory.
+       [[clang::atomic(no_remote_memory, fine_grained_memory)]]
+       {
+           // In this block:
+           //   - Atomic operations are not performed on remote memory.
+           //   - Atomic operations are performed on fine-grained memory.
+           //   - The setting for denormal mode remains as the global default
+           //     (typically no_ignore_denormal_mode, enforcing strict denormal mode correctness).
+           // ...
+       }
+   }
+
+Function bodies do not accept statement attributes, so this will not work:
+
+.. code-block:: c++
+
+   void func() [[clang::atomic(remote_memory)]] {  // Wrong: applies to function type
+   }
+
+Use the attribute on a compound statement within the function:
+
+.. code-block:: c++
+
+   void func() {
+       [[clang::atomic(remote_memory)]]
+       {
+           // Atomic operations in this block carry the specified metadata.
+       }
+   }
+
+The ``[[clang::atomic]]`` attribute affects only the code generation of atomic
+instructions within the annotated compound statement. Clang attaches target-specific
+metadata to those atomic instructions in the emitted LLVM IR to guide backend lowering.
+This metadata is fixed at the Clang code generation phase and is not modified by later
+LLVM passes (such as function inlining).
+
+For example, consider:
+
+.. code-block:: cpp
+
+  inline void func() {
+    [[clang::atomic(remote_memory)]]
+    {
+      // Atomic instructions lowered with metadata.
+    }
+  }
+
+  void foo() {
+    [[clang::atomic(no_remote_memory)]]
+    {
+      func(); // Inlined by LLVM, but the metadata from 'func()' remains unchanged.
+    }
+  }
+
+Although current usage focuses on AMDGPU, the mechanism is general. Other
+backends can ignore or implement their own responses to these flags if desired.
+If a target does not understand or enforce these hints, the IR remains valid,
+and the resulting program is still correct (although potentially less optimized
+for that user's needs).
+
 Specifying an attribute for multiple declarations (#pragma clang attribute)
 ===========================================================================
 
@@ -5399,7 +6110,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 
 * The pragma clang section is enabled automatically, without need of any flags.
 
-* This feature is only defined to work sensibly for ELF and Mach-O targets.
+* This feature is only defined to work sensibly for ELF, Mach-O and COFF targets.
 
 * If section name is specified through _attribute_((section("myname"))), then
   the attribute name gains precedence.
@@ -5407,7 +6118,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 * Global variables that are initialized to zero will be placed in the named
   bss section, if one is present.
 
-* The ``#pragma clang section`` directive does not does try to infer section-kind
+* The ``#pragma clang section`` directive does not try to infer section-kind
   from the name. For example, naming a section "``.bss.mySec``" does NOT mean
   it will be a bss section name.
 
@@ -5636,17 +6347,6 @@ Examples are:
    # 60 "" 2 // return to "main.c"
    # 1 "/usr/ancient/header.h" 1 4 // Enter an implicit extern "C" header
 
-Extended Integer Types
-======================
-
-Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
-and in C++. This type was previously implemented in Clang with the same
-semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
-favor of the standard type.
-
-Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
-so this type should not yet be used in interfaces that require ABI stability.
-
 Intrinsics Support within Constant Expressions
 ==============================================
 
@@ -5714,6 +6414,8 @@ The following builtin intrinsics can be used in constant expressions:
 
 The following x86-specific intrinsics can be used in constant expressions:
 
+* ``_addcarry_u32``
+* ``_addcarry_u64``
 * ``_bit_scan_forward``
 * ``_bit_scan_reverse``
 * ``__bsfd``
@@ -5754,6 +6456,8 @@ The following x86-specific intrinsics can be used in constant expressions:
 * ``_rotwr``
 * ``_lrotl``
 * ``_lrotr``
+* ``_subborrow_u32``
+* ``_subborrow_u64``
 
 Debugging the Compiler
 ======================
@@ -5817,3 +6521,128 @@ specify the starting offset to begin embedding from. The resources is treated
 as being empty if the specified offset is larger than the number of bytes in
 the resource. The offset will be applied *before* any ``limit`` parameters are
 applied.
+
+Union and aggregate initialization in C
+=======================================
+
+In C23 (N2900), when an object is initialized from initializer ``= {}``, all
+elements of arrays, all members of structs, and the first members of unions are
+empty-initialized recursively. In addition, all padding bits are initialized to
+zero.
+
+Clang guarantees the following behaviors:
+
+* ``1:`` Clang supports initializer ``= {}`` mentioned above in all C
+  standards.
+
+* ``2:`` When unions are initialized from initializer ``= {}``, bytes outside
+  of the first members of unions are also initialized to zero.
+
+* ``3:`` When unions, structures and arrays are initialized from initializer
+  ``= { initializer-list }``, all members not explicitly initialized in
+  the initializer list are empty-initialized recursively. In addition, all
+  padding bits are initialized to zero.
+
+Currently, the above extension only applies to C source code, not C++.
+
+
+Empty Objects in C
+==================
+The declaration of a structure or union type which has no named members is
+undefined behavior (C23 and earlier) or implementation-defined behavior (C2y).
+Clang allows the declaration of a structure or union type with no named members
+in all C language modes. `sizeof` for such a type returns `0`, which is
+different behavior than in C++ (where the size of such an object is typically
+`1`).
+
+
+Qualified function types in C
+=============================
+Declaring a function with a qualified type in C is undefined behavior (C23 and
+earlier) or implementation-defined behavior (C2y). Clang allows a function type
+to be specified with the ``const`` and ``volatile`` qualifiers, but ignores the
+qualifications.
+
+.. code-block:: c
+
+   typedef int f(void);
+   const volatile f func; // Qualifier on function type has no effect.
+
+
+Note, Clang does not allow an ``_Atomic`` function type because
+of explicit constraints against atomically qualified (arrays and) function
+types.
+
+
+Underspecified Object Declarations in C
+=======================================
+
+C23 introduced the notion of `underspecified object declarations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+(note, the final standards text is different from WG14 N3006 due to changes
+during national body comment review). When an object is declared with the
+``constexpr`` storage class specifier or has a deduced type (with the ``auto``
+specifier), it is said to be "underspecified". Underspecified declarations have
+different requirements than non-underspecified declarations. In particular, the
+identifier being declared cannot be used in its initialization. e.g.,
+
+.. code-block:: c
+
+  auto x = x; // Invalid
+  constexpr int y = y; // Invalid
+
+The standard leaves it implementation-defined whether an underspecified
+declaration may introduce additional identifiers as part of the declaration.
+
+Clang allows additional identifiers to be declared in the following cases:
+
+* A compound literal may introduce a new type. e.g.,
+
+.. code-block:: c
+
+  auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
+  constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
+
+* The type specifier for a ``constexpr`` declaration may define a new type.
+  e.g.,
+
+.. code-block:: c
+
+  constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
+
+* A function declarator may be declared with parameters, including parameters
+  which introduce a new type. e.g.,
+
+.. code-block:: c
+
+  constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
+  auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
+
+* The initializer may contain a GNU statement expression which defines new
+  types or objects. e.g.,
+
+.. code-block:: c
+
+  constexpr int i = ({                              // Accepted by Clang
+    constexpr int x = 12;
+    constexpr struct S { int x; } s = { x };
+    s.x;
+  });
+  auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
+
+Clang intentionally does not implement the changed scoping rules from C23
+for underspecified declarations. Doing so would significantly complicate the
+implementation in order to get reasonable diagnostic behavior and also means
+Clang fails to reject some code that should be rejected. e.g.,
+
+.. code-block:: c
+
+  // This should be rejected because 'x' is not in scope within the initializer
+  // of an underspecified declaration. Clang accepts because it treats the scope
+  // of the identifier as beginning immediately after the declarator, same as with
+  // a non-underspecified declaration.
+  constexpr int x = sizeof(x);
+
+  // Clang rejects this code with a diagnostic about using the variable within its
+  // own initializer rather than rejecting the code with an undeclared identifier
+  // diagnostic.
+  auto x = x;

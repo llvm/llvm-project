@@ -14,7 +14,7 @@
 
 using namespace llvm;
 
-static void clearModuleData(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceModuleDataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   if (!Program.getModuleIdentifier().empty() && !O.shouldKeep())
@@ -24,8 +24,4 @@ static void clearModuleData(Oracle &O, ReducerWorkItem &WorkItem) {
   // TODO: clear line by line rather than all at once
   if (!Program.getModuleInlineAsm().empty() && !O.shouldKeep())
     Program.setModuleInlineAsm("");
-}
-
-void llvm::reduceModuleDataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, clearModuleData, "Reducing Module Data");
 }

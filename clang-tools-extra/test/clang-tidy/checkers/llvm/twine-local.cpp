@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s llvm-twine-local %t
+// RUN: %check_clang_tidy --match-partial-fixes %s llvm-twine-local %t
 
 namespace llvm {
 class Twine {

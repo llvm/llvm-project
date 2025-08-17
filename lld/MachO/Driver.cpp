@@ -25,7 +25,6 @@
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
@@ -36,22 +35,21 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
-
-#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -270,6 +268,20 @@ struct ArchiveFileInfo {
 
 static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
+static void saveThinArchiveToRepro(ArchiveFile const *file) {
+  assert(tar && file->getArchive().isThin());
+
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->getArchive().children(e)) {
+    MemoryBufferRef mb = CHECK(c.getMemoryBufferRef(),
+                               toString(file) + ": failed to get buffer");
+    tar->append(relativeToRoot(CHECK(c.getFullName(), file)), mb.getBuffer());
+  }
+  if (e)
+    error(toString(file) +
+          ": Archive::children failed: " + toString(std::move(e)));
+}
+
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
@@ -298,9 +310,10 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       std::unique_ptr<object::Archive> archive = CHECK(
           object::Archive::create(mbref), path + ": failed to parse archive");
 
-      if (!archive->isEmpty() && !archive->hasSymbolTable())
-        error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
+
+      if (tar && file->getArchive().isThin())
+        saveThinArchiveToRepro(file);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -330,18 +343,24 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-          if (Error e = file->fetch(c, reason))
-            error(toString(file) + ": " + reason +
-                  " failed to load archive member: " + toString(std::move(e)));
+          if (Error e = file->fetch(c, reason)) {
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": " + reason +
+                   " failed to load archive member: " + toString(std::move(e)));
+            else
+              llvm::consumeError(std::move(e));
+          }
         }
         if (e)
           error(toString(file) +
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
-      for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().starts_with(objc::symbol_names::klass))
-          file->fetch(sym);
+      if (file->getArchive().hasSymbolTable()) {
+        for (const object::Archive::Symbol &sym : file->getArchive().symbols())
+          if (sym.getName().starts_with(objc::symbol_names::klass))
+            file->fetch(sym);
+      }
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol.
@@ -349,7 +368,18 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-          if (!mb || !hasObjCSection(*mb))
+          if (!mb) {
+            // We used to create broken repro tarballs that only included those
+            // object files from thin archives that ended up being used.
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": -ObjC failed to open archive member: " +
+                   toString(mb.takeError()));
+            else
+              llvm::consumeError(mb.takeError());
+            continue;
+          }
+
+          if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
             error(toString(file) + ": -ObjC failed to load archive member: " +
@@ -360,7 +390,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     }
-
     file->addLazySymbols();
     loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
     newFile = file;
@@ -582,8 +611,7 @@ static bool compileBitcodeFiles() {
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
-  for (ObjFile *file : compiled)
-    inputFiles.insert(file);
+  inputFiles.insert_range(compiled);
 
   return !compiled.empty();
 }
@@ -814,8 +842,14 @@ static ICFLevel getICFLevel(const ArgList &args) {
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
+                      .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
+
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
+    error("--icf=safe_thunks is only supported on arm64 targets");
+  }
+
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
@@ -910,7 +944,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   const char *argv[] = {"lld", opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  os.flush();
   error(msg + ": " + StringRef(err).trim());
 }
 
@@ -1009,20 +1042,36 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
          platform == PLATFORM_XROS_SIMULATOR;
 }
 
-static bool dataConstDefault(const InputArgList &args) {
-  static const std::array<std::pair<PlatformType, VersionTuple>, 6> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(10, 15)},
-        {PLATFORM_IOS, VersionTuple(13, 0)},
-        {PLATFORM_TVOS, VersionTuple(13, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(6, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)},
-        {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
+template <std::size_t N>
+using MinVersions = std::array<std::pair<PlatformType, VersionTuple>, N>;
+
+/// Returns true if the platform is greater than the min version.
+/// Returns false if the platform does not exist.
+template <std::size_t N>
+static bool greaterEqMinVersion(const MinVersions<N> &minVersions,
+                                bool ignoreSimulator) {
+  PlatformType platform = config->platformInfo.target.Platform;
+  if (ignoreSimulator)
+    platform = removeSimulator(platform);
+  auto it = llvm::find_if(minVersions,
                           [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end())
-    if (config->platformInfo.target.MinDeployment < it->second)
-      return false;
+  if (it != minVersions.end())
+    if (config->platformInfo.target.MinDeployment >= it->second)
+      return true;
+  return false;
+}
+
+static bool dataConstDefault(const InputArgList &args) {
+  static const MinVersions<6> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(10, 15)},
+      {PLATFORM_IOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(4, 0)},
+  }};
+  if (!greaterEqMinVersion(minVersion, true))
+    return false;
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -1048,42 +1097,43 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (arg && arg->getOption().matches(OPT_no_fixup_chains))
     return false;
 
-  bool isRequested = arg != nullptr;
+  bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
+  if (!config->isPic) {
+    if (requested)
+      error("-fixup_chains is incompatible with -no_pie");
 
-  // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
-        {PLATFORM_IOS, VersionTuple(13, 4)},
-        {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end() &&
-      it->second > config->platformInfo.target.MinDeployment) {
-    if (!isRequested)
-      return false;
-
-    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
-         it->second.getAsString() + ", which is newer than target minimum of " +
-         config->platformInfo.target.MinDeployment.getAsString());
+    return false;
   }
 
   if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
-    if (isRequested)
+    if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
+
     return false;
   }
 
-  if (!config->isPic) {
-    if (isRequested)
-      error("-fixup_chains is incompatible with -no_pie");
+  if (args.hasArg(OPT_preload)) {
+    if (requested)
+      error("-fixup_chains is incompatible with -preload");
+
     return false;
   }
 
-  // TODO: Enable by default once stable.
-  return isRequested;
+  if (requested)
+    return true;
+
+  static const MinVersions<9> minVersion = {{
+      {PLATFORM_IOS, VersionTuple(13, 4)},
+      {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
+      {PLATFORM_MACOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(14, 0)},
+      {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, false);
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
@@ -1094,12 +1144,20 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
   if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
     return false;
 
-  // TODO: If no flag is specified, don't default to false, but instead:
-  //   - default false on   <   ios14
-  //   - default true  on   >=  ios14
-  // For now, until this feature is confirmed stable, default to false if no
-  // flag is explicitly specified
-  return false;
+  // If no flag is specified, enable this on newer versions by default.
+  // The min versions is taken from
+  // ld64(https://github.com/apple-oss-distributions/ld64/blob/47f477cb721755419018f7530038b272e9d0cdea/src/ld/ld.hpp#L310)
+  // to mimic to operation of ld64
+  // [here](https://github.com/apple-oss-distributions/ld64/blob/47f477cb721755419018f7530038b272e9d0cdea/src/ld/Options.cpp#L6085-L6101)
+  static const MinVersions<6> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(10, 16)},
+      {PLATFORM_IOS, VersionTuple(14, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+      {PLATFORM_TVOS, VersionTuple(14, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(5, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, true);
 }
 
 void SymbolPatterns::clear() {
@@ -1247,12 +1305,64 @@ static void gatherInputSections() {
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
       for (const Subsection &subsection : section->subsections)
         addInputSection(subsection.isec);
     }
     if (!file->objCImageInfo.empty())
       in.objCImageInfo->addFile(file);
   }
+}
+
+static void codegenDataGenerate() {
+  TimeTraceScope timeScope("Generating codegen data");
+
+  OutlinedHashTreeRecord globalOutlineRecord;
+  StableFunctionMapRecord globalMergeRecord;
+  for (ConcatInputSection *isec : inputSections) {
+    if (isec->getSegName() != segment_names::data)
+      continue;
+    if (isec->getName() == section_names::outlinedHashTree) {
+      // Read outlined hash tree from each section.
+      OutlinedHashTreeRecord localOutlineRecord;
+      // Use a pointer to allow modification by the function.
+      auto *data = isec->data.data();
+      localOutlineRecord.deserialize(data);
+
+      // Merge it to the global hash tree.
+      globalOutlineRecord.merge(localOutlineRecord);
+    }
+    if (isec->getName() == section_names::functionMap) {
+      // Read stable functions from each section.
+      StableFunctionMapRecord localMergeRecord;
+      // Use a pointer to allow modification by the function.
+      auto *data = isec->data.data();
+      localMergeRecord.deserialize(data);
+
+      // Merge it to the global function map.
+      globalMergeRecord.merge(localMergeRecord);
+    }
+  }
+
+  globalMergeRecord.finalize();
+
+  CodeGenDataWriter Writer;
+  if (!globalOutlineRecord.empty())
+    Writer.addRecord(globalOutlineRecord);
+  if (!globalMergeRecord.empty())
+    Writer.addRecord(globalMergeRecord);
+
+  std::error_code EC;
+  auto fileName = config->codegenDataGeneratePath;
+  assert(!fileName.empty());
+  raw_fd_ostream Output(fileName, EC, sys::fs::OF_None);
+  if (EC)
+    error("fail to create " + fileName + ": " + EC.message());
+
+  if (auto E = Writer.write(Output))
+    error("fail to write CGData: " + toString(std::move(E)));
 }
 
 static void foldIdenticalLiterals() {
@@ -1399,6 +1509,30 @@ static void eraseInitializerSymbols() {
       sym->used = false;
 }
 
+static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_rpath)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+    else if (config->warnDuplicateRpath)
+      warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
+  }
+  return vals;
+}
+
+static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_allowable_client)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1438,7 +1572,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
-  InputArgList args = parser.parse(argsArr.slice(1));
+  InputArgList args = parser.parse(*ctx, argsArr.slice(1));
 
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
                                  "(use --error-limit=0 to see all errors)";
@@ -1446,11 +1580,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/true);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/true);
     return true;
   }
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/false);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/false);
     return true;
   }
   if (args.hasArg(OPT_version)) {
@@ -1501,27 +1635,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
   if (!config->osoPrefix.empty()) {
-    // Expand special characters, such as ".", "..", or  "~", if present.
-    // Note: LD64 only expands "." and not other special characters.
-    // That seems silly to imitate so we will not try to follow it, but rather
-    // just use real_path() to do it.
-
     // The max path length is 4096, in theory. However that seems quite long
     // and seems unlikely that any one would want to strip everything from the
     // path. Hence we've picked a reasonably large number here.
     SmallString<1024> expanded;
-    if (!fs::real_path(config->osoPrefix, expanded,
-                       /*expand_tilde=*/true)) {
-      // Note: LD64 expands "." to be `<current_dir>/`
-      // (ie., it has a slash suffix) whereas real_path() doesn't.
-      // So we have to append '/' to be consistent.
-      StringRef sep = sys::path::get_separator();
-      // real_path removes trailing slashes as part of the normalization, but
-      // these are meaningful for our text based stripping
-      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
-        expanded += sep;
-      config->osoPrefix = saver().save(expanded.str());
+    // Expand "." into the current working directory.
+    if (config->osoPrefix == "." && !fs::current_path(expanded)) {
+      // Note: LD64 expands "." to be `<current_dir>/
+      // (ie., it has a slash suffix) whereas current_path() doesn't.
+      // So we have to append '/' to be consistent because this is
+      // meaningful for our text based stripping.
+      expanded += sys::path::get_separator();
+    } else {
+      expanded = config->osoPrefix;
     }
+    config->osoPrefix = saver().save(expanded.str());
   }
 
   bool pie = args.hasFlag(OPT_pie, OPT_no_pie, true);
@@ -1536,6 +1664,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
+  config->interposable = args.hasArg(OPT_interposable);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
@@ -1612,6 +1741,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->umbrella = arg->getValue();
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
+  config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
@@ -1639,7 +1769,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->warnDuplicateRpath =
+      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
+  config->runtimePaths = getRuntimePaths(args);
+  config->allowableClients = getAllowableClients(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1662,6 +1795,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
+  config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
@@ -1677,11 +1811,73 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->codegenDataGeneratePath =
+      args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
+  config->warnThinArchiveMissingMembers =
+      args.hasFlag(OPT_warn_thin_archive_missing_members,
+                   OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+  config->disableVerify = args.hasArg(OPT_disable_verify);
+
+  auto IncompatWithCGSort = [&](StringRef firstArgStr) {
+    // Throw an error only if --call-graph-profile-sort is explicitly specified
+    if (config->callGraphProfileSort)
+      if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
+        error(firstArgStr + " is incompatible with " + arg->getSpelling());
+  };
+  if (args.hasArg(OPT_irpgo_profile_sort) ||
+      args.hasArg(OPT_irpgo_profile_sort_eq))
+    warn("--irpgo-profile-sort is deprecated. Please use "
+         "--bp-startup-sort=function");
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile))
+    config->irpgoProfilePath = arg->getValue();
+
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
+    config->irpgoProfilePath = arg->getValue();
+    config->bpStartupFunctionSort = true;
+    IncompatWithCGSort(arg->getSpelling());
+  }
+  config->bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  if (const Arg *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef startupSortStr = arg->getValue();
+    if (startupSortStr == "function") {
+      config->bpStartupFunctionSort = true;
+    } else if (startupSortStr != "none") {
+      error("unknown value `" + startupSortStr + "` for " + arg->getSpelling());
+    }
+    if (startupSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  if (!config->bpStartupFunctionSort &&
+      config->bpCompressionSortStartupFunctions)
+    error("--bp-compression-sort-startup-functions must be used with "
+          "--bp-startup-sort=function");
+  if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
+    error("--bp-startup-sort=function must be used with "
+          "--irpgo-profile");
+  if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      config->bpFunctionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      config->bpDataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      config->bpFunctionOrderForCompression = true;
+      config->bpDataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      error("unknown value `" + compressionSortStr + "` for " +
+            arg->getSpelling());
+    }
+    if (compressionSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  config->bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1709,6 +1905,15 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   } else if (config->outputType == MH_DYLIB) {
     config->installName = config->finalOutput;
   }
+
+  auto getClientName = [&]() {
+    StringRef cn = path::filename(config->finalOutput);
+    cn.consume_front("lib");
+    auto firstDotOrUnderscore = cn.find_first_of("._");
+    cn = cn.take_front(firstDotOrUnderscore);
+    return cn;
+  };
+  config->clientName = args.getLastArgValue(OPT_client_name, getClientName());
 
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
     if (config->outputType != MH_DYLIB)
@@ -1775,9 +1980,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->arch() != AK_i386)
-      error("invalid argument '" + arg->getAsString(args) +
-            "': max and init must be the same for non-i386 archs");
+
+    // FIXME: Check if this works on more platforms.
+    bool allowsDifferentInitAndMaxProt =
+        config->platform() == PLATFORM_MACOS ||
+        config->platform() == PLATFORM_MACCATALYST;
+    if (allowsDifferentInitAndMaxProt) {
+      if (initProt > maxProt)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': init must not be more permissive than max");
+    } else {
+      if (maxProt != initProt && config->arch() != AK_i386)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': max and init must be the same for non-macOS non-i386 archs");
+    }
+
     if (segName == segment_names::linkEdit)
       error("-segprot cannot be used to change __LINKEDIT's protections");
     config->segmentProtections.push_back({segName, maxProt, initProt});
@@ -1857,17 +2074,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       shouldAdhocSignByDefault(config->arch(), config->platform()));
 
   if (args.hasArg(OPT_v)) {
-    message(getLLDVersion(), lld::errs());
+    message(getLLDVersion(), ctx->e.errs());
     message(StringRef("Library search paths:") +
                 (config->librarySearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->librarySearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
     message(StringRef("Framework search paths:") +
                 (config->frameworkSearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->frameworkSearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
   }
 
   config->progName = argsArr[0];
@@ -1917,6 +2134,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(arg->getValue(), arg->getSpelling());
       config->mllvmOpts.emplace_back(arg->getValue());
     }
+
+    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
     createSyntheticSections();
     createSyntheticSymbols();
@@ -1971,6 +2190,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
 
     gatherInputSections();
+
+    if (!config->codegenDataGeneratePath.empty())
+      codegenDataGenerate();
+
     if (config->callGraphProfileSort)
       priorityBuilder.extractCallGraphProfile();
 
@@ -1989,14 +2212,16 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
-    if (args.hasArg(OPT_objc_category_merging, OPT_no_objc_category_merging))
+    if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
+                     false))
       objc::mergeCategories();
 
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
     if (config->icfLevel != ICFLevel::none) {
-      if (config->icfLevel == ICFLevel::safe)
+      if (config->icfLevel == ICFLevel::safe ||
+          config->icfLevel == ICFLevel::safe_thunks)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
     } else if (config->dedupStrings) {

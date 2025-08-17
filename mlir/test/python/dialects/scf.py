@@ -18,6 +18,26 @@ def constructAndPrintInModule(f):
     return f
 
 
+# CHECK-LABEL: TEST: testSimpleForall
+# CHECK: scf.forall (%[[IV0:.*]], %[[IV1:.*]]) in (4, 8) shared_outs(%[[BOUND_ARG:.*]] = %{{.*}}) -> (tensor<4x8xf32>)
+# CHECK:   arith.addi %[[IV0]], %[[IV1]]
+# CHECK:   scf.forall.in_parallel
+@constructAndPrintInModule
+def testSimpleForall():
+    f32 = F32Type.get()
+    tensor_type = RankedTensorType.get([4, 8], f32)
+
+    @func.FuncOp.from_py_func(tensor_type)
+    def forall_loop(tensor):
+        loop = scf.ForallOp([0, 0], [4, 8], [1, 1], [tensor])
+        with InsertionPoint(loop.body):
+            i, j = loop.induction_variables
+            arith.addi(i, j)
+            loop.terminator()
+        # The verifier will check that the regions have been created properly.
+        assert loop.verify()
+
+
 # CHECK-LABEL: TEST: testSimpleLoop
 @constructAndPrintInModule
 def testSimpleLoop():
@@ -275,6 +295,32 @@ def testIfWithoutElse():
 # CHECK: scf.if %[[ARG0:.*]]
 # CHECK:   %[[ONE:.*]] = arith.constant 1
 # CHECK:   %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
+# CHECK: return
+
+
+@constructAndPrintInModule
+def testNestedIf():
+    bool = IntegerType.get_signless(1)
+    i32 = IntegerType.get_signless(32)
+
+    @func.FuncOp.from_py_func(bool, bool)
+    def nested_if(b, c):
+        if_op = scf.IfOp(b)
+        with InsertionPoint(if_op.then_block) as ip:
+            if_op = scf.IfOp(c, ip=ip)
+            with InsertionPoint(if_op.then_block):
+                one = arith.ConstantOp(i32, 1)
+                add = arith.AddIOp(one, one)
+                scf.YieldOp([])
+            scf.YieldOp([])
+        return
+
+
+# CHECK: func @nested_if(%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+# CHECK: scf.if %[[ARG0:.*]]
+# CHECK:   scf.if %[[ARG1:.*]]
+# CHECK:     %[[ONE:.*]] = arith.constant 1
+# CHECK:     %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
 # CHECK: return
 
 

@@ -11,13 +11,11 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -27,18 +25,18 @@ using namespace mlir::sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 #define CMPI(p, l, r)                                                          \
-  (builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::p, (l), (r))       \
+  (arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::p, (l), (r))      \
        .getResult())
 
 #define C_IDX(v) (constantIndex(builder, loc, (v)))
-#define YIELD(vs) (builder.create<scf::YieldOp>(loc, (vs)))
-#define ADDI(lhs, rhs) (builder.create<arith::AddIOp>(loc, (lhs), (rhs)))
-#define ANDI(lhs, rhs) (builder.create<arith::AndIOp>(loc, (lhs), (rhs)))
-#define SUBI(lhs, rhs) (builder.create<arith::SubIOp>(loc, (lhs), (rhs)))
-#define MULI(lhs, rhs) (builder.create<arith::MulIOp>(loc, (lhs), (rhs)))
-#define REMUI(lhs, rhs) (builder.create<arith::RemUIOp>(loc, (lhs), (rhs)))
-#define DIVUI(lhs, rhs) (builder.create<arith::DivUIOp>(loc, (lhs), (rhs)))
-#define SELECT(c, l, r) (builder.create<arith::SelectOp>(loc, (c), (l), (r)))
+#define YIELD(vs) (scf::YieldOp::create(builder, loc, (vs)))
+#define ADDI(lhs, rhs) (arith::AddIOp::create(builder, loc, (lhs), (rhs)))
+#define ANDI(lhs, rhs) (arith::AndIOp::create(builder, loc, (lhs), (rhs)))
+#define SUBI(lhs, rhs) (arith::SubIOp::create(builder, loc, (lhs), (rhs)))
+#define MULI(lhs, rhs) (arith::MulIOp::create(builder, loc, (lhs), (rhs)))
+#define REMUI(lhs, rhs) (arith::RemUIOp::create(builder, loc, (lhs), (rhs)))
+#define DIVUI(lhs, rhs) (arith::DivUIOp::create(builder, loc, (lhs), (rhs)))
+#define SELECT(c, l, r) (arith::SelectOp::create(builder, loc, (c), (l), (r)))
 
 //===----------------------------------------------------------------------===//
 // Debugging utils
@@ -47,8 +45,8 @@ using namespace mlir::sparse_tensor;
 #ifndef NDEBUG
 LLVM_ATTRIBUTE_UNUSED static void dumpIndexMemRef(OpBuilder &builder,
                                                   Location loc, Value memref) {
-  memref = builder.create<memref::CastOp>(
-      loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
+  memref = memref::CastOp::create(
+      builder, loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
   createFuncCall(builder, loc, "printMemrefInd", TypeRange{},
                  ValueRange{memref}, EmitCInterface::On);
 }
@@ -87,7 +85,7 @@ static Value unFoldOpIntResult(OpBuilder &builder, Location loc,
                                OpFoldResult ofr) {
   if (std::optional<int64_t> i = getConstantIntValue(ofr); i.has_value())
     return constantIndex(builder, loc, *i);
-  return ofr.get<Value>();
+  return cast<Value>(ofr);
 }
 
 static Value tryFoldTensors(Value t) {
@@ -263,7 +261,7 @@ void LoopEmitter::initializeLoopEmit(
         denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
 
       Value denseVal =
-          builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+          bufferization::ToBufferOp::create(builder, loc, denseTp, tensor);
       // Dense outputs need special handling.
       if (isOutput && updater)
         denseVal = updater(builder, loc, denseVal, tensor);
@@ -273,7 +271,7 @@ void LoopEmitter::initializeLoopEmit(
       // Annotated sparse tensors.
       // We also need the value buffer for all-dense annotated "sparse"
       // tensors.
-      valBuffer[t] = builder.create<ToValuesOp>(loc, tensor);
+      valBuffer[t] = ToValuesOp::create(builder, loc, tensor);
     }
   }
 
@@ -352,8 +350,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
     if (depRedOrder.empty())
       continue;
 
-    std::sort(depRedOrder.begin(), depRedOrder.end(),
-              [](auto &l, auto &r) { return std::get<0>(l) < std::get<0>(r); });
+    llvm::sort(depRedOrder, llvm::less_first());
 
     SmallVector<SparseIterator *> lastIter(tensors.size(), nullptr);
     for (auto [loop, t, lvl] : depRedOrder) {
@@ -405,7 +402,7 @@ void LoopEmitter::categorizeIterators(
       spIters.push_back(it);
   }
 
-  std::stable_sort(spIters.begin(), spIters.end(), [](auto lhs, auto rhs) {
+  llvm::stable_sort(spIters, [](auto lhs, auto rhs) {
     // AffineUnRed > Affine > Slice > Trivial
     return static_cast<uint8_t>(lhs->kind) > static_cast<uint8_t>(rhs->kind);
   });
@@ -482,7 +479,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
   Value iv;
   if (isParallel) {
     scf::ParallelOp parOp =
-        builder.create<scf::ParallelOp>(loc, lo, hi, step, reduc);
+        scf::ParallelOp::create(builder, loc, lo, hi, step, reduc);
     builder.setInsertionPointToStart(parOp.getBody());
     assert(parOp.getNumReductions() == reduc.size());
     iv = parOp.getInductionVars()[0];
@@ -498,7 +495,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
       reduc[i] = parOp.getInitVals()[i];
     loop = parOp;
   } else {
-    scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
+    scf::ForOp forOp = scf::ForOp::create(builder, loc, lo, hi, step, reduc);
     builder.setInsertionPointToStart(forOp.getBody());
     iv = forOp.getInductionVar();
 
@@ -524,84 +521,8 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
 std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     OpBuilder &builder, Location loc, ArrayRef<SparseIterator *> spIters,
     MutableArrayRef<Value> reduc, bool needsUniv) {
-  // NOTE: the slice driven tensor-related reduction variable must
-  // appear before normal tensors.
-
-  // The set of induction variables for the while loop.
-  SmallVector<Value> ivs;
-
-  // Construct the while-loop with a parameter for each coordinate.
-  for (SparseIterator *it : spIters) {
-    ValueRange itVals = it->getCursor();
-    ivs.append(itVals.begin(), itVals.end());
-  }
-
-  // The position where user-supplied reduction variable starts.
-  ivs.append(reduc.begin(), reduc.end());
-  // Update universal index.
-  if (needsUniv)
-    ivs.push_back(loopSeqStack.back().first);
-
-  // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
-  TypeRange types = ValueRange(ivs).getTypes();
-  auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
-
-  SmallVector<Location> locs(types.size(), loc);
-  Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
-  Block *after = builder.createBlock(&whileOp.getAfter(), {}, types, locs);
-
-  // Generates loop conditions.
-  builder.setInsertionPointToStart(before);
-  ValueRange bArgs = before->getArguments();
-  Value whileCond = nullptr; // bool values for loop condition.
-
-  for (SparseIterator *it : spIters) {
-    auto [cond, remArgs] = it->genWhileCond(builder, loc, bArgs);
-    whileCond = !whileCond ? cond : ANDI(whileCond, cond);
-    bArgs = remArgs;
-  }
-  // The remaining block arguments are user-provided reduction values and an
-  // optional universal index. Make sure their sizes match.
-  assert(bArgs.size() == reduc.size() + needsUniv);
-  builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
-
-  // Generates loop body.
-  builder.setInsertionPointToStart(after);
-  ValueRange aArgs = after->getArguments();
-  // Since some LoopCondKind might need extra checks to filter out invalid
-  // iterations, we maintains another array to hold the iteration arguments to
-  // yield if the checks fails.
-  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
-
-  for (SparseIterator *it : spIters) {
-    aArgs = it->linkNewScope(aArgs);
-    // Dereference the iterator to cache the coordinate.
-    it->deref(builder, loc);
-  }
-
-  // In-place update on reduction variable.
-  assert(aArgs.size() == reduc.size() + needsUniv);
-  for (unsigned i = 0, e = reduc.size(); i < e; i++)
-    reduc[i] = aArgs[i];
-
-  Value min;
-  // Finds the minimum coordinate
-  if (!needsUniv) {
-    for (SparseIterator *it : spIters) {
-      if (min) {
-        Value cmp = CMPI(ult, it->getCrd(), min);
-        min = SELECT(cmp, it->getCrd(), min);
-      } else {
-        min = it->getCrd();
-      }
-    }
-  } else {
-    // Otherwise, universal index is the minimal pos.
-    min = whileOp.getAfterArguments().back();
-  }
-
-  return {whileOp, min};
+  return genCoIteration(builder, loc, spIters, reduc,
+                        needsUniv ? loopSeqStack.back().first : nullptr);
 }
 
 bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
@@ -615,33 +536,106 @@ bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
   return true;
 }
 
+Region *LoopEmitter::enterCurrentCoIterationCase(OpBuilder &builder,
+                                                 Location loc,
+                                                 I64BitSet caseBit,
+                                                 unsigned caseIdx,
+                                                 MutableArrayRef<Value> reduc) {
+  auto coIterOp = cast<CoIterateOp>(loopStack.back().loop);
+  SmallVector<Attribute> cases(coIterOp.getCases().getAsRange<Attribute>());
+  cases[caseIdx] = builder.getI64IntegerAttr(caseBit);
+
+  coIterOp.setCasesAttr(builder.getArrayAttr(cases));
+  Region &caseRegion = coIterOp.getRegion(caseIdx);
+  assert(caseRegion.getBlocks().empty() &&
+         "re-initialize the same coiteration case region.");
+
+  // Each block starts with by a list of user-provided iteration arguments.
+  TypeRange iterArgsTps = coIterOp.getInitArgs().getTypes();
+  // Followed by a list of used coordinates of index type.
+  SmallVector<Type> blockArgTps(coIterOp.getCrdUsedLvls().count(),
+                                builder.getIndexType());
+
+  blockArgTps.append(iterArgsTps.begin(), iterArgsTps.end());
+  // Ends with a set of iterators that defines the actually iteration space.
+  for (auto i : caseBit.bits()) {
+    blockArgTps.push_back(
+        cast<IterSpaceType>(coIterOp.getIterSpaces()[i].getType())
+            .getIteratorType());
+  }
+  SmallVector<Location> locs(blockArgTps.size(), loc);
+  caseRegion.emplaceBlock().addArguments(blockArgTps, locs);
+
+  // Entering the new region scope, updating the SSA chain.
+  builder.setInsertionPointToStart(&caseRegion.front());
+  // Update the coordinates.
+  loopStack.back().iv = coIterOp.getCrds(caseIdx).front();
+  // Updates loop iteration arguments.
+  ValueRange iterArgs = coIterOp.getRegionIterArgs(caseIdx);
+  llvm::copy(iterArgs, reduc.begin());
+  // Updates sparse iterator values.
+  ValueRange iters = coIterOp.getRegionIterators(caseIdx);
+  ArrayRef<TensorLevel> tidLvls = loopStack.back().tidLvls;
+  for (auto [i, tl] : llvm::enumerate(unpackTensorLevelRange(tidLvls))) {
+    if (caseBit[i]) {
+      spIterVals[tl.first][tl.second] = iters.front();
+      iters = iters.drop_front();
+    } else {
+      spIterVals[tl.first][tl.second] = nullptr;
+    }
+  }
+  // Must have consumed all iterator SSA values.
+  assert(iters.empty());
+  return &caseRegion;
+}
+
 Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     OpBuilder &builder, Location loc, ArrayRef<TensorLevel> tidLvls,
-    MutableArrayRef<Value> reduc, bool tryParallel, bool needsUniv) {
-
+    unsigned numCases, MutableArrayRef<Value> reduc, bool tryParallel,
+    bool needsUniv) {
+  // TODO: Argument `numCases` only used when generating iterator-based sparse
+  // loops. Simplify the code upon feature complete.
   // TODO: handle coiteration with sparse iterator.
   if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
-    assert(tidLvls.size() == 1);
-    auto [tid, lvl] = unpackTensorLevel(tidLvls.front());
-    Value t = tensors[tid];
+    if (tidLvls.size() == 1) {
+      auto [tid, lvl] = unpackTensorLevel(tidLvls.front());
+      Value t = tensors[tid];
 
-    // Extract and iterate over the iteration space.
-    ExtractIterSpaceOp extractSpaceOp =
-        lvl == 0 ? builder.create<ExtractIterSpaceOp>(loc, t)
-                 : builder.create<ExtractIterSpaceOp>(
-                       loc, t, spIterVals[tid][lvl - 1], lvl);
+      // Extract and iterate over the iteration space.
+      ExtractIterSpaceOp extractSpaceOp =
+          lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
+                   : ExtractIterSpaceOp::create(builder, loc, t,
+                                                spIterVals[tid][lvl - 1], lvl);
 
-    IterateOp iterOp = builder.create<IterateOp>(
-        loc, extractSpaceOp.getExtractedSpace(), reduc);
-    spIterVals[tid][lvl] = iterOp.getIterator();
+      IterateOp iterOp = IterateOp::create(
+          builder, loc, extractSpaceOp.getExtractedSpace(), reduc);
+      spIterVals[tid][lvl] = iterOp.getIterator();
 
-    // Update the reduction varaibles.
-    llvm::copy(iterOp.getRegionIterArgs(), reduc.begin());
-    // Set the insertion point to loop body.
-    builder.setInsertionPointToStart(iterOp.getBody());
-    loopStack.emplace_back(tidLvls, iterOp, builder.getInsertionBlock(),
-                           iterOp.getIterator(), loopTag);
-    return iterOp;
+      // Update the reduction varaibles.
+      llvm::copy(iterOp.getRegionIterArgs(), reduc.begin());
+      // Set the insertion point to loop body.
+      builder.setInsertionPointToStart(iterOp.getBody());
+      loopStack.emplace_back(tidLvls, iterOp, builder.getInsertionBlock(),
+                             iterOp.getCrds().front(), loopTag);
+      return iterOp;
+    }
+
+    // CoIteration Loops.
+    SmallVector<Value> spaces;
+    for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+      Value t = tensors[tid];
+      ExtractIterSpaceOp extractSpaceOp =
+          lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
+                   : ExtractIterSpaceOp::create(builder, loc, t,
+                                                spIterVals[tid][lvl - 1], lvl);
+      spaces.push_back(extractSpaceOp.getExtractedSpace());
+    }
+    auto coIterOp = CoIterateOp::create(builder, loc, spaces, reduc, numCases);
+    // The CoIterationOp does not have insertion block nor induction variable.
+    // TODO: the `struct LoopInfo` should be simplied after full migration.
+    loopStack.emplace_back(tidLvls, coIterOp, /*insertion block*/ nullptr,
+                           /*induction variable*/ nullptr, loopTag);
+    return coIterOp;
   }
 
   // TODO: support multiple return on parallel for?
@@ -734,7 +728,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
     auto iterateOp = llvm::cast<IterateOp>(loopInfo.loop);
     assert(reduc.size() == iterateOp.getNumResults());
-    rewriter.create<sparse_tensor::YieldOp>(loc, reduc);
+    sparse_tensor::YieldOp::create(rewriter, loc, reduc);
     // Exit the loop.
     rewriter.setInsertionPointAfter(iterateOp);
     // In-place update reduction variables.
@@ -744,7 +738,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
       assert(reduc.size() == forOp.getNumResults());
-      rewriter.create<scf::YieldOp>(loc, reduc);
+      scf::YieldOp::create(rewriter, loc, reduc);
     }
     // Exit the loop.
     rewriter.setInsertionPointAfter(forOp);
@@ -783,7 +777,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
 #endif // NDEBUG
 
       rewriter.setInsertionPointAfter(redExp);
-      auto redOp = rewriter.create<scf::ReduceOp>(loc, curVal);
+      auto redOp = scf::ReduceOp::create(rewriter, loc, curVal);
       // Attach to the reduction op.
       Block *redBlock = &redOp.getReductions().front().front();
       rewriter.setInsertionPointToEnd(redBlock);
@@ -795,7 +789,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       // Erases the out-dated reduction expression.
       rewriter.eraseOp(redExp);
       rewriter.setInsertionPointToEnd(redBlock);
-      rewriter.create<scf::ReduceReturnOp>(loc, newRed->getResult(0));
+      scf::ReduceReturnOp::create(rewriter, loc, newRed->getResult(0));
     }
     rewriter.setInsertionPointAfter(parOp);
     // In-place update reduction variables.
@@ -866,6 +860,18 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
   const LoopInfo &loopInfo = loopStack.back();
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
+    Operation *p = loopInfo.loop;
+    if (isa<IterateOp>(p))
+      sparse_tensor::YieldOp::create(rewriter, loc, reduc);
+
+    // Exit the loop.
+    rewriter.setInsertionPointAfter(p);
+    // In-place update reduction variables.
+    llvm::copy(p->getResults(), reduc.begin());
+    loopStack.pop_back();
+    return;
+  }
 
   // Sets the insertion point to the right position.
   rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
@@ -885,6 +891,96 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
 
   assert(loopStack.size() == loopSeqStack.size());
   loopStack.pop_back();
+}
+
+//===----------------------------------------------------------------------===//
+// Loop generation utils
+//===----------------------------------------------------------------------===//
+
+std::pair<Operation *, Value> sparse_tensor::genCoIteration(
+    OpBuilder &builder, Location loc, ArrayRef<SparseIterator *> spIters,
+    MutableArrayRef<Value> reduc, Value uniIdx, bool userReducFirst) {
+  // NOTE: the slice driven tensor-related reduction variable must
+  // appear before normal tensors.
+
+  // The set of induction variables for the while loop.
+  SmallVector<Value> ivs;
+
+  // TODO: remove the flag after full migration. Currently
+  // `sparse_tensor.coiterate` operation (must) put user provided reduction
+  // values at the front of the block list, while direct sparsification to scf
+  // loops put them at the end.
+  if (userReducFirst)
+    ivs.append(reduc.begin(), reduc.end());
+
+  // Construct the while-loop with a parameter for each coordinate.
+  for (SparseIterator *it : spIters) {
+    ValueRange itVals = it->getCursor();
+    ivs.append(itVals.begin(), itVals.end());
+  }
+
+  if (!userReducFirst)
+    ivs.append(reduc.begin(), reduc.end());
+
+  // Update universal index.
+  if (uniIdx)
+    ivs.push_back(uniIdx);
+
+  // Ensures all operands are valid.
+  assert(!llvm::is_contained(ivs, nullptr));
+  TypeRange types = ValueRange(ivs).getTypes();
+  auto whileOp = scf::WhileOp::create(builder, loc, types, ivs);
+
+  SmallVector<Location> locs(types.size(), loc);
+  Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
+  Block *after = builder.createBlock(&whileOp.getAfter(), {}, types, locs);
+
+  // Generates loop conditions.
+  builder.setInsertionPointToStart(before);
+  ValueRange bArgs = before->getArguments();
+  Value whileCond = nullptr; // bool values for loop condition.
+
+  for (SparseIterator *it : spIters) {
+    auto [cond, remArgs] = it->genWhileCond(builder, loc, bArgs);
+    whileCond = !whileCond ? cond : ANDI(whileCond, cond);
+    bArgs = remArgs;
+  }
+  // The remaining block arguments are user-provided reduction values and an
+  // optional universal index. Make sure their sizes match.
+  assert(bArgs.size() == reduc.size() + (uniIdx ? 1 : 0));
+  scf::ConditionOp::create(builder, loc, whileCond, before->getArguments());
+
+  // Generates loop body.
+  builder.setInsertionPointToStart(after);
+  ValueRange aArgs = after->getArguments();
+
+  for (SparseIterator *it : spIters) {
+    aArgs = it->linkNewScope(aArgs);
+    // Dereference the iterator to cache the coordinate.
+    it->deref(builder, loc);
+  }
+
+  // In-place update on reduction variable.
+  for (unsigned i = 0, e = reduc.size(); i < e; i++)
+    reduc[i] = aArgs[i];
+
+  Value min;
+  // Finds the minimum coordinate
+  if (!uniIdx) {
+    for (SparseIterator *it : spIters) {
+      if (min) {
+        Value cmp = CMPI(ult, it->getCrd(), min);
+        min = SELECT(cmp, it->getCrd(), min);
+      } else {
+        min = it->getCrd();
+      }
+    }
+  } else {
+    // Otherwise, universal index is the minimal pos.
+    min = whileOp.getAfterArguments().back();
+  }
+
+  return {whileOp, min};
 }
 
 #undef CMPI

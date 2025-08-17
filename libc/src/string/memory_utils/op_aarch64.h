@@ -13,6 +13,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
@@ -23,9 +25,9 @@
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>
-#endif //__ARM_NEON
 
-namespace LIBC_NAMESPACE::aarch64 {
+namespace LIBC_NAMESPACE_DECL {
+namespace aarch64 {
 
 LIBC_INLINE_VAR constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
@@ -170,9 +172,13 @@ template <size_t Size> struct Bcmp {
   }
 };
 
-} // namespace LIBC_NAMESPACE::aarch64
+} // namespace aarch64
+} // namespace LIBC_NAMESPACE_DECL
 
-namespace LIBC_NAMESPACE::generic {
+#endif //__ARM_NEON
+
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -220,6 +226,8 @@ LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
   return MemcmpReturnType::zero();
 }
 
+#if defined(__ARM_NEON)
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint8x16_t
 template <> struct is_vector<uint8x16_t> : cpp::true_type {};
@@ -264,7 +272,11 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16x2_t>(CPtr p1, CPtr p2,
   }
   return MemcmpReturnType::zero();
 }
-} // namespace LIBC_NAMESPACE::generic
+
+#endif // __ARM_NEON
+
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TARGET_ARCH_IS_AARCH64
 

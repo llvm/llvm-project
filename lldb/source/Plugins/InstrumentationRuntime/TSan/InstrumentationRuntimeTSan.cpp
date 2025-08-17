@@ -14,7 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -31,6 +30,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <memory>
 
@@ -323,15 +323,15 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
-  Status eval_error;
   frame_sp->CalculateExecutionContext(exe_ctx);
   ExpressionResults result = UserExpression::Evaluate(
       exe_ctx, options, thread_sanitizer_retrieve_report_data_command, "",
-      main_value, eval_error);
+      main_value);
   if (result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate ThreadSanitizer expression:\n";
-    ss << eval_error.AsCString();
+    if (main_value)
+      ss << main_value->GetError().AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return StructuredData::ObjectSP();
@@ -546,8 +546,7 @@ static std::string Sprintf(const char *format, ...) {
 
 static std::string GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr) {
   lldb_private::Address so_addr;
-  if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr,
-                                                                       so_addr))
+  if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
     return "";
 
   lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
@@ -561,8 +560,7 @@ static std::string GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr) {
 static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
                                             Declaration &decl) {
   lldb_private::Address so_addr;
-  if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr,
-                                                                       so_addr))
+  if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
     return;
 
   lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
@@ -600,8 +598,7 @@ addr_t InstrumentationRuntimeTSan::GetFirstNonInternalFramePc(
     addr_t addr = *maybe_addr;
 
     lldb_private::Address so_addr;
-    if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(
-            addr, so_addr))
+    if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
       continue;
 
     if (so_addr.GetModule() == runtime_module_sp)
@@ -770,15 +767,15 @@ std::string InstrumentationRuntimeTSan::GetLocationDescription(
             Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
       }
     } else if (type == "stack") {
-      tid_t tid = loc->GetAsDictionary()
-                      ->GetValueForKey("thread_id")
-                      ->GetUnsignedIntegerValue();
+      lldb::tid_t tid = loc->GetAsDictionary()
+                            ->GetValueForKey("thread_id")
+                            ->GetUnsignedIntegerValue();
 
       result = Sprintf("Location is stack of thread %d", tid);
     } else if (type == "tls") {
-      tid_t tid = loc->GetAsDictionary()
-                      ->GetValueForKey("thread_id")
-                      ->GetUnsignedIntegerValue();
+      lldb::tid_t tid = loc->GetAsDictionary()
+                            ->GetValueForKey("thread_id")
+                            ->GetUnsignedIntegerValue();
 
       result = Sprintf("Location is TLS of thread %d", tid);
     } else if (type == "fd") {
@@ -867,13 +864,14 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
               CreateStopReasonWithInstrumentationData(
                   *thread_sp, stop_reason_description, report));
 
-    StreamFile &s = process_sp->GetTarget().GetDebugger().GetOutputStream();
-    s.Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
-             "info -s' to get extended information about the "
-             "report.\n");
+    lldb::StreamSP s =
+        process_sp->GetTarget().GetDebugger().GetAsyncOutputStream();
+    s->Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
+              "info -s' to get extended information about the "
+              "report.\n");
 
     return true; // Return true to stop the target
-  } else
+  }
     return false; // Let target run
 }
 
@@ -948,7 +946,7 @@ static std::string GenerateThreadName(const std::string &path,
   if (path == "mops") {
     size_t size =
         o->GetObjectForDotSeparatedPath("size")->GetUnsignedIntegerValue();
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     bool is_write =
         o->GetObjectForDotSeparatedPath("is_write")->GetBooleanValue();
@@ -979,7 +977,7 @@ static std::string GenerateThreadName(const std::string &path,
   }
 
   if (path == "threads") {
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     result = Sprintf("Thread %zu created", thread_id);
   }
@@ -987,7 +985,7 @@ static std::string GenerateThreadName(const std::string &path,
   if (path == "locs") {
     std::string type = std::string(
         o->GetAsDictionary()->GetValueForKey("type")->GetStringValue());
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     int fd = o->GetObjectForDotSeparatedPath("file_descriptor")
                  ->GetSignedIntegerValue();
@@ -1007,7 +1005,7 @@ static std::string GenerateThreadName(const std::string &path,
   }
 
   if (path == "stacks") {
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     result = Sprintf("Thread %" PRIu64, thread_id);
   }
@@ -1034,7 +1032,7 @@ static void AddThreadsForPath(const std::string &path,
 
         StructuredData::ObjectSP thread_id_obj =
             o->GetObjectForDotSeparatedPath("thread_os_id");
-        tid_t tid =
+        lldb::tid_t tid =
             thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
 
         ThreadSP new_thread_sp =

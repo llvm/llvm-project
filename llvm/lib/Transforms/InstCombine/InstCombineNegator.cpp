@@ -43,15 +43,10 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
-namespace llvm {
-class DataLayout;
-class LLVMContext;
-} // namespace llvm
-
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
@@ -94,13 +89,14 @@ static cl::opt<unsigned>
                     cl::desc("What is the maximal lookup depth when trying to "
                              "check for viability of negation sinking."));
 
-Negator::Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation_)
+Negator::Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT_,
+                 bool IsTrulyNegation_)
     : Builder(C, TargetFolder(DL),
               IRBuilderCallbackInserter([&](Instruction *I) {
                 ++NegatorNumInstructionsCreatedTotal;
                 NewInstructions.push_back(I);
               })),
-      IsTrulyNegation(IsTrulyNegation_) {}
+      DT(DT_), IsTrulyNegation(IsTrulyNegation_) {}
 
 #if LLVM_ENABLE_STATS
 Negator::~Negator() {
@@ -222,6 +218,11 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     }
     break;
   }
+  case Instruction::Call:
+    if (auto *CI = dyn_cast<CmpIntrinsic>(I); CI && CI->hasOneUse())
+      return Builder.CreateIntrinsic(CI->getType(), CI->getIntrinsicID(),
+                                     {CI->getRHS(), CI->getLHS()});
+    break;
   default:
     break; // Other instructions require recursive reasoning.
   }
@@ -232,7 +233,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     // However, only do this either if the old `sub` doesn't stick around, or
     // it was subtracting from a constant. Otherwise, this isn't profitable.
     return Builder.CreateSub(I->getOperand(1), I->getOperand(0),
-                             I->getName() + ".neg", /* HasNUW */ false,
+                             I->getName() + ".neg", /*HasNUW=*/false,
                              IsNSW && I->hasNoSignedWrap());
   }
 
@@ -308,6 +309,9 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     auto *PHI = cast<PHINode>(I);
     SmallVector<Value *, 4> NegatedIncomingValues(PHI->getNumOperands());
     for (auto I : zip(PHI->incoming_values(), NegatedIncomingValues)) {
+      // Don't negate indvars to avoid infinite loops.
+      if (DT.dominates(PHI->getParent(), std::get<0>(I)))
+        return nullptr;
       if (!(std::get<1>(I) =
                 negate(std::get<0>(I), IsNSW, Depth + 1))) // Early return.
         return nullptr;
@@ -329,6 +333,17 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       NewSelect->swapValues();
       // Don't swap prof metadata, we didn't change the branch behavior.
       NewSelect->setName(I->getName() + ".neg");
+      // Poison-generating flags should be dropped
+      Value *TV = NewSelect->getTrueValue();
+      Value *FV = NewSelect->getFalseValue();
+      if (match(TV, m_Neg(m_Specific(FV))))
+        cast<Instruction>(TV)->dropPoisonGeneratingFlags();
+      else if (match(FV, m_Neg(m_Specific(TV))))
+        cast<Instruction>(FV)->dropPoisonGeneratingFlags();
+      else {
+        cast<Instruction>(TV)->dropPoisonGeneratingFlags();
+        cast<Instruction>(FV)->dropPoisonGeneratingFlags();
+      }
       Builder.Insert(NewSelect);
       return NewSelect;
     }
@@ -389,7 +404,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     IsNSW &= I->hasNoSignedWrap();
     if (Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth + 1))
       return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg",
-                               /* HasNUW */ false, IsNSW);
+                               /*HasNUW=*/false, IsNSW);
     // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
     Constant *Op1C;
     if (!match(I->getOperand(1), m_ImmConstant(Op1C)) || !IsTrulyNegation)
@@ -397,7 +412,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     return Builder.CreateMul(
         I->getOperand(0),
         Builder.CreateShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
-        I->getName() + ".neg", /* HasNUW */ false, IsNSW);
+        I->getName() + ".neg", /*HasNUW=*/false, IsNSW);
   }
   case Instruction::Or: {
     if (!cast<PossiblyDisjointInst>(I)->isDisjoint())
@@ -468,7 +483,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       // Can't negate either of them.
       return nullptr;
     return Builder.CreateMul(NegatedOp, OtherOp, I->getName() + ".neg",
-                             /* HasNUW */ false, IsNSW && I->hasNoSignedWrap());
+                             /*HasNUW=*/false, IsNSW && I->hasNoSignedWrap());
   }
   default:
     return nullptr; // Don't know, likely not negatible for free.
@@ -536,7 +551,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   if (!NegatorEnabled || !DebugCounter::shouldExecute(NegatorCounter))
     return nullptr;
 
-  Negator N(Root->getContext(), IC.getDataLayout(), LHSIsZero);
+  Negator N(Root->getContext(), IC.getDataLayout(), IC.getDominatorTree(),
+            LHSIsZero);
   std::optional<Result> Res = N.run(Root, IsNSW);
   if (!Res) { // Negation failed.
     LLVM_DEBUG(dbgs() << "Negator: failed to sink negation into " << *Root

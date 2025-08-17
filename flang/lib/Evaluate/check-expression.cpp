@@ -69,13 +69,14 @@ public:
   bool operator()(const Component &component) const {
     return (*this)(component.base());
   }
-  // Forbid integer division by zero in constants.
+  // Prevent integer division by known zeroes in constant expressions.
   template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
-    if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero() && (*this)(division.left());
+    if ((*this)(division.left()) && (*this)(division.right())) {
+      const auto divisor{GetScalarConstantValue<T>(division.right())};
+      return !divisor || !divisor->IsZero();
     } else {
       return false;
     }
@@ -100,9 +101,9 @@ template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
     const Symbol &component, const Expr<SomeType> &expr) const {
   if (IsAllocatable(component)) {
-    return IsNullObjectPointer(expr);
+    return IsNullObjectPointer(&expr);
   } else if (IsPointer(component)) {
-    return IsNullPointer(expr) || IsInitialDataTarget(expr) ||
+    return IsNullPointerOrAllocatable(&expr) || IsInitialDataTarget(expr) ||
         IsInitialProcedureTarget(expr);
   } else {
     return (*this)(expr);
@@ -132,13 +133,23 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
     } else if (proc.IsPure()) {
+      std::size_t j{0};
       for (const auto &arg : call.arguments()) {
-        if (!arg) {
+        if (const auto *dataDummy{j < proc.dummyArguments.size()
+                    ? std::get_if<characteristics::DummyDataObject>(
+                          &proc.dummyArguments[j].u)
+                    : nullptr};
+            dataDummy &&
+            dataDummy->attrs.test(
+                characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
+          // The value of the argument doesn't matter
+        } else if (!arg) {
           return false;
         } else if (const auto *expr{arg->UnwrapExpr()};
-                   !expr || !(*this)(*expr)) {
+            !expr || !(*this)(*expr)) {
           return false;
         }
+        ++j;
       }
       return true;
     }
@@ -194,7 +205,7 @@ struct IsActuallyConstantHelper {
       const bool compIsConstant{(*this)(y)};
       // If an allocatable component is initialized by a constant,
       // the structure constructor is not a constant.
-      if ((!compIsConstant && !IsNullPointer(y)) ||
+      if ((!compIsConstant && !IsNullPointerOrAllocatable(&y)) ||
           (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
@@ -311,7 +322,9 @@ public:
   bool operator()(const ProcedureRef &x) const {
     if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
       return intrinsic->characteristics.value().attrs.test(
-          characteristics::Procedure::Attr::NullPointer);
+                 characteristics::Procedure::Attr::NullPointer) ||
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullAllocatable);
     }
     return false;
   }
@@ -388,9 +401,91 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
     return IsInitialProcedureTarget(*proc);
   } else {
-    return IsNullProcedurePointer(expr);
+    return IsNullProcedurePointer(&expr);
   }
 }
+
+class SuspiciousRealLiteralFinder
+    : public AnyTraverse<SuspiciousRealLiteralFinder> {
+public:
+  using Base = AnyTraverse<SuspiciousRealLiteralFinder>;
+  SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
+      : Base{*this}, kind_{kind}, context_{c} {}
+  using Base::operator();
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
+    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+      context_.messages().Say(common::UsageWarning::RealConstantWidening,
+          "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
+          kind_, x.AsFortran());
+      return true;
+    } else {
+      return false;
+    }
+  }
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
+    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+      context_.messages().Say(common::UsageWarning::RealConstantWidening,
+          "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
+          kind_, x.AsFortran());
+      return true;
+    } else {
+      return false;
+    }
+  }
+  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+    if constexpr ((TOCAT == TypeCategory::Real ||
+                      TOCAT == TypeCategory::Complex) &&
+        (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
+      auto fromType{x.left().GetType()};
+      if (!fromType || fromType->kind() < TOKIND) {
+        return false;
+      }
+    }
+    return (*this)(x.left());
+  }
+
+private:
+  int kind_;
+  FoldingContext &context_;
+};
+
+void CheckRealWidening(const Expr<SomeType> &expr, const DynamicType &toType,
+    FoldingContext &context) {
+  if (toType.category() == TypeCategory::Real ||
+      toType.category() == TypeCategory::Complex) {
+    if (auto fromType{expr.GetType()}) {
+      if ((fromType->category() == TypeCategory::Real ||
+              fromType->category() == TypeCategory::Complex) &&
+          toType.kind() > fromType->kind()) {
+        SuspiciousRealLiteralFinder{toType.kind(), context}(expr);
+      }
+    }
+  }
+}
+
+void CheckRealWidening(const Expr<SomeType> &expr,
+    const std::optional<DynamicType> &toType, FoldingContext &context) {
+  if (toType) {
+    CheckRealWidening(expr, *toType, context);
+  }
+}
+
+class InexactLiteralConversionFlagClearer
+    : public AnyTraverse<InexactLiteralConversionFlagClearer> {
+public:
+  using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
+  InexactLiteralConversionFlagClearer() : Base(*this) {}
+  using Base::operator();
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+    mut.set_isFromInexactLiteralConversion(false);
+    return false;
+  }
+};
 
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
@@ -403,6 +498,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   if (auto symTS{
           characteristics::TypeAndShape::Characterize(symbol, context)}) {
     auto xType{x.GetType()};
+    CheckRealWidening(x, symTS->type(), context);
     auto converted{ConvertToType(symTS->type(), Expr<SomeType>{x})};
     if (!converted &&
         symbol.owner().context().IsEnabled(
@@ -412,6 +508,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           symbol.owner().context().ShouldWarn(
               common::LanguageFeature::LogicalIntegerAssignment)) {
         context.messages().Say(
+            common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -419,6 +516,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
+        InexactLiteralConversionFlagClearer{}(folded);
         int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
@@ -431,7 +529,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
                 symbol.name(), symRank, folded.Rank());
           }
-        } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
+        } else if (auto extents{AsConstantExtents(context, symTS->shape())};
+            extents && !HasNegativeExtent(*extents)) {
           if (folded.Rank() == 0 && symRank == 0) {
             // symbol and constant are both scalars
             return {std::move(folded)};
@@ -493,7 +592,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       } else {
         context.messages().Say(
             "Initialization expression for '%s' (%s) cannot be computed as a constant value"_err_en_US,
-            symbol.name(), folded.AsFortran());
+            symbol.name(), x.AsFortran());
       }
     } else if (xType) {
       context.messages().Say(
@@ -525,6 +624,13 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
+    const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+    bool isInitialized{semantics::IsSaved(ultimate) &&
+        !IsAllocatable(ultimate) && object &&
+        (ultimate.test(Symbol::Flag::InDataStmt) ||
+            object->init().has_value())};
+    bool hasHostAssociation{
+        &symbol.owner() != &scope_ || &ultimate.owner() != &scope_};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -543,17 +649,42 @@ public:
       } else if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (!inInquiry_ &&
+      } else if (!inInquiry_ && !hasHostAssociation &&
           ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
         return "reference to INTENT(OUT) dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
-        return std::nullopt;
-      } else {
+      } else if (!ultimate.has<semantics::ObjectEntityDetails>()) {
         return "dummy procedure argument";
+      } else {
+        // Sketchy case: some compilers allow an INTENT(OUT) dummy argument
+        // to be used in a specification expression if it is host-associated.
+        // The arguments raised in support this usage, however, depend on
+        // a reading of the standard that would also accept an OPTIONAL
+        // host-associated dummy argument, and that doesn't seem like a
+        // good idea.
+        if (!inInquiry_ && hasHostAssociation &&
+            ultimate.attrs().test(semantics::Attr::INTENT_OUT) &&
+            context_.languageFeatures().ShouldWarn(
+                common::UsageWarning::HostAssociatedIntentOutInSpecExpr)) {
+          context_.messages().Say(
+              "specification expression refers to host-associated INTENT(OUT) dummy argument '%s'"_port_en_US,
+              ultimate.name());
+        }
+        return std::nullopt;
       }
-    } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
+    } else if (hasHostAssociation) {
       return std::nullopt; // host association is in play
+    } else if (isInitialized &&
+        context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::SavedLocalInSpecExpr)) {
+      if (!scope_.IsModuleFile() &&
+          context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::SavedLocalInSpecExpr)) {
+        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
+            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+            ultimate.name());
+      }
+      return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       if (object->commonBlock()) {
@@ -626,7 +757,6 @@ public:
   }
 
   Result operator()(const ProcedureRef &x) const {
-    bool inInquiry{false};
     if (const auto *symbol{x.proc().GetSymbol()}) {
       const Symbol &ultimate{symbol->GetUltimate()};
       if (!semantics::IsPureProcedure(ultimate)) {
@@ -658,10 +788,12 @@ public:
       }
       // References to internal functions are caught in expression semantics.
       // TODO: other checks for standard module procedures
+      auto restorer{common::ScopedSet(inInquiry_, false)};
+      return (*this)(x.arguments());
     } else { // intrinsic
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
-      inInquiry = context_.intrinsics().GetIntrinsicClass(intrin.name) ==
-          IntrinsicClass::inquiryFunction;
+      bool inInquiry{context_.intrinsics().GetIntrinsicClass(intrin.name) ==
+          IntrinsicClass::inquiryFunction};
       if (scope_.IsDerivedType()) { // C750, C754
         if ((context_.intrinsics().IsIntrinsic(intrin.name) &&
                 badIntrinsicsForComponents_.find(intrin.name) !=
@@ -688,37 +820,55 @@ public:
       if (intrin.name == "present") {
         return std::nullopt; // always ok
       }
-      // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
-      if (inInquiry && x.arguments().size() >= 1) {
-        if (const auto &arg{x.arguments().at(0)}) {
-          if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
-            if (intrin.name == "allocated" || intrin.name == "associated" ||
-                intrin.name == "is_contiguous") { // ok
-            } else if (intrin.name == "len" &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::Len)) { // ok
-            } else if (intrin.name == "lbound" &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::LowerBound)) { // ok
-            } else if ((intrin.name == "shape" || intrin.name == "size" ||
-                           intrin.name == "sizeof" ||
-                           intrin.name == "storage_size" ||
-                           intrin.name == "ubound") &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::Extent)) { // ok
-            } else {
-              return "non-constant inquiry function '"s + intrin.name +
-                  "' not allowed for local object";
-            }
+      const auto &proc{intrin.characteristics.value()};
+      std::size_t j{0};
+      for (const auto &arg : x.arguments()) {
+        bool checkArg{true};
+        if (const auto *dataDummy{j < proc.dummyArguments.size()
+                    ? std::get_if<characteristics::DummyDataObject>(
+                          &proc.dummyArguments[j].u)
+                    : nullptr}) {
+          if (dataDummy->attrs.test(characteristics::DummyDataObject::Attr::
+                      OnlyIntrinsicInquiry)) {
+            checkArg = false; // value unused, e.g. IEEE_SUPPORT_FLAG(,,,. X)
           }
         }
+        if (arg && checkArg) {
+          // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
+          if (inInquiry) {
+            if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
+              if (intrin.name == "allocated" || intrin.name == "associated" ||
+                  intrin.name == "is_contiguous") { // ok
+              } else if (intrin.name == "len" &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::Len)) { // ok
+              } else if (intrin.name == "lbound" &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::LowerBound)) { // ok
+              } else if ((intrin.name == "shape" || intrin.name == "size" ||
+                             intrin.name == "sizeof" ||
+                             intrin.name == "storage_size" ||
+                             intrin.name == "ubound") &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::Extent)) { // ok
+              } else {
+                return "non-constant inquiry function '"s + intrin.name +
+                    "' not allowed for local object";
+              }
+            }
+          }
+          auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
+          if (auto err{(*this)(*arg)}) {
+            return err;
+          }
+        }
+        ++j;
       }
+      return std::nullopt;
     }
-    auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
-    return (*this)(x.arguments());
   }
 
 private:
@@ -781,8 +931,9 @@ bool CheckSpecificationExprHelper::IsPermissibleInquiry(
 template <typename A>
 void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
     FoldingContext &context, bool forElementalFunctionResult) {
-  if (auto why{CheckSpecificationExprHelper{
-          scope, context, forElementalFunctionResult}(x)}) {
+  CheckSpecificationExprHelper errors{
+      scope, context, forElementalFunctionResult};
+  if (auto why{errors(x)}) {
     context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
         forElementalFunctionResult ? " for elemental function result" : "",
         *why);
@@ -814,7 +965,12 @@ class IsContiguousHelper
 public:
   using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsContiguousHelper, Result>;
-  explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  explicit IsContiguousHelper(FoldingContext &c,
+      bool namedConstantSectionsAreContiguous,
+      bool firstDimensionStride1 = false)
+      : Base{*this}, context_{c},
+        namedConstantSectionsAreContiguous_{namedConstantSectionsAreContiguous},
+        firstDimensionStride1_{firstDimensionStride1} {}
   using Base::operator();
 
   template <typename T> Result operator()(const Constant<T> &) const {
@@ -836,6 +992,11 @@ public:
                    ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       // RANK(*) associating entity is contiguous.
       if (details->IsAssumedSize()) {
+        return true;
+      } else if (!IsVariable(details->expr()) &&
+          (namedConstantSectionsAreContiguous_ ||
+              !ExtractDataRef(details->expr(), true, true))) {
+        // Selector is associated to an expression value.
         return true;
       } else {
         return Base::operator()(ultimate); // use expr
@@ -869,10 +1030,7 @@ public:
       return std::nullopt;
     }
   }
-  Result operator()(const CoarrayRef &x) const {
-    int rank{0};
-    return CheckSubscripts(x.subscript(), rank).has_value();
-  }
+  Result operator()(const CoarrayRef &x) const { return (*this)(x.base()); }
   Result operator()(const Component &x) const {
     if (x.base().Rank() == 0) {
       return (*this)(x.GetLastSymbol());
@@ -881,16 +1039,68 @@ public:
         if (!*baseIsContiguous) {
           return false;
         }
-        // TODO could be true if base contiguous and this is only component, or
-        // if base has only one element?
+        // TODO: should be true if base is contiguous and this is only
+        // component, or when the base has at most one element
       }
       return std::nullopt;
     }
   }
   Result operator()(const ComplexPart &x) const {
+    // TODO: should be true when base is empty array, too
     return x.complex().Rank() == 0;
   }
-  Result operator()(const Substring &) const { return std::nullopt; }
+  Result operator()(const Substring &x) const {
+    if (x.Rank() == 0) {
+      return true; // scalar substring always contiguous
+    }
+    // Substrings with rank must have DataRefs as their parents
+    const DataRef &parentDataRef{DEREF(x.GetParentIf<DataRef>())};
+    std::optional<std::int64_t> len;
+    if (auto lenExpr{parentDataRef.LEN()}) {
+      len = ToInt64(Fold(context_, std::move(*lenExpr)));
+      if (len) {
+        if (*len <= 0) {
+          return true; // empty substrings
+        } else if (*len == 1) {
+          // Substrings can't be incomplete; is base array contiguous?
+          return (*this)(parentDataRef);
+        }
+      }
+    }
+    std::optional<std::int64_t> upper;
+    bool upperIsLen{false};
+    if (auto upperExpr{x.upper()}) {
+      upper = ToInt64(Fold(context_, common::Clone(*upperExpr)));
+      if (upper) {
+        if (*upper < 1) {
+          return true; // substring(n:0) empty
+        }
+        upperIsLen = len && *upper >= *len;
+      } else if (const auto *inquiry{
+                     UnwrapConvertedExpr<DescriptorInquiry>(*upperExpr)};
+                 inquiry && inquiry->field() == DescriptorInquiry::Field::Len) {
+        upperIsLen =
+            &parentDataRef.GetLastSymbol() == &inquiry->base().GetLastSymbol();
+      }
+    } else {
+      upperIsLen = true; // substring(n:)
+    }
+    if (auto lower{ToInt64(Fold(context_, x.lower()))}) {
+      if (*lower == 1 && upperIsLen) {
+        // known complete substring; is base contiguous?
+        return (*this)(parentDataRef);
+      } else if (upper) {
+        if (*upper < *lower) {
+          return true; // empty substring(3:2)
+        } else if (*lower > 1) {
+          return false; // known incomplete substring
+        } else if (len && *upper < *len) {
+          return false; // known incomplete substring
+        }
+      }
+    }
+    return std::nullopt; // contiguity not known
+  }
 
   Result operator()(const ProcedureRef &x) const {
     if (auto chars{characteristics::Procedure::Characterize(
@@ -935,6 +1145,9 @@ private:
     auto dims{subscript.size()};
     std::vector<bool> knownPartialSlice(dims, false);
     for (auto j{dims}; j-- > 0;) {
+      if (j == 0 && firstDimensionStride1_ && !result.value_or(true)) {
+        result.reset(); // ignore problems on later dimensions
+      }
       std::optional<ConstantSubscript> dimLbound;
       std::optional<ConstantSubscript> dimUbound;
       std::optional<ConstantSubscript> dimExtent;
@@ -957,18 +1170,20 @@ private:
           dimExtent = 0;
         }
       }
-
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
         ++rank;
+        const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
+        const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
+        std::optional<ConstantSubscript> lowerVal{lowerBound
+                ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
+                : dimLbound};
+        std::optional<ConstantSubscript> upperVal{upperBound
+                ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
+                : dimUbound};
         if (auto stride{ToInt64(triplet->stride())}) {
-          const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
-          const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
-          std::optional<ConstantSubscript> lowerVal{lowerBound
-                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
-                  : dimLbound};
-          std::optional<ConstantSubscript> upperVal{upperBound
-                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
-                  : dimUbound};
+          if (j == 0 && *stride == 1 && firstDimensionStride1_) {
+            result = *stride == 1; // contiguous or empty if so
+          }
           if (lowerVal && upperVal) {
             if (*lowerVal < *upperVal) {
               if (*stride < 0) {
@@ -984,23 +1199,31 @@ private:
                   *lowerVal + *stride >= *upperVal) {
                 result = false; // discontiguous if not empty
               }
-            } else {
-              mayBeEmpty = true;
+            } else { // bounds known and equal
+              if (j == 0 && firstDimensionStride1_) {
+                result = true; // stride doesn't matter
+              }
+            }
+          } else { // bounds not both known
+            mayBeEmpty = true;
+          }
+        } else { // stride not known
+          if (lowerVal && upperVal && *lowerVal == *upperVal) {
+            // stride doesn't matter when bounds are equal
+            if (j == 0 && firstDimensionStride1_) {
+              result = true;
             }
           } else {
             mayBeEmpty = true;
           }
-        } else {
-          mayBeEmpty = true;
         }
-      } else if (subscript[j].Rank() > 0) {
+      } else if (subscript[j].Rank() > 0) { // vector subscript
         ++rank;
         if (!result) {
-          result = false; // vector subscript
+          result = false;
         }
         mayBeEmpty = true;
-      } else {
-        // Scalar subscript.
+      } else { // scalar subscript
         if (dimExtent && *dimExtent > 1) {
           knownPartialSlice[j] = true;
         }
@@ -1012,7 +1235,7 @@ private:
     if (result) {
       return result;
     }
-    // Not provably discontiguous at this point.
+    // Not provably contiguous or discontiguous at this point.
     // Return "true" if simply contiguous, otherwise nullopt.
     for (auto j{subscript.size()}; j-- > 0;) {
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
@@ -1043,22 +1266,37 @@ private:
   }
 
   FoldingContext &context_;
+  bool namedConstantSectionsAreContiguous_{false};
+  bool firstDimensionStride1_{false};
 };
 
 template <typename A>
-std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
-  return IsContiguousHelper{context}(x);
+std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1) {
+  if (!IsVariable(x) &&
+      (namedConstantSectionsAreContiguous || !ExtractDataRef(x, true, true))) {
+    return true;
+  } else {
+    return IsContiguousHelper{
+        context, namedConstantSectionsAreContiguous, firstDimensionStride1}(x);
+  }
 }
 
-template std::optional<bool> IsContiguous(
-    const Expr<SomeType> &, FoldingContext &);
-template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Substring &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
-template std::optional<bool> IsContiguous(
-    const ComplexPart &, FoldingContext &);
-template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const Substring &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const Component &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const ComplexPart &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {
@@ -1085,44 +1323,53 @@ class StmtFunctionChecker
 public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
+
+  static constexpr auto feature{
+      common::LanguageFeature::StatementFunctionExtensions};
+
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
       : Base{*this}, sf_{sf}, context_{context} {
-    if (!context_.languageFeatures().IsEnabled(
-            common::LanguageFeature::StatementFunctionExtensions)) {
+    if (!context_.languageFeatures().IsEnabled(feature)) {
       severity_ = parser::Severity::Error;
-    } else if (context_.languageFeatures().ShouldWarn(
-                   common::LanguageFeature::StatementFunctionExtensions)) {
+    } else if (context_.languageFeatures().ShouldWarn(feature)) {
       severity_ = parser::Severity::Portability;
     }
   }
   using Base::operator();
 
+  Result Return(parser::Message &&msg) const {
+    if (severity_) {
+      msg.set_severity(*severity_);
+      if (*severity_ != parser::Severity::Error) {
+        msg.set_languageFeature(feature);
+      }
+    }
+    return std::move(msg);
+  }
+
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain an array constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain an array constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const StructureConstructor &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a structure constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a structure constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const TypeParamInquiry &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
@@ -1144,21 +1391,18 @@ public:
               proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
-            auto msg{
-                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
-            msg.set_severity(*severity_);
-            return parser::Message{
-                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+            return Return(parser::Message{sf_.name(),
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
+                sf_.name(), symbol->name()});
           }
         }
       }
     }
     if (proc.Rank() > 0) {
       if (severity_) {
-        auto msg{
-            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
-        msg.set_severity(*severity_);
-        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        return Return(parser::Message{sf_.name(),
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US,
+            sf_.name()});
       }
     }
     return std::nullopt;
@@ -1170,10 +1414,9 @@ public:
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
         if (severity_) {
-          auto msg{
-              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
-          msg.set_severity(*severity_);
-          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+          return Return(parser::Message{sf_.name(),
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
+              sf_.name()});
         }
       }
     }

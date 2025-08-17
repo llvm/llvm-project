@@ -242,28 +242,28 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<bool> EnableFunctionArgSnippets{
+opt<std::string> EnableFunctionArgSnippets{
     "function-arg-placeholders",
     cat(Features),
-    desc("When disabled, completions contain only parentheses for "
-         "function calls. When enabled, completions also contain "
+    desc("When disabled (0), completions contain only parentheses for "
+         "function calls. When enabled (1), completions also contain "
          "placeholders for method parameters"),
-    init(CodeCompleteOptions().EnableFunctionArgSnippets),
+    init("-1"),
 };
 
-opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
+opt<Config::HeaderInsertionPolicy> HeaderInsertion{
     "header-insertion",
     cat(Features),
     desc("Add #include directives when accepting code completions"),
     init(CodeCompleteOptions().InsertIncludes),
     values(
-        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
+        clEnumValN(Config::HeaderInsertionPolicy::IWYU, "iwyu",
                    "Include what you use. "
                    "Insert the owning header for top-level symbols, unless the "
                    "header is already directly included or the symbol is "
                    "forward-declared"),
         clEnumValN(
-            CodeCompleteOptions::NeverInsert, "never",
+            Config::HeaderInsertionPolicy::NeverInsert, "never",
             "Never insert #include directives as part of code completion")),
 };
 
@@ -551,6 +551,13 @@ opt<std::string> ProjectRoot{
 };
 #endif
 
+opt<bool> ExperimentalModulesSupport{
+    "experimental-modules-support",
+    cat(Features),
+    desc("Experimental support for standard c++ modules"),
+    init(false),
+};
+
 /// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
@@ -597,7 +604,7 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
-                  AsyncTaskRunner *Tasks) {
+                  AsyncTaskRunner *Tasks, bool SupportContainedRefs) {
   static const trace::Metric RemoteIndexUsed("used_remote_index",
                                              trace::Metric::Value, "address");
   switch (External.Kind) {
@@ -613,8 +620,9 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
         External.Location);
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
     auto IndexLoadTask = [File = External.Location,
-                          PlaceHolder = NewIndex.get()] {
-      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true))
+                          PlaceHolder = NewIndex.get(), SupportContainedRefs] {
+      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true,
+                               SupportContainedRefs))
         PlaceHolder->reset(std::move(Idx));
     };
     if (Tasks) {
@@ -626,6 +634,22 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
     return std::move(NewIndex);
   }
   llvm_unreachable("Invalid ExternalIndexKind.");
+}
+
+std::optional<bool> shouldEnableFunctionArgSnippets() {
+  std::string Val = EnableFunctionArgSnippets;
+  // Accept the same values that a bool option parser would, but also accept
+  // -1 to indicate "unspecified", in which case the ArgumentListsPolicy
+  // config option will be respected.
+  if (Val == "1" || Val == "true" || Val == "True" || Val == "TRUE")
+    return true;
+  if (Val == "0" || Val == "false" || Val == "False" || Val == "FALSE")
+    return false;
+  if (Val != "-1")
+    elog("Value specified by --function-arg-placeholders is invalid. Provide a "
+         "boolean value or leave unspecified to use ArgumentListsPolicy from "
+         "config instead.");
+  return std::nullopt;
 }
 
 class FlagsConfigProvider : public config::Provider {
@@ -643,6 +667,7 @@ public:
     std::optional<Config::CDBSearchSpec> CDBSearch;
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
+    std::optional<Config::ArgumentListsPolicy> ArgumentLists;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -687,6 +712,11 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
+    if (std::optional<bool> Enable = shouldEnableFunctionArgSnippets()) {
+      ArgumentLists = *Enable ? Config::ArgumentListsPolicy::FullPlaceholders
+                              : Config::ArgumentListsPolicy::Delimiters;
+    }
+
     Frag = [=](const config::Params &, Config &C) {
       if (CDBSearch)
         C.CompileFlags.CDBSearch = *CDBSearch;
@@ -694,6 +724,10 @@ public:
         C.Index.External = *IndexSpec;
       if (BGPolicy)
         C.Index.Background = *BGPolicy;
+      if (ArgumentLists)
+        C.Completion.ArgumentLists = *ArgumentLists;
+      if (HeaderInsertion.getNumOccurrences())
+        C.Completion.HeaderInsertion = HeaderInsertion;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 
@@ -860,6 +894,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
+  Opts.EnableExperimentalModulesSupport = ExperimentalModulesSupport;
 
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:
@@ -872,7 +907,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = true;
-  std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
@@ -892,7 +926,12 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BackgroundIndexPriority = BackgroundIndexPriority;
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
-  auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
+  auto PAI = createProjectAwareIndex(
+      [SupportContainedRefs = Opts.EnableOutgoingCalls](
+          const Config::ExternalIndexSpec &External, AsyncTaskRunner *Tasks) {
+        return loadExternalIndex(External, Tasks, SupportContainedRefs);
+      },
+      Sync);
   Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
@@ -908,9 +947,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
+  // FIXME: If we're using C++20 modules, force the lookup process to load
+  // external decls, since currently the index doesn't support C++20 modules.
+  Opts.CodeComplete.ForceLoadPreamble = ExperimentalModulesSupport;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;

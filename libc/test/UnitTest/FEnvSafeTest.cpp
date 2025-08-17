@@ -9,9 +9,13 @@
 #include "FEnvSafeTest.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 
-namespace LIBC_NAMESPACE::testing {
+namespace LIBC_NAMESPACE_DECL {
+namespace testing {
 
 void FEnvSafeTest::PreserveFEnv::check() {
   fenv_t after;
@@ -23,6 +27,10 @@ void FEnvSafeTest::TearDown() {
   if (!should_be_unchanged) {
     restore_fenv();
   }
+  // TODO (PR 135320): Remove this override once all FEnvSafeTest instances are
+  // updated to validate or ignore errno.
+  libc_errno = 0;
+  ErrnoCheckingTest::TearDown();
 }
 
 void FEnvSafeTest::get_fenv(fenv_t &fenv) {
@@ -81,4 +89,5 @@ void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
 #endif
 }
 
-} // namespace LIBC_NAMESPACE::testing
+} // namespace testing
+} // namespace LIBC_NAMESPACE_DECL

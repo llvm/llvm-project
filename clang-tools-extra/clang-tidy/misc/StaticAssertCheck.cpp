@@ -13,9 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
 #include <string>
 
@@ -40,8 +38,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(
           hasAnyOperatorName("&&", "=="),
           hasEitherOperand(ignoringImpCasts(stringLiteral().bind("assertMSG"))),
-          anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
-                anything()))
+          optionally(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast))))
           .bind("assertExprRoot"),
       IsAlwaysFalse);
   auto NonConstexprFunctionCall =
@@ -54,12 +51,10 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
   auto NonConstexprCode =
       expr(anyOf(NonConstexprFunctionCall, NonConstexprVariableReference));
   auto AssertCondition =
-      expr(
-          anyOf(expr(ignoringParenCasts(anyOf(
-                    AssertExprRoot, unaryOperator(hasUnaryOperand(
-                                        ignoringParenCasts(AssertExprRoot)))))),
-                anything()),
-          unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
+      expr(optionally(expr(ignoringParenCasts(anyOf(
+               AssertExprRoot, unaryOperator(hasUnaryOperand(
+                                   ignoringParenCasts(AssertExprRoot))))))),
+           unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
   auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(

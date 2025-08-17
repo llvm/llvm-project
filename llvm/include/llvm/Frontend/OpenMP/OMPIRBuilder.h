@@ -14,13 +14,16 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
-#include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -28,9 +31,13 @@
 
 namespace llvm {
 class CanonicalLoopInfo;
+class ScanInfo;
 struct TargetRegionEntryInfo;
 class OffloadEntriesInfoManager;
 class OpenMPIRBuilder;
+class Loop;
+class LoopAnalysis;
+class LoopInfo;
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -39,15 +46,17 @@ class OpenMPIRBuilder;
 /// not have any PHINodes. If \p CreateBranch is true, a branch instruction to
 /// \p New will be added such that there is no semantic change. Otherwise, the
 /// \p IP insert block remains degenerate and it is up to the caller to insert a
-/// terminator.
-void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
-              bool CreateBranch);
+/// terminator. \p DL is used as the debug location for the branch instruction
+/// if one is created.
+LLVM_ABI void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
+                       bool CreateBranch, DebugLoc DL);
 
 /// Splice a BasicBlock at an IRBuilder's current insertion point. Its new
 /// insert location will stick to after the instruction before the insertion
 /// point (instead of moving with the instruction the InsertPoint stores
 /// internally).
-void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
+LLVM_ABI void spliceBB(IRBuilder<> &Builder, BasicBlock *New,
+                       bool CreateBranch);
 
 /// Split a BasicBlock at an InsertPoint, even if the block is degenerate
 /// (missing the terminator).
@@ -57,26 +66,29 @@ void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
 /// is true, a branch to the new successor will new created such that
 /// semantically there is no change; otherwise the block of the insertion point
 /// remains degenerate and it is the caller's responsibility to insert a
-/// terminator. Returns the new successor block.
-BasicBlock *splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
-                    llvm::Twine Name = {});
+/// terminator. \p DL is used as the debug location for the branch instruction
+/// if one is created. Returns the new successor block.
+LLVM_ABI BasicBlock *splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
+                             DebugLoc DL, llvm::Twine Name = {});
 
 /// Split a BasicBlock at \p Builder's insertion point, even if the block is
 /// degenerate (missing the terminator).  Its new insert location will stick to
 /// after the instruction before the insertion point (instead of moving with the
 /// instruction the InsertPoint stores internally).
-BasicBlock *splitBB(IRBuilderBase &Builder, bool CreateBranch,
-                    llvm::Twine Name = {});
+LLVM_ABI BasicBlock *splitBB(IRBuilderBase &Builder, bool CreateBranch,
+                             llvm::Twine Name = {});
 
 /// Split a BasicBlock at \p Builder's insertion point, even if the block is
 /// degenerate (missing the terminator).  Its new insert location will stick to
 /// after the instruction before the insertion point (instead of moving with the
 /// instruction the InsertPoint stores internally).
-BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch, llvm::Twine Name);
+LLVM_ABI BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch,
+                             llvm::Twine Name);
 
 /// Like splitBB, but reuses the current block's name for the new name.
-BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
-                              llvm::Twine Suffix = ".split");
+LLVM_ABI BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder,
+                                       bool CreateBranch,
+                                       llvm::Twine Suffix = ".split");
 
 /// Captures attributes that affect generating LLVM-IR using the
 /// OpenMPIRBuilder and related classes. Note that not all attributes are
@@ -115,13 +127,17 @@ public:
   // Grid Value for the GPU target
   std::optional<omp::GV> GridValue;
 
-  OpenMPIRBuilderConfig();
-  OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
-                        bool OpenMPOffloadMandatory,
-                        bool HasRequiresReverseOffload,
-                        bool HasRequiresUnifiedAddress,
-                        bool HasRequiresUnifiedSharedMemory,
-                        bool HasRequiresDynamicAllocators);
+  /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
+  /// false`), this contains the list of offloading triples associated, if any.
+  SmallVector<Triple> TargetTriples;
+
+  LLVM_ABI OpenMPIRBuilderConfig();
+  LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
+                                 bool OpenMPOffloadMandatory,
+                                 bool HasRequiresReverseOffload,
+                                 bool HasRequiresUnifiedAddress,
+                                 bool HasRequiresUnifiedSharedMemory,
+                                 bool HasRequiresDynamicAllocators);
 
   // Getters functions that assert if the required values are not present.
   bool isTargetDevice() const {
@@ -146,14 +162,14 @@ public:
   }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
-  bool hasRequiresReverseOffload() const;
-  bool hasRequiresUnifiedAddress() const;
-  bool hasRequiresUnifiedSharedMemory() const;
-  bool hasRequiresDynamicAllocators() const;
+  LLVM_ABI bool hasRequiresReverseOffload() const;
+  LLVM_ABI bool hasRequiresUnifiedAddress() const;
+  LLVM_ABI bool hasRequiresUnifiedSharedMemory() const;
+  LLVM_ABI bool hasRequiresDynamicAllocators() const;
 
   /// Returns requires directive clauses as flags compatible with those expected
   /// by libomptarget.
-  int64_t getRequiresFlags() const;
+  LLVM_ABI int64_t getRequiresFlags() const;
 
   // Returns the FirstSeparator if set, otherwise use the default separator
   // depending on isGPU
@@ -183,10 +199,10 @@ public:
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
 
-  void setHasRequiresReverseOffload(bool Value);
-  void setHasRequiresUnifiedAddress(bool Value);
-  void setHasRequiresUnifiedSharedMemory(bool Value);
-  void setHasRequiresDynamicAllocators(bool Value);
+  LLVM_ABI void setHasRequiresReverseOffload(bool Value);
+  LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
+  LLVM_ABI void setHasRequiresUnifiedSharedMemory(bool Value);
+  LLVM_ABI void setHasRequiresDynamicAllocators(bool Value);
 
 private:
   /// Flags for specifying which requires directive clauses are present.
@@ -196,6 +212,9 @@ private:
 /// Data structure to contain the information needed to uniquely identify
 /// a target entry.
 struct TargetRegionEntryInfo {
+  /// The prefix used for kernel names.
+  static constexpr const char *KernelNamePrefix = "__omp_offloading_";
+
   std::string ParentName;
   unsigned DeviceID;
   unsigned FileID;
@@ -208,10 +227,10 @@ struct TargetRegionEntryInfo {
       : ParentName(ParentName), DeviceID(DeviceID), FileID(FileID), Line(Line),
         Count(Count) {}
 
-  static void getTargetRegionEntryFnName(SmallVectorImpl<char> &Name,
-                                         StringRef ParentName,
-                                         unsigned DeviceID, unsigned FileID,
-                                         unsigned Line, unsigned Count);
+  LLVM_ABI static void
+  getTargetRegionEntryFnName(SmallVectorImpl<char> &Name, StringRef ParentName,
+                             unsigned DeviceID, unsigned FileID, unsigned Line,
+                             unsigned Count);
 
   bool operator<(const TargetRegionEntryInfo &RHS) const {
     return std::make_tuple(ParentName, DeviceID, FileID, Line, Count) <
@@ -275,7 +294,7 @@ public:
   };
 
   /// Return true if a there are no entries defined.
-  bool empty() const;
+  LLVM_ABI bool empty() const;
   /// Return number of entries defined so far.
   unsigned size() const { return OffloadingEntriesNum; }
 
@@ -319,26 +338,28 @@ public:
 
   /// Initialize target region entry.
   /// This is ONLY needed for DEVICE compilation.
-  void initializeTargetRegionEntryInfo(const TargetRegionEntryInfo &EntryInfo,
-                                       unsigned Order);
+  LLVM_ABI void
+  initializeTargetRegionEntryInfo(const TargetRegionEntryInfo &EntryInfo,
+                                  unsigned Order);
   /// Register target region entry.
-  void registerTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
-                                     Constant *Addr, Constant *ID,
-                                     OMPTargetRegionEntryKind Flags);
+  LLVM_ABI void registerTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
+                                              Constant *Addr, Constant *ID,
+                                              OMPTargetRegionEntryKind Flags);
   /// Return true if a target region entry with the provided information
   /// exists.
-  bool hasTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
-                                bool IgnoreAddressId = false) const;
+  LLVM_ABI bool hasTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
+                                         bool IgnoreAddressId = false) const;
 
   // Return the Name based on \a EntryInfo using the next available Count.
-  void getTargetRegionEntryFnName(SmallVectorImpl<char> &Name,
-                                  const TargetRegionEntryInfo &EntryInfo);
+  LLVM_ABI void
+  getTargetRegionEntryFnName(SmallVectorImpl<char> &Name,
+                             const TargetRegionEntryInfo &EntryInfo);
 
   /// brief Applies action \a Action on all registered entries.
   typedef function_ref<void(const TargetRegionEntryInfo &EntryInfo,
                             const OffloadEntryInfoTargetRegion &)>
       OffloadTargetRegionEntryInfoActTy;
-  void
+  LLVM_ABI void
   actOnTargetRegionEntriesInfo(const OffloadTargetRegionEntryInfoActTy &Action);
 
   //
@@ -412,15 +433,13 @@ public:
 
   /// Initialize device global variable entry.
   /// This is ONLY used for DEVICE compilation.
-  void initializeDeviceGlobalVarEntryInfo(StringRef Name,
-                                          OMPTargetGlobalVarEntryKind Flags,
-                                          unsigned Order);
+  LLVM_ABI void initializeDeviceGlobalVarEntryInfo(
+      StringRef Name, OMPTargetGlobalVarEntryKind Flags, unsigned Order);
 
   /// Register device global variable entry.
-  void registerDeviceGlobalVarEntryInfo(StringRef VarName, Constant *Addr,
-                                        int64_t VarSize,
-                                        OMPTargetGlobalVarEntryKind Flags,
-                                        GlobalValue::LinkageTypes Linkage);
+  LLVM_ABI void registerDeviceGlobalVarEntryInfo(
+      StringRef VarName, Constant *Addr, int64_t VarSize,
+      OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage);
   /// Checks if the variable with the given name has been registered already.
   bool hasDeviceGlobalVarEntryInfo(StringRef VarName) const {
     return OffloadEntriesDeviceGlobalVar.count(VarName) > 0;
@@ -428,7 +447,7 @@ public:
   /// Applies action \a Action on all registered entries.
   typedef function_ref<void(StringRef, const OffloadEntryInfoDeviceGlobalVar &)>
       OffloadDeviceGlobalVarEntryInfoActTy;
-  void actOnDeviceGlobalVarEntriesInfo(
+  LLVM_ABI void actOnDeviceGlobalVarEntriesInfo(
       const OffloadDeviceGlobalVarEntryInfoActTy &Action);
 
 private:
@@ -469,27 +488,55 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(Triple(M.getTargetTriple())) {}
-  ~OpenMPIRBuilder();
+        T(M.getTargetTriple()), IsFinalized(false) {}
+  LLVM_ABI ~OpenMPIRBuilder();
 
+  class AtomicInfo : public llvm::AtomicInfo {
+    llvm::Value *AtomicVar;
+
+  public:
+    AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
+               uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
+               llvm::Align ValueAlign, bool UseLibcall,
+               IRBuilderBase::InsertPoint AllocaIP, llvm::Value *AtomicVar)
+        : llvm::AtomicInfo(Builder, Ty, AtomicSizeInBits, ValueSizeInBits,
+                           AtomicAlign, ValueAlign, UseLibcall, AllocaIP),
+          AtomicVar(AtomicVar) {}
+
+    llvm::Value *getAtomicPointer() const override { return AtomicVar; }
+    void decorateWithTBAA(llvm::Instruction *I) override {}
+    llvm::AllocaInst *CreateAlloca(llvm::Type *Ty,
+                                   const llvm::Twine &Name) const override {
+      llvm::AllocaInst *allocaInst = Builder->CreateAlloca(Ty);
+      allocaInst->setName(Name);
+      return allocaInst;
+    }
+  };
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once! This internal state includes types
   /// used in the OpenMPIRBuilder generated from OMPKinds.def.
-  void initialize();
+  LLVM_ABI void initialize();
 
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
   /// Finalize the underlying module, e.g., by outlining regions.
   /// \param Fn                    The function to be finalized. If not used,
   ///                              all functions are finalized.
-  void finalize(Function *Fn = nullptr);
+  LLVM_ABI void finalize(Function *Fn = nullptr);
+
+  /// Check whether the finalize function has already run
+  /// \return true if the finalize function has already run
+  LLVM_ABI bool isFinalized();
 
   /// Add attributes known for \p FnID to \p Fn.
-  void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
+  LLVM_ABI void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
 
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
+
+  /// Type used to represent an insertion point or an error value.
+  using InsertPointOrErrorTy = Expected<InsertPointTy>;
 
   /// Get the create a name using the platform specific separators.
   /// \param Parts parts of the final name that needs separation
@@ -499,7 +546,8 @@ public:
   /// parts: "p1", "p2", "p3", "p4"
   /// The resulting name is "p1$p2.p3.p4"
   /// The separators are retrieved from the OpenMPIRBuilderConfig.
-  std::string createPlatformSpecificName(ArrayRef<StringRef> Parts) const;
+  LLVM_ABI std::string
+  createPlatformSpecificName(ArrayRef<StringRef> Parts) const;
 
   /// Callback type for variable finalization (think destructors).
   ///
@@ -509,7 +557,7 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy = std::function<void(InsertPointTy CodeGenIP)>;
+  using FinalizeCallbackTy = std::function<Error(InsertPointTy CodeGenIP)>;
 
   struct FinalizationInfo {
     /// The finalization callback provided by the last in-flight invocation of
@@ -560,15 +608,19 @@ public:
   ///                 not be split.
   /// \param CodeGenIP is the insertion point at which the body code should be
   ///                  placed.
+  ///
+  /// \return an error, if any were triggered during execution.
   using BodyGenCallbackTy =
-      function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+      function_ref<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
   // function_ref class - function_ref contains non-ownable reference
   // to the callable.
+  ///
+  /// \return an error, if any were triggered during execution.
   using StorableBodyGenCallbackTy =
-      std::function<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+      std::function<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
   /// Callback type for loop body code generation.
   ///
@@ -578,8 +630,10 @@ public:
   ///                  terminated with an unconditional branch to the loop
   ///                  latch.
   /// \param IndVar    is the induction variable usable at the insertion point.
+  ///
+  /// \return an error, if any were triggered during execution.
   using LoopBodyGenCallbackTy =
-      function_ref<void(InsertPointTy CodeGenIP, Value *IndVar)>;
+      function_ref<Error(InsertPointTy CodeGenIP, Value *IndVar)>;
 
   /// Callback type for variable privatization (think copy & default
   /// constructor).
@@ -599,7 +653,7 @@ public:
   ///
   /// \returns The new insertion point where code generation continues and
   ///          \p ReplVal the replacement value.
-  using PrivatizeCallbackTy = function_ref<InsertPointTy(
+  using PrivatizeCallbackTy = function_ref<InsertPointOrErrorTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &Original,
       Value &Inner, Value *&ReplVal)>;
 
@@ -629,9 +683,10 @@ public:
   /// \param ThreadID Optional parameter to pass in any existing ThreadID value.
   ///
   /// \returns The insertion point after the barrier.
-  InsertPointTy createBarrier(const LocationDescription &Loc,
-                              omp::Directive Kind, bool ForceSimpleCall = false,
-                              bool CheckCancelFlag = true);
+  LLVM_ABI InsertPointOrErrorTy createBarrier(const LocationDescription &Loc,
+                                              omp::Directive Kind,
+                                              bool ForceSimpleCall = false,
+                                              bool CheckCancelFlag = true);
 
   /// Generator for '#omp cancel'
   ///
@@ -640,8 +695,21 @@ public:
   /// \param CanceledDirective The kind of directive that is cancled.
   ///
   /// \returns The insertion point after the barrier.
-  InsertPointTy createCancel(const LocationDescription &Loc, Value *IfCondition,
-                             omp::Directive CanceledDirective);
+  LLVM_ABI InsertPointOrErrorTy createCancel(const LocationDescription &Loc,
+                                             Value *IfCondition,
+                                             omp::Directive CanceledDirective);
+
+  /// Generator for '#omp cancellation point'
+  ///
+  /// \param Loc The location where the directive was encountered.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  ///
+  /// \returns The insertion point after the barrier.
+  LLVM_ABI InsertPointOrErrorTy createCancellationPoint(
+      const LocationDescription &Loc, omp::Directive CanceledDirective);
+
+  /// Creates a ScanInfo object, allocates and returns the pointer.
+  Expected<ScanInfo *> scanInfoInitialize();
 
   /// Generator for '#omp parallel'
   ///
@@ -656,12 +724,11 @@ public:
   /// \param IsCancellable Flag to indicate a cancellable parallel region.
   ///
   /// \returns The insertion position *after* the parallel.
-  IRBuilder<>::InsertPoint
-  createParallel(const LocationDescription &Loc, InsertPointTy AllocaIP,
-                 BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
-                 FinalizeCallbackTy FiniCB, Value *IfCondition,
-                 Value *NumThreads, omp::ProcBindKind ProcBind,
-                 bool IsCancellable);
+  LLVM_ABI InsertPointOrErrorTy createParallel(
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
+      FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
+      omp::ProcBindKind ProcBind, bool IsCancellable);
 
   /// Generator for the control flow structure of an OpenMP canonical loop.
   ///
@@ -682,18 +749,53 @@ public:
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
-  CanonicalLoopInfo *createCanonicalLoop(const LocationDescription &Loc,
-                                         LoopBodyGenCallbackTy BodyGenCB,
-                                         Value *TripCount,
-                                         const Twine &Name = "loop");
+  LLVM_ABI Expected<CanonicalLoopInfo *>
+  createCanonicalLoop(const LocationDescription &Loc,
+                      LoopBodyGenCallbackTy BodyGenCB, Value *TripCount,
+                      const Twine &Name = "loop");
 
-  /// Generator for the control flow structure of an OpenMP canonical loop.
+  /// Generator for the control flow structure of an OpenMP canonical loops if
+  /// the parent directive has an `inscan` modifier specified.
+  /// If the `inscan` modifier is specified, the region of the parent is
+  /// expected to have a `scan` directive. Based on the clauses in
+  /// scan directive, the body of the loop is split into two loops: Input loop
+  /// and Scan Loop. Input loop contains the code generated for input phase of
+  /// scan and Scan loop contains the code generated for scan phase of scan.
+  /// From the bodyGen callback of these loops, `createScan` would be called
+  /// when a scan directive is encountered from the loop body. `createScan`
+  /// based on whether 1. inclusive or exclusive scan is specified and, 2. input
+  /// loop or scan loop is generated, lowers the body of the for loop
+  /// accordingly.
   ///
-  /// Instead of a logical iteration space, this allows specifying user-defined
-  /// loop counter values using increment, upper- and lower bounds. To
-  /// disambiguate the terminology when counting downwards, instead of lower
-  /// bounds we use \p Start for the loop counter value in the first body
-  /// iteration.
+  /// \param Loc       The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the loop body code.
+  /// \param Start     Value of the loop counter for the first iterations.
+  /// \param Stop      Loop counter values past this will stop the loop.
+  /// \param Step      Loop counter increment after each iteration; negative
+  ///                  means counting down.
+  /// \param IsSigned  Whether Start, Stop and Step are signed integers.
+  /// \param InclusiveStop Whether \p Stop itself is a valid value for the loop
+  ///                      counter.
+  /// \param ComputeIP Insertion point for instructions computing the trip
+  ///                  count. Can be used to ensure the trip count is available
+  ///                  at the outermost loop of a loop nest. If not set,
+  ///                  defaults to the preheader of the generated loop.
+  /// \param Name      Base name used to derive BB and instruction names.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                  `ScanInfoInitialize`.
+  ///
+  /// \returns A vector containing Loop Info of Input Loop and Scan Loop.
+  Expected<SmallVector<llvm::CanonicalLoopInfo *>> createCanonicalScanLoops(
+      const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+      Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+      InsertPointTy ComputeIP, const Twine &Name, ScanInfo *ScanRedInfo);
+
+  /// Calculate the trip count of a canonical loop.
+  ///
+  /// This allows specifying user-defined loop counter values using increment,
+  /// upper- and lower bounds. To disambiguate the terminology when counting
+  /// downwards, instead of lower bounds we use \p Start for the loop counter
+  /// value in the first body iteration.
   ///
   /// Consider the following limitations:
   ///
@@ -717,7 +819,31 @@ public:
   ///
   ///      for (int i = 0; i < 42; i -= 1u)
   ///
-  //
+  /// \param Loc       The insert and source location description.
+  /// \param Start     Value of the loop counter for the first iterations.
+  /// \param Stop      Loop counter values past this will stop the loop.
+  /// \param Step      Loop counter increment after each iteration; negative
+  ///                  means counting down.
+  /// \param IsSigned  Whether Start, Stop and Step are signed integers.
+  /// \param InclusiveStop Whether \p Stop itself is a valid value for the loop
+  ///                      counter.
+  /// \param Name      Base name used to derive instruction names.
+  ///
+  /// \returns The value holding the calculated trip count.
+  LLVM_ABI Value *calculateCanonicalLoopTripCount(
+      const LocationDescription &Loc, Value *Start, Value *Stop, Value *Step,
+      bool IsSigned, bool InclusiveStop, const Twine &Name = "loop");
+
+  /// Generator for the control flow structure of an OpenMP canonical loop.
+  ///
+  /// Instead of a logical iteration space, this allows specifying user-defined
+  /// loop counter values using increment, upper- and lower bounds. To
+  /// disambiguate the terminology when counting downwards, instead of lower
+  /// bounds we use \p Start for the loop counter value in the first body
+  ///
+  /// It calls \see calculateCanonicalLoopTripCount for trip count calculations,
+  /// so limitations of that method apply here as well.
+  ///
   /// \param Loc       The insert and source location description.
   /// \param BodyGenCB Callback that will generate the loop body code.
   /// \param Start     Value of the loop counter for the first iterations.
@@ -732,15 +858,17 @@ public:
   ///                  at the outermost loop of a loop nest. If not set,
   ///                  defaults to the preheader of the generated loop.
   /// \param Name      Base name used to derive BB and instruction names.
+  /// \param InScan    Whether loop has a scan reduction specified.
+  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
+  ///                  `ScanInfoInitialize`.
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
-  CanonicalLoopInfo *createCanonicalLoop(const LocationDescription &Loc,
-                                         LoopBodyGenCallbackTy BodyGenCB,
-                                         Value *Start, Value *Stop, Value *Step,
-                                         bool IsSigned, bool InclusiveStop,
-                                         InsertPointTy ComputeIP = {},
-                                         const Twine &Name = "loop");
+  LLVM_ABI Expected<CanonicalLoopInfo *> createCanonicalLoop(
+      const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+      Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+      InsertPointTy ComputeIP = {}, const Twine &Name = "loop",
+      bool InScan = false, ScanInfo *ScanRedInfo = nullptr);
 
   /// Collapse a loop nest into a single loop.
   ///
@@ -802,16 +930,17 @@ public:
   ///                  loop.
   ///
   /// \returns The CanonicalLoopInfo object representing the collapsed loop.
-  CanonicalLoopInfo *collapseLoops(DebugLoc DL,
-                                   ArrayRef<CanonicalLoopInfo *> Loops,
-                                   InsertPointTy ComputeIP);
+  LLVM_ABI CanonicalLoopInfo *collapseLoops(DebugLoc DL,
+                                            ArrayRef<CanonicalLoopInfo *> Loops,
+                                            InsertPointTy ComputeIP);
 
   /// Get the default alignment value for given target
   ///
   /// \param TargetTriple   Target triple
   /// \param Features       StringMap which describes extra CPU features
-  static unsigned getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
-                                            const StringMap<bool> &Features);
+  LLVM_ABI static unsigned
+  getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
+                            const StringMap<bool> &Features);
 
   /// Retrieve (or create if non-existent) the address of a declare
   /// target variable, used in conjunction with registerTargetGlobalVariable
@@ -847,7 +976,7 @@ public:
   /// linkage type, if unspecified and a nullptr is given, it will instead
   /// utilise the linkage stored on the existing global variable in the
   /// LLVMModule.
-  Constant *getAddrOfDeclareTargetVar(
+  LLVM_ABI Constant *getAddrOfDeclareTargetVar(
       OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind CaptureClause,
       OffloadEntriesInfoManager::OMPTargetDeviceClauseKind DeviceClause,
       bool IsDeclaration, bool IsExternallyVisible,
@@ -891,7 +1020,7 @@ public:
   /// retrieving an address for
   /// \param Addr - the original llvm value (addr) of the variable to be
   /// registered
-  void registerTargetGlobalVariable(
+  LLVM_ABI void registerTargetGlobalVariable(
       OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind CaptureClause,
       OffloadEntriesInfoManager::OMPTargetDeviceClauseKind DeviceClause,
       bool IsDeclaration, bool IsExternallyVisible,
@@ -903,7 +1032,7 @@ public:
       Type *LlvmPtrTy, Constant *Addr);
 
   /// Get the offset of the OMP_MAP_MEMBER_OF field.
-  unsigned getFlagMemberOffset();
+  LLVM_ABI unsigned getFlagMemberOffset();
 
   /// Get OMP_MAP_MEMBER_OF flag with extra bits reserved based on
   /// the position given.
@@ -912,7 +1041,7 @@ public:
   /// by the parents position in the combined information vectors used
   /// to generate the structure itself. Multiple children (member's of)
   /// with the same parent will use the same returned member flag.
-  omp::OpenMPOffloadMappingFlags getMemberOfFlag(unsigned Position);
+  LLVM_ABI omp::OpenMPOffloadMappingFlags getMemberOfFlag(unsigned Position);
 
   /// Given an initial flag set, this function modifies it to contain
   /// the passed in MemberOfFlag generated from the getMemberOfFlag
@@ -923,8 +1052,9 @@ public:
   /// \param MemberOfFlag - A modified OMP_MAP_MEMBER_OF flag, adjusted
   /// slightly based on the getMemberOfFlag which adjusts the flag bits
   /// based on the members position in its parent.
-  void setCorrectMemberOfFlag(omp::OpenMPOffloadMappingFlags &Flags,
-                              omp::OpenMPOffloadMappingFlags MemberOfFlag);
+  LLVM_ABI void
+  setCorrectMemberOfFlag(omp::OpenMPOffloadMappingFlags &Flags,
+                         omp::OpenMPOffloadMappingFlags MemberOfFlag);
 
 private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop
@@ -965,11 +1095,12 @@ private:
   ///                 preheader of the loop.
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
+  /// \param LoopType Type of workshare loop.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         bool NeedsBarrier);
+  InsertPointOrErrorTy applyStaticWorkshareLoop(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      omp::WorksharingLoopType LoopType, bool NeedsBarrier);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
@@ -984,11 +1115,11 @@ private:
   /// \param ChunkSize    The user-specified chunk size.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyStaticChunkedWorkshareLoop(DebugLoc DL,
-                                                CanonicalLoopInfo *CLI,
-                                                InsertPointTy AllocaIP,
-                                                bool NeedsBarrier,
-                                                Value *ChunkSize);
+  InsertPointOrErrorTy applyStaticChunkedWorkshareLoop(DebugLoc DL,
+                                                       CanonicalLoopInfo *CLI,
+                                                       InsertPointTy AllocaIP,
+                                                       bool NeedsBarrier,
+                                                       Value *ChunkSize);
 
   /// Modifies the canonical loop to be a dynamically-scheduled workshare loop.
   ///
@@ -1010,11 +1141,12 @@ private:
   ///                 scheduling. If \p nullptr, defaults to 1.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                          InsertPointTy AllocaIP,
-                                          omp::OMPScheduleType SchedType,
-                                          bool NeedsBarrier,
-                                          Value *Chunk = nullptr);
+  InsertPointOrErrorTy applyDynamicWorkshareLoop(DebugLoc DL,
+                                                 CanonicalLoopInfo *CLI,
+                                                 InsertPointTy AllocaIP,
+                                                 omp::OMPScheduleType SchedType,
+                                                 bool NeedsBarrier,
+                                                 Value *Chunk = nullptr);
 
   /// Create alternative version of the loop to support if clause
   ///
@@ -1028,7 +1160,9 @@ private:
   ///                   original and copied loop values and loop blocks.
   /// \param NamePrefix Optional name prefix for if.then if.else blocks.
   void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
-                       ValueToValueMapTy &VMap, const Twine &NamePrefix = "");
+                       ValueMap<const Value *, WeakTrackingVH> &VMap,
+                       LoopAnalysis &LIA, LoopInfo &LI, llvm::Loop *L,
+                       const Twine &NamePrefix = "");
 
 public:
   /// Modifies the canonical loop to be a workshare loop.
@@ -1065,7 +1199,7 @@ public:
   ///                 It corresponds to type of loop workshare OpenMP pragma.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoop(
+  LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
       bool NeedsBarrier,
       llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default,
@@ -1118,7 +1252,7 @@ public:
   /// \returns A list of generated loops. Contains twice as many loops as the
   ///          input loop nest; the first half are the floor loops and the
   ///          second half are the tile loops.
-  std::vector<CanonicalLoopInfo *>
+  LLVM_ABI std::vector<CanonicalLoopInfo *>
   tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
             ArrayRef<Value *> TileSizes);
 
@@ -1130,14 +1264,14 @@ public:
   ///
   /// \param DL   Debug location for instructions added by unrolling.
   /// \param Loop The loop to unroll. The loop will be invalidated.
-  void unrollLoopFull(DebugLoc DL, CanonicalLoopInfo *Loop);
+  LLVM_ABI void unrollLoopFull(DebugLoc DL, CanonicalLoopInfo *Loop);
 
   /// Fully or partially unroll a loop. How the loop is unrolled is determined
   /// using LLVM's LoopUnrollPass.
   ///
   /// \param DL   Debug location for instructions added by unrolling.
   /// \param Loop The loop to unroll. The loop will be invalidated.
-  void unrollLoopHeuristic(DebugLoc DL, CanonicalLoopInfo *Loop);
+  LLVM_ABI void unrollLoopHeuristic(DebugLoc DL, CanonicalLoopInfo *Loop);
 
   /// Partially unroll a loop.
   ///
@@ -1161,8 +1295,9 @@ public:
   /// \param UnrolledCLI If non-null, receives the CanonicalLoopInfo of the
   ///                    partially unrolled loop. Otherwise, uses loop metadata
   ///                    to defer unrolling to the LoopUnrollPass.
-  void unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop, int32_t Factor,
-                         CanonicalLoopInfo **UnrolledCLI);
+  LLVM_ABI void unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop,
+                                  int32_t Factor,
+                                  CanonicalLoopInfo **UnrolledCLI);
 
   /// Add metadata to simd-ize a loop. If IfCond is not nullptr, the loop
   /// is cloned. The metadata which prevents vectorization is added to
@@ -1177,25 +1312,25 @@ public:
   /// \param Order       The enum to map order clause.
   /// \param Simdlen     The Simdlen length to apply to the simd loop.
   /// \param Safelen     The Safelen length to apply to the simd loop.
-  void applySimd(CanonicalLoopInfo *Loop,
-                 MapVector<Value *, Value *> AlignedVars, Value *IfCond,
-                 omp::OrderKind Order, ConstantInt *Simdlen,
-                 ConstantInt *Safelen);
+  LLVM_ABI void applySimd(CanonicalLoopInfo *Loop,
+                          MapVector<Value *, Value *> AlignedVars,
+                          Value *IfCond, omp::OrderKind Order,
+                          ConstantInt *Simdlen, ConstantInt *Safelen);
 
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
-  void createFlush(const LocationDescription &Loc);
+  LLVM_ABI void createFlush(const LocationDescription &Loc);
 
   /// Generator for '#omp taskwait'
   ///
   /// \param Loc The location where the taskwait directive was encountered.
-  void createTaskwait(const LocationDescription &Loc);
+  LLVM_ABI void createTaskwait(const LocationDescription &Loc);
 
   /// Generator for '#omp taskyield'
   ///
   /// \param Loc The location where the taskyield directive was encountered.
-  void createTaskyield(const LocationDescription &Loc);
+  LLVM_ABI void createTaskyield(const LocationDescription &Loc);
 
   /// A struct to pack the relevant information for an OpenMP depend clause.
   struct DependData {
@@ -1222,20 +1357,26 @@ public:
   ///                    cannot be resumed until execution of the structured
   ///                    block that is associated with the generated task is
   ///                    completed.
-  InsertPointTy createTask(const LocationDescription &Loc,
-                           InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
-                           bool Tied = true, Value *Final = nullptr,
-                           Value *IfCondition = nullptr,
-                           SmallVector<DependData> Dependencies = {});
+  /// \param EventHandle If present, signifies the event handle as part of
+  ///			 the detach clause
+  /// \param Mergeable	 If the given task is `mergeable`
+  /// \param priority `priority-value' specifies the execution order of the
+  ///                 tasks that is generated by the construct
+  LLVM_ABI InsertPointOrErrorTy
+  createTask(const LocationDescription &Loc, InsertPointTy AllocaIP,
+             BodyGenCallbackTy BodyGenCB, bool Tied = true,
+             Value *Final = nullptr, Value *IfCondition = nullptr,
+             SmallVector<DependData> Dependencies = {}, bool Mergeable = false,
+             Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
   ///
   /// \param Loc The location where the taskgroup construct was encountered.
   /// \param AllocaIP The insertion point to be used for alloca instructions.
   /// \param BodyGenCB Callback that will generate the region code.
-  InsertPointTy createTaskgroup(const LocationDescription &Loc,
-                                InsertPointTy AllocaIP,
-                                BodyGenCallbackTy BodyGenCB);
+  LLVM_ABI InsertPointOrErrorTy createTaskgroup(const LocationDescription &Loc,
+                                                InsertPointTy AllocaIP,
+                                                BodyGenCallbackTy BodyGenCB);
 
   using FileIdentifierInfoCallbackTy =
       std::function<std::tuple<std::string, uint64_t>()>;
@@ -1247,7 +1388,7 @@ public:
   /// resides in as well as the line number for the target entry
   /// \param ParentName The name of the parent the target entry resides in, if
   /// any.
-  static TargetRegionEntryInfo
+  LLVM_ABI static TargetRegionEntryInfo
   getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                            StringRef ParentName = "");
 
@@ -1273,15 +1414,15 @@ public:
   /// \param CodeGenIP InsertPoint for CodeGen.
   /// \param LHS Pass in the LHS Value to be used for CodeGen.
   /// \param RHS Pass in the RHS Value to be used for CodeGen.
-  using ReductionGenCBTy = std::function<InsertPointTy(
+  using ReductionGenCBTy = std::function<InsertPointOrErrorTy(
       InsertPointTy CodeGenIP, Value *LHS, Value *RHS, Value *&Res)>;
 
   /// Functions used to generate atomic reductions. Such functions take two
   /// Values representing pointers to LHS and RHS of the reduction, as well as
   /// the element type of these pointers. They are expected to atomically
   /// update the LHS to the reduced value.
-  using ReductionGenAtomicCBTy =
-      std::function<InsertPointTy(InsertPointTy, Type *, Value *, Value *)>;
+  using ReductionGenAtomicCBTy = std::function<InsertPointOrErrorTy(
+      InsertPointTy, Type *, Value *, Value *)>;
 
   /// Enum class for reduction evaluation types scalar, complex and aggregate.
   enum class EvalKind { Scalar, Complex, Aggregate };
@@ -1346,9 +1487,6 @@ public:
 
   /// Supporting functions for Reductions CodeGen.
 private:
-  /// Emit the llvm.used metadata.
-  void emitUsed(StringRef Name, std::vector<llvm::WeakTrackingVH> &List);
-
   /// Get the id of the current thread on the GPU.
   Value *getGPUThreadID();
 
@@ -1462,6 +1600,47 @@ private:
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
       Function *ReduceFn, AttributeList FuncAttrs);
 
+  /// Helper function for CreateCanonicalScanLoops to create InputLoop
+  /// in the firstGen and Scan Loop in the SecondGen
+  /// \param InputLoopGen Callback for generating the loop for input phase
+  /// \param ScanLoopGen  Callback for generating the loop for scan phase
+  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
+  ///                     `ScanInfoInitialize`.
+  ///
+  /// \return error if any produced, else return success.
+  Error emitScanBasedDirectiveIR(
+      llvm::function_ref<Error()> InputLoopGen,
+      llvm::function_ref<Error(LocationDescription Loc)> ScanLoopGen,
+      ScanInfo *ScanRedInfo);
+
+  /// Creates the basic blocks required for scan reduction.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                    `ScanInfoInitialize`.
+  void createScanBBs(ScanInfo *ScanRedInfo);
+
+  /// Dynamically allocates the buffer needed for scan reduction.
+  /// \param AllocaIP    The IP where possibly-shared pointer of buffer needs to
+  ///                    be declared.
+  /// \param ScanVars    Scan Variables.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                    `ScanInfoInitialize`.
+  ///
+  /// \return error if any produced, else return success.
+  Error emitScanBasedDirectiveDeclsIR(InsertPointTy AllocaIP,
+                                      ArrayRef<llvm::Value *> ScanVars,
+                                      ArrayRef<llvm::Type *> ScanVarsType,
+                                      ScanInfo *ScanRedInfo);
+
+  /// Copies the result back to the reduction variable.
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ScanRedInfo    Pointer to the ScanInfo objected created using
+  ///                       `ScanInfoInitialize`.
+  ///
+  /// \return error if any produced, else return success.
+  Error emitScanBasedDirectiveFinalsIR(
+      ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
+      ScanInfo *ScanInfo);
+
   /// This function emits a helper that gathers Reduce lists from the first
   /// lane of every active warp to lanes in the first warp.
   ///
@@ -1481,9 +1660,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The InterWarpCopy function.
-  Function *emitInterWarpCopyFunction(const LocationDescription &Loc,
-                                      ArrayRef<ReductionInfo> ReductionInfos,
-                                      AttributeList FuncAttrs);
+  Expected<Function *>
+  emitInterWarpCopyFunction(const LocationDescription &Loc,
+                            ArrayRef<ReductionInfo> ReductionInfos,
+                            AttributeList FuncAttrs);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1575,7 +1755,7 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The reduction function.
-  Function *createReductionFunction(
+  Expected<Function *> createReductionFunction(
       StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       AttributeList FuncAttrs = {});
@@ -1836,17 +2016,14 @@ public:
   ///                           nowait.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
-  /// \param HasDistribute      Optional flag set if it is a
-  ///                           distribute reduction.
   /// \param GridValue          Optional GPU grid value.
   /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
   /// \param SrcLocInfo         Source location information global.
-  InsertPointTy createReductionsGPU(
+  LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
-      bool HasDistribute = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -1914,10 +2091,12 @@ public:
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
   /// \param IsByRef            A flag set if the reduction is using reference
   /// or direct value.
-  InsertPointTy createReductions(const LocationDescription &Loc,
-                                 InsertPointTy AllocaIP,
-                                 ArrayRef<ReductionInfo> ReductionInfos,
-                                 ArrayRef<bool> IsByRef, bool IsNoWait = false);
+  /// \param IsTeamsReduction   Optional flag set if it is a teams
+  ///                           reduction.
+  LLVM_ABI InsertPointOrErrorTy createReductions(
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      ArrayRef<ReductionInfo> ReductionInfos, ArrayRef<bool> IsByRef,
+      bool IsNoWait = false, bool IsTeamsReduction = false);
 
   ///}
 
@@ -1932,50 +2111,62 @@ public:
   }
 
   /// Return the function declaration for the runtime function with \p FnID.
-  FunctionCallee getOrCreateRuntimeFunction(Module &M,
-                                            omp::RuntimeFunction FnID);
+  LLVM_ABI FunctionCallee getOrCreateRuntimeFunction(Module &M,
+                                                     omp::RuntimeFunction FnID);
 
-  Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
+  LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
-  Constant *getOrCreateSrcLocStr(StringRef LocStr, uint32_t &SrcLocStrSize);
+  LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
+                                          uint32_t &SrcLocStrSize);
 
   /// Return the (LLVM-IR) string describing the default source location.
-  Constant *getOrCreateDefaultSrcLocStr(uint32_t &SrcLocStrSize);
+  LLVM_ABI Constant *getOrCreateDefaultSrcLocStr(uint32_t &SrcLocStrSize);
 
   /// Return the (LLVM-IR) string describing the source location identified by
   /// the arguments.
-  Constant *getOrCreateSrcLocStr(StringRef FunctionName, StringRef FileName,
-                                 unsigned Line, unsigned Column,
-                                 uint32_t &SrcLocStrSize);
+  LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef FunctionName,
+                                          StringRef FileName, unsigned Line,
+                                          unsigned Column,
+                                          uint32_t &SrcLocStrSize);
 
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
-  Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
-                                 Function *F = nullptr);
+  LLVM_ABI Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
+                                          Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.
-  Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
-                                 uint32_t &SrcLocStrSize);
+  LLVM_ABI Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
+                                          uint32_t &SrcLocStrSize);
 
   /// Return an ident_t* encoding the source location \p SrcLocStr and \p Flags.
   /// TODO: Create a enum class for the Reserve2Flags
-  Constant *getOrCreateIdent(Constant *SrcLocStr, uint32_t SrcLocStrSize,
-                             omp::IdentFlag Flags = omp::IdentFlag(0),
-                             unsigned Reserve2Flags = 0);
+  LLVM_ABI Constant *getOrCreateIdent(Constant *SrcLocStr,
+                                      uint32_t SrcLocStrSize,
+                                      omp::IdentFlag Flags = omp::IdentFlag(0),
+                                      unsigned Reserve2Flags = 0);
 
   /// Create a hidden global flag \p Name in the module with initial value \p
   /// Value.
-  GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
+  LLVM_ABI GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
+
+  /// Emit the llvm.used metadata.
+  LLVM_ABI void emitUsed(StringRef Name, ArrayRef<llvm::WeakTrackingVH> List);
+
+  /// Emit the kernel execution mode.
+  LLVM_ABI GlobalVariable *
+  emitKernelExecutionMode(StringRef KernelName, omp::OMPTgtExecModeFlags Mode);
 
   /// Generate control flow and cleanup for cancellation.
   ///
   /// \param CancelFlag Flag indicating if the cancellation is performed.
   /// \param CanceledDirective The kind of directive that is cancled.
   /// \param ExitCB Extra code to be generated in the exit block.
-  void emitCancelationCheckImpl(Value *CancelFlag,
-                                omp::Directive CanceledDirective,
-                                FinalizeCallbackTy ExitCB = {});
+  ///
+  /// \return an error, if any were triggered during execution.
+  LLVM_ABI Error emitCancelationCheckImpl(Value *CancelFlag,
+                                          omp::Directive CanceledDirective,
+                                          FinalizeCallbackTy ExitCB = {});
 
   /// Generate a target region entry call.
   ///
@@ -1988,16 +2179,17 @@ public:
   /// \param NumThreads Number of threads via the 'thread_limit' clause.
   /// \param HostPtr Pointer to the host-side pointer of the target kernel.
   /// \param KernelArgs Array of arguments to the kernel.
-  InsertPointTy emitTargetKernel(const LocationDescription &Loc,
-                                 InsertPointTy AllocaIP, Value *&Return,
-                                 Value *Ident, Value *DeviceID, Value *NumTeams,
-                                 Value *NumThreads, Value *HostPtr,
-                                 ArrayRef<Value *> KernelArgs);
+  LLVM_ABI InsertPointTy emitTargetKernel(const LocationDescription &Loc,
+                                          InsertPointTy AllocaIP,
+                                          Value *&Return, Value *Ident,
+                                          Value *DeviceID, Value *NumTeams,
+                                          Value *NumThreads, Value *HostPtr,
+                                          ArrayRef<Value *> KernelArgs);
 
   /// Generate a flush runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  void emitFlush(const LocationDescription &Loc);
+  LLVM_ABI void emitFlush(const LocationDescription &Loc);
 
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
@@ -2015,17 +2207,17 @@ public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  void emitTaskwaitImpl(const LocationDescription &Loc);
+  LLVM_ABI void emitTaskwaitImpl(const LocationDescription &Loc);
 
   /// Generate a taskyield runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  void emitTaskyieldImpl(const LocationDescription &Loc);
+  LLVM_ABI void emitTaskyieldImpl(const LocationDescription &Loc);
 
   /// Return the current thread ID.
   ///
   /// \param Ident The ident (ident_t*) describing the query origin.
-  Value *getOrCreateThreadID(Value *Ident);
+  LLVM_ABI Value *getOrCreateThreadID(Value *Ident);
 
   /// The OpenMPIRBuilder Configuration
   OpenMPIRBuilderConfig Config;
@@ -2058,8 +2250,8 @@ public:
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
-    void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
-                       SmallVectorImpl<BasicBlock *> &BlockVector);
+    LLVM_ABI void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
+                                SmallVectorImpl<BasicBlock *> &BlockVector);
 
     /// Return the function that contains the region to be outlined.
     Function *getFunction() const { return EntryBB->getParent(); }
@@ -2077,6 +2269,9 @@ public:
   /// free'd.
   std::forward_list<CanonicalLoopInfo> LoopInfos;
 
+  /// Collection of owned ScanInfo objects that eventually need to be free'd.
+  std::forward_list<ScanInfo> ScanInfos;
+
   /// Add a new region that will be outlined later.
   void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
 
@@ -2088,16 +2283,17 @@ public:
   StringMap<GlobalVariable *, BumpPtrAllocator> InternalVars;
 
   /// Computes the size of type in bytes.
-  Value *getSizeInBytes(Value *BasePtr);
+  LLVM_ABI Value *getSizeInBytes(Value *BasePtr);
 
   // Emit a branch from the current block to the Target block only if
   // the current block has a terminator.
-  void emitBranch(BasicBlock *Target);
+  LLVM_ABI void emitBranch(BasicBlock *Target);
 
   // If BB has no use then delete it and return. Else place BB after the current
   // block, if possible, or else at the end of the function. Also add a branch
   // from current block to BB if current block does not have a terminator.
-  void emitBlock(BasicBlock *BB, Function *CurFn, bool IsFinished = false);
+  LLVM_ABI void emitBlock(BasicBlock *BB, Function *CurFn,
+                          bool IsFinished = false);
 
   /// Emits code for OpenMP 'if' clause using specified \a BodyGenCallbackTy
   /// Here is the logic:
@@ -2106,15 +2302,19 @@ public:
   /// } else {
   ///   ElseGen();
   /// }
-  void emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
-                    BodyGenCallbackTy ElseGen, InsertPointTy AllocaIP = {});
+  ///
+  /// \return an error, if any were triggered during execution.
+  LLVM_ABI Error emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
+                              BodyGenCallbackTy ElseGen,
+                              InsertPointTy AllocaIP = {});
 
   /// Create the global variable holding the offload mappings information.
-  GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
-                                        std::string VarName);
+  LLVM_ABI GlobalVariable *
+  createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
+                        std::string VarName);
 
   /// Create the global variable holding the offload names information.
-  GlobalVariable *
+  LLVM_ABI GlobalVariable *
   createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
                         std::string VarName);
 
@@ -2125,9 +2325,10 @@ public:
   };
 
   /// Create the allocas instruction used in call to mapper functions.
-  void createMapperAllocas(const LocationDescription &Loc,
-                           InsertPointTy AllocaIP, unsigned NumOperands,
-                           struct MapperAllocas &MapperAllocas);
+  LLVM_ABI void createMapperAllocas(const LocationDescription &Loc,
+                                    InsertPointTy AllocaIP,
+                                    unsigned NumOperands,
+                                    struct MapperAllocas &MapperAllocas);
 
   /// Create the call for the target mapper function.
   /// \param Loc The source location description.
@@ -2138,10 +2339,11 @@ public:
   /// \param MapperAllocas The AllocaInst used for the call.
   /// \param DeviceID Device ID for the call.
   /// \param NumOperands Number of operands in the call.
-  void emitMapperCall(const LocationDescription &Loc, Function *MapperFunc,
-                      Value *SrcLocInfo, Value *MaptypesArg, Value *MapnamesArg,
-                      struct MapperAllocas &MapperAllocas, int64_t DeviceID,
-                      unsigned NumOperands);
+  LLVM_ABI void emitMapperCall(const LocationDescription &Loc,
+                               Function *MapperFunc, Value *SrcLocInfo,
+                               Value *MaptypesArg, Value *MapnamesArg,
+                               struct MapperAllocas &MapperAllocas,
+                               int64_t DeviceID, unsigned NumOperands);
 
   /// Container for the arguments used to pass data to the runtime library.
   struct TargetDataRTArgs {
@@ -2176,28 +2378,68 @@ public:
           MapNamesArray(MapNamesArray) {}
   };
 
+  /// Container to pass the default attributes with which a kernel must be
+  /// launched, used to set kernel attributes and populate associated static
+  /// structures.
+  ///
+  /// For max values, < 0 means unset, == 0 means set but unknown at compile
+  /// time. The number of max values will be 1 except for the case where
+  /// ompx_bare is set.
+  struct TargetKernelDefaultAttrs {
+    omp::OMPTgtExecModeFlags ExecFlags =
+        omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+    SmallVector<int32_t, 3> MaxTeams = {-1};
+    int32_t MinTeams = 1;
+    SmallVector<int32_t, 3> MaxThreads = {-1};
+    int32_t MinThreads = 1;
+    int32_t ReductionDataSize = 0;
+    int32_t ReductionBufferLength = 0;
+  };
+
+  /// Container to pass LLVM IR runtime values or constants related to the
+  /// number of teams and threads with which the kernel must be launched, as
+  /// well as the trip count of the loop, if it is an SPMD or Generic-SPMD
+  /// kernel. These must be defined in the host prior to the call to the kernel
+  /// launch OpenMP RTL function.
+  struct TargetKernelRuntimeAttrs {
+    SmallVector<Value *, 3> MaxTeams = {nullptr};
+    Value *MinTeams = nullptr;
+    SmallVector<Value *, 3> TargetThreadLimit = {nullptr};
+    SmallVector<Value *, 3> TeamsThreadLimit = {nullptr};
+
+    /// 'parallel' construct 'num_threads' clause value, if present and it is an
+    /// SPMD kernel.
+    Value *MaxThreads = nullptr;
+
+    /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
+    /// it is a generic kernel.
+    Value *LoopTripCount = nullptr;
+  };
+
   /// Data structure that contains the needed information to construct the
   /// kernel args vector.
   struct TargetKernelArgs {
     /// Number of arguments passed to the runtime library.
-    unsigned NumTargetItems;
+    unsigned NumTargetItems = 0;
     /// Arguments passed to the runtime library
     TargetDataRTArgs RTArgs;
     /// The number of iterations
-    Value *NumIterations;
+    Value *NumIterations = nullptr;
     /// The number of teams.
-    Value *NumTeams;
+    ArrayRef<Value *> NumTeams;
     /// The number of threads.
-    Value *NumThreads;
+    ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem;
+    Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
-    bool HasNoWait;
+    bool HasNoWait = false;
 
-    /// Constructor for TargetKernelArgs
+    // Constructors for TargetKernelArgs.
+    TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
-                     Value *NumIterations, Value *NumTeams, Value *NumThreads,
-                     Value *DynCGGroupMem, bool HasNoWait)
+                     Value *NumIterations, ArrayRef<Value *> NumTeams,
+                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
+                     bool HasNoWait)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
@@ -2207,9 +2449,9 @@ public:
   /// Create the kernel args vector used by emitTargetKernel. This function
   /// creates various constant values that are used in the resulting args
   /// vector.
-  static void getKernelArgsVector(TargetKernelArgs &KernelArgs,
-                                  IRBuilderBase &Builder,
-                                  SmallVector<Value *> &ArgsVector);
+  LLVM_ABI static void getKernelArgsVector(TargetKernelArgs &KernelArgs,
+                                           IRBuilderBase &Builder,
+                                           SmallVector<Value *> &ArgsVector);
 
   /// Struct that keeps the information that should be kept throughout
   /// a 'target data' region.
@@ -2230,6 +2472,11 @@ public:
     bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
+
+    bool EmitDebug = false;
+
+    /// Whether the `target ... data` directive has a `nowait` clause.
+    bool HasNoWait = false;
 
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
@@ -2299,17 +2546,23 @@ public:
                                    CurInfo.NonContigInfo.Strides.end());
     }
   };
+  using MapInfosOrErrorTy = Expected<MapInfosTy &>;
 
   /// Callback function type for functions emitting the host fallback code that
   /// is executed when the kernel launch fails. It takes an insertion point as
   /// parameter where the code should be emitted. It returns an insertion point
   /// that points right after after the emitted code.
-  using EmitFallbackCallbackTy = function_ref<InsertPointTy(InsertPointTy)>;
+  using EmitFallbackCallbackTy =
+      function_ref<InsertPointOrErrorTy(InsertPointTy)>;
+
+  // Callback function type for emitting and fetching user defined custom
+  // mappers.
+  using CustomMapperCallbackTy =
+      function_ref<Expected<Function *>(unsigned int)>;
 
   /// Generate a target region entry call and host fallback call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  /// \param OutlinedFn The outlined kernel function.
   /// \param OutlinedFnID The ooulined function ID.
   /// \param EmitTargetCallFallbackCB Call back function to generate host
   ///        fallback code.
@@ -2317,41 +2570,84 @@ public:
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param RTLoc Source location identifier
   /// \param AllocaIP The insertion point to be used for alloca instructions.
-  InsertPointTy emitKernelLaunch(
-      const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
+  LLVM_ABI InsertPointOrErrorTy emitKernelLaunch(
+      const LocationDescription &Loc, Value *OutlinedFnID,
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
+
+  /// Callback type for generating the bodies of device directives that require
+  /// outer target tasks (e.g. in case of having `nowait` or `depend` clauses).
+  ///
+  /// \param DeviceID The ID of the device on which the target region will
+  ///        execute.
+  /// \param RTLoc Source location identifier
+  /// \Param TargetTaskAllocaIP Insertion point for the alloca block of the
+  ///        generated task.
+  ///
+  /// \return an error, if any were triggered during execution.
+  using TargetTaskBodyCallbackTy =
+      function_ref<Error(Value *DeviceID, Value *RTLoc,
+                         IRBuilderBase::InsertPoint TargetTaskAllocaIP)>;
+
+  /// Generate a target-task for the target construct
+  ///
+  /// \param TaskBodyCB Callback to generate the actual body of the target task.
+  /// \param DeviceID Identifier for the device via the 'device' clause.
+  /// \param RTLoc Source location identifier
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param Dependencies Vector of DependData objects holding information of
+  ///        dependencies as specified by the 'depend' clause.
+  /// \param HasNoWait True if the target construct had 'nowait' on it, false
+  ///        otherwise
+  LLVM_ABI InsertPointOrErrorTy emitTargetTask(
+      TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
+      const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+      const TargetDataRTArgs &RTArgs, bool HasNoWait);
 
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
   /// ForEndCall, emit map types to be passed for the end of the region instead
   /// of the beginning.
-  void emitOffloadingArraysArgument(IRBuilderBase &Builder,
-                                    OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
-                                    OpenMPIRBuilder::TargetDataInfo &Info,
-                                    bool EmitDebug = false,
-                                    bool ForEndCall = false);
+  LLVM_ABI void emitOffloadingArraysArgument(
+      IRBuilderBase &Builder, OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
+      OpenMPIRBuilder::TargetDataInfo &Info, bool ForEndCall = false);
 
   /// Emit an array of struct descriptors to be assigned to the offload args.
-  void emitNonContiguousDescriptor(InsertPointTy AllocaIP,
-                                   InsertPointTy CodeGenIP,
-                                   MapInfosTy &CombinedInfo,
-                                   TargetDataInfo &Info);
+  LLVM_ABI void emitNonContiguousDescriptor(InsertPointTy AllocaIP,
+                                            InsertPointTy CodeGenIP,
+                                            MapInfosTy &CombinedInfo,
+                                            TargetDataInfo &Info);
 
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
-  /// return nullptr by reference.
-  void emitOffloadingArrays(
+  /// return nullptr by reference. Accepts a reference to a MapInfosTy object
+  /// that contains information generated for mappable clauses,
+  /// including base pointers, pointers, sizes, map types, user-defined mappers.
+  LLVM_ABI Error emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
-      TargetDataInfo &Info, bool IsNonContiguous = false,
-      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+      TargetDataInfo &Info, CustomMapperCallbackTy CustomMapperCB,
+      bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr);
+
+  /// Allocates memory for and populates the arrays required for offloading
+  /// (offload_{baseptrs|ptrs|mappers|sizes|maptypes|mapnames}). Then, it
+  /// emits their base addresses as arguments to be passed to the runtime
+  /// library. In essence, this function is a combination of
+  /// emitOffloadingArrays and emitOffloadingArraysArgument and should arguably
+  /// be preferred by clients of OpenMPIRBuilder.
+  LLVM_ABI Error emitOffloadingArraysAndArgs(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+      TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
+      CustomMapperCallbackTy CustomMapperCB, bool IsNonContiguous = false,
+      bool ForEndCall = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr);
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
-  void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
-                          int32_t Flags, GlobalValue::LinkageTypes,
-                          StringRef Name = "");
+  LLVM_ABI void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
+                                   int32_t Flags, GlobalValue::LinkageTypes,
+                                   StringRef Name = "");
 
   /// The kind of errors that can occur when emitting the offload entries and
   /// metadata.
@@ -2372,7 +2668,7 @@ public:
   // !omp_offload.info = !{!1, ...}
   //
   // We only generate metadata for function that contain target regions.
-  void createOffloadEntriesAndInfoMetadata(
+  LLVM_ABI void createOffloadEntriesAndInfoMetadata(
       EmitMetadataErrorReportFunctionTy &ErrorReportFunction);
 
 public:
@@ -2386,9 +2682,11 @@ public:
   ///
   /// \return The insertion position *after* the CopyPrivate call.
 
-  InsertPointTy createCopyPrivate(const LocationDescription &Loc,
-                                  llvm::Value *BufSize, llvm::Value *CpyBuf,
-                                  llvm::Value *CpyFn, llvm::Value *DidIt);
+  LLVM_ABI InsertPointTy createCopyPrivate(const LocationDescription &Loc,
+                                           llvm::Value *BufSize,
+                                           llvm::Value *CpyBuf,
+                                           llvm::Value *CpyFn,
+                                           llvm::Value *DidIt);
 
   /// Generator for '#omp single'
   ///
@@ -2400,11 +2698,11 @@ public:
   /// \param CPFuncs copy functions to use for each copyprivate variable.
   ///
   /// \returns The insertion position *after* the single call.
-  InsertPointTy createSingle(const LocationDescription &Loc,
-                             BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB, bool IsNowait,
-                             ArrayRef<llvm::Value *> CPVars = {},
-                             ArrayRef<llvm::Function *> CPFuncs = {});
+  LLVM_ABI InsertPointOrErrorTy
+  createSingle(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+               FinalizeCallbackTy FiniCB, bool IsNowait,
+               ArrayRef<llvm::Value *> CPVars = {},
+               ArrayRef<llvm::Function *> CPFuncs = {});
 
   /// Generator for '#omp master'
   ///
@@ -2413,9 +2711,9 @@ public:
   /// \param FiniCB Callback to finalize variable copies.
   ///
   /// \returns The insertion position *after* the master.
-  InsertPointTy createMaster(const LocationDescription &Loc,
-                             BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB);
+  LLVM_ABI InsertPointOrErrorTy createMaster(const LocationDescription &Loc,
+                                             BodyGenCallbackTy BodyGenCB,
+                                             FinalizeCallbackTy FiniCB);
 
   /// Generator for '#omp masked'
   ///
@@ -2424,9 +2722,52 @@ public:
   /// \param FiniCB Callback to finialize variable copies.
   ///
   /// \returns The insertion position *after* the masked.
-  InsertPointTy createMasked(const LocationDescription &Loc,
-                             BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB, Value *Filter);
+  LLVM_ABI InsertPointOrErrorTy createMasked(const LocationDescription &Loc,
+                                             BodyGenCallbackTy BodyGenCB,
+                                             FinalizeCallbackTy FiniCB,
+                                             Value *Filter);
+
+  /// This function performs the scan reduction of the values updated in
+  /// the input phase. The reduction logic needs to be emitted between input
+  /// and scan loop returned by `CreateCanonicalScanLoops`. The following
+  /// is the code that is generated, `buffer` and `span` are expected to be
+  /// populated before executing the generated code.
+  /// \code{c}
+  /// for (int k = 0; k != ceil(log2(span)); ++k) {
+  ///   i=pow(2,k)
+  ///   for (size cnt = last_iter; cnt >= i; --cnt)
+  ///     buffer[cnt] op= buffer[cnt-i];
+  /// }
+  /// \endcode
+  /// \param Loc The insert and source location description.
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ScanRedInfo    Pointer to the ScanInfo objected created using
+  ///                       `ScanInfoInitialize`.
+  ///
+  /// \returns The insertion position *after* the masked.
+  InsertPointOrErrorTy emitScanReduction(
+      const LocationDescription &Loc,
+      ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
+      ScanInfo *ScanRedInfo);
+
+  /// This directive split and directs the control flow to input phase
+  ///  blocks or scan phase blocks based on 1. whether input loop or scan loop
+  ///  is executed, 2. whether exclusive or inclusive scan is used.
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param AllocaIP    The IP where the temporary buffer for scan reduction
+  //                     needs to be allocated.
+  /// \param ScanVars    Scan Variables.
+  /// \param IsInclusive Whether it is an inclusive or exclusive scan.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                    `ScanInfoInitialize`.
+  ///
+  /// \returns The insertion position *after* the scan.
+  InsertPointOrErrorTy createScan(const LocationDescription &Loc,
+                                  InsertPointTy AllocaIP,
+                                  ArrayRef<llvm::Value *> ScanVars,
+                                  ArrayRef<llvm::Type *> ScanVarsType,
+                                  bool IsInclusive, ScanInfo *ScanRedInfo);
 
   /// Generator for '#omp critical'
   ///
@@ -2437,10 +2778,11 @@ public:
   /// \param HintInst Hint Instruction for hint clause associated with critical
   ///
   /// \returns The insertion position *after* the critical.
-  InsertPointTy createCritical(const LocationDescription &Loc,
-                               BodyGenCallbackTy BodyGenCB,
-                               FinalizeCallbackTy FiniCB,
-                               StringRef CriticalName, Value *HintInst);
+  LLVM_ABI InsertPointOrErrorTy createCritical(const LocationDescription &Loc,
+                                               BodyGenCallbackTy BodyGenCB,
+                                               FinalizeCallbackTy FiniCB,
+                                               StringRef CriticalName,
+                                               Value *HintInst);
 
   /// Generator for '#omp ordered depend (source | sink)'
   ///
@@ -2452,10 +2794,10 @@ public:
   /// \param IsDependSource If true, depend source; otherwise, depend sink.
   ///
   /// \return The insertion position *after* the ordered.
-  InsertPointTy createOrderedDepend(const LocationDescription &Loc,
-                                    InsertPointTy AllocaIP, unsigned NumLoops,
-                                    ArrayRef<llvm::Value *> StoreValues,
-                                    const Twine &Name, bool IsDependSource);
+  LLVM_ABI InsertPointTy
+  createOrderedDepend(const LocationDescription &Loc, InsertPointTy AllocaIP,
+                      unsigned NumLoops, ArrayRef<llvm::Value *> StoreValues,
+                      const Twine &Name, bool IsDependSource);
 
   /// Generator for '#omp ordered [threads | simd]'
   ///
@@ -2466,10 +2808,9 @@ public:
   /// otherwise, with simd clause;
   ///
   /// \returns The insertion position *after* the ordered.
-  InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
-                                         BodyGenCallbackTy BodyGenCB,
-                                         FinalizeCallbackTy FiniCB,
-                                         bool IsThreads);
+  LLVM_ABI InsertPointOrErrorTy createOrderedThreadsSimd(
+      const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+      FinalizeCallbackTy FiniCB, bool IsThreads);
 
   /// Generator for '#omp sections'
   ///
@@ -2482,12 +2823,11 @@ public:
   /// \param IsNowait If true, barrier - to ensure all sections are executed
   /// before moving forward will not be generated.
   /// \returns The insertion position *after* the sections.
-  InsertPointTy createSections(const LocationDescription &Loc,
-                               InsertPointTy AllocaIP,
-                               ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
-                               PrivatizeCallbackTy PrivCB,
-                               FinalizeCallbackTy FiniCB, bool IsCancellable,
-                               bool IsNowait);
+  LLVM_ABI InsertPointOrErrorTy
+  createSections(const LocationDescription &Loc, InsertPointTy AllocaIP,
+                 ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
+                 PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB,
+                 bool IsCancellable, bool IsNowait);
 
   /// Generator for '#omp section'
   ///
@@ -2495,9 +2835,9 @@ public:
   /// \param BodyGenCB Callback that will generate the region body code.
   /// \param FiniCB Callback to finalize variable copies.
   /// \returns The insertion position *after* the section.
-  InsertPointTy createSection(const LocationDescription &Loc,
-                              BodyGenCallbackTy BodyGenCB,
-                              FinalizeCallbackTy FiniCB);
+  LLVM_ABI InsertPointOrErrorTy createSection(const LocationDescription &Loc,
+                                              BodyGenCallbackTy BodyGenCB,
+                                              FinalizeCallbackTy FiniCB);
 
   /// Generator for `#omp teams`
   ///
@@ -2511,10 +2851,21 @@ public:
   ///        contention group created by each team.
   /// \param IfExpr is the integer argument value of the if condition on the
   ///        teams clause.
-  InsertPointTy
-  createTeams(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-              Value *NumTeamsLower = nullptr, Value *NumTeamsUpper = nullptr,
-              Value *ThreadLimit = nullptr, Value *IfExpr = nullptr);
+  LLVM_ABI InsertPointOrErrorTy createTeams(const LocationDescription &Loc,
+                                            BodyGenCallbackTy BodyGenCB,
+                                            Value *NumTeamsLower = nullptr,
+                                            Value *NumTeamsUpper = nullptr,
+                                            Value *ThreadLimit = nullptr,
+                                            Value *IfExpr = nullptr);
+
+  /// Generator for `#omp distribute`
+  ///
+  /// \param Loc The location where the distribute construct was encountered.
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  LLVM_ABI InsertPointOrErrorTy createDistribute(const LocationDescription &Loc,
+                                                 InsertPointTy AllocaIP,
+                                                 BodyGenCallbackTy BodyGenCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -2528,10 +2879,11 @@ public:
   //				 and copy.in.end block
   ///
   /// \returns The insertion point where copying operation to be emitted.
-  InsertPointTy createCopyinClauseBlocks(InsertPointTy IP, Value *MasterAddr,
-                                         Value *PrivateAddr,
-                                         llvm::IntegerType *IntPtrTy,
-                                         bool BranchtoEnd = true);
+  LLVM_ABI InsertPointTy createCopyinClauseBlocks(InsertPointTy IP,
+                                                  Value *MasterAddr,
+                                                  Value *PrivateAddr,
+                                                  llvm::IntegerType *IntPtrTy,
+                                                  bool BranchtoEnd = true);
 
   /// Create a runtime call for kmpc_Alloc
   ///
@@ -2541,8 +2893,8 @@ public:
   /// \param Name Name of call Instruction for OMP_alloc
   ///
   /// \returns CallInst to the OMP_Alloc call
-  CallInst *createOMPAlloc(const LocationDescription &Loc, Value *Size,
-                           Value *Allocator, std::string Name = "");
+  LLVM_ABI CallInst *createOMPAlloc(const LocationDescription &Loc, Value *Size,
+                                    Value *Allocator, std::string Name = "");
 
   /// Create a runtime call for kmpc_free
   ///
@@ -2552,8 +2904,8 @@ public:
   /// \param Name Name of call Instruction for OMP_Free
   ///
   /// \returns CallInst to the OMP_Free call
-  CallInst *createOMPFree(const LocationDescription &Loc, Value *Addr,
-                          Value *Allocator, std::string Name = "");
+  LLVM_ABI CallInst *createOMPFree(const LocationDescription &Loc, Value *Addr,
+                                   Value *Allocator, std::string Name = "");
 
   /// Create a runtime call for kmpc_threadprivate_cached
   ///
@@ -2563,10 +2915,10 @@ public:
   /// \param Name Name of call Instruction for callinst
   ///
   /// \returns CallInst to the thread private cache call.
-  CallInst *createCachedThreadPrivate(const LocationDescription &Loc,
-                                      llvm::Value *Pointer,
-                                      llvm::ConstantInt *Size,
-                                      const llvm::Twine &Name = Twine(""));
+  LLVM_ABI CallInst *
+  createCachedThreadPrivate(const LocationDescription &Loc,
+                            llvm::Value *Pointer, llvm::ConstantInt *Size,
+                            const llvm::Twine &Name = Twine(""));
 
   /// Create a runtime call for __tgt_interop_init
   ///
@@ -2579,12 +2931,12 @@ public:
   /// \param HaveNowaitClause does nowait clause exist
   ///
   /// \returns CallInst to the __tgt_interop_init call
-  CallInst *createOMPInteropInit(const LocationDescription &Loc,
-                                 Value *InteropVar,
-                                 omp::OMPInteropType InteropType, Value *Device,
-                                 Value *NumDependences,
-                                 Value *DependenceAddress,
-                                 bool HaveNowaitClause);
+  LLVM_ABI CallInst *createOMPInteropInit(const LocationDescription &Loc,
+                                          Value *InteropVar,
+                                          omp::OMPInteropType InteropType,
+                                          Value *Device, Value *NumDependences,
+                                          Value *DependenceAddress,
+                                          bool HaveNowaitClause);
 
   /// Create a runtime call for __tgt_interop_destroy
   ///
@@ -2596,11 +2948,11 @@ public:
   /// \param HaveNowaitClause does nowait clause exist
   ///
   /// \returns CallInst to the __tgt_interop_destroy call
-  CallInst *createOMPInteropDestroy(const LocationDescription &Loc,
-                                    Value *InteropVar, Value *Device,
-                                    Value *NumDependences,
-                                    Value *DependenceAddress,
-                                    bool HaveNowaitClause);
+  LLVM_ABI CallInst *createOMPInteropDestroy(const LocationDescription &Loc,
+                                             Value *InteropVar, Value *Device,
+                                             Value *NumDependences,
+                                             Value *DependenceAddress,
+                                             bool HaveNowaitClause);
 
   /// Create a runtime call for __tgt_interop_use
   ///
@@ -2612,10 +2964,11 @@ public:
   /// \param HaveNowaitClause does nowait clause exist
   ///
   /// \returns CallInst to the __tgt_interop_use call
-  CallInst *createOMPInteropUse(const LocationDescription &Loc,
-                                Value *InteropVar, Value *Device,
-                                Value *NumDependences, Value *DependenceAddress,
-                                bool HaveNowaitClause);
+  LLVM_ABI CallInst *createOMPInteropUse(const LocationDescription &Loc,
+                                         Value *InteropVar, Value *Device,
+                                         Value *NumDependences,
+                                         Value *DependenceAddress,
+                                         bool HaveNowaitClause);
 
   /// The `omp target` interface
   ///
@@ -2627,16 +2980,11 @@ public:
   /// Create a runtime call for kmpc_target_init
   ///
   /// \param Loc The insert and source location description.
-  /// \param IsSPMD Flag to indicate if the kernel is an SPMD kernel or not.
-  /// \param MinThreads Minimal number of threads, or 0.
-  /// \param MaxThreads Maximal number of threads, or 0.
-  /// \param MinTeams Minimal number of teams, or 0.
-  /// \param MaxTeams Maximal number of teams, or 0.
-  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD,
-                                 int32_t MinThreadsVal = 0,
-                                 int32_t MaxThreadsVal = 0,
-                                 int32_t MinTeamsVal = 0,
-                                 int32_t MaxTeamsVal = 0);
+  /// \param Attrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  LLVM_ABI InsertPointTy createTargetInit(
+      const LocationDescription &Loc,
+      const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
 
   /// Create a runtime call for kmpc_target_deinit
   ///
@@ -2645,9 +2993,9 @@ public:
   ///        for teams reduction.
   /// \param TeamsReductionBufferLength The number of elements (each of up to
   ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
-  void createTargetDeinit(const LocationDescription &Loc,
-                          int32_t TeamsReductionDataSize = 0,
-                          int32_t TeamsReductionBufferLength = 1024);
+  LLVM_ABI void createTargetDeinit(const LocationDescription &Loc,
+                                   int32_t TeamsReductionDataSize = 0,
+                                   int32_t TeamsReductionBufferLength = 1024);
 
   ///}
 
@@ -2657,17 +3005,18 @@ public:
 
   /// Read/write a bounds on threads for \p Kernel. Read will return 0 if none
   /// is set.
-  static std::pair<int32_t, int32_t>
+  LLVM_ABI static std::pair<int32_t, int32_t>
   readThreadBoundsForKernel(const Triple &T, Function &Kernel);
-  static void writeThreadBoundsForKernel(const Triple &T, Function &Kernel,
-                                         int32_t LB, int32_t UB);
+  LLVM_ABI static void writeThreadBoundsForKernel(const Triple &T,
+                                                  Function &Kernel, int32_t LB,
+                                                  int32_t UB);
 
   /// Read/write a bounds on teams for \p Kernel. Read will return 0 if none
   /// is set.
-  static std::pair<int32_t, int32_t> readTeamBoundsForKernel(const Triple &T,
-                                                             Function &Kernel);
-  static void writeTeamsForKernel(const Triple &T, Function &Kernel, int32_t LB,
-                                  int32_t UB);
+  LLVM_ABI static std::pair<int32_t, int32_t>
+  readTeamBoundsForKernel(const Triple &T, Function &Kernel);
+  LLVM_ABI static void writeTeamsForKernel(const Triple &T, Function &Kernel,
+                                           int32_t LB, int32_t UB);
   ///}
 
 private:
@@ -2686,7 +3035,8 @@ private:
 
 public:
   /// Functions used to generate a function with the given name.
-  using FunctionGenCallback = std::function<Function *(StringRef FunctionName)>;
+  using FunctionGenCallback =
+      std::function<Expected<Function *>(StringRef FunctionName)>;
 
   /// Create a unique name for the entry function using the source location
   /// information of the current target region. The name will be something like:
@@ -2719,10 +3069,10 @@ public:
   /// \param GenerateFunctionCallback The callback function to generate the code
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  void emitTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
-                                FunctionGenCallback &GenerateFunctionCallback,
-                                bool IsOffloadEntry, Function *&OutlinedFn,
-                                Constant *&OutlinedFnID);
+  LLVM_ABI Error emitTargetRegionFunction(
+      TargetRegionEntryInfo &EntryInfo,
+      FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
+      Function *&OutlinedFn, Constant *&OutlinedFnID);
 
   /// Registers the given function and sets up the attribtues of the function
   /// Returns the FunctionID.
@@ -2732,10 +3082,10 @@ public:
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnName Name of the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  Constant *registerTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
-                                         Function *OutlinedFunction,
-                                         StringRef EntryFnName,
-                                         StringRef EntryFnIDName);
+  LLVM_ABI Constant *
+  registerTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
+                               Function *OutlinedFunction,
+                               StringRef EntryFnName, StringRef EntryFnIDName);
 
   /// Type of BodyGen to use for region codegen
   ///
@@ -2756,6 +3106,67 @@ public:
   using GenMapInfoCallbackTy =
       function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
 
+private:
+  /// Emit the array initialization or deletion portion for user-defined mapper
+  /// code generation. First, it evaluates whether an array section is mapped
+  /// and whether the \a MapType instructs to delete this section. If \a IsInit
+  /// is true, and \a MapType indicates to not delete this array, array
+  /// initialization code is generated. If \a IsInit is false, and \a MapType
+  /// indicates to delete this array, array deletion code is generated.
+  void emitUDMapperArrayInitOrDel(Function *MapperFn, llvm::Value *MapperHandle,
+                                  llvm::Value *Base, llvm::Value *Begin,
+                                  llvm::Value *Size, llvm::Value *MapType,
+                                  llvm::Value *MapName, TypeSize ElementSize,
+                                  llvm::BasicBlock *ExitBB, bool IsInit);
+
+public:
+  /// Emit the user-defined mapper function. The code generation follows the
+  /// pattern in the example below.
+  /// \code
+  /// void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
+  ///                                           void *base, void *begin,
+  ///                                           int64_t size, int64_t type,
+  ///                                           void *name = nullptr) {
+  ///   // Allocate space for an array section first or add a base/begin for
+  ///   // pointer dereference.
+  ///   if ((size > 1 || (base != begin && maptype.IsPtrAndObj)) &&
+  ///       !maptype.IsDelete)
+  ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
+  ///                                 size*sizeof(Ty), clearToFromMember(type));
+  ///   // Map members.
+  ///   for (unsigned i = 0; i < size; i++) {
+  ///     // For each component specified by this mapper:
+  ///     for (auto c : begin[i]->all_components) {
+  ///       if (c.hasMapper())
+  ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin,
+  ///         c.arg_size,
+  ///                       c.arg_type, c.arg_name);
+  ///       else
+  ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
+  ///                                     c.arg_begin, c.arg_size, c.arg_type,
+  ///                                     c.arg_name);
+  ///     }
+  ///   }
+  ///   // Delete the array section.
+  ///   if (size > 1 && maptype.IsDelete)
+  ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
+  ///                                 size*sizeof(Ty), clearToFromMember(type));
+  /// }
+  /// \endcode
+  ///
+  /// \param PrivAndGenMapInfoCB Callback that privatizes code and populates the
+  /// MapInfos and returns.
+  /// \param ElemTy DeclareMapper element type.
+  /// \param FuncName Optional param to specify mapper function name.
+  /// \param CustomMapperCB Optional callback to generate code related to
+  /// custom mappers.
+  LLVM_ABI Expected<Function *> emitUserDefinedMapper(
+      function_ref<MapInfosOrErrorTy(
+          InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
+          PrivAndGenMapInfoCB,
+      llvm::Type *ElemTy, StringRef FuncName,
+      CustomMapperCallbackTy CustomMapperCB);
+
   /// Generator for '#omp target data'
   ///
   /// \param Loc The location where the target data construct was encountered.
@@ -2768,73 +3179,91 @@ public:
   /// \param IfCond Value which corresponds to the if clause condition.
   /// \param Info Stores all information realted to the Target Data directive.
   /// \param GenMapInfoCB Callback that populates the MapInfos and returns.
+  /// \param CustomMapperCB Callback to generate code related to
+  /// custom mappers.
   /// \param BodyGenCB Optional Callback to generate the region code.
   /// \param DeviceAddrCB Optional callback to generate code related to
   /// use_device_ptr and use_device_addr.
-  /// \param CustomMapperCB Optional callback to generate code related to
-  /// custom mappers.
-  OpenMPIRBuilder::InsertPointTy createTargetData(
+  LLVM_ABI InsertPointOrErrorTy createTargetData(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
       TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
+      CustomMapperCallbackTy CustomMapperCB,
       omp::RuntimeFunction *MapperFunc = nullptr,
-      function_ref<InsertPointTy(InsertPointTy CodeGenIP,
-                                 BodyGenTy BodyGenType)>
+      function_ref<InsertPointOrErrorTy(InsertPointTy CodeGenIP,
+                                        BodyGenTy BodyGenType)>
           BodyGenCB = nullptr,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr,
       Value *SrcLocInfo = nullptr);
 
-  using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
+  using TargetBodyGenCallbackTy = function_ref<InsertPointOrErrorTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
-  using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointTy(
+  using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointOrErrorTy(
       Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP)>;
 
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
+  /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
-  /// function should be emitted.
+  ///        function should be emitted.
+  /// \param Info Stores all information realted to the Target directive.
   /// \param EntryInfo The entry information about the function.
-  /// \param NumTeams Number of teams specified in the num_teams clause.
-  /// \param NumThreads Number of teams specified in the thread_limit clause.
+  /// \param DefaultAttrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  /// \param RuntimeAttrs Structure containing the runtime numbers of threads
+  ///        and teams to launch the kernel with.
+  /// \param IfCond value of the `if` clause.
   /// \param Inputs The input values to the region that will be passed.
-  /// as arguments to the outlined function.
+  ///        as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
-  /// instructions for passed in target arguments where neccessary
-  InsertPointTy createTarget(const LocationDescription &Loc,
-                             OpenMPIRBuilder::InsertPointTy AllocaIP,
-                             OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                             TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
-                             int32_t NumThreads,
-                             SmallVectorImpl<Value *> &Inputs,
-                             GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
+  ///        instructions for passed in target arguments where neccessary
+  /// \param CustomMapperCB Callback to generate code related to
+  /// custom mappers.
+  /// \param Dependencies A vector of DependData objects that carry
+  ///        dependency information as passed in the depend clause
+  /// \param HasNowait Whether the target construct has a `nowait` clause or
+  ///        not.
+  LLVM_ABI InsertPointOrErrorTy createTarget(
+      const LocationDescription &Loc, bool IsOffloadEntry,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
+      OpenMPIRBuilder::InsertPointTy CodeGenIP, TargetDataInfo &Info,
+      TargetRegionEntryInfo &EntryInfo,
+      const TargetKernelDefaultAttrs &DefaultAttrs,
+      const TargetKernelRuntimeAttrs &RuntimeAttrs, Value *IfCond,
+      SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
+      TargetBodyGenCallbackTy BodyGenCB,
+      TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+      CustomMapperCallbackTy CustomMapperCB,
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
   /// __kmpc_distribute_static_init* if \a IsGPUDistribute is set.
-  FunctionCallee createForStaticInitFunction(unsigned IVSize, bool IVSigned,
-                                             bool IsGPUDistribute);
+  LLVM_ABI FunctionCallee createForStaticInitFunction(unsigned IVSize,
+                                                      bool IVSigned,
+                                                      bool IsGPUDistribute);
 
   /// Returns __kmpc_dispatch_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
-  FunctionCallee createDispatchInitFunction(unsigned IVSize, bool IVSigned);
+  LLVM_ABI FunctionCallee createDispatchInitFunction(unsigned IVSize,
+                                                     bool IVSigned);
 
   /// Returns __kmpc_dispatch_next_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
-  FunctionCallee createDispatchNextFunction(unsigned IVSize, bool IVSigned);
+  LLVM_ABI FunctionCallee createDispatchNextFunction(unsigned IVSize,
+                                                     bool IVSigned);
 
   /// Returns __kmpc_dispatch_fini_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
-  FunctionCallee createDispatchFiniFunction(unsigned IVSize, bool IVSigned);
+  LLVM_ABI FunctionCallee createDispatchFiniFunction(unsigned IVSize,
+                                                     bool IVSigned);
 
   /// Returns __kmpc_dispatch_deinit runtime function.
-  FunctionCallee createDispatchDeinitFunction();
+  LLVM_ABI FunctionCallee createDispatchDeinitFunction();
 
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
   /// generated below. Their names are defined and used in OpenMPKinds.def. Here
@@ -2887,10 +3316,10 @@ private:
   ///        should be called.
   ///
   /// \return The insertion position in exit block
-  InsertPointTy emitCommonDirectiveExit(omp::Directive OMPD,
-                                        InsertPointTy FinIP,
-                                        Instruction *ExitCall,
-                                        bool HasFinalize = true);
+  InsertPointOrErrorTy emitCommonDirectiveExit(omp::Directive OMPD,
+                                               InsertPointTy FinIP,
+                                               Instruction *ExitCall,
+                                               bool HasFinalize = true);
 
   /// Common Interface to generate OMP inlined regions
   ///
@@ -2908,8 +3337,7 @@ private:
   /// \param IsCancellable if HasFinalize is set to true, indicate if the
   ///        the directive should be cancellable.
   /// \return The insertion point after the region
-
-  InsertPointTy
+  InsertPointOrErrorTy
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
                        FinalizeCallbackTy FiniCB, bool Conditional = false,
@@ -2945,7 +3373,7 @@ private:
   ///
   /// \returns Value to update X to.
   using AtomicUpdateCallbackTy =
-      const function_ref<Value *(Value *XOld, IRBuilder<> &IRB)>;
+      const function_ref<Expected<Value *>(Value *XOld, IRBuilder<> &IRB)>;
 
 private:
   enum AtomicKind { Read, Write, Update, Capture, Compare };
@@ -2984,17 +3412,20 @@ private:
   ///
   /// \returns A pair of the old value of X before the update, and the value
   ///          used for the update.
-  std::pair<Value *, Value *>
+  Expected<std::pair<Value *, Value *>>
   emitAtomicUpdate(InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
-                   bool IsXBinopExpr);
+                   bool IsXBinopExpr, bool IsIgnoreDenormalMode,
+                   bool IsFineGrainedMemory, bool IsRemoteMemory);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///
   /// \Return The instruction
   Value *emitRMWOpAsInstruction(Value *Src1, Value *Src2,
                                 AtomicRMWInst::BinOp RMWOp);
+
+  bool IsFinalized;
 
 public:
   /// a struct to pack relevant information while generating atomic Ops
@@ -3013,11 +3444,13 @@ public:
   /// 					    value
   /// \param AO			Atomic ordering of the generated atomic
   /// 					    instructions.
-  ///
+  /// \param AllocaIP           Insert point for allocas
+  //
   /// \return Insertion point after generated atomic read IR.
-  InsertPointTy createAtomicRead(const LocationDescription &Loc,
-                                 AtomicOpValue &X, AtomicOpValue &V,
-                                 AtomicOrdering AO);
+  LLVM_ABI InsertPointTy createAtomicRead(const LocationDescription &Loc,
+                                          AtomicOpValue &X, AtomicOpValue &V,
+                                          AtomicOrdering AO,
+                                          InsertPointTy AllocaIP);
 
   /// Emit atomic write for : X = Expr --- Only Scalar data types.
   ///
@@ -3026,11 +3459,13 @@ public:
   /// \param Expr		The value to store.
   /// \param AO			Atomic ordering of the generated atomic
   ///               instructions.
+  /// \param AllocaIP           Insert point for allocas
   ///
   /// \return Insertion point after generated atomic Write IR.
-  InsertPointTy createAtomicWrite(const LocationDescription &Loc,
-                                  AtomicOpValue &X, Value *Expr,
-                                  AtomicOrdering AO);
+  LLVM_ABI InsertPointTy createAtomicWrite(const LocationDescription &Loc,
+                                           AtomicOpValue &X, Value *Expr,
+                                           AtomicOrdering AO,
+                                           InsertPointTy AllocaIP);
 
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
@@ -3052,12 +3487,12 @@ public:
   ///	                    (e.g. true for X = X BinOp Expr)
   ///
   /// \return Insertion point after generated atomic update IR.
-  InsertPointTy createAtomicUpdate(const LocationDescription &Loc,
-                                   InsertPointTy AllocaIP, AtomicOpValue &X,
-                                   Value *Expr, AtomicOrdering AO,
-                                   AtomicRMWInst::BinOp RMWOp,
-                                   AtomicUpdateCallbackTy &UpdateOp,
-                                   bool IsXBinopExpr);
+  LLVM_ABI InsertPointOrErrorTy createAtomicUpdate(
+      const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
+      Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
+      AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr,
+      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = false,
+      bool IsRemoteMemory = false);
 
   /// Emit atomic update for constructs: --- Only Scalar data types
   /// V = X; X = X BinOp Expr ,
@@ -3088,12 +3523,13 @@ public:
   ///                        'v', not an updated one.
   ///
   /// \return Insertion point after generated atomic capture IR.
-  InsertPointTy
-  createAtomicCapture(const LocationDescription &Loc, InsertPointTy AllocaIP,
-                      AtomicOpValue &X, AtomicOpValue &V, Value *Expr,
-                      AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-                      AtomicUpdateCallbackTy &UpdateOp, bool UpdateExpr,
-                      bool IsPostfixUpdate, bool IsXBinopExpr);
+  LLVM_ABI InsertPointOrErrorTy createAtomicCapture(
+      const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
+      AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
+      AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
+      bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr,
+      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = false,
+      bool IsRemoteMemory = false);
 
   /// Emit atomic compare for constructs: --- Only scalar data types
   /// cond-expr-stmt:
@@ -3140,18 +3576,16 @@ public:
   ///                     the case the comparison is '=='.
   ///
   /// \return Insertion point after generated atomic capture IR.
-  InsertPointTy
+  LLVM_ABI InsertPointTy
   createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
                       AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
                       bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
-  InsertPointTy createAtomicCompare(const LocationDescription &Loc,
-                                    AtomicOpValue &X, AtomicOpValue &V,
-                                    AtomicOpValue &R, Value *E, Value *D,
-                                    AtomicOrdering AO,
-                                    omp::OMPAtomicCompareOp Op,
-                                    bool IsXBinopExpr, bool IsPostfixUpdate,
-                                    bool IsFailOnly, AtomicOrdering Failure);
+  LLVM_ABI InsertPointTy createAtomicCompare(
+      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+      bool IsFailOnly, AtomicOrdering Failure);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///
@@ -3169,11 +3603,11 @@ public:
   ///                  and instruction names.
   ///
   /// \returns The CanonicalLoopInfo that represents the emitted loop.
-  CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
-                                        Function *F,
-                                        BasicBlock *PreInsertBefore,
-                                        BasicBlock *PostInsertBefore,
-                                        const Twine &Name = {});
+  LLVM_ABI CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
+                                                 Function *F,
+                                                 BasicBlock *PreInsertBefore,
+                                                 BasicBlock *PostInsertBefore,
+                                                 const Twine &Name = {});
   /// OMP Offload Info Metadata name string
   const std::string ompOffloadInfoName = "omp_offload.info";
 
@@ -3183,7 +3617,7 @@ public:
   ///
   /// \param M         Module to load Metadata info from. Module passed maybe
   /// loaded from bitcode file, i.e, different from OpenMPIRBuilder::M module.
-  void loadOffloadInfoMetadata(Module &M);
+  LLVM_ABI void loadOffloadInfoMetadata(Module &M);
 
   /// Loads all the offload entries information from the host IR
   /// metadata read from the file passed in as the HostFilePath argument. This
@@ -3192,7 +3626,7 @@ public:
   /// \param HostFilePath The path to the host IR file,
   /// used to load in offload metadata for the device, allowing host and device
   /// to maintain the same metadata mapping.
-  void loadOffloadInfoMetadata(StringRef HostFilePath);
+  LLVM_ABI void loadOffloadInfoMetadata(StringRef HostFilePath);
 
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
@@ -3200,8 +3634,9 @@ public:
   /// \param Ty Type of the global variable. If it is exist already the type
   /// must be the same.
   /// \param Name Name of the variable.
-  GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                                              unsigned AddressSpace = 0);
+  LLVM_ABI GlobalVariable *
+  getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
+                              unsigned AddressSpace = 0);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
@@ -3311,6 +3746,9 @@ private:
   BasicBlock *Latch = nullptr;
   BasicBlock *Exit = nullptr;
 
+  // Hold the MLIR value for the `lastiter` of the canonical loop.
+  Value *LastIter = nullptr;
+
   /// Add the control blocks of this loop to \p BBs.
   ///
   /// This does not include any block from the body, including the one returned
@@ -3343,6 +3781,18 @@ private:
   void mapIndVar(llvm::function_ref<Value *(Instruction *)> Updater);
 
 public:
+  /// Sets the last iteration variable for this loop.
+  void setLastIter(Value *IterVar) { LastIter = std::move(IterVar); }
+
+  /// Returns the last iteration variable for this loop.
+  /// Certain use-cases (like translation of linear clause) may access
+  /// this variable even after a loop transformation. Hence, do not guard
+  /// this getter function by `isValid`. It is the responsibility of the
+  /// callee to ensure this functionality is not invoked by a non-outlined
+  /// CanonicalLoopInfo object (in which case, `setLastIter` will never be
+  /// invoked and `LastIter` will be by default `nullptr`).
+  Value *getLastIter() { return LastIter; }
+
   /// Returns whether this object currently represents the IR of a loop. If
   /// returning false, it may have been consumed by a loop transformation or not
   /// been intialized. Do not use in this case;
@@ -3352,7 +3802,7 @@ public:
   /// Code that must be execute before any loop iteration can be emitted here,
   /// such as computing the loop trip count and begin lifetime markers. Code in
   /// the preheader is not considered part of the canonical loop.
-  BasicBlock *getPreheader() const;
+  LLVM_ABI BasicBlock *getPreheader() const;
 
   /// The header is the entry for each iteration. In the canonical control flow,
   /// it only contains the PHINode for the induction variable.
@@ -3452,11 +3902,98 @@ public:
   }
 
   /// Consistency self-check.
-  void assertOK() const;
+  LLVM_ABI void assertOK() const;
 
   /// Invalidate this loop. That is, the underlying IR does not fulfill the
   /// requirements of an OpenMP canonical loop anymore.
-  void invalidate();
+  LLVM_ABI void invalidate();
+};
+
+/// ScanInfo holds the information to assist in lowering of Scan reduction.
+/// Before lowering, the body of the for loop specifying scan reduction is
+/// expected to have the following structure
+///
+///     Loop Body Entry
+///        |
+///     Code before the scan directive
+///        |
+///     Scan Directive
+///        |
+///     Code after the scan directive
+///        |
+///     Loop Body Exit
+/// When `createCanonicalScanLoops` is executed, the bodyGen callback of it
+/// transforms the body to:
+///
+///     Loop Body Entry
+///        |
+///     OMPScanDispatch
+///
+///     OMPBeforeScanBlock
+///        |
+///     OMPScanLoopExit
+///        |
+///     Loop Body Exit
+///
+/// The insert point is updated to the first insert point of OMPBeforeScanBlock.
+/// It dominates the control flow of code generated until
+/// scan directive is encountered and OMPAfterScanBlock dominates the
+/// control flow of code generated after scan is encountered. The successor
+/// of OMPScanDispatch can be OMPBeforeScanBlock or OMPAfterScanBlock based
+/// on 1.whether it is in Input phase or Scan Phase , 2. whether it is an
+/// exclusive or inclusive scan. This jump is added when `createScan` is
+/// executed. If input loop is being generated, if it is inclusive scan,
+/// `OMPAfterScanBlock` succeeds `OMPScanDispatch` , if exclusive,
+/// `OMPBeforeScanBlock` succeeds `OMPDispatch` and vice versa for scan loop. At
+/// the end of the input loop, temporary buffer is populated and at the
+/// beginning of the scan loop, temporary buffer is read. After scan directive
+/// is encountered, insertion point is updated to `OMPAfterScanBlock` as it is
+/// expected to dominate the code after the scan directive. Both Before and
+/// After scan blocks are succeeded by `OMPScanLoopExit`.
+/// Temporary buffer allocations are done in `ScanLoopInit` block before the
+/// lowering of for-loop. The results are copied back to reduction variable in
+/// `ScanLoopFinish` block.
+class ScanInfo {
+public:
+  /// Dominates the body of the loop before scan directive
+  llvm::BasicBlock *OMPBeforeScanBlock = nullptr;
+
+  /// Dominates the body of the loop before scan directive
+  llvm::BasicBlock *OMPAfterScanBlock = nullptr;
+
+  /// Controls the flow to before or after scan blocks
+  llvm::BasicBlock *OMPScanDispatch = nullptr;
+
+  /// Exit block of loop body
+  llvm::BasicBlock *OMPScanLoopExit = nullptr;
+
+  /// Block before loop body where scan initializations are done
+  llvm::BasicBlock *OMPScanInit = nullptr;
+
+  /// Block after loop body where scan finalizations are done
+  llvm::BasicBlock *OMPScanFinish = nullptr;
+
+  /// If true, it indicates Input phase is lowered; else it indicates
+  /// ScanPhase is lowered
+  bool OMPFirstScanLoop = false;
+
+  /// Maps the private reduction variable to the pointer of the temporary
+  /// buffer
+  llvm::SmallDenseMap<llvm::Value *, llvm::Value *> *ScanBuffPtrs;
+
+  /// Keeps track of value of iteration variable for input/scan loop to be
+  /// used for Scan directive lowering
+  llvm::Value *IV;
+
+  /// Stores the span of canonical loop being lowered to be used for temporary
+  /// buffer allocation or Finalization.
+  llvm::Value *Span;
+
+  ScanInfo() {
+    ScanBuffPtrs = new llvm::SmallDenseMap<llvm::Value *, llvm::Value *>();
+  }
+
+  ~ScanInfo() { delete (ScanBuffPtrs); }
 };
 
 } // end namespace llvm

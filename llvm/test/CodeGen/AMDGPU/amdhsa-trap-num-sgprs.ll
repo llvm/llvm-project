@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=-trap-handler < %s | FileCheck %s --check-prefixes=GCN,TRAP-HANDLER-DISABLE
 
 ; GCN-LABEL: {{^}}amdhsa_trap_num_sgprs
-; TRAP-HANDLER-ENABLE:  NumSgprs: 77
-; TRAP-HANDLER-DISABLE: NumSgprs: 92
+; TRAP-HANDLER-ENABLE:  NumSgprs: 61
+; TRAP-HANDLER-DISABLE: NumSgprs: 77
 define amdgpu_kernel void @amdhsa_trap_num_sgprs(
     ptr addrspace(1) %out0, i32 %in0,
     ptr addrspace(1) %out1, i32 %in1,
@@ -34,7 +34,7 @@ define amdgpu_kernel void @amdhsa_trap_num_sgprs(
     ptr addrspace(1) %out26, i32 %in26,
     ptr addrspace(1) %out27, i32 %in27,
     ptr addrspace(1) %out28, i32 %in28,
-    ptr addrspace(1) %out29, i32 %in29) {
+    ptr addrspace(1) %out29, i32 %in29) #0 {
 entry:
   store i32 %in0, ptr addrspace(1) %out0
   store i32 %in1, ptr addrspace(1) %out1
@@ -68,3 +68,5 @@ entry:
   store i32 %in29, ptr addrspace(1) %out29
   ret void
 }
+
+attributes #0 = { "amdgpu-no-flat-scratch-init" }

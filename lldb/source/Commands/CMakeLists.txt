@@ -23,6 +23,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandObjectPlatform.cpp
   CommandObjectPlugin.cpp
   CommandObjectProcess.cpp
+  CommandObjectProtocolServer.cpp
   CommandObjectQuit.cpp
   CommandObjectRegexCommand.cpp
   CommandObjectRegister.cpp
@@ -43,6 +44,8 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandOptionsProcessAttach.cpp
   CommandOptionsProcessLaunch.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -53,10 +56,8 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbVersion
-
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbCommands LLDBOptionsGen)

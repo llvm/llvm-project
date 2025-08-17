@@ -266,15 +266,14 @@ without differentiation based on offload kind.
     The target triple of the code object. See `Target Triple
     <https://clang.llvm.org/docs/CrossCompilation.html#target-triple>`_.
 
-    The bundler accepts target triples with or without the optional environment
-    field:
+    LLVM target triples can be with or without the optional environment field:
 
     ``<arch><sub>-<vendor>-<sys>``, or
     ``<arch><sub>-<vendor>-<sys>-<env>``
 
-    However, in order to standardize outputs for tools that consume bitcode
-    bundles, bundles written by the bundler internally use only the 4-field
-    target triple:
+    However, in order to standardize outputs for tools that consume bitcode bundles
+    and to parse target ID containing dashes, the bundler only accepts target
+    triples in the 4-field format:
 
     ``<arch><sub>-<vendor>-<sys>-<env>``
 
@@ -526,15 +525,15 @@ The compressed offload bundle begins with a header followed by the compressed bi
     This is a unique identifier to distinguish compressed offload bundles. The value is the string 'CCOB' (Compressed Clang Offload Bundle).
 
 - **Version Number (16-bit unsigned int)**:
-    This denotes the version of the compressed offload bundle format. The current version is `2`.
+    This denotes the version of the compressed offload bundle format. The current version is `3`.
 
 - **Compression Method (16-bit unsigned int)**:
     This field indicates the compression method used. The value corresponds to either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from the LLVM compression enumeration.
 
-- **Total File Size (32-bit unsigned int)**:
+- **Total File Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
     This is the total size (in bytes) of the file, including the header. Available in version 2 and above.
 
-- **Uncompressed Binary Size (32-bit unsigned int)**:
+- **Uncompressed Binary Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
     This is the size (in bytes) of the binary data before it was compressed.
 
 - **Hash (64-bit unsigned int)**:
@@ -542,3 +541,5 @@ The compressed offload bundle begins with a header followed by the compressed bi
 
 - **Compressed Data**:
     The actual compressed binary data follows the header. Its size can be inferred from the total size of the file minus the header size.
+
+    > **Note**: Version 3 is now the default format. For backward compatibility with older HIP runtimes that support version 2 only, set the environment variable `COMPRESSED_BUNDLE_FORMAT_VERSION=2`.

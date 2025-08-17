@@ -80,10 +80,10 @@ namespace test4 {
   // CHECK-LABEL:    define{{.*}} void @_ZN5test41AC2Ev(
   // CHECK:      [[THIS:%.*]] = load ptr, ptr {{%.*}}
   //   Construct single.
-  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[THIS]], i32 0, i32 0
+  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds nuw [[A:%.*]], ptr [[THIS]], i32 0, i32 0
   // CHECK-NEXT: store ptr null, ptr [[SINGLE]], align 8
   //   Construct array.
-  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[THIS]], i32 0, i32 1
+  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds nuw [[A:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: call void @llvm.memset.p0.i64(ptr align 8 [[ARRAY]], i8 0, i64 48, i1 false)
   //   throw 0;
   // CHECK:      invoke void @__cxa_throw(

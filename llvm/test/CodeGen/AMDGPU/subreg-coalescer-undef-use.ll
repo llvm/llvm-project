@@ -7,7 +7,7 @@ target triple="amdgcn--"
 ; NOTE: breaking large PHIs is disabled here else this example is completely optimized out
 ;  before reaching codegen.
 
-define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) nounwind {
+define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) #1 {
 ; CHECK-LABEL: foobar:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -40,13 +40,13 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) n
 ; Such a copies appear because the float4 vectors and their elements in the test are uniform
 ; but the PHI node in "ife" block is divergent because of the CF dependency (divergent branch in bb0)
 entry:
-  %v0 = insertelement <4 x float> undef, float %a0, i32 0
+  %v0 = insertelement <4 x float> poison, float %a0, i32 0
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cnd = icmp eq i32 %tid, 0
   br i1 %cnd, label %ift, label %ife
 
 ift:
-  %v1 = insertelement <4 x float> undef, float %a1, i32 0
+  %v1 = insertelement <4 x float> poison, float %a1, i32 0
   br label %ife
 
 ife:
@@ -59,3 +59,4 @@ ife:
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 
 attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

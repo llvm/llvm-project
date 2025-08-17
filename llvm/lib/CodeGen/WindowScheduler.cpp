@@ -45,6 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -95,7 +96,7 @@ cl::opt<unsigned> WindowDiffLimit(
 
 // WindowIILimit serves as an indicator of abnormal scheduling results and could
 // potentially be referenced by the derived target window scheduler.
-cl::opt<unsigned>
+static cl::opt<unsigned>
     WindowIILimit("window-ii-limit",
                   cl::desc("The upper limit of II in the window algorithm."),
                   cl::Hidden, cl::init(1000));
@@ -167,7 +168,7 @@ WindowScheduler::createMachineScheduler(bool OnlyBuildGraph) {
              ? new ScheduleDAGMI(
                    Context, std::make_unique<PostGenericScheduler>(Context),
                    true)
-             : Context->PassConfig->createMachineScheduler(Context);
+             : Context->TM->createMachineScheduler(Context);
 }
 
 bool WindowScheduler::initialize() {
@@ -232,8 +233,11 @@ bool WindowScheduler::initialize() {
       return false;
     }
     for (auto &Def : MI.all_defs())
-      if (Def.isReg() && Def.getReg().isPhysical())
+      if (Def.isReg() && Def.getReg().isPhysical()) {
+        LLVM_DEBUG(dbgs() << "Physical registers are not supported in "
+                             "window scheduling!\n");
         return false;
+      }
   }
   if (SchedInstrNum <= WindowRegionLimit) {
     LLVM_DEBUG(dbgs() << "There are too few MIs in the window region!\n");
@@ -279,8 +283,7 @@ void WindowScheduler::restoreMBB() {
     MI.eraseFromParent();
   }
   // Restore MBB to the state before window scheduling.
-  for (auto *MI : OriMIs)
-    MBB->push_back(MI);
+  llvm::append_range(*MBB, OriMIs);
   updateLiveIntervals();
 }
 
@@ -353,8 +356,8 @@ void WindowScheduler::generateTripleMBB() {
           // ==================================
           //          < Terminators >
           // ==================================
-          if (DefPairs.count(NewUse))
-            NewUse = DefPairs[NewUse];
+          if (auto It = DefPairs.find(NewUse); It != DefPairs.end())
+            NewUse = It->second;
           NewMI->substituteRegister(DefRegPair.first, NewUse, 0, *TRI);
         }
       // DefPairs is updated at last.
@@ -437,14 +440,17 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
       int PredCycle = getOriCycle(PredMI);
       ExpectCycle = std::max(ExpectCycle, PredCycle + (int)Pred.getLatency());
     }
-    // ResourceManager can be used to detect resource conflicts between the
-    // current MI and the previously inserted MIs.
-    while (!RM.canReserveResources(*SU, CurCycle) || CurCycle < ExpectCycle) {
-      ++CurCycle;
-      if (CurCycle == (int)WindowIILimit)
-        return CurCycle;
+    // Zero cost instructions do not need to check resource.
+    if (!TII->isZeroCost(MI.getOpcode())) {
+      // ResourceManager can be used to detect resource conflicts between the
+      // current MI and the previously inserted MIs.
+      while (!RM.canReserveResources(*SU, CurCycle) || CurCycle < ExpectCycle) {
+        ++CurCycle;
+        if (CurCycle == (int)WindowIILimit)
+          return CurCycle;
+      }
+      RM.reserveResources(*SU, CurCycle);
     }
-    RM.reserveResources(*SU, CurCycle);
     OriToCycle[getOriMI(&MI)] = CurCycle;
     LLVM_DEBUG(dbgs() << "\tCycle " << CurCycle << " [S."
                       << getOriStage(getOriMI(&MI), Offset) << "]: " << MI);
@@ -485,6 +491,7 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
 // ========================================
 int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
   int MaxStallCycle = 0;
+  int CurrentII = MaxCycle + 1;
   auto Range = getScheduleRange(Offset, SchedInstrNum);
   for (auto &MI : Range) {
     auto *SU = TripleDAG->getSUnit(&MI);
@@ -492,8 +499,8 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
     for (auto &Succ : SU->Succs) {
       if (Succ.isWeak() || Succ.getSUnit() == &TripleDAG->ExitSU)
         continue;
-      // If the expected cycle does not exceed MaxCycle, no check is needed.
-      if (DefCycle + (int)Succ.getLatency() <= MaxCycle)
+      // If the expected cycle does not exceed CurrentII, no check is needed.
+      if (DefCycle + (int)Succ.getLatency() <= CurrentII)
         continue;
       // If the cycle of the scheduled MI A is less than that of the scheduled
       // MI B, the scheduling will fail because the lifetime of the
@@ -503,7 +510,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
       if (DefCycle < UseCycle)
         return WindowIILimit;
       // Get the stall cycle introduced by the register between two trips.
-      int StallCycle = DefCycle + (int)Succ.getLatency() - MaxCycle - UseCycle;
+      int StallCycle = DefCycle + (int)Succ.getLatency() - CurrentII - UseCycle;
       MaxStallCycle = std::max(MaxStallCycle, StallCycle);
     }
   }
@@ -574,9 +581,10 @@ DenseMap<MachineInstr *, int> WindowScheduler::getIssueOrder(unsigned Offset,
   DenseMap<MachineInstr *, int> IssueOrder;
   int Id = 0;
   for (int Cycle = 0; Cycle < (int)II; ++Cycle) {
-    if (!CycleToMIs.count(Cycle))
+    auto It = CycleToMIs.find(Cycle);
+    if (It == CycleToMIs.end())
       continue;
-    for (auto *MI : CycleToMIs[Cycle])
+    for (auto *MI : It->second)
       IssueOrder[MI] = Id++;
   }
   return IssueOrder;
@@ -671,8 +679,7 @@ MachineInstr *WindowScheduler::getOriMI(MachineInstr *NewMI) {
 }
 
 unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
-  assert(llvm::find(OriMIs, OriMI) != OriMIs.end() &&
-         "Cannot find OriMI in OriMIs!");
+  assert(llvm::is_contained(OriMIs, OriMI) && "Cannot find OriMI in OriMIs!");
   // If there is no instruction fold, all MI stages are 0.
   if (Offset == SchedPhiNum)
     return 0;

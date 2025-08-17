@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
 
 ; ELF: Section {
 ; ELF: Name: .text
@@ -23,7 +23,7 @@
 ; ELF: Section: .text (0x2)
 ; ELF: }
 
-; GFX10: NumSGPRsForWavesPerEU: 2
+; GFX10: NumSGPRsForWavesPerEU: 6
 ; GFX10: NumVGPRsForWavesPerEU: 1
 
 define amdgpu_kernel void @simple(ptr addrspace(1) %out) {

@@ -15,7 +15,6 @@
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -102,10 +101,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
 
-  for (uint64_t &Offset : OutDieOffsetArray)
-    Offset = 0;
-  for (TypeEntry *&Name : TypeEntries)
-    Name = nullptr;
+  llvm::fill(OutDieOffsetArray, 0);
+  llvm::fill(TypeEntries, nullptr);
   eraseSections();
 
   setStage(Stage::CreatedNotLoaded);
@@ -381,38 +378,36 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
 std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
     const DWARFFormValue &RefValue,
     ResolveInterCUReferencesMode CanResolveInterCUReferences) {
-  if (std::optional<DWARFFormValue::UnitOffset> Ref =
-          *RefValue.getAsRelativeReference()) {
-    if (Ref->Unit == OrigUnit) {
-      // Referenced DIE is in current compile unit.
-      if (std::optional<uint32_t> RefDieIdx =
-              getDIEIndexForOffset(OrigUnit->getOffset() + Ref->Offset))
-        return UnitEntryPairTy{this, OrigUnit->getDebugInfoEntry(*RefDieIdx)};
-    }
-    uint64_t RefDIEOffset =
-        Ref->Unit ? Ref->Unit->getOffset() + Ref->Offset : Ref->Offset;
-    if (CompileUnit *RefCU = getUnitFromOffset(RefDIEOffset)) {
-      if (RefCU == this) {
-        // Referenced DIE is in current compile unit.
-        if (std::optional<uint32_t> RefDieIdx =
-                getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
-      } else if (CanResolveInterCUReferences) {
-        // Referenced DIE is in other compile unit.
-
-        // Check whether DIEs are loaded for that compile unit.
-        enum Stage ReferredCUStage = RefCU->getStage();
-        if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
-          return UnitEntryPairTy{RefCU, nullptr};
-
-        if (std::optional<uint32_t> RefDieIdx =
-                RefCU->getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
-      } else
-        return UnitEntryPairTy{RefCU, nullptr};
-    }
+  CompileUnit *RefCU;
+  uint64_t RefDIEOffset;
+  if (std::optional<uint64_t> Offset = RefValue.getAsRelativeReference()) {
+    RefCU = this;
+    RefDIEOffset = RefValue.getUnit()->getOffset() + *Offset;
+  } else if (Offset = RefValue.getAsDebugInfoReference(); Offset) {
+    RefCU = getUnitFromOffset(*Offset);
+    RefDIEOffset = *Offset;
+  } else {
+    return std::nullopt;
   }
 
+  if (RefCU == this) {
+    // Referenced DIE is in current compile unit.
+    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+  } else if (RefCU && CanResolveInterCUReferences) {
+    // Referenced DIE is in other compile unit.
+
+    // Check whether DIEs are loaded for that compile unit.
+    enum Stage ReferredCUStage = RefCU->getStage();
+    if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+      return UnitEntryPairTy{RefCU, nullptr};
+
+    if (std::optional<uint32_t> RefDieIdx =
+            RefCU->getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+  } else {
+    return UnitEntryPairTy{RefCU, nullptr};
+  }
   return std::nullopt;
 }
 
@@ -1173,8 +1168,7 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress =
-            SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1211,7 +1205,7 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+              SA->Address + VarAddressAdjustment.value_or(0);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1436,13 +1430,13 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
   if (IsDeclaration && !DeclarationDie) {
     // Alocate declaration DIE.
     DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_weak(DeclarationDie,
-                                                             NewDie))
+    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
+                                                               NewDie))
       return NewDie;
   } else if (IsDeclaration && !IsParentDeclaration && OldParentIsDeclaration) {
     // Overwrite existing declaration DIE if it's parent is also an declaration
     // while parent of current declaration DIE is a definition.
-    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_weak(
+    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_strong(
             OldParentIsDeclaration, false)) {
       DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
       TypeDescriptor->DeclarationDie = NewDie;
@@ -1452,13 +1446,13 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
     // Alocate declaration DIE since parent of current DIE is marked as
     // declaration.
     DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_weak(DeclarationDie,
-                                                             NewDie))
+    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
+                                                               NewDie))
       return NewDie;
   } else if (!IsDeclaration && !IsParentDeclaration) {
     // Allocate definition DIE.
     DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->Die.compare_exchange_weak(DefinitionDie, NewDie)) {
+    if (TypeDescriptor->Die.compare_exchange_strong(DefinitionDie, NewDie)) {
       TypeDescriptor->ParentIsDeclaration = false;
       return NewDie;
     }
@@ -1816,19 +1810,19 @@ DwarfUnit *CompileUnit::OutputUnitVariantPtr::operator->() {
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isCompileUnit() {
-  return Ptr.is<CompileUnit *>();
+  return isa<CompileUnit *>(Ptr);
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isTypeUnit() {
-  return Ptr.is<TypeUnit *>();
+  return isa<TypeUnit *>(Ptr);
 }
 
 CompileUnit *CompileUnit::OutputUnitVariantPtr::getAsCompileUnit() {
-  return Ptr.get<CompileUnit *>();
+  return cast<CompileUnit *>(Ptr);
 }
 
 TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
-  return Ptr.get<TypeUnit *>();
+  return cast<TypeUnit *>(Ptr);
 }
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(

@@ -281,7 +281,8 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   Y->Header.Type = Obj.getHeader().e_type;
   if (Obj.getHeader().e_machine != 0)
     Y->Header.Machine = ELFYAML::ELF_EM(Obj.getHeader().e_machine);
-  Y->Header.Flags = Obj.getHeader().e_flags;
+  if (Obj.getHeader().e_flags != 0)
+    Y->Header.Flags = ELFYAML::ELF_EF(Obj.getHeader().e_flags);
   Y->Header.Entry = Obj.getHeader().e_entry;
 
   // Dump sections
@@ -596,6 +597,7 @@ ELFDumper<ELFT>::dumpSections() {
       return [this](const Elf_Shdr *S) { return dumpSymtabShndxSection(S); };
     case ELF::SHT_REL:
     case ELF::SHT_RELA:
+    case ELF::SHT_CREL:
       return [this](const Elf_Shdr *S) { return dumpRelocSection(S); };
     case ELF::SHT_RELR:
       return [this](const Elf_Shdr *S) { return dumpRelrSection(S); };
@@ -898,7 +900,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 2)
+      if (Cur && Version > 3)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -933,9 +935,19 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
            ++BlockIndex) {
         uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
         uint64_t Offset = Data.getULEB128(Cur);
+        std::optional<std::vector<llvm::yaml::Hex64>> CallsiteOffsets;
+        if (FeatureOrErr->CallsiteOffsets) {
+          uint32_t NumCallsites = Data.getULEB128(Cur);
+          CallsiteOffsets = std::vector<llvm::yaml::Hex64>(NumCallsites, 0);
+          for (uint32_t CallsiteIndex = 0; Cur && CallsiteIndex < NumCallsites;
+               ++CallsiteIndex) {
+            (*CallsiteOffsets)[CallsiteIndex] = Data.getULEB128(Cur);
+          }
+        }
         uint64_t Size = Data.getULEB128(Cur);
         uint64_t Metadata = Data.getULEB128(Cur);
-        BBEntries.push_back({ID, Offset, Size, Metadata});
+        BBEntries.push_back(
+            {ID, Offset, Size, Metadata, std::move(CallsiteOffsets)});
       }
       TotalNumBlocks += BBEntries.size();
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
@@ -1165,27 +1177,41 @@ ELFDumper<ELFT>::dumpRelocSection(const Elf_Shdr *Shdr) {
   if (Shdr->sh_size != 0)
     S->Relocations.emplace();
 
-  if (Shdr->sh_type == ELF::SHT_REL) {
-    auto Rels = Obj.rels(*Shdr);
-    if (!Rels)
-      return Rels.takeError();
-    for (const Elf_Rel &Rel : *Rels) {
-      ELFYAML::Relocation R;
-      if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
-        return std::move(E);
-      S->Relocations->push_back(R);
-    }
+  std::vector<Elf_Rel> Rels;
+  std::vector<Elf_Rela> Relas;
+  if (Shdr->sh_type == ELF::SHT_CREL) {
+    Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(*Shdr);
+    if (!ContentOrErr)
+      return ContentOrErr.takeError();
+    auto Crel = Obj.decodeCrel(*ContentOrErr);
+    if (!Crel)
+      return Crel.takeError();
+    Rels = std::move(Crel->first);
+    Relas = std::move(Crel->second);
+  } else if (Shdr->sh_type == ELF::SHT_REL) {
+    auto R = Obj.rels(*Shdr);
+    if (!R)
+      return R.takeError();
+    Rels = std::move(*R);
   } else {
-    auto Rels = Obj.relas(*Shdr);
-    if (!Rels)
-      return Rels.takeError();
-    for (const Elf_Rela &Rel : *Rels) {
-      ELFYAML::Relocation R;
-      if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
-        return std::move(E);
-      R.Addend = Rel.r_addend;
-      S->Relocations->push_back(R);
-    }
+    auto R = Obj.relas(*Shdr);
+    if (!R)
+      return R.takeError();
+    Relas = std::move(*R);
+  }
+
+  for (const Elf_Rel &Rel : Rels) {
+    ELFYAML::Relocation R;
+    if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
+      return std::move(E);
+    S->Relocations->push_back(R);
+  }
+  for (const Elf_Rela &Rel : Relas) {
+    ELFYAML::Relocation R;
+    if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
+      return std::move(E);
+    R.Addend = Rel.r_addend;
+    S->Relocations->push_back(R);
   }
 
   return S.release();
@@ -1251,8 +1277,7 @@ ELFDumper<ELFT>::dumpSymtabShndxSection(const Elf_Shdr *Shdr) {
     return EntriesOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Word &E : *EntriesOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *EntriesOrErr);
   return S.release();
 }
 
@@ -1436,7 +1461,15 @@ ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
     if (Verdef->vd_hash != 0)
       Entry.Hash = Verdef->vd_hash;
 
+    if (Verdef->vd_aux != sizeof(Elf_Verdef))
+      Entry.VDAux = Verdef->vd_aux;
+
     const uint8_t *BufAux = Buf + Verdef->vd_aux;
+    if (BufAux > Data.end())
+      return createStringError(
+          errc::invalid_argument,
+          "corrupted section: vd_aux value " + Twine(Verdef->vd_aux) +
+              " in section verdef points past end of the section");
     while (BufAux) {
       const Elf_Verdaux *Verdaux =
           reinterpret_cast<const Elf_Verdaux *>(BufAux);
@@ -1467,8 +1500,7 @@ ELFDumper<ELFT>::dumpSymverSection(const Elf_Shdr *Shdr) {
     return VersionsOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Half &E : *VersionsOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *VersionsOrErr);
 
   return S.release();
 }

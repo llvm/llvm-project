@@ -2,7 +2,7 @@ Command Line Usage: scan-build and CodeChecker
 ==============================================
 
 This document provides guidelines for running the static analyzer from the command line on whole projects.
-CodeChecker and scan-build are two CLI tools for using CSA on multiple files (tranlation units).
+CodeChecker and scan-build are two CLI tools for using CSA on multiple files (translation units).
 Both provide a way of driving the analyzer, detecting compilation flags, and generating reports.
 CodeChecker is more actively maintained, provides heuristics for working with multiple versions of popular compilers and it also comes with a web-based GUI for viewing, filtering, categorizing and suppressing the results.
 Therefore CodeChecker is recommended in case you need any of the above features or just more customizability in general.
@@ -193,6 +193,8 @@ When compiling your application to run on the simulator, it is important that **
 **scan-build** provides the ``--use-cc`` and ``--use-c++`` options to hardwire which compiler scan-build should use for building your code. Note that although you are chiefly interested in analyzing your project, keep in mind that running the analyzer is intimately tied to the build, and not being able to compile your code means it won't get fully analyzed (if at all).
 
 If you aren't certain which compiler Xcode uses to build your project, try just running ``xcodebuild`` (without **scan-build**). You should see the full path to the compiler that Xcode is using, and use that as an argument to ``--use-cc``.
+
+.. _command-line-usage-CodeChecker:
 
 CodeChecker
 -----------

@@ -20,15 +20,15 @@ class APInt;
 namespace RISCVMatInt {
 
 enum OpndKind {
-  RegImm, // ADDI/ADDIW/SLLI/SRLI/BSETI/BCLRI
-  Imm,    // LUI
-  RegReg, // SH1ADD/SH2ADD/SH3ADD
+  RegImm, // ADDI/ADDIW/XORI/SLLI/SRLI/SLLI_UW/RORI/BSETI/BCLRI/TH_SRRI
+  Imm,    // LUI/QC_LI/QC_E_LI
+  RegReg, // SH1ADD/SH2ADD/SH3ADD/PACK
   RegX0,  // ADD_UW
 };
 
 class Inst {
   unsigned Opc;
-  int32_t Imm; // The largest value we need to store is 20 bits.
+  int32_t Imm; // The largest value we need to store is 32 bits for QC_E_LI.
 
 public:
   Inst(unsigned Opc, int64_t I) : Opc(Opc), Imm(I) {
@@ -71,8 +71,13 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 // If CompressionCost is true it will use a different cost calculation if RVC is
 // enabled. This should be used to compare two different sequences to determine
 // which is more compressible.
+//
+// If FreeZeroes is true, it will be assumed free to materialize any
+// XLen-sized chunks that are 0. This is appropriate to use in instances when
+// the zero register can be used, e.g. when estimating the cost of
+// materializing a value used by a particular operation.
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
-                  bool CompressionCost = false);
+                  bool CompressionCost = false, bool FreeZeroes = false);
 } // namespace RISCVMatInt
 } // namespace llvm
 #endif

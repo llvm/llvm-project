@@ -6,8 +6,7 @@ define i1 @test_second_and_condition_implied_by_first(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], true
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -31,8 +30,7 @@ define i1 @test_first_and_condition_implied_by_second_ops(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -56,8 +54,7 @@ define i1 @test_second_and_condition_implied_by_first_select_form(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 true, i1 false
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -105,8 +102,7 @@ define i1 @test_same_cond_for_and(i8 %x) {
 ; CHECK-LABEL: @test_same_cond_for_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -152,8 +148,7 @@ define i1 @test_second_and_condition_not_implied_by_first(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -371,8 +366,7 @@ define i1 @test_and_used_in_false_branch(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], true
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
@@ -397,8 +391,7 @@ define i1 @test_or_used_in_false_branch(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], false
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
 ; CHECK:       else:
@@ -423,8 +416,7 @@ define i1 @test_or_used_in_false_branch2(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = or i1 false, [[T_1]]
-; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[T_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
 ; CHECK:       else:
@@ -450,8 +442,7 @@ define i1 @and_select_first_implies_second_may_be_poison(ptr noundef %A, ptr nou
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr [[B]], i64 -1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt ptr [[GEP]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_2]], i1 true, i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C_2]]
 ;
 entry:
   %c.1 = icmp ne ptr %A, %B
@@ -497,4 +488,216 @@ entry:
   ret i1 %and
 }
 
+define void @and_tree_second_implies_first(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
+; CHECK-LABEL: @and_tree_second_implies_first(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp0 = icmp sge i32 %v0, %v1
+  %cmp1 = icmp sge i32 %v1, %v2
+  %and1 = and i1 %cmp0, %cmp1
+  %cmp2 = icmp slt i32 %v0, %v2
+  %and2 = and i1 %cmp2, %and1
+  br i1 %and2, label %if.then, label %return
+
+if.then:
+  call void @side_effect()
+  br label %return
+
+return:
+  ret void
+}
+
+define void @and_tree_second_implies_first_perm1(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
+; CHECK-LABEL: @and_tree_second_implies_first_perm1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[CMP2]], [[CMP1]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp0 = icmp sge i32 %v0, %v1
+  %cmp1 = icmp sge i32 %v1, %v2
+  %cmp2 = icmp slt i32 %v0, %v2
+  %and1 = and i1 %cmp2, %cmp1
+  %and2 = and i1 %cmp0, %and1
+  br i1 %and2, label %if.then, label %return
+
+if.then:
+  call void @side_effect()
+  br label %return
+
+return:
+  ret void
+}
+
+
+define void @and_tree_second_implies_first_perm2(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
+; CHECK-LABEL: @and_tree_second_implies_first_perm2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[CMP0]], [[CMP2]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp0 = icmp sge i32 %v0, %v1
+  %cmp1 = icmp sge i32 %v1, %v2
+  %cmp2 = icmp slt i32 %v0, %v2
+  %and1 = and i1 %cmp0, %cmp2
+  %and2 = and i1 %cmp1, %and1
+  br i1 %and2, label %if.then, label %return
+
+if.then:
+  call void @side_effect()
+  br label %return
+
+return:
+  ret void
+}
+
+define void @logical_and_tree_second_implies_first(i32 %v0, i32 %v1, i32 %v2) {
+; CHECK-LABEL: @logical_and_tree_second_implies_first(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[CMP0]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[CMP2]], i1 [[AND1]], i1 false
+; CHECK-NEXT:    br i1 [[AND2]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp0 = icmp sge i32 %v0, %v1
+  %cmp1 = icmp sge i32 %v1, %v2
+  %and1 = select i1 %cmp0, i1 %cmp1, i1 false
+  %cmp2 = icmp slt i32 %v0, %v2
+  %and2 = select i1 %cmp2, i1 %and1, i1 false
+  br i1 %and2, label %if.then, label %return
+
+if.then:
+  call void @side_effect()
+  br label %return
+
+return:
+  ret void
+}
+
+define void @or_tree_second_implies_first(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
+; CHECK-LABEL: @or_tree_second_implies_first(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = or i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
+; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp0 = icmp sge i32 %v0, %v1
+  %cmp1 = icmp sge i32 %v1, %v2
+  %and1 = or i1 %cmp0, %cmp1
+  %cmp2 = icmp slt i32 %v0, %v2
+  %and2 = or i1 %cmp2, %and1
+  br i1 %and2, label %if.then, label %return
+
+if.then:
+  call void @side_effect()
+  br label %return
+
+return:
+  ret void
+}
+
+define void @or_tree_second_implies_first_with_unknown_cond(i64 %x, i1 %cond) {
+; CHECK-LABEL: @or_tree_second_implies_first_with_unknown_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[CMP1]], i1 [[COND:%.*]], i1 false
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[X]], 2
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp ugt i64 %x, 1
+  %or1 = select i1 %cmp1, i1 %cond, i1 false
+  %cmp2 = icmp ult i64 %x, 2
+  %or2 = select i1 %or1, i1 %cmp2, i1 false
+  br i1 %or2, label %if.then, label %if.end
+
+if.then:
+  call void @side_effect()
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @negative_and_or_tree_second_implies_first(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
+; CHECK-LABEL: @negative_and_or_tree_second_implies_first(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = or i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP2]], [[AND1]]
+; CHECK-NEXT:    br i1 [[AND2]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp0 = icmp sge i32 %v0, %v1
+  %cmp1 = icmp sge i32 %v1, %v2
+  %and1 = or i1 %cmp0, %cmp1
+  %cmp2 = icmp slt i32 %v0, %v2
+  %and2 = and i1 %cmp2, %and1
+  br i1 %and2, label %if.then, label %return
+
+if.then:
+  call void @side_effect()
+  br label %return
+
+return:
+  ret void
+}
+
+declare void @side_effect()
 declare void @no_noundef(i1 noundef)

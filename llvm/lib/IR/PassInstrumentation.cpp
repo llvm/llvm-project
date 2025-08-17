@@ -17,8 +17,13 @@
 
 namespace llvm {
 
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Module *>;
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Function *>;
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Loop *>;
+
 void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
                                                       StringRef PassName) {
+  assert(!PassName.empty() && "PassName can't be empty!");
   ClassToPassName.try_emplace(ClassName, PassName.str());
 }
 
@@ -29,7 +34,10 @@ PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
       Fn();
     ClassToPassNameCallbacks.clear();
   }
-  return ClassToPassName[ClassName];
+  auto PassNameIter = ClassToPassName.find(ClassName);
+  if (PassNameIter != ClassToPassName.end())
+    return PassNameIter->second;
+  return {};
 }
 
 AnalysisKey PassInstrumentationAnalysis::Key;

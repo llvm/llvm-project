@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; If the workgroup id range is restricted, we should be able to use
 ; mad24 for the usual indexing pattern.
@@ -9,7 +9,7 @@ declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
 
 ; GCN-LABEL: {{^}}get_global_id_0:
 ; GCN: s_and_b32 [[WGSIZEX:s[0-9]+]], {{s[0-9]+}}, 0xffff
-; GCN: s_mul_i32 [[MUL:s[0-9]+]], s8, [[WGSIZEX]]
+; GCN: s_mul_i32 [[MUL:s[0-9]+]], s14, [[WGSIZEX]]
 ; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, [[MUL]], v0
 define amdgpu_kernel void @get_global_id_0(ptr addrspace(1) %out) #1 {
   %dispatch.ptr = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()

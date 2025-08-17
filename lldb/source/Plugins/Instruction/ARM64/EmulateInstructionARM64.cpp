@@ -404,7 +404,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
   if (!success && !m_ignore_conditions)
     return false;
 
-  uint32_t orig_pc_value = 0;
+  uint64_t orig_pc_value = 0;
   if (auto_advance_pc) {
     orig_pc_value =
         ReadRegisterUnsigned(eRegisterKindLLDB, gpr_pc_arm64, 0, &success);
@@ -418,7 +418,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
     return false;
 
   if (auto_advance_pc) {
-    uint32_t new_pc_value =
+    uint64_t new_pc_value =
         ReadRegisterUnsigned(eRegisterKindLLDB, gpr_pc_arm64, 0, &success);
     if (!success)
       return false;
@@ -440,14 +440,14 @@ bool EmulateInstructionARM64::CreateFunctionEntryUnwind(
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_arm64, 0);
-  row->SetRegisterLocationToSame(gpr_lr_arm64, /*must_replace=*/false);
-  row->SetRegisterLocationToSame(gpr_fp_arm64, /*must_replace=*/false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_arm64, 0);
+  row.SetRegisterLocationToSame(gpr_lr_arm64, /*must_replace=*/false);
+  row.SetRegisterLocationToSame(gpr_fp_arm64, /*must_replace=*/false);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionARM64");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);

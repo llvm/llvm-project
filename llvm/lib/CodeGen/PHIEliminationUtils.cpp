@@ -19,7 +19,7 @@ using namespace llvm;
 // the basic block.
 MachineBasicBlock::iterator
 llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
-                             unsigned SrcReg) {
+                             Register SrcReg) {
   // Handle the trivial case trivially.
   if (MBB->empty())
     return MBB->begin();

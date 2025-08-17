@@ -11,34 +11,35 @@ function(add_unittest_framework_library name)
                         "header only libraries, use 'add_header_library'")
   endif()
 
-  # The Nvidia 'nvlink' linker does not support static libraries.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    set(library_type OBJECT)
-  else()
-    set(library_type STATIC)
-  endif()
-
   foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
     add_library(
       ${lib}
-      ${library_type}
+      STATIC
       EXCLUDE_FROM_ALL
       ${TEST_LIB_SRCS}
       ${TEST_LIB_HDRS}
     )
-    target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
-    list(APPEND compile_options -fno-exceptions -fno-rtti)
+    target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
-    if(LIBC_COMPILER_HAS_FIXED_POINT)
-      list(APPEND compile_options -ffixed-point)
-    endif()
-    target_compile_options(${lib} PUBLIC ${compile_options})
   endforeach()
-  _get_hermetic_test_compile_options(compile_options -nostdinc++)
-  target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
-  target_compile_options(${name}.hermetic PRIVATE ${compile_options})
+
+  if(LLVM_LIBC_FULL_BUILD)
+    # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
+    # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
+    set(LLVM_LIBC_FULL_BUILD "")
+    _get_common_test_compile_options(compile_options "" "")
+    target_compile_options(${name}.unit PRIVATE ${compile_options})
+    set(LLVM_LIBC_FULL_BUILD ON)
+  else()
+    _get_common_test_compile_options(compile_options "" "")
+    target_compile_options(${name}.unit PRIVATE ${compile_options})
+  endif()
+
+  _get_hermetic_test_compile_options(compile_options "")
+  target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
+  target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
   if(TEST_LIB_DEPENDS)
     foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
@@ -68,6 +69,7 @@ add_unittest_framework_library(
     Test.h
     TestLogger.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string
@@ -90,12 +92,16 @@ add_unittest_framework_library(
     ${libc_death_test_srcs}
   HDRS
     ExecuteFunction.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_unittest_framework_library(
   LibcHermeticTestSupport
   SRCS
     HermeticTestUtils.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -119,6 +125,7 @@ add_unittest_framework_library(
     RoundingModeUtils.h
   DEPENDS
     LibcTest
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.string_utils
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -159,6 +166,7 @@ add_unittest_framework_library(
     PrintfMatcher.h
   DEPENDS
     LibcTest
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.printf_core.core_structs
     libc.test.UnitTest.string_utils
@@ -172,6 +180,7 @@ add_unittest_framework_library(
     ScanfMatcher.h
   DEPENDS
     LibcTest
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
     libc.test.UnitTest.string_utils
@@ -185,5 +194,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.StringUtil.error_to_string
+    libc.src.errno.errno
+)
+
+add_header_library(
+  ErrnoCheckingTest
+  HDRS
+    ErrnoCheckingTest.h
+  DEPENDS
+    libc.src.__support.common
     libc.src.errno.errno
 )

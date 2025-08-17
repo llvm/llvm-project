@@ -366,6 +366,20 @@ The command to obtain the output shown in the example is:
 Initially, we will focus on summary strings, and then describe the Python
 binding mechanism.
 
+Summary Format Matching On Pointers
+----------------------
+
+A summary formatter for a type ``T`` might or might not be appropriate to use
+for pointers to that type. If the formatter is only appropriate for the type and
+not its pointers, use the ``-p`` option to restrict it to match SBValues of type
+``T``. If you want the formatter to also match pointers to the type, you can use
+the ``-d`` option to specify how many pointer layers the formatter should match.
+The default value is 1, so if you don't specify ``-p`` or ``-d``, your formatter
+will be used on SBValues of type ``T`` and ``T*``. If you want to also match
+``T**`` set ``-d`` to 2, etc. In all cases, the SBValue passed to the summary
+formatter will be the matched ValueObject. lldb doesn't dereference the matched
+value down to the SBValue of type ``T`` before passing it to your formatter.
+
 Summary Strings
 ---------------
 
@@ -961,7 +975,7 @@ printed one by one.
 [1] The `max_children` argument is optional (since lldb 3.8.0) and indicates the
 maximum number of children that lldb is interested in (at this moment). If the
 computation of the number of children is expensive (for example, requires
-travesing a linked list to determine its size) your implementation may return
+traversing a linked list to determine its size) your implementation may return
 `max_children` rather than the actual number. If the computation is cheap (e.g., the
 number is stored as a field of the object), then you can always return the true
 number of children (that is, ignore the `max_children` argument).
@@ -1209,16 +1223,15 @@ Categories
 ----------
 
 Categories are a way to group related formatters. For instance, LLDB itself
-groups the formatters for the libstdc++ types in a category named
-gnu-libstdc++. Basically, categories act like containers in which to store
-formatters for a same library or OS release.
+groups the formatters for STL types in a category named cpluspus. Basically,
+categories act like containers in which to store formatters for a same library
+or OS release.
 
 By default, several categories are created in LLDB:
 
 - default: this is the category where every formatter ends up, unless another category is specified
 - objc: formatters for basic and common Objective-C types that do not specifically depend on macOS
-- gnu-libstdc++: formatters for std::string, std::vector, std::list and std::map as implemented by libstdcpp
-- libcxx: formatters for std::string, std::vector, std::list and std::map as implemented by libcxx
+- cplusplus: formatters for STL types (currently only libc++ and libstdc++ are supported). Enabled when debugging C++ targets.
 - system: truly basic types for which a formatter is required
 - AppKit: Cocoa classes
 - CoreFoundation: CF classes
@@ -1226,13 +1239,13 @@ By default, several categories are created in LLDB:
 - CoreServices: CS classes
 - VectorTypes: compact display for several vector types
 
-If you want to use a custom category for your formatters, all the type ... add
-provide a --category (-w) option, that names the category to add the formatter
+If you want to use a custom category for your formatters, all the ``type ... add``
+provide a ``--category`` (``-w``) option, that names the category to add the formatter
 to. To delete the formatter, you then have to specify the correct category.
 
 Categories can be in one of two states: enabled and disabled. A category is
-initially disabled, and can be enabled using the type category enable command.
-To disable an enabled category, the command to use is type category disable.
+initially disabled, and can be enabled using the ``type category enable`` command.
+To disable an enabled category, the command to use is ``type category disable``.
 
 The order in which categories are enabled or disabled is significant, in that
 LLDB uses that order when looking for formatters. Therefore, when you enable a
@@ -1246,12 +1259,11 @@ that the search order is:
 - AppKit
 - CoreServices
 - CoreGraphics
-- gnu-libstdc++
-- libcxx
+- cplusplus
 - VectorTypes
 - system
 
-As said, gnu-libstdc++ and libcxx contain formatters for C++ STL data types.
+As said, cplusplus contain formatters for C++ STL data types.
 system contains formatters for char* and char[], which reflect the behavior of
 older versions of LLDB which had built-in formatters for these types. Because
 now these are formatters, you can even replace them with your own if so you

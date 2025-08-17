@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include "src/sys/auxv/getauxval.h"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int bcmp(const void *lhs, const void *rhs, size_t count);
 void bzero(void *ptr, size_t count);
@@ -30,7 +31,9 @@ int atexit(void (*func)(void));
 // always returns 0 to indicate a failure.
 [[gnu::weak]] unsigned long getauxval(unsigned long id) { return 0; }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
+
+constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
 
 namespace {
 
@@ -41,7 +44,7 @@ namespace {
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 static constexpr uint64_t MEMORY_SIZE = 65336;
-static uint8_t memory[MEMORY_SIZE];
+alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 
 } // anonymous namespace
@@ -72,8 +75,6 @@ void *memset(void *ptr, int value, size_t count) {
 
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
-
-constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
 
 void *malloc(size_t s) {
   // Keep the bump pointer aligned on an eight byte boundary.
@@ -123,7 +124,7 @@ unsigned long __getauxval(unsigned long id) {
 
 } // extern "C"
 
-void *operator new(unsigned long size, void *ptr) { return ptr; }
+void *operator new(size_t size, void *ptr) { return ptr; }
 
 void *operator new(size_t size) { return malloc(size); }
 
@@ -136,3 +137,16 @@ void operator delete(void *) {
 }
 
 void operator delete(void *ptr, size_t size) { __builtin_trap(); }
+
+// Defining members in the std namespace is not preferred. But, we do it here
+// so that we can use it to define the operator new which takes std::align_val_t
+// argument.
+namespace std {
+enum class align_val_t : size_t {};
+} // namespace std
+
+void operator delete(void *mem, std::align_val_t) noexcept { __builtin_trap(); }
+
+void operator delete(void *mem, unsigned int, std::align_val_t) noexcept {
+  __builtin_trap();
+}

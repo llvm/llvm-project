@@ -21,7 +21,6 @@
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
 
 using namespace llvm;
 
@@ -46,9 +45,11 @@ enum RuntimeLibcallSignature {
   i64_func_i64,
   f32_func_f32_f32,
   f32_func_f32_i32,
+  f32_func_f32_iPTR,
   f32_func_i64_i64,
   f64_func_f64_f64,
   f64_func_f64_i32,
+  f64_func_f64_iPTR,
   f64_func_i64_i64,
   i16_func_f32,
   i16_func_f64,
@@ -70,6 +71,7 @@ enum RuntimeLibcallSignature {
   i16_i16_func_i16_i16,
   i32_i32_func_i32_i32,
   i64_i64_func_i64_i64,
+  i64_i64_func_i64_i64_iPTR,
   i64_i64_func_i64_i64_i64_i64,
   i64_i64_func_i64_i64_i64_i64_iPTR,
   i64_i64_i64_i64_func_i64_i64_i64_i64,
@@ -204,6 +206,27 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::TAN_F32] = f32_func_f32;
     Table[RTLIB::TAN_F64] = f64_func_f64;
     Table[RTLIB::TAN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ASIN_F32] = f32_func_f32;
+    Table[RTLIB::ASIN_F64] = f64_func_f64;
+    Table[RTLIB::ASIN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ACOS_F32] = f32_func_f32;
+    Table[RTLIB::ACOS_F64] = f64_func_f64;
+    Table[RTLIB::ACOS_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ATAN_F32] = f32_func_f32;
+    Table[RTLIB::ATAN_F64] = f64_func_f64;
+    Table[RTLIB::ATAN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ATAN2_F32] = f32_func_f32_f32;
+    Table[RTLIB::ATAN2_F64] = f64_func_f64_f64;
+    Table[RTLIB::ATAN2_F128] = i64_i64_func_i64_i64_i64_i64;
+    Table[RTLIB::SINH_F32] = f32_func_f32;
+    Table[RTLIB::SINH_F64] = f64_func_f64;
+    Table[RTLIB::SINH_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::COSH_F32] = f32_func_f32;
+    Table[RTLIB::COSH_F64] = f64_func_f64;
+    Table[RTLIB::COSH_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::TANH_F32] = f32_func_f32;
+    Table[RTLIB::TANH_F64] = f64_func_f64;
+    Table[RTLIB::TANH_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::SINCOS_F32] = func_f32_iPTR_iPTR;
     Table[RTLIB::SINCOS_F64] = func_f64_iPTR_iPTR;
     Table[RTLIB::SINCOS_F128] = func_i64_i64_iPTR_iPTR;
@@ -255,9 +278,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::LDEXP_F32] = f32_func_f32_i32;
     Table[RTLIB::LDEXP_F64] = f64_func_f64_i32;
     Table[RTLIB::LDEXP_F128] = i64_i64_func_i64_i64_i32;
-    Table[RTLIB::FREXP_F32] = f32_func_f32_i32;
-    Table[RTLIB::FREXP_F64] = f64_func_f64_i32;
-    Table[RTLIB::FREXP_F128] = i64_i64_func_i64_i64_i32;
+    Table[RTLIB::FREXP_F32] = f32_func_f32_iPTR;
+    Table[RTLIB::FREXP_F64] = f64_func_f64_iPTR;
+    Table[RTLIB::FREXP_F128] = i64_i64_func_i64_i64_iPTR;
+    Table[RTLIB::MODF_F32] = f32_func_f32_iPTR;
+    Table[RTLIB::MODF_F64] = f64_func_f64_iPTR;
+    Table[RTLIB::MODF_F128] = i64_i64_func_i64_i64_iPTR;
 
     // Conversion
     // All F80 and PPCF128 routines are unsupported.
@@ -502,27 +528,19 @@ RuntimeLibcallSignatureTable &getRuntimeLibcallSignatures() {
 // constructor for use with a static variable
 struct StaticLibcallNameMap {
   StringMap<RTLIB::Libcall> Map;
-  StaticLibcallNameMap() {
-    static const std::pair<const char *, RTLIB::Libcall> NameLibcalls[] = {
-#define HANDLE_LIBCALL(code, name) {(const char *)name, RTLIB::code},
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-    };
-    for (const auto &NameLibcall : NameLibcalls) {
-      if (NameLibcall.first != nullptr &&
-          getRuntimeLibcallSignatures().Table[NameLibcall.second] !=
-              unsupported) {
-        assert(!Map.contains(NameLibcall.first) &&
+  StaticLibcallNameMap(const Triple &TT) {
+    // FIXME: This is broken if there are ever different triples compiled with
+    // different libcalls.
+    RTLIB::RuntimeLibcallsInfo RTCI(TT);
+    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
+      StringRef NameLibcall = RTCI.getLibcallName(LC);
+      if (!NameLibcall.empty() &&
+          getRuntimeLibcallSignatures().Table[LC] != unsupported) {
+        assert(!Map.contains(NameLibcall) &&
                "duplicate libcall names in name map");
-        Map[NameLibcall.first] = NameLibcall.second;
+        Map[NameLibcall] = LC;
       }
     }
-    // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
-    // consistent with the f64 and f128 names.
-    Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
-    Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
-
-    Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
 };
 
@@ -612,6 +630,11 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::F32);
     Params.push_back(wasm::ValType::I32);
     break;
+  case f32_func_f32_iPTR:
+    Rets.push_back(wasm::ValType::F32);
+    Params.push_back(wasm::ValType::F32);
+    Params.push_back(PtrTy);
+    break;
   case f32_func_i64_i64:
     Rets.push_back(wasm::ValType::F32);
     Params.push_back(wasm::ValType::I64);
@@ -631,6 +654,11 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::F64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    break;
+  case f64_func_f64_iPTR:
+    Rets.push_back(wasm::ValType::F64);
+    Params.push_back(wasm::ValType::F64);
+    Params.push_back(PtrTy);
     break;
   case i16_func_f32:
     Rets.push_back(wasm::ValType::I32);
@@ -744,6 +772,17 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    break;
+  case i64_i64_func_i64_i64_iPTR:
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(PtrTy);
     break;
   case i64_i64_func_i64_i64_i64_i64:
     if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
@@ -897,7 +936,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                       StringRef Name,
                                       SmallVectorImpl<wasm::ValType> &Rets,
                                       SmallVectorImpl<wasm::ValType> &Params) {
-  static StaticLibcallNameMap LibcallNameMap;
+  static StaticLibcallNameMap LibcallNameMap(Subtarget.getTargetTriple());
   auto &Map = LibcallNameMap.Map;
   auto Val = Map.find(Name);
 #ifndef NDEBUG

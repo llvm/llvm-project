@@ -1,0 +1,17 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("InterpTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Testing",
+    "//clang/lib/Tooling",
+  ]
+  sources = [
+    "BitcastBuffer.cpp",
+    "Descriptor.cpp",
+    "toAPValue.cpp",
+  ]
+}

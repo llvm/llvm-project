@@ -19,8 +19,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 namespace scanf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;
@@ -36,7 +34,7 @@ using ::fwrite;
 } // namespace scanf_test
 
 TEST(LlvmLibcFScanfTest, WriteToFile) {
-  const char *FILENAME = "fscanf_output.test";
+  const char *FILENAME = APPEND_LIBC_TEST("fscanf_output.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
   ::FILE *file = scanf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);

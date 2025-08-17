@@ -27,3 +27,12 @@ add_header_library(
   DEPENDS
     libc.src.__support.macros.properties.compiler
 )
+
+add_header_library(
+  null_check
+  HDRS
+    null_check.h
+  DEPENDS
+    .config
+    .optimization
+)

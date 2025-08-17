@@ -6,8 +6,8 @@ define void @select_v16i8_imm(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vrepli.h $vr1, -256
-; CHECK-NEXT:    vbitseli.b $vr1, $vr0, 255
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
   %sel = select <16 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %v0
@@ -72,8 +72,7 @@ define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    vld $vr2, $a1, 0
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI4_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret

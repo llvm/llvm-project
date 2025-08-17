@@ -4,6 +4,8 @@
 // KEEP-NON-LEAF: "-mframe-pointer=non-leaf"
 // KEEP-NONE-NOT: warning: argument unused
 // KEEP-NONE:     "-mframe-pointer=none"
+// KEEP-RESERVED-NOT: warning: argument unused
+// KEEP-RESERVED: "-mframe-pointer=reserved"
 
 // On Linux x86, omit frame pointer when optimization is enabled.
 // RUN: %clang -### --target=i386-linux -S -fomit-frame-pointer %s 2>&1 | \
@@ -42,8 +44,8 @@
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
 // -pg -fomit-frame-pointer => error.
-// RUN: not %clang -### -S -fomit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-OMIT-FP-PG %s
-// RUN: %clang -### -S -fomit-frame-pointer -fno-omit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-MIX-NO-OMIT-FP-PG %s
+// RUN: not %clang -### --target=i386-linux -S -fomit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-OMIT-FP-PG %s
+// RUN: %clang -### --target=i386-linux -S -fomit-frame-pointer -fno-omit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-MIX-NO-OMIT-FP-PG %s
 // CHECK-NO-MIX-OMIT-FP-PG: '-fomit-frame-pointer' not allowed with '-pg'
 // CHECK-MIX-NO-OMIT-FP-PG-NOT: '-fomit-frame-pointer' not allowed with '-pg'
 
@@ -160,7 +162,64 @@
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
 // RUN: %clang -### --target=riscv64-linux-android -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-// RUN: not %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
+// RUN: %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+
+// On ARM backend bare metal targets, frame pointer is omitted
+// RUN: %clang -### --target=arm-arm-none-eabi -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabi -S -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-arm-none-eabi -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabi -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=armeb-arm-none-eabi -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=thumb-arm-none-eabi -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=thumbeb-arm-none-eabi -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+
+// Check that for Apple bare metal targets, we're keeping frame pointers by default
+// RUN: %clang -### --target=thumbv6m-apple-none-macho -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=thumbv6m-apple-none-macho -S -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-apple-none-macho -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-apple-none-macho -S -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=thumbv6m-apple-none-macho -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=thumbv6m-apple-none-macho -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-apple-none-macho -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-apple-none-macho -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+
+// AArch64 bare metal targets behave like hosted targets
+// RUN: %clang -### --target=aarch64-none-elf -S %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -O1 %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -fno-omit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -O1 -fno-omit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+
+// AArch64 Windows requires that the frame pointer be reserved
+// RUN: %clang -### --target=aarch64-pc-windows-msvc -S -fomit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
+
 void f0() {}
 void f1() { f0(); }

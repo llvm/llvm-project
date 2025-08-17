@@ -677,7 +677,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                 std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
-          LengthPos(LengthPos), WithIncrease(WithIncrease){};
+          LengthPos(LengthPos), WithIncrease(WithIncrease) {};
 
     StringRef Name;
     std::optional<unsigned> DestinationPos;
@@ -702,17 +702,16 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
     return hasArgument(
         CC.LengthPos,
         allOf(
-            anyOf(
-                ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
-                allOf(unless(hasDefinition(SizeOfCharExpr)),
-                      allOf(CC.WithIncrease
-                                ? ignoringImpCasts(hasDefinition(HasIncOp))
-                                : ignoringImpCasts(allOf(
-                                      unless(hasDefinition(HasIncOp)),
-                                      anyOf(hasDefinition(binaryOperator().bind(
-                                                UnknownLengthName)),
-                                            hasDefinition(anything())))),
-                            AnyOfWrongLengthInit))),
+            anyOf(ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
+                  allOf(unless(hasDefinition(SizeOfCharExpr)),
+                        allOf(CC.WithIncrease
+                                  ? ignoringImpCasts(hasDefinition(HasIncOp))
+                                  : ignoringImpCasts(
+                                        allOf(unless(hasDefinition(HasIncOp)),
+                                              hasDefinition(optionally(
+                                                  binaryOperator().bind(
+                                                      UnknownLengthName))))),
+                              AnyOfWrongLengthInit))),
             expr().bind(LengthExprName)));
   };
 

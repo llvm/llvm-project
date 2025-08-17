@@ -22,8 +22,6 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
     Pass that enables folding of full-layer operations on constant tensors.
   }];
 
-  let constructor = "createTosaLayerwiseConstantFoldPass()";
-
   let options = [
       Option<"aggressiveReduceConstant", "aggressive-reduce-constant", "bool",
              /*default=*/"false",
@@ -32,14 +30,13 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
    ];
 }
 
-def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
+def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   let summary = "Propagate shapes across TOSA operations";
   let description = [{
     Pass that uses operand types and propagates shapes to TOSA operations.
     This includes legalizing rankless and dynamic shapes towards static.
   }];
 
-  let constructor = "createTosaInferShapesPass()";
   let dependentDialects = [
     "func::FuncDialect",
     "tensor::TensorDialect",
@@ -47,7 +44,8 @@ def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   ];
 }
 
-def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
+def TosaMakeBroadcastablePass
+    : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
   let summary = "TOSA rank Reshape to enable Broadcasting";
   let description = [{
     Pass that enables broadcast by making all input arrays have the same
@@ -56,29 +54,15 @@ def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
     approach similar to step 1 of Numpy 4-step broadcasting:
     https://numpy.org/doc/stable/reference/ufuncs.html#broadcasting
   }];
-
-  let constructor = "createTosaMakeBroadcastablePass()";
 }
 
-def TosaOptionalDecompositions
-  : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
+def TosaOptionalDecompositionsPass
+    : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
   let summary = "Applies Tosa operations optional decompositions";
   let description = [{
     Pass to apply the Tosa operations decompositions
     exposed as populate functions in include/mlir/Dialect/Tosa/Transforms/Passes.h
   }];
-
-  let constructor = "tosa::createTosaOptionalDecompositions()";
-}
-
-def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
-    [
-      I32EnumAttrCase<"BaseInference", 0, "bi">,
-      I32EnumAttrCase<"MainInference", 1, "mi">,
-      I32EnumAttrCase<"MainTraining", 2, "mt">,
-      I32EnumAttrCase<"Undefined", 3>
-    ]>{
-  let cppNamespace = "mlir::tosa";
 }
 
 def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
@@ -97,22 +81,18 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   }];
 
   let options = [
-      Option<"profile", "profile", "mlir::tosa::TosaProfileEnum",
-             /*default=*/"mlir::tosa::TosaProfileEnum::Undefined",
-             "Validate if operations match for the given profile",
-             [{::llvm::cl::values(
-               clEnumValN(mlir::tosa::TosaProfileEnum::BaseInference, "bi",
-                "Use Base Inference profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::MainInference, "mi",
-                "Use Main Inference profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::MainTraining, "mt",
-                "Use Main Training profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::Undefined, "undefined",
-                "Do not define a profile.")
-              )}]>,
-      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+      ListOption<"profile", "profile", "std::string",
+             "Validate if operations match for the given profile set">,
+      ListOption<"extension", "extension", "std::string",
+             "Validate if operations match for the given extension set">,
+      Option<"strictOpSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
+      Option<"allowInvalidOpDatatypeCombinations", "allow-invalid-op-datatype-combinations", "bool",
+             /*default=*/"false",
+             "Disable checks for operations that are determined to be invalid due to their "
+             "operand/result datatypes not aligning with the 'Supported Data Types' "
+             "sections of the specifciation">,
       Option<"level", "level", "mlir::tosa::TosaLevelEnum",
              /*default=*/"mlir::tosa::TosaLevelEnum::EightK",
              "Validate if operator parameters are within specfication for the given level",
@@ -124,6 +104,41 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
                 "to the operation data types.")
               )}]>
    ];
+}
+
+def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
+  let summary = "Reduce transposes through other operators";
+  let description = [{
+    Pass that identifies and reduces tosa.TRANSPOSE operations through chains
+    of operators.
+
+    The pass traverses dependencies of tosa.TRANSPOSE operations until they
+    terminate in either a tosa.RESHAPE that we can fold the hoisted
+    tosa.TRANSPOSE into, a tosa.TRANSPOSE that forms the identity with the
+    hoisted one, or a tosa.CONST with a dense elements attribute. It then
+    propagates the hoisted transform upward through the intervening operators
+    if the support is implemented. Finally, it observes that no duplication
+    will occur of both the chain that was hoisted through and the new chain
+    that results, and if so, it replaces the hoisted tosa.TRANSPOSE.
+
+    The pass has an important use-case in cleaning up the results of frameworks
+    that introduce a lot of data-layout transformations when legalizing to TOSA,
+    a common one being transformations between NHWC and NCHW layouts.
+  }];
+}
+
+def TosaConvertIntegerTypeToSignless : Pass<"tosa-convert-integer-type-to-signless", "func::FuncOp"> {
+  let summary = "Convert integer types to signless";
+  let description = [{
+    This pass converts signed or unsigned integer types to signless. It
+    currently does this greedily for all operators and can also change the
+    signature of the function. Should the signature of the entrypoint
+    function change, it will be the responsibility of the user to carry
+    signedness information of the inputs and outputs independently.
+
+    This can be a useful transformation for conversion to other formats
+    that require strict adherence to the TOSA specification.
+  }];
 }
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

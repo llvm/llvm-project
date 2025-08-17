@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sinpif.h"
-#include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/sincosf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -82,6 +83,11 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
 
     // check for NaN values
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+
       if (x_abs == 0x7f80'0000U) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
@@ -108,4 +114,4 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

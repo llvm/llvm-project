@@ -14,7 +14,6 @@
 #include "BPFISelLowering.h"
 #include "BPF.h"
 #include "BPFSubtarget.h"
-#include "BPFTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -22,8 +21,10 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -69,6 +70,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
+  setOperationAction(ISD::TRAP, MVT::Other, Custom);
+
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, MVT::i64, Custom);
 
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
@@ -91,6 +94,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_XOR, VT, Custom);
     setOperationAction(ISD::ATOMIC_SWAP, VT, Custom);
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Custom);
+  }
+
+  for (auto VT : {MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
   }
 
   for (auto VT : { MVT::i32, MVT::i64 }) {
@@ -291,6 +299,9 @@ void BPFTargetLowering::ReplaceNodeResults(
     else
       Msg = "unsupported atomic operation, please use 64 bit version";
     break;
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return;
   }
 
   SDLoc DL(N);
@@ -316,6 +327,11 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSDIVSREM(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::TRAP:
+    return LowerTRAP(Op, DAG);
   }
 }
 
@@ -401,6 +417,21 @@ SDValue BPFTargetLowering::LowerFormalArguments(
 }
 
 const size_t BPFTargetLowering::MaxArgs = 5;
+
+static void resetRegMaskBit(const TargetRegisterInfo *TRI, uint32_t *RegMask,
+                            MCRegister Reg) {
+  for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+    RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+}
+
+static uint32_t *regMaskFromTemplate(const TargetRegisterInfo *TRI,
+                                     MachineFunction &MF,
+                                     const uint32_t *BaseRegMask) {
+  uint32_t *RegMask = MF.allocateRegMask();
+  unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+  memcpy(RegMask, BaseRegMask, sizeof(RegMask[0]) * RegMaskSize);
+  return RegMask;
+}
 
 SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
@@ -496,10 +527,12 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), CLI.DL, PtrVT,
                                         G->getOffset(), 0);
   } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
-    fail(CLI.DL, DAG,
-         Twine("A call to built-in function '" + StringRef(E->getSymbol()) +
-               "' is not supported."));
+    if (StringRef(E->getSymbol()) != BPF_TRAP) {
+      Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
+      fail(CLI.DL, DAG,
+           Twine("A call to built-in function '" + StringRef(E->getSymbol()) +
+                 "' is not supported."));
+    }
   }
 
   // Returns a chain & a flag for retval copy to use.
@@ -512,6 +545,22 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // known live into the call.
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+
+  bool HasFastCall =
+      (CLI.CB && isa<CallInst>(CLI.CB) && CLI.CB->hasFnAttr("bpf_fastcall"));
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (HasFastCall) {
+    uint32_t *RegMask = regMaskFromTemplate(
+        TRI, MF, TRI->getCallPreservedMask(MF, CallingConv::PreserveAll));
+    for (auto const &RegPair : RegsToPass)
+      resetRegMaskBit(TRI, RegMask, RegPair.first);
+    if (!CLI.CB->getType()->isVoidTy())
+      resetRegMaskBit(TRI, RegMask, BPF::R0);
+    Ops.push_back(DAG.getRegisterMask(RegMask));
+  } else {
+    Ops.push_back(
+        DAG.getRegisterMask(TRI->getCallPreservedMask(MF, CLI.CallConv)));
+  }
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
@@ -666,10 +715,69 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     NegateCC(LHS, RHS, CC);
 
   SDValue TargetCC = DAG.getConstant(CC, DL, LHS.getValueType());
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
 
-  return DAG.getNode(BPFISD::SELECT_CC, DL, VTs, Ops);
+  return DAG.getNode(BPFISD::SELECT_CC, DL, Op.getValueType(), Ops);
+}
+
+SDValue BPFTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
+      AtomicOrdering::SequentiallyConsistent)
+    fail(DL, DAG,
+         "sequentially consistent (seq_cst) "
+         "atomic load/store is not supported");
+
+  return Op;
+}
+
+static Function *createBPFUnreachable(Module *M) {
+  if (auto *Fn = M->getFunction(BPF_TRAP))
+    return Fn;
+
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(M->getContext()), false);
+  Function *NewF =
+      Function::Create(FT, GlobalValue::ExternalWeakLinkage, BPF_TRAP, M);
+  NewF->setDSOLocal(true);
+  NewF->setCallingConv(CallingConv::C);
+  NewF->setSection(".ksyms");
+
+  if (M->debug_compile_units().empty())
+    return NewF;
+
+  DIBuilder DBuilder(*M);
+  DITypeRefArray ParamTypes =
+      DBuilder.getOrCreateTypeArray({nullptr /*void return*/});
+  DISubroutineType *FuncType = DBuilder.createSubroutineType(ParamTypes);
+  DICompileUnit *CU = *M->debug_compile_units_begin();
+  DISubprogram *SP =
+      DBuilder.createFunction(CU, BPF_TRAP, BPF_TRAP, nullptr, 0, FuncType, 0,
+                              DINode::FlagZero, DISubprogram::SPFlagZero);
+  NewF->setSubprogram(SP);
+  return NewF;
+}
+
+SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  SmallVector<SDValue> InVals;
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  Function *Fn = createBPFUnreachable(MF.getFunction().getParent());
+  auto PtrVT = getPointerTy(MF.getDataLayout());
+  CLI.Callee = DAG.getTargetGlobalAddress(Fn, DL, PtrVT);
+  CLI.Chain = N->getOperand(0);
+  CLI.IsTailCall = false;
+  CLI.CallConv = CallingConv::C;
+  CLI.IsVarArg = false;
+  CLI.DL = DL;
+  CLI.NoMerge = false;
+  CLI.DoesNotReturn = true;
+  return LowerCall(CLI, InVals);
 }
 
 const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {

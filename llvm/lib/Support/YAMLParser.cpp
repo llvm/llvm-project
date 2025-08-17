@@ -258,9 +258,8 @@ public:
   Token getNext();
 
   void printError(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Message,
-                  ArrayRef<SMRange> Ranges = std::nullopt) {
-    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ std::nullopt,
-                    ShowColors);
+                  ArrayRef<SMRange> Ranges = {}) {
+    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ {}, ShowColors);
   }
 
   void setError(const Twine &Message, StringRef::iterator Position) {
@@ -762,8 +761,9 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
           EscapedInput += "\\U" + std::string(8 - HexStr.size(), '0') + HexStr;
       }
       i += UnicodeScalarValue.second - 1;
-    } else
+    } else {
       EscapedInput.push_back(*i);
+    }
   }
   return EscapedInput;
 }
@@ -1012,17 +1012,16 @@ void Scanner::scan_ns_uri_char() {
   while (true) {
     if (Current == End)
       break;
-    if ((   *Current == '%'
-          && Current + 2 < End
-          && is_ns_hex_digit(*(Current + 1))
-          && is_ns_hex_digit(*(Current + 2)))
-        || is_ns_word_char(*Current)
-        || StringRef(Current, 1).find_first_of("#;/?:@&=+$,_.!~*'()[]")
-          != StringRef::npos) {
+    if ((*Current == '%' && Current + 2 < End &&
+         is_ns_hex_digit(*(Current + 1)) && is_ns_hex_digit(*(Current + 2))) ||
+        is_ns_word_char(*Current) ||
+        StringRef(Current, 1).find_first_of("#;/?:@&=+$,_.!~*'()[]") !=
+            StringRef::npos) {
       ++Current;
       ++Column;
-    } else
+    } else {
       break;
+    }
   }
 }
 
@@ -1106,8 +1105,9 @@ void Scanner::removeStaleSimpleKeyCandidates() {
         setError( "Could not find expected : for simple key"
                 , i->Tok->Range.begin());
       i = SimpleKeys.erase(i);
-    } else
+    } else {
       ++i;
+    }
   }
 }
 
@@ -2632,8 +2632,9 @@ bool Document::parseDirectives() {
     } else if (T.Kind == Token::TK_VersionDirective) {
       parseYAMLDirective();
       isDirective = true;
-    } else
+    } else {
       break;
+    }
   }
   return isDirective;
 }

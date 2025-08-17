@@ -4,6 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o %t
 # RUN: %lldb %t \
 # RUN:   -o "target variable udata data1 data2 data4 data8 string strp ref4 udata_ptr" \
+# RUN:   -o "target variable --format x data16" \
 # RUN:   -o exit | FileCheck %s
 
 # CHECK-LABEL: target variable
@@ -22,6 +23,8 @@
 # CHECK: (char[7]) ref4 = <empty constant data>
 ## A variable of pointer type.
 # CHECK: (unsigned long *) udata_ptr = 0xdeadbeefbaadf00d
+# CHECK: (unsigned __int128) data16 = 0xdeadbeefbaadf00ddeadbeefbaadf00d
+
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code
@@ -88,6 +91,7 @@
         var 15, 0x8                     # DW_FORM_string
         var 16, 0xe                     # DW_FORM_strp
         var 17, 0x13                    # DW_FORM_ref4
+        var 18, 0x1e                    # DW_FORM_data16
         .byte   0                       # EOM(3)
         .section        .debug_info,"",@progbits
 .Lcu_begin0:
@@ -119,6 +123,11 @@
 .Lulong_ptr:
         .byte   2                       # Abbrev DW_TAG_pointer_type
         .long   .Lulong-.Lcu_begin0     # DW_AT_type
+.Lu128:
+        .byte   6                       # Abbrev DW_TAG_base_type
+        .asciz  "Lu128"                 # DW_AT_name
+        .byte   16                      # DW_AT_byte_size
+        .byte   7                       # DW_AT_encoding
 
         .byte   10                      # Abbrev DW_TAG_variable
         .asciz  "udata"                 # DW_AT_name
@@ -164,6 +173,12 @@
         .asciz  "udata_ptr"             # DW_AT_name
         .long   .Lulong_ptr-.Lcu_begin0 # DW_AT_type
         .uleb128 0xdeadbeefbaadf00d     # DW_AT_const_value
+
+        .byte   18                      # Abbrev DW_TAG_variable
+        .asciz  "data16"                # DW_AT_name
+        .long   .Lu128-.Lcu_begin0      # DW_AT_type
+        .quad   0xdeadbeefbaadf00d      # DW_AT_const_value
+        .quad   0xdeadbeefbaadf00d      # DW_AT_const_value
 
         .byte   0                       # End Of Children Mark
 .Ldebug_info_end0:

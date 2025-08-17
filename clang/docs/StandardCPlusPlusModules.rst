@@ -305,17 +305,17 @@ Therefore, none of the following names are valid by default:
 Using a reserved module name is strongly discouraged, but
 ``-Wno-reserved-module-identifier`` can be used to suppress the warning.
 
-Specifying dependent BMIs
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Specifying BMI dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are 3 ways to specify a dependent BMI:
+There are 3 ways to specify a BMI dependency:
 
 1. ``-fprebuilt-module-path=<path/to/directory>``.
 2. ``-fmodule-file=<path/to/BMI>`` (Deprecated).
 3. ``-fmodule-file=<module-name>=<path/to/BMI>``.
 
 The ``-fprebuilt-module-path`` option specifies the path to search for
-dependent BMIs. Multiple paths may be specified, similar to using ``-I`` to
+BMI dependencies. Multiple paths may be specified, similar to using ``-I`` to
 specify a search path for header files. When importing a module ``M``, the
 compiler looks for ``M.pcm`` in the directories specified by
 ``-fprebuilt-module-path``. Similarly, when importing a partition module unit
@@ -337,9 +337,8 @@ When these options are specified in the same invocation of the compiler, the
 ``-fmodule-file=<module-name>=<path/to/BMI>``, which takes precedence over
 ``-fprebuilt-module-path=<path/to/directory>``.
 
-Note: all dependant BMIs must be specified explicitly, either directly or
-indirectly dependent BMIs explicitly. See
-https://github.com/llvm/llvm-project/issues/62707 for details.
+Note: all BMI dependencies must be specified explicitly, either directly or
+indirectly. See https://github.com/llvm/llvm-project/issues/62707 for details.
 
 When compiling a ``module implementation unit``, the BMI of the corresponding
 ``primary module interface unit`` must be specified because a module
@@ -380,7 +379,7 @@ For example, the traditional compilation processes for headers are like:
   hdr2.h  --,                                 |
   src2.cpp -+> clang++ src2.cpp --> src2.o ---'
 
-And the compilation process for module units are like:
+And the compilation processes for module units are like:
 
 .. code-block:: text
 
@@ -397,6 +396,16 @@ more details.
 BMIs cannot be shipped in an archive to create a module library. Instead, the
 BMIs(``*.pcm``) are compiled into object files(``*.o``) and those object files
 are added to the archive instead.
+
+clang-cl
+~~~~~~~~
+
+``clang-cl`` supports the same options as ``clang++`` for modules as detailed above;
+there is no need to prefix these options with ``/clang:``. Note that ``cl.exe``
+`options to emit/consume IFC files <https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/>` are *not* supported.
+The resultant precompiled modules are also not compatible for use with ``cl.exe``.
+
+We recommend that build system authors use the above-mentioned ``clang++`` options  with ``clang-cl`` to build modules.
 
 Consistency Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -425,7 +434,7 @@ non-module-unit uses need to be consistent. Consider the following example:
   $ clang++ -std=c++23 Use.cpp -fprebuilt-module-path=.
 
 Clang rejects the example due to the inconsistent language standard modes. Not
-all compiler options are language dialect options, though. For example:
+all compiler options are language-dialect options, though. For example:
 
 .. code-block:: console
 
@@ -452,6 +461,37 @@ Currently, Clang accepts the above example, though it may produce surprising
 results if the debugging code depends on consistent use of ``NDEBUG`` in other
 translation units.
 
+Source Files Consistency
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang may open the input files [1]_ of a BMI during the compilation. This implies that
+when Clang consumes a BMI, all the input files need to be present in the original path
+and with the original contents.
+
+To overcome these requirements and simplify cases like distributed builds and sandboxed
+builds, users can use the ``-fmodules-embed-all-files`` flag to embed all input files
+into the BMI so that Clang does not need to open the corresponding file on disk.
+
+When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits the source
+code into the BMI file, the contents of the BMI file contain a sufficiently verbose
+representation to reproduce the original source file.
+
+.. [1] Input files: The source files which took part in the compilation of the BMI.
+   For example:
+
+   .. code-block:: c++
+
+     // M.cppm
+     module;
+     #include "foo.h"
+     export module M;
+
+     // foo.h
+     #pragma once
+     #include "bar.h"
+
+   The ``M.cppm``, ``foo.h`` and ``bar.h`` are input files for the BMI of ``M.cppm``.
+
 Object definition consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -473,6 +513,13 @@ fragment is disabled by default. These checks can be enabled by specifying
 ``-Xclang -fno-skip-odr-check-in-gmf`` when compiling. If the check is enabled
 and you encounter incorrect or missing diagnostics, please report them via the
 `community issue tracker <https://github.com/llvm/llvm-project/issues/>`_.
+
+Privacy Issue
+-------------
+
+BMIs are not and should not be treated as an information hiding mechanism.
+They should always be assumed to contain all the information that was used to
+create them, in a recoverable form.
 
 ABI Impacts
 -----------
@@ -554,16 +601,16 @@ unnecessary dependencies for the BMI. To mitigate the problem, Clang has a
 compiler option to reduce the information contained in the BMI. These two
 formats are known as Full BMI and Reduced BMI, respectively.
 
-Users can use the ``-fexperimental-modules-reduced-bmi`` option to produce a
+Users can use the ``-fmodules-reduced-bmi`` option to produce a
 Reduced BMI.
 
 For the one-phase compilation model (CMake implements this model), with
-``-fexperimental-modules-reduced-bmi``, the generated BMI will be a Reduced
+``-fmodules-reduced-bmi``, the generated BMI will be a Reduced
 BMI automatically. (The output path of the BMI is specified by
 ``-fmodule-output=`` as usual with the one-phase compilation model).
 
 It is also possible to produce a Reduced BMI with the two-phase compilation
-model. When ``-fexperimental-modules-reduced-bmi``, ``--precompile``, and
+model. When ``-fmodules-reduced-bmi``, ``--precompile``, and
 ``-fmodule-output=`` are specified, the generated BMI specified by ``-o`` will
 be a full BMI and the BMI specified by ``-fmodule-output=`` will be a Reduced
 BMI. The dependency graph in this case would look like:
@@ -577,7 +624,7 @@ BMI. The dependency graph in this case would look like:
                                                -> ...
                                                -> consumer_n.cpp
 
-Clang does not emit diagnostics when ``-fexperimental-modules-reduced-bmi`` is
+Clang does not emit diagnostics when ``-fmodules-reduced-bmi`` is
 used with a non-module unit. This design permits users of the one-phase
 compilation model to try using reduced BMIs without needing to modify the build
 system. The two-phase compilation module requires build system support.
@@ -640,17 +687,155 @@ fails to instantiate. For such issues, users can add references to ``N::g`` in
 the `module purview <https://eel.is/c++draft/module.unit#5>`_ of ``M.cppm`` to
 ensure it is reachable, e.g. ``using N::g;``.
 
-Support for Reduced BMIs is still experimental, but it may become the default
-in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
+As of Clang 22.x, the Reduced BMI is enabled by default. You may still want to
+use Full BMI with ``-fno-modules-reduced-bmi`` in the following case:
+1. Your build system uses two-phase compilation but it haven't adjusted the
+implementation for reduced BMI.
+2. You meet a regression with Reduced BMI that you cannot work around. Please
+report an issue for this case.
 
-1. ``-fexperimental-modules-reduced-bmi`` is opt-in for 1~2 releases. The period depends
-   on user feedback and may be extended.
-2. Announce that Reduced BMIs are no longer experimental and introduce
-   ``-fmodules-reduced-bmi`` as a new option, and recommend use of the new
-   option. This transition is expected to take 1~2 additional releases as well.
-3. Finally, ``-fmodules-reduced-bmi`` will be the default. When that time
-   comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
-   be meaningful to build systems which elect to support two-phase compilation.
+Experimental Non-Cascading Changes
+----------------------------------
+
+This section is primarily for build system vendors. For end compiler users,
+if you don't want to read it all, this is helpful to reduce recompilations.
+We encourage build system vendors and end users try this out and bring feedback.
+
+Before Clang 19, a change in BMI of any (transitive) dependency would cause the
+outputs of the BMI to change. Starting with Clang 19, changes to non-direct
+dependencies should not directly affect the output BMI, unless they affect the
+results of the compilations. We expect that there are many more opportunities
+for this optimization than we currently have realized and would appreciate
+feedback about missed optimization opportunities. For example,
+
+.. code-block:: c++
+
+  // m-partA.cppm
+  export module m:partA;
+
+  // m-partB.cppm
+  export module m:partB;
+  export int getB() { return 44; }
+
+  // m.cppm
+  export module m;
+  export import :partA;
+  export import :partB;
+
+  // useBOnly.cppm
+  export module useBOnly;
+  import m;
+  export int B() {
+    return getB();
+  }
+
+  // Use.cc
+  import useBOnly;
+  int get() {
+    return B();
+  }
+
+To compile the project (for brevity, some commands are omitted.):
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+If the interface of ``m-partA.cppm`` is changed to:
+
+.. code-block:: c++
+
+  // m-partA.v1.cppm
+  export module m:partA;
+  export int getA() { return 43; }
+
+and the BMI for ``useBOnly`` is recompiled as in:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+then the contents of ``useBOnly.pcm`` remain unchanged.
+Consequently, if the build system only bases recompilation decisions on directly imported modules,
+it becomes possible to skip the recompilation of ``Use.cc``.
+It should be fine because the altered interfaces do not affect ``Use.cc`` in any way;
+the changes do not cascade.
+
+When ``Clang`` generates a BMI, it records the hash values of all potentially contributory BMIs
+for the BMI being produced. This ensures that build systems are not required to consider
+transitively imported modules when deciding whether to recompile.
+
+What is considered to be a potential contributory BMIs is currently unspecified.
+However, it is a severe bug for a BMI to remain unchanged following an
+observable change in the module source files that affects the module consumers.
+
+Build systems may utilize this optimization by doing an update-if-changed operation to the BMI
+that is consumed from the BMI that is output by the compiler.
+
+We encourage build systems to add an experimental mode that
+reuses the cached BMI when **direct** dependencies did not change,
+even if **transitive** dependencies did change.
+
+Given there are potential compiler bugs, we recommend that build systems
+support this feature as a configurable option so that users
+can go back to the transitive change mode safely at any time.
+
+Interactions with Reduced BMI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With reduced BMI, non-cascading changes can be more powerful. For example,
+
+.. code-block:: c++
+
+  // A.cppm
+  export module A;
+  export int a() { return 44; }
+
+  // B.cppm
+  export module B;
+  import A;
+  export int b() { return a(); }
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fmodules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fmodules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+And let's change the implementation for ``A.cppm`` into:
+
+.. code-block:: c++
+
+  export module A;
+  int a_impl() { return 99; }
+  export int a() { return a_impl(); }
+
+and recompile the example:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fmodules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fmodules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+We should find the contents of ``B.pcm`` remains the same. In this case, the build system is
+allowed to skip recompilations of TUs which solely and directly depend on module ``B``.
+
+This only happens with a reduced BMI. With reduced BMIs, we won't record the function body
+of ``int b()`` in the BMI for ``B`` so that the module ``A`` doesn't contribute to the BMI of ``B``
+and we have less dependencies.
 
 Performance Tips
 ----------------
@@ -740,6 +925,9 @@ approach:
 
 Reducing the duplication from textual includes is what improves compile-time
 performance.
+
+To help users to identify such issues, we add a warning ``-Wdecls-in-multiple-modules``.
+This warning is disabled by default and it needs to be explicitly enabled or by ``-Weverything``.
 
 Transitioning to modules
 ------------------------
@@ -999,14 +1187,14 @@ them to ``your_library_imported.h`` too.
 Importing modules
 ~~~~~~~~~~~~~~~~~
 
-When there are dependent libraries providing modules, they should be imported
-in your module as well. Many existing libraries will fall into this category
-once the ``std`` module is more widely available.
+When there are library dependencies providing modules, the module dependencies
+should be imported in your module as well. Many existing libraries will fall
+into this category once the ``std`` module is more widely available.
 
-All dependent libraries providing modules
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+All library dependencies providing modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Of course, most of the complexity disappears if all the dependent libraries
+Of course, most of the complexity disappears if all the library dependencies
 provide modules.
 
 Headers need to be converted to include third-party headers conditionally. Then,
@@ -1067,8 +1255,8 @@ Non-exported ``using`` declarations are unnecessary if using implementation
 module units. Instead, third-party modules can be imported directly in
 implementation module units.
 
-Partial dependent libraries providing modules
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Partial library dependencies providing modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the library has to mix the use of ``include`` and ``import`` in its module,
 the primary goal is still the removal of duplicated declarations in translation
@@ -1076,6 +1264,58 @@ units as much as possible. If the imported modules provide headers to skip
 parsing their headers, those should be included after the import. If the
 imported modules don't provide such a header, one can be made manually for
 improved compile time performance.
+
+Reachability of internal partition units
+----------------------------------------
+
+The internal partition units are sometimes called implementation partition units in other documentation.
+However, the name may be confusing since implementation partition units are not implementation
+units.
+
+According to `[module.reach]p1 <https://eel.is/c++draft/module.reach#1>`_ and
+`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_ (from N4986):
+
+  A translation unit U is necessarily reachable from a point P if U is a module
+  interface unit on which the translation unit containing P has an interface
+  dependency, or the translation unit containing P imports U, in either case
+  prior to P.
+
+  All translation units that are necessarily reachable are reachable. Additional
+  translation units on which the point within the program has an interface
+  dependency may be considered reachable, but it is unspecified which are and
+  under what circumstances.
+
+For example,
+
+.. code-block:: c++
+
+  // a.cpp
+  import B;
+  int main()
+  {
+      g<void>();
+  }
+
+  // b.cppm
+  export module B;
+  import :C;
+  export template <typename T> inline void g() noexcept
+  {
+      return f<T>();
+  }
+
+  // c.cppm
+  module B:C;
+  template<typename> inline void f() noexcept {}
+
+The internal partition unit ``c.cppm`` is not necessarily reachable by
+``a.cpp`` because ``c.cppm`` is not a module interface unit and ``a.cpp``
+doesn't import ``c.cppm``. This leaves it up to the compiler to decide if
+``c.cppm`` is reachable by ``a.cpp`` or not. Clang's behavior is that
+indirectly imported internal partition units are not reachable.
+
+The suggested approach for using an internal partition unit in Clang is
+to only import them in the implementation unit.
 
 Known Issues
 ------------
@@ -1163,7 +1403,7 @@ non-module unit depending on the definition of some macros. However, this usage
 is forbidden by P1857R3 which is not yet implemented in Clang. This means that
 is possible to write invalid modules which will no longer be accepted once
 P1857R3 is implemented. This is tracked by
-`#56917 <https://github.com/llvm/llvm-project/issues/56917>`_.
+`#54047 <https://github.com/llvm/llvm-project/issues/54047>`_.
 
 Until then, it is recommended not to mix macros with module declarations.
 
@@ -1175,13 +1415,6 @@ Currently, Clang requires the file name of an ``importable module unit`` to
 have ``.cppm`` (or ``.ccm``, ``.cxxm``, ``.c++m``) as the file extension.
 However, the behavior is inconsistent with other compilers. This is tracked by
 `#57416 <https://github.com/llvm/llvm-project/issues/57416>`_.
-
-clang-cl is not compatible with standard C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``/clang:-fmodule-file`` and ``/clang:-fprebuilt-module-path`` cannot be used
-to specify the BMI with ``clang-cl.exe``. This is tracked by
-`#64118 <https://github.com/llvm/llvm-project/issues/64118>`_.
 
 Incorrect ODR violation diagnostics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1324,17 +1557,17 @@ file as a header. For example:
   $ clang++ -std=c++20 -fmodule-header=system -xc++-header iostream -o iostream.pcm
   $ clang++ -std=c++20 -fmodule-file=iostream.pcm use.cpp
 
-How to specify dependent BMIs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How to specify BMI dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``-fmodule-file`` can be used to specify a dependent BMI (or multiple times for
-more than one dependent BMI).
+``-fmodule-file`` can be used to specify a BMI dependency (or multiple times for
+more than one BMI dependency).
 
 With the existing implementation, ``-fprebuilt-module-path`` cannot be used for
 header units (because they are nominally anonymous). For header units, use
 ``-fmodule-file`` to include the relevant PCM file for each header unit.
 
-This is expect to be solved in a future version of Clang either by the compiler
+This is expected to be solved in a future version of Clang either by the compiler
 finding and specifying ``-fmodule-file`` automatically, or by the use of a
 module-mapper that understands how to map the header name to their PCMs.
 

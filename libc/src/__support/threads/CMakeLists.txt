@@ -10,6 +10,15 @@ add_header_library(
     sleep.h
 )
 
+add_header_library(
+  spin_lock
+  HDRS
+    spin_lock.h
+  DEPENDS
+    .sleep
+    libc.src.__support.CPP.atomic
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
@@ -33,6 +42,14 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
       .mutex
       libc.src.__support.CPP.mutex
   )
+elseif(NOT (LIBC_CONF_THREAD_MODE STREQUAL LIBC_THREAD_MODE_PLATFORM))
+  add_header_library(
+    mutex
+  HDRS
+    mutex.h
+  DEPENDS
+    .mutex_common
+  )
 endif()
 
 add_header_library(
@@ -40,6 +57,7 @@ add_header_library(
   HDRS
     thread.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.optional
@@ -55,6 +73,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
     DEPENDS
       .mutex
       .${LIBC_TARGET_OS}.thread
+      libc.hdr.stdint_proxy
       libc.src.__support.common
       libc.src.__support.fixedvector
       libc.src.__support.CPP.array
@@ -80,3 +99,19 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
     .${LIBC_TARGET_OS}.CndVar
   )
 endif()
+
+if (LLVM_LIBC_FULL_BUILD)
+  set(identifier_dependency_on_thread libc.src.__support.threads.thread)
+endif()
+
+add_header_library(
+  identifier
+  HDRS
+    identifier.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.include.sys_syscall
+    libc.hdr.types.pid_t
+    ${identifier_dependency_on_thread}
+)

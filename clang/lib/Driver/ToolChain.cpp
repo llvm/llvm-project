@@ -9,22 +9,21 @@
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
-#include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
 #include "ToolChains/InterfaceStubs.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -40,9 +39,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -103,33 +104,6 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     addIfExists(getFilePaths(), Path);
 }
 
-llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-ToolChain::executeToolChainProgram(StringRef Executable,
-                                   unsigned SecondsToWait) const {
-  llvm::SmallString<64> OutputFile;
-  llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile);
-  llvm::FileRemover OutputRemover(OutputFile.c_str());
-  std::optional<llvm::StringRef> Redirects[] = {
-      {""},
-      OutputFile.str(),
-      {""},
-  };
-
-  std::string ErrorMessage;
-  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
-                                /*MemoryLimit=*/0, &ErrorMessage))
-    return llvm::createStringError(std::error_code(),
-                                   Executable + ": " + ErrorMessage);
-
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> OutputBuf =
-      llvm::MemoryBuffer::getFile(OutputFile.c_str());
-  if (!OutputBuf)
-    return llvm::createStringError(OutputBuf.getError(),
-                                   "Failed to read stdout of " + Executable +
-                                       ": " + OutputBuf.getError().message());
-  return std::move(*OutputBuf);
-}
-
 void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
   Triple.setEnvironment(Env);
   if (EffectiveTriple != llvm::Triple())
@@ -184,35 +158,85 @@ bool ToolChain::defaultToIEEELongDouble() const {
   return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
 }
 
+static void processMultilibCustomFlags(Multilib::flags_list &List,
+                                       const llvm::opt::ArgList &Args) {
+  for (const Arg *MultilibFlagArg :
+       Args.filtered(options::OPT_fmultilib_flag)) {
+    List.push_back(MultilibFlagArg->getAsString(Args));
+    MultilibFlagArg->claim();
+  }
+}
+
 static void getAArch64MultilibFlags(const Driver &D,
                                           const llvm::Triple &Triple,
                                           const llvm::opt::ArgList &Args,
                                           Multilib::flags_list &Result) {
   std::vector<StringRef> Features;
-  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features, false);
+  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features,
+                                           /*ForAS=*/false,
+                                           /*ForMultilib=*/true);
   const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
   llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.PosTargetFeature))
-      MArch.push_back(Ext.UserVisibleName.str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.PosTargetFeature))
+        MArch.push_back(Ext.UserVisibleName.str());
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.NegTargetFeature))
-      MArch.push_back(("no" + Ext.UserVisibleName).str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.NegTargetFeature))
+        MArch.push_back(("no" + Ext.UserVisibleName).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
     if (FeatureSet.contains(ArchInfo->ArchFeature))
       ArchName = ArchInfo->Name;
-  assert(!ArchName.empty() && "at least one architecture should be found");
-  MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
-  Result.push_back(llvm::join(MArch, "+"));
+  if (!ArchName.empty()) {
+    MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
+    Result.push_back(llvm::join(MArch, "+"));
+  }
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+
+  if (FeatureSet.contains("+strict-align"))
+    Result.push_back("-mno-unaligned-access");
+  else
+    Result.push_back("-munaligned-access");
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
+  }
+
+  const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
+  if (ABIArg) {
+    Result.push_back(ABIArg->getAsString(Args));
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group);
+      A && A->getOption().matches(options::OPT_O)) {
+    switch (A->getValue()[0]) {
+    case 's':
+      Result.push_back("-Os");
+      break;
+    case 'z':
+      Result.push_back("-Oz");
+      break;
+    }
+  }
+
+  processMultilibCustomFlags(Result, Args);
 }
 
-static void getARMMultilibFlags(const Driver &D,
-                                      const llvm::Triple &Triple,
-                                      const llvm::opt::ArgList &Args,
-                                      Multilib::flags_list &Result) {
+static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                llvm::Reloc::Model RelocationModel,
+                                const llvm::opt::ArgList &Args,
+                                Multilib::flags_list &Result) {
   std::vector<StringRef> Features;
   llvm::ARM::FPUKind FPUKind = tools::arm::getARMTargetFeatures(
       D, Triple, Args, Features, false /*ForAs*/, true /*ForMultilib*/);
@@ -221,11 +245,13 @@ static void getARMMultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.Feature))
+        MArch.push_back(Ext.Name.str());
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.NegFeature))
+        MArch.push_back(("no" + Ext.Name).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
 
@@ -252,6 +278,62 @@ static void getARMMultilibFlags(const Driver &D,
   case arm::FloatABI::Invalid:
     llvm_unreachable("Invalid float ABI");
   }
+
+  if (RelocationModel == llvm::Reloc::ROPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    Result.push_back("-fropi");
+  else
+    Result.push_back("-fno-ropi");
+
+  if (RelocationModel == llvm::Reloc::RWPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    Result.push_back("-frwpi");
+  else
+    Result.push_back("-fno-rwpi");
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+
+  if (FeatureSet.contains("+strict-align"))
+    Result.push_back("-mno-unaligned-access");
+  else
+    Result.push_back("-munaligned-access");
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group);
+      A && A->getOption().matches(options::OPT_O)) {
+    switch (A->getValue()[0]) {
+    case 's':
+      Result.push_back("-Os");
+      break;
+    case 'z':
+      Result.push_back("-Oz");
+      break;
+    }
+  }
+
+  processMultilibCustomFlags(Result, Args);
+}
+
+static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                  const llvm::opt::ArgList &Args,
+                                  Multilib::flags_list &Result) {
+  std::string Arch = riscv::getRISCVArch(Args, Triple);
+  // Canonicalize arch for easier matching
+  auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+      Arch, /*EnableExperimentalExtensions*/ true);
+  if (!llvm::errorToBool(ISAInfo.takeError()))
+    Result.push_back("-march=" + (*ISAInfo)->toString());
+
+  Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
 }
 
 Multilib::flags_list
@@ -261,6 +343,18 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   std::vector<std::string> Result;
   const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
   Result.push_back("--target=" + Triple.str());
+
+  // A difference of relocation model (absolutely addressed data, PIC, Arm
+  // ROPI/RWPI) is likely to change whether a particular multilib variant is
+  // compatible with a given link. Determine the relocation model of the
+  // current link, so as to add appropriate multilib flags.
+  llvm::Reloc::Model RelocationModel;
+  unsigned PICLevel;
+  bool IsPIE;
+  {
+    RegisterEffectiveTriple TripleRAII(*this, Triple);
+    std::tie(RelocationModel, PICLevel, IsPIE) = ParsePICArgs(*this, Args);
+  }
 
   switch (Triple.getArch()) {
   case llvm::Triple::aarch64:
@@ -272,7 +366,11 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    getARMMultilibFlags(D, Triple, Args, Result);
+    getARMMultilibFlags(D, Triple, RelocationModel, Args, Result);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    getRISCVMultilibFlags(D, Triple, Args, Result);
     break;
   default:
     break;
@@ -290,9 +388,15 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   else
     Result.push_back("-fexceptions");
 
+  if (RelocationModel == llvm::Reloc::PIC_)
+    Result.push_back(IsPIE ? (PICLevel > 1 ? "-fPIE" : "-fpie")
+                           : (PICLevel > 1 ? "-fPIC" : "-fpic"));
+  else
+    Result.push_back("-fno-pic");
+
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
-  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  Result.erase(llvm::unique(Result), Result.end());
   return Result;
 }
 
@@ -303,10 +407,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -336,6 +439,9 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"cl", "--driver-mode=cl"},
       {"++", "--driver-mode=g++"},
       {"flang", "--driver-mode=flang"},
+      // For backwards compatibility, we create a symlink for `flang` called
+      // `flang-new`. This will be removed in the future.
+      {"flang-new", "--driver-mode=flang"},
       {"clang-dxc", "--driver-mode=dxc"},
   };
 
@@ -413,8 +519,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered =
-      llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -546,6 +651,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::DsymutilJobClass:
   case Action::VerifyDebugInfoJobClass:
   case Action::BinaryAnalyzeJobClass:
+  case Action::BinaryTranslatorJobClass:
     llvm_unreachable("Invalid tool kind.");
 
   case Action::CompileJobClass:
@@ -553,7 +659,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::PreprocessJobClass:
   case Action::ExtractAPIJobClass:
   case Action::AnalyzeJobClass:
-  case Action::MigrateJobClass:
   case Action::VerifyPCHJobClass:
   case Action::BackendJobClass:
     return getClang();
@@ -638,8 +743,8 @@ std::string ToolChain::getCompilerRTBasename(const ArgList &Args,
 
 std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
                                                StringRef Component,
-                                               FileType Type,
-                                               bool AddArch) const {
+                                               FileType Type, bool AddArch,
+                                               bool IsFortran) const {
   const llvm::Triple &TT = getTriple();
   bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
@@ -655,9 +760,12 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     Suffix = IsITANMSVCWindows ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
-    Suffix = TT.isOSWindows()
-                 ? (TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
-                 : ".so";
+    if (TT.isOSWindows())
+      Suffix = TT.isOSCygMing() ? ".dll.a" : ".lib";
+    else if (TT.isOSAIX())
+      Suffix = ".a";
+    else
+      Suffix = ".so";
     break;
   }
 
@@ -667,14 +775,16 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     const char *Env = TT.isAndroid() ? "-android" : "";
     ArchAndEnv = ("-" + Arch + Env).str();
   }
-  return (Prefix + Twine("clang_rt.") + Component + ArchAndEnv + Suffix).str();
+
+  std::string LibName = IsFortran ? "flang_rt." : "clang_rt.";
+  return (Prefix + Twine(LibName) + Component + ArchAndEnv + Suffix).str();
 }
 
 std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
-                                     FileType Type) const {
+                                     FileType Type, bool IsFortran) const {
   // Check for runtime files in the new layout without the architecture first.
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  std::string CRTBasename = buildCompilerRTBasename(
+      Args, Component, Type, /*AddArch=*/false, IsFortran);
   SmallString<128> Path;
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);
@@ -684,12 +794,10 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     if (Path.empty())
       Path = P;
   }
-  if (getTriple().isOSAIX())
-    Path.clear();
 
   // Check the filename for the old layout if the new one does not exist.
-  CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
+  CRTBasename = buildCompilerRTBasename(Args, Component, Type,
+                                        /*AddArch=*/!IsFortran, IsFortran);
   SmallString<128> OldPath(getCompilerRTPath());
   llvm::sys::path::append(OldPath, CRTBasename);
   if (Path.empty() || getVFS().exists(OldPath))
@@ -703,8 +811,88 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
 
 const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
                                               StringRef Component,
-                                              FileType Type) const {
-  return Args.MakeArgString(getCompilerRT(Args, Component, Type));
+                                              FileType Type,
+                                              bool isFortran) const {
+  return Args.MakeArgString(getCompilerRT(Args, Component, Type, isFortran));
+}
+
+/// Add Fortran runtime libs
+void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
+                                      llvm::opt::ArgStringList &CmdArgs) const {
+  // Link flang_rt.runtime
+  // These are handled earlier on Windows by telling the frontend driver to
+  // add the correct libraries to link against as dependents in the object
+  // file.
+  if (!getTriple().isKnownWindowsMSVCEnvironment()) {
+    StringRef F128LibName = getDriver().getFlangF128MathLibrary();
+    F128LibName.consume_front_insensitive("lib");
+    if (!F128LibName.empty()) {
+      bool AsNeeded = !getTriple().isOSAIX();
+      CmdArgs.push_back("-lflang_rt.quadmath");
+      if (AsNeeded)
+        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/true);
+      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
+      if (AsNeeded)
+        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
+    }
+    addFlangRTLibPath(Args, CmdArgs);
+
+    // needs libexecinfo for backtrace functions
+    if (getTriple().isOSFreeBSD() || getTriple().isOSNetBSD() ||
+        getTriple().isOSOpenBSD() || getTriple().isOSDragonFly())
+      CmdArgs.push_back("-lexecinfo");
+  }
+
+  // libomp needs libatomic for atomic operations if using libgcc
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false)) {
+    Driver::OpenMPRuntimeKind OMPRuntime = getDriver().getOpenMPRuntime(Args);
+    ToolChain::RuntimeLibType RuntimeLib = GetRuntimeLibType(Args);
+    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
+      CmdArgs.push_back("-latomic");
+  }
+}
+
+void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
+                                             ArgStringList &CmdArgs) const {
+  auto AddLibSearchPathIfExists = [&](const Twine &Path) {
+    // Linker may emit warnings about non-existing directories
+    if (!llvm::sys::fs::is_directory(Path))
+      return;
+
+    if (getTriple().isKnownWindowsMSVCEnvironment())
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + Path));
+    else
+      CmdArgs.push_back(Args.MakeArgString("-L" + Path));
+  };
+
+  // Search for flang_rt.* at the same location as clang_rt.* with
+  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=0. On most platforms, flang_rt is
+  // located at the path returned by getRuntimePath() which is already added to
+  // the library search path. This exception is for Apple-Darwin.
+  AddLibSearchPathIfExists(getCompilerRTPath());
+
+  // Fall back to the non-resource directory <driver-path>/../lib. We will
+  // probably have to refine this in the future. In particular, on some
+  // platforms, we may need to use lib64 instead of lib.
+  SmallString<256> DefaultLibPath =
+      llvm::sys::path::parent_path(getDriver().Dir);
+  llvm::sys::path::append(DefaultLibPath, "lib");
+  AddLibSearchPathIfExists(DefaultLibPath);
+}
+
+void ToolChain::addFlangRTLibPath(const ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const {
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so.
+  // On AIX, default to static flang-rt.
+  if (Args.hasFlag(options::OPT_static_libflangrt,
+                   options::OPT_shared_libflangrt, getTriple().isOSAIX()))
+    CmdArgs.push_back(
+        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
+  else {
+    CmdArgs.push_back("-lflang_rt.runtime");
+    addArchSpecificRPath(*this, Args, CmdArgs);
+  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
@@ -751,6 +939,16 @@ ToolChain::getFallbackAndroidTargetPath(StringRef BaseDir) const {
   return std::string(P);
 }
 
+llvm::Triple ToolChain::getTripleWithoutOSVersion() const {
+  return (Triple.hasEnvironment()
+              ? llvm::Triple(Triple.getArchName(), Triple.getVendorName(),
+                             llvm::Triple::getOSTypeName(Triple.getOS()),
+                             llvm::Triple::getEnvironmentTypeName(
+                                 Triple.getEnvironment()))
+              : llvm::Triple(Triple.getArchName(), Triple.getVendorName(),
+                             llvm::Triple::getOSTypeName(Triple.getOS())));
+}
+
 std::optional<std::string>
 ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   auto getPathForTriple =
@@ -762,8 +960,31 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     return {};
   };
 
-  if (auto Path = getPathForTriple(getTriple()))
+  const llvm::Triple &T = getTriple();
+  if (auto Path = getPathForTriple(T))
     return *Path;
+
+  if (T.isOSAIX()) {
+    llvm::Triple AIXTriple;
+    if (T.getEnvironment() == Triple::UnknownEnvironment) {
+      // Strip unknown environment and the OS version from the triple.
+      AIXTriple = llvm::Triple(T.getArchName(), T.getVendorName(),
+                               llvm::Triple::getOSTypeName(T.getOS()));
+    } else {
+      // Strip the OS version from the triple.
+      AIXTriple = getTripleWithoutOSVersion();
+    }
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
+
+  if (T.isOSzOS() &&
+      (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
+    // Build the triple without version information
+    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
+    if (auto Path = getPathForTriple(TripleWithoutVersion))
+      return *Path;
+  }
 
   // When building with per target runtime directories, various ways of naming
   // the Arm architecture may have been normalised to simply "arm".
@@ -780,14 +1001,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   //
   // M profile Arm is bare metal and we know they will not be using the per
   // target runtime directory layout.
-  if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
-    llvm::Triple ArmTriple = getTriple();
+  if (T.getArch() == Triple::arm && !T.isArmMClass()) {
+    llvm::Triple ArmTriple = T;
     ArmTriple.setArch(Triple::arm);
     if (auto Path = getPathForTriple(ArmTriple))
       return *Path;
   }
 
-  if (getTriple().isAndroid())
+  if (T.isAndroid())
     return getFallbackAndroidTargetPath(BaseDir);
 
   return {};
@@ -801,6 +1022,7 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   // Darwin does not use per-target runtime directory.
   if (Triple.isOSDarwin())
     return {};
+
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
 }
@@ -844,7 +1066,8 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
          Args.hasArg(options::OPT_fprofile_instr_generate) ||
          Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
          Args.hasArg(options::OPT_fcreate_profile) ||
-         Args.hasArg(options::OPT_forder_file_instrumentation);
+         Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage) ||
+         Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage_EQ);
 }
 
 bool ToolChain::needsGCovInstrumentation(const llvm::opt::ArgList &Args) {
@@ -878,7 +1101,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
   const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
+  StringRef UseLinker = A ? A->getValue() : getDriver().getPreferredLinker();
 
   // --ld-path= takes precedence over -fuse-ld= and specifies the executable
   // name. -B, COMPILER_PATH and PATH and consulted if the value does not
@@ -1027,11 +1250,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
+    tools::aarch64::setPAuthABIInTriple(getDriver(), Args, Triple);
     if (!Triple.isOSBinFormatMachO())
-      return getTripleString();
+      return Triple.getTriple();
 
     if (Triple.isArm64e())
-      return getTripleString();
+      return Triple.getTriple();
 
     // FIXME: older versions of ld64 expect the "arm64" component in the actual
     // triple string and query it to determine whether an LTO file can be
@@ -1041,6 +1265,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString();
+  case llvm::Triple::amdgcn: {
+    llvm::Triple Triple = getTriple();
+    if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "amdgcnspirv")
+      Triple.setArch(llvm::Triple::ArchType::spirv64);
+    return Triple.getTriple();
+  }
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
@@ -1171,10 +1401,17 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+/// Utility function to add a system framework directory to CC1 arguments.
+void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
+                                          llvm::opt::ArgStringList &CC1Args,
+                                          const Twine &Path) {
+  CC1Args.push_back("-internal-iframework");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+}
+
 /// Utility function to add a system include directory to CC1 arguments.
-/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                            ArgStringList &CC1Args,
-                                            const Twine &Path) {
+void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                 ArgStringList &CC1Args, const Twine &Path) {
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
@@ -1187,9 +1424,9 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
 /// "C" semantics. These semantics are *ignored* by and large today, but its
 /// important to preserve the preprocessor changes resulting from the
 /// classification.
-/*static*/ void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
-                                                   ArgStringList &CC1Args,
-                                                   const Twine &Path) {
+void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
+                                        ArgStringList &CC1Args,
+                                        const Twine &Path) {
   CC1Args.push_back("-internal-externc-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
@@ -1201,19 +1438,28 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
 }
 
+/// Utility function to add a list of system framework directories to CC1.
+void ToolChain::addSystemFrameworkIncludes(const ArgList &DriverArgs,
+                                           ArgStringList &CC1Args,
+                                           ArrayRef<StringRef> Paths) {
+  for (const auto &Path : Paths) {
+    CC1Args.push_back("-internal-iframework");
+    CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  }
+}
+
 /// Utility function to add a list of system include directories to CC1.
-/*static*/ void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
-                                             ArgStringList &CC1Args,
-                                             ArrayRef<StringRef> Paths) {
+void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
+                                  ArgStringList &CC1Args,
+                                  ArrayRef<StringRef> Paths) {
   for (const auto &Path : Paths) {
     CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
   }
 }
 
-/*static*/ std::string ToolChain::concat(StringRef Path, const Twine &A,
-                                         const Twine &B, const Twine &C,
-                                         const Twine &D) {
+std::string ToolChain::concat(StringRef Path, const Twine &A, const Twine &B,
+                              const Twine &C, const Twine &D) {
   SmallString<128> Result(Path);
   llvm::sys::path::append(Result, llvm::sys::path::Style::posix, A, B, C, D);
   return std::string(Result);
@@ -1230,7 +1476,7 @@ std::string ToolChain::detectLibcxxVersion(StringRef IncludePath) const {
     StringRef VersionText = llvm::sys::path::filename(LI->path());
     int Version;
     if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+        !VersionText.substr(1).getAsInteger(10, Version)) {
       if (Version > MaxVersion) {
         MaxVersion = Version;
         MaxVersionString = std::string(VersionText);
@@ -1332,7 +1578,7 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
       Default = false;
     if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
       StringRef Model = A->getValue();
-      if (Model != "fast")
+      if (Model != "fast" && Model != "aggressive")
         Default = false;
     }
   }
@@ -1376,7 +1622,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::Nullability | SanitizerKind::LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
-      getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
+      getTriple().getArch() == llvm::Triple::arm ||
+      getTriple().getArch() == llvm::Triple::thumb || getTriple().isWasm() ||
       getTriple().isAArch64() || getTriple().isRISCV() ||
       getTriple().isLoongArch64())
     Res |= SanitizerKind::CFIICall;
@@ -1394,8 +1641,12 @@ void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args) const {}
 
+void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                                   ArgStringList &CC1Args) const {}
+
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs) const {
+ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+                         const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
 
@@ -1505,12 +1756,14 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     Prev = Index;
     std::unique_ptr<Arg> XOpenMPTargetArg(Opts.ParseOneArg(Args, Index));
     if (!XOpenMPTargetArg || Index > Prev + 1) {
-      getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-          << A->getAsString(Args);
+      if (!A->isClaimed()) {
+        getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << A->getAsString(Args);
+      }
       continue;
     }
     if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&
-        Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() != 1) {
+        Args.getAllArgValues(options::OPT_offload_targets_EQ).size() != 1) {
       getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
       continue;
     }
@@ -1541,9 +1794,11 @@ void ToolChain::TranslateXarchArgs(
       A->getOption().matches(options::OPT_Xarch_host))
     ValuePos = 0;
 
-  unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(ValuePos));
+  const InputArgList &BaseArgs = Args.getBaseArgs();
+  unsigned Index = BaseArgs.MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
-  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(Args, Index));
+  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(
+      Args, Index, llvm::opt::Visibility(clang::driver::options::ClangOption)));
 
   // If the argument parsing failed or more than one argument was
   // consumed, the -Xarch_ argument's parameter tried to consume
@@ -1565,8 +1820,31 @@ void ToolChain::TranslateXarchArgs(
     Diags.Report(DiagID) << A->getAsString(Args);
     return;
   }
+
   XarchArg->setBaseArg(A);
   A = XarchArg.release();
+
+  // Linker input arguments require custom handling. The problem is that we
+  // have already constructed the phase actions, so we can not treat them as
+  // "input arguments".
+  if (A->getOption().hasFlag(options::LinkerInput)) {
+    // Convert the argument into individual Zlinker_input_args. Need to do this
+    // manually to avoid memory leaks with the allocated arguments.
+    for (const char *Value : A->getValues()) {
+      auto Opt = Opts.getOption(options::OPT_Zlinker_input);
+      unsigned Index = BaseArgs.MakeIndex(Opt.getName(), Value);
+      auto NewArg =
+          new Arg(Opt, BaseArgs.MakeArgString(Opt.getPrefix() + Opt.getName()),
+                  Index, BaseArgs.getArgString(Index + 1), A);
+
+      DAL->append(NewArg);
+      if (!AllocatedArgs)
+        DAL->AddSynthesizedArg(NewArg);
+      else
+        AllocatedArgs->push_back(NewArg);
+    }
+  }
+
   if (!AllocatedArgs)
     DAL->AddSynthesizedArg(A);
   else
@@ -1590,19 +1868,17 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
     } else if (A->getOption().matches(options::OPT_Xarch_host)) {
       NeedTrans = !IsDevice;
       Skip = IsDevice;
-    } else if (A->getOption().matches(options::OPT_Xarch__) && IsDevice) {
-      // Do not translate -Xarch_ options for non CUDA/HIP toolchain since
-      // they may need special translation.
-      // Skip this argument unless the architecture matches BoundArch
-      if (BoundArch.empty() || A->getValue(0) != BoundArch)
-        Skip = true;
-      else
-        NeedTrans = true;
+    } else if (A->getOption().matches(options::OPT_Xarch__)) {
+      NeedTrans = A->getValue() == getArchName() ||
+                  (!BoundArch.empty() && A->getValue() == BoundArch);
+      Skip = !NeedTrans;
     }
     if (NeedTrans || Skip)
       Modified = true;
-    if (NeedTrans)
+    if (NeedTrans) {
+      A->claim();
       TranslateXarchArgs(Args, A, DAL, AllocatedArgs);
+    }
     if (!Skip)
       DAL->append(A);
   }

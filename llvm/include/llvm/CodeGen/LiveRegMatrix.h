@@ -37,7 +37,9 @@ class MachineFunction;
 class TargetRegisterInfo;
 class VirtRegMap;
 
-class LiveRegMatrix : public MachineFunctionPass {
+class LiveRegMatrix {
+  friend class LiveRegMatrixWrapperLegacy;
+  friend class LiveRegMatrixAnalysis;
   const TargetRegisterInfo *TRI = nullptr;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
@@ -46,7 +48,7 @@ class LiveRegMatrix : public MachineFunctionPass {
   unsigned UserTag = 0;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
-  LiveIntervalUnion::Allocator LIUAlloc;
+  std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
   LiveIntervalUnion::Array Matrix;
 
   // Cached queries per register unit.
@@ -54,18 +56,17 @@ class LiveRegMatrix : public MachineFunctionPass {
 
   // Cached register mask interference info.
   unsigned RegMaskTag = 0;
-  unsigned RegMaskVirtReg = 0;
+  Register RegMaskVirtReg;
   BitVector RegMaskUsable;
 
-  // MachineFunctionPass boilerplate.
-  void getAnalysisUsage(AnalysisUsage &) const override;
-  bool runOnMachineFunction(MachineFunction &) override;
-  void releaseMemory() override;
+  LiveRegMatrix()
+      : LIUAlloc(std::make_unique<LiveIntervalUnion::Allocator>()) {};
+  void releaseMemory();
 
 public:
-  static char ID;
+  LiveRegMatrix(LiveRegMatrix &&Other) = default;
 
-  LiveRegMatrix();
+  void init(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM);
 
   //===--------------------------------------------------------------------===//
   // High-level interface.
@@ -114,6 +115,16 @@ public:
   /// the segment [Start, End).
   bool checkInterference(SlotIndex Start, SlotIndex End, MCRegister PhysReg);
 
+  /// Check for interference in the segment [Start, End) that may prevent
+  /// assignment to PhysReg, like checkInterference. Returns a lane mask of
+  /// which lanes of the physical register interfere in the segment [Start, End)
+  /// of some other interval already assigned to PhysReg.
+  ///
+  /// If this function returns LaneBitmask::getNone(), PhysReg is completely
+  /// free at the segment [Start, End).
+  LaneBitmask checkInterferenceLanes(SlotIndex Start, SlotIndex End,
+                                     MCRegister PhysReg);
+
   /// Assign VirtReg to PhysReg.
   /// This will mark VirtReg's live range as occupied in the LiveRegMatrix and
   /// update VirtRegMap. The live range is expected to be available in PhysReg.
@@ -150,13 +161,39 @@ public:
   /// Use MCRegUnitIterator to enumerate all regunits in the desired PhysReg.
   /// This returns a reference to an internal Query data structure that is only
   /// valid until the next query() call.
-  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegister RegUnit);
+  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegUnit RegUnit);
 
   /// Directly access the live interval unions per regunit.
   /// This returns an array indexed by the regunit number.
   LiveIntervalUnion *getLiveUnions() { return &Matrix[0]; }
 
   Register getOneVReg(unsigned PhysReg) const;
+};
+
+class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {
+  LiveRegMatrix LRM;
+
+public:
+  static char ID;
+
+  LiveRegMatrixWrapperLegacy() : MachineFunctionPass(ID) {}
+
+  LiveRegMatrix &getLRM() { return LRM; }
+  const LiveRegMatrix &getLRM() const { return LRM; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void releaseMemory() override;
+};
+
+class LiveRegMatrixAnalysis : public AnalysisInfoMixin<LiveRegMatrixAnalysis> {
+  friend AnalysisInfoMixin<LiveRegMatrixAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = LiveRegMatrix;
+
+  LiveRegMatrix run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

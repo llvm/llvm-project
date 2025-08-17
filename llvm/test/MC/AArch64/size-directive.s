@@ -32,7 +32,7 @@ aarch64_size:
 // CHECK-OBJ-NEXT: )
 
 // SYMS:      Type   Bind   Vis     Ndx Name
-// SYMS:      NOTYPE LOCAL  DEFAULT   3 $d.0
+// SYMS:      NOTYPE LOCAL  DEFAULT   3 $d{{$}}
 // SYMS-NEXT: FUNC   GLOBAL DEFAULT   3 aarch64_size
 // SYMS-NEXT: NOTYPE GLOBAL DEFAULT UND half_word
 // SYMS-NEXT: NOTYPE GLOBAL DEFAULT UND full_word

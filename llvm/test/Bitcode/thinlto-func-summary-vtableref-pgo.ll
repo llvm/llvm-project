@@ -11,21 +11,21 @@
 ; RUN: llvm-dis -o - %t.o | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=DIS
 
 ; CHECK: <GLOBALVAL_SUMMARY_BLOCK
-; CHECK-NEXT:   <VERSION op0=9/>
+; CHECK-NEXT:   <VERSION op0=
 ; CHECK-NEXT:   <FLAGS op0=0/>
 ; The `VALUE_GUID` below represents the "_ZTV4Base" referenced by the instruction
 ; that loads vtable pointers.
-; CHECK-NEXT: <VALUE_GUID op0=21 op1=1960855528937986108/>
+; CHECK-NEXT: <VALUE_GUID {{.*}} op0=21 op1=456547254 op2=3929380924/>
 ; The `VALUE_GUID` below represents the "_ZN4Base4funcEv" referenced by the
 ; indirect call instruction.
-; CHECK-NEXT:      <VALUE_GUID op0=20 op1=5459407273543877811/>
+; CHECK-NEXT:      <VALUE_GUID {{.*}} op0=20 op1=1271117309 op2=2009351347/>
 ; NOTE vtables and functions from Derived class is dropped because
 ; `-icp-max-num-vtables` and `-icp-max-prom` are both set to one.
 ; <PERMODULE_PROFILE> has the format [valueid, flags, instcount, funcflags,
 ;                                     numrefs, rorefcnt, worefcnt,
 ;                                     m x valueid,
 ;                                     n x (valueid, hotness+tailcall)]
-; CHECK-NEXT:   <PERMODULE_PROFILE abbrevid=4 op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=21 op8=20 op9=3/>
+; CHECK-NEXT:   <PERMODULE_PROFILE {{.*}} op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=21 op8=20 op9=3/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

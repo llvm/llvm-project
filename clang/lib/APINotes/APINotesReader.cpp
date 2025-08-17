@@ -14,11 +14,10 @@
 //===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
+#include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
 namespace clang {
@@ -135,6 +134,13 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
     Data += ErrorDomainLength - 1;
   }
+
+  if (unsigned ConformanceLength =
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+    Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
+                                         ConformanceLength - 1));
+    Data += ConformanceLength - 1;
+  }
 }
 
 /// Used to deserialize the on-disk identifier table.
@@ -176,8 +182,9 @@ public:
   }
 };
 
-/// Used to deserialize the on-disk Objective-C class table.
-class ObjCContextIDTableInfo {
+/// Used to deserialize the on-disk table of Objective-C classes and C++
+/// namespaces.
+class ContextIDTableInfo {
 public:
   using internal_key_type = ContextTableKey;
   using external_key_type = internal_key_type;
@@ -221,9 +228,8 @@ public:
 };
 
 /// Used to deserialize the on-disk Objective-C property table.
-class ObjCContextInfoTableInfo
-    : public VersionedTableInfo<ObjCContextInfoTableInfo, unsigned,
-                                ObjCContextInfo> {
+class ContextInfoTableInfo
+    : public VersionedTableInfo<ContextInfoTableInfo, unsigned, ContextInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     return endian::readNext<uint32_t, llvm::endianness::little>(Data);
@@ -233,9 +239,9 @@ public:
     return static_cast<size_t>(llvm::hash_value(Key));
   }
 
-  static ObjCContextInfo readUnversioned(internal_key_type Key,
-                                         const uint8_t *&Data) {
-    ObjCContextInfo Info;
+  static ContextInfo readUnversioned(internal_key_type Key,
+                                     const uint8_t *&Data) {
+    ContextInfo Info;
     ReadCommonTypeInfo(Data, Info);
     uint8_t Payload = *Data++;
 
@@ -299,6 +305,28 @@ public:
   }
 };
 
+/// Used to deserialize the on-disk C record field table.
+class FieldTableInfo
+    : public VersionedTableInfo<FieldTableInfo, SingleDeclTableKey, FieldInfo> {
+public:
+  static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
+  }
+
+  hash_value_type ComputeHash(internal_key_type Key) {
+    return static_cast<size_t>(Key.hashValue());
+  }
+
+  static FieldInfo readUnversioned(internal_key_type Key,
+                                   const uint8_t *&Data) {
+    FieldInfo Info;
+    ReadVariableInfo(Data, Info);
+    return Info;
+  }
+};
+
 /// Read serialized ParamInfo.
 void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   ReadVariableInfo(Data, Info);
@@ -309,6 +337,9 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
     Info.setRetainCountConvention(Convention);
   }
   Payload >>= 3;
+  if (Payload & 0x01)
+    Info.setLifetimebound(Payload & 0x02);
+  Payload >>= 2;
   if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
@@ -347,6 +378,13 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
+
+  unsigned SwiftReturnOwnershipLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.SwiftReturnOwnership = std::string(reinterpret_cast<const char *>(Data),
+                                          reinterpret_cast<const char *>(Data) +
+                                              SwiftReturnOwnershipLength);
+  Data += SwiftReturnOwnershipLength;
 }
 
 /// Used to deserialize the on-disk Objective-C method table.
@@ -371,12 +409,19 @@ public:
                                         const uint8_t *&Data) {
     ObjCMethodInfo Info;
     uint8_t Payload = *Data++;
+    bool HasSelf = Payload & 0x01;
+    Payload >>= 1;
     Info.RequiredInit = Payload & 0x01;
     Payload >>= 1;
     Info.DesignatedInit = Payload & 0x01;
     Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
 
     ReadFunctionInfo(Data, Info);
+    if (HasSelf) {
+      Info.Self = ParamInfo{};
+      ReadParamInfo(Data, *Info.Self);
+    }
     return Info;
   }
 };
@@ -429,15 +474,13 @@ public:
 
 /// Used to deserialize the on-disk global variable table.
 class GlobalVariableTableInfo
-    : public VersionedTableInfo<GlobalVariableTableInfo, ContextTableKey,
+    : public VersionedTableInfo<GlobalVariableTableInfo, SingleDeclTableKey,
                                 GlobalVariableInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, NameID};
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -454,15 +497,13 @@ public:
 
 /// Used to deserialize the on-disk global function table.
 class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, ContextTableKey,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, SingleDeclTableKey,
                                 GlobalFunctionInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, NameID};
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -473,6 +514,39 @@ public:
                                             const uint8_t *&Data) {
     GlobalFunctionInfo Info;
     ReadFunctionInfo(Data, Info);
+    return Info;
+  }
+};
+
+/// Used to deserialize the on-disk C++ method table.
+class CXXMethodTableInfo
+    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+                                CXXMethodInfo> {
+public:
+  static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
+  }
+
+  hash_value_type ComputeHash(internal_key_type Key) {
+    return static_cast<size_t>(Key.hashValue());
+  }
+
+  static CXXMethodInfo readUnversioned(internal_key_type Key,
+                                       const uint8_t *&Data) {
+    CXXMethodInfo Info;
+
+    uint8_t Payload = *Data++;
+    bool HasThis = Payload & 0x01;
+    Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
+
+    ReadFunctionInfo(Data, Info);
+    if (HasThis) {
+      Info.This = ParamInfo{};
+      ReadParamInfo(Data, *Info.This);
+    }
     return Info;
   }
 };
@@ -501,15 +575,13 @@ public:
 
 /// Used to deserialize the on-disk tag table.
 class TagTableInfo
-    : public VersionedTableInfo<TagTableInfo, ContextTableKey, TagInfo> {
+    : public VersionedTableInfo<TagTableInfo, SingleDeclTableKey, TagInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID =
         endian::readNext<IdentifierID, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, NameID};
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -529,10 +601,12 @@ public:
 
     uint8_t Copyable =
         endian::readNext<uint8_t, llvm::endianness::little>(Data);
-    if (Copyable == kSwiftNonCopyable)
-      Info.setSwiftCopyable(std::optional(false));
-    else if (Copyable == kSwiftCopyable)
-      Info.setSwiftCopyable(std::optional(true));
+    if (Copyable == kSwiftConforms || Copyable == kSwiftDoesNotConform)
+      Info.setSwiftCopyable(std::optional(Copyable == kSwiftConforms));
+    uint8_t Escapable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Escapable == kSwiftConforms || Escapable == kSwiftDoesNotConform)
+      Info.setSwiftEscapable(std::optional(Escapable == kSwiftConforms));
 
     unsigned ImportAsLength =
         endian::readNext<uint16_t, llvm::endianness::little>(Data);
@@ -555,6 +629,20 @@ public:
                                         ReleaseOpLength - 1);
       Data += ReleaseOpLength - 1;
     }
+    unsigned DefaultOwnershipLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DefaultOwnershipLength > 0) {
+      Info.SwiftDefaultOwnership = std::string(
+          reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
+      Data += DefaultOwnershipLength - 1;
+    }
+    unsigned DestroyOpLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DestroyOpLength > 0) {
+      Info.SwiftDestroyOp = std::string(reinterpret_cast<const char *>(Data),
+                                        DestroyOpLength - 1);
+      Data += DestroyOpLength - 1;
+    }
 
     ReadCommonTypeInfo(Data, Info);
     return Info;
@@ -563,16 +651,14 @@ public:
 
 /// Used to deserialize the on-disk typedef table.
 class TypedefTableInfo
-    : public VersionedTableInfo<TypedefTableInfo, ContextTableKey,
+    : public VersionedTableInfo<TypedefTableInfo, SingleDeclTableKey,
                                 TypedefInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto nameID =
         endian::readNext<IdentifierID, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, nameID};
+    return {CtxID, nameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -614,17 +700,17 @@ public:
   /// The identifier table.
   std::unique_ptr<SerializedIdentifierTable> IdentifierTable;
 
-  using SerializedObjCContextIDTable =
-      llvm::OnDiskIterableChainedHashTable<ObjCContextIDTableInfo>;
+  using SerializedContextIDTable =
+      llvm::OnDiskIterableChainedHashTable<ContextIDTableInfo>;
 
-  /// The Objective-C context ID table.
-  std::unique_ptr<SerializedObjCContextIDTable> ObjCContextIDTable;
+  /// The Objective-C / C++ context ID table.
+  std::unique_ptr<SerializedContextIDTable> ContextIDTable;
 
-  using SerializedObjCContextInfoTable =
-      llvm::OnDiskIterableChainedHashTable<ObjCContextInfoTableInfo>;
+  using SerializedContextInfoTable =
+      llvm::OnDiskIterableChainedHashTable<ContextInfoTableInfo>;
 
   /// The Objective-C context info table.
-  std::unique_ptr<SerializedObjCContextInfoTable> ObjCContextInfoTable;
+  std::unique_ptr<SerializedContextInfoTable> ContextInfoTable;
 
   using SerializedObjCPropertyTable =
       llvm::OnDiskIterableChainedHashTable<ObjCPropertyTableInfo>;
@@ -632,11 +718,23 @@ public:
   /// The Objective-C property table.
   std::unique_ptr<SerializedObjCPropertyTable> ObjCPropertyTable;
 
+  using SerializedFieldTable =
+      llvm::OnDiskIterableChainedHashTable<FieldTableInfo>;
+
+  /// The C record field table.
+  std::unique_ptr<SerializedFieldTable> FieldTable;
+
   using SerializedObjCMethodTable =
       llvm::OnDiskIterableChainedHashTable<ObjCMethodTableInfo>;
 
   /// The Objective-C method table.
   std::unique_ptr<SerializedObjCMethodTable> ObjCMethodTable;
+
+  using SerializedCXXMethodTable =
+      llvm::OnDiskIterableChainedHashTable<CXXMethodTableInfo>;
+
+  /// The C++ method table.
+  std::unique_ptr<SerializedCXXMethodTable> CXXMethodTable;
 
   using SerializedObjCSelectorTable =
       llvm::OnDiskIterableChainedHashTable<ObjCSelectorTableInfo>;
@@ -685,12 +783,16 @@ public:
                         llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readIdentifierBlock(llvm::BitstreamCursor &Cursor,
                            llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readObjCContextBlock(llvm::BitstreamCursor &Cursor,
-                            llvm::SmallVectorImpl<uint64_t> &Scratch);
+  bool readContextBlock(llvm::BitstreamCursor &Cursor,
+                        llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readObjCPropertyBlock(llvm::BitstreamCursor &Cursor,
                              llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readObjCMethodBlock(llvm::BitstreamCursor &Cursor,
                            llvm::SmallVectorImpl<uint64_t> &Scratch);
+  bool readCXXMethodBlock(llvm::BitstreamCursor &Cursor,
+                          llvm::SmallVectorImpl<uint64_t> &Scratch);
+  bool readFieldBlock(llvm::BitstreamCursor &Cursor,
+                      llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readObjCSelectorBlock(llvm::BitstreamCursor &Cursor,
                              llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readGlobalVariableBlock(llvm::BitstreamCursor &Cursor,
@@ -906,7 +1008,7 @@ bool APINotesReader::Implementation::readIdentifierBlock(
   return false;
 }
 
-bool APINotesReader::Implementation::readObjCContextBlock(
+bool APINotesReader::Implementation::readContextBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(OBJC_CONTEXT_BLOCK_ID))
     return true;
@@ -950,31 +1052,30 @@ bool APINotesReader::Implementation::readObjCContextBlock(
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
-    case objc_context_block::OBJC_CONTEXT_ID_DATA: {
-      // Already saw Objective-C context ID table.
-      if (ObjCContextIDTable)
+    case context_block::CONTEXT_ID_DATA: {
+      // Already saw Objective-C / C++ context ID table.
+      if (ContextIDTable)
         return true;
 
       uint32_t tableOffset;
-      objc_context_block::ObjCContextIDLayout::readRecord(Scratch, tableOffset);
+      context_block::ContextIDLayout::readRecord(Scratch, tableOffset);
       auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
 
-      ObjCContextIDTable.reset(SerializedObjCContextIDTable::Create(
+      ContextIDTable.reset(SerializedContextIDTable::Create(
           base + tableOffset, base + sizeof(uint32_t), base));
       break;
     }
 
-    case objc_context_block::OBJC_CONTEXT_INFO_DATA: {
-      // Already saw Objective-C context info table.
-      if (ObjCContextInfoTable)
+    case context_block::CONTEXT_INFO_DATA: {
+      // Already saw Objective-C / C++ context info table.
+      if (ContextInfoTable)
         return true;
 
       uint32_t tableOffset;
-      objc_context_block::ObjCContextInfoLayout::readRecord(Scratch,
-                                                            tableOffset);
+      context_block::ContextInfoLayout::readRecord(Scratch, tableOffset);
       auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
 
-      ObjCContextInfoTable.reset(SerializedObjCContextInfoTable::Create(
+      ContextInfoTable.reset(SerializedContextInfoTable::Create(
           base + tableOffset, base + sizeof(uint32_t), base));
       break;
     }
@@ -1127,6 +1228,156 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
       auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
 
       ObjCMethodTable.reset(SerializedObjCMethodTable::Create(
+          base + tableOffset, base + sizeof(uint32_t), base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    MaybeNext = Cursor.advance();
+    if (!MaybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeNext.takeError());
+      return false;
+    }
+    Next = MaybeNext.get();
+  }
+
+  return false;
+}
+
+bool APINotesReader::Implementation::readCXXMethodBlock(
+    llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
+  if (Cursor.EnterSubBlock(CXX_METHOD_BLOCK_ID))
+    return true;
+
+  llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
+  if (!MaybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(MaybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry Next = MaybeNext.get();
+  while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (Next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (Cursor.SkipBlock())
+        return true;
+
+      MaybeNext = Cursor.advance();
+      if (!MaybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(MaybeNext.takeError());
+        return false;
+      }
+      Next = MaybeNext.get();
+      continue;
+    }
+
+    Scratch.clear();
+    llvm::StringRef BlobData;
+    llvm::Expected<unsigned> MaybeKind =
+        Cursor.readRecord(Next.ID, Scratch, &BlobData);
+    if (!MaybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeKind.takeError());
+      return false;
+    }
+    unsigned Kind = MaybeKind.get();
+    switch (Kind) {
+    case cxx_method_block::CXX_METHOD_DATA: {
+      // Already saw C++ method table.
+      if (CXXMethodTable)
+        return true;
+
+      uint32_t tableOffset;
+      cxx_method_block::CXXMethodDataLayout::readRecord(Scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
+
+      CXXMethodTable.reset(SerializedCXXMethodTable::Create(
+          base + tableOffset, base + sizeof(uint32_t), base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    MaybeNext = Cursor.advance();
+    if (!MaybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeNext.takeError());
+      return false;
+    }
+    Next = MaybeNext.get();
+  }
+
+  return false;
+}
+
+bool APINotesReader::Implementation::readFieldBlock(
+    llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
+  if (Cursor.EnterSubBlock(FIELD_BLOCK_ID))
+    return true;
+
+  llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
+  if (!MaybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(MaybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry Next = MaybeNext.get();
+  while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (Next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (Cursor.SkipBlock())
+        return true;
+
+      MaybeNext = Cursor.advance();
+      if (!MaybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(MaybeNext.takeError());
+        return false;
+      }
+      Next = MaybeNext.get();
+      continue;
+    }
+
+    Scratch.clear();
+    llvm::StringRef BlobData;
+    llvm::Expected<unsigned> MaybeKind =
+        Cursor.readRecord(Next.ID, Scratch, &BlobData);
+    if (!MaybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeKind.takeError());
+      return false;
+    }
+    unsigned Kind = MaybeKind.get();
+    switch (Kind) {
+    case field_block::FIELD_DATA: {
+      // Already saw field table.
+      if (FieldTable)
+        return true;
+
+      uint32_t tableOffset;
+      field_block::FieldDataLayout::readRecord(Scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
+
+      FieldTable.reset(SerializedFieldTable::Create(
           base + tableOffset, base + sizeof(uint32_t), base));
       break;
     }
@@ -1678,7 +1929,7 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
 
     case OBJC_CONTEXT_BLOCK_ID:
       if (!HasValidControlBlock ||
-          Implementation->readObjCContextBlock(Cursor, Scratch)) {
+          Implementation->readContextBlock(Cursor, Scratch)) {
         Failed = true;
         return;
       }
@@ -1696,6 +1947,22 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
     case OBJC_METHOD_BLOCK_ID:
       if (!HasValidControlBlock ||
           Implementation->readObjCMethodBlock(Cursor, Scratch)) {
+        Failed = true;
+        return;
+      }
+      break;
+
+    case CXX_METHOD_BLOCK_ID:
+      if (!HasValidControlBlock ||
+          Implementation->readCXXMethodBlock(Cursor, Scratch)) {
+        Failed = true;
+        return;
+      }
+      break;
+
+    case FIELD_BLOCK_ID:
+      if (!HasValidControlBlock ||
+          Implementation->readFieldBlock(Cursor, Scratch)) {
         Failed = true;
         return;
       }
@@ -1787,11 +2054,16 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     : Results(std::move(R)) {
 
   assert(!Results.empty());
-  assert(std::is_sorted(
-      Results.begin(), Results.end(),
+  assert(llvm::is_sorted(
+      Results,
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
-        assert(left.first != right.first && "two entries for the same version");
+        // The comparison function should be reflective, and with expensive
+        // checks we can get callbacks basically checking that lambda(a,a) is
+        // false. We could still check that we do not find equal elements when
+        // left!=right.
+        assert((&left == &right || left.first != right.first) &&
+               "two entries for the same version");
         return left.first < right.first;
       }));
 
@@ -1815,7 +2087,7 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
 
 auto APINotesReader::lookupObjCClassID(llvm::StringRef Name)
     -> std::optional<ContextID> {
-  if (!Implementation->ObjCContextIDTable)
+  if (!Implementation->ContextIDTable)
     return std::nullopt;
 
   std::optional<IdentifierID> ClassID = Implementation->getIdentifier(Name);
@@ -1824,25 +2096,25 @@ auto APINotesReader::lookupObjCClassID(llvm::StringRef Name)
 
   // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
   // context.
-  auto KnownID = Implementation->ObjCContextIDTable->find(
+  auto KnownID = Implementation->ContextIDTable->find(
       ContextTableKey(-1, (uint8_t)ContextKind::ObjCClass, *ClassID));
-  if (KnownID == Implementation->ObjCContextIDTable->end())
+  if (KnownID == Implementation->ContextIDTable->end())
     return std::nullopt;
 
   return ContextID(*KnownID);
 }
 
 auto APINotesReader::lookupObjCClassInfo(llvm::StringRef Name)
-    -> VersionedInfo<ObjCContextInfo> {
-  if (!Implementation->ObjCContextInfoTable)
+    -> VersionedInfo<ContextInfo> {
+  if (!Implementation->ContextInfoTable)
     return std::nullopt;
 
   std::optional<ContextID> CtxID = lookupObjCClassID(Name);
   if (!CtxID)
     return std::nullopt;
 
-  auto KnownInfo = Implementation->ObjCContextInfoTable->find(CtxID->Value);
-  if (KnownInfo == Implementation->ObjCContextInfoTable->end())
+  auto KnownInfo = Implementation->ContextInfoTable->find(CtxID->Value);
+  if (KnownInfo == Implementation->ContextInfoTable->end())
     return std::nullopt;
 
   return {Implementation->SwiftVersion, *KnownInfo};
@@ -1850,7 +2122,7 @@ auto APINotesReader::lookupObjCClassInfo(llvm::StringRef Name)
 
 auto APINotesReader::lookupObjCProtocolID(llvm::StringRef Name)
     -> std::optional<ContextID> {
-  if (!Implementation->ObjCContextIDTable)
+  if (!Implementation->ContextIDTable)
     return std::nullopt;
 
   std::optional<IdentifierID> classID = Implementation->getIdentifier(Name);
@@ -1859,25 +2131,25 @@ auto APINotesReader::lookupObjCProtocolID(llvm::StringRef Name)
 
   // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
   // context.
-  auto KnownID = Implementation->ObjCContextIDTable->find(
+  auto KnownID = Implementation->ContextIDTable->find(
       ContextTableKey(-1, (uint8_t)ContextKind::ObjCProtocol, *classID));
-  if (KnownID == Implementation->ObjCContextIDTable->end())
+  if (KnownID == Implementation->ContextIDTable->end())
     return std::nullopt;
 
   return ContextID(*KnownID);
 }
 
 auto APINotesReader::lookupObjCProtocolInfo(llvm::StringRef Name)
-    -> VersionedInfo<ObjCContextInfo> {
-  if (!Implementation->ObjCContextInfoTable)
+    -> VersionedInfo<ContextInfo> {
+  if (!Implementation->ContextInfoTable)
     return std::nullopt;
 
   std::optional<ContextID> CtxID = lookupObjCProtocolID(Name);
   if (!CtxID)
     return std::nullopt;
 
-  auto KnownInfo = Implementation->ObjCContextInfoTable->find(CtxID->Value);
-  if (KnownInfo == Implementation->ObjCContextInfoTable->end())
+  auto KnownInfo = Implementation->ContextInfoTable->find(CtxID->Value);
+  if (KnownInfo == Implementation->ContextInfoTable->end())
     return std::nullopt;
 
   return {Implementation->SwiftVersion, *KnownInfo};
@@ -1920,6 +2192,40 @@ auto APINotesReader::lookupObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
   return {Implementation->SwiftVersion, *Known};
 }
 
+auto APINotesReader::lookupField(ContextID CtxID, llvm::StringRef Name)
+    -> VersionedInfo<FieldInfo> {
+  if (!Implementation->FieldTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  auto Known = Implementation->FieldTable->find(
+      SingleDeclTableKey(CtxID.Value, *NameID));
+  if (Known == Implementation->FieldTable->end())
+    return std::nullopt;
+
+  return {Implementation->SwiftVersion, *Known};
+}
+
+auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name)
+    -> VersionedInfo<CXXMethodInfo> {
+  if (!Implementation->CXXMethodTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  auto Known = Implementation->CXXMethodTable->find(
+      SingleDeclTableKey(CtxID.Value, *NameID));
+  if (Known == Implementation->CXXMethodTable->end())
+    return std::nullopt;
+
+  return {Implementation->SwiftVersion, *Known};
+}
+
 auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
                                           std::optional<Context> Ctx)
     -> VersionedInfo<GlobalVariableInfo> {
@@ -1930,7 +2236,7 @@ auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->GlobalVariableTable->find(Key);
   if (Known == Implementation->GlobalVariableTable->end())
@@ -1949,7 +2255,7 @@ auto APINotesReader::lookupGlobalFunction(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->GlobalFunctionTable->find(Key);
   if (Known == Implementation->GlobalFunctionTable->end())
@@ -1974,6 +2280,24 @@ auto APINotesReader::lookupEnumConstant(llvm::StringRef Name)
   return {Implementation->SwiftVersion, *Known};
 }
 
+auto APINotesReader::lookupTagID(llvm::StringRef Name,
+                                 std::optional<Context> ParentCtx)
+    -> std::optional<ContextID> {
+  if (!Implementation->ContextIDTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> TagID = Implementation->getIdentifier(Name);
+  if (!TagID)
+    return std::nullopt;
+
+  auto KnownID = Implementation->ContextIDTable->find(
+      ContextTableKey(ParentCtx, ContextKind::Tag, *TagID));
+  if (KnownID == Implementation->ContextIDTable->end())
+    return std::nullopt;
+
+  return ContextID(*KnownID);
+}
+
 auto APINotesReader::lookupTag(llvm::StringRef Name, std::optional<Context> Ctx)
     -> VersionedInfo<TagInfo> {
   if (!Implementation->TagTable)
@@ -1983,7 +2307,7 @@ auto APINotesReader::lookupTag(llvm::StringRef Name, std::optional<Context> Ctx)
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->TagTable->find(Key);
   if (Known == Implementation->TagTable->end())
@@ -2002,7 +2326,7 @@ auto APINotesReader::lookupTypedef(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->TypedefTable->find(Key);
   if (Known == Implementation->TypedefTable->end())
@@ -2014,7 +2338,7 @@ auto APINotesReader::lookupTypedef(llvm::StringRef Name,
 auto APINotesReader::lookupNamespaceID(
     llvm::StringRef Name, std::optional<ContextID> ParentNamespaceID)
     -> std::optional<ContextID> {
-  if (!Implementation->ObjCContextIDTable)
+  if (!Implementation->ContextIDTable)
     return std::nullopt;
 
   std::optional<IdentifierID> NamespaceID = Implementation->getIdentifier(Name);
@@ -2023,9 +2347,9 @@ auto APINotesReader::lookupNamespaceID(
 
   uint32_t RawParentNamespaceID =
       ParentNamespaceID ? ParentNamespaceID->Value : -1;
-  auto KnownID = Implementation->ObjCContextIDTable->find(
+  auto KnownID = Implementation->ContextIDTable->find(
       {RawParentNamespaceID, (uint8_t)ContextKind::Namespace, *NamespaceID});
-  if (KnownID == Implementation->ObjCContextIDTable->end())
+  if (KnownID == Implementation->ContextIDTable->end())
     return std::nullopt;
 
   return ContextID(*KnownID);

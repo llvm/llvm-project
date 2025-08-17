@@ -8,6 +8,7 @@ tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM XCoreGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM XCoreGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM XCoreGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM XCoreGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(XCoreCommonTableGen)

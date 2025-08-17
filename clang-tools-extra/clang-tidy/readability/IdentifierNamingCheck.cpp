@@ -14,10 +14,8 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -496,7 +494,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
     StringRef Val = Options.get(Buffer, "");
     if (!Val.empty()) {
       std::string Type = PrimType.str();
-      std::replace(Type.begin(), Type.end(), '-', ' ');
+      llvm::replace(Type, '-', ' ');
       HNOption.PrimitiveType[Type] = Val.str();
     }
   }
@@ -1135,6 +1133,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   if (isa<TypeAliasDecl>(D) && NamingStyles[SK_TypeAlias])
     return SK_TypeAlias;
 
+  if (isa<NamespaceAliasDecl>(D) && NamingStyles[SK_Namespace])
+    return SK_Namespace;
+
   if (const auto *Decl = dyn_cast<NamespaceDecl>(D)) {
     if (Decl->isAnonymousNamespace())
       return SK_Invalid;
@@ -1355,7 +1356,7 @@ IdentifierNamingCheck::getFailureInfo(
   std::string KindName =
       fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
                     IdentifierNamingCheck::CT_LowerCase);
-  std::replace(KindName.begin(), KindName.end(), '_', ' ');
+  llvm::replace(KindName, '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
   if (StringRef(Fixup) == Name) {

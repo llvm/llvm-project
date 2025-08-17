@@ -89,19 +89,18 @@ define void @masked_scatter_nxv8f32(<vscale x 8 x float> %data, ptr %base, <vsca
 define void @masked_scatter_nxv32i32(<vscale x 32 x i32> %data, ptr %base, <vscale x 32 x i32> %offsets, <vscale x 32 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv32i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.s
-; CHECK-NEXT:    ld1w { z24.s }, p2/z, [x1, #7, mul vl]
-; CHECK-NEXT:    ld1w { z25.s }, p2/z, [x1, #6, mul vl]
-; CHECK-NEXT:    ld1w { z26.s }, p2/z, [x1, #5, mul vl]
-; CHECK-NEXT:    ld1w { z27.s }, p2/z, [x1, #4, mul vl]
-; CHECK-NEXT:    ld1w { z28.s }, p2/z, [x1, #3, mul vl]
-; CHECK-NEXT:    ld1w { z29.s }, p2/z, [x1, #2, mul vl]
-; CHECK-NEXT:    ld1w { z30.s }, p2/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1w { z31.s }, p2/z, [x1]
 ; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    ldr z30, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z31, [x1]
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ldr z28, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z29, [x1, #2, mul vl]
 ; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    ldr z24, [x1, #7, mul vl]
+; CHECK-NEXT:    ldr z25, [x1, #6, mul vl]
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    ldr z26, [x1, #5, mul vl]
+; CHECK-NEXT:    ldr z27, [x1, #4, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p3, [x0, z31.s, sxtw #2]
 ; CHECK-NEXT:    st1w { z1.s }, p2, [x0, z30.s, sxtw #2]
 ; CHECK-NEXT:    punpklo p2.h, p0.b

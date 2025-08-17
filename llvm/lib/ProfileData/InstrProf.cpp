@@ -13,7 +13,6 @@
 
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,6 +27,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Casting.h"
@@ -43,6 +43,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -259,6 +260,46 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
+ProfOStream::ProfOStream(raw_fd_ostream &FD)
+    : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
+
+ProfOStream::ProfOStream(raw_string_ostream &STR)
+    : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
+
+uint64_t ProfOStream::tell() const { return OS.tell(); }
+void ProfOStream::write(uint64_t V) { LE.write<uint64_t>(V); }
+void ProfOStream::write32(uint32_t V) { LE.write<uint32_t>(V); }
+void ProfOStream::writeByte(uint8_t V) { LE.write<uint8_t>(V); }
+
+void ProfOStream::patch(ArrayRef<PatchItem> P) {
+  using namespace support;
+
+  if (IsFDOStream) {
+    raw_fd_ostream &FDOStream = static_cast<raw_fd_ostream &>(OS);
+    const uint64_t LastPos = FDOStream.tell();
+    for (const auto &K : P) {
+      FDOStream.seek(K.Pos);
+      for (uint64_t Elem : K.D)
+        write(Elem);
+    }
+    // Reset the stream to the last position after patching so that users
+    // don't accidentally overwrite data. This makes it consistent with
+    // the string stream below which replaces the data directly.
+    FDOStream.seek(LastPos);
+  } else {
+    raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
+    std::string &Data = SOStream.str(); // with flush
+    for (const auto &K : P) {
+      for (int I = 0, E = K.D.size(); I != E; I++) {
+        uint64_t Bytes =
+            endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+        Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
+                     (const char *)&Bytes, sizeof(uint64_t));
+      }
+    }
+  }
+}
+
 std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
                            uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
@@ -402,7 +443,7 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO) {
 
 // See getIRPGOObjectName() for a discription of the format.
 std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName) {
-  auto [FileName, MangledName] = IRPGOName.split(kGlobalIdentifierDelimiter);
+  auto [FileName, MangledName] = IRPGOName.split(GlobalIdentifierDelimiter);
   if (MangledName.empty())
     return std::make_pair(StringRef(), IRPGOName);
   return std::make_pair(FileName, MangledName);
@@ -430,21 +471,39 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
 
   // Now fix up illegal chars in local VarName that may upset the assembler.
   const char InvalidChars[] = "-:;<>/\"'";
-  size_t found = VarName.find_first_of(InvalidChars);
-  while (found != std::string::npos) {
-    VarName[found] = '_';
-    found = VarName.find_first_of(InvalidChars, found + 1);
+  size_t FoundPos = VarName.find_first_of(InvalidChars);
+  while (FoundPos != std::string::npos) {
+    VarName[FoundPos] = '_';
+    FoundPos = VarName.find_first_of(InvalidChars, FoundPos + 1);
   }
   return VarName;
+}
+
+bool isGPUProfTarget(const Module &M) {
+  const Triple &T = M.getTargetTriple();
+  return T.isGPU();
+}
+
+void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
+  // If the target is a GPU, make the symbol protected so it can
+  // be read from the host device
+  if (isGPUProfTarget(M))
+    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
+  // Hide the symbol so that we correctly get a copy for each executable.
+  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
 }
 
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
+  // Ensure profiling variables on GPU are visible to be read from host
+  if (isGPUProfTarget(M))
+    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  if (Linkage == GlobalValue::ExternalWeakLinkage)
+  else if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -454,14 +513,11 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
 
   auto *Value =
       ConstantDataArray::getString(M.getContext(), PGOFuncName, false);
-  auto FuncNameVar =
+  auto *FuncNameVar =
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
                          getPGOFuncNameVarName(PGOFuncName, Linkage));
 
-  // Hide the symbol so that we correctly get a copy for each executable.
-  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
-    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
-
+  setPGOFuncVisibility(M, FuncNameVar);
   return FuncNameVar;
 }
 
@@ -469,20 +525,19 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-Error InstrProfSymtab::create(Module &M, bool InLTO) {
+Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
   for (Function &F : M) {
     // Function may not have a name: like using asm("") to overwrite the name.
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO), AddCanonical))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
-    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO), AddCanonical))
       return E;
   }
 
-  SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
@@ -497,33 +552,29 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
 
 Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
                                          StringRef VTablePGOName) {
-  auto mapName = [&](StringRef Name) -> Error {
+  auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addSymbolName(Name))
       return E;
 
     bool Inserted = true;
-    std::tie(std::ignore, Inserted) =
-        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(
+        GlobalValue::getGUIDAssumingExternalLinkage(Name), &VTable);
     if (!Inserted)
       LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();
   };
-  if (Error E = mapName(VTablePGOName))
+  if (Error E = NameToGUIDMap(VTablePGOName))
     return E;
 
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
   if (CanonicalName != VTablePGOName)
-    return mapName(CanonicalName);
+    return NameToGUIDMap(CanonicalName);
 
   return Error::success();
 }
 
-/// \c NameStrings is a string composed of one of more possibly encoded
-/// sub-strings. The substrings are separated by 0 or more zero bytes. This
-/// method decodes the string and calls `NameCallback` for each substring.
-static Error
-readAndDecodeStrings(StringRef NameStrings,
-                     std::function<Error(StringRef)> NameCallback) {
+Error readAndDecodeStrings(StringRef NameStrings,
+                           std::function<Error(StringRef)> NameCallback) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -532,10 +583,10 @@ readAndDecodeStrings(StringRef NameStrings,
     P += N;
     uint64_t CompressedSize = decodeULEB128(P, &N);
     P += N;
-    bool isCompressed = (CompressedSize != 0);
+    const bool IsCompressed = (CompressedSize != 0);
     SmallVector<uint8_t, 128> UncompressedNameStrings;
     StringRef NameStrings;
-    if (isCompressed) {
+    if (IsCompressed) {
       if (!llvm::compression::zlib::isAvailable())
         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
 
@@ -566,28 +617,24 @@ readAndDecodeStrings(StringRef NameStrings,
 }
 
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readAndDecodeStrings(
-      NameStrings,
-      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+  return readAndDecodeStrings(NameStrings,
+                              [&](StringRef S) { return addFuncName(S); });
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
                               StringRef VTableNameStrings) {
-  if (Error E = readAndDecodeStrings(FuncNameStrings,
-                                     std::bind(&InstrProfSymtab::addFuncName,
-                                               this, std::placeholders::_1)))
+  if (Error E = readAndDecodeStrings(
+          FuncNameStrings, [&](StringRef S) { return addFuncName(S); }))
     return E;
 
-  return readAndDecodeStrings(
-      VTableNameStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(VTableNameStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
     StringRef CompressedVTableStrings) {
-  return readAndDecodeStrings(
-      CompressedVTableStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(CompressedVTableStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
@@ -601,45 +648,49 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // pattern ".xxx" which is kept before matching, other suffixes similar as
   // ".llvm." will be stripped.
   const std::string UniqSuffix = ".__uniq.";
-  size_t pos = PGOName.find(UniqSuffix);
-  if (pos != StringRef::npos)
-    pos += UniqSuffix.length();
+  size_t Pos = PGOName.find(UniqSuffix);
+  if (Pos != StringRef::npos)
+    Pos += UniqSuffix.length();
   else
-    pos = 0;
+    Pos = 0;
 
   // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
   // the beginning.
-  pos = PGOName.find('.', pos);
-  if (pos != StringRef::npos && pos != 0)
-    return PGOName.substr(0, pos);
+  Pos = PGOName.find('.', Pos);
+  if (Pos != StringRef::npos && Pos != 0)
+    return PGOName.substr(0, Pos);
 
   return PGOName;
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  auto mapName = [&](StringRef Name) -> Error {
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
+                                       bool AddCanonical) {
+  auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    MD5FuncMap.emplace_back(Function::getGUIDAssumingExternalLinkage(Name), &F);
     return Error::success();
   };
-  if (Error E = mapName(PGOFuncName))
+  if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
+
+  if (!AddCanonical)
+    return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
   if (CanonicalFuncName != PGOFuncName)
-    return mapName(CanonicalFuncName);
+    return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();
 }
 
-uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) const {
   // Given a runtime address, look up the hash value in the interval map, and
   // fallback to value 0 if a hash value is not found.
   return VTableAddrMap.lookup(Address, 0);
 }
 
-uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) const {
   finalizeSymtab();
   auto It = partition_point(AddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
     return A.first < Address;
@@ -661,7 +712,7 @@ void InstrProfSymtab::dumpNames(raw_ostream &OS) const {
 }
 
 Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
-                                     bool doCompression, std::string &Result) {
+                                     bool DoCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");
 
   uint8_t Header[20], *P = Header;
@@ -685,7 +736,7 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
     return Error::success();
   };
 
-  if (!doCompression) {
+  if (!DoCompression) {
     return WriteStringToResult(0, UncompressedNameStrings);
   }
 
@@ -706,22 +757,22 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar) {
 }
 
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
-                                std::string &Result, bool doCompression) {
+                                std::string &Result, bool DoCompression) {
   std::vector<std::string> NameStrs;
   for (auto *NameVar : NameVars) {
     NameStrs.push_back(std::string(getPGOFuncNameVarInitializer(NameVar)));
   }
   return collectGlobalObjectNameStrings(
-      NameStrs, compression::zlib::isAvailable() && doCompression, Result);
+      NameStrs, compression::zlib::isAvailable() && DoCompression, Result);
 }
 
 Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
-                           std::string &Result, bool doCompression) {
+                           std::string &Result, bool DoCompression) {
   std::vector<std::string> VTableNameStrs;
   for (auto *VTable : VTables)
     VTableNameStrs.push_back(getPGOName(*VTable));
   return collectGlobalObjectNameStrings(
-      VTableNameStrs, compression::zlib::isAvailable() && doCompression,
+      VTableNameStrs, compression::zlib::isAvailable() && DoCompression,
       Result);
 }
 
@@ -999,18 +1050,22 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
 }
 
 void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
-                                   InstrProfValueData *VData, uint32_t N,
+                                   ArrayRef<InstrProfValueData> VData,
                                    InstrProfSymtab *ValueMap) {
-  for (uint32_t I = 0; I < N; I++) {
-    VData[I].Value = remapValue(VData[I].Value, ValueKind, ValueMap);
+  // Remap values.
+  std::vector<InstrProfValueData> RemappedVD;
+  RemappedVD.reserve(VData.size());
+  for (const auto &V : VData) {
+    uint64_t NewValue = remapValue(V.Value, ValueKind, ValueMap);
+    RemappedVD.push_back({NewValue, V.Count});
   }
+
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
   assert(ValueSites.size() == Site);
-  if (N == 0)
-    ValueSites.emplace_back();
-  else
-    ValueSites.emplace_back(VData, VData + N);
+
+  // Add a new value site with remapped value profiling data.
+  ValueSites.emplace_back(std::move(RemappedVD));
 }
 
 void TemporalProfTraceTy::createBPFunctionNodes(
@@ -1054,7 +1109,8 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     // BalancedPartitioning more effective.
     for (auto &[Id, UNs] : IdToUNs)
       llvm::erase_if(UNs, [&](auto &UN) {
-        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+        unsigned Freq = UNFrequency[UN];
+        return Freq <= 1 || 2 * Freq > IdToUNs.size();
       });
   }
 
@@ -1104,8 +1160,7 @@ void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
-  ValueProfData *VD =
-      (ValueProfData *)(new (::operator new(TotalSizeInBytes)) ValueProfData());
+  ValueProfData *VD = new (::operator new(TotalSizeInBytes)) ValueProfData();
   memset(VD, 0, TotalSizeInBytes);
   return VD;
 }
@@ -1144,7 +1199,8 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
   InstrProfValueData *ValueData = getValueProfRecordValueData(this);
   for (uint64_t VSite = 0; VSite < NumValueSites; ++VSite) {
     uint8_t ValueDataCount = this->SiteCountArray[VSite];
-    Record.addValueData(Kind, VSite, ValueData, ValueDataCount, SymTab);
+    ArrayRef<InstrProfValueData> VDs(ValueData, ValueDataCount);
+    Record.addValueData(Kind, VSite, VDs, SymTab);
     ValueData += ValueDataCount;
   }
 }
@@ -1298,7 +1354,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;
   // Tag
-  Vals.push_back(MDHelper.createString("VP"));
+  Vals.push_back(MDHelper.createString(MDProfLabels::ValueProfile));
   // Value Kind
   Vals.push_back(MDHelper.createConstant(
       ConstantInt::get(Type::getInt32Ty(Ctx), ValueKind)));
@@ -1329,7 +1385,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || Tag->getString() != "VP")
+  if (!Tag || Tag->getString() != MDProfLabels::ValueProfile)
     return nullptr;
 
   // Now check kind:
@@ -1413,7 +1469,7 @@ bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
   if (GO.hasComdat())
     return true;
 
-  if (!Triple(M.getTargetTriple()).supportsCOMDAT())
+  if (!M.getTargetTriple().supportsCOMDAT())
     return false;
 
   // See createPGOFuncNameVar for more details. To avoid link errors, profile
@@ -1436,7 +1492,7 @@ bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
 
 // Check if INSTR_PROF_RAW_VERSION_VAR is defined.
 bool isIRPGOFlagSet(const Module *M) {
-  auto IRInstrVar =
+  const GlobalVariable *IRInstrVar =
       M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   if (!IRInstrVar || IRInstrVar->hasLocalLinkage())
     return false;
@@ -1500,7 +1556,7 @@ void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput) {
 Error OverlapStats::accumulateCounts(const std::string &BaseFilename,
                                      const std::string &TestFilename,
                                      bool IsCS) {
-  auto getProfileSum = [IsCS](const std::string &Filename,
+  auto GetProfileSum = [IsCS](const std::string &Filename,
                               CountSumOrPercent &Sum) -> Error {
     // This function is only used from llvm-profdata that doesn't use any kind
     // of VFS. Just create a default RealFileSystem to read profiles.
@@ -1513,10 +1569,10 @@ Error OverlapStats::accumulateCounts(const std::string &BaseFilename,
     Reader->accumulateCounts(Sum, IsCS);
     return Error::success();
   };
-  auto Ret = getProfileSum(BaseFilename, Base);
+  auto Ret = GetProfileSum(BaseFilename, Base);
   if (Ret)
     return Ret;
-  Ret = getProfileSum(TestFilename, Test);
+  Ret = GetProfileSum(TestFilename, Test);
   if (Ret)
     return Ret;
   this->BaseFilename = &BaseFilename;

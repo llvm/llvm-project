@@ -1,0 +1,121 @@
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -o "image dump symtab" -o exit | FileCheck %s
+# CHECK: Index   UserID     DSX Type            File Address/Value Load Address       Size               Flags      Name
+# CHECK: [    0] 4294967295     Invalid         0xffffffffffffffff                    0x0000000000000000 0x00000000 errno
+# CHECK: [    1] 4294967295     Code            0x0000000100000500                    0x0000000000000398 0x00000000 __threads_init
+# CHECK: [    2] 4294967295     Data            0x0000000110000a70                    0x0000000000000060 0x00000000 __threads_init
+# CHECK: [    3] 4294967295     Invalid         0x0000000110000ad0                    0x00000000000000b0 0x00000000 TOC
+# CHECK: [    4] 4294967295     Invalid         0x0000000100000898                    0x00000000100001d8 0x00000000 text
+# CHECK: [    5] 4294967295     Code            0x0000000100000898                    0x00000000100001d8 0x00000000 main
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1F7
+  NumberOfSections: 2
+  CreationTime:    000000000
+  Flags:           0x0002
+Sections:
+  - Name:            .text
+    Address:         0x100000438
+    Size:            0x38
+    FileOffsetToData: 0x0
+    FileOffsetToLineNumbers: 0x0
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_TEXT ]
+    SectionData:     E8C20000
+  - Name:            .data
+    Address:         0x1100008D2
+    Size:            0x2AE
+    FileOffsetToData: 0x8D2
+    FileOffsetToRelocations: 0x132E
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x22
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DATA ]
+    SectionData:     '' 
+Symbols:
+  - Name:            errno
+    Value:           0x0
+    Section:         N_UNDEF
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolAlignmentAndType: 0
+        StorageMappingClass: XMC_RW
+        SectionOrLengthLo: 0
+        SectionOrLengthHi: 0
+  - Name:            .__threads_init
+    Value:           0x100000500
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolAlignmentAndType: 2
+        StorageMappingClass: XMC_PR
+        SectionOrLengthLo: 80
+        SectionOrLengthHi: 0
+  - Name:            __threads_init
+    Value:           0x110000A70
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolAlignmentAndType: 25
+        StorageMappingClass: XMC_DS
+        SectionOrLengthLo: 24
+        SectionOrLengthHi: 0
+  - Name:            TOC
+    Value:           0x110000AD0
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolAlignmentAndType: 25
+        StorageMappingClass: XMC_TC0
+        SectionOrLengthLo: 0
+        SectionOrLengthHi: 0
+  - Name:            .text
+    Value:           0x100000898
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolAlignmentAndType: 17
+        StorageMappingClass: XMC_PR
+        SectionOrLengthLo: 58
+        SectionOrLengthHi: 0
+  - Name:            .main
+    Value:           0x100000898
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolAlignmentAndType: 2
+        StorageMappingClass: XMC_PR
+        SectionOrLengthLo: 135
+        SectionOrLengthHi: 0
+...

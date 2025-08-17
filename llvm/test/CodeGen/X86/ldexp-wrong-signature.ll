@@ -2,14 +2,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; RUN: llc < %s -mtriple=i386-pc-win32 | FileCheck %s -check-prefix=CHECK-WIN
 
-define float @ldexpf_too_many_args(float %a, i32 %b, i32 %c) {
+define float @ldexpf_too_many_args(float %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: ldexpf_too_many_args:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq ldexpf@PLT
 ; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: ldexpf_too_many_args:
@@ -28,14 +26,12 @@ define float @ldexpf_too_many_args(float %a, i32 %b, i32 %c) {
   ret float %result
 }
 
-define float @ldexp_wrong_fp_type(float %a, i32 %b) {
+define float @ldexp_wrong_fp_type(float %a, i32 %b) nounwind {
 ; CHECK-LABEL: ldexp_wrong_fp_type:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq ldexp@PLT
 ; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: ldexp_wrong_fp_type:

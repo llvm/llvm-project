@@ -10,6 +10,7 @@
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 #include <queue>
@@ -25,6 +26,8 @@ AST_MATCHER(Stmt, isMacroExpansion) {
   SourceLocation Loc = Node.getBeginLoc();
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
+
+AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
 
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
   SourceManager &SM = Context.getSourceManager();
@@ -66,7 +69,8 @@ bool isUnaryLogicalNotOperator(const Stmt *Statement) {
 
 void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
                               const ImplicitCastExpr *Cast, const Stmt *Parent,
-                              ASTContext &Context) {
+                              ASTContext &Context,
+                              bool UseUpperCaseLiteralSuffix) {
   // In case of expressions like (! integer), we should remove the redundant not
   // operator and use inverted comparison (integer == 0).
   bool InvertComparison =
@@ -112,8 +116,13 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
     EndLocInsertion += " != ";
   }
 
-  EndLocInsertion += getZeroLiteralToCompareWithForType(
+  const StringRef ZeroLiteral = getZeroLiteralToCompareWithForType(
       Cast->getCastKind(), SubExpr->getType(), Context);
+
+  if (UseUpperCaseLiteralSuffix)
+    EndLocInsertion += ZeroLiteral.upper();
+  else
+    EndLocInsertion += ZeroLiteral;
 
   if (NeedOuterParens) {
     EndLocInsertion += ")";
@@ -248,12 +257,15 @@ ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
-      AllowPointerConditions(Options.get("AllowPointerConditions", false)) {}
+      AllowPointerConditions(Options.get("AllowPointerConditions", false)),
+      UseUpperCaseLiteralSuffix(
+          Options.get("UseUpperCaseLiteralSuffix", false)) {}
 
 void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
+  Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
@@ -289,6 +301,11 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                          hasCastKind(CK_FloatingToBoolean),
                          hasCastKind(CK_PointerToBoolean),
                          hasCastKind(CK_MemberPointerToBoolean)),
+                   // Exclude cases of C23 comparison result.
+                   unless(allOf(isC23(),
+                                hasSourceExpression(ignoringParens(
+                                    binaryOperator(hasAnyOperatorName(
+                                        ">", ">=", "==", "!=", "<", "<=")))))),
                    // Exclude case of using if or while statements with variable
                    // declaration, e.g.:
                    //   if (int var = functionCall()) {}
@@ -331,8 +348,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
-              anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
-                    anything()),
+              optionally(
+                  hasParent(implicitCastExpr().bind("furtherImplicitCast"))),
               unless(isInTemplateInstantiation()),
               unless(IsInCompilerGeneratedFunction))),
       this);
@@ -344,14 +361,15 @@ void ImplicitBoolConversionCheck::check(
   if (const auto *CastToBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
-    return handleCastToBool(CastToBool, Parent, *Result.Context);
+    handleCastToBool(CastToBool, Parent, *Result.Context);
+    return;
   }
 
   if (const auto *CastFromBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool")) {
     const auto *NextImplicitCast =
         Result.Nodes.getNodeAs<ImplicitCastExpr>("furtherImplicitCast");
-    return handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
+    handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
   }
 }
 
@@ -378,7 +396,8 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
   if (!EquivalentLiteral.empty()) {
     Diag << tooling::fixit::createReplacement(*Cast, EquivalentLiteral);
   } else {
-    fixGenericExprCastToBool(Diag, Cast, Parent, Context);
+    fixGenericExprCastToBool(Diag, Cast, Parent, Context,
+                             UseUpperCaseLiteralSuffix);
   }
 }
 
@@ -392,8 +411,16 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
 
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
-    Diag << tooling::fixit::createReplacement(
-        *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context));
+
+    const auto EquivalentForBoolLiteral =
+        getEquivalentForBoolLiteral(BoolLiteral, DestType, Context);
+    if (UseUpperCaseLiteralSuffix)
+      Diag << tooling::fixit::createReplacement(
+          *Cast, EquivalentForBoolLiteral.upper());
+    else
+      Diag << tooling::fixit::createReplacement(*Cast,
+                                                EquivalentForBoolLiteral);
+
   } else {
     fixGenericExprCastFromBool(Diag, Cast, Context, DestType.getAsString());
   }

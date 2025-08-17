@@ -13,13 +13,36 @@
 
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace {
+/// Implement the interface to convert Arith to EmitC.
+struct ArithToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateArithToEmitCPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertArithToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    dialect->addInterfaces<ArithToEmitCDialectInterface>();
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
@@ -35,8 +58,11 @@ public:
   matchAndRewrite(arith::ConstantOp arithConst,
                   arith::ConstantOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<emitc::ConstantOp>(
-        arithConst, arithConst.getType(), adaptor.getValue());
+    Type newTy = this->getTypeConverter()->convertType(arithConst.getType());
+    if (!newTy)
+      return rewriter.notifyMatchFailure(arithConst, "type conversion failed");
+    rewriter.replaceOpWithNewOp<emitc::ConstantOp>(arithConst, newTy,
+                                                   adaptor.getValue());
     return success();
   }
 };
@@ -50,6 +76,12 @@ Type adaptIntegralTypeSignedness(Type ty, bool needsUnsigned) {
                             : IntegerType::SignednessSemantics::Signed;
       return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
                               signedness);
+    }
+  } else if (emitc::isPointerWideType(ty)) {
+    if (isa<emitc::SizeTType>(ty) != needsUnsigned) {
+      if (needsUnsigned)
+        return emitc::SizeTType::get(ty.getContext());
+      return emitc::PtrDiffTType::get(ty.getContext());
     }
   }
   return ty;
@@ -78,9 +110,9 @@ public:
     emitc::CmpPredicate predicate;
     switch (op.getPredicate()) {
     case arith::CmpFPredicate::AlwaysFalse: {
-      auto constant = rewriter.create<emitc::ConstantOp>(
-          op.getLoc(), rewriter.getI1Type(),
-          rewriter.getBoolAttr(/*value=*/false));
+      auto constant =
+          emitc::ConstantOp::create(rewriter, op.getLoc(), rewriter.getI1Type(),
+                                    rewriter.getBoolAttr(/*value=*/false));
       rewriter.replaceOp(op, constant);
       return success();
     }
@@ -147,9 +179,9 @@ public:
       return success();
     }
     case arith::CmpFPredicate::AlwaysTrue: {
-      auto constant = rewriter.create<emitc::ConstantOp>(
-          op.getLoc(), rewriter.getI1Type(),
-          rewriter.getBoolAttr(/*value=*/true));
+      auto constant =
+          emitc::ConstantOp::create(rewriter, op.getLoc(), rewriter.getI1Type(),
+                                    rewriter.getBoolAttr(/*value=*/true));
       rewriter.replaceOp(op, constant);
       return success();
     }
@@ -157,8 +189,8 @@ public:
 
     // Compare the values naively
     auto cmpResult =
-        rewriter.create<emitc::CmpOp>(op.getLoc(), op.getType(), predicate,
-                                      adaptor.getLhs(), adaptor.getRhs());
+        emitc::CmpOp::create(rewriter, op.getLoc(), op.getType(), predicate,
+                             adaptor.getLhs(), adaptor.getRhs());
 
     // Adjust the results for unordered/ordered semantics
     if (unordered) {
@@ -181,16 +213,16 @@ private:
   Value isNaN(ConversionPatternRewriter &rewriter, Location loc,
               Value operand) const {
     // A value is NaN exactly when it compares unequal to itself.
-    return rewriter.create<emitc::CmpOp>(
-        loc, rewriter.getI1Type(), emitc::CmpPredicate::ne, operand, operand);
+    return emitc::CmpOp::create(rewriter, loc, rewriter.getI1Type(),
+                                emitc::CmpPredicate::ne, operand, operand);
   }
 
   /// Return a value that is true if \p operand is not NaN.
   Value isNotNaN(ConversionPatternRewriter &rewriter, Location loc,
                  Value operand) const {
     // A value is not NaN exactly when it compares equal to itself.
-    return rewriter.create<emitc::CmpOp>(
-        loc, rewriter.getI1Type(), emitc::CmpPredicate::eq, operand, operand);
+    return emitc::CmpOp::create(rewriter, loc, rewriter.getI1Type(),
+                                emitc::CmpPredicate::eq, operand, operand);
   }
 
   /// Return a value that is true if the operands \p first and \p second are
@@ -199,8 +231,8 @@ private:
                                Location loc, Value first, Value second) const {
     auto firstIsNaN = isNaN(rewriter, loc, first);
     auto secondIsNaN = isNaN(rewriter, loc, second);
-    return rewriter.create<emitc::LogicalOrOp>(loc, rewriter.getI1Type(),
-                                               firstIsNaN, secondIsNaN);
+    return emitc::LogicalOrOp::create(rewriter, loc, rewriter.getI1Type(),
+                                      firstIsNaN, secondIsNaN);
   }
 
   /// Return a value that is true if the operands \p first and \p second are
@@ -209,8 +241,8 @@ private:
                              Value first, Value second) const {
     auto firstIsNotNaN = isNotNaN(rewriter, loc, first);
     auto secondIsNotNaN = isNotNaN(rewriter, loc, second);
-    return rewriter.create<emitc::LogicalAndOp>(loc, rewriter.getI1Type(),
-                                                firstIsNotNaN, secondIsNotNaN);
+    return emitc::LogicalAndOp::create(rewriter, loc, rewriter.getI1Type(),
+                                       firstIsNotNaN, secondIsNotNaN);
   }
 };
 
@@ -263,8 +295,9 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type type = adaptor.getLhs().getType();
-    if (!isa_and_nonnull<IntegerType, IndexType>(type)) {
-      return rewriter.notifyMatchFailure(op, "expected integer or index type");
+    if (!type || !(isa<IntegerType>(type) || emitc::isPointerWideType(type))) {
+      return rewriter.notifyMatchFailure(
+          op, "expected integer or size_t/ssize_t/ptrdiff_t type");
     }
 
     bool needsUnsigned = needsUnsignedCmp(op.getPredicate());
@@ -317,8 +350,10 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type opReturnType = this->getTypeConverter()->convertType(op.getType());
-    if (!isa_and_nonnull<IntegerType>(opReturnType))
-      return rewriter.notifyMatchFailure(op, "expected integer result type");
+    if (!opReturnType || !(isa<IntegerType>(opReturnType) ||
+                           emitc::isPointerWideType(opReturnType)))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer or size_t/ssize_t/ptrdiff_t result type");
 
     if (adaptor.getOperands().size() != 1) {
       return rewriter.notifyMatchFailure(
@@ -326,8 +361,10 @@ public:
     }
 
     Type operandType = adaptor.getIn().getType();
-    if (!isa_and_nonnull<IntegerType>(operandType))
-      return rewriter.notifyMatchFailure(op, "expected integer operand type");
+    if (!operandType || !(isa<IntegerType>(operandType) ||
+                          emitc::isPointerWideType(operandType)))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer or size_t/ssize_t/ptrdiff_t operand type");
 
     // Signed (sign-extending) casts from i1 are not supported.
     if (operandType.isInteger(1) && !castToUnsigned)
@@ -338,10 +375,13 @@ public:
     // equivalent to (v != 0). Implementing as (bool)(v & 0x01) gives
     // truncation.
     if (opReturnType.isInteger(1)) {
-      auto constOne = rewriter.create<emitc::ConstantOp>(
-          op.getLoc(), operandType, rewriter.getIntegerAttr(operandType, 1));
-      auto oneAndOperand = rewriter.create<emitc::BitwiseAndOp>(
-          op.getLoc(), operandType, adaptor.getIn(), constOne);
+      Type attrType = (emitc::isPointerWideType(operandType))
+                          ? rewriter.getIndexType()
+                          : operandType;
+      auto constOne = emitc::ConstantOp::create(
+          rewriter, op.getLoc(), operandType, rewriter.getOneAttr(attrType));
+      auto oneAndOperand = emitc::BitwiseAndOp::create(
+          rewriter, op.getLoc(), operandType, adaptor.getIn(), constOne);
       rewriter.replaceOpWithNewOp<emitc::CastOp>(op, opReturnType,
                                                  oneAndOperand);
       return success();
@@ -362,8 +402,8 @@ public:
     Value actualOp = adaptValueType(adaptor.getIn(), rewriter, castSrcType);
 
     // Actual cast (may change bitwidth)
-    auto cast = rewriter.template create<emitc::CastOp>(op.getLoc(),
-                                                        castDestType, actualOp);
+    auto cast =
+        emitc::CastOp::create(rewriter, op.getLoc(), castDestType, actualOp);
 
     // Cast to the expected output type
     auto result = adaptValueType(cast, rewriter, opReturnType);
@@ -392,9 +432,44 @@ public:
   matchAndRewrite(ArithOp arithOp, typename ArithOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    rewriter.template replaceOpWithNewOp<EmitCOp>(arithOp, arithOp.getType(),
+    Type newTy = this->getTypeConverter()->convertType(arithOp.getType());
+    if (!newTy)
+      return rewriter.notifyMatchFailure(arithOp,
+                                         "converting result type failed");
+    rewriter.template replaceOpWithNewOp<EmitCOp>(arithOp, newTy,
                                                   adaptor.getOperands());
 
+    return success();
+  }
+};
+
+template <class ArithOp, class EmitCOp>
+class BinaryUIOpConversion final : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp uiBinOp, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type newRetTy = this->getTypeConverter()->convertType(uiBinOp.getType());
+    if (!newRetTy)
+      return rewriter.notifyMatchFailure(uiBinOp,
+                                         "converting result type failed");
+    if (!isa<IntegerType>(newRetTy)) {
+      return rewriter.notifyMatchFailure(uiBinOp, "expected integer type");
+    }
+    Type unsignedType =
+        adaptIntegralTypeSignedness(newRetTy, /*needsUnsigned=*/true);
+    if (!unsignedType)
+      return rewriter.notifyMatchFailure(uiBinOp,
+                                         "converting result type failed");
+    Value lhsAdapted = adaptValueType(uiBinOp.getLhs(), rewriter, unsignedType);
+    Value rhsAdapted = adaptValueType(uiBinOp.getRhs(), rewriter, unsignedType);
+
+    auto newDivOp = EmitCOp::create(rewriter, uiBinOp.getLoc(), unsignedType,
+                                    ArrayRef<Value>{lhsAdapted, rhsAdapted});
+    Value resultAdapted = adaptValueType(newDivOp, rewriter, newRetTy);
+    rewriter.replaceOp(uiBinOp, resultAdapted);
     return success();
   }
 };
@@ -409,8 +484,9 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!isa_and_nonnull<IntegerType, IndexType>(type)) {
-      return rewriter.notifyMatchFailure(op, "expected integer type");
+    if (!type || !(isa<IntegerType>(type) || emitc::isPointerWideType(type))) {
+      return rewriter.notifyMatchFailure(
+          op, "expected integer or size_t/ssize_t/ptrdiff_t type");
     }
 
     if (type.isInteger(1)) {
@@ -431,8 +507,8 @@ public:
     Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
     Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
 
-    Value arithmeticResult = rewriter.template create<EmitCOp>(
-        op.getLoc(), arithmeticType, lhs, rhs);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
 
     Value result = adaptValueType(arithmeticResult, rewriter, type);
 
@@ -471,14 +547,99 @@ public:
     Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
     Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
 
-    Value arithmeticResult = rewriter.template create<EmitCOp>(
-        op.getLoc(), arithmeticType, lhs, rhs);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
 
     Value result = adaptValueType(arithmeticResult, rewriter, type);
 
     rewriter.replaceOp(op, result);
     return success();
   }
+};
+
+template <typename ArithOp, typename EmitCOp, bool isUnsignedOp>
+class ShiftOpConversion : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = this->getTypeConverter()->convertType(op.getType());
+    if (!type || !(isa<IntegerType>(type) || emitc::isPointerWideType(type))) {
+      return rewriter.notifyMatchFailure(
+          op, "expected integer or size_t/ssize_t/ptrdiff_t type");
+    }
+
+    if (type.isInteger(1)) {
+      return rewriter.notifyMatchFailure(op, "i1 type is not implemented");
+    }
+
+    Type arithmeticType = adaptIntegralTypeSignedness(type, isUnsignedOp);
+
+    Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
+    // Shift amount interpreted as unsigned per Arith dialect spec.
+    Type rhsType = adaptIntegralTypeSignedness(adaptor.getRhs().getType(),
+                                               /*needsUnsigned=*/true);
+    Value rhs = adaptValueType(adaptor.getRhs(), rewriter, rhsType);
+
+    // Add a runtime check for overflow
+    Value width;
+    if (emitc::isPointerWideType(type)) {
+      Value eight = emitc::ConstantOp::create(rewriter, op.getLoc(), rhsType,
+                                              rewriter.getIndexAttr(8));
+      emitc::CallOpaqueOp sizeOfCall = emitc::CallOpaqueOp::create(
+          rewriter, op.getLoc(), rhsType, "sizeof", ArrayRef<Value>{eight});
+      width = emitc::MulOp::create(rewriter, op.getLoc(), rhsType, eight,
+                                   sizeOfCall.getResult(0));
+    } else {
+      width = emitc::ConstantOp::create(
+          rewriter, op.getLoc(), rhsType,
+          rewriter.getIntegerAttr(rhsType, type.getIntOrFloatBitWidth()));
+    }
+
+    Value excessCheck =
+        emitc::CmpOp::create(rewriter, op.getLoc(), rewriter.getI1Type(),
+                             emitc::CmpPredicate::lt, rhs, width);
+
+    // Any concrete value is a valid refinement of poison.
+    Value poison = emitc::ConstantOp::create(
+        rewriter, op.getLoc(), arithmeticType,
+        (isa<IntegerType>(arithmeticType)
+             ? rewriter.getIntegerAttr(arithmeticType, 0)
+             : rewriter.getIndexAttr(0)));
+
+    emitc::ExpressionOp ternary = emitc::ExpressionOp::create(
+        rewriter, op.getLoc(), arithmeticType, /*do_not_inline=*/false);
+    Block &bodyBlock = ternary.getBodyRegion().emplaceBlock();
+    auto currentPoint = rewriter.getInsertionPoint();
+    rewriter.setInsertionPointToStart(&bodyBlock);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
+    Value resultOrPoison =
+        emitc::ConditionalOp::create(rewriter, op.getLoc(), arithmeticType,
+                                     excessCheck, arithmeticResult, poison);
+    emitc::YieldOp::create(rewriter, op.getLoc(), resultOrPoison);
+    rewriter.setInsertionPoint(op->getBlock(), currentPoint);
+
+    Value result = adaptValueType(ternary, rewriter, type);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+template <typename ArithOp, typename EmitCOp>
+class SignedShiftOpConversion final
+    : public ShiftOpConversion<ArithOp, EmitCOp, false> {
+  using ShiftOpConversion<ArithOp, EmitCOp, false>::ShiftOpConversion;
+};
+
+template <typename ArithOp, typename EmitCOp>
+class UnsignedShiftOpConversion final
+    : public ShiftOpConversion<ArithOp, EmitCOp, true> {
+  using ShiftOpConversion<ArithOp, EmitCOp, true>::ShiftOpConversion;
 };
 
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
@@ -536,15 +697,16 @@ public:
     Type actualResultType = dstType;
     if (isa<arith::FPToUIOp>(castOp)) {
       actualResultType =
-          rewriter.getIntegerType(operandType.getIntOrFloatBitWidth(),
+          rewriter.getIntegerType(dstType.getIntOrFloatBitWidth(),
                                   /*isSigned=*/false);
     }
 
-    Value result = rewriter.create<emitc::CastOp>(
-        castOp.getLoc(), actualResultType, adaptor.getOperands());
+    Value result = emitc::CastOp::create(
+        rewriter, castOp.getLoc(), actualResultType, adaptor.getOperands());
 
     if (isa<arith::FPToUIOp>(castOp)) {
-      result = rewriter.create<emitc::CastOp>(castOp.getLoc(), dstType, result);
+      result =
+          emitc::CastOp::create(rewriter, castOp.getLoc(), dstType, result);
     }
     rewriter.replaceOp(castOp, result);
 
@@ -586,9 +748,46 @@ public:
     }
     Value fpCastOperand = adaptor.getIn();
     if (actualOperandType != operandType) {
-      fpCastOperand = rewriter.template create<emitc::CastOp>(
-          castOp.getLoc(), actualOperandType, fpCastOperand);
+      fpCastOperand = emitc::CastOp::create(rewriter, castOp.getLoc(),
+                                            actualOperandType, fpCastOperand);
     }
+    rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
+
+    return success();
+  }
+};
+
+// Floating-point to floating-point conversions.
+template <typename CastOp>
+class FpCastOpConversion : public OpConversionPattern<CastOp> {
+public:
+  FpCastOpConversion(const TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern<CastOp>(typeConverter, context) {}
+
+  LogicalResult
+  matchAndRewrite(CastOp castOp, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Vectors in particular are not supported.
+    Type operandType = adaptor.getIn().getType();
+    if (!emitc::isSupportedFloatType(operandType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast source type");
+    if (auto roundingModeOp =
+            dyn_cast<arith::ArithRoundingModeInterface>(*castOp)) {
+      // Only supporting default rounding mode as of now.
+      if (roundingModeOp.getRoundingModeAttr())
+        return rewriter.notifyMatchFailure(castOp, "unsupported rounding mode");
+    }
+
+    Type dstType = this->getTypeConverter()->convertType(castOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(castOp, "type conversion failed");
+
+    if (!emitc::isSupportedFloatType(dstType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast destination type");
+
+    Value fpCastOperand = adaptor.getIn();
     rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
 
     return success();
@@ -605,6 +804,8 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
                                         RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
+  mlir::populateEmitCSizeTTypeConversions(typeConverter);
+
   // clang-format off
   patterns.add<
     ArithConstantOpConversionPattern,
@@ -614,12 +815,17 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
     ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
+    BinaryUIOpConversion<arith::DivUIOp, emitc::DivOp>,
+    BinaryUIOpConversion<arith::RemUIOp, emitc::RemOp>,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
     BitwiseOpConversion<arith::AndIOp, emitc::BitwiseAndOp>,
     BitwiseOpConversion<arith::OrIOp, emitc::BitwiseOrOp>,
     BitwiseOpConversion<arith::XOrIOp, emitc::BitwiseXorOp>,
+    UnsignedShiftOpConversion<arith::ShLIOp, emitc::BitwiseLeftShiftOp>,
+    SignedShiftOpConversion<arith::ShRSIOp, emitc::BitwiseRightShiftOp>,
+    UnsignedShiftOpConversion<arith::ShRUIOp, emitc::BitwiseRightShiftOp>,
     CmpFOpConversion,
     CmpIOpConversion,
     NegFOpConversion,
@@ -628,10 +834,14 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     UnsignedCastConversion<arith::TruncIOp>,
     SignedCastConversion<arith::ExtSIOp>,
     UnsignedCastConversion<arith::ExtUIOp>,
+    SignedCastConversion<arith::IndexCastOp>,
+    UnsignedCastConversion<arith::IndexCastUIOp>,
     ItoFCastOpConversion<arith::SIToFPOp>,
     ItoFCastOpConversion<arith::UIToFPOp>,
     FtoICastOpConversion<arith::FPToSIOp>,
-    FtoICastOpConversion<arith::FPToUIOp>
+    FtoICastOpConversion<arith::FPToUIOp>,
+    FpCastOpConversion<arith::ExtFOp>,
+    FpCastOpConversion<arith::TruncFOp>
   >(typeConverter, ctx);
   // clang-format on
 }

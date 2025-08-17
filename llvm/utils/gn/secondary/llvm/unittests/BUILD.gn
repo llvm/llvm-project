@@ -8,9 +8,13 @@ group("unittests") {
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
     "Bitstream:BitstreamTests",
+    "CAS:CASTests",
+    "CGData:CodeGenDataTests",
     "CodeGen:CodeGenTests",
+
+    # FIXME: Figure out how to make pass.
+    # "CodeGen/CGPluginTest",
     "CodeGen/GlobalISel:GlobalISelTests",
-    "CodeGenData:CodeGenDataTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
     "DebugInfo/BTF:DebugInfoBTFTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
@@ -50,6 +54,7 @@ group("unittests") {
     "TableGen:TableGenTests",
     "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",
+    "Telemetry:TelemetryTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
@@ -59,6 +64,7 @@ group("unittests") {
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
     "Transforms/Vectorize:VectorizeTests",
+    "Transforms/Vectorize/SandboxVectorizer:SandboxVectorizerTests",
     "XRay:XRayTests",
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
@@ -100,7 +106,10 @@ group("unittests") {
     ]
   }
   if (llvm_build_RISCV) {
-    deps += [ "Target/RISCV:RISCVTests" ]
+    deps += [
+      "Target/RISCV:RISCVTests",
+      "tools/llvm-exegesis/RISCV:LLVMExegesisRISCVTests",
+    ]
   }
   if (llvm_build_SystemZ) {
     deps += [ "MC/SystemZ:SystemZAsmLexerTests" ]

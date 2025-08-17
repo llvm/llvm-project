@@ -1,0 +1,51 @@
+# Testing configuration for Apple's system libc++.
+#
+# This configuration differs from a normal LLVM shared library configuration in
+# that we must use DYLD_LIBRARY_PATH to run the tests against the just-built library,
+# since Apple's libc++ has an absolute install_name.
+#
+# We also don't use a per-target include directory layout, so we have only one
+# include directory for the libc++ headers.
+#
+# Finally, we also link against an artificial shims library that provides
+# the functionality necessary for the upstream libc++ to be usable in place
+# of a system-provided libc++. Without that, attempting to replace the system
+# libc++ with DYLD_LIBRARY_PATH would result in missing symbols and other similar
+# issues since the upstream libc++ does not contain all the symbols provided by
+# the system library.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
+ADDITIONAL_PARAMETERS = [
+    libcxx.test.dsl.Parameter(name='apple_system_shims', type=str,
+        actions=lambda path: [libcxx.test.dsl.AddSubstitution('%{apple-system-shims}', path)],
+        help="""
+        Path to a pre-built object file or static archive that contains shims necessary to
+        allow replacing the system libc++ by the just-built one.
+        """),
+]
+
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include-dir} -I %{libcxx-dir}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib-dir} -lc++ %{apple-system-shims}'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib-dir} -- '
+))
+
+config.stdlib = 'apple-libc++'
+
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS + ADDITIONAL_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

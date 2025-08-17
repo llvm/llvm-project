@@ -84,8 +84,12 @@ public:
 
   /// Hook for derived dialect interfaces to publish the supported metadata
   /// kinds. As every metadata kind has a unique integer identifier, the
-  /// function returns the list of supported metadata identifiers.
-  virtual ArrayRef<unsigned> getSupportedMetadata() const { return {}; }
+  /// function returns the list of supported metadata identifiers. `ctx` can be
+  /// used to obtain IDs of metadata kinds that do not have a fixed static one.
+  virtual ArrayRef<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &ctx) const {
+    return {};
+  }
 };
 
 /// Interface collection for the import of LLVM IR that dispatches to a concrete
@@ -101,7 +105,7 @@ public:
   /// intrinsic and metadata kinds and builds the dispatch tables for the
   /// conversion. Returns failure if multiple dialect interfaces translate the
   /// same LLVM IR intrinsic.
-  LogicalResult initializeImport() {
+  LogicalResult initializeImport(llvm::LLVMContext &llvmContext) {
     for (const LLVMImportDialectInterface &iface : *this) {
       // Verify the supported intrinsics have not been mapped before.
       const auto *intrinsicIt =
@@ -139,7 +143,7 @@ public:
       for (unsigned id : iface.getSupportedInstructions())
         instructionToDialect[id] = &iface;
       // Add a mapping for all supported metadata kinds.
-      for (unsigned kind : iface.getSupportedMetadata())
+      for (unsigned kind : iface.getSupportedMetadata(llvmContext))
         metadataToDialect[kind].push_back(iface.getDialect());
     }
 
@@ -149,17 +153,7 @@ public:
   /// Converts the LLVM intrinsic to an MLIR operation if a conversion exists.
   /// Returns failure otherwise.
   LogicalResult convertIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
-                                 LLVM::ModuleImport &moduleImport) const {
-    // Lookup the dialect interface for the given intrinsic.
-    Dialect *dialect = intrinsicToDialect.lookup(inst->getIntrinsicID());
-    if (!dialect)
-      return failure();
-
-    // Dispatch the conversion to the dialect interface.
-    const LLVMImportDialectInterface *iface = getInterfaceFor(dialect);
-    assert(iface && "expected to find a dialect interface");
-    return iface->convertIntrinsic(builder, inst, moduleImport);
-  }
+                                 LLVM::ModuleImport &moduleImport) const;
 
   /// Returns true if the given LLVM IR intrinsic is convertible to an MLIR
   /// operation.
@@ -220,6 +214,11 @@ public:
   }
 
 private:
+  /// Generate llvm.call_intrinsic when no supporting dialect available.
+  static LogicalResult
+  convertUnregisteredIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
+                               LLVM::ModuleImport &moduleImport);
+
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
   DenseMap<unsigned, const LLVMImportDialectInterface *> instructionToDialect;
   DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;

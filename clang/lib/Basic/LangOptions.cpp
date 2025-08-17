@@ -11,22 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
 
 LangOptions::LangOptions() : LangStd(LangStandard::lang_unspecified) {
-#define LANGOPT(Name, Bits, Default, Description) Name = Default;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) set##Name(Default);
+#define LANGOPT(Name, Bits, Default, Compatibility, Description) Name = Default;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  set##Name(Default);
 #include "clang/Basic/LangOptions.def"
 }
 
 void LangOptions::resetNonModularOptions() {
-#define LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_LANGOPT(Name, Bits, Default, Description) Name = Default;
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  Name = static_cast<unsigned>(Default);
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  if constexpr (CompatibilityKind::Compatibility == CompatibilityKind::Benign) \
+    Name = Default;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  if constexpr (CompatibilityKind::Compatibility == CompatibilityKind::Benign) \
+    Name = static_cast<unsigned>(Default);
 #include "clang/Basic/LangOptions.def"
 
   // Reset "benign" options with implied values (Options.td ImpliedBy relations)
@@ -34,8 +36,8 @@ void LangOptions::resetNonModularOptions() {
   // invocations that cannot be round-tripped to arguments.
   // FIXME: we should derive this automatically from ImpliedBy in tablegen.
   AllowFPReassoc = UnsafeFPMath;
-  NoHonorNaNs = FiniteMathOnly;
-  NoHonorInfs = FiniteMathOnly;
+  NoHonorInfs = FastMath;
+  NoHonorNaNs = FastMath;
 
   // These options do not affect AST generation.
   NoSanitizeFiles.clear();
@@ -125,6 +127,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.HexFloats = Std.hasHexFloats();
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
+  Opts.RawStringLiterals = Std.hasRawStringLiterals();
 
   Opts.HLSL = Lang == Language::HLSL;
   if (Opts.HLSL && Opts.IncludeDefaultHeader)
@@ -158,6 +161,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2021;
   else if (LangStd == LangStandard::lang_hlsl202x)
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202x;
+  else if (LangStd == LangStandard::lang_hlsl202y)
+    Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202y;
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {
@@ -200,13 +205,13 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }
 
-  Opts.RenderScript = Lang == Language::RenderScript;
-
   // OpenCL, C++ and C23 have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 
   // OpenCL and HLSL have half keyword
   Opts.Half = Opts.OpenCL || Opts.HLSL;
+
+  Opts.PreserveVec3Type = Opts.HLSL;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
@@ -216,7 +221,7 @@ FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
 
 FPOptionsOverride FPOptions::getChangesSlow(const FPOptions &Base) const {
   FPOptions::storage_type OverrideMask = 0;
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (get##NAME() != Base.get##NAME())                                         \
     OverrideMask |= NAME##Mask;
 #include "clang/Basic/FPOptions.def"
@@ -224,14 +229,14 @@ FPOptionsOverride FPOptions::getChangesSlow(const FPOptions &Base) const {
 }
 
 LLVM_DUMP_METHOD void FPOptions::dump() {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   llvm::errs() << "\n " #NAME " " << get##NAME();
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
 }
 
 LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (has##NAME##Override())                                                   \
     llvm::errs() << "\n " #NAME " Override is " << get##NAME##Override();
 #include "clang/Basic/FPOptions.def"

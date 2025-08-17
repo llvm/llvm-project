@@ -37,14 +37,17 @@ class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
 
 def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     MemRefElementTypeInterface,
+    PtrLikeTypeInterface,
+    VectorElementTypeInterface,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "getIndexBitwidth", "verifyEntries"]>
+      "areCompatible", "getIndexBitwidth", "verifyEntries",
+      "getPreferredAlignment"]>
   ]> {
   let summary = "pointer type";
   let description = [{
     The `ptr` type is an opaque pointer type. This type typically represents a
     handle to an object in memory or target-dependent values like `nullptr`.
-    Pointers are optionally parameterized by a memory space.
+    Pointers are parameterized by a memory space.
 
     Syntax:
 
@@ -53,14 +56,63 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     memory-space ::= attribute-value
     ```
   }];
-  let parameters = (ins OptionalParameter<"Attribute">:$memorySpace);
-  let assemblyFormat = "(`<` $memorySpace^ `>`)?";
+  let parameters = (ins "MemorySpaceAttrInterface":$memorySpace);
+  let assemblyFormat = "`<` $memorySpace `>`";
   let builders = [
-    TypeBuilder<(ins CArg<"Attribute", "nullptr">:$memorySpace), [{
-      return $_get($_ctxt, memorySpace);
+    TypeBuilderWithInferredContext<(ins
+      "MemorySpaceAttrInterface":$memorySpace), [{
+      return $_get(memorySpace.getContext(), memorySpace);
     }]>
   ];
-  let skipDefaultBuilders = 1;
+  let extraClassDeclaration = [{
+    // `PtrLikeTypeInterface` interface methods.
+    /// Returns `Type()` as this pointer type is opaque.
+    Type getElementType() const {
+      return Type();
+    }
+    /// Clones the pointer with specified memory space or returns failure
+    /// if an `elementType` was specified or if the memory space doesn't
+    /// implement `MemorySpaceAttrInterface`.
+    FailureOr<PtrLikeTypeInterface> clonePtrWith(Attribute memorySpace,
+      std::optional<Type> elementType) const {
+      if (elementType)
+        return failure();
+      if (auto ms = dyn_cast<MemorySpaceAttrInterface>(memorySpace))
+        return cast<PtrLikeTypeInterface>(get(ms));
+      return failure();
+    }
+    /// `!ptr.ptr` types are seen as ptr-like objects with no metadata.
+    bool hasPtrMetadata() const {
+      return false;
+    }
+  }];
+}
+
+def Ptr_PtrMetadata : Ptr_Type<"PtrMetadata", "ptr_metadata"> {
+  let summary = "Pointer metadata type";
+  let description = [{
+    The `ptr_metadata` type represents an opaque-view of the metadata associated
+    with a `ptr-like` object type.
+
+    Note: It's a verification error to construct a `ptr_metadata` type using a
+    `ptr-like` type with no metadata.
+
+    Example:
+
+    ```mlir
+    // The metadata associated with a `memref` type.
+    !ptr.ptr_metadata<memref<f32>>
+    ```
+  }];
+  let parameters = (ins "PtrLikeTypeInterface":$type);
+  let assemblyFormat = "`<` $type `>`";
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "PtrLikeTypeInterface":$ptrLike), [{
+      return $_get(ptrLike.getContext(), ptrLike);
+    }]>
+  ];
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

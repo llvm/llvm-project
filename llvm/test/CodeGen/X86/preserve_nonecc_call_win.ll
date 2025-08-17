@@ -12,7 +12,9 @@ define preserve_nonecc void @entry(ptr %r12, ptr %r13, ptr %r14, ptr %r15, ptr %
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    callq boring
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    jmp continuation # TAILCALL
 ; CHECK-NEXT:    .seh_endproc
   call void @boring()

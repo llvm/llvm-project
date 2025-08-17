@@ -62,6 +62,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  complex_macros
+  HDR
+    complex-macros.h
+)
+
+add_macro_header(
   features_macros
   HDR
     features-macros.h
@@ -110,11 +116,25 @@ add_macro_header(
 )
 
 add_macro_header(
+  malloc_macros
+  HDR
+    malloc-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h
   DEPENDS
     .limits_macros
+)
+
+add_macro_header(
+  math_function_macros
+  HDR
+    math-function-macros.h
+  DEPENDS
+    .math_macros
 )
 
 add_macro_header(
@@ -283,3 +303,50 @@ add_macro_header(
   HDR
     dlfcn-macros.h
 )
+
+add_macro_header(
+  elf_macros
+  HDR
+    elf-macros.h
+)
+
+add_macro_header(
+  endian_macros
+  HDR
+    endian-macros.h
+  DEPENDS
+    .stdint_macros
+)
+
+add_macro_header(
+  locale_macros
+  HDR
+    locale-macros.h
+)
+
+add_macro_header(
+  pthread_macros
+  HDR
+    pthread-macros.h
+  DEPENDS
+    .null_macro
+)
+
+add_macro_header(
+  poll-macros
+  HDR
+    poll-macros.h
+)
+
+add_macro_header(
+  EFIAPI_macros
+  HDR
+    EFIAPI-macros.h
+)
+
+add_macro_header(
+  sysexits_macros
+  HDR
+    sysexits-macros.h
+)
+

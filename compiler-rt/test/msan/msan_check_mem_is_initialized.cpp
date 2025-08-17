@@ -1,6 +1,6 @@
 // RUN: %clangxx_msan -O0 -g -DPOSITIVE %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
-// RUN: MSAN_OPTIONS=verbosity=1 not %run %t 2>&1 | \
+// RUN: env MSAN_OPTIONS=verbosity=1 not %run %t 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-VERBOSE
 
 // RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
@@ -12,7 +12,7 @@ int main(void) {
   __msan_poison(p + 10, 2);
 
   __msan_check_mem_is_initialized(p, 10);
-  __msan_check_mem_is_initialized(p + 12, 30);
+  __msan_check_mem_is_initialized(p + 12, 20);
 #ifdef POSITIVE
   __msan_check_mem_is_initialized(p + 5, 20);
   // CHECK: Uninitialized bytes in __msan_check_mem_is_initialized at offset 5 inside [0x{{.*}}, 20)

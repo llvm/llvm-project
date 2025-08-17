@@ -21,8 +21,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;
@@ -47,7 +45,7 @@ int call_vfprintf(::FILE *__restrict stream, const char *__restrict format,
 }
 
 TEST(LlvmLibcVFPrintfTest, WriteToFile) {
-  const char *FILENAME = "vfprintf_output.test";
+  const char *FILENAME = APPEND_LIBC_TEST("vfprintf_output.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = printf_test::fopen(FILE_PATH, "w");

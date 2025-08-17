@@ -13,6 +13,9 @@ let Command = "target modules dump separate debug info" in {
     Desc<"Output the details in JSON format.">;
   def tm_errors_only : Option<"errors-only", "e">, Group<1>,
     Desc<"Filter to show only debug info files with errors.">;
+  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
+                                     Group<1>,
+                                     Desc<"Load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -92,6 +95,12 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_condition : Option<"condition", "c">, Group<1>,
     Arg<"Expression">, Desc<"The breakpoint stops only if this condition "
     "expression evaluates to true.">;
+  def breakpoint_modify_condition_language
+      : Option<"condition-language", "Y">,
+        Group<1>,
+        Arg<"Language">,
+        Desc<"Specifies the Language to use when executing the breakpoint's "
+             "condition expression.">;
   def breakpoint_modify_auto_continue : Option<"auto-continue", "G">, Group<1>,
     Arg<"Boolean">,
     Desc<"The breakpoint will auto-continue after running its commands.">;
@@ -196,7 +205,7 @@ let Command = "breakpoint set" in {
     "identifiers). If not set the target.language setting is used.">;
   def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
     Arg<"Boolean">, Groups<[1,3,4,5,6,7,8,12]>,
-    Desc<"sKip the prologue if the breakpoint is at the beginning of a "
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
     "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
     Arg<"BreakpointName">,
@@ -324,6 +333,10 @@ let Command = "disassemble" in {
     Arg<"DisassemblyFlavor">, Desc<"Name of the disassembly flavor you want to "
     "use. Currently the only valid options are default, and for Intel "
     "architectures, att and intel.">;
+  def disassemble_options_cpu : Option<"cpu", "X">, Arg<"CPUName">,
+    Desc<"Override the CPU for disassembling.">;
+  def disassemble_options_features : Option<"features", "Y">, Arg<"CPUFeatures">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def disassemble_options_arch : Option<"arch", "A">, Arg<"Architecture">,
     Desc<"Specify the architecture to use from cross disassembly.">;
   def disassemble_options_start_address : Option<"start-address", "s">,
@@ -679,6 +692,11 @@ let Command = "platform shell" in {
     Desc<"Shell interpreter path. This is the binary used to run the command.">;
 }
 
+let Command = "plugin list" in {
+  def plugin_list_json : Option<"json", "j">,
+                         Desc<"Output the plugin list in json format.">;
+}
+
 let Command = "process launch" in {
   def process_launch_stop_at_entry : Option<"stop-at-entry", "s">,
     Desc<"Stop at the entry point of the program when launching a process.">;
@@ -691,7 +709,10 @@ let Command = "process launch" in {
   def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,
     Desc<"Name of the process plugin you want to use.">;
   def process_launch_working_dir : Option<"working-dir", "w">, Arg<"DirectoryName">,
-    Desc<"Set the current working directory to <path> when running the inferior.">;
+    Desc<"Set the current working directory to <path> when running the inferior. This option "
+         "applies only to the current `process launch` invocation. If "
+         "`target.launch-working-dir` is set and this option is given, the value of this "
+         "option will be used instead of the setting.">;
   def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
     Desc<"Set the architecture for the process to launch when ambiguous.">;
   def process_launch_environment : Option<"environment", "E">,
@@ -730,13 +751,17 @@ let Command = "process attach" in {
 }
 
 let Command = "process continue" in {
-  def process_continue_ignore_count : Option<"ignore-count", "i">, Group<1>,
+  def process_continue_ignore_count : Option<"ignore-count", "i">, Groups<[1,2]>,
     Arg<"UnsignedInteger">, Desc<"Ignore <N> crossings of the breakpoint (if it"
     " exists) for the currently selected thread.">;
-  def process_continue_run_to_bkpt : Option<"continue-to-bkpt", "b">, Group<2>,
+  def process_continue_run_to_bkpt : Option<"continue-to-bkpt", "b">, Groups<[3,4]>,
     Arg<"BreakpointIDRange">, Desc<"Specify a breakpoint to continue to, temporarily "
     "ignoring other breakpoints.  Can be specified more than once.  "
     "The continue action will be done synchronously if this option is specified.">;
+  def thread_continue_forward : Option<"forward", "F">, Groups<[1,3]>,
+    Desc<"Set the direction to forward before continuing.">;
+  def thread_continue_reverse : Option<"reverse", "R">, Groups<[2,4]>,
+    Desc<"Set the direction to reverse before continuing.">;
 }
 
 let Command = "process detach" in {
@@ -777,6 +802,8 @@ let Command = "process handle" in {
 let Command = "process status" in {
   def process_status_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose process status including extended crash information.">;
+  def process_status_dump : Option<"dump-modification-id", "d">, Group<1>,
+    Desc<"Dump the state of the ProcessModID of the stopped process.">;
 }
 
 let Command = "process save_core" in {
@@ -839,6 +866,12 @@ let Command = "scripting run" in {
   def script_language : Option<"language", "l">,
     EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specific the default scripting language is used.">;
+}
+
+let Command = "scripting extension list" in {
+  def scripting_extension_list_language : Option<"language", "l">,
+    EnumArg<"ScriptLang">, Desc<"Specify the scripting "
+    " language. If none is specified the default scripting language is used.">;
 }
 
 let Command = "source info" in {
@@ -952,6 +985,8 @@ let Command = "target modules show unwind" in {
   def target_modules_show_unwind_address : Option<"address", "a">, Group<2>,
     Arg<"AddressOrExpression">, Desc<"Show unwind instructions for a function "
     "or symbol containing an address">;
+  def target_modules_show_unwind_cached : Option<"cached", "c">,
+    Arg<"Boolean">, Desc<"Show cached unwind information">;
 }
 
 let Command = "target modules lookup" in {
@@ -1031,8 +1066,14 @@ let Command = "target stop hook add" in {
     Arg<"FunctionName">, Desc<"Set the function name within which the stop hook"
     " will be run.">, Completion<"Symbol">;
   def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
-    Arg<"Boolean">, Desc<"The breakpoint will auto-continue after running its"
+    Arg<"Boolean">, Desc<"The stop-hook will auto-continue after running its"
     " commands.">;
+  def target_stop_hook_add_at_initial_stop : Option<"at-initial-stop", "I">,
+    Arg<"Boolean">, Desc<"Whether the stop-hook will trigger when lldb  "
+    "initially gains control of the process.  For a process launch, this "
+    "initial stop may happen very early on - before the loader has run.  You "
+    "can use this option if you do not want some stop-hooks to run then.  "
+    "Defaults to true.">;
 }
 
 let Command = "thread backtrace" in {
@@ -1042,6 +1083,8 @@ let Command = "thread backtrace" in {
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
   Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
+  Desc<"Do not filter out frames according to installed frame recognizers">;
 }
 
 let Command = "thread step scope" in {
@@ -1091,6 +1134,9 @@ let Command = "thread info" in {
     " JSON format.">;
   def thread_info_stop_info : Option<"stop-info", "s">, Desc<"Display the "
     "extended stop info in JSON format.">;
+  def thread_info_backing_thread : Option<"backing-thread", "b">,
+    Desc<"If this is an OS plugin thread, query the backing thread instead; has"
+    " no effect otherwise.">;
 }
 
 let Command = "thread return" in {
@@ -1104,7 +1150,8 @@ let Command = "thread jump" in {
   def thread_jump_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
     Required, Desc<"Specifies the line number to jump to.">;
   def thread_jump_by : Option<"by", "b">, Group<2>, Arg<"Offset">, Required,
-    Desc<"Jumps by a relative line offset from the current line.">;
+    Desc<"Jumps by a relative line offset from the current line,"
+    "can be a positive or negative offset">;
   def thread_jump_address : Option<"address", "a">, Group<3>,
     Arg<"AddressOrExpression">, Required, Desc<"Jumps to a specific address.">;
   def thread_jump_force : Option<"force", "r">, Groups<[1,2,3]>,
@@ -1191,7 +1238,7 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
     Group<1>,
     Desc<"Dump only the events that happened during the execution of the "
-    "target. No instrutions are dumped.">;
+    "target. No instructions are dumped.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of "
@@ -1216,6 +1263,10 @@ let Command = "type summary add" in {
     Desc<"Don't show the value, just show the summary, for this type.">;
   def type_summary_add_skip_pointers : Option<"skip-pointers", "p">,
     Desc<"Don't use this format for pointers-to-type objects.">;
+  def type_summary_add_pointer_match_depth : Option<"pointer-match-depth", "d">,
+    Arg<"UnsignedInteger">,
+    Desc<"Specify the maximum pointer depth that this format can be apply to "
+    "(default to 1). It's only effective when --skip-pointers is not set.">;
   def type_summary_add_skip_references : Option<"skip-references", "r">,
     Desc<"Don't use this format for references-to-type objects.">;
   def type_summary_add_regex : Option<"regex", "x">,
@@ -1440,12 +1491,20 @@ let Command = "statistics dump" in {
     "this is turned off unless specified. "
     "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
-  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
-    Arg<"Boolean">,
-    Desc<"If the setting interpreter.save-transcript is enabled and this "
-    "option is 'true', include a JSON array with all commands the user and/or "
-    "scripts executed during a debug session. "
-    "Defaults to true, unless the '--summary' mode is enabled, in which case "
-    "this is turned off unless specified.">;
-
+  def statistics_dump_transcript
+      : Option<"transcript", "t">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"If the setting interpreter.save-transcript is enabled and this "
+             "option is 'true', include a JSON array with all commands the "
+             "user and/or "
+             "scripts executed during a debug session. "
+             "Defaults to false. ">;
+  def statistics_dump_plugins
+      : Option<"plugins", "p">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"Dump statistics for known plugins including name, order, and "
+             "enabled state. Defaults to true for both summary and default "
+             "mode.">;
 }

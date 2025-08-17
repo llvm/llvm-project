@@ -9,16 +9,22 @@
 #include "src/string/strncmp.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, strncmp,
                    (const char *left, const char *right, size_t n)) {
+  if (n) {
+    LIBC_CRASH_ON_NULLPTR(left);
+    LIBC_CRASH_ON_NULLPTR(right);
+  }
   auto comp = [](char l, char r) -> int { return l - r; };
   return inline_strncmp(left, right, n, comp);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

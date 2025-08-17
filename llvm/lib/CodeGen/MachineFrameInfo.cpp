@@ -197,7 +197,7 @@ void MachineFrameInfo::computeMaxCallFrameSize(
     for (MachineInstr &MI : MBB) {
       unsigned Opcode = MI.getOpcode();
       if (Opcode == FrameSetupOpcode || Opcode == FrameDestroyOpcode) {
-        unsigned Size = TII.getFrameSize(MI);
+        uint64_t Size = TII.getFrameSize(MI);
         MaxCallFrameSize = std::max(MaxCallFrameSize, Size);
         if (FrameSDOps != nullptr)
           FrameSDOps->push_back(&MI);
@@ -244,6 +244,22 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     }
     OS << "\n";
   }
+  OS << "save/restore points:\n";
+
+  if (!SavePoints.empty()) {
+    OS << "save points:\n";
+
+    for (auto &item : SavePoints)
+      OS << printMBBReference(*item) << "\n";
+  } else
+    OS << "save points are empty\n";
+
+  if (!RestorePoints.empty()) {
+    OS << "restore points:\n";
+    for (auto &item : RestorePoints)
+      OS << printMBBReference(*item) << "\n";
+  } else
+    OS << "restore points are empty\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

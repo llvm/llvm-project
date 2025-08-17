@@ -9,6 +9,8 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/Decompressor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 using namespace llvm;
@@ -315,10 +317,12 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_SYMPART);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_EHDR);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_PHDR);
-    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP_V0);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_JT_SIZES)
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_CFI_JUMP_TABLE)
+    STRINGIFY_ENUM_CASE(ELF, SHT_GNU_SFRAME);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
@@ -408,46 +412,31 @@ ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
 template <class ELFT>
 Expected<typename ELFFile<ELFT>::RelsOrRelas>
 ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
-  DataExtractor::Cursor Cur(0);
-  const uint64_t Hdr = Data.getULEB128(Cur);
-  const size_t Count = Hdr / 8;
-  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
-  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
   std::vector<Elf_Rel> Rels;
   std::vector<Elf_Rela> Relas;
-  if (Hdr & ELF::CREL_HDR_ADDEND)
-    Relas.resize(Count);
-  else
-    Rels.resize(Count);
-  typename ELFT::uint Offset = 0, Addend = 0;
-  uint32_t SymIdx = 0, Type = 0;
-  for (size_t I = 0; I != Count; ++I) {
-    // The delta offset and flags member may be larger than uint64_t. Special
-    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
-    // ULEB128 bytes encode the remaining delta offset bits.
-    const uint8_t B = Data.getU8(Cur);
-    Offset += B >> FlagBits;
-    if (B >= 0x80)
-      Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
-    // Delta symidx/type/addend members (SLEB128).
-    if (B & 1)
-      SymIdx += Data.getSLEB128(Cur);
-    if (B & 2)
-      Type += Data.getSLEB128(Cur);
-    if (B & 4 & Hdr)
-      Addend += Data.getSLEB128(Cur);
-    if (Hdr & ELF::CREL_HDR_ADDEND) {
-      Relas[I].r_offset = Offset << Shift;
-      Relas[I].setSymbolAndType(SymIdx, Type, false);
-      Relas[I].r_addend = Addend;
-    } else {
-      Rels[I].r_offset = Offset << Shift;
-      Rels[I].setSymbolAndType(SymIdx, Type, false);
-    }
-  }
-  if (!Cur)
-    return std::move(Cur.takeError());
+  size_t I = 0;
+  bool HasAddend;
+  Error Err = object::decodeCrel<ELFT::Is64Bits>(
+      Content,
+      [&](uint64_t Count, bool HasA) {
+        HasAddend = HasA;
+        if (HasAddend)
+          Relas.resize(Count);
+        else
+          Rels.resize(Count);
+      },
+      [&](Elf_Crel Crel) {
+        if (HasAddend) {
+          Relas[I].r_offset = Crel.r_offset;
+          Relas[I].setSymbolAndType(Crel.r_symidx, Crel.r_type, false);
+          Relas[I++].r_addend = Crel.r_addend;
+        } else {
+          Rels[I].r_offset = Crel.r_offset;
+          Rels[I++].setSymbolAndType(Crel.r_symidx, Crel.r_type, false);
+        }
+      });
+  if (Err)
+    return std::move(Err);
   return std::make_pair(std::move(Rels), std::move(Relas));
 }
 
@@ -760,13 +749,25 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     assert(RelaSec &&
            "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
            "object file without providing a relocation section.");
-    Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas = EF.relas(*RelaSec);
-    if (!Relas)
-      return createError("unable to read relocations for section " +
-                         describe(EF, Sec) + ": " +
-                         toString(Relas.takeError()));
-    for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
-      FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+    if (RelaSec->sh_type == ELF::SHT_CREL) {
+      Expected<typename ELFFile<ELFT>::RelsOrRelas> Relas = EF.crels(*RelaSec);
+      if (!Relas)
+        return createError("unable to read CREL relocations for section " +
+                           describe(EF, Sec) + ": " +
+                           toString(Relas.takeError()));
+      for (typename ELFFile<ELFT>::Elf_Rela Rela : std::get<1>(*Relas)) {
+        FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+      }
+    } else {
+      Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas =
+          EF.relas(*RelaSec);
+      if (!Relas)
+        return createError("unable to read relocations for section " +
+                           describe(EF, Sec) + ": " +
+                           toString(Relas.takeError()));
+      for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
+        FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+    }
   }
   auto GetAddressForRelocation =
       [&](unsigned RelocationOffsetInSection) -> Expected<unsigned> {
@@ -783,6 +784,27 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
   ArrayRef<uint8_t> Content = *ContentsOrErr;
+
+  // Decompress the section if needed.
+  std::unique_ptr<uint8_t[]> DecompressedContent;
+  if (Sec.sh_flags & llvm::ELF::SHF_COMPRESSED) {
+    Expected<StringRef> SectionNameOrErr = EF.getSectionName(Sec);
+    if (!SectionNameOrErr)
+      return SectionNameOrErr.takeError();
+    auto DecompressorOrErr =
+        Decompressor::create(*SectionNameOrErr, toStringRef(*ContentsOrErr),
+                             EF.isLE(), ELFT::Is64Bits);
+    if (!DecompressorOrErr)
+      return DecompressorOrErr.takeError();
+    size_t DecompressedSize = DecompressorOrErr->getDecompressedSize();
+    DecompressedContent = std::make_unique<uint8_t[]>(DecompressedSize);
+    MutableArrayRef<uint8_t> DecompressedContentRef(DecompressedContent.get(),
+                                                    DecompressedSize);
+    if (Error Err = DecompressorOrErr->decompress(DecompressedContentRef))
+      return std::move(Err);
+    Content = DecompressedContentRef;
+  }
+
   DataExtractor Data(Content, EF.isLE(), ELFT::Is64Bits ? 8 : 4);
   std::vector<BBAddrMap> FunctionEntries;
 
@@ -812,31 +834,27 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   BBAddrMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
          Cur.tell() < Content.size()) {
-    if (Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
-      Version = Data.getU8(Cur);
-      if (!Cur)
-        break;
-      if (Version > 2)
-        return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
-                           Twine(static_cast<int>(Version)));
-      Feature = Data.getU8(Cur); // Feature byte
-      if (!Cur)
-        break;
-      auto FeatEnableOrErr = BBAddrMap::Features::decode(Feature);
-      if (!FeatEnableOrErr)
-        return FeatEnableOrErr.takeError();
-      FeatEnable = *FeatEnableOrErr;
-      if (Feature != 0 && Version < 2 && Cur)
-        return createError(
-            "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
-            "PGO features are enabled: version = " +
-            Twine(static_cast<int>(Version)) +
-            " feature = " + Twine(static_cast<int>(Feature)));
-    }
+    Version = Data.getU8(Cur);
+    if (!Cur)
+      break;
+    if (Version < 2 || Version > 3)
+      return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
+                         Twine(static_cast<int>(Version)));
+    Feature = Data.getU8(Cur); // Feature byte
+    if (!Cur)
+      break;
+    auto FeatEnableOrErr = BBAddrMap::Features::decode(Feature);
+    if (!FeatEnableOrErr)
+      return FeatEnableOrErr.takeError();
+    FeatEnable = *FeatEnableOrErr;
+    if (FeatEnable.CallsiteOffsets && Version < 3)
+      return createError("version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
+                         "callsite offsets feature is enabled: version = " +
+                         Twine(static_cast<int>(Version)) +
+                         " feature = " + Twine(static_cast<int>(Feature)));
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     typename ELFFile<ELFT>::uintX_t RangeBaseAddress = 0;
-    std::vector<BBAddrMap::BBEntry> BBEntries;
     if (FeatEnable.MultiBBRange) {
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
@@ -864,29 +882,43 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         RangeBaseAddress = *AddressOrErr;
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
-      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
-                                    (BlockIndex < NumBlocksInBBRange);
-           ++BlockIndex) {
-        uint32_t ID = Version >= 2
-                          ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
-                          : BlockIndex;
-        uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        if (Version >= 1) {
-          // Offset is calculated relative to the end of the previous BB.
-          Offset += PrevBBEndOffset;
-          PrevBBEndOffset = Offset + Size;
+      std::vector<BBAddrMap::BBEntry> BBEntries;
+      if (!FeatEnable.OmitBBEntries) {
+        for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
+                                      Cur && (BlockIndex < NumBlocksInBBRange);
+             ++BlockIndex) {
+          uint32_t ID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          // Read the callsite offsets.
+          uint32_t LastCallsiteOffset = 0;
+          SmallVector<uint32_t, 1> CallsiteOffsets;
+          if (FeatEnable.CallsiteOffsets) {
+            uint32_t NumCallsites =
+                readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            CallsiteOffsets.reserve(NumCallsites);
+            for (uint32_t CallsiteIndex = 0;
+                 !ULEBSizeErr && Cur && (CallsiteIndex < NumCallsites);
+                 ++CallsiteIndex) {
+              LastCallsiteOffset +=
+                  readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+              CallsiteOffsets.push_back(LastCallsiteOffset);
+            }
+          }
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
+                          LastCallsiteOffset;
+          uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+              BBAddrMap::BBEntry::Metadata::decode(MD);
+          if (!MetadataOrErr) {
+            MetadataDecodeErr = MetadataOrErr.takeError();
+            break;
+          }
+          BBEntries.push_back({ID, Offset + PrevBBEndOffset, Size,
+                               *MetadataOrErr, CallsiteOffsets});
+          PrevBBEndOffset += Offset + Size;
         }
-        Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
-            BBAddrMap::BBEntry::Metadata::decode(MD);
-        if (!MetadataOrErr) {
-          MetadataDecodeErr = MetadataOrErr.takeError();
-          break;
-        }
-        BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+        TotalNumBlocks += BBEntries.size();
       }
-      TotalNumBlocks += BBEntries.size();
       BBRangeEntries.push_back({RangeBaseAddress, std::move(BBEntries)});
     }
     FunctionEntries.push_back({std::move(BBRangeEntries)});
@@ -964,12 +996,12 @@ ELFFile<ELFT>::getSectionAndRelocations(
       continue;
     }
     if (*DoesSectionMatch) {
-      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
-              .second)
+      if (SecToRelocMap.try_emplace(&Sec).second)
         continue;
     }
 
-    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
+    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL &&
+        Sec.sh_type != ELF::SHT_CREL)
       continue;
 
     Expected<const Elf_Shdr *> RelSecOrErr = this->getSection(Sec.sh_info);
@@ -994,7 +1026,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
   return SecToRelocMap;
 }
 
-template class llvm::object::ELFFile<ELF32LE>;
-template class llvm::object::ELFFile<ELF32BE>;
-template class llvm::object::ELFFile<ELF64LE>;
-template class llvm::object::ELFFile<ELF64BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64BE>;

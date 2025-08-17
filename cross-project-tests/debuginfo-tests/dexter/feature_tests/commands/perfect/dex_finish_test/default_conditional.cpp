@@ -6,7 +6,7 @@
 //      condition (x == 5) is satisfied.
 //      Tests using the default controller (no \DexLimitSteps).
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: default_conditional.cpp
 

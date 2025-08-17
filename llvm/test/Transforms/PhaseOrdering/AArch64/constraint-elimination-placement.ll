@@ -6,22 +6,17 @@ target triple = "arm64-apple-macosx"
 
 define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %call) {
 ; CHECK-LABEL: define noundef i1 @test_order_1(
-; CHECK-SAME: ptr nocapture writeonly [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[CMP40_NOT3:%.*]] = icmp slt i32 [[CALL]], 1
+; CHECK-NEXT:    [[CMP40_NOT3:%.*]] = icmp sgt i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[CMP40_NOT3]], label [[FOR_COND41_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond41.preheader.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64
 ; CHECK-NEXT:    br label [[FOR_COND41_PREHEADER:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[INDVARS_IV:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       for.cond41.preheader:
-; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ [[TMP0]], [[FOR_COND41_PREHEADER_PREHEADER]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_COND_CLEANUP]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND:%.*]] ]
 ; CHECK-NEXT:    [[CALL431:%.*]] = load volatile i32, ptr [[OTHER]], align 4
 ; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
 ; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
@@ -36,6 +31,11 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[CALL43:%.*]] = load volatile i32, ptr [[OTHER]], align 4
 ; CHECK-NEXT:    [[CMP44:%.*]] = icmp sgt i32 [[CALL43]], 0
 ; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_COND]]
+; CHECK:       for.inc57:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP1]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND41_PREHEADER_PREHEADER]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -94,7 +94,7 @@ declare i64 @strlen(ptr)
 
 define void @test2(ptr %this) #0 {
 ; CHECK-LABEL: define void @test2(
-; CHECK-SAME: ptr nocapture writeonly [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
@@ -153,7 +153,7 @@ if.else21:                                        ; preds = %entry
 
 define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-LABEL: define noundef i1 @test2_fn2(
-; CHECK-SAME: ptr nocapture readonly [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[__RHS]])
 ; CHECK-NEXT:    [[CALL1_I:%.*]] = tail call i1 @test2_fn4(i8 undef)

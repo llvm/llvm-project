@@ -16,13 +16,15 @@ namespace T2 {
 
 struct a { };
 struct b { };
-  
+
 class A {
   virtual a* f(); // expected-note{{overridden virtual function is here}}
+  virtual int *g(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
   virtual b* f(); // expected-error{{return type of virtual function 'f' is not covariant with the return type of the function it overrides ('b *' is not derived from 'a *')}}
+  virtual char *g(); // expected-error{{virtual function 'g' has a different return type ('char *') than the function it overrides (which has return type 'int *')}}
 };
 
 }
@@ -31,7 +33,7 @@ namespace T3 {
 
 struct a { };
 struct b : private a { }; // expected-note{{declared private here}}
-  
+
 class A {
   virtual a* f(); // FIXME: desired-note{{overridden virtual function is here}}
 };
@@ -47,7 +49,7 @@ namespace T4 {
 struct a { };
 struct a1 : a { };
 struct b : a, a1 { }; // expected-warning{{direct base 'a' is inaccessible due to ambiguity:\n    struct T4::b -> a\n    struct T4::b -> a1 -> a}}
-  
+
 class A {
   virtual a* f(); // expected-note{{overridden virtual function is here}}
 };
@@ -61,33 +63,73 @@ class B : A {
 }
 
 namespace T5 {
-  
+
 struct a { };
 
 class A {
-  virtual a* const f(); 
+  virtual a* const f();
   virtual a* const g(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
-  virtual a* const f(); 
+  virtual a* const f();
   virtual a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides ('a *' has different qualifiers than 'a *const')}}
 };
 
 }
 
 namespace T6 {
-  
+
 struct a { };
 
 class A {
-  virtual const a* f(); 
-  virtual a* g(); // expected-note{{overridden virtual function is here}}
+  // Classes.
+  virtual const a* const_vs_unqualified_class();
+  virtual a* unqualified_vs_const_class(); // expected-note{{overridden virtual function is here}}
+
+  virtual volatile a* volatile_vs_unqualified_class();
+  virtual a* unqualified_vs_volatile_class(); // expected-note{{overridden virtual function is here}}
+
+  virtual const a* const_vs_volatile_class(); // expected-note{{overridden virtual function is here}}
+  virtual volatile a* volatile_vs_const_class(); // expected-note{{overridden virtual function is here}}
+
+  virtual const volatile a* const_volatile_vs_const_class();
+  virtual const a* const_vs_const_volatile_class(); // expected-note{{overridden virtual function is here}}
+
+  virtual const volatile a* const_volatile_vs_volatile_class();
+  virtual volatile a* volatile_vs_const_volatile_class(); // expected-note{{overridden virtual function is here}}
+
+  virtual const volatile a* const_volatile_vs_unualified_class();
+  virtual a* unqualified_vs_const_volatile_class(); // expected-note{{overridden virtual function is here}}
+
+  // Non Classes.
+  virtual const int* const_vs_unqualified_non_class(); // expected-note{{overridden virtual function is here}}
+  virtual int* unqualified_vs_const_non_class(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
-  virtual a* f(); 
-  virtual const a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides (class type 'const a *' is more qualified than class type 'a *'}}
+  // Classes.
+  a* const_vs_unqualified_class() override;
+  const a* unqualified_vs_const_class() override; // expected-error{{return type of virtual function 'unqualified_vs_const_class' is not covariant with the return type of the function it overrides (class type 'const a *' does not have the same cv-qualification as or less cv-qualification than class type 'a *')}}
+
+  a* volatile_vs_unqualified_class() override;
+  volatile a* unqualified_vs_volatile_class() override; // expected-error{{return type of virtual function 'unqualified_vs_volatile_class' is not covariant with the return type of the function it overrides (class type 'volatile a *' does not have the same cv-qualification as or less cv-qualification than class type 'a *')}}
+
+  volatile a* const_vs_volatile_class() override; // expected-error{{return type of virtual function 'const_vs_volatile_class' is not covariant with the return type of the function it overrides (class type 'volatile a *' does not have the same cv-qualification as or less cv-qualification than class type 'const a *')}}
+  const a* volatile_vs_const_class() override; // expected-error{{return type of virtual function 'volatile_vs_const_class' is not covariant with the return type of the function it overrides (class type 'const a *' does not have the same cv-qualification as or less cv-qualification than class type 'volatile a *')}}
+
+  const a* const_volatile_vs_const_class() override;
+  const volatile a* const_vs_const_volatile_class() override; // expected-error{{return type of virtual function 'const_vs_const_volatile_class' is not covariant with the return type of the function it overrides (class type 'const volatile a *' does not have the same cv-qualification as or less cv-qualification than class type 'const a *')}}
+
+  volatile a* const_volatile_vs_volatile_class() override;
+  const volatile a* volatile_vs_const_volatile_class() override; // expected-error{{return type of virtual function 'volatile_vs_const_volatile_class' is not covariant with the return type of the function it overrides (class type 'const volatile a *' does not have the same cv-qualification as or less cv-qualification than class type 'volatile a *')}}
+
+  a* const_volatile_vs_unualified_class() override;
+  const volatile a* unqualified_vs_const_volatile_class() override; // expected-error{{return type of virtual function 'unqualified_vs_const_volatile_class' is not covariant with the return type of the function it overrides (class type 'const volatile a *' does not have the same cv-qualification as or less cv-qualification than class type 'a *')}}
+
+  // Non Classes.
+  int* const_vs_unqualified_non_class() override; // expected-error{{virtual function 'const_vs_unqualified_non_class' has a different return type ('int *') than the function it overrides (which has return type 'const int *')}}
+  const int* unqualified_vs_const_non_class() override; // expected-error{{virtual function 'unqualified_vs_const_non_class' has a different return type ('const int *') than the function it overrides (which has return type 'int *')}}
 };
 
 }
@@ -108,11 +150,11 @@ namespace T7 {
 namespace T8 {
   struct a { };
   struct b; // expected-note {{forward declaration of 'T8::b'}}
-  
+
   class A {
     virtual a *f();
   };
-  
+
   class B : A {
     b* f(); // expected-error {{return type of virtual function 'f' is not covariant with the return type of the function it overrides ('b' is incomplete)}}
   };
@@ -120,15 +162,15 @@ namespace T8 {
 
 namespace T9 {
   struct a { };
-  
+
   template<typename T> struct b : a {
     int a[sizeof(T) ? -1 : -1]; // expected-error {{array with a negative size}}
   };
-  
+
   class A {
     virtual a *f();
   };
-  
+
   class B : A {
     virtual b<int> *f(); // expected-note {{in instantiation of template class 'T9::b<int>' requested here}}
   };
@@ -143,7 +185,7 @@ class X1 : public X0 {
 };
 
 template <typename Base>
-struct Foo : Base { 
+struct Foo : Base {
   void f(int) = 0; // expected-error{{not virtual and cannot be declared pure}}
 };
 
@@ -243,7 +285,7 @@ namespace T10 {
   struct A { };
   struct B : A { };
 
-  struct C { 
+  struct C {
     virtual A&& f();
   };
 
@@ -256,7 +298,7 @@ namespace T11 {
   struct A { };
   struct B : A { };
 
-  struct C { 
+  struct C {
     virtual A& f(); // expected-note {{overridden virtual function is here}}
   };
 
@@ -269,7 +311,7 @@ namespace T12 {
   struct A { };
   struct B : A { };
 
-  struct C { 
+  struct C {
     virtual A&& f(); // expected-note {{overridden virtual function is here}}
   };
 
@@ -287,5 +329,15 @@ namespace PR8168 {
   class B : public A {
   public:
     static void foo() {} // expected-error{{'static' member function 'foo' overrides a virtual function}}
+  };
+}
+
+namespace ForwardDeclared {
+  class A;
+  struct B {
+    virtual B *f();
+  };
+  struct A : B {
+    A *f();
   };
 }

@@ -13,10 +13,8 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MLModelRunner.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/PassManager.h"
 
-#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
@@ -25,6 +23,7 @@ namespace llvm {
 class DiagnosticInfoOptimizationBase;
 class Module;
 class MLInlineAdvice;
+class ProfileSummaryInfo;
 
 class MLInlineAdvisor : public InlineAdvisor {
 public:
@@ -83,6 +82,7 @@ private:
   int64_t NodeCount = 0;
   int64_t EdgeCount = 0;
   int64_t EdgesOfLastSeenNodes = 0;
+  const bool UseIR2Vec;
 
   std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;

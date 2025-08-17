@@ -96,7 +96,7 @@ define i8 @replace_with_x_for_new_oneuse2(i8 noundef %xx, i8 %yy, i8 %z, i8 %w, 
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], 13
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[YY:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[Y]], [[Q:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[Q:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[MUL]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
@@ -181,4 +181,24 @@ define i8 @replace_with_y_for_simple_binop_fail(i8 %x, i8 noundef %y, i8 %z, i8 
   %mul = mul nsw i8 %x, %q
   %sel = select i1 %cmp, i8 %mul, i8 %z
   ret i8 %sel
+}
+
+; Make sure we don't run into an infinite loop.
+define i32 @pr142405(i32 noundef %x) {
+; CHECK-LABEL: @pr142405(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[SMAX]], 65535
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[MASKED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[SMAX]], 1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %smax = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %masked = and i32 %smax, 65535
+  %cmp = icmp eq i32 %x, %masked
+  %sel = select i1 %cmp, i32 %smax, i32 0
+  %and = and i32 %sel, 1
+  ret i32 %and
 }

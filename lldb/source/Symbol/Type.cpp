@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cstdio>
+#include <iterator>
+#include <memory>
 #include <optional>
 
 #include "lldb/Core/Module.h"
@@ -30,6 +33,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -41,35 +45,6 @@ llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os,
   StreamString lldb_stream;
   rhs.Dump(lldb_stream);
   return os << lldb_stream.GetString();
-}
-
-bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
-                                  llvm::ArrayRef<CompilerContext> pattern) {
-  auto ctx = context_chain.begin();
-  auto ctx_end = context_chain.end();
-  for (const CompilerContext &pat : pattern) {
-    // Early exit if the pattern is too long.
-    if (ctx == ctx_end)
-      return false;
-    if (*ctx != pat) {
-      // Skip any number of module matches.
-      if (pat.kind == CompilerContextKind::AnyModule) {
-        // Greedily match 0..n modules.
-        ctx = std::find_if(ctx, ctx_end, [](const CompilerContext &ctx) {
-          return ctx.kind != CompilerContextKind::Module;
-        });
-        continue;
-      }
-      // See if there is a kind mismatch; they should have 1 bit in common.
-      if (((uint16_t)ctx->kind & (uint16_t)pat.kind) == 0)
-        return false;
-      // The name is ignored for AnyModule, but not for AnyType.
-      if (pat.kind != CompilerContextKind::AnyModule && ctx->name != pat.name)
-        return false;
-    }
-    ++ctx;
-  }
-  return true;
 }
 
 static CompilerContextKind ConvertTypeClass(lldb::TypeClass type_class) {
@@ -153,19 +128,56 @@ void TypeQuery::SetLanguages(LanguageSet languages) {
 
 bool TypeQuery::ContextMatches(
     llvm::ArrayRef<CompilerContext> context_chain) const {
-  if (GetExactMatch() || context_chain.size() == m_context.size())
-    return ::contextMatches(context_chain, m_context);
+  auto ctx = context_chain.rbegin(), ctx_end = context_chain.rend();
+  for (auto pat = m_context.rbegin(), pat_end = m_context.rend();
+       pat != pat_end;) {
 
-  // We don't have an exact match, we need to bottom m_context.size() items to
-  // match for a successful lookup.
-  if (context_chain.size() < m_context.size())
-    return false; // Not enough items in context_chain to allow for a match.
+    if (ctx == ctx_end)
+      return false; // Pattern too long.
 
-  size_t compare_count = context_chain.size() - m_context.size();
-  return ::contextMatches(
-      llvm::ArrayRef<CompilerContext>(context_chain.data() + compare_count,
-                                      m_context.size()),
-      m_context);
+    if (ctx->kind == CompilerContextKind::Namespace && ctx->name.IsEmpty()) {
+      // We're matching an anonymous namespace. These are optional, so we check
+      // if the pattern expects an anonymous namespace.
+      if (pat->name.IsEmpty() && (pat->kind & CompilerContextKind::Namespace) ==
+                                     CompilerContextKind::Namespace) {
+        // Match, advance both iterators.
+        ++pat;
+      }
+      // Otherwise, only advance the context to skip over the anonymous
+      // namespace, and try matching again.
+      ++ctx;
+      continue;
+    }
+
+    // See if there is a kind mismatch; they should have 1 bit in common.
+    if ((ctx->kind & pat->kind) == CompilerContextKind())
+      return false;
+
+    if (ctx->name != pat->name)
+      return false;
+
+    ++ctx;
+    ++pat;
+  }
+
+  // Skip over any remaining module and anonymous namespace entries if we were
+  // asked to do that.
+  auto should_skip = [this](const CompilerContext &ctx) {
+    if (ctx.kind == CompilerContextKind::Module)
+      return GetIgnoreModules();
+    if (ctx.kind == CompilerContextKind::Namespace && ctx.name.IsEmpty())
+      return !GetStrictNamespaces();
+    return false;
+  };
+  ctx = std::find_if_not(ctx, ctx_end, should_skip);
+
+  // At this point, we have exhausted the pattern and we have a partial match at
+  // least. If that's all we're looking for, we're done.
+  if (!GetExactMatch())
+    return true;
+
+  // We have an exact match if we've exhausted the target context as well.
+  return ctx == ctx_end;
 }
 
 bool TypeQuery::LanguageMatches(lldb::LanguageType language) const {
@@ -223,9 +235,6 @@ void CompilerContext::Dump(Stream &s) const {
   case CompilerContextKind::Typedef:
     s << "Typedef";
     break;
-  case CompilerContextKind::AnyModule:
-    s << "AnyModule";
-    break;
   case CompilerContextKind::AnyType:
     s << "AnyType";
     break;
@@ -238,7 +247,7 @@ public:
   TypeAppendVisitor(TypeListImpl &type_list) : m_type_list(type_list) {}
 
   bool operator()(const lldb::TypeSP &type) {
-    m_type_list.Append(TypeImplSP(new TypeImpl(type)));
+    m_type_list.Append(std::make_shared<TypeImpl>(type));
     return true;
   }
 
@@ -447,14 +456,18 @@ Type *Type::GetEncodingType() {
   return m_encoding_type;
 }
 
-std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
+llvm::Expected<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
     return static_cast<uint64_t>(m_byte_size);
 
   switch (m_encoding_uid_type) {
   case eEncodingInvalid:
+    return llvm::createStringError("could not get type size: invalid encoding");
+
   case eEncodingIsSyntheticUID:
-    break;
+    return llvm::createStringError(
+        "could not get type size: synthetic encoding");
+
   case eEncodingIsUID:
   case eEncodingIsConstUID:
   case eEncodingIsRestrictUID:
@@ -464,18 +477,18 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
       if (std::optional<uint64_t> size =
-              encoding_type->GetByteSize(exe_scope)) {
+              llvm::expectedToOptional(encoding_type->GetByteSize(exe_scope))) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return static_cast<uint64_t>(m_byte_size);
       }
 
-    if (std::optional<uint64_t> size =
-            GetLayoutCompilerType().GetByteSize(exe_scope)) {
-      m_byte_size = *size;
-      m_byte_size_has_value = true;
-      return static_cast<uint64_t>(m_byte_size);
-    }
+    auto size_or_err = GetLayoutCompilerType().GetByteSize(exe_scope);
+    if (!size_or_err)
+      return size_or_err.takeError();
+    m_byte_size = *size_or_err;
+    m_byte_size_has_value = true;
+    return static_cast<uint64_t>(m_byte_size);
   } break;
 
     // If we are a pointer or reference, then this is just a pointer size;
@@ -490,7 +503,8 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       }
     } break;
   }
-  return {};
+  return llvm::createStringError(
+      "could not get type size: unexpected encoding");
 }
 
 llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
@@ -531,7 +545,9 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
   }
 
   const uint64_t byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+      llvm::expectedToOptional(
+          GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope()
+                              : nullptr))
           .value_or(0);
   if (data.GetByteSize() < byte_size) {
     lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));
@@ -800,7 +816,15 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     switch (pos.value()) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
-        result.scope.push_back(name.slice(name_begin, pos.index() - 1));
+        llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
+        // The demanglers use these strings to represent anonymous
+        // namespaces. Convert it to a more language-agnostic form (which is
+        // also used in DWARF).
+        if (scope_name == "(anonymous namespace)" ||
+            scope_name == "`anonymous namespace'" ||
+            scope_name == "`anonymous-namespace'")
+          scope_name = "";
+        result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;
       }
       break;

@@ -3,17 +3,6 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching-LCS.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching-LCS.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --salvage-stale-profile-max-callsites=6 2>&1 | FileCheck %s -check-prefix=CHECK-MAX-CALLSITES
 
-; CHECK: Run stale profile matching for test_direct_call
-; CHECK: Location is matched from 1 to 1
-; CHECK: Location is matched from 2 to 2
-; CHECK: Location is matched from 3 to 3
-; CHECK: Callsite with callee:C is matched from 4 to 2
-; CHECK: Location is rematched backwards from 3 to 1
-; CHECK: Callsite with callee:A is matched from 5 to 4
-; CHECK: Callsite with callee:B is matched from 6 to 5
-; CHECK: Location is matched from 7 to 6
-; CHECK: Callsite with callee:A is matched from 8 to 6
-
 ; CHECK: Run stale profile matching for test_indirect_call
 ; CHECK: Location is matched from 1 to 1
 ; CHECK: Location is matched from 2 to 2
@@ -27,6 +16,17 @@
 ; CHECK: Location is matched from 8 to 5
 ; CHECK: Callsite with callee:unknown.indirect.callee is matched from 9 to 6
 ; CHECK: Callsite with callee:C is matched from 10 to 7
+
+; CHECK: Run stale profile matching for test_direct_call
+; CHECK: Location is matched from 1 to 1
+; CHECK: Location is matched from 2 to 2
+; CHECK: Location is matched from 3 to 3
+; CHECK: Callsite with callee:C is matched from 4 to 2
+; CHECK: Location is rematched backwards from 3 to 1
+; CHECK: Callsite with callee:A is matched from 5 to 4
+; CHECK: Callsite with callee:B is matched from 6 to 5
+; CHECK: Location is matched from 7 to 6
+; CHECK: Callsite with callee:A is matched from 8 to 6
 
 ; CHECK-MAX-CALLSITES: Skip stale profile matching for test_direct_call
 ; CHECK-MAX-CALLSITES-NOT: Skip stale profile matching for test_indirect_call
@@ -119,10 +119,10 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.start.p0(ptr nocapture) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.end.p0(ptr nocapture) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #4

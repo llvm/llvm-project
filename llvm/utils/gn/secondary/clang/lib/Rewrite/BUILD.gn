@@ -7,9 +7,7 @@ static_library("Rewrite") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "DeltaTree.cpp",
     "HTMLRewrite.cpp",
-    "RewriteRope.cpp",
     "Rewriter.cpp",
     "TokenRewriter.cpp",
   ]

@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s -o - 2>%t
+// RUN: not llvm-tblgen -gen-disassembler -I %p/../../../include %s -o - 2>%t
 // RUN: FileCheck %s < %t
 
 include "llvm/Target/Target.td"
@@ -29,7 +29,7 @@ def B : I<(outs GPR32:$dst), (ins GPR32:$src1), []> {
 }
 
 // CHECK: Decoding Conflict:
-// CHECK:   00000000000000000000000000000000
-// CHECK:   ................................
-// CHECK: A 00000000000000000000000000000000
-// CHECK: B 00000000000000000000000000000000
+// CHECK:     ................................
+// CHECK:     00000000000000000000000000000000
+// CHECK:     00000000000000000000000000000000  A
+// CHECK:     00000000000000000000000000000000  B

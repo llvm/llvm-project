@@ -258,7 +258,6 @@ define arm_aapcs_vfpcc <2 x float> @vduplanefloat(<2 x float> %A) nounwind {
 define arm_aapcs_vfpcc <16 x i8> @vduplaneQ8(<8 x i8> %A) nounwind {
 ; CHECK-LABEL: vduplaneQ8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.8 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp2 = shufflevector <8 x i8> %A, <8 x i8> undef, <16 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
@@ -268,7 +267,6 @@ define arm_aapcs_vfpcc <16 x i8> @vduplaneQ8(<8 x i8> %A) nounwind {
 define arm_aapcs_vfpcc <8 x i16> @vduplaneQ16(<4 x i16> %A) nounwind {
 ; CHECK-LABEL: vduplaneQ16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.16 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp2 = shufflevector <4 x i16> %A, <4 x i16> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
@@ -278,7 +276,6 @@ define arm_aapcs_vfpcc <8 x i16> @vduplaneQ16(<4 x i16> %A) nounwind {
 define arm_aapcs_vfpcc <4 x i32> @vduplaneQ32(<2 x i32> %A) nounwind {
 ; CHECK-LABEL: vduplaneQ32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.32 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp2 = shufflevector <2 x i32> %A, <2 x i32> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
@@ -288,7 +285,6 @@ define arm_aapcs_vfpcc <4 x i32> @vduplaneQ32(<2 x i32> %A) nounwind {
 define arm_aapcs_vfpcc <4 x float> @vduplaneQfloat(<2 x float> %A) nounwind {
 ; CHECK-LABEL: vduplaneQfloat:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.32 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
 	%tmp2 = shufflevector <2 x float> %A, <2 x float> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >

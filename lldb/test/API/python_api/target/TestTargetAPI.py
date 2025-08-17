@@ -153,9 +153,14 @@ class TargetAPITestCase(TestBase):
         self.assertSuccess(error, "Make sure memory read succeeded")
         self.assertEqual(len(content), 1)
 
+        # Make sure reading from 0x0 fails
+        sb_addr = lldb.SBAddress(0, target)
+        self.assertIsNone(target.ReadMemory(sb_addr, 1, error))
+        self.assertTrue(error.Fail())
+
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote  # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @no_debug_info_test
     def test_launch_simple(self):
         d = {"EXE": "b.out"}
@@ -532,3 +537,27 @@ class TargetAPITestCase(TestBase):
         """Make sure we don't crash when trying to select invalid target."""
         target = lldb.SBTarget()
         self.dbg.SetSelectedTarget(target)
+
+    @no_debug_info_test
+    def test_get_api_mutex(self):
+        """Make sure we can lock and unlock the API mutex from Python."""
+        target = self.dbg.GetDummyTarget()
+
+        mutex = target.GetAPIMutex()
+        self.assertTrue(mutex.IsValid())
+        mutex.lock()
+        # The API call below doesn't actually matter, it's just there to
+        # confirm we don't block on the API lock.
+        target.BreakpointCreateByName("foo", "bar")
+        mutex.unlock()
+
+    @no_debug_info_test
+    def test_get_api_mutex_with_statement(self):
+        """Make sure we can lock and unlock the API mutex using a with-statement from Python."""
+        target = self.dbg.GetDummyTarget()
+
+        with target.GetAPIMutex() as mutex:
+            self.assertTrue(mutex.IsValid())
+            # The API call below doesn't actually matter, it's just there to
+            # confirm we don't block on the API lock.
+            target.BreakpointCreateByName("foo", "bar")

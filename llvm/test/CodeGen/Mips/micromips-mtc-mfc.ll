@@ -12,11 +12,11 @@ define double @foo(double %a, double %b) {
 ; MM2-NEXT:    mthc1 $zero, $f2 # encoding: [0x54,0x02,0x38,0x3b]
 ; MM2-NEXT:    c.ule.d $f12, $f2 # encoding: [0x54,0x4c,0x05,0xfc]
 ; MM2-NEXT:    bc1t $BB0_2 # encoding: [0x43,0xa0,A,A]
-; MM2-NEXT:    # fixup A - offset: 0, value: ($BB0_2), kind: fixup_MICROMIPS_PC16_S1
+; MM2-NEXT:    # fixup A - offset: 0, value: $BB0_2, kind: fixup_MICROMIPS_PC16_S1
 ; MM2-NEXT:    nop # encoding: [0x00,0x00,0x00,0x00]
 ; MM2-NEXT:  # %bb.1: # %entry
 ; MM2-NEXT:    j $BB0_2 # encoding: [0b110101AA,A,A,A]
-; MM2-NEXT:    # fixup A - offset: 0, value: ($BB0_2), kind: fixup_MICROMIPS_26_S1
+; MM2-NEXT:    # fixup A - offset: 0, value: $BB0_2, kind: fixup_MICROMIPS_26_S1
 ; MM2-NEXT:    nop # encoding: [0x00,0x00,0x00,0x00]
 ; MM2-NEXT:  $BB0_2: # %return
 ; MM2-NEXT:    jrc $ra # encoding: [0x45,0xbf]

@@ -217,6 +217,19 @@ Completion:
   EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(std::nullopt));
 }
 
+TEST(ParseYAML, CodePatterns) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+    Completion:
+      CodePatterns: None
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.CodePatterns, llvm::ValueIs(val("None")));
+}
+
 TEST(ParseYAML, ShowAKA) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
@@ -297,13 +310,19 @@ TEST(ParseYAML, Style) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 Style:
-  FullyQualifiedNamespaces: [foo, bar])yaml");
+  FullyQualifiedNamespaces: [foo, bar]
+  AngledHeaders: ["foo", "bar"]
+  QuotedHeaders: ["baz", "baar"])yaml");
   auto Results =
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].Style.FullyQualifiedNamespaces,
               ElementsAre(val("foo"), val("bar")));
+  EXPECT_THAT(Results[0].Style.AngledHeaders,
+              ElementsAre(val("foo"), val("bar")));
+  EXPECT_THAT(Results[0].Style.QuotedHeaders,
+              ElementsAre(val("baz"), val("baar")));
 }
 } // namespace
 } // namespace config

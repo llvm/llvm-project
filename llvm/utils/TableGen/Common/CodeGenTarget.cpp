@@ -23,13 +23,12 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <algorithm>
 #include <iterator>
 #include <tuple>
 using namespace llvm;
 
-cl::OptionCategory AsmParserCat("Options for -gen-asm-parser");
-cl::OptionCategory AsmWriterCat("Options for -gen-asm-writer");
+static cl::OptionCategory AsmParserCat("Options for -gen-asm-parser");
+static cl::OptionCategory AsmWriterCat("Options for -gen-asm-writer");
 
 static cl::opt<unsigned>
     AsmParserNum("asmparsernum", cl::init(0),
@@ -47,23 +46,10 @@ MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
   return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
 }
 
-StringRef llvm::getName(MVT::SimpleValueType T) {
-  switch (T) {
-  case MVT::Other:
-    return "UNKNOWN";
-  case MVT::iPTR:
-    return "TLI.getPointerTy()";
-  case MVT::iPTRAny:
-    return "TLI.getPointerTy()";
-  default:
-    return getEnumName(T);
-  }
-}
-
 StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   // clang-format off
   switch (T) {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy)   \
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
@@ -77,17 +63,15 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
 std::string llvm::getQualifiedName(const Record *R) {
   std::string Namespace;
   if (R->getValue("Namespace"))
-    Namespace = std::string(R->getValueAsString("Namespace"));
+    Namespace = R->getValueAsString("Namespace").str();
   if (Namespace.empty())
-    return std::string(R->getName());
+    return R->getName().str();
   return Namespace + "::" + R->getName().str();
 }
 
-/// getTarget - Return the current instance of the Target class.
-///
-CodeGenTarget::CodeGenTarget(RecordKeeper &records)
-    : Records(records), CGH(records) {
-  std::vector<Record *> Targets = Records.getAllDerivedDefinitions("Target");
+CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
+    : Records(records), CGH(records), Intrinsics(records) {
+  ArrayRef<const Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("No 'Target' subclasses defined!");
   if (Targets.size() != 1)
@@ -104,7 +88,7 @@ StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 /// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {
   if (InstNamespace.empty()) {
-    for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *Inst : getInstructions()) {
       // We are not interested in the "TargetOpcode" namespace.
       if (Inst->Namespace != "TargetOpcode") {
         InstNamespace = Inst->Namespace;
@@ -121,7 +105,7 @@ StringRef CodeGenTarget::getRegNamespace() const {
   return RegClasses.size() > 0 ? RegClasses.front().Namespace : "";
 }
 
-Record *CodeGenTarget::getInstructionSet() const {
+const Record *CodeGenTarget::getInstructionSet() const {
   return TargetRec->getValueAsDef("InstructionSet");
 }
 
@@ -131,8 +115,9 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
 
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
-Record *CodeGenTarget::getAsmParser() const {
-  std::vector<Record *> LI = TargetRec->getValueAsListOfDefs("AssemblyParsers");
+const Record *CodeGenTarget::getAsmParser() const {
+  std::vector<const Record *> LI =
+      TargetRec->getValueAsListOfDefs("AssemblyParsers");
   if (AsmParserNum >= LI.size())
     PrintFatalError("Target does not have an AsmParser #" +
                     Twine(AsmParserNum) + "!");
@@ -142,28 +127,27 @@ Record *CodeGenTarget::getAsmParser() const {
 /// getAsmParserVariant - Return the AssemblyParserVariant definition for
 /// this target.
 ///
-Record *CodeGenTarget::getAsmParserVariant(unsigned i) const {
-  std::vector<Record *> LI =
+const Record *CodeGenTarget::getAsmParserVariant(unsigned Idx) const {
+  std::vector<const Record *> LI =
       TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
-  if (i >= LI.size())
-    PrintFatalError("Target does not have an AsmParserVariant #" + Twine(i) +
+  if (Idx >= LI.size())
+    PrintFatalError("Target does not have an AsmParserVariant #" + Twine(Idx) +
                     "!");
-  return LI[i];
+  return LI[Idx];
 }
 
 /// getAsmParserVariantCount - Return the AssemblyParserVariant definition
 /// available for this target.
 ///
 unsigned CodeGenTarget::getAsmParserVariantCount() const {
-  std::vector<Record *> LI =
-      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
-  return LI.size();
+  return TargetRec->getValueAsListOfDefs("AssemblyParserVariants").size();
 }
 
 /// getAsmWriter - Return the AssemblyWriter definition for this target.
 ///
-Record *CodeGenTarget::getAsmWriter() const {
-  std::vector<Record *> LI = TargetRec->getValueAsListOfDefs("AssemblyWriters");
+const Record *CodeGenTarget::getAsmWriter() const {
+  std::vector<const Record *> LI =
+      TargetRec->getValueAsListOfDefs("AssemblyWriters");
   if (AsmWriterNum >= LI.size())
     PrintFatalError("Target does not have an AsmWriter #" +
                     Twine(AsmWriterNum) + "!");
@@ -176,69 +160,19 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
   return *RegBank;
 }
 
-std::optional<CodeGenRegisterClass *> CodeGenTarget::getSuperRegForSubReg(
-    const ValueTypeByHwMode &ValueTy, CodeGenRegBank &RegBank,
-    const CodeGenSubRegIndex *SubIdx, bool MustBeAllocatable) const {
-  std::vector<CodeGenRegisterClass *> Candidates;
-  auto &RegClasses = RegBank.getRegClasses();
-
-  // Try to find a register class which supports ValueTy, and also contains
-  // SubIdx.
-  for (CodeGenRegisterClass &RC : RegClasses) {
-    // Is there a subclass of this class which contains this subregister index?
-    CodeGenRegisterClass *SubClassWithSubReg = RC.getSubClassWithSubReg(SubIdx);
-    if (!SubClassWithSubReg)
-      continue;
-
-    // We have a class. Check if it supports this value type.
-    if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
-      continue;
-
-    // If necessary, check that it is allocatable.
-    if (MustBeAllocatable && !SubClassWithSubReg->Allocatable)
-      continue;
-
-    // We have a register class which supports both the value type and
-    // subregister index. Remember it.
-    Candidates.push_back(SubClassWithSubReg);
-  }
-
-  // If we didn't find anything, we're done.
-  if (Candidates.empty())
-    return std::nullopt;
-
-  // Find and return the largest of our candidate classes.
-  llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
-                                    const CodeGenRegisterClass *B) {
-    if (A->getMembers().size() > B->getMembers().size())
-      return true;
-
-    if (A->getMembers().size() < B->getMembers().size())
-      return false;
-
-    // Order by name as a tie-breaker.
-    return StringRef(A->getName()) < B->getName();
-  });
-
-  return Candidates[0];
-}
-
-void CodeGenTarget::ReadRegAltNameIndices() const {
-  RegAltNameIndices = Records.getAllDerivedDefinitions("RegAltNameIndex");
-  llvm::sort(RegAltNameIndices, LessRecord());
-}
-
 /// getRegisterByName - If there is a register with the specific AsmName,
 /// return it.
 const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
   return getRegBank().getRegistersByName().lookup(Name);
 }
 
-const CodeGenRegisterClass &CodeGenTarget::getRegisterClass(Record *R) const {
+const CodeGenRegisterClass &
+CodeGenTarget::getRegisterClass(const Record *R) const {
   return *getRegBank().getRegClass(R);
 }
 
-std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R) const {
+std::vector<ValueTypeByHwMode>
+CodeGenTarget::getRegisterVTs(const Record *R) const {
   const CodeGenRegister *Reg = getRegBank().getReg(R);
   std::vector<ValueTypeByHwMode> Result;
   for (const auto &RC : getRegBank().getRegClasses()) {
@@ -270,45 +204,46 @@ CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
 }
 
 void CodeGenTarget::ReadInstructions() const {
-  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("Instruction");
+  ArrayRef<const Record *> Insts =
+      Records.getAllDerivedDefinitions("Instruction");
   if (Insts.size() <= 2)
     PrintFatalError("No 'Instruction' subclasses defined!");
 
   // Parse the instructions defined in the .td file.
-  for (Record *R : Insts) {
-    Instructions[R] = std::make_unique<CodeGenInstruction>(R);
-    if (Instructions[R]->isVariableLengthEncoding())
-      HasVariableLengthEncodings = true;
+  for (const Record *R : Insts) {
+    auto [II, _] =
+        InstructionMap.try_emplace(R, std::make_unique<CodeGenInstruction>(R));
+    HasVariableLengthEncodings |= II->second->isVariableLengthEncoding();
   }
 }
 
 static const CodeGenInstruction *GetInstByName(
-    const char *Name,
+    StringRef Name,
     const DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &Insts,
-    RecordKeeper &Records) {
+    const RecordKeeper &Records) {
   const Record *Rec = Records.getDef(Name);
 
   const auto I = Insts.find(Rec);
   if (!Rec || I == Insts.end())
-    PrintFatalError(Twine("Could not find '") + Name + "' instruction!");
+    PrintFatalError("Could not find '" + Name + "' instruction!");
   return I->second.get();
 }
 
 static const char *FixedInstrs[] = {
 #define HANDLE_TARGET_OPCODE(OPC) #OPC,
 #include "llvm/Support/TargetOpcodes.def"
-    nullptr};
+};
 
 unsigned CodeGenTarget::getNumFixedInstructions() {
-  return std::size(FixedInstrs) - 1;
+  return std::size(FixedInstrs);
 }
 
 /// Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
-  const auto &Insts = getInstructions();
-  for (const char *const *p = FixedInstrs; *p; ++p) {
-    const CodeGenInstruction *Instr = GetInstByName(*p, Insts, Records);
+  const auto &InstMap = getInstructionMap();
+  for (const char *Name : FixedInstrs) {
+    const CodeGenInstruction *Instr = GetInstByName(Name, InstMap, Records);
     assert(Instr && "Missing target independent instruction");
     assert(Instr->Namespace == "TargetOpcode" && "Bad namespace");
     InstrsByEnum.push_back(Instr);
@@ -317,31 +252,31 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
-  for (const auto &I : Insts) {
-    const CodeGenInstruction *CGI = I.second.get();
+  for (const auto &[_, CGIUp] : InstMap) {
+    const CodeGenInstruction *CGI = CGIUp.get();
     if (CGI->Namespace != "TargetOpcode") {
       InstrsByEnum.push_back(CGI);
-      if (CGI->TheDef->getValueAsBit("isPseudo"))
-        ++NumPseudoInstructions;
+      NumPseudoInstructions += CGI->TheDef->getValueAsBit("isPseudo");
     }
   }
 
-  assert(InstrsByEnum.size() == Insts.size() && "Missing predefined instr");
+  assert(InstrsByEnum.size() == InstMap.size() && "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
   llvm::sort(
       InstrsByEnum.begin() + EndOfPredefines, InstrsByEnum.end(),
       [](const CodeGenInstruction *Rec1, const CodeGenInstruction *Rec2) {
-        const auto &D1 = *Rec1->TheDef;
-        const auto &D2 = *Rec2->TheDef;
+        const Record &D1 = *Rec1->TheDef;
+        const Record &D2 = *Rec2->TheDef;
+        // Sort all pseudo instructions before non-pseudo ones, and sort by name
+        // within.
         return std::tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
                std::tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
       });
 
   // Assign an enum value to each instruction according to the sorted order.
-  unsigned Num = 0;
-  for (const CodeGenInstruction *Inst : InstrsByEnum)
-    Inst->EnumVal = Num++;
+  for (const auto &[Idx, Inst] : enumerate(InstrsByEnum))
+    Inst->EnumVal = Idx;
 }
 
 /// isLittleEndianEncoding - Return whether this target encodes its instruction
@@ -357,23 +292,22 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
   if (!isLittleEndianEncoding())
     return;
 
-  std::vector<Record *> Insts =
-      Records.getAllDerivedDefinitions("InstructionEncoding");
-  for (Record *R : Insts) {
+  for (const Record *R :
+       Records.getAllDerivedDefinitions("InstructionEncoding")) {
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo"))
       continue;
 
-    BitsInit *BI = R->getValueAsBitsInit("Inst");
+    const BitsInit *BI = R->getValueAsBitsInit("Inst");
 
     unsigned numBits = BI->getNumBits();
 
-    SmallVector<Init *, 16> NewBits(numBits);
+    SmallVector<const Init *, 16> NewBits(numBits);
 
     for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
       unsigned bitSwapIdx = numBits - bit - 1;
-      Init *OrigBit = BI->getBit(bit);
-      Init *BitSwap = BI->getBit(bitSwapIdx);
+      const Init *OrigBit = BI->getBit(bit);
+      const Init *BitSwap = BI->getBit(bitSwapIdx);
       NewBits[bit] = BitSwap;
       NewBits[bitSwapIdx] = OrigBit;
     }
@@ -382,11 +316,15 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
       NewBits[middle] = BI->getBit(middle);
     }
 
-    BitsInit *NewBI = BitsInit::get(Records, NewBits);
+    RecordKeeper &MutableRC = const_cast<RecordKeeper &>(Records);
+    const BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
 
-    // Update the bits in reversed order so that emitInstrOpBits will get the
-    // correct endianness.
-    R->getValue("Inst")->setValue(NewBI);
+    // Update the bits in reversed order so that emitters will get the correct
+    // endianness.
+    // FIXME: Eliminate mutation of TG records by creating a helper function
+    // to reverse bits and maintain a cache instead of mutating records.
+    Record *MutableR = const_cast<Record *>(R);
+    MutableR->getValue("Inst")->setValue(NewBI);
   }
 }
 
@@ -402,10 +340,10 @@ bool CodeGenTarget::guessInstructionProperties() const {
 //===----------------------------------------------------------------------===//
 // ComplexPattern implementation
 //
-ComplexPattern::ComplexPattern(Record *R) {
+ComplexPattern::ComplexPattern(const Record *R) {
   Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
-  SelectFunc = std::string(R->getValueAsString("SelectFunc"));
+  SelectFunc = R->getValueAsString("SelectFunc").str();
   RootNodes = R->getValueAsListOfDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which
@@ -421,30 +359,28 @@ ComplexPattern::ComplexPattern(Record *R) {
   // FIXME: Why is this different from parseSDPatternOperatorProperties?
   // Parse the properties.
   Properties = 0;
-  std::vector<Record *> PropList = R->getValueAsListOfDefs("Properties");
-  for (unsigned i = 0, e = PropList.size(); i != e; ++i)
-    if (PropList[i]->getName() == "SDNPHasChain") {
+  for (const Record *Prop : R->getValueAsListOfDefs("Properties")) {
+    if (Prop->getName() == "SDNPHasChain") {
       Properties |= 1 << SDNPHasChain;
-    } else if (PropList[i]->getName() == "SDNPOptInGlue") {
+    } else if (Prop->getName() == "SDNPOptInGlue") {
       Properties |= 1 << SDNPOptInGlue;
-    } else if (PropList[i]->getName() == "SDNPMayStore") {
+    } else if (Prop->getName() == "SDNPMayStore") {
       Properties |= 1 << SDNPMayStore;
-    } else if (PropList[i]->getName() == "SDNPMayLoad") {
+    } else if (Prop->getName() == "SDNPMayLoad") {
       Properties |= 1 << SDNPMayLoad;
-    } else if (PropList[i]->getName() == "SDNPSideEffect") {
+    } else if (Prop->getName() == "SDNPSideEffect") {
       Properties |= 1 << SDNPSideEffect;
-    } else if (PropList[i]->getName() == "SDNPMemOperand") {
+    } else if (Prop->getName() == "SDNPMemOperand") {
       Properties |= 1 << SDNPMemOperand;
-    } else if (PropList[i]->getName() == "SDNPVariadic") {
+    } else if (Prop->getName() == "SDNPVariadic") {
       Properties |= 1 << SDNPVariadic;
-    } else if (PropList[i]->getName() == "SDNPWantRoot") {
-      Properties |= 1 << SDNPWantRoot;
-    } else if (PropList[i]->getName() == "SDNPWantParent") {
-      Properties |= 1 << SDNPWantParent;
     } else {
-      PrintFatalError(R->getLoc(), "Unsupported SD Node property '" +
-                                       PropList[i]->getName() +
-                                       "' on ComplexPattern '" + R->getName() +
-                                       "'!");
+      PrintFatalError(R->getLoc(),
+                      "Unsupported SD Node property '" + Prop->getName() +
+                          "' on ComplexPattern '" + R->getName() + "'!");
     }
+  }
+
+  WantsRoot = R->getValueAsBit("WantsRoot");
+  WantsParent = R->getValueAsBit("WantsParent");
 }

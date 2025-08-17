@@ -221,7 +221,7 @@ func.func @one_elem_vector(%arg0: vector<1xi32>) {
 // -----
 
 //===----------------------------------------------------------------------===//
-// std bit ops
+// Bit ops
 //===----------------------------------------------------------------------===//
 
 module attributes {
@@ -559,6 +559,23 @@ func.func @constant() {
   return
 }
 
+// CHECK-LABEL: @constant_8bit_float
+func.func @constant_8bit_float() {
+  // CHECK: spirv.Constant 56 : i8
+  %cst = arith.constant 1.0 : f8E4M3
+  // CHECK: spirv.Constant 56 : i8
+  %cst_i8 = arith.bitcast %cst : f8E4M3 to i8
+  // CHECK: spirv.Constant dense<56> : vector<4xi8>
+  %cst_vector = arith.constant dense<1.0> : vector<4xf8E4M3>
+  // CHECK: spirv.Constant dense<56> : vector<4xi8>
+  %cst_vector_i8 = arith.bitcast %cst_vector : vector<4xf8E4M3> to vector<4xi8>
+  // CHECK: spirv.Constant dense<60> : tensor<4xi8> : !spirv.array<4 x i8>
+  %cst_tensor = arith.constant dense<1.0> : tensor<4xf8E5M2>
+  // CHECK: spirv.Constant dense<60> : tensor<4xi8> : !spirv.array<4 x i8>
+  %cst_tensor_i8 = arith.bitcast %cst_tensor : tensor<4xf8E5M2> to tensor<4xi8>
+  return
+}
+
 // CHECK-LABEL: @constant_16bit
 func.func @constant_16bit() {
   // CHECK: spirv.Constant 4 : i16
@@ -653,7 +670,7 @@ func.func @corner_cases() {
 // -----
 
 //===----------------------------------------------------------------------===//
-// std cast ops
+// Cast ops
 //===----------------------------------------------------------------------===//
 
 module attributes {
@@ -753,6 +770,21 @@ func.func @fptrunc2(%arg0: f32) -> f16 {
   %0 = arith.truncf %arg0 : f32 to f16
   return %0 : f16
 }
+
+
+// CHECK-LABEL: @experimental_constrained_fptrunc
+func.func @experimental_constrained_fptrunc(%arg0 : f64) {
+  // CHECK: spirv.FConvert %arg0 {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : f64 to f32
+  %0 = arith.truncf %arg0 to_nearest_even : f64 to f32
+  // CHECK: spirv.FConvert %arg0 {fp_rounding_mode = #spirv.fp_rounding_mode<RTN>} : f64 to f32
+  %1 = arith.truncf %arg0 downward : f64 to f32
+  // CHECK: spirv.FConvert %arg0 {fp_rounding_mode = #spirv.fp_rounding_mode<RTP>} : f64 to f32
+  %2 = arith.truncf %arg0 upward : f64 to f32
+  // CHECK: spirv.FConvert %arg0 {fp_rounding_mode = #spirv.fp_rounding_mode<RTZ>} : f64 to f32
+  %3 = arith.truncf %arg0 toward_zero : f64 to f32
+  return
+}
+
 
 // CHECK-LABEL: @sitofp1
 func.func @sitofp1(%arg0 : i32) -> f32 {

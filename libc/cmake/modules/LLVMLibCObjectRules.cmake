@@ -1,4 +1,33 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
+set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
+set(ENTRYPOINT_EXT_TARGET_TYPE "ENTRYPOINT_EXT")
+
+# Rule to check if a list of dependencies contains any entrypoint objects. Returns a list in entrypoint_deps.
+function(check_entrypoint_deps entrypoint_deps)
+  set(PUBLIC_DEPS "")
+  set(fq_deps_list "")
+  list(APPEND fq_deps_list ${ARGN})
+
+  #don't warn for deps that are allowed, such as errno
+  set(ALLOWED_DEPS
+    "libc.src.errno.errno"
+    "libc.src.setjmp.longjmp"
+  )
+  list(REMOVE_ITEM fq_deps_list ${ALLOWED_DEPS})
+
+  foreach(dep IN LISTS fq_deps_list)
+    if(NOT TARGET ${dep})
+      continue()
+    endif()
+
+    get_target_property(target_type ${dep} "TARGET_TYPE")
+    if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+      list(APPEND PUBLIC_DEPS ${dep})
+    endif()
+  endforeach()
+  set(${entrypoint_deps} ${PUBLIC_DEPS} PARENT_SCOPE)
+endfunction()
+
 
 # Rule which is essentially a wrapper over add_library to compile a set of
 # sources to object files.
@@ -65,23 +94,16 @@ function(create_object_library fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
-  # The NVPTX target is installed as LLVM-IR but the internal testing toolchain
-  # cannot handle it natively. Make a separate internal target for testing.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_GPU_TESTS_DISABLED)
-    add_library(
-      ${internal_target_name}
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_OBJECT_SRCS}
-      ${ADD_OBJECT_HDRS}
-    )
-    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    target_compile_options(${internal_target_name} PRIVATE ${compile_options}
-                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
-    set_target_properties(${internal_target_name}
-                          PROPERTIES
-                          CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD})
+  #loop through the deps, check if any have the TARGET_TYPE of ENTRYPOINT_OBJ_TARGET_TYPE, and print a warning if they do.
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    set(entrypoint_deps "")
+    if(NOT "${fq_deps_list}" STREQUAL "")
+      check_entrypoint_deps(entrypoint_deps ${fq_deps_list})
+    endif()
+    if(NOT "${entrypoint_deps}" STREQUAL "")
+      message(WARNING "Object ${fq_target_name} depends on public entrypoint(s) ${entrypoint_deps}.
+      Depending on public entrypoints is not allowed in internal code.")
+    endif()
   endif()
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -93,11 +115,11 @@ function(create_object_library fq_target_name)
     endif()
   endif()
 
-  if(fq_deps_list)
-    add_dependencies(${fq_target_name} ${fq_deps_list})
-    # Add deps as link libraries to inherit interface compile and link options.
-    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
-  endif()
+  list(APPEND fq_deps_list libc.src.__support.macros.config)
+  list(REMOVE_DUPLICATES fq_deps_list)
+  add_dependencies(${fq_target_name} ${fq_deps_list})
+  # Add deps as link libraries to inherit interface compile and link options.
+  target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
 
   set_target_properties(
     ${fq_target_name}
@@ -129,8 +151,6 @@ function(add_object_library target_name)
     ${ARGN})
 endfunction(add_object_library)
 
-set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
-set(ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE "ENTRYPOINT_OBJ_VENDOR")
 
 # A rule for entrypoint object targets.
 # Usage:
@@ -148,20 +168,13 @@ set(ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE "ENTRYPOINT_OBJ_VENDOR")
 function(create_entrypoint_object fq_target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
-    "ALIAS;REDIRECTED;VENDOR" # Optional argument
+    "ALIAS;REDIRECTED" # Optional argument
     "NAME;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
     ${ARGN}
   )
 
   set(entrypoint_target_type ${ENTRYPOINT_OBJ_TARGET_TYPE})
-  if(${ADD_ENTRYPOINT_OBJ_VENDOR})
-    # TODO: We currently rely on external definitions of certain math functions
-    # provided by GPU vendors like AMD or Nvidia. We need to mark these so we
-    # don't end up running tests on these. In the future all of these should be
-    # implemented and this can be removed.
-    set(entrypoint_target_type ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-  endif()
   list(FIND TARGET_ENTRYPOINT_NAME_LIST ${ADD_ENTRYPOINT_OBJ_NAME} entrypoint_name_index)
   if(${entrypoint_name_index} EQUAL -1)
     add_custom_target(${fq_target_name})
@@ -205,8 +218,7 @@ function(create_entrypoint_object fq_target_name)
     endif()
 
     get_target_property(obj_type ${fq_dep_name} "TARGET_TYPE")
-    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
-                               ${obj_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
+    if((NOT obj_type) OR (NOT ${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}))
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
@@ -257,6 +269,19 @@ function(create_entrypoint_object fq_target_name)
   _get_common_compile_options(common_compile_options "${ADD_ENTRYPOINT_OBJ_FLAGS}")
   list(APPEND common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
+
+  #loop through the deps, check if any have the TARGET_TYPE of entrypoint_target_type, and print a warning if they do.
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    set(entrypoint_deps "")
+    if(NOT "${fq_deps_list}" STREQUAL "")
+      check_entrypoint_deps(entrypoint_deps ${fq_deps_list})
+    endif()
+    if(NOT "${entrypoint_deps}" STREQUAL "")
+      message(WARNING "Entrypoint ${fq_target_name} depends on public entrypoint(s) ${entrypoint_deps}.
+      Depending on public entrypoints is not allowed in internal code.")
+    endif()
+  endif()
+
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -283,12 +308,6 @@ function(create_entrypoint_object fq_target_name)
   add_dependencies(${internal_target_name} ${full_deps_list})
   target_link_libraries(${internal_target_name} ${full_deps_list})
 
-  # The NVPTX target cannot use LTO for the internal targets used for testing.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    target_compile_options(${internal_target_name} PRIVATE
-                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
-  endif()
-
   add_library(
     ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
@@ -303,6 +322,17 @@ function(create_entrypoint_object fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name} ${full_deps_list})
   target_link_libraries(${fq_target_name} ${full_deps_list})
+
+  # Builtin recognition causes issues when trying to implement the builtin
+  # functions themselves. The GPU backends do not use libcalls so we disable the
+  # known problematic ones on the entrypoints that implement them.
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
+                      memset strcmp strstr)
+    if(${ADD_ENTRYPOINT_OBJ_NAME} IN_LIST libc_builtins)
+      target_compile_options(${fq_target_name} PRIVATE -fno-builtin-${ADD_ENTRYPOINT_OBJ_NAME})
+    endif()
+  endif()
 
   set_target_properties(
     ${fq_target_name}
@@ -412,8 +442,6 @@ function(add_entrypoint_object target_name)
   )
 endfunction(add_entrypoint_object)
 
-set(ENTRYPOINT_EXT_TARGET_TYPE "ENTRYPOINT_EXT")
-
 # A rule for external entrypoint targets.
 # Usage:
 #     add_entrypoint_external(
@@ -466,3 +494,41 @@ function(add_redirector_object target_name)
     BEFORE PRIVATE -fPIC ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
 endfunction(add_redirector_object)
+
+# Helper to define a function with multiple implementations
+# - Computes flags to satisfy required/rejected features and arch,
+# - Declares an entry point,
+# - Attach the REQUIRE_CPU_FEATURES property to the target,
+# - Add the fully qualified target to `${name}_implementations` global property for tests.
+function(add_implementation name impl_name)
+  cmake_parse_arguments(
+    "ADD_IMPL"
+    "" # Optional arguments
+    "" # Single value arguments
+    "REQUIRE;SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;MLLVM_COMPILE_OPTIONS" # Multi value arguments
+    ${ARGN})
+
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
+    foreach(opt IN LISTS ADD_IMPL_MLLVM_COMPILE_OPTIONS)
+      list(APPEND ADD_IMPL_COMPILE_OPTIONS "SHELL:-mllvm ${opt}")
+    endforeach()
+  endif()
+
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    # Prevent warning when passing x86 SIMD types as template arguments.
+    # e.g. "warning: ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+    list(APPEND ADD_IMPL_COMPILE_OPTIONS "-Wno-ignored-attributes")
+  endif()
+
+  add_entrypoint_object(${impl_name}
+    NAME ${name}
+    SRCS ${ADD_IMPL_SRCS}
+    HDRS ${ADD_IMPL_HDRS}
+    DEPENDS ${ADD_IMPL_DEPENDS}
+    COMPILE_OPTIONS ${libc_opt_high_flag} ${ADD_IMPL_COMPILE_OPTIONS}
+  )
+  get_fq_target_name(${impl_name} fq_target_name)
+  set_target_properties(${fq_target_name} PROPERTIES REQUIRE_CPU_FEATURES "${ADD_IMPL_REQUIRE}")
+  set_property(GLOBAL APPEND PROPERTY "${name}_implementations" "${fq_target_name}")
+endfunction()

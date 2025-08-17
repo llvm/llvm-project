@@ -10,7 +10,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringExtras.h"
 
 #define DEBUG_TYPE "clang-tidy"
@@ -18,6 +17,12 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
+
+namespace {
+AST_MATCHER(CXXRecordDecl, isInMacro) {
+  return Node.getBeginLoc().isMacroID() && Node.getEndLoc().isMacroID();
+}
+} // namespace
 
 SpecialMemberFunctionsCheck::SpecialMemberFunctionsCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -27,7 +32,8 @@ SpecialMemberFunctionsCheck::SpecialMemberFunctionsCheck(
       AllowMissingMoveFunctionsWhenCopyIsDeleted(
           Options.get("AllowMissingMoveFunctionsWhenCopyIsDeleted", false)),
       AllowImplicitlyDeletedCopyOrMove(
-          Options.get("AllowImplicitlyDeletedCopyOrMove", false)) {}
+          Options.get("AllowImplicitlyDeletedCopyOrMove", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void SpecialMemberFunctionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -37,6 +43,7 @@ void SpecialMemberFunctionsCheck::storeOptions(
                 AllowMissingMoveFunctionsWhenCopyIsDeleted);
   Options.store(Opts, "AllowImplicitlyDeletedCopyOrMove",
                 AllowImplicitlyDeletedCopyOrMove);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 std::optional<TraversalKind>
@@ -46,11 +53,12 @@ SpecialMemberFunctionsCheck::getCheckTraversalKind() const {
 }
 
 void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
-  auto IsNotImplicitOrDeleted = anyOf(unless(isImplicit()), isDeleted());
+  const auto IsNotImplicitOrDeleted = anyOf(unless(isImplicit()), isDeleted());
+  const ast_matchers::internal::Matcher<CXXRecordDecl> Anything = anything();
 
   Finder->addMatcher(
       cxxRecordDecl(
-          unless(isImplicit()),
+          unless(isImplicit()), IgnoreMacros ? unless(isInMacro()) : Anything,
           eachOf(has(cxxDestructorDecl(unless(isImplicit())).bind("dtor")),
                  has(cxxConstructorDecl(isCopyConstructor(),
                                         IsNotImplicitOrDeleted)
@@ -117,7 +125,8 @@ void SpecialMemberFunctionsCheck::check(
   if (!MatchedDecl)
     return;
 
-  ClassDefId ID(MatchedDecl->getLocation(), std::string(MatchedDecl->getName()));
+  ClassDefId ID(MatchedDecl->getLocation(),
+                std::string(MatchedDecl->getName()));
 
   auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
     llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =

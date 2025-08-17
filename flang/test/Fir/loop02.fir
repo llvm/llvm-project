@@ -31,7 +31,7 @@ func.func private @y(%addr : !fir.ref<index>)
 // CHECK:           cond_br %[[VAL_13]], ^bb2, ^bb3
 // CHECK:         ^bb2:
 // CHECK:           fir.call @y(%[[VAL_0]]) : (!fir.ref<index>) -> ()
-// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_10]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_10]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_11]], %[[VAL_15]] : index
 // CHECK:           br ^bb1(%[[VAL_14]], %[[VAL_16]] : index, index)
@@ -54,7 +54,7 @@ func.func private @y(%addr : !fir.ref<index>)
 // NOOPT:           cond_br %[[VAL_9]], ^bb2, ^bb3
 // NOOPT:         ^bb2:
 // NOOPT:           fir.call @y(%[[VAL_0]]) : (!fir.ref<index>) -> ()
-// NOOPT:           %[[VAL_10:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] : index
+// NOOPT:           %[[VAL_10:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] overflow<nsw> : index
 // NOOPT:           %[[VAL_11:.*]] = arith.constant 1 : index
 // NOOPT:           %[[VAL_12:.*]] = arith.subi %[[VAL_7]], %[[VAL_11]] : index
 // NOOPT:           br ^bb1(%[[VAL_10]], %[[VAL_12]] : index, index)

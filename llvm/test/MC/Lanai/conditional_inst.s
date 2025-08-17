@@ -27,14 +27,14 @@ jump2:
 ! CHECK: encoding: [0b1110110A,A,A,0x01'A']
 ! CHECK-NEXT: fixup A - offset: 0, value: jump1, kind: FIXUP_LANAI_25
 ! CHECK-NEXT: <MCInst #{{[0-9]+}} BRCC{{$}}
-! CHECK-NEXT: <MCOperand Expr:(jump1)>
+! CHECK-NEXT: <MCOperand Expr:specifier(0,jump1)>
 ! CHECK-NEXT: <MCOperand Imm:13>
 
     bpl jump2
 ! CHECK: encoding: [0b1110101A,A,A,A]
 ! CHECK-NEXT: fixup A - offset: 0, value: jump2, kind: FIXUP_LANAI_25
 ! CHECK-NEXT: <MCInst #{{[0-9]+}} BRCC{{$}}
-! CHECK-NEXT: <MCOperand Expr:(jump2)>
+! CHECK-NEXT: <MCOperand Expr:specifier(0,jump2)>
 ! CHECK-NEXT: <MCOperand Imm:10>
 
     bt .
@@ -43,7 +43,7 @@ jump2:
 ! CHECK:      encoding: [0b1110000A,A,A,A]
 ! CHECK-NEXT:   fixup A - offset: 0, value: .Ltmp0, kind: FIXUP_LANAI_25
 ! CHECK-NEXT: <MCInst #{{[0-9]+}} BT{{$}}
-! CHECK-NEXT:   <MCOperand Expr:(.Ltmp0)>
+! CHECK-NEXT:   <MCOperand Expr:.Ltmp0>
 
 ! SCC
     spl %r19

@@ -15,13 +15,7 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Builders.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 namespace mlir {
@@ -82,7 +76,7 @@ static bool isInnermostAffineForOp(AffineForOp op) {
 }
 
 /// Gathers loops that have no affine.for's nested within.
-static void gatherInnermostLoops(func::FuncOp f,
+static void gatherInnermostLoops(FunctionOpInterface f,
                                  SmallVectorImpl<AffineForOp> &loops) {
   f.walk([&](AffineForOp forOp) {
     if (isInnermostAffineForOp(forOp))
@@ -91,7 +85,7 @@ static void gatherInnermostLoops(func::FuncOp f,
 }
 
 void LoopUnroll::runOnOperation() {
-  func::FuncOp func = getOperation();
+  FunctionOpInterface func = getOperation();
   if (func.isExternal())
     return;
 
@@ -100,8 +94,8 @@ void LoopUnroll::runOnOperation() {
     SmallVector<AffineForOp, 4> loops;
 
     // Gathers all loops with trip count <= minTripCount. Do a post order walk
-    // so that loops are gathered from innermost to outermost (or else unrolling
-    // an outer one may delete gathered inner ones).
+    // so that loops are gathered from innermost to outermost (or else
+    // unrolling an outer one may delete gathered inner ones).
     getOperation().walk([&](AffineForOp forOp) {
       std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
       if (tripCount && *tripCount <= unrollFullThreshold)
@@ -145,7 +139,8 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
                             cleanUpUnroll);
 }
 
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::affine::createLoopUnrollPass(
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
+mlir::affine::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(

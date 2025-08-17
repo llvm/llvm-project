@@ -38,6 +38,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/InitUndef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
@@ -59,7 +60,23 @@ using namespace llvm;
 
 namespace {
 
-class InitUndef : public MachineFunctionPass {
+class InitUndefLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  InitUndefLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override { return INIT_UNDEF_NAME; }
+};
+
+class InitUndef {
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetSubtargetInfo *ST;
@@ -70,21 +87,11 @@ class InitUndef : public MachineFunctionPass {
   SmallVector<MachineInstr *, 8> DeadInsts;
 
 public:
-  static char ID;
-
-  InitUndef() : MachineFunctionPass(ID) {}
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override { return INIT_UNDEF_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
   bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                         const DeadLaneDetector &DLD);
+                         const DeadLaneDetector *DLD);
   bool handleSubReg(MachineFunction &MF, MachineInstr &MI,
                     const DeadLaneDetector &DLD);
   bool fixupIllOperand(MachineInstr *MI, MachineOperand &MO);
@@ -93,12 +100,12 @@ private:
 
 } // end anonymous namespace
 
-char InitUndef::ID = 0;
-INITIALIZE_PASS(InitUndef, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
-char &llvm::InitUndefID = InitUndef::ID;
+char InitUndefLegacy::ID = 0;
+INITIALIZE_PASS(InitUndefLegacy, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
+char &llvm::InitUndefID = InitUndefLegacy::ID;
 
 static bool isEarlyClobberMI(MachineInstr &MI) {
-  return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
+  return llvm::any_of(MI.all_defs(), [](const MachineOperand &DefMO) {
     return DefMO.isReg() && DefMO.isEarlyClobber();
   });
 }
@@ -120,8 +127,6 @@ bool InitUndef::handleReg(MachineInstr *MI) {
       continue;
     if (!UseMO.getReg().isVirtual())
       continue;
-    if (!TRI->doesRegClassHavePseudoInitUndef(MRI->getRegClass(UseMO.getReg())))
-      continue;
 
     if (UseMO.isUndef() || findImplictDefMIFromReg(UseMO.getReg(), MRI))
       Changed |= fixupIllOperand(MI, UseMO);
@@ -140,20 +145,16 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
       continue;
     if (UseMO.isTied())
       continue;
-    if (!TRI->doesRegClassHavePseudoInitUndef(MRI->getRegClass(UseMO.getReg())))
-      continue;
 
     Register Reg = UseMO.getReg();
     if (NewRegs.count(Reg))
       continue;
-    DeadLaneDetector::VRegInfo Info =
-        DLD.getVRegInfo(Register::virtReg2Index(Reg));
+    DeadLaneDetector::VRegInfo Info = DLD.getVRegInfo(Reg.virtRegIndex());
 
     if (Info.UsedLanes == Info.DefinedLanes)
       continue;
 
-    const TargetRegisterClass *TargetRegClass =
-        TRI->getLargestSuperClass(MRI->getRegClass(Reg));
+    const TargetRegisterClass *TargetRegClass = MRI->getRegClass(Reg);
 
     LaneBitmask NeedDef = Info.UsedLanes & ~Info.DefinedLanes;
 
@@ -166,19 +167,26 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     });
 
     SmallVector<unsigned> SubRegIndexNeedInsert;
-    TRI->getCoveringSubRegIndexes(*MRI, TargetRegClass, NeedDef,
+    TRI->getCoveringSubRegIndexes(TargetRegClass, NeedDef,
                                   SubRegIndexNeedInsert);
+
+    // It's not possible to create the INIT_UNDEF when there is no register
+    // class associated for the subreg. This may happen for artificial subregs
+    // that are not directly addressable.
+    if (any_of(SubRegIndexNeedInsert, [&](unsigned Ind) -> bool {
+          return !TRI->getSubRegisterClass(TargetRegClass, Ind);
+        }))
+      continue;
 
     Register LatestReg = Reg;
     for (auto ind : SubRegIndexNeedInsert) {
       Changed = true;
-      const TargetRegisterClass *SubRegClass = TRI->getLargestSuperClass(
-          TRI->getSubRegisterClass(TargetRegClass, ind));
+      const TargetRegisterClass *SubRegClass =
+          TRI->getSubRegisterClass(TargetRegClass, ind);
       Register TmpInitSubReg = MRI->createVirtualRegister(SubRegClass);
       LLVM_DEBUG(dbgs() << "Register Class ID" << SubRegClass->getID() << "\n");
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
-              TII->get(TII->getUndefInitOpcode(SubRegClass->getID())),
-              TmpInitSubReg);
+              TII->get(TargetOpcode::INIT_UNDEF), TmpInitSubReg);
       Register NewReg = MRI->createVirtualRegister(TargetRegClass);
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
               TII->get(TargetOpcode::INSERT_SUBREG), NewReg)
@@ -198,14 +206,13 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 
   LLVM_DEBUG(
       dbgs() << "Emitting PseudoInitUndef Instruction for implicit register "
-             << MO.getReg() << '\n');
+             << printReg(MO.getReg()) << '\n');
 
-  const TargetRegisterClass *TargetRegClass =
-      TRI->getLargestSuperClass(MRI->getRegClass(MO.getReg()));
+  const TargetRegisterClass *TargetRegClass = MRI->getRegClass(MO.getReg());
   LLVM_DEBUG(dbgs() << "Register Class ID" << TargetRegClass->getID() << "\n");
-  unsigned Opcode = TII->getUndefInitOpcode(TargetRegClass->getID());
   Register NewReg = MRI->createVirtualRegister(TargetRegClass);
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(Opcode), NewReg);
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(TargetOpcode::INIT_UNDEF), NewReg);
   MO.setReg(NewReg);
   if (MO.isUndef())
     MO.setIsUndef(false);
@@ -213,7 +220,7 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 }
 
 bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                                  const DeadLaneDetector &DLD) {
+                                  const DeadLaneDetector *DLD) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr &MI = *I;
@@ -239,23 +246,32 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 
     if (isEarlyClobberMI(MI)) {
       if (MRI->subRegLivenessEnabled())
-        Changed |= handleSubReg(MF, MI, DLD);
+        Changed |= handleSubReg(MF, MI, *DLD);
       Changed |= handleReg(&MI);
     }
   }
   return Changed;
 }
 
-bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
+bool InitUndefLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return InitUndef().run(MF);
+}
+
+PreservedAnalyses InitUndefPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  if (!InitUndef().run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool InitUndef::run(MachineFunction &MF) {
   ST = &MF.getSubtarget();
 
-  // supportsInitUndef is implemented to reflect if an architecture has support
-  // for the InitUndef pass. Support comes from having the relevant Pseudo
-  // instructions that can be used to initialize the register. The function
-  // returns false by default so requires an implementation per architecture.
-  // Support can be added by overriding the function in a way that best fits
-  // the architecture.
-  if (!ST->supportsInitUndef())
+  // The pass is only needed if early-clobber defs and undef ops cannot be
+  // allocated to the same register.
+  if (!ST->requiresDisjointEarlyClobberAndUndef())
     return false;
 
   MRI = &MF.getRegInfo();
@@ -263,15 +279,19 @@ bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   TRI = MRI->getTargetRegisterInfo();
 
   bool Changed = false;
-  DeadLaneDetector DLD(MRI, TRI);
-  DLD.computeSubRegisterLaneBitInfo();
+  std::unique_ptr<DeadLaneDetector> DLD;
+  if (MRI->subRegLivenessEnabled()) {
+    DLD = std::make_unique<DeadLaneDetector>(MRI, TRI);
+    DLD->computeSubRegisterLaneBitInfo();
+  }
 
   for (MachineBasicBlock &BB : MF)
-    Changed |= processBasicBlock(MF, BB, DLD);
+    Changed |= processBasicBlock(MF, BB, DLD.get());
 
   for (auto *DeadMI : DeadInsts)
     DeadMI->eraseFromParent();
   DeadInsts.clear();
+  NewRegs.clear();
 
   return Changed;
 }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-min-max-use-initializer-list %t
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-min-max-use-initializer-list %t
 
 // CHECK-FIXES: #include <algorithm>
 namespace utils {
@@ -321,6 +321,12 @@ struct GH91982 {
 // CHECK-FIXES-NEXT: fun2Args(0, 1),
 // CHECK-FIXES-NEXT: fun3Args(0, 1, 2), fun4Args(0, 1, 2, 3)});
   }
+};
+
+struct GH107594 {
+    int foo(int a, int b, char c) {
+        return std::max<int>({a, b, c});
+    }
 };
 
 } // namespace

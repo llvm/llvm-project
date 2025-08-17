@@ -101,8 +101,10 @@ CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
+CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
+CGOPT(bool, EnableStaticDataPartitioning)
 CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayFunctionIndex)
@@ -460,6 +462,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableAddrsig);
 
+  static cl::opt<bool> EnableCallGraphSection(
+      "call-graph-section", cl::desc("Emit a call graph section"),
+      cl::init(false));
+  CGBINDOPT(EnableCallGraphSection);
+
   static cl::opt<bool> EmitCallSiteInfo(
       "emit-call-site-info",
       cl::desc(
@@ -479,6 +486,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                "profile information"),
       cl::init(false));
   CGBINDOPT(EnableMachineFunctionSplitter);
+
+  static cl::opt<bool> EnableStaticDataPartitioning(
+      "partition-static-data-sections",
+      cl::desc("Partition data sections using profile information."),
+      cl::init(false));
+  CGBINDOPT(EnableStaticDataPartitioning);
 
   static cl::opt<bool> ForceDwarfFrameSection(
       "force-dwarf-frame-section",
@@ -525,8 +538,6 @@ llvm::BasicBlockSection
 codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
   if (getBBSections() == "all")
     return BasicBlockSection::All;
-  else if (getBBSections() == "labels")
-    return BasicBlockSection::Labels;
   else if (getBBSections() == "none")
     return BasicBlockSection::None;
   else {
@@ -588,7 +599,9 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
+  Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
+  Options.EmitCallGraphSection = getEnableCallGraphSection();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
@@ -624,12 +637,9 @@ std::string codegen::getFeaturesStr() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -644,12 +654,9 @@ std::vector<std::string> codegen::getFeatureList() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -764,7 +771,7 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
   auto *Target = TheTarget->createTargetMachine(
-      TheTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
+      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(),
       codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
       codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
       OptLevel);

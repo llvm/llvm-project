@@ -1,0 +1,588 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___CXX03_QUEUE
+#define _LIBCPP___CXX03_QUEUE
+
+/*
+    queue synopsis
+
+namespace std
+{
+
+template <class T, class Container = deque<T>>
+class queue
+{
+public:
+    typedef Container                                container_type;
+    typedef typename container_type::value_type      value_type;
+    typedef typename container_type::reference       reference;
+    typedef typename container_type::const_reference const_reference;
+    typedef typename container_type::size_type       size_type;
+
+protected:
+    container_type c;
+
+public:
+    queue() = default;
+    ~queue() = default;
+
+    queue(const queue& q) = default;
+    queue(queue&& q) = default;
+
+    queue& operator=(const queue& q) = default;
+    queue& operator=(queue&& q) = default;
+
+    explicit queue(const container_type& c);
+    explicit queue(container_type&& c)
+    template<class InputIterator>
+        queue(InputIterator first, InputIterator last); // since C++23
+    template<container-compatible-range<T> R> queue(from_range_t, R&& rg); // since C++23
+    template <class Alloc>
+        explicit queue(const Alloc& a);
+    template <class Alloc>
+        queue(const container_type& c, const Alloc& a);
+    template <class Alloc>
+        queue(container_type&& c, const Alloc& a);
+    template <class Alloc>
+        queue(const queue& q, const Alloc& a);
+    template <class Alloc>
+        queue(queue&& q, const Alloc& a);
+    template <class InputIterator, class Alloc>
+        queue(InputIterator first, InputIterator last, const Alloc&); // since C++23
+    template<container-compatible-range<T> R, class Alloc>
+        queue(from_range_t, R&& rg, const Alloc&); // since C++23
+
+    bool      empty() const;
+    size_type size() const;
+
+    reference       front();
+    const_reference front() const;
+    reference       back();
+    const_reference back() const;
+
+    void push(const value_type& v);
+    void push(value_type&& v);
+    template<container-compatible-range<T> R>
+      void push_range(R&& rg); // C++23
+    template <class... Args> reference emplace(Args&&... args); // reference in C++17
+    void pop();
+
+    void swap(queue& q) noexcept(is_nothrow_swappable_v<Container>)
+};
+
+template<class Container>
+  queue(Container) -> queue<typename Container::value_type, Container>; // C++17
+
+template<class InputIterator>
+  queue(InputIterator, InputIterator) -> queue<iter-value-type<InputIterator>>; // since C++23
+
+template<ranges::input_range R>
+  queue(from_range_t, R&&) -> queue<ranges::range_value_t<R>>; // since C++23
+
+template<class Container, class Allocator>
+  queue(Container, Allocator) -> queue<typename Container::value_type, Container>; // C++17
+
+template<class InputIterator, class Allocator>
+  queue(InputIterator, InputIterator, Allocator)
+  -> queue<iter-value-type<InputIterator>,
+           deque<iter-value-type<InputIterator>, Allocator>>; // since C++23
+
+template<ranges::input_range R, class Allocator>
+    queue(from_range_t, R&&, Allocator)
+      -> queue<ranges::range_value_t<R>, deque<ranges::range_value_t<R>, Allocator>>; // since C++23
+
+template <class T, class Container>
+  bool operator==(const queue<T, Container>& x,const queue<T, Container>& y);
+
+template <class T, class Container>
+  bool operator< (const queue<T, Container>& x,const queue<T, Container>& y);
+
+template <class T, class Container>
+  bool operator!=(const queue<T, Container>& x,const queue<T, Container>& y);
+
+template <class T, class Container>
+  bool operator> (const queue<T, Container>& x,const queue<T, Container>& y);
+
+template <class T, class Container>
+  bool operator>=(const queue<T, Container>& x,const queue<T, Container>& y);
+
+template <class T, class Container>
+  bool operator<=(const queue<T, Container>& x,const queue<T, Container>& y);
+
+template<class T, three_way_comparable Container>
+  compare_three_way_result_t<Container>
+    operator<=>(const queue<T, Container>& x, const queue<T, Container>& y);  // since C++20
+
+template <class T, class Container>
+  void swap(queue<T, Container>& x, queue<T, Container>& y)
+  noexcept(noexcept(x.swap(y)));
+
+template <class T, class Container = vector<T>,
+          class Compare = less<typename Container::value_type>>
+class priority_queue
+{
+public:
+    typedef Container                                container_type;
+    typedef typename container_type::value_type      value_type;
+    typedef typename container_type::reference       reference;
+    typedef typename container_type::const_reference const_reference;
+    typedef typename container_type::size_type       size_type;
+
+protected:
+    container_type c;
+    Compare comp;
+
+public:
+    priority_queue() : priority_queue(Compare()) {} // C++20
+    explicit priority_queue(const Compare& x) : priority_queue(x, Container()) {}
+    priority_queue(const Compare& x, const Container&);
+    explicit priority_queue(const Compare& x = Compare(), Container&& = Container()); // before C++20
+    priority_queue(const Compare& x, Container&&); // C++20
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Compare& comp = Compare());
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Compare& comp, const Container& c);
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Compare& comp, Container&& c);
+    template <container-compatible-range<T> R>
+        priority_queue(from_range_t, R&& rg, const Compare& x = Compare()); // since C++23
+    template <class Alloc>
+        explicit priority_queue(const Alloc& a);
+    template <class Alloc>
+        priority_queue(const Compare& comp, const Alloc& a);
+    template <class Alloc>
+        priority_queue(const Compare& comp, const Container& c,
+                       const Alloc& a);
+    template <class Alloc>
+        priority_queue(const Compare& comp, Container&& c,
+                       const Alloc& a);
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Alloc& a);
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Compare& comp, const Alloc& a);
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Compare& comp, const Container& c, const Alloc& a);
+    template <class InputIterator>
+        priority_queue(InputIterator first, InputIterator last,
+                       const Compare& comp, Container&& c, const Alloc& a);
+    template <container-compatible-range<T> R, class Alloc>
+      priority_queue(from_range_t, R&& rg, const Compare&, const Alloc&); // since C++23
+    template <container-compatible-range<T> R, class Alloc>
+      priority_queue(from_range_t, R&& rg, const Alloc&); // since C++23
+    template <class Alloc>
+        priority_queue(const priority_queue& q, const Alloc& a);
+    template <class Alloc>
+        priority_queue(priority_queue&& q, const Alloc& a);
+
+    bool            empty() const;
+    size_type       size() const;
+    const_reference top() const;
+
+    void push(const value_type& v);
+    void push(value_type&& v);
+    template<container-compatible-range<T> R>
+      void push_range(R&& rg); // C++23
+    template <class... Args> void emplace(Args&&... args);
+    void pop();
+
+    void swap(priority_queue& q)
+        noexcept(is_nothrow_swappable_v<Container> &&
+                 is_nothrow_swappable_v<Comp>)
+};
+
+template <class Compare, class Container>
+priority_queue(Compare, Container)
+    -> priority_queue<typename Container::value_type, Container, Compare>; // C++17
+
+template<class InputIterator,
+         class Compare = less<iter-value-type<InputIterator>>,
+         class Container = vector<iter-value-type<InputIterator>>>
+priority_queue(InputIterator, InputIterator, Compare = Compare(), Container = Container())
+    -> priority_queue<iter-value-type<InputIterator>, Container, Compare>; // C++17
+
+template<ranges::input_range R, class Compare = less<ranges::range_value_t<R>>>
+  priority_queue(from_range_t, R&&, Compare = Compare())
+    -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>>, Compare>; // C++23
+
+template<class Compare, class Container, class Allocator>
+priority_queue(Compare, Container, Allocator)
+    -> priority_queue<typename Container::value_type, Container, Compare>; // C++17
+
+template<class InputIterator, class Allocator>
+priority_queue(InputIterator, InputIterator, Allocator)
+    -> priority_queue<iter-value-type<InputIterator>,
+                      vector<iter-value-type<InputIterator>, Allocator>,
+                      less<iter-value-type<InputIterator>>>; // C++17
+
+template<class InputIterator, class Compare, class Allocator>
+priority_queue(InputIterator, InputIterator, Compare, Allocator)
+    -> priority_queue<iter-value-type<InputIterator>,
+                      vector<iter-value-type<InputIterator>, Allocator>, Compare>; // C++17
+
+template<class InputIterator, class Compare, class Container, class Allocator>
+priority_queue(InputIterator, InputIterator, Compare, Container, Allocator)
+    -> priority_queue<typename Container::value_type, Container, Compare>; // C++17
+
+template<ranges::input_range R, class Compare, class Allocator>
+  priority_queue(from_range_t, R&&, Compare, Allocator)
+    -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>, Allocator>,
+                        Compare>; // C++23
+
+template<ranges::input_range R, class Allocator>
+  priority_queue(from_range_t, R&&, Allocator)
+    -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>, Allocator>>; // C++23
+
+template <class T, class Container, class Compare>
+  void swap(priority_queue<T, Container, Compare>& x,
+            priority_queue<T, Container, Compare>& y)
+            noexcept(noexcept(x.swap(y)));
+
+}  // std
+
+*/
+
+#include <__cxx03/__algorithm/make_heap.h>
+#include <__cxx03/__algorithm/pop_heap.h>
+#include <__cxx03/__algorithm/push_heap.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__fwd/deque.h>
+#include <__cxx03/__fwd/queue.h>
+#include <__cxx03/__iterator/back_insert_iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/uses_allocator.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/deque>
+#include <__cxx03/vector>
+#include <__cxx03/version>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__cxx03/__undef_macros>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Tp, class _Container>
+_LIBCPP_HIDE_FROM_ABI bool operator==(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y);
+
+template <class _Tp, class _Container>
+_LIBCPP_HIDE_FROM_ABI bool operator<(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y);
+
+template <class _Tp, class _Container /*= deque<_Tp>*/>
+class _LIBCPP_TEMPLATE_VIS queue {
+public:
+  typedef _Container container_type;
+  typedef typename container_type::value_type value_type;
+  typedef typename container_type::reference reference;
+  typedef typename container_type::const_reference const_reference;
+  typedef typename container_type::size_type size_type;
+  static_assert(is_same<_Tp, value_type>::value, "");
+
+protected:
+  container_type c;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI queue() : c() {}
+
+  _LIBCPP_HIDE_FROM_ABI queue(const queue& __q) : c(__q.c) {}
+
+  _LIBCPP_HIDE_FROM_ABI queue& operator=(const queue& __q) {
+    c = __q.c;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI explicit queue(const container_type& __c) : c(__c) {}
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI explicit queue(const _Alloc& __a) : c(__a) {}
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI queue(const queue& __q, const _Alloc& __a) : c(__q.c, __a) {}
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI queue(const container_type& __c, const _Alloc& __a) : c(__c, __a) {}
+
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+
+  _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return c.front(); }
+  _LIBCPP_HIDE_FROM_ABI reference back() { return c.back(); }
+  _LIBCPP_HIDE_FROM_ABI const_reference back() const { return c.back(); }
+
+  _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v) { c.push_back(__v); }
+  _LIBCPP_HIDE_FROM_ABI void pop() { c.pop_front(); }
+
+  _LIBCPP_HIDE_FROM_ABI void swap(queue& __q) {
+    using std::swap;
+    swap(c, __q.c);
+  }
+
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+
+  template <class _T1, class _OtherContainer>
+  friend _LIBCPP_HIDE_FROM_ABI bool
+  operator==(const queue<_T1, _OtherContainer>& __x, const queue<_T1, _OtherContainer>& __y);
+
+  template <class _T1, class _OtherContainer>
+  friend _LIBCPP_HIDE_FROM_ABI bool
+  operator<(const queue<_T1, _OtherContainer>& __x, const queue<_T1, _OtherContainer>& __y);
+};
+
+template <class _Tp, class _Container>
+inline _LIBCPP_HIDE_FROM_ABI bool operator==(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+  return __x.c == __y.c;
+}
+
+template <class _Tp, class _Container>
+inline _LIBCPP_HIDE_FROM_ABI bool operator<(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+  return __x.c < __y.c;
+}
+
+template <class _Tp, class _Container>
+inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+  return !(__x == __y);
+}
+
+template <class _Tp, class _Container>
+inline _LIBCPP_HIDE_FROM_ABI bool operator>(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+  return __y < __x;
+}
+
+template <class _Tp, class _Container>
+inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+  return !(__x < __y);
+}
+
+template <class _Tp, class _Container>
+inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+  return !(__y < __x);
+}
+
+template <class _Tp, class _Container, __enable_if_t<__is_swappable_v<_Container>, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI void swap(queue<_Tp, _Container>& __x, queue<_Tp, _Container>& __y) {
+  __x.swap(__y);
+}
+
+template <class _Tp, class _Container, class _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<queue<_Tp, _Container>, _Alloc> : public uses_allocator<_Container, _Alloc> {
+};
+
+template <class _Tp, class _Container, class _Compare>
+class _LIBCPP_TEMPLATE_VIS priority_queue {
+public:
+  typedef _Container container_type;
+  typedef _Compare value_compare;
+  typedef typename container_type::value_type value_type;
+  typedef typename container_type::reference reference;
+  typedef typename container_type::const_reference const_reference;
+  typedef typename container_type::size_type size_type;
+  static_assert(is_same<_Tp, value_type>::value, "");
+
+protected:
+  container_type c;
+  value_compare comp;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI priority_queue() : c(), comp() {}
+
+  _LIBCPP_HIDE_FROM_ABI priority_queue(const priority_queue& __q) : c(__q.c), comp(__q.comp) {}
+
+  _LIBCPP_HIDE_FROM_ABI priority_queue& operator=(const priority_queue& __q) {
+    c    = __q.c;
+    comp = __q.comp;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI explicit priority_queue(const value_compare& __comp) : c(), comp(__comp) {}
+  _LIBCPP_HIDE_FROM_ABI priority_queue(const value_compare& __comp, const container_type& __c);
+  template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(_InputIter __f, _InputIter __l, const value_compare& __comp = value_compare());
+
+  template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  priority_queue(_InputIter __f, _InputIter __l, const value_compare& __comp, const container_type& __c);
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI explicit priority_queue(const _Alloc& __a);
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(const value_compare& __comp, const _Alloc& __a);
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(const value_compare& __comp, const container_type& __c, const _Alloc& __a);
+
+  template <class _Alloc, __enable_if_t<uses_allocator<container_type, _Alloc>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(const priority_queue& __q, const _Alloc& __a);
+
+  template <
+      class _InputIter,
+      class _Alloc,
+      __enable_if_t<__has_input_iterator_category<_InputIter>::value && uses_allocator<container_type, _Alloc>::value,
+                    int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(_InputIter __f, _InputIter __l, const _Alloc& __a);
+
+  template <
+      class _InputIter,
+      class _Alloc,
+      __enable_if_t<__has_input_iterator_category<_InputIter>::value && uses_allocator<container_type, _Alloc>::value,
+                    int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(_InputIter __f, _InputIter __l, const value_compare& __comp, const _Alloc& __a);
+
+  template <
+      class _InputIter,
+      class _Alloc,
+      __enable_if_t<__has_input_iterator_category<_InputIter>::value && uses_allocator<container_type, _Alloc>::value,
+                    int> = 0>
+  _LIBCPP_HIDE_FROM_ABI priority_queue(
+      _InputIter __f, _InputIter __l, const value_compare& __comp, const container_type& __c, const _Alloc& __a);
+
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+  _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.front(); }
+
+  _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v);
+  _LIBCPP_HIDE_FROM_ABI void pop();
+
+  _LIBCPP_HIDE_FROM_ABI void swap(priority_queue& __q);
+
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+};
+
+template <class _Tp, class _Container, class _Compare>
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(const _Compare& __comp, const container_type& __c)
+    : c(__c), comp(__comp) {
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(
+    _InputIter __f, _InputIter __l, const value_compare& __comp)
+    : c(__f, __l), comp(__comp) {
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(
+    _InputIter __f, _InputIter __l, const value_compare& __comp, const container_type& __c)
+    : c(__c), comp(__comp) {
+  c.insert(c.end(), __f, __l);
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <class _Alloc, __enable_if_t<uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(const _Alloc& __a) : c(__a) {}
+
+template <class _Tp, class _Container, class _Compare>
+template <class _Alloc, __enable_if_t<uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& __comp, const _Alloc& __a)
+    : c(__a), comp(__comp) {}
+
+template <class _Tp, class _Container, class _Compare>
+template <class _Alloc, __enable_if_t<uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(
+    const value_compare& __comp, const container_type& __c, const _Alloc& __a)
+    : c(__c, __a), comp(__comp) {
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <class _Alloc, __enable_if_t<uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(const priority_queue& __q, const _Alloc& __a)
+    : c(__q.c, __a), comp(__q.comp) {}
+
+template <class _Tp, class _Container, class _Compare>
+template <
+    class _InputIter,
+    class _Alloc,
+    __enable_if_t<__has_input_iterator_category<_InputIter>::value && uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(_InputIter __f, _InputIter __l, const _Alloc& __a)
+    : c(__f, __l, __a), comp() {
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <
+    class _InputIter,
+    class _Alloc,
+    __enable_if_t<__has_input_iterator_category<_InputIter>::value && uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(
+    _InputIter __f, _InputIter __l, const value_compare& __comp, const _Alloc& __a)
+    : c(__f, __l, __a), comp(__comp) {
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <
+    class _InputIter,
+    class _Alloc,
+    __enable_if_t<__has_input_iterator_category<_InputIter>::value && uses_allocator<_Container, _Alloc>::value, int> >
+inline priority_queue<_Tp, _Container, _Compare>::priority_queue(
+    _InputIter __f, _InputIter __l, const value_compare& __comp, const container_type& __c, const _Alloc& __a)
+    : c(__c, __a), comp(__comp) {
+  c.insert(c.end(), __f, __l);
+  std::make_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+inline void priority_queue<_Tp, _Container, _Compare>::push(const value_type& __v) {
+  c.push_back(__v);
+  std::push_heap(c.begin(), c.end(), comp);
+}
+
+template <class _Tp, class _Container, class _Compare>
+inline void priority_queue<_Tp, _Container, _Compare>::pop() {
+  std::pop_heap(c.begin(), c.end(), comp);
+  c.pop_back();
+}
+
+template <class _Tp, class _Container, class _Compare>
+inline void priority_queue<_Tp, _Container, _Compare>::swap(priority_queue& __q) {
+  using std::swap;
+  swap(c, __q.c);
+  swap(comp, __q.comp);
+}
+
+template <class _Tp,
+          class _Container,
+          class _Compare,
+          __enable_if_t<__is_swappable_v<_Container> && __is_swappable_v<_Compare>, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI void
+swap(priority_queue<_Tp, _Container, _Compare>& __x, priority_queue<_Tp, _Container, _Compare>& __y) {
+  __x.swap(__y);
+}
+
+template <class _Tp, class _Container, class _Compare, class _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<priority_queue<_Tp, _Container, _Compare>, _Alloc>
+    : public uses_allocator<_Container, _Alloc> {};
+
+_LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+#  include <__cxx03/cstdlib>
+#  include <__cxx03/functional>
+#  include <__cxx03/type_traits>
+#endif
+
+#endif // _LIBCPP___CXX03_QUEUE

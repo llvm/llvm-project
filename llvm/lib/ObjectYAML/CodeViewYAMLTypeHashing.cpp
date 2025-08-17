@@ -13,8 +13,6 @@
 
 #include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
 
-#include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 

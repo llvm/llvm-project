@@ -15,21 +15,29 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang::include_cleaner {
 namespace {
+bool isOperatorNewDelete(OverloadedOperatorKind OpKind) {
+  return OpKind == OO_New || OpKind == OO_Delete || OpKind == OO_Array_New ||
+         OpKind == OO_Array_Delete;
+}
+
 using DeclCallback =
     llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>;
 
@@ -52,14 +60,10 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   NamedDecl *getMemberProvider(QualType Base) {
     if (Base->isPointerType())
       return getMemberProvider(Base->getPointeeType());
-    // Unwrap the sugar ElaboratedType.
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Base))
-      return getMemberProvider(ElTy->getNamedType());
-
     if (const auto *TT = dyn_cast<TypedefType>(Base))
       return TT->getDecl();
     if (const auto *UT = dyn_cast<UsingType>(Base))
-      return UT->getFoundDecl();
+      return UT->getDecl();
     // A heuristic: to resolve a template type to **only** its template name.
     // We're only using this method for the base type of MemberExpr, in general
     // the template provides the member, and the critical case `unique_ptr<Foo>`
@@ -126,6 +130,20 @@ public:
     return true;
   }
 
+  bool qualifierIsNamespaceOrNone(DeclRefExpr *DRE) {
+    NestedNameSpecifier Qual = DRE->getQualifier();
+    switch (Qual.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
+    case NestedNameSpecifier::Kind::Namespace:
+    case NestedNameSpecifier::Kind::Global:
+      return true;
+    case NestedNameSpecifier::Kind::Type:
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      return false;
+    }
+    llvm_unreachable("Unknown value for NestedNameSpecifierKind");
+  }
+
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     auto *FD = DRE->getFoundDecl();
     // Prefer the underlying decl if FoundDecl isn't a shadow decl, e.g:
@@ -138,7 +156,15 @@ public:
     // the container decl instead, which is preferred as it'll handle
     // aliases/exports properly.
     if (!FD->isCXXClassMember() && !llvm::isa<EnumConstantDecl>(FD)) {
-      report(DRE->getLocation(), FD);
+      // Global operator new/delete [] is available implicitly in every
+      // translation unit, even without including any explicit headers. So treat
+      // those as ambigious to not force inclusion in TUs that transitively
+      // depend on those.
+      RefType RT =
+          isOperatorNewDelete(FD->getDeclName().getCXXOverloadedOperator())
+              ? RefType::Ambiguous
+              : RefType::Explicit;
+      report(DRE->getLocation(), FD, RT);
       return true;
     }
     // If the ref is without a qualifier, and is a member, ignore it. As it is
@@ -147,10 +173,8 @@ public:
     //
     // If it's an enum constant, it must be due to prior decl. Report references
     // to it when qualifier isn't a type.
-    if (llvm::isa<EnumConstantDecl>(FD)) {
-      if (!DRE->getQualifier() || DRE->getQualifier()->getAsNamespace())
-        report(DRE->getLocation(), FD);
-    }
+    if (llvm::isa<EnumConstantDecl>(FD) && qualifierIsNamespaceOrNone(DRE))
+      report(DRE->getLocation(), FD);
     return true;
   }
 
@@ -204,7 +228,12 @@ public:
   bool VisitUsingDecl(UsingDecl *UD) {
     for (const auto *Shadow : UD->shadows()) {
       auto *TD = Shadow->getTargetDecl();
-      auto IsUsed = TD->isUsed() || TD->isReferenced();
+      // For function-decls, we might have overloads brought in due to
+      // transitive dependencies. Hence we only want to report explicit
+      // references for those if they're used.
+      // But for record decls, spelling of the type always refers to primary
+      // decl non-ambiguously. Hence spelling is already a use.
+      auto IsUsed = TD->isUsed() || TD->isReferenced() || !TD->getAsFunction();
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
 
@@ -271,7 +300,6 @@ public:
   // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    // if (CTSD->isExplicitSpecialization())
     if (clang::isTemplateExplicitInstantiationOrSpecialization(
             CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
@@ -279,11 +307,15 @@ public:
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    // if (VTSD->isExplicitSpecialization())
     if (clang::isTemplateExplicitInstantiationOrSpecialization(
             VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
+    return true;
+  }
+
+  bool VisitCleanupAttr(CleanupAttr *attr) {
+    report(attr->getArgLoc(), attr->getFunctionDecl());
     return true;
   }
 
@@ -303,17 +335,17 @@ public:
   }
 
   bool VisitUsingTypeLoc(UsingTypeLoc TL) {
-    reportType(TL.getNameLoc(), TL.getFoundDecl());
+    reportType(TL.getNameLoc(), TL.getDecl());
     return true;
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getDecl());
+    reportType(TTL.getNameLoc(), TTL.getOriginalDecl());
     return true;
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getTypedefNameDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 
@@ -350,6 +382,15 @@ public:
     report(E->getExprLoc(),
            const_cast<CXXRecordDecl *>(E->getBestDynamicClassType()),
            RefType::Implicit);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    report(E->getExprLoc(), E->getOperatorNew(), RefType::Ambiguous);
+    return true;
+  }
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
 };

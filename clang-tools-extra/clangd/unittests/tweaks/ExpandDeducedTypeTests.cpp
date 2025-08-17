@@ -69,8 +69,8 @@ TEST_F(ExpandDeducedTypeTest, Test) {
   EXPECT_THAT(apply(R"cpp(au^to s = &"foobar";)cpp"),
               StartsWith("fail: Could not expand type"));
 
-  EXPECT_EQ(apply("ns::Class * foo() { au^to c = foo(); }"),
-            "ns::Class * foo() { ns::Class * c = foo(); }");
+  EXPECT_EQ(apply("ns::Class * foo() { au^to c = foo(); return nullptr; }"),
+            "ns::Class * foo() { ns::Class * c = foo(); return nullptr; }");
   EXPECT_EQ(
       apply("void ns::Func() { au^to x = new ns::Class::Nested{}; }"),
       "void ns::Func() { ns::Class::Nested * x = new ns::Class::Nested{}; }");

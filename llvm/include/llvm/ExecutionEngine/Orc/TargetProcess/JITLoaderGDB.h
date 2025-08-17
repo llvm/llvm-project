@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_JITLOADERGDB_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 // Keep in sync with gdb/gdb/jit.h
@@ -42,10 +43,10 @@ struct jit_descriptor {
 };
 }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size);
+extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
+llvm_orc_registerJITLoaderGDBWrapper(const char *ArgData, size_t ArgSize);
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderGDBAllocAction(const char *Data, size_t Size);
+extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
+llvm_orc_registerJITLoaderGDBAllocAction(const char *ArgData, size_t ArgSize);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_JITLOADERGDB_H

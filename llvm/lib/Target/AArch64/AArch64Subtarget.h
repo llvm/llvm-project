@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -33,12 +34,11 @@
 namespace llvm {
 class GlobalValue;
 class StringRef;
-class Triple;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
-    Others,
+    Generic,
 #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 #undef ARM_PROCESSOR_FAMILY
@@ -46,7 +46,7 @@ public:
 
 protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
-  ARMProcFamilyEnum ARMProcFamily = Others;
+  ARMProcFamilyEnum ARMProcFamily = Generic;
 
   // Enable 64-bit vectorization in SLP.
   unsigned MinVectorRegisterBitWidth = 64;
@@ -56,9 +56,13 @@ protected:
   bool ATTRIBUTE = DEFAULT;
 #include "AArch64GenSubtargetInfo.inc"
 
+  unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
+  // Default scatter/gather overhead.
+  unsigned ScatterOverhead = 10;
+  unsigned GatherOverhead = 10;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
@@ -81,10 +85,13 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
-  unsigned VScaleForTuning = 2;
+  unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
+
+  bool EnableSubregLiveness;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -123,6 +130,8 @@ public:
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
+  virtual unsigned getHwModeSet() const override;
+
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
@@ -149,6 +158,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+  bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -169,6 +179,13 @@ public:
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const { return IsStreamingCompatible; }
 
+  /// Returns the size of memory region that if accessed by both the CPU and
+  /// the SME unit could result in a hazard. 0 = disabled.
+  unsigned getStreamingHazardSize() const {
+    return StreamingHazardSize.value_or(
+        !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
+  }
+
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
   /// mode, which disables NEON instructions).
@@ -185,10 +202,14 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
-  /// Returns true if the target has access to either the full range of SVE instructions,
-  /// or the streaming-compatible subset of SVE instructions.
+  /// Returns true if the target has access to the streaming-compatible subset
+  /// of SVE instructions.
+  bool isStreamingSVEAvailable() const { return hasSME() && isStreaming(); }
+
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions.
   bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || (hasSME() && isStreaming());
+    return hasSVE() || isStreamingSVEAvailable();
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
@@ -209,6 +230,7 @@ public:
     AllReservedX |= ReserveXRegisterForRA;
     return AllReservedX.count();
   }
+  bool isLRReservedForRA() const { return ReserveLRForRA; }
   bool isXRegCustomCalleeSaved(size_t i) const {
     return CustomCallSavedXRegs[i];
   }
@@ -221,9 +243,14 @@ public:
            hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
+  unsigned getEpilogueVectorizationMinVF() const {
+    return EpilogueVectorizationMinVF;
+  }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
+  unsigned getScatterOverhead() const { return ScatterOverhead; }
+  unsigned getGatherOverhead() const { return GatherOverhead; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,
@@ -291,6 +318,10 @@ public:
     }
   }
 
+  /// Returns whether the operating system makes it safer to store sensitive
+  /// values in x16 and x17 as opposed to other registers.
+  bool isX16X17Safer() const;
+
   /// ParseSubtargetFeatures - Parses features string setting specified
   /// subtarget options.  Definition of function is auto generated by tblgen.
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
@@ -312,7 +343,8 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,
                              const TargetSchedModel *SchedModel) const override;
@@ -321,13 +353,15 @@ public:
 
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 
-  bool isCallingConvWin64(CallingConv::ID CC) const {
+  bool isCallingConvWin64(CallingConv::ID CC, bool IsVarArg) const {
     switch (CC) {
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
       return isTargetWindows();
+    case CallingConv::PreserveNone:
+      return IsVarArg && isTargetWindows();
     case CallingConv::Win64:
       return true;
     default:
@@ -362,7 +396,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   // Return the known range for the bit length of SVE data registers. A value
-  // of 0 means nothing is known about that particular limit beyong what's
+  // of 0 means nothing is known about that particular limit beyond what's
   // implied by the architecture.
   unsigned getMaxSVEVectorSizeInBits() const {
     assert(isSVEorStreamingSVEAvailable() &&
@@ -374,6 +408,16 @@ public:
     assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");
     return MinSVEVectorSizeInBits;
+  }
+
+  // Return the known bit length of SVE data registers. A value of 0 means the
+  // length is unknown beyond what's implied by the architecture.
+  unsigned getSVEVectorSizeInBits() const {
+    assert(isSVEorStreamingSVEAvailable() &&
+           "Tried to get SVE vector length without SVE support!");
+    if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
+      return MaxSVEVectorSizeInBits;
+    return 0;
   }
 
   bool useSVEForFixedLengthVectors() const {
@@ -397,43 +441,29 @@ public:
     return DefaultSVETFOpts;
   }
 
+  /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
+  /// add + cnt instructions.
+  bool useScalarIncVL() const;
+
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
     return "__chkstk";
   }
 
-  const char* getSecurityCheckCookieName() const {
-    if (isWindowsArm64EC())
-      return "#__security_check_cookie_arm64ec";
-    return "__security_check_cookie";
-  }
-
   /// Choose a method of checking LR before performing a tail call.
-  AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
+  AArch64PAuth::AuthCheckMethod
+  getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;
 
-  const PseudoSourceValue *getAddressCheckPSV() const {
-    return AddressCheckPSV.get();
-  }
-
-private:
-  /// Pseudo value representing memory load performed to check an address.
-  ///
-  /// This load operation is solely used for its side-effects: if the address
-  /// is not mapped (or not readable), it triggers CPU exception, otherwise
-  /// execution proceeds and the value is not used.
-  class AddressCheckPseudoSourceValue : public PseudoSourceValue {
-  public:
-    AddressCheckPseudoSourceValue(const TargetMachine &TM)
-        : PseudoSourceValue(TargetCustom, TM) {}
-
-    bool isConstant(const MachineFrameInfo *) const override { return false; }
-    bool isAliased(const MachineFrameInfo *) const override { return true; }
-    bool mayAlias(const MachineFrameInfo *) const override { return true; }
-    void printCustom(raw_ostream &OS) const override { OS << "AddressCheck"; }
-  };
-
-  std::unique_ptr<AddressCheckPseudoSourceValue> AddressCheckPSV;
+  /// Compute the integer discriminator for a given BlockAddress constant, if
+  /// blockaddress signing is enabled, or std::nullopt otherwise.
+  /// Blockaddress signing is controlled by the function attribute
+  /// "ptrauth-indirect-gotos" on the parent function.
+  /// Note that this assumes the discriminator is independent of the indirect
+  /// goto branch site itself, i.e., it's the same for all BlockAddresses in
+  /// a function.
+  std::optional<uint16_t>
+  getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
 };
 } // End llvm namespace
 

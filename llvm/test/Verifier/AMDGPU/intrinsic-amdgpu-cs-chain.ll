@@ -32,6 +32,13 @@ define amdgpu_cs_chain void @bad_exec(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr,
   unreachable
 }
 
+define amdgpu_cs_chain void @not_unreachable(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {
+  ; CHECK: llvm.amdgcn.cs.chain must be followed by unreachable
+  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
+  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
+  ret void
+}
+
 define void @bad_caller_default_cc(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {
   ; CHECK: Intrinsic can only be used from functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve calling conventions
   ; CHECK-NEXT: @llvm.amdgcn.set.inactive.chain.arg

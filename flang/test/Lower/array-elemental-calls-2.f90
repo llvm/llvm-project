@@ -141,11 +141,11 @@ end subroutine
 ! CHECK-LABEL: func @_QMtest_opsPcheck_cmplx_part() {
 subroutine check_cmplx_part()
   print *,  elem_func_real(AIMAG(z1 + z2))
-! CHECK:  %[[VAL_13:.*]] = fir.load %{{.*}} : !fir.ref<!fir.complex<8>>
+! CHECK:  %[[VAL_13:.*]] = fir.load %{{.*}} : !fir.ref<complex<f64>>
 ! CHECK:  fir.do_loop
-! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.complex<8>>, index) -> !fir.complex<8>
-! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] {fastmath = #arith.fastmath<contract>} : !fir.complex<8>
-! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (!fir.complex<8>) -> f64
+! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xcomplex<f64>>, index) -> complex<f64>
+! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] {fastmath = #arith.fastmath<contract>} : complex<f64>
+! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (complex<f64>) -> f64
 ! CHECK:  fir.call @_QPelem_func_real(%[[VAL_25]]) {{.*}}: (f64) -> i32
 end subroutine
 
@@ -185,10 +185,8 @@ subroutine check_parentheses_derived(a)
 ! CHECK: fir.do_loop
 ! CHECK: %[[VAL_21:.*]] = fir.array_access %{{.}}, %{{.*}}
 ! CHECK: %[[VAL_22:.*]] = fir.no_reassoc %[[VAL_21]] : !fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>
-! CHECK: %[[FIELD:.*]] = fir.field_index i, !fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>
-! CHECK: %[[FROM:.*]] = fir.coordinate_of %[[VAL_22]], %[[FIELD]] : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
-! CHECK: %[[FIELD2:.*]] = fir.field_index i, !fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>
-! CHECK: %[[TO:.*]] = fir.coordinate_of %[[VAL_0]], %[[FIELD2]] : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[FROM:.*]] = fir.coordinate_of %[[VAL_22]], i : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> !fir.ref<i32>
+! CHECK: %[[TO:.*]] = fir.coordinate_of %[[VAL_0]], i : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> !fir.ref<i32>
 ! CHECK: %[[VAL:.*]] = fir.load %[[FROM]] : !fir.ref<i32>
 ! CHECK: fir.store %[[VAL]] to %[[TO]] : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.call @_QPelem_func_derived(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> i32

@@ -22,6 +22,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
@@ -30,14 +31,9 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-#include <charconv>
 #include <regex>
 
 using namespace llvm;
-
-namespace llvm {
-void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
-}
 
 namespace {
 
@@ -48,9 +44,8 @@ class SPIRVPrepareFunctions : public ModulePass {
 
 public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {
-    initializeSPIRVPrepareFunctionsPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
+      : ModulePass(ID), TM(TM) {}
 
   bool runOnModule(Module &M) override;
 
@@ -68,11 +63,11 @@ char SPIRVPrepareFunctions::ID = 0;
 INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
                 "SPIRV prepare functions", false, false)
 
-std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
+static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
   assert(IntrinsicFunc && "Missing function");
   std::string FuncName = IntrinsicFunc->getName().str();
-  std::replace(FuncName.begin(), FuncName.end(), '.', '_');
+  llvm::replace(FuncName, '.', '_');
   FuncName = "spirv." + FuncName;
   return FuncName;
 }
@@ -228,9 +223,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
         } else {
           MDsItem.push_back(MDString::get(Ctx, Item));
         }
-      } else if (int32_t Num;
-                 std::from_chars(Item.data(), Item.data() + Item.size(), Num)
-                     .ec == std::errc{}) {
+      } else if (int32_t Num; llvm::to_integer(StringRef(Item), Num, 10)) {
         MDsItem.push_back(
             ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Num)));
       } else {
@@ -241,7 +234,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
       return SmallVector<Metadata *>{};
     MDs.push_back(MDNode::get(Ctx, MDsItem));
   }
-  return Pos == static_cast<int>(Anno.length()) ? MDs
+  return Pos == static_cast<int>(Anno.length()) ? std::move(MDs)
                                                 : SmallVector<Metadata *>{};
 }
 
@@ -342,30 +335,6 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
-static void buildUMulWithOverflowFunc(Function *UMulFunc) {
-  // The function body is already created.
-  if (!UMulFunc->empty())
-    return;
-
-  BasicBlock *EntryBB = BasicBlock::Create(UMulFunc->getParent()->getContext(),
-                                           "entry", UMulFunc);
-  IRBuilder<> IRB(EntryBB);
-  // Build the actual unsigned multiplication logic with the overflow
-  // indication. Do unsigned multiplication Mul = A * B. Then check
-  // if unsigned division Div = Mul / A is not equal to B. If so,
-  // then overflow has happened.
-  Value *Mul = IRB.CreateNUWMul(UMulFunc->getArg(0), UMulFunc->getArg(1));
-  Value *Div = IRB.CreateUDiv(Mul, UMulFunc->getArg(0));
-  Value *Overflow = IRB.CreateICmpNE(UMulFunc->getArg(0), Div);
-
-  // umul.with.overflow intrinsic return a structure, where the first element
-  // is the multiplication result, and the second is an overflow bit.
-  Type *StructTy = UMulFunc->getReturnType();
-  Value *Agg = IRB.CreateInsertValue(PoisonValue::get(StructTy), Mul, {0});
-  Value *Res = IRB.CreateInsertValue(Agg, Overflow, {1});
-  IRB.CreateRet(Res);
-}
-
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -377,56 +346,38 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   // We need to lower this into a builtin and then the builtin into a SPIR-V
   // instruction.
   if (II->getIntrinsicID() == Intrinsic::assume) {
-    Function *F = Intrinsic::getDeclaration(
+    Function *F = Intrinsic::getOrInsertDeclaration(
         II->getModule(), Intrinsic::SPVIntrinsics::spv_assume);
     II->setCalledFunction(F);
   } else if (II->getIntrinsicID() == Intrinsic::expect) {
-    Function *F = Intrinsic::getDeclaration(
+    Function *F = Intrinsic::getOrInsertDeclaration(
         II->getModule(), Intrinsic::SPVIntrinsics::spv_expect,
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
-
-  return;
 }
 
-static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
-                                     ArrayRef<unsigned> OpNos) {
-  Function *F = nullptr;
-  if (OpNos.empty()) {
-    F = Intrinsic::getDeclaration(II->getModule(), NewID);
-  } else {
-    SmallVector<Type *, 4> Tys;
-    for (unsigned OpNo : OpNos)
-      Tys.push_back(II->getOperand(OpNo)->getType());
-    F = Intrinsic::getDeclaration(II->getModule(), NewID, Tys);
-  }
-  II->setCalledFunction(F);
+static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  IRBuilder<> Builder(II);
+  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  std::optional<TypeSize> Size =
+      Alloca->getAllocationSize(Alloca->getDataLayout());
+  Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
+  Builder.CreateIntrinsic(NewID, Alloca->getType(),
+                          {SizeVal, II->getArgOperand(0)});
+  II->eraseFromParent();
   return true;
-}
-
-static void lowerUMulWithOverflow(IntrinsicInst *UMulIntrinsic) {
-  // Get a separate function - otherwise, we'd have to rework the CFG of the
-  // current one. Then simply replace the intrinsic uses with a call to the new
-  // function.
-  Module *M = UMulIntrinsic->getModule();
-  FunctionType *UMulFuncTy = UMulIntrinsic->getFunctionType();
-  Type *FSHLRetTy = UMulFuncTy->getReturnType();
-  const std::string FuncName = lowerLLVMIntrinsicName(UMulIntrinsic);
-  Function *UMulFunc =
-      getOrCreateFunction(M, FSHLRetTy, UMulFuncTy->params(), FuncName);
-  buildUMulWithOverflowFunc(UMulFunc);
-  UMulIntrinsic->setCalledFunction(UMulFunc);
 }
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
+  const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
+    for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
       if (!Call)
         continue;
@@ -444,24 +395,29 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerFunnelShifts(II);
         Changed = true;
         break;
-      case Intrinsic::umul_with_overflow:
-        lowerUMulWithOverflow(II);
-        Changed = true;
-        break;
       case Intrinsic::assume:
-      case Intrinsic::expect: {
-        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+      case Intrinsic::expect:
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
-      } break;
+        break;
       case Intrinsic::lifetime_start:
-        Changed |= toSpvOverloadedIntrinsic(
-            II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        if (!STI.isShader()) {
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_start);
+        } else {
+          II->eraseFromParent();
+          Changed = true;
+        }
         break;
       case Intrinsic::lifetime_end:
-        Changed |= toSpvOverloadedIntrinsic(
-            II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        if (!STI.isShader()) {
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_end);
+        } else {
+          II->eraseFromParent();
+          Changed = true;
+        }
         break;
       case Intrinsic::ptr_annotation:
         lowerPtrAnnotation(II);
@@ -478,13 +434,16 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
 // noted in 'spv.cloned_funcs' metadata for later restoration.
 Function *
 SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
+  bool IsRetAggr = F->getReturnType()->isAggregateType();
+  // Allow intrinsics with aggregate return type to reach GlobalISel
+  if (F->isIntrinsic() && IsRetAggr)
+    return F;
+
   IRBuilder<> B(F->getContext());
 
-  bool IsRetAggr = F->getReturnType()->isAggregateType();
-  bool HasAggrArg =
-      std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
-        return Arg.getType()->isAggregateType();
-      });
+  bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
+    return Arg.getType()->isAggregateType();
+  });
   bool DoClone = IsRetAggr || HasAggrArg;
   if (!DoClone)
     return F;
@@ -536,13 +495,20 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
       CI->mutateFunctionType(NewF->getFunctionType());
     U->replaceUsesOfWith(F, NewF);
   }
+
+  // register the mutation
+  if (RetType != F->getReturnType())
+    TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
+        NewF, F->getReturnType());
   return NewF;
 }
 
 bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   bool Changed = false;
-  for (Function &F : M)
+  for (Function &F : M) {
     Changed |= substituteIntrinsicCalls(&F);
+    Changed |= sortBlocks(F);
+  }
 
   std::vector<Function *> FuncsWorklist;
   for (auto &F : M)

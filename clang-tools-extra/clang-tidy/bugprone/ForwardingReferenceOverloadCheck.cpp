@@ -9,7 +9,6 @@
 #include "ForwardingReferenceOverloadCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -19,14 +18,14 @@ namespace {
 // Check if the given type is related to std::enable_if.
 AST_MATCHER(QualType, isEnableIf) {
   auto CheckTemplate = [](const TemplateSpecializationType *Spec) {
-    if (!Spec || !Spec->getTemplateName().getAsTemplateDecl()) {
+    if (!Spec)
       return false;
-    }
-    const NamedDecl *TypeDecl =
-        Spec->getTemplateName().getAsTemplateDecl()->getTemplatedDecl();
-    return TypeDecl->isInStdNamespace() &&
-           (TypeDecl->getName() == "enable_if" ||
-            TypeDecl->getName() == "enable_if_t");
+
+    const TemplateDecl *TDecl = Spec->getTemplateName().getAsTemplateDecl();
+
+    return TDecl && TDecl->isInStdNamespace() &&
+           (TDecl->getName() == "enable_if" ||
+            TDecl->getName() == "enable_if_t");
   };
   const Type *BaseType = Node.getTypePtr();
   // Case: pointer or reference to enable_if.
@@ -34,21 +33,17 @@ AST_MATCHER(QualType, isEnableIf) {
     BaseType = BaseType->getPointeeType().getTypePtr();
   }
   // Case: type parameter dependent (enable_if<is_integral<T>>).
-  if (const auto *Dependent = BaseType->getAs<DependentNameType>()) {
-    BaseType = Dependent->getQualifier()->getAsType();
-  }
+  if (const auto *Dependent = BaseType->getAs<DependentNameType>())
+    BaseType = Dependent->getQualifier().getAsType();
   if (!BaseType)
     return false;
   if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>()))
     return true; // Case: enable_if_t< >.
-  if (const auto *Elaborated = BaseType->getAs<ElaboratedType>()) {
-    if (const auto *Q = Elaborated->getQualifier())
-      if (const auto *Qualifier = Q->getAsType()) {
-        if (CheckTemplate(Qualifier->getAs<TemplateSpecializationType>())) {
-          return true; // Case: enable_if< >::type.
-        }
-      }
-  }
+  if (const auto *TT = BaseType->getAs<TypedefType>())
+    if (NestedNameSpecifier Q = TT->getQualifier();
+        Q.getKind() == NestedNameSpecifier::Kind::Type)
+      if (CheckTemplate(Q.getAsType()->getAs<TemplateSpecializationType>()))
+        return true; // Case: enable_if< >::type.
   return false;
 }
 AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,

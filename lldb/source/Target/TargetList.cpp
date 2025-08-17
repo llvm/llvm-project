@@ -88,8 +88,8 @@ Status TargetList::CreateTargetInternal(
   // determine the architecture.
   const ArchSpec arch(triple_str);
   if (!triple_str.empty() && !arch.IsValid()) {
-    error.SetErrorStringWithFormat("invalid triple '%s'",
-                                   triple_str.str().c_str());
+    error = Status::FromErrorStringWithFormat("invalid triple '%s'",
+                                              triple_str.str().c_str());
     return error;
   }
 
@@ -158,7 +158,7 @@ Status TargetList::CreateTargetInternal(
               platform_arch.DumpTriple(platform_arch_strm.AsRawOstream());
               matching_module_spec.GetArchitecture().DumpTriple(
                   module_arch_strm.AsRawOstream());
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "the specified architecture '%s' is not compatible with '%s' "
                   "in '%s'",
                   platform_arch_strm.GetData(), module_arch_strm.GetData(),
@@ -188,7 +188,8 @@ Status TargetList::CreateTargetInternal(
                 platform_list.GetOrCreate(archs, {}, candidates)) {
           platform_sp = platform_for_archs_sp;
         } else if (candidates.empty()) {
-          error.SetErrorString("no matching platforms found for this file");
+          error = Status::FromErrorString(
+              "no matching platforms found for this file");
           return error;
         } else {
           // More than one platform claims to support this file.
@@ -206,7 +207,7 @@ Status TargetList::CreateTargetInternal(
             platform_set.insert(platform_name);
           }
           error_strm.Printf("), specify an architecture to disambiguate");
-          error.SetErrorString(error_strm.GetString());
+          error = Status(error_strm.GetString().str());
           return error;
         }
       }
@@ -315,12 +316,12 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     if (error.Success() && exe_module_sp) {
       if (exe_module_sp->GetObjectFile() == nullptr) {
         if (arch.IsValid()) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "\"%s\" doesn't contain architecture %s", file.GetPath().c_str(),
               arch.GetArchitectureName());
         } else {
-          error.SetErrorStringWithFormat("unsupported file type \"%s\"",
-                                         file.GetPath().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "unsupported file type \"%s\"", file.GetPath().c_str());
         }
         return error;
       }
@@ -381,8 +382,8 @@ bool TargetList::DeleteTarget(TargetSP &target_sp) {
 TargetSP TargetList::FindTargetWithExecutableAndArchitecture(
     const FileSpec &exe_file_spec, const ArchSpec *exe_arch_ptr) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [&exe_file_spec, exe_arch_ptr](const TargetSP &item) {
+  auto it = llvm::find_if(
+      m_target_list, [&exe_file_spec, exe_arch_ptr](const TargetSP &item) {
         Module *exe_module = item->GetExecutableModulePointer();
         if (!exe_module ||
             !FileSpec::Match(exe_file_spec, exe_module->GetFileSpec()))
@@ -400,11 +401,10 @@ TargetSP TargetList::FindTargetWithExecutableAndArchitecture(
 
 TargetSP TargetList::FindTargetWithProcessID(lldb::pid_t pid) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [pid](const TargetSP &item) {
-        auto *process_ptr = item->GetProcessSP().get();
-        return process_ptr && (process_ptr->GetID() == pid);
-      });
+  auto it = llvm::find_if(m_target_list, [pid](const TargetSP &item) {
+    auto *process_ptr = item->GetProcessSP().get();
+    return process_ptr && (process_ptr->GetID() == pid);
+  });
 
   if (it != m_target_list.end())
     return *it;
@@ -418,10 +418,9 @@ TargetSP TargetList::FindTargetWithProcess(Process *process) const {
     return target_sp;
 
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [process](const TargetSP &item) {
-        return item->GetProcessSP().get() == process;
-      });
+  auto it = llvm::find_if(m_target_list, [process](const TargetSP &item) {
+    return item->GetProcessSP().get() == process;
+  });
 
   if (it != m_target_list.end())
     target_sp = *it;
@@ -435,8 +434,9 @@ TargetSP TargetList::GetTargetSP(Target *target) const {
     return target_sp;
 
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [target](const TargetSP &item) { return item.get() == target; });
+  auto it = llvm::find_if(m_target_list, [target](const TargetSP &item) {
+    return item.get() == target;
+  });
   if (it != m_target_list.end())
     target_sp = *it;
 

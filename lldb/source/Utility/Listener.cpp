@@ -18,22 +18,16 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Listener::Listener(const char *name)
-    : m_name(name), m_broadcasters(), m_broadcasters_mutex(), m_events(),
-      m_events_mutex(), m_is_shadow() {
-  Log *log = GetLog(LLDBLog::Object);
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Listener::Listener('%s')", static_cast<void *>(this),
-              m_name.c_str());
+Listener::Listener(const char *name) : m_name(name) {
+  LLDB_LOGF(GetLog(LLDBLog::Object), "%p Listener::Listener('%s')",
+            static_cast<void *>(this), m_name.c_str());
 }
 
 Listener::~Listener() {
-  Log *log = GetLog(LLDBLog::Object);
-
   // Don't call Clear() from here as that can cause races. See #96750.
 
-  LLDB_LOGF(log, "%p Listener::%s('%s')", static_cast<void *>(this),
-            __FUNCTION__, m_name.c_str());
+  LLDB_LOGF(GetLog(LLDBLog::Object), "%p Listener::%s('%s')",
+            static_cast<void *>(this), __FUNCTION__, m_name.c_str());
 }
 
 void Listener::Clear() {
@@ -358,8 +352,7 @@ Listener::StartListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
       this->shared_from_this(), event_spec);
   if (bits_acquired) {
     BroadcasterManagerWP manager_wp(manager_sp);
-    auto iter = llvm::find_if(m_broadcaster_managers, manager_matcher);
-    if (iter == m_broadcaster_managers.end())
+    if (llvm::none_of(m_broadcaster_managers, manager_matcher))
       m_broadcaster_managers.push_back(manager_wp);
   }
 

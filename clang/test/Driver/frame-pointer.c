@@ -4,6 +4,9 @@
 // RUN: %clang --target=i386-pc-linux -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK3-32 %s
 // RUN: %clang --target=i386-pc-linux -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECKs-32 %s
 
+// RUN: %clang --target=i386-linux-android -### -S -O0 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
+// RUN: %clang --target=i386-linux-android -### -S -O1 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
+// RUN: %clang --target=i386-linux-android -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
 
 // RUN: %clang --target=x86_64-pc-linux -### -S -O0 %s 2>&1 | FileCheck -check-prefix=CHECK0-64 %s
 // RUN: %clang --target=x86_64-pc-linux -### -S -O1 %s 2>&1 | FileCheck -check-prefix=CHECK1-64 %s
@@ -11,6 +14,10 @@
 // RUN: %clang --target=x86_64-pc-linux -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK3-64 %s
 // RUN: %clang --target=x86_64-pc-linux -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECKs-64 %s
 // RUN: %clang --target=x86_64-pc-win32-macho -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-MACHO-64 %s
+
+// RUN: %clang --target=x86_64-linux-android -### -S -O0 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
+// RUN: %clang --target=x86_64-linux-android -### -S -O1 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
+// RUN: %clang --target=x86_64-linux-android -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
 
 // Trust the above to get the optimizations right, and just test other targets
 // that want this by default.
@@ -57,9 +64,9 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK3-64 %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECKs-64 %s
 
-// RUN: %clang --target=riscv64-linux-android -### -S -O0 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID-64 %s
-// RUN: %clang --target=riscv64-linux-android -### -S -O1 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID-64 %s
-// RUN: %clang --target=riscv64-linux-android -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID-64 %s
+// RUN: %clang --target=riscv64-linux-android -### -S -O0 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
+// RUN: %clang --target=riscv64-linux-android -### -S -O1 %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
+// RUN: %clang --target=riscv64-linux-android -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-ANDROID %s
 
 // RUN: %clang --target=loongarch32 -### -S -O0 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK0-32 %s
 // RUN: %clang --target=loongarch32 -### -S -O1 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK1-32 %s
@@ -86,4 +93,4 @@
 // CHECKs-64-NOT: -mframe-pointer=all
 // CHECK-MACHO-64: -mframe-pointer=all
 
-// CHECK-ANDROID-64: -mframe-pointer=non-leaf
+// CHECK-ANDROID: -mframe-pointer=non-leaf

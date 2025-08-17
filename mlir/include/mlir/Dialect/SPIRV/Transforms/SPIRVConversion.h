@@ -17,8 +17,11 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 
@@ -35,6 +38,10 @@ enum class SPIRVSubByteTypeStorage {
 struct SPIRVConversionOptions {
   /// The number of bits to store a boolean value.
   unsigned boolNumBits{8};
+
+  /// Whether to emulate unsupported floats with integer types of same bit
+  /// width.
+  bool emulateUnsupportedFloatTypes{true};
 
   /// How sub-byte values are storaged in memory.
   SPIRVSubByteTypeStorage subByteTypeStorage{SPIRVSubByteTypeStorage::Packed};
@@ -131,8 +138,12 @@ private:
 /// `func` op to the SPIR-V dialect. These patterns do not handle shader
 /// interface/ABI; they convert function parameters to be of SPIR-V allowed
 /// types.
-void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateBuiltinFuncToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                         RewritePatternSet &patterns);
+
+void populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns);
+
+void populateReturnOpVectorRewritePatterns(RewritePatternSet &patterns);
 
 namespace spirv {
 class AccessChainOp;
@@ -182,6 +193,25 @@ Value getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 Value getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
                           ValueRange indices, Location loc, OpBuilder &builder);
+
+// Find the largest factor of size among {2,3,4} for the lowest dimension of
+// the target shape.
+int getComputeVectorSize(int64_t size);
+
+// GetNativeVectorShape implementation for reduction ops.
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::ReductionOp op);
+
+// GetNativeVectorShape implementation for transpose ops.
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::TransposeOp op);
+
+// For general ops.
+std::optional<SmallVector<int64_t>> getNativeVectorShape(Operation *op);
+
+// Unroll vectors in function signatures to native size.
+LogicalResult unrollVectorsInSignatures(Operation *op);
+
+// Unroll vectors in function bodies to native size.
+LogicalResult unrollVectorsInFuncBodies(Operation *op);
 
 } // namespace spirv
 } // namespace mlir

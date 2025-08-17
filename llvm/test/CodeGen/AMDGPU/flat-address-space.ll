@@ -2,8 +2,9 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,CIVI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,CIVI,CIVI-HSA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10,GFX10PLUS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-FAKE16 %s
 
 ; GCN-LABEL: {{^}}store_flat_i32:
 ; GCN-DAG: s_load_{{dwordx2|b64}} s[[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],
@@ -20,7 +21,7 @@ define amdgpu_kernel void @store_flat_i32(ptr addrspace(1) %gptr, i32 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}store_flat_i64:
-; GCN: flat_store_{{dwordx2|b64}}
+; GCN: flat_store_{{dword|b64}}
 define amdgpu_kernel void @store_flat_i64(ptr addrspace(1) %gptr, i64 %x) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   store volatile i64 %x, ptr %fptr, align 8
@@ -28,7 +29,7 @@ define amdgpu_kernel void @store_flat_i64(ptr addrspace(1) %gptr, i64 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}store_flat_v4i32:
-; GCN: flat_store_{{dwordx4|b128}}
+; GCN: flat_store_{{dword|b128}}
 define amdgpu_kernel void @store_flat_v4i32(ptr addrspace(1) %gptr, <4 x i32> %x) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   store volatile <4 x i32> %x, ptr %fptr, align 16
@@ -65,7 +66,7 @@ define amdgpu_kernel void @load_flat_i32(ptr addrspace(1) noalias %out, ptr addr
 }
 
 ; GCN-LABEL: load_flat_i64:
-; GCN: flat_load_{{dwordx2|b64}}
+; GCN: flat_load_{{dword|b64}}
 define amdgpu_kernel void @load_flat_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %gptr) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   %fload = load volatile i64, ptr %fptr, align 8
@@ -74,7 +75,7 @@ define amdgpu_kernel void @load_flat_i64(ptr addrspace(1) noalias %out, ptr addr
 }
 
 ; GCN-LABEL: load_flat_v4i32:
-; GCN: flat_load_{{dwordx4|b128}}
+; GCN: flat_load_{{dword|b128}}
 define amdgpu_kernel void @load_flat_v4i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %gptr) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   %fload = load volatile <4 x i32>, ptr %fptr, align 32
@@ -123,10 +124,8 @@ define amdgpu_kernel void @zextload_flat_i16(ptr addrspace(1) noalias %out, ptr 
 }
 
 ; GCN-LABEL: flat_scratch_unaligned_load:
-; GCN: flat_load_{{ubyte|u8}}
-; GCN: flat_load_{{ubyte|u8}}
-; GCN: flat_load_{{ubyte|u8}}
-; GCN: flat_load_{{ubyte|u8}}
+; GFX9: flat_load_dword
+; GFX10PLUS: flat_load_{{dword|b32}}
 define amdgpu_kernel void @flat_scratch_unaligned_load() {
   %scratch = alloca i32, addrspace(5)
   %fptr = addrspacecast ptr addrspace(5) %scratch to ptr
@@ -136,10 +135,8 @@ define amdgpu_kernel void @flat_scratch_unaligned_load() {
 }
 
 ; GCN-LABEL: flat_scratch_unaligned_store:
-; GCN: flat_store_{{byte|b8}}
-; GCN: flat_store_{{byte|b8}}
-; GCN: flat_store_{{byte|b8}}
-; GCN: flat_store_{{byte|b8}}
+; GFX9: flat_store_dword
+; GFX10PLUS: flat_store_{{dword|b32}}
 define amdgpu_kernel void @flat_scratch_unaligned_store() {
   %scratch = alloca i32, addrspace(5)
   %fptr = addrspacecast ptr addrspace(5) %scratch to ptr
@@ -228,7 +225,8 @@ define amdgpu_kernel void @store_flat_i8_neg_offset(ptr %fptr, i8 %x) #0 {
 ; CIVI: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
 ; GFX9: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc{{$}}
 ; GFX10: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
-; GFX11: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc dlc{{$}}
+; GFX11-TRUE16: flat_load_d16_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc dlc{{$}}
+; GFX11-FAKE16: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc dlc{{$}}
 define amdgpu_kernel void @load_flat_i8_max_offset(ptr %fptr) #0 {
   %fptr.offset = getelementptr inbounds i8, ptr %fptr, i64 4095
   %val = load volatile i8, ptr %fptr.offset
@@ -238,7 +236,9 @@ define amdgpu_kernel void @load_flat_i8_max_offset(ptr %fptr) #0 {
 ; GCN-LABEL: {{^}}load_flat_i8_max_offset_p1:
 ; CIVI: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
 ; GFX9: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
-; GFX10PLUS: flat_load_{{ubyte|u8}} v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
+; GFX10: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
+; GFX11-TRUE16: flat_load_d16_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
+; GFX11-FAKE16: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
 define amdgpu_kernel void @load_flat_i8_max_offset_p1(ptr %fptr) #0 {
   %fptr.offset = getelementptr inbounds i8, ptr %fptr, i64 4096
   %val = load volatile i8, ptr %fptr.offset

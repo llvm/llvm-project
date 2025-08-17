@@ -15,6 +15,11 @@ using LlvmLibcSincosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 TEST_F(LlvmLibcSincosTest, SpecialNumbers) {
   double sin_x, cos_x;
 
+  LIBC_NAMESPACE::sincos(sNaN, &sin_x, &cos_x);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, cos_x);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, sin_x);
+  EXPECT_MATH_ERRNO(0);
+
   LIBC_NAMESPACE::sincos(aNaN, &sin_x, &cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, sin_x);
