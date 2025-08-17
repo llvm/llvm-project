@@ -526,46 +526,30 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
   bool unsigned_is_allowed = literal->IsUnsigned() || literal->GetRadix() != 10;
   llvm::APInt apint = literal->GetValue();
 
-  // Try int/unsigned int.
-  llvm::Expected<uint64_t> int_size =
-      GetBasicType(type_system, lldb::eBasicTypeInt).GetBitSize(ctx.get());
-  if (!int_size)
-    return int_size.takeError();
-  if (literal->GetTypeSuffix() == IntegerTypeSuffix::None &&
-      apint.isIntN(*int_size)) {
-    if (!literal->IsUnsigned() && apint.isIntN(*int_size - 1))
-      return GetBasicType(type_system, lldb::eBasicTypeInt);
-    if (unsigned_is_allowed)
-      return GetBasicType(type_system, lldb::eBasicTypeUnsignedInt);
+  llvm::SmallVector<std::pair<lldb::BasicType, lldb::BasicType>, 3> candidates;
+  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::None)
+    candidates.emplace_back(lldb::eBasicTypeInt,
+                            unsigned_is_allowed ? lldb::eBasicTypeUnsignedInt
+                                                : lldb::eBasicTypeInvalid);
+  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::Long)
+    candidates.emplace_back(lldb::eBasicTypeLong,
+                            unsigned_is_allowed ? lldb::eBasicTypeUnsignedLong
+                                                : lldb::eBasicTypeInvalid);
+  candidates.emplace_back(lldb::eBasicTypeLongLong,
+                          lldb::eBasicTypeUnsignedLongLong);
+  for (auto [signed_, unsigned_] : candidates) {
+    CompilerType signed_type = type_system->GetBasicTypeFromAST(signed_);
+    if (!signed_type)
+      continue;
+    llvm::Expected<uint64_t> size = signed_type.GetBitSize(ctx.get());
+    if (!size)
+      return size.takeError();
+    if (!literal->IsUnsigned() && apint.isIntN(*size - 1))
+      return signed_type;
+    if (unsigned_ != lldb::eBasicTypeInvalid && apint.isIntN(*size))
+      return type_system->GetBasicTypeFromAST(unsigned_);
   }
-  // Try long/unsigned long.
-  llvm::Expected<uint64_t> long_size =
-      GetBasicType(type_system, lldb::eBasicTypeLong).GetBitSize(ctx.get());
-  if (!long_size)
-    return long_size.takeError();
-  if (literal->GetTypeSuffix() != IntegerTypeSuffix::LongLong &&
-      apint.isIntN(*long_size)) {
-    if (!literal->IsUnsigned() && apint.isIntN(*long_size - 1))
-      return GetBasicType(type_system, lldb::eBasicTypeLong);
-    if (unsigned_is_allowed)
-      return GetBasicType(type_system, lldb::eBasicTypeUnsignedLong);
-  }
-  // Try long long/unsigned long long.
-  llvm::Expected<uint64_t> long_long_size =
-      GetBasicType(type_system, lldb::eBasicTypeLongLong).GetBitSize(ctx.get());
-  if (!long_long_size)
-    return long_long_size.takeError();
-  if (apint.isIntN(*long_long_size)) {
-    if (!literal->IsUnsigned() && apint.isIntN(*long_long_size - 1))
-      return GetBasicType(type_system, lldb::eBasicTypeLongLong);
-    // If we still couldn't decide a type, we probably have something that
-    // does not fit in a signed long long, but has no U suffix. Also known as:
-    //
-    //  warning: integer literal is too large to be represented in a signed
-    //  integer type, interpreting as unsigned [-Wimplicitly-unsigned-literal]
-    //
-    return GetBasicType(type_system, lldb::eBasicTypeUnsignedLongLong);
-  }
+
   return llvm::make_error<DILDiagnosticError>(
       m_expr,
       "integer literal is too large to be represented in any integer type",
