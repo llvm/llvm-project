@@ -66,7 +66,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'int_arr[1.0]'",
             error=True,
-            substrs=["failed to parse integer constant: <'1.0' (floating_constant)>"],
+            substrs=["failed to parse integer constant: <'1.0' (float_constant)>"],
         )
 
         # Test accessing bits in scalar types.

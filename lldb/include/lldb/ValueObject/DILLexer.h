@@ -28,7 +28,7 @@ public:
     arrow,
     coloncolon,
     eof,
-    floating_constant,
+    float_constant,
     identifier,
     integer_constant,
     l_paren,

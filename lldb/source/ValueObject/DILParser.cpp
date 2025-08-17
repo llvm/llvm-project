@@ -184,7 +184,7 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
-  if (CurToken().IsOneOf({Token::integer_constant, Token::floating_constant}))
+  if (CurToken().IsOneOf({Token::integer_constant, Token::float_constant}))
     return ParseNumericLiteral();
   if (CurToken().IsOneOf(
           {Token::coloncolon, Token::identifier, Token::l_paren})) {

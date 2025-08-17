@@ -28,8 +28,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "coloncolon";
   case Kind::eof:
     return "eof";
-  case Kind::floating_constant:
-    return "floating_constant";
+  case Kind::float_constant:
+    return "float_constant";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -133,7 +133,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   bool isFloat = false;
   std::optional<llvm::StringRef> maybe_number = IsNumber(remainder, isFloat);
   if (maybe_number) {
-    auto kind = isFloat ? Token::floating_constant : Token::integer_constant;
+    auto kind = isFloat ? Token::float_constant : Token::integer_constant;
     return Token(kind, maybe_number->str(), position);
   }
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);

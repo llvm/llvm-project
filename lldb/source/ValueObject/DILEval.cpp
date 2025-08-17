@@ -512,11 +512,9 @@ GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
   if (type_system)
-    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
-      return compiler_type;
+    return type_system.get()->GetBasicTypeFromAST(basic_type);
 
-  CompilerType empty_type;
-  return empty_type;
+  return CompilerType();
 }
 
 llvm::Expected<CompilerType>
