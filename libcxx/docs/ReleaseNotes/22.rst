@@ -45,6 +45,8 @@ Improvements and New Features
 
 - The performance of ``map::map(const map&)`` has been improved up to 2.3x
 - The performance of ``map::operator=(const map&)`` has been improved by up to 11x
+- The performance of ``unordered_set::unordered_set(const unordered_set&)`` has been improved by up to 3.3x.
+- The performance of ``unordered_set::operator=(const unordered_set&)`` has been improved by up to 5x.
 
 Deprecations and Removals
 -------------------------
