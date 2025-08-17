@@ -25,7 +25,7 @@ def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
 }
 
 // A 8-bit signed immediate allowing range [-128, 255]
-// but represented as [-128, 255].
+// but represented as [-128, 127].
 def simm8_unsigned : RISCVOp {
   let ParserMatchClass = SImm8UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
