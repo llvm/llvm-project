@@ -28,4 +28,4 @@ if (LLDB_CAN_USE_LLDB_SERVER)
   add_lldb_tool_subdirectory(lldb-server)
 endif()
 
-add_subdirectory(yaml2macho-core)
+add_lldb_tool_subdirectory(yaml2macho-core)
