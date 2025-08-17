@@ -238,6 +238,9 @@ AST Matchers
 clang-format
 ------------
 
+- Deprecate option ``SplitEmptyRecord`` and replace it with ``WrapEmptyRecord`` that
+  allows formatting empty records as single-line.
+
 libclang
 --------
 
