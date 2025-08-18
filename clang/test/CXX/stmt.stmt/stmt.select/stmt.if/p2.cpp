@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++1z -fblocks -verify %s -DBLOCK_TEST
 // RUN: %clang_cc1 -std=c++1z -verify %s -DUNDEFINED
 
 #ifdef UNDEFINED
@@ -254,6 +255,15 @@ namespace GH153884 {
     // expected-note@-1 {{in instantiation of function template specialization 'GH153884::f2()}}
     return false;
   }
+
+#if BLOCK_TEST
+void  block_receiver(int (^)() );
+int f3() {
+  if constexpr (0)
+    (block_receiver)(^{ return 2; });
+  return 1;
+}
+#endif
 }
 
 #endif
