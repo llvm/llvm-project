@@ -180,7 +180,7 @@ class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
   let Constraints = "$rd = $rd_wb";
 }
 
-// Common base for pli.b/h/w and plui.h/w
+// Common base for pli.db/h/w and plui.dh/w
 class RVPPairLoadImm_i<bits<7> funct7, dag ins, string opcodestr,
                        string argstr>
     : RVInst<(outs GPRPairRV32:$rd), ins, opcodestr, argstr, [],
