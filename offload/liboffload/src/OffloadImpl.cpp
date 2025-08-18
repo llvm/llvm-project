@@ -149,9 +149,9 @@ struct ol_event_impl_t {
   void *EventInfo;
   ol_device_handle_t Device;
   size_t QueueId;
-  // Events may outlive the queue - don't assume this is always valid
+  // Events may outlive the queue - don't assume this is always valid.
   // It is provided only to implement OL_EVENT_INFO_QUEUE. Use QueueId to check
-  // for queue equality instead
+  // for queue equality instead.
   ol_queue_handle_t Queue;
 };
 
