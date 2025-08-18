@@ -30,7 +30,7 @@ namespace interp {
 class Function;
 class Program;
 class State;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 struct ParamOffset {
   unsigned Offset;
