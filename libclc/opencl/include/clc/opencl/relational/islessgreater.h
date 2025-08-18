@@ -11,11 +11,11 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION islessgreater
+#define __CLC_FUNCTION islessgreater
 #define __CLC_BODY <clc/relational/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_RELATIONAL_ISLESSGREATER_H__
