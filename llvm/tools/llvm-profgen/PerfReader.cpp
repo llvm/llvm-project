@@ -15,6 +15,8 @@
 
 #define DEBUG_TYPE "perf-reader"
 
+using namespace llvm;
+
 cl::opt<bool> SkipSymbolization("skip-symbolization",
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
@@ -47,9 +49,6 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
              "means no depth limit."));
 
-extern cl::opt<std::string> PerfTraceFilename;
-extern cl::opt<bool> ShowDisassemblyOnly;
-extern cl::opt<bool> ShowSourceLocations;
 extern cl::opt<std::string> OutputFilename;
 
 namespace llvm {
