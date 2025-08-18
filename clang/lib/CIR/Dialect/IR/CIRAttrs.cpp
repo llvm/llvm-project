@@ -425,6 +425,44 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CIR VTableAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VTableAttr::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type type,
+    mlir::ArrayAttr vtableData) {
+  auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
+  if (!sTy)
+    return emitError() << "expected !cir.record type result";
+  if (sTy.getMembers().empty() || vtableData.empty())
+    return emitError() << "expected record type with one or more subtype";
+
+  for (size_t i = 0; i < sTy.getMembers().size(); ++i) {
+    auto constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(vtableData[i]);
+    if (!constArrayAttr)
+      return emitError() << "expected constant array subtype";
+
+    if (cir::ConstRecordAttr::verify(emitError, type, vtableData).failed())
+      return failure();
+
+    LogicalResult eltTypeCheck = success();
+    auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());
+    arrayElts.walkImmediateSubElements(
+        [&](Attribute attr) {
+          if (mlir::isa<ConstPtrAttr, GlobalViewAttr>(attr))
+            return;
+
+          eltTypeCheck = emitError()
+                         << "expected GlobalViewAttr or ConstPtrAttr";
+        },
+        [&](Type type) {});
+    if (eltTypeCheck.failed())
+      return eltTypeCheck;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 

@@ -497,6 +497,46 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAttr
+//===----------------------------------------------------------------------===//
+
+def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
+  let summary = "Represents a C++ vtable";
+  let description = [{
+    Wraps a #cir.const_record containing vtable data.
+
+    Example:
+    ```
+    cir.global linkonce_odr @_ZTV1B = #cir.vtable<<
+        {#cir.const_array<[#cir.null : !cir.ptr<i8>,
+         #cir.global_view<@_ZTI1B> : !cir.ptr<i8>,
+         #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>,
+         #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>,
+         #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]>
+         : !cir.array<!cir.ptr<i8> x 5>}>>
+      : !cir.record<"", !cir.array<!cir.ptr<i8> x 5>>
+    ```
+  }];
+
+  // `vtable_data` is a const record with one element, containing an array of
+  // vtable information.
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::ArrayAttr":$vtable_data);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$vtable_data), [{
+      return $_get(type.getContext(), type, vtable_data);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($vtable_data) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
