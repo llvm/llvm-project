@@ -311,7 +311,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
       for (unsigned int Step = 0; Step < Size; Step += PatternSize) {
         auto *Dst =
             reinterpret_cast<void *>(reinterpret_cast<char *>(TgtPtr) + Step);
-        std::memcpy(TgtPtr, PatternPtr, PatternSize);
+        std::memcpy(Dst, PatternPtr, PatternSize);
       }
     }
 
