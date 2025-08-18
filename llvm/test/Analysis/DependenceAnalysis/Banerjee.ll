@@ -113,7 +113,7 @@ define void @banerjee1(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %2 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %2, ptr %B.addr.12, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 ; NORMALIZE-LABEL: 'banerjee1'
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -127,7 +127,7 @@ define void @banerjee1(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: %2 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: store i64 %2, ptr %B.addr.12, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
-; NORMALIZE-NEXT:    da analyze - output [* *]!
+; NORMALIZE-NEXT:    da analyze - confused!
 ;
 ; DELIN-LABEL: 'banerjee1'
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -141,7 +141,7 @@ define void @banerjee1(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: %2 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %2, ptr %B.addr.12, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
-; DELIN-NEXT:    da analyze - output [* *]!
+; DELIN-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp4 = icmp sgt i64 %n, 0

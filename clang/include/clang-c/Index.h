@@ -6953,7 +6953,7 @@ clang_getCursorUnaryOperatorKind(CXCursor cursor);
  * @}
  */
 
-CINDEX_DEPRECATED
+/* CINDEX_DEPRECATED - disabled to silence MSVC deprecation warnings */
 typedef void *CXRemapping;
 
 CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *);

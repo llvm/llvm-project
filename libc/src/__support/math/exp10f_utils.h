@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -89,7 +89,7 @@ struct Exp10Base : public ExpBase {
                                        0x1.0470591dff149p1, 0x1.2bd7c0a9fbc4dp0,
                                        0x1.1429e74a98f43p-1};
 
-  static double powb_lo(double dx) {
+  LIBC_INLINE static double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     // c0 = 1 + COEFFS[0] * dx
@@ -154,4 +154,4 @@ LIBC_INLINE static constexpr exp_b_reduc_t exp_b_range_reduc(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F_UTILS_H

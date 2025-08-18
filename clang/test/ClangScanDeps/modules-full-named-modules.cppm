@@ -92,14 +92,7 @@ export void Hello();
 // CHECK-NEXT:             ]
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
-// CHECK-NEXT:              "{{.*}}/M-{{.*}}.pcm"
-// CHECK:                 ]
-// CHECK:                 "input-file": "[[PREFIX]]/M.cppm"
-// CHECK:               },
-// CHECK-NEXT:          {
-// CHECK:                 "command-line": [
-// CHECK:                   "-o",
-// CHECK-NEXT:              "[[PREFIX]]/M.o"
+// CHECK-NEXT:              "{{.*}}/M.o"
 // CHECK:                 ]
 // CHECK:                 "input-file": "[[PREFIX]]/M.cppm"
 // CHECK:               }
@@ -160,18 +153,7 @@ void World() {
 // CHECK-NEXT:             ]
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
-// CHECK-NEXT:              "{{.*}}/impl_part-{{.*}}.pcm",
-// CHECK:                 ]
-// CHECK:                 "input-file": "[[PREFIX]]/impl_part.cppm"
-// CHECK:               },
-// CHECK-NEXT:          {
-// CHECK:                 "named-module": "M:impl_part"
-// CHECK-NEXT:            "named-module-deps": [
-// CHECK-NEXT:              "M:interface_part"
-// CHECK-NEXT:             ]
-// CHECK:                 "command-line": [
-// CHECK:                   "-o",
-// CHECK-NEXT:              "[[PREFIX]]/impl_part.o",
+// CHECK-NEXT:              "{{.*}}/impl_part.o",
 // CHECK:                 ]
 // CHECK:                 "input-file": "[[PREFIX]]/impl_part.cppm"
 // CHECK:               }
@@ -194,16 +176,7 @@ export void World();
 // CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
-// CHECK-NEXT:              "{{.*}}/interface_part-{{.*}}.pcm",
-// CHECK:                 ]
-// CHECK:                 "input-file": "[[PREFIX]]/interface_part.cppm"
-// CHECK:               },
-// CHECK-NEXT:          {
-// CHECK:                 "named-module": "M:interface_part"
-// CHECK-NOT:             "named-module-deps": []
-// CHECK:                 "command-line": [
-// CHECK:                   "-o",
-// CHECK-NEXT:              "[[PREFIX]]/interface_part.o",
+// CHECK-NEXT:              "{{.*}}/interface_part.o",
 // CHECK:                 ]
 // CHECK:                 "input-file": "[[PREFIX]]/interface_part.cppm"
 // CHECK:               }
@@ -259,14 +232,7 @@ int main() {
 // CHECK-NEXT:             ]
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
-// CHECK-NEXT:              "{{.*}}/M-{{.*}}.pcm"
-// CHECK:                 ]
-// CHECK:                 "input-file": "[[PREFIX]]/M.cppm"
-// CHECK:               },
-// CHECK-NEXT:          {
-// CHECK:                 "command-line": [
-// CHECK:                   "-o",
-// CHECK-NEXT:              "[[PREFIX]]/M.o"
+// CHECK-NEXT:              "{{.*}}/M.o"
 // CHECK:                 ]
 // CHECK:                 "input-file": "[[PREFIX]]/M.cppm"
 // CHECK:               },
@@ -292,18 +258,7 @@ int main() {
 // CHECK-NEXT:             ]
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
-// CHECK-NEXT:              "{{.*}}/impl_part-{{.*}}.pcm",
-// CHECK:                 ]
-// CHECK:                 "input-file": "[[PREFIX]]/impl_part.cppm"
-// CHECK:               },
-// CHECK-NEXT:          {
-// CHECK:                 "named-module": "M:impl_part"
-// CHECK-NEXT:            "named-module-deps": [
-// CHECK-NEXT:              "M:interface_part"
-// CHECK-NEXT:             ]
-// CHECK:                 "command-line": [
-// CHECK:                   "-o",
-// CHECK-NEXT:              "[[PREFIX]]/impl_part.o",
+// CHECK-NEXT:              "{{.*}}/impl_part.o",
 // CHECK:                 ]
 // CHECK:                 "input-file": "[[PREFIX]]/impl_part.cppm"
 // CHECK:               }
@@ -316,16 +271,7 @@ int main() {
 // CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
-// CHECK-NEXT:              "{{.*}}/interface_part-{{.*}}.pcm",
-// CHECK:                 ]
-// CHECK:                 "input-file": "[[PREFIX]]/interface_part.cppm"
-// CHECK:               },
-// CHECK-NEXT:          {
-// CHECK:                 "named-module": "M:interface_part"
-// CHECK-NOT:             "named-module-deps": []
-// CHECK:                 "command-line": [
-// CHECK:                   "-o",
-// CHECK-NEXT:              "[[PREFIX]]/interface_part.o",
+// CHECK-NEXT:              "{{.*}}/interface_part.o",
 // CHECK:                 ]
 // CHECK:                 "input-file": "[[PREFIX]]/interface_part.cppm"
 // CHECK:               }

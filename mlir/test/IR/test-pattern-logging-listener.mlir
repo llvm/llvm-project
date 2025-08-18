@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: mlir-opt %s --test-walk-pattern-rewrite-driver \
 // RUN:   --allow-unregistered-dialect --debug-only=pattern-logging-listener 2>&1 | FileCheck %s
 
@@ -7,15 +8,15 @@
 // {anonymous_namespace} vs `anonymous_namespace` (and maybe others?) on the
 // various platforms.
 
-// CHECK: [pattern-logging-listener]
+// CHECK: [pattern-logging-listener:1]
 // CHECK-SAME: ::ReplaceWithNewOp | notifyOperationInserted | test.new_op
-// CHECK: [pattern-logging-listener]
+// CHECK: [pattern-logging-listener:1]
 // CHECK-SAME: ::ReplaceWithNewOp | notifyOperationReplaced (with values) | test.replace_with_new_op
-// CHECK: [pattern-logging-listener]
+// CHECK: [pattern-logging-listener:1]
 // CHECK-SAME: ::ReplaceWithNewOp | notifyOperationModified | arith.addi
-// CHECK: [pattern-logging-listener]
+// CHECK: [pattern-logging-listener:1]
 // CHECK-SAME: ::ReplaceWithNewOp | notifyOperationModified | arith.addi
-// CHECK: [pattern-logging-listener]
+// CHECK: [pattern-logging-listener:1]
 // CHECK-SAME: ::ReplaceWithNewOp | notifyOperationErased | test.replace_with_new_op
 func.func @replace_with_new_op() -> i32 {
   %a = "test.replace_with_new_op"() : () -> (i32)

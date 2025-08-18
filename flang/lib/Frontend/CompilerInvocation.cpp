@@ -512,6 +512,16 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_triple))
     opts.triple = a->getValue();
 
+  opts.atomicIgnoreDenormalMode = args.hasFlag(
+      clang::driver::options::OPT_fatomic_ignore_denormal_mode,
+      clang::driver::options::OPT_fno_atomic_ignore_denormal_mode, false);
+  opts.atomicFineGrainedMemory = args.hasFlag(
+      clang::driver::options::OPT_fatomic_fine_grained_memory,
+      clang::driver::options::OPT_fno_atomic_fine_grained_memory, false);
+  opts.atomicRemoteMemory =
+      args.hasFlag(clang::driver::options::OPT_fatomic_remote_memory,
+                   clang::driver::options::OPT_fno_atomic_remote_memory, false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
@@ -1142,6 +1152,17 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+  // -fcoarray
+  if (args.hasArg(clang::driver::options::OPT_fcoarray)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::Coarray);
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                              "Support for multi image Fortran features is "
+                              "still experimental and in development.");
+    diags.Report(diagID);
+  }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -1152,8 +1173,15 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
                                         clang::driver::options::OPT_fno_openmp);
-  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
-    return true;
+  if (!arg ||
+      arg->getOption().matches(clang::driver::options::OPT_fno_openmp)) {
+    bool isSimdSpecified = args.hasFlag(
+        clang::driver::options::OPT_fopenmp_simd,
+        clang::driver::options::OPT_fno_openmp_simd, /*Default=*/false);
+    if (!isSimdSpecified)
+      return true;
+    res.getLangOpts().OpenMPSimd = 1;
+  }
 
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
@@ -1685,6 +1713,20 @@ void CompilerInvocation::setDefaultPredefinitions() {
                                              FLANG_VERSION_MINOR_STRING);
   fortranOptions.predefinitions.emplace_back("__flang_patchlevel__",
                                              FLANG_VERSION_PATCHLEVEL_STRING);
+
+  // Add predefinitions based on the relocation model
+  if (unsigned PICLevel = getCodeGenOpts().PICLevel) {
+    fortranOptions.predefinitions.emplace_back("__PIC__",
+                                               std::to_string(PICLevel));
+    fortranOptions.predefinitions.emplace_back("__pic__",
+                                               std::to_string(PICLevel));
+    if (getCodeGenOpts().IsPIE) {
+      fortranOptions.predefinitions.emplace_back("__PIE__",
+                                                 std::to_string(PICLevel));
+      fortranOptions.predefinitions.emplace_back("__pie__",
+                                                 std::to_string(PICLevel));
+    }
+  }
 
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(

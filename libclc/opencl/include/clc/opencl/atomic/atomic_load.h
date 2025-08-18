@@ -9,7 +9,7 @@
 #ifndef __CLC_OPENCL_ATOMIC_ATOMIC_LOAD_H__
 #define __CLC_OPENCL_ATOMIC_ATOMIC_LOAD_H__
 
-#define FUNCTION atomic_load
+#define __CLC_FUNCTION atomic_load
 #define __CLC_NO_VALUE_ARG
 
 #define __CLC_BODY <clc/opencl/atomic/atomic_decl.inc>
@@ -19,6 +19,6 @@
 #include <clc/math/gentype.inc>
 
 #undef __CLC_NO_VALUE_ARG
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_ATOMIC_ATOMIC_LOAD_H__

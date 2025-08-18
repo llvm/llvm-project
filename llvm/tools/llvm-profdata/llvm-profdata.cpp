@@ -16,6 +16,7 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
@@ -52,23 +53,23 @@ using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
 // https://llvm.org/docs/CommandGuide/llvm-profdata.html has documentations
 // on each subcommand.
-static cl::SubCommand ShowSubcommand(
+cl::SubCommand ShowSubcommand(
     "show",
     "Takes a profile data file and displays the profiles. See detailed "
     "documentation in "
     "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-show");
-static cl::SubCommand OrderSubcommand(
+cl::SubCommand OrderSubcommand(
     "order",
     "Reads temporal profiling traces from a profile and outputs a function "
     "order that reduces the number of page faults for those traces. See "
     "detailed documentation in "
     "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-order");
-static cl::SubCommand OverlapSubcommand(
+cl::SubCommand OverlapSubcommand(
     "overlap",
     "Computes and displays the overlap between two profiles. See detailed "
     "documentation in "
     "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-overlap");
-static cl::SubCommand MergeSubcommand(
+cl::SubCommand MergeSubcommand(
     "merge",
     "Takes several profiles and merge them together. See detailed "
     "documentation in "
@@ -91,11 +92,12 @@ enum class ShowFormat { Text, Json, Yaml };
 } // namespace
 
 // Common options.
-static cl::opt<std::string>
-    OutputFilename("output", cl::value_desc("output"), cl::init("-"),
-                   cl::desc("Output file"), cl::sub(ShowSubcommand),
-                   cl::sub(OrderSubcommand), cl::sub(OverlapSubcommand),
-                   cl::sub(MergeSubcommand));
+cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
+                                    cl::init("-"), cl::desc("Output file"),
+                                    cl::sub(ShowSubcommand),
+                                    cl::sub(OrderSubcommand),
+                                    cl::sub(OverlapSubcommand),
+                                    cl::sub(MergeSubcommand));
 // NOTE: cl::alias must not have cl::sub(), since aliased option's cl::sub()
 // will be used. llvm::cl::alias::done() method asserts this condition.
 static cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
@@ -525,9 +527,9 @@ static void exitWithError(Twine Message, StringRef Whence = "",
 static void exitWithError(Error E, StringRef Whence = "") {
   if (E.isA<InstrProfError>()) {
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
-      instrprof_error InstrError = IPE.get();
+      instrprof_error instrError = IPE.get();
       StringRef Hint = "";
-      if (InstrError == instrprof_error::unrecognized_format) {
+      if (instrError == instrprof_error::unrecognized_format) {
         // Hint in case user missed specifying the profile type.
         Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
@@ -634,7 +636,7 @@ public:
     return New.empty() ? Name : FunctionId(New);
   }
 };
-} // namespace
+}
 
 struct WeightedFile {
   std::string Filename;
@@ -824,18 +826,18 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       // Only show hint the first time an error occurs.
       auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
       std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
-      bool FirstTime = WC->WriterErrorCodes.insert(ErrCode).second;
+      bool firstTime = WC->WriterErrorCodes.insert(ErrCode).second;
       handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
-                             Input.Filename, FuncName, FirstTime);
+                             Input.Filename, FuncName, firstTime);
     });
   }
 
   if (KeepVTableSymbols) {
-    const InstrProfSymtab &Symtab = Reader->getSymtab();
-    const auto &VTableNames = Symtab.getVTableNames();
+    const InstrProfSymtab &symtab = Reader->getSymtab();
+    const auto &VTableNames = symtab.getVTableNames();
 
-    for (const auto &KV : VTableNames)
-      WC->Writer.addVTableName(KV.getKey());
+    for (const auto &kv : VTableNames)
+      WC->Writer.addVTableName(kv.getKey());
   }
 
   if (Reader->hasTemporalProfile()) {
@@ -876,8 +878,8 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
     std::unique_lock<std::mutex> ErrGuard{Dst->ErrLock};
-    bool FirstTime = Dst->WriterErrorCodes.insert(ErrorCode).second;
-    if (FirstTime)
+    bool firstTime = Dst->WriterErrorCodes.insert(ErrorCode).second;
+    if (firstTime)
       warn(toString(make_error<InstrProfError>(ErrorCode, Msg)));
   });
 }
@@ -887,22 +889,24 @@ getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
   return Val.first();
 }
 
-static std::string getFuncName(const SampleProfileMap::value_type &Val) {
+static std::string
+getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T> static void filterFunctions(T &ProfileMap) {
-  bool HasFilter = !FuncNameFilter.empty();
-  bool HasNegativeFilter = !FuncNameNegativeFilter.empty();
-  if (!HasFilter && !HasNegativeFilter)
+template <typename T>
+static void filterFunctions(T &ProfileMap) {
+  bool hasFilter = !FuncNameFilter.empty();
+  bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
+  if (!hasFilter && !hasNegativeFilter)
     return;
 
   // If filter starts with '?' it is MSVC mangled name, not a regex.
   llvm::Regex ProbablyMSVCMangledName("[?@$_0-9A-Za-z]+");
-  if (HasFilter && FuncNameFilter[0] == '?' &&
+  if (hasFilter && FuncNameFilter[0] == '?' &&
       ProbablyMSVCMangledName.match(FuncNameFilter))
     FuncNameFilter = llvm::Regex::escape(FuncNameFilter);
-  if (HasNegativeFilter && FuncNameNegativeFilter[0] == '?' &&
+  if (hasNegativeFilter && FuncNameNegativeFilter[0] == '?' &&
       ProbablyMSVCMangledName.match(FuncNameNegativeFilter))
     FuncNameNegativeFilter = llvm::Regex::escape(FuncNameNegativeFilter);
 
@@ -910,9 +914,9 @@ template <typename T> static void filterFunctions(T &ProfileMap) {
   llvm::Regex Pattern(FuncNameFilter);
   llvm::Regex NegativePattern(FuncNameNegativeFilter);
   std::string Error;
-  if (HasFilter && !Pattern.isValid(Error))
+  if (hasFilter && !Pattern.isValid(Error))
     exitWithError(Error);
-  if (HasNegativeFilter && !NegativePattern.isValid(Error))
+  if (hasNegativeFilter && !NegativePattern.isValid(Error))
     exitWithError(Error);
 
   // Handle MD5 profile, so it is still able to match using the original name.
@@ -924,10 +928,10 @@ template <typename T> static void filterFunctions(T &ProfileMap) {
     auto Tmp = I++;
     const auto &FuncName = getFuncName(*Tmp);
     // Negative filter has higher precedence than positive filter.
-    if ((HasNegativeFilter &&
+    if ((hasNegativeFilter &&
          (NegativePattern.match(FuncName) ||
           (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
-        (HasFilter && !(Pattern.match(FuncName) ||
+        (hasFilter && !(Pattern.match(FuncName) ||
                         (FunctionSamples::UseMD5 && MD5Name == FuncName))))
       ProfileMap.erase(Tmp);
   }
@@ -1188,7 +1192,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   StringMap<StringRef> StaticFuncMap;
   InstrProfSummaryBuilder IPBuilder(ProfileSummaryBuilder::DefaultCutoffs);
 
-  auto CheckSampleProfileHasFUnique = [&Reader]() {
+  auto checkSampleProfileHasFUnique = [&Reader]() {
     for (const auto &PD : Reader->getProfiles()) {
       auto &FContext = PD.second.getContext();
       if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
@@ -1199,9 +1203,9 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     return false;
   };
 
-  bool SampleProfileHasFUnique = CheckSampleProfileHasFUnique();
+  bool SampleProfileHasFUnique = checkSampleProfileHasFUnique();
 
-  auto BuildStaticFuncMap = [&StaticFuncMap,
+  auto buildStaticFuncMap = [&StaticFuncMap,
                              SampleProfileHasFUnique](const StringRef Name) {
     std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
@@ -1361,7 +1365,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     InstrProfRecord *R = &PD.getValue().begin()->second;
     StringRef FullName = PD.getKey();
     InstrProfileMap[FullName] = InstrProfileEntry(R);
-    BuildStaticFuncMap(FullName);
+    buildStaticFuncMap(FullName);
   }
 
   for (auto &PD : Reader->getProfiles()) {
@@ -1492,8 +1496,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    MaskedDiscriminator, Remapper(Target.first),
-                                    Target.second);
+                                    MaskedDiscriminator,
+                                    Remapper(Target.first), Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -1754,7 +1758,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
     if (SanitizedEntry.starts_with("#"))
       continue;
     // If there's no comma, it's an unweighted profile.
-    if (!SanitizedEntry.contains(','))
+    else if (!SanitizedEntry.contains(','))
       addWeightedInput(WFV, {std::string(SanitizedEntry), 1});
     else
       addWeightedInput(WFV, parseWeightedFile(SanitizedEntry));
@@ -2735,11 +2739,10 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   return std::error_code();
 }
 
-static void overlapSampleProfile(const std::string &BaseFilename,
-                                 const std::string &TestFilename,
-                                 const OverlapFuncFilters &FuncFilter,
-                                 uint64_t SimilarityCutoff,
-                                 raw_fd_ostream &OS) {
+void overlapSampleProfile(const std::string &BaseFilename,
+                          const std::string &TestFilename,
+                          const OverlapFuncFilters &FuncFilter,
+                          uint64_t SimilarityCutoff, raw_fd_ostream &OS) {
   using namespace sampleprof;
 
   // We use 0.000005 to initialize OverlapAggr.Epsilon because the final metrics
@@ -2870,7 +2873,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     OS << ":ir\n";
 
   for (const auto &Func : *Reader) {
-    if (IsIRInstr) {
+    if (Reader->isIRLevelProfile()) {
       bool FuncIsCS = NamedInstrProfRecord::hasCSFlagInHash(Func.Hash);
       if (FuncIsCS != ShowCS)
         continue;
@@ -2878,7 +2881,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     bool Show = ShowAllFunctions ||
                 (!FuncNameFilter.empty() && Func.Name.contains(FuncNameFilter));
 
-    if (Show && TextFormat) {
+    bool doTextFormatDump = (Show && TextFormat);
+
+    if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
       InstrProfWriter::writeRecordInText(Func.Name, Func.Hash, Func, Symtab,
                                          OS);
@@ -2916,9 +2921,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
     }
 
-    for (const auto &Count : Func.Counts) {
-      FuncMax = std::max(FuncMax, Count);
-      FuncSum += Count;
+    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
+      FuncMax = std::max(FuncMax, Func.Counts[I]);
+      FuncSum += Func.Counts[I];
     }
 
     if (FuncMax < ShowValueCutoff) {
@@ -2928,8 +2933,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
            << " Sum = " << FuncSum << ")\n";
       }
       continue;
-    }
-    if (OnlyListBelow)
+    } else if (OnlyListBelow)
       continue;
 
     if (TopNFunctions || ShowHotFuncList)
@@ -2996,8 +3000,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (TextFormat || ShowCovered)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
-  OS << "Instrumentation level: " << (IsIRInstr ? "IR" : "Front-end");
-  if (IsIRInstr) {
+  bool IsIR = Reader->isIRLevelProfile();
+  OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
+  if (IsIR) {
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
     OS << "  instrument_loop_entries = " << Reader->instrLoopEntriesEnabled();
   }
@@ -3065,10 +3070,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     auto &Traces = Reader->getTemporalProfTraces();
     OS << "Temporal Profile Traces (samples=" << Traces.size()
        << " seen=" << Reader->getTemporalProfTraceStreamSize() << "):\n";
-    for (auto [Index, Trace] : llvm::enumerate(Traces)) {
-      OS << "  Temporal Profile Trace " << Index << " (weight=" << Trace.Weight
-         << " count=" << Trace.FunctionNameRefs.size() << "):\n";
-      for (auto &NameRef : Trace.FunctionNameRefs)
+    for (unsigned i = 0; i < Traces.size(); i++) {
+      OS << "  Temporal Profile Trace " << i << " (weight=" << Traces[i].Weight
+         << " count=" << Traces[i].FunctionNameRefs.size() << "):\n";
+      for (auto &NameRef : Traces[i].FunctionNameRefs)
         OS << "    " << Reader->getSymtab().getFuncOrVarName(NameRef) << "\n";
     }
   }
@@ -3381,8 +3386,7 @@ static int show_main(StringRef ProgName) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
-    WithColor::warning()
-        << "-function argument ignored: showing all functions\n";
+    WithColor::warning() << "-function argument ignored: showing all functions\n";
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);

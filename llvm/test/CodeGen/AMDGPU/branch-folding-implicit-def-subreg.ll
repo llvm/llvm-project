@@ -766,10 +766,10 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr10 = COPY renamable $sgpr22, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr12_vgpr13 = DS_READ_B64_gfx9 killed renamable $vgpr10, 0, 0, implicit $exec :: (load (s64) from %ir.8, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr10 = COPY renamable $sgpr46, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr11 = V_ALIGNBIT_B32_e64 killed $sgpr47, killed $vgpr10, 1, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr52 = V_ALIGNBIT_B32_e64 $vgpr17, $vgpr16, 1, implicit $exec
+  ; GFX90A-NEXT:   renamable $vgpr11 = V_ALIGNBIT_B32_opsel_e64 0, killed $sgpr47, 0, killed $vgpr10, 0, 1, 0, 0, implicit $exec
+  ; GFX90A-NEXT:   renamable $vgpr52 = V_ALIGNBIT_B32_opsel_e64 0, $vgpr17, 0, $vgpr16, 0, 1, 0, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr17 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr12_sgpr13, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr15 = V_ALIGNBIT_B32_e64 $vgpr15, $vgpr14, 1, implicit $exec
+  ; GFX90A-NEXT:   renamable $vgpr15 = V_ALIGNBIT_B32_opsel_e64 0, $vgpr15, 0, $vgpr14, 0, 1, 0, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_XOR_B64 $exec, -1, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_OR_B64 renamable $sgpr36_sgpr37, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $vgpr10 = COPY renamable $vgpr14, implicit $exec
