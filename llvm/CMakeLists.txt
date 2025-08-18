@@ -891,7 +891,8 @@ option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
 
-if(UNIX AND CMAKE_SIZEOF_VOID_P GREATER_EQUAL 8)
+# Default to build OnDiskCAS on 64-bit systems.
+if(CMAKE_SIZEOF_VOID_P GREATER_EQUAL 8)
   set(LLVM_ENABLE_ONDISK_CAS_default ON)
 else()
   set(LLVM_ENABLE_ONDISK_CAS_default OFF)

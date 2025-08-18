@@ -97,6 +97,13 @@ public:
   MappedFileRegionBumpPtr &operator=(const MappedFileRegionBumpPtr &) = delete;
 
 private:
+  // The file size increment to extend the storage size.
+  // The minimum increment is a page, but allocate more to amortize the cost.
+  static constexpr int64_t Increment = 4 * 1024 * 1024; // 4 MB
+
+  // Extend the AllocatedSize to be enough to hold NewEnd.
+  Error extendSpaceImpl(int64_t NewEnd);
+
   void destroyImpl();
   void moveImpl(MappedFileRegionBumpPtr &RHS) {
     std::swap(Region, RHS.Region);
@@ -114,7 +121,9 @@ private:
   RegionT Region;
   Header *H = nullptr;
   std::string Path;
+  // File descriptor for the main storage file.
   std::optional<int> FD;
+  // File descriptor for the file used as reader/writer lock.
   std::optional<int> SharedLockFD;
 };
 

@@ -9,6 +9,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
@@ -51,7 +52,7 @@ protected:
       ArrayRef<char> Ref{reinterpret_cast<char const *>(Var),
                          Len * sizeof(*Var)};
       EnvStorage.emplace_back();
-      auto convStatus = convertUTF16ToUTF8String(Ref, EnvStorage.back());
+      auto convStatus = llvm::convertUTF16ToUTF8String(Ref, EnvStorage.back());
       EXPECT_TRUE(convStatus);
       return EnvStorage.back();
 #else
