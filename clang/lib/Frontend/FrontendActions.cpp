@@ -1160,7 +1160,6 @@ void DumpCompilerOptionsAction::ExecuteAction() {
   const Preprocessor &PP = CI.getPreprocessor();
   const LangOptions &LangOpts = PP.getLangOpts();
 
-
   // FIXME: Rather than manually format the JSON (which is awkward due to
   // needing to remove trailing commas), this should make use of a JSON library.
   // FIXME: Instead of printing enums as an integral value and specifying the
