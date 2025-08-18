@@ -4538,6 +4538,7 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
     struct S {
       void foo1(int a);
       void foo2(int a) const;
+      void foo2(this const S& self, float a);
       void foo3(this const S& self, int a);
       void foo4(this S& self, int a);
     };
@@ -4587,6 +4588,8 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("foo2"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("foo4"), signature("(int a)"),
@@ -4599,6 +4602,8 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
         Result.Completions,
         UnorderedElementsAre(AllOf(named("foo2"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})"))));
   }
@@ -4609,6 +4614,8 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
         Result.Completions,
         UnorderedElementsAre(AllOf(named("foo2"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})"))));
   }
@@ -4621,6 +4628,8 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("foo2"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("foo4"), signature("(int a)"),
@@ -4635,6 +4644,8 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("foo2"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("foo4"), signature("(int a)"),
@@ -4647,6 +4658,8 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
         Result.Completions,
         UnorderedElementsAre(AllOf(named("foo2"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})"))));
   }
