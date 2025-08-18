@@ -5612,8 +5612,12 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     if (VecTy->getElementType()->isIntegerTy(1))
       return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
 
+    // OpenCL uses the MSB of the mask vector.
     llvm::Value *ZeroVec = llvm::Constant::getNullValue(VecTy);
-    CondV = Builder.CreateICmpNE(CondV, ZeroVec, "vector_cond");
+    if (condExpr->getType()->isExtVectorType())
+      CondV = Builder.CreateICmpSLT(CondV, ZeroVec, "vector_cond");
+    else
+      CondV = Builder.CreateICmpNE(CondV, ZeroVec, "vector_cond");
     return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
   }
 

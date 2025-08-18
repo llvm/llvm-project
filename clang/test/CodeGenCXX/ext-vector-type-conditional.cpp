@@ -42,17 +42,17 @@ double some_double;
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @two_ints, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @two_ints, align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @two_ints, align 8
-// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp ne <2 x i32> [[TMP0]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp slt <2 x i32> [[TMP0]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <2 x i1> [[VECTOR_COND]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr @two_ints, align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr @two_floats, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr @two_floats, align 8
-// CHECK-NEXT:    [[VECTOR_COND1:%.*]] = icmp ne <2 x i32> [[TMP3]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND1:%.*]] = icmp slt <2 x i32> [[TMP3]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT2:%.*]] = select <2 x i1> [[VECTOR_COND1]], <2 x float> [[TMP4]], <2 x float> [[TMP5]]
 // CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr @two_ll, align 16
 // CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr @two_doubles, align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr @two_doubles, align 16
-// CHECK-NEXT:    [[VECTOR_COND3:%.*]] = icmp ne <2 x i64> [[TMP6]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND3:%.*]] = icmp slt <2 x i64> [[TMP6]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT4:%.*]] = select <2 x i1> [[VECTOR_COND3]], <2 x double> [[TMP7]], <2 x double> [[TMP8]]
 // CHECK-NEXT:    [[LOAD_BITS:%.*]] = load i8, ptr @two_bools, align 1
 // CHECK-NEXT:    [[TMP9:%.*]] = bitcast i8 [[LOAD_BITS]] to <8 x i1>
@@ -90,7 +90,7 @@ void TwoVectorOps() {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr @some_short, align 2
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT1:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT2:%.*]] = shufflevector <4 x i16> [[SPLAT_SPLATINSERT1]], <4 x i16> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp ne <4 x i16> [[TMP0]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp slt <4 x i16> [[TMP0]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <4 x i1> [[VECTOR_COND]], <4 x i16> [[SPLAT_SPLAT]], <4 x i16> [[SPLAT_SPLAT2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr @four_shorts, align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr @some_ushort, align 2
@@ -99,7 +99,7 @@ void TwoVectorOps() {
 // CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr @some_ushort, align 2
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP5]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT6:%.*]] = shufflevector <4 x i16> [[SPLAT_SPLATINSERT5]], <4 x i16> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND7:%.*]] = icmp ne <4 x i16> [[TMP3]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND7:%.*]] = icmp slt <4 x i16> [[TMP3]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT8:%.*]] = select <4 x i1> [[VECTOR_COND7]], <4 x i16> [[SPLAT_SPLAT4]], <4 x i16> [[SPLAT_SPLAT6]]
 // CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr @four_ints, align 16
 // CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr @some_ushort, align 2
@@ -110,7 +110,7 @@ void TwoVectorOps() {
 // CHECK-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP8]] to i32
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT12:%.*]] = insertelement <4 x i32> poison, i32 [[CONV11]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT12]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND14:%.*]] = icmp ne <4 x i32> [[TMP6]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND14:%.*]] = icmp slt <4 x i32> [[TMP6]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT15:%.*]] = select <4 x i1> [[VECTOR_COND14]], <4 x i32> [[SPLAT_SPLAT10]], <4 x i32> [[SPLAT_SPLAT13]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, ptr @four_ints, align 16
 // CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr @some_int, align 4
@@ -120,7 +120,7 @@ void TwoVectorOps() {
 // CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr @some_float, align 4
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT19:%.*]] = insertelement <4 x float> poison, float [[TMP11]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT20:%.*]] = shufflevector <4 x float> [[SPLAT_SPLATINSERT19]], <4 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND21:%.*]] = icmp ne <4 x i32> [[TMP9]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND21:%.*]] = icmp slt <4 x i32> [[TMP9]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT22:%.*]] = select <4 x i1> [[VECTOR_COND21]], <4 x float> [[SPLAT_SPLAT18]], <4 x float> [[SPLAT_SPLAT20]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i64>, ptr @four_ll, align 32
 // CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr @some_double, align 8
@@ -130,7 +130,7 @@ void TwoVectorOps() {
 // CHECK-NEXT:    [[CONV25:%.*]] = sitofp i64 [[TMP14]] to double
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT26:%.*]] = insertelement <4 x double> poison, double [[CONV25]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT27:%.*]] = shufflevector <4 x double> [[SPLAT_SPLATINSERT26]], <4 x double> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND28:%.*]] = icmp ne <4 x i64> [[TMP12]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND28:%.*]] = icmp slt <4 x i64> [[TMP12]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT29:%.*]] = select <4 x i1> [[VECTOR_COND28]], <4 x double> [[SPLAT_SPLAT24]], <4 x double> [[SPLAT_SPLAT27]]
 // CHECK-NEXT:    [[TMP15:%.*]] = load <4 x i32>, ptr @four_ints, align 16
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr @some_int, align 4
@@ -140,7 +140,7 @@ void TwoVectorOps() {
 // CHECK-NEXT:    [[CONV32:%.*]] = sext i16 [[TMP17]] to i32
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[CONV32]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT34:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT33]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND35:%.*]] = icmp ne <4 x i32> [[TMP15]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND35:%.*]] = icmp slt <4 x i32> [[TMP15]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT36:%.*]] = select <4 x i1> [[VECTOR_COND35]], <4 x i32> [[SPLAT_SPLAT31]], <4 x i32> [[SPLAT_SPLAT34]]
 // CHECK-NEXT:    ret void
 //
@@ -166,26 +166,26 @@ void TwoScalarOps() {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @some_int, align 4
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp slt <4 x i32> [[TMP0]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <4 x i1> [[VECTOR_COND]], <4 x i32> [[TMP1]], <4 x i32> [[SPLAT_SPLAT]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @four_ints, align 16
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr @four_ints, align 16
-// CHECK-NEXT:    [[VECTOR_COND1:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND1:%.*]] = icmp slt <4 x i32> [[TMP3]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT2:%.*]] = select <4 x i1> [[VECTOR_COND1]], <4 x i32> [[TMP4]], <4 x i32> splat (i32 5)
 // CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr @four_ints, align 16
 // CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr @four_floats, align 16
 // CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr @some_float, align 4
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT3:%.*]] = insertelement <4 x float> poison, float [[TMP7]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT4:%.*]] = shufflevector <4 x float> [[SPLAT_SPLATINSERT3]], <4 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND5:%.*]] = icmp ne <4 x i32> [[TMP5]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND5:%.*]] = icmp slt <4 x i32> [[TMP5]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT6:%.*]] = select <4 x i1> [[VECTOR_COND5]], <4 x float> [[TMP6]], <4 x float> [[SPLAT_SPLAT4]]
 // CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i64>, ptr @four_ll, align 32
 // CHECK-NEXT:    [[TMP9:%.*]] = load <4 x double>, ptr @four_doubles, align 32
-// CHECK-NEXT:    [[VECTOR_COND7:%.*]] = icmp ne <4 x i64> [[TMP8]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND7:%.*]] = icmp slt <4 x i64> [[TMP8]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT8:%.*]] = select <4 x i1> [[VECTOR_COND7]], <4 x double> [[TMP9]], <4 x double> splat (double 6.000000e+00)
 // CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i64>, ptr @four_ll, align 32
 // CHECK-NEXT:    [[TMP11:%.*]] = load <4 x i64>, ptr @four_ll, align 32
-// CHECK-NEXT:    [[VECTOR_COND9:%.*]] = icmp ne <4 x i64> [[TMP10]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND9:%.*]] = icmp slt <4 x i64> [[TMP10]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT10:%.*]] = select <4 x i1> [[VECTOR_COND9]], <4 x i64> [[TMP11]], <4 x i64> splat (i64 6)
 // CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i64>, ptr @four_ll, align 32
 // CHECK-NEXT:    [[TMP13:%.*]] = load <4 x i64>, ptr @four_ll, align 32
@@ -193,14 +193,14 @@ void TwoScalarOps() {
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP14]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT11:%.*]] = insertelement <4 x i64> poison, i64 [[CONV]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <4 x i64> [[SPLAT_SPLATINSERT11]], <4 x i64> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND13:%.*]] = icmp ne <4 x i64> [[TMP12]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND13:%.*]] = icmp slt <4 x i64> [[TMP12]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT14:%.*]] = select <4 x i1> [[VECTOR_COND13]], <4 x i64> [[TMP13]], <4 x i64> [[SPLAT_SPLAT12]]
 // CHECK-NEXT:    [[TMP15:%.*]] = load <4 x i64>, ptr @four_ll, align 32
 // CHECK-NEXT:    [[TMP16:%.*]] = load <4 x i64>, ptr @four_ll, align 32
 // CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr @some_ll, align 8
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP17]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <4 x i64> [[SPLAT_SPLATINSERT15]], <4 x i64> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[VECTOR_COND17:%.*]] = icmp ne <4 x i64> [[TMP15]], zeroinitializer
+// CHECK-NEXT:    [[VECTOR_COND17:%.*]] = icmp slt <4 x i64> [[TMP15]], zeroinitializer
 // CHECK-NEXT:    [[VECTOR_SELECT18:%.*]] = select <4 x i1> [[VECTOR_COND17]], <4 x i64> [[TMP16]], <4 x i64> [[SPLAT_SPLAT16]]
 // CHECK-NEXT:    ret void
 //
