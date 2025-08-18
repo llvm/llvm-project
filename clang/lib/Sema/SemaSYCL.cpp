@@ -397,10 +397,7 @@ CompoundStmt *BuildSYCLKernelLaunchStmt(Sema &SemaRef, FunctionDecl *FD,
   ASTContext &Ctx = SemaRef.getASTContext();
   SmallVector<Stmt *> Stmts;
 
-  // Prepare a string literal that contains the kernel name in the ordinary
-  // literal encoding.
-  // FIXME: transcode the contents of KernelName from UTF-8 to the
-  // ordinary literal encoding.
+  // Prepare a string literal that contains the kernel name.
   QualType KernelNameCharTy = Ctx.CharTy.withConst();
   llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
                              KernelName.size() + 1);

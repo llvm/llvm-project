@@ -44,19 +44,24 @@ void kernel_single_task(KernelType kernelFunc) {
   kernelFunc(42);
 }
 
+// Exercise code gen with kernel name types named with esoteric characters.
+struct \u03b4\u03c4\u03c7; // Delta Tau Chi (δτχ)
+
 int main() {
   single_purpose_kernel obj;
   single_purpose_kernel_task(obj);
   int capture;
   auto lambda = [=](auto) { (void) capture; };
   kernel_single_task<decltype(lambda)>(lambda);
+  kernel_single_task<\u03b4\u03c4\u03c7>([](int){});
 }
 
 // Verify that SYCL kernel caller functions are not emitted during host
 // compilation.
 //
 // CHECK-HOST-NOT: define {{.*}} @_ZTS26single_purpose_kernel_name
-// CHECK-HOST-NOT: define {{.*}} @_ZTSZ4mainE18lambda_kernel_name
+// CHECK-HOST-NOT: define {{.*}} @_ZTSZ4mainEUlT_E_
+// CHECK-HOST-NOT: define {{.*}} @"_ZTS6\CE\B4\CF\84\CF\87"
 
 // Verify that sycl_kernel_entry_point attributed functions are not emitted
 // during device compilation.
@@ -66,6 +71,10 @@ int main() {
 
 // Verify that kernel launch code is generated for sycl_kernel_entry_point
 // attributed functions during host compilation.
+//
+// CHECK-HOST-LINUX:      @.str = private unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", align 1
+// CHECK-HOST-LINUX:      @.str.1 = private unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", align 1
+// CHECK-HOST-LINUX:      @.str.2 = private unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", align 1
 //
 // CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
@@ -80,6 +89,13 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   store i32 %kernelFunc.coerce, ptr %coerce.dive, align 4
 // CHECK-HOST-LINUX-NEXT:   store ptr @.str.1, ptr @kernel_name, align 8
+// CHECK-HOST-LINUX-NEXT:   ret void
+// CHECK-HOST-LINUX-NEXT: }
+//
+// CHECK-HOST-LINUX:      define internal void @"_Z18kernel_single_taskI6\CE\B4\CF\84\CF\87Z4mainEUliE_EvT0_"() #{{[0-9]+}} {
+// CHECK-HOST-LINUX-NEXT: entry:
+// CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %class.anon.0, align 1
+// CHECK-HOST-LINUX-NEXT:   store ptr @.str.2, ptr @kernel_name, align 8
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -98,6 +114,15 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   store i32 %kernelFunc.coerce, ptr %coerce.dive, align 4
 // CHECK-HOST-WINDOWS-NEXT:   store ptr @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@", ptr @"?kernel_name@?0???$kernel_single_task@V<lambda_1>@?0??main@@9@V1?0??2@9@@@YAXV<lambda_1>@?0??main@@9@@Z@3PEBDEB", align 8
+// CHECK-HOST-WINDOWS-NEXT:   ret void
+// CHECK-HOST-WINDOWS-NEXT: }
+//
+// CHECK-HOST-WINDOWS:      define internal void @"??$kernel_single_task@U\CE\B4\CF\84\CF\87@@V<lambda_2>@?0??main@@9@@@YAXV<lambda_2>@?0??main@@9@@Z"(i8 %kernelFunc.coerce) #{{[0-9]+}} {
+// CHECK-HOST-WINDOWS-NEXT: entry:
+// CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %class.anon.0, align 1
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.0, ptr %kernelFunc, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   store i8 %kernelFunc.coerce, ptr %coerce.dive, align 1
+// CHECK-HOST-WINDOWS-NEXT:   store ptr @"??_C@_0M@BCGAEMBE@_ZTS6?N?$LE?O?$IE?O?$IH?$AA@", ptr @"?kernel_name@?0???$kernel_single_task@U\CE\B4\CF\84\CF\87@@V<lambda_2>@?0??main@@9@@@YAXV<lambda_2>@?0??main@@9@@Z@3PEBDEB", align 8
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 
@@ -181,6 +206,44 @@ int main() {
 // CHECK-SPIR-NEXT:     ret void
 // CHECK-SPIR-NEXT:   }
 // CHECK-SPIR:        define internal spir_func void @_ZZ4mainENKUlT_E_clIiEEDaS_
+
+// IR for the SYCL kernel caller function generated for kernel_single_task with
+// the Delta Tau Chi type as the SYCL kernel name type.
+//
+// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
+// CHECK-AMDGCN-SAME:   (ptr addrspace(4) noundef byref(%class.anon.0) align 1 %0) #[[AMDGCN_ATTR0]] {
+// CHECK-AMDGCN-NEXT: entry:
+// CHECK-AMDGCN-NEXT:   %coerce = alloca %class.anon.0, align 1, addrspace(5)
+// CHECK-AMDGCN-NEXT:   %kernelFunc = addrspacecast ptr addrspace(5) %coerce to ptr
+// CHECK-AMDGCN-NEXT:   call void @llvm.memcpy.p0.p4.i64(ptr align 1 %kernelFunc, ptr addrspace(4) align 1 %0, i64 1, i1 false)
+// CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUliE_clEi
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc, i32 noundef 42) #[[AMDGCN_ATTR1:[0-9]+]]
+// CHECK-AMDGCN-NEXT:   ret void
+// CHECK-AMDGCN-NEXT: }
+// CHECK-AMDGCN:      define internal void @_ZZ4mainENKUliE_clEi
+//
+// CHECK-NVPTX:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-NVPTX-NEXT:  define dso_local ptx_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
+// CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon.0) align 1 %kernelFunc) #[[NVPTX_ATTR0:[0-9]+]] {
+// CHECK-NVPTX-NEXT:  entry:
+// CHECK-NVPTX-NEXT:    call void @_ZZ4mainENKUliE_clEi
+// CHECK-NVPTX-SAME:      (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc, i32 noundef 42) #[[NVPTX_ATTR1:[0-9]+]]
+// CHECK-NVPTX-NEXT:    ret void
+// CHECK-NVPTX-NEXT:  }
+// CHECK-NVPTX:       define internal void @_ZZ4mainENKUliE_clEi
+//
+// CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
+// CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon.0) align 1 %kernelFunc) #[[SPIR_ATTR0:[0-9]+]] {
+// CHECK-SPIR-NEXT:   entry:
+// CHECK-SPIR-NEXT:     %kernelFunc.ascast = addrspacecast ptr %kernelFunc to ptr addrspace(4)
+// CHECK-SPIR-NEXT:     call spir_func void @_ZZ4mainENKUliE_clEi
+// CHECK-SPIR-SAME:       (ptr addrspace(4) noundef align 1 dereferenceable_or_null(1) %kernelFunc.ascast, i32 noundef 42) #[[SPIR_ATTR1:[0-9]+]]
+// CHECK-SPIR-NEXT:     ret void
+// CHECK-SPIR-NEXT:   }
+// CHECK-SPIR:        define internal spir_func void @_ZZ4mainENKUliE_clEi
+
 
 // CHECK-AMDGCN: #[[AMDGCN_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK-AMDGCN: #[[AMDGCN_ATTR1]] = { convergent nounwind }

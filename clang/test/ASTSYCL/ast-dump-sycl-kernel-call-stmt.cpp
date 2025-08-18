@@ -319,6 +319,27 @@ void skep7(S7 k) {
 // CHECK-NEXT: | |         `-DeclRefExpr {{.*}} 'S7' lvalue ImplicitParam {{.*}} 'k' 'S7'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<7>
 
+// Symbol names generated for the kernel entry point function should be
+// representable in the ordinary literal encoding even when the kernel name
+// type is named with esoteric characters.
+struct \u03b4\u03c4\u03c7; // Delta Tau Chi (δτχ)
+struct S8 {
+  void operator()() const;
+};
+[[clang::sycl_kernel_entry_point(\u03b4\u03c4\u03c7)]]
+void skep8(S8 k) {
+  k();
+}
+// CHECK:      |-FunctionDecl {{.*}} skep8 'void (S8)'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used k 'S8'
+// CHECK-NEXT: | |-SYCLKernelCallStmt {{.*}}
+// CHECK-NEXT: | | |-CompoundStmt {{.*}}
+// CHECK:      | | |-CompoundStmt {{.*}}
+// CHECK:      | | |   `-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
+// CHECK-NEXT: | | |     `-StringLiteral {{.*}} 'const char[12]' lvalue "_ZTS6\316\264\317\204\317\207"
+// CHECK:      | | `-OutlinedFunctionDecl {{.*}}
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}}
+
 
 void the_end() {}
 // CHECK:      `-FunctionDecl {{.*}} the_end 'void ()'
