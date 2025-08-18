@@ -691,6 +691,12 @@ psas.hx s0, a0, a2
 # CHECK-ASM-AND-OBJ: pssa.hx a0, t1, t5
 # CHECK-ASM: encoding: [0x3b,0x65,0xe3,0x95]
 pssa.hx a0, t1, t5
+# CHECK-ASM-AND-OBJ: paas.hx t1, a2, s0
+# CHECK-ASM: encoding: [0x3b,0x63,0x86,0x98]
+paas.hx t1, a2, s0
+# CHECK-ASM-AND-OBJ: pasa.hx t1, s2, t3
+# CHECK-ASM: encoding: [0x3b,0x63,0xc9,0x9d]
+pasa.hx t1, s2, t3
 # CHECK-ASM-AND-OBJ: pmseq.h t3, s0, t1
 # CHECK-ASM: encoding: [0x3b,0x6e,0x64,0xc0]
 pmseq.h t3, s0, t1
@@ -802,9 +808,9 @@ pmulh.h.b0 t1, a0, a0
 # CHECK-ASM-AND-OBJ: pmulhsu.h.b0 t3, s0, a4
 # CHECK-ASM: encoding: [0x3b,0x7e,0xe4,0xa4]
 pmulhsu.h.b0 t3, s0, a4
-# CHECK-ASM-AND-OBJ: pmhaccu.h.b0 t1, a0, a4
+# CHECK-ASM-AND-OBJ: pmhacc.h.b0 t1, a0, a4
 # CHECK-ASM: encoding: [0x3b,0x73,0xe5,0xa8]
-pmhaccu.h.b0 t1, a0, a4
+pmhacc.h.b0 t1, a0, a4
 # CHECK-ASM-AND-OBJ: pmhaccsu.h.b0 s2, t5, t3
 # CHECK-ASM: encoding: [0x3b,0x79,0xcf,0xad]
 pmhaccsu.h.b0 s2, t5, t3
