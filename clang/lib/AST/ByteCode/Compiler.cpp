@@ -2980,20 +2980,25 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     if (T && !E->isLValue())
       return this->delegate(Init);
 
-    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
-      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+    if (!GlobalIndex)
+      return false;
+
+    if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+      return false;
+
+    // Since this is a global variable, we might've already seen,
+    // don't do it again.
+    if (P.isGlobalInitialized(*GlobalIndex))
+      return true;
+
+    if (T) {
+      if (!this->visit(Init))
         return false;
-
-      if (T) {
-        if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*T, *GlobalIndex, E);
-      }
-
-      return this->visitInitializer(Init) && this->emitFinishInit(E);
+      return this->emitInitGlobal(*T, *GlobalIndex, E);
     }
 
-    return false;
+    return this->visitInitializer(Init) && this->emitFinishInit(E);
   }
 
   // Otherwise, use a local variable.
