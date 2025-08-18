@@ -6,7 +6,7 @@
 
 # RELOC:       Relocations [
 # RELOC:         .rela.eh_frame {
-# RELOC-NEXT:       0x1C R_LARCH_32_PCREL .text 0x0
+# RELOC-NEXT:       0x1C R_LARCH_32_PCREL .L{{.*}} 0x0
 # RELOC-NEXT:    }
 # RELOC-NEXT:  ]
 # DWARFDUMP:       DW_CFA_advance_loc: 8

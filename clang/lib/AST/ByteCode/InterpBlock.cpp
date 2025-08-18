@@ -18,10 +18,6 @@ using namespace clang::interp;
 
 void Block::addPointer(Pointer *P) {
   assert(P);
-  if (IsStatic) {
-    assert(!Pointers);
-    return;
-  }
 
 #ifndef NDEBUG
   assert(!hasPointer(P));
@@ -39,10 +35,6 @@ void Block::addPointer(Pointer *P) {
 void Block::removePointer(Pointer *P) {
   assert(P->isBlockPointer());
   assert(P);
-  if (IsStatic) {
-    assert(!Pointers);
-    return;
-  }
 
 #ifndef NDEBUG
   assert(hasPointer(P));
@@ -74,10 +66,6 @@ void Block::replacePointer(Pointer *Old, Pointer *New) {
   assert(New);
   assert(New->isBlockPointer());
   assert(Old != New);
-  if (IsStatic) {
-    assert(!Pointers);
-    return;
-  }
 #ifndef NDEBUG
   assert(hasPointer(Old));
 #endif

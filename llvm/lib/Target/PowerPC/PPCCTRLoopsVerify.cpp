@@ -93,7 +93,7 @@ static bool clobbersCTR(const MachineInstr &MI) {
 static bool verifyCTRBranch(MachineBasicBlock *MBB,
                             MachineBasicBlock::iterator I) {
   MachineBasicBlock::iterator BI = I;
-  SmallSet<MachineBasicBlock *, 16>   Visited;
+  SmallPtrSet<MachineBasicBlock *, 16> Visited;
   SmallVector<MachineBasicBlock *, 8> Preds;
   bool CheckPreds;
 

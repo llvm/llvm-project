@@ -1613,7 +1613,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (CurrMaxExit == MaxBECount)
       SkipLastIter = true;
   };
-  SmallSet<const SCEV *, 8> DominatingExactExitCounts;
+  SmallPtrSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
     const SCEV *MaxExitCount = SE->getExitCount(

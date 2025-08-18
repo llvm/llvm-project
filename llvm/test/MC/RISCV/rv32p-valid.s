@@ -376,3 +376,19 @@ ppackt.h t3, s0, s0
 # CHECK-ASM-AND-OBJ: packt a2, t3, t1
 # CHECK-ASM: encoding: [0x3b,0x46,0x6e,0xb2]
 packt a2, t3, t1
+
+# CHECK-ASM-AND-OBJ: pli.dh a4, 16
+# CHECK-ASM: encoding: [0x1b,0x27,0x10,0x30]
+pli.dh a4, 16
+# CHECK-ASM-AND-OBJ: pli.db a6, 16
+# CHECK-ASM: encoding: [0x1b,0x28,0x10,0x34]
+pli.db a6, 16
+# CHECK-ASM-AND-OBJ: pli.db a6, -128
+# CHECK-ASM: encoding: [0x1b,0x28,0x80,0x34]
+pli.db a6, -128
+# CHECK-ASM-AND-OBJ: plui.dh tp, 32
+# CHECK-ASM: encoding: [0x1b,0x22,0x08,0x70]
+plui.dh tp, 32
+# CHECK-ASM-AND-OBJ: plui.dh tp, -412
+# CHECK-ASM: encoding: [0x1b,0x22,0x99,0x70]
+plui.dh tp, 612

@@ -496,8 +496,7 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
 
 std::unique_ptr<MCObjectTargetWriter>
 LoongArchAsmBackend::createObjectTargetWriter() const {
-  return createLoongArchELFObjectWriter(
-      OSABI, Is64Bit, STI.hasFeature(LoongArch::FeatureRelax));
+  return createLoongArchELFObjectWriter(OSABI, Is64Bit);
 }
 
 MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,

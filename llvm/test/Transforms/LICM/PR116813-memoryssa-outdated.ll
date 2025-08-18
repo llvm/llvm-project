@@ -18,7 +18,7 @@ define i32 @foo(i1 %arg, ptr %arg1) {
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[UNSWITCHED_SELECT_US:%.*]] = phi ptr [ [[ARG1]], %[[BB0]] ]
 ; CHECK-NEXT:    [[I3_US:%.*]] = call i32 [[UNSWITCHED_SELECT_US]]()
-; CHECK-NEXT:    br i1 true, label %[[LOOP_US]], label %[[RET_SPLIT_US:.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_US]], label %[[RET_SPLIT_US:.*]]
 ; CHECK:       [[RET_SPLIT_US]]:
 ; CHECK-NEXT:    [[I3_LCSSA_US:%.*]] = phi i32 [ [[I3_US]], %[[BB1]] ]
 ; CHECK-NEXT:    br label %[[RET:.*]]

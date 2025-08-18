@@ -52,11 +52,11 @@ FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
     dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, 0));
 
   ArrayRef<int64_t> shape = type.getShape();
-  Value empty = rewriter.create<tensor::EmptyOp>(
-      loc, ArrayRef<int64_t>{shape[1], shape[0]}, type.getElementType(),
-      dynamicDims);
-  auto transposeOp = rewriter.create<linalg::TransposeOp>(
-      loc, input, empty, ArrayRef<int64_t>{1, 0});
+  Value empty = tensor::EmptyOp::create(rewriter, loc,
+                                        ArrayRef<int64_t>{shape[1], shape[0]},
+                                        type.getElementType(), dynamicDims);
+  auto transposeOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
+                                                 ArrayRef<int64_t>{1, 0});
   Operation *newMatmulOp;
   if (transposeLHS) {
     newMatmulOp = MatmulTransposeAOp::create(
@@ -112,8 +112,8 @@ mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
   Value empty = tensor::EmptyOp::create(
       rewriter, loc, ArrayRef<int64_t>{shape[0], shape[2], shape[1]},
       type.getElementType(), dynamicDims);
-  auto transposeOp = rewriter.create<linalg::TransposeOp>(
-      loc, input, empty, ArrayRef<int64_t>{0, 2, 1});
+  auto transposeOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
+                                                 ArrayRef<int64_t>{0, 2, 1});
   Operation *newMatmulOp;
   if (transposeLHS) {
     newMatmulOp = BatchMatmulTransposeAOp::create(

@@ -479,10 +479,12 @@ public:
   /// respect to a positive constant `divisor`. Two constraints are added to the
   /// system to capture equivalence with the floordiv:
   /// q = dividend floordiv c    <=>   c*q <= dividend <= c*q + c - 1.
-  void addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
-                        const DynamicAPInt &divisor);
-  void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
-    addLocalFloorDiv(getDynamicAPIntVec(dividend), DynamicAPInt(divisor));
+  /// Returns the column position of the new local variable.
+  unsigned addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
+                            const DynamicAPInt &divisor);
+  unsigned addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
+    return addLocalFloorDiv(getDynamicAPIntVec(dividend),
+                            DynamicAPInt(divisor));
   }
 
   /// Adds a new local variable as the modulus of an affine function of other

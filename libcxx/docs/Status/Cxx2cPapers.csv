@@ -66,7 +66,7 @@
 "`P2747R2 <https://wg21.link/P2747R2>`__","``constexpr`` placement new","2024-06 (St. Louis)","|Complete|","20",""
 "`P2997R1 <https://wg21.link/P2997R1>`__","Removing the common reference requirement from the indirectly invocable concepts","2024-06 (St. Louis)","|Complete|","19","Implemented as a DR against C++20. (MSVC STL and libstdc++ will do the same.)"
 "`P2389R2 <https://wg21.link/P2389R2>`__","``dextents`` Index Type Parameter","2024-06 (St. Louis)","|Complete|","19",""
-"`P3168R2 <https://wg21.link/P3168R2>`__","Give ``std::optional`` Range Support","2024-06 (St. Louis)","","",""
+"`P3168R2 <https://wg21.link/P3168R2>`__","Give ``std::optional`` Range Support","2024-06 (St. Louis)","|Complete|","22",""
 "`P3217R0 <https://wg21.link/P3217R0>`__","Adjoints to 'Enabling list-initialization for algorithms': find_last","2024-06 (St. Louis)","","",""
 "`P2985R0 <https://wg21.link/P2985R0>`__","A type trait for detecting virtual base classes","2024-06 (St. Louis)","|Complete|","20",""
 "`P0843R14 <https://wg21.link/P0843R14>`__","``inplace_vector``","2024-06 (St. Louis)","","",""

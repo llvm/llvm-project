@@ -33,8 +33,8 @@ namespace {
 emitc::IncludeOp addStandardHeader(OpBuilder &builder, ModuleOp module,
                                    StringRef headerName) {
   StringAttr includeAttr = builder.getStringAttr(headerName);
-  return builder.create<emitc::IncludeOp>(
-      module.getLoc(), includeAttr,
+  return emitc::IncludeOp::create(
+      builder, module.getLoc(), includeAttr,
       /*is_standard_include=*/builder.getUnitAttr());
 }
 

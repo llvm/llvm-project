@@ -1357,17 +1357,10 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         // DsCnt corresponds to LGKMCnt here.
         return (Decoded.DsCnt == 0);
       }
-      case AMDGPU::S_WAIT_STORECNT:
-      case AMDGPU::S_WAIT_STORECNT_DSCNT:
-      case AMDGPU::S_WAIT_LOADCNT:
-      case AMDGPU::S_WAIT_LOADCNT_DSCNT:
-      case AMDGPU::S_WAIT_SAMPLECNT:
-      case AMDGPU::S_WAIT_BVHCNT:
-      case AMDGPU::S_WAIT_DSCNT:
-      case AMDGPU::S_WAIT_EXPCNT:
-      case AMDGPU::S_WAIT_KMCNT:
-        llvm_unreachable("unexpected wait count instruction");
       default:
+        assert((!SIInstrInfo::isWaitcnt(MI.getOpcode()) ||
+                MI.getOpcode() == AMDGPU::S_WAIT_IDLE) &&
+               "unexpected wait count instruction");
         // SOPP instructions cannot mitigate the hazard.
         if (TII->isSOPP(MI))
           return false;
@@ -2257,28 +2250,7 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     if (WaitStates >= 3 || SIInstrInfo::isVALU(MI))
       return true;
 
-    switch (MI.getOpcode()) {
-    case AMDGPU::S_WAITCNT:
-    case AMDGPU::S_WAITCNT_VSCNT:
-    case AMDGPU::S_WAITCNT_VMCNT:
-    case AMDGPU::S_WAITCNT_EXPCNT:
-    case AMDGPU::S_WAITCNT_LGKMCNT:
-    case AMDGPU::S_WAIT_IDLE:
-    case AMDGPU::S_WAIT_LOADCNT:
-    case AMDGPU::S_WAIT_LOADCNT_DSCNT:
-    case AMDGPU::S_WAIT_SAMPLECNT:
-    case AMDGPU::S_WAIT_BVHCNT:
-    case AMDGPU::S_WAIT_STORECNT:
-    case AMDGPU::S_WAIT_STORECNT_DSCNT:
-    case AMDGPU::S_WAIT_EXPCNT:
-    case AMDGPU::S_WAIT_DSCNT:
-    case AMDGPU::S_WAIT_KMCNT:
-      return true;
-    default:
-      break;
-    }
-
-    return false;
+    return SIInstrInfo::isWaitcnt(MI.getOpcode());
   };
 
   return FPAtomicToDenormModeWaitStates -

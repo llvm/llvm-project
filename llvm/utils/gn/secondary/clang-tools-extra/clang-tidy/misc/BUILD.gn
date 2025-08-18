@@ -46,6 +46,7 @@ static_library("misc") {
     "NoRecursionCheck.cpp",
     "NonCopyableObjects.cpp",
     "NonPrivateMemberVariablesInClassesCheck.cpp",
+    "OverrideWithDifferentVisibilityCheck.cpp",
     "RedundantExpressionCheck.cpp",
     "StaticAssertCheck.cpp",
     "ThrowByValueCatchByReferenceCheck.cpp",
