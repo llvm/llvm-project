@@ -251,7 +251,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
 
