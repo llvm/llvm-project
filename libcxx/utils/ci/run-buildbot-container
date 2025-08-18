@@ -20,6 +20,7 @@
 # --user $(id -u):$(id -g)
 
 set -e
+set -x
 
 MONOREPO_ROOT="$(git rev-parse --show-toplevel)"
 if [[ ! -d "${MONOREPO_ROOT}/libcxx/utils/ci" ]]; then
