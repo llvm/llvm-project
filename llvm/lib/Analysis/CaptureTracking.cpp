@@ -405,7 +405,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
 
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
-  SmallSet<const Use *, 20> Visited;
+  SmallPtrSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
     for (const Use &U : V->uses()) {
