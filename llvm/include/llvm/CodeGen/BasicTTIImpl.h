@@ -1444,9 +1444,10 @@ public:
                                        Op1);
   }
 
-  InstructionCost getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
-                                            TTI::TargetCostKind CostKind,
-                                            unsigned Index) const override {
+  InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override {
     unsigned NewIndex = -1;
     if (auto *FVTy = dyn_cast<FixedVectorType>(Val)) {
       assert(Index < FVTy->getNumElements() &&

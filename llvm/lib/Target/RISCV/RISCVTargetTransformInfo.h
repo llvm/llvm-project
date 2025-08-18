@@ -243,9 +243,10 @@ public:
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
 
-  InstructionCost getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
-                                            TTI::TargetCostKind CostKind,
-                                            unsigned Index) const override;
+  InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,

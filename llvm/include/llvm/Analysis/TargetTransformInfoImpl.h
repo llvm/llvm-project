@@ -810,9 +810,9 @@ public:
   }
 
   virtual InstructionCost
-  getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
-                            TTI::TargetCostKind CostKind,
-                            unsigned Index) const {
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const {
     return 1;
   }
 

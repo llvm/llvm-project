@@ -3987,11 +3987,12 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
 }
 
 InstructionCost
-AArch64TTIImpl::getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
-                                          TTI::TargetCostKind CostKind,
-                                          unsigned Index) const {
-  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Val))
-    return BaseT::getVectorInstrCostFromEnd(Opcode, Val, CostKind, Index);
+AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                                 TTI::TargetCostKind CostKind,
+                                                 unsigned Index) const {
+  if (isa<FixedVectorType>(Val))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
+                                                   Index);
 
   // This typically requires both while and lastb instructions in order
   // to extract the last element. If this is in a loop the while

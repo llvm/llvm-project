@@ -5301,8 +5301,8 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
       TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
       TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS, CostKind);
   if (!IsLoopInvariantStoreValue)
-    Cost += TTI.getVectorInstrCostFromEnd(Instruction::ExtractElement, VectorTy,
-                                          CostKind, 0);
+    Cost += TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
+                                                 VectorTy, CostKind, 0);
   return Cost;
 }
 
