@@ -66,26 +66,29 @@ void SystemZPreRASchedStrategy::initializePrioRegClasses(
 void SystemZPreRASchedStrategy::initializePressureSets(
     const TargetRegisterInfo *TRI) {
 
-  // In order to use the PDiff of an SU to deduce interesting liveness
-  // implications, only the interesting PressureSet is considered. This is
-  // the set that is shared between vector and FP regs (VR16Bit), or between
-  // GR64 and GR32 (GRX32Bit). The exact list of PressureSets and how they
-  // are affected by different register classes is determined by
-  // TableGen. These two PressureSet:s that are (currently) interesting are
-  // deduced from the code below, as to have something better than just
-  // hard-coding these.
+  // Based on the nature of the Vector/FP and GPR register classes, TableGen
+  // defines a set of PressureSets that reflects the overlap of register
+  // classes: FP regs affect both FP16Bit and VR16Bit PressureSets, while VR
+  // regs affect only VR16Bit. Similarly, GR64 affects GRX32Bit (with a
+  // weight of 2), while GR32 affects both GR32Bit and GRX32Bit.
   //
-  // As an example of why this is needed, consider this instruction:
+  // This SchedStrategy doesn't use these PressureSets quite in the way
+  // originally intended, but rather just to check if use operands are
+  // already live or not in interesting cases. The distinctions between
+  // Vector/FP registers or GR64Bit/GR32Bit are not made when a defining
+  // instruction is scheduled low only if no uses are also becoming live.
+  // Therefore only the common PressureSets are relevant. For example, this
+  // instruction will always have 'FP16Bit -1':
+  //
   //   %14:vf128bit = VREPF %7:vr128bit, 1
-  // VF128 affects FP16Bit and VR16Bit, but VR128 affects only VR16Bit.
-  // Therefore, the PDiff is 'FP16Bit -1' as the VR16Bit PressureChange:s cancel
-  // out over the def and use operands. As the VR16Bit pressure is unaffected,
-  // it is however clear that there is one register defined and one that is used
-  // and killed. In other words, %7 is not live so it balances the pressure to
-  // 0 with %14 (%14 live, %7 not live before scheduling bottom-up).
+  //
+  // If %7 is already live, there would also be 'VR16Bit -1', which is the
+  // interesting case.
+  //
+  // Rather than hard coding VR16Bit and GRX32Bit PressureSets, they are
+  // inferred below as the intersections of various register class groups.
   //
   // TODO: Could TableGen emit these directly instead?
-
   if (!WITHPDIFFS)
     return;
 
