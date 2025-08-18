@@ -25,6 +25,9 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
+/// Returns true if only scalar values of \p Def are used by all users.
+bool onlyScalarValuesUsed(const VPValue *Def);
+
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
