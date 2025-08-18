@@ -11,11 +11,11 @@
 
 #include <clc/internal/clc.h>
 
-#define FUNCTION __clc_atomic_fetch_xor
+#define __CLC_FUNCTION __clc_atomic_fetch_xor
 
 #define __CLC_BODY <clc/atomic/atomic_decl.inc>
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_ATOMIC_CLC_ATOMIC_FETCH_XOR_H__

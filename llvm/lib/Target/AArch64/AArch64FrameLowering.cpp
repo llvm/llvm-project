@@ -1475,24 +1475,26 @@ static bool requiresSaveVG(const MachineFunction &MF) {
   return true;
 }
 
-bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
+static bool matchLibcall(const TargetLowering &TLI, const MachineOperand &MO,
+                         RTLIB::Libcall LC) {
+  return MO.isSymbol() &&
+         StringRef(TLI.getLibcallName(LC)) == MO.getSymbolName();
+}
+
+bool isVGInstruction(MachineBasicBlock::iterator MBBI,
+                     const TargetLowering &TLI) {
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
       Opc == AArch64::UBFMXri)
     return true;
 
-  if (requiresGetVGCall(*MBBI->getMF())) {
-    if (Opc == AArch64::ORRXrr)
-      return true;
+  if (!requiresGetVGCall(*MBBI->getMF()))
+    return false;
 
-    if (Opc == AArch64::BL) {
-      auto Op1 = MBBI->getOperand(0);
-      return Op1.isSymbol() &&
-             (StringRef(Op1.getSymbolName()) == "__arm_get_current_vg");
-    }
-  }
+  if (Opc == AArch64::BL)
+    return matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_GET_CURRENT_VG);
 
-  return false;
+  return Opc == AArch64::ORRXrr;
 }
 
 // Convert callee-save register save/restore instruction to do stack pointer
@@ -1511,9 +1513,11 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // functions, we need to do this for both the streaming and non-streaming
   // vector length. Move past these instructions if necessary.
   MachineFunction &MF = *MBB.getParent();
-  if (requiresSaveVG(MF))
-    while (isVGInstruction(MBBI))
+  if (requiresSaveVG(MF)) {
+    auto &TLI = *MF.getSubtarget().getTargetLowering();
+    while (isVGInstruction(MBBI, TLI))
       ++MBBI;
+  }
 
   switch (MBBI->getOpcode()) {
   default:
@@ -2097,11 +2101,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // Move past the saves of the callee-saved registers, fixing up the offsets
   // and pre-inc if we decided to combine the callee-save and local stack
   // pointer bump above.
+  auto &TLI = *MF.getSubtarget().getTargetLowering();
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
     if (CombineSPBump &&
         // Only fix-up frame-setup load/store instructions.
-        (!requiresSaveVG(MF) || !isVGInstruction(MBBI)))
+        (!requiresSaveVG(MF) || !isVGInstruction(MBBI, TLI)))
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
     ++MBBI;
@@ -3468,6 +3473,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
+  auto &TLI = *MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool NeedsWinCFI = needsWinCFI(MF);
@@ -3581,11 +3587,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
               .addReg(AArch64::X0, RegState::Implicit)
               .setMIFlag(MachineInstr::FrameSetup);
 
-        const uint32_t *RegMask = TRI->getCallPreservedMask(
-            MF,
-            CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
+        RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
+        const uint32_t *RegMask =
+            TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(LC));
         BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
-            .addExternalSymbol("__arm_get_current_vg")
+            .addExternalSymbol(TLI.getLibcallName(LC))
             .addRegMask(RegMask)
             .addReg(AArch64::X0, RegState::ImplicitDefine)
             .setMIFlag(MachineInstr::FrameSetup);
