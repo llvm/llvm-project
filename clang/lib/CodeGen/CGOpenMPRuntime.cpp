@@ -9113,7 +9113,8 @@ private:
           emitCombinedEntry(
               CurInfo, AttachCombinedInfo, GroupCurInfo.Types, PartialStruct,
               /*IsMapThis*/ !VD, OMPBuilder, VD,
-              /*OffsetForMemberOfFlag=*/0, /*NotTargetParam=*/true);
+              /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
+              /*NotTargetParam=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct

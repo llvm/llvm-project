@@ -233,7 +233,7 @@
 // CK19-USE: [[SIZE42:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 104, i64 {{4|8}}]
 // CK19-USE: [[MTYPE42:@.+]] = private {{.*}}constant [3 x i64] [i64 544, i64 3, i64 16384]
 // CK19-NOUSE: [[SIZE42:@.+]] = private {{.*}}constant [2 x i64] [i64 104, i64 {{4|8}}]
-// CK19-NOUSE: [[MTYPE42:@.+]] = private {{.*}}constant [2 x i64] [64 3, i64 16384]
+// CK19-NOUSE: [[MTYPE42:@.+]] = private {{.*}}constant [2 x i64] [i64 3, i64 16384]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE43:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
@@ -1175,7 +1175,7 @@ void explicit_maps_single (int ii){
 
   // Region 28
 
-  // &mptr[0], &mptr[0], 0, IMPLICIT | PARAM
+  // [ &mptr[0], &mptr[0], 0, IMPLICIT | PARAM ]
   // &mptr[1][2][0], &mptr[1][2][2], sizeof(mptr[1][2][2:4]), TO | FROM
   // &mptr[1][2], &mptr[1][2][2], sizeof(void*), ATTACH
 
@@ -1189,19 +1189,21 @@ void explicit_maps_single (int ii){
 
   // CK19-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
-  // CK19-DAG: store ptr [[VAR0]], ptr [[P0]]
-  // CK19-DAG: [[VAR0]] = load ptr, ptr [[PTR:%mptr]]
+  // CK19-USE-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
+  // CK19-USE-DAG: store ptr [[VAR0]], ptr [[P0]]
+  // CK19-USE-DAG: [[VAR0]] = load ptr, ptr [[PTR:%mptr]]
 
   // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
-  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-USE-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+  // CK19-USE-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-NOUSE-DAG: store ptr [[VAR1:%.+]], ptr [[BP0]]
+  // CK19-NOUSE-DAG: store ptr [[SEC1:%.+]], ptr [[P0]]
   // CK19-DAG: [[VAR1]] = load ptr, ptr [[VAR11:%[^,]+]]
   // CK19-DAG: [[VAR11]] = getelementptr {{.*}}ptr [[VAR111:[^,]+]], i{{.+}} 2
   // CK19-DAG: [[VAR111]] = load ptr, ptr [[VAR1111:%[^,]+]],
   // CK19-DAG: [[VAR1111]] = getelementptr {{.*}}ptr [[VAR11111:[^,]+]], i{{.+}} 1
-  // CK19-DAG: [[VAR11111]] = load ptr, ptr [[PTR]]
+  // CK19-DAG: [[VAR11111]] = load ptr, ptr [[PTR:%mptr]]
   // CK19-DAG: [[SEC1:%.+]] = getelementptr {{.*}}i32, ptr [[SEC11:%.+]], i{{.*}} 2
   // CK19-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]]
   // CK19-DAG: [[SEC111]] = getelementptr {{.*}}ptr [[SEC1111:[^,]+]], i{{.+}} 2
@@ -1209,10 +1211,12 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC11111]] = getelementptr {{.*}}ptr [[SEC111111:[^,]+]], i{{.+}} 1
   // CK19-DAG: [[SEC111111]] = load ptr, ptr [[PTR]]
 
-  // CK19-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
-  // CK19-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-  // CK19-DAG: store ptr [[VAR11]], ptr [[BP2]]
-  // CK19-DAG: store ptr [[SEC1]], ptr [[P2]]
+  // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
+  // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
+  // CK19-USE-DAG: store ptr [[VAR11]], ptr [[BP2]]
+  // CK19-USE-DAG: store ptr [[SEC1]], ptr [[P2]]
+  // CK19-NOUSE-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+  // CK19-NOUSE-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
 
   // CK19-USE: call void [[CALL28:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL28:@.+]]()
@@ -1225,7 +1229,7 @@ void explicit_maps_single (int ii){
 
   // Region 29
 
-  // &mptr[0], &mptr[0], 0, IMPLICIT | PARAM
+  // [ &mptr[0], &mptr[0], 0, IMPLICIT | PARAM ]
   // &mptr[1][2][0], &mptr[1][2][3], sizeof(mptr[1][2][3]), TO | FROM
   // &mptr[1][2], &mptr[1][2][3], sizeof(void*), ATTACH
 
@@ -1239,19 +1243,21 @@ void explicit_maps_single (int ii){
 
   // CK19-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
-  // CK19-DAG: store ptr [[VAR0]], ptr [[P0]]
-  // CK19-DAG: [[VAR0]] = load ptr, ptr [[PTR:%mptr]]
+  // CK19-USE-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
+  // CK19-USE-DAG: store ptr [[VAR0]], ptr [[P0]]
+  // CK19-USE-DAG: [[VAR0]] = load ptr, ptr [[PTR:%mptr]]
 
   // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
-  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-USE-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+  // CK19-USE-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-NOUSE-DAG: store ptr [[VAR1:%.+]], ptr [[BP0]]
+  // CK19-NOUSE-DAG: store ptr [[SEC1:%.+]], ptr [[P0]]
   // CK19-DAG: [[VAR1]] = load ptr, ptr [[VAR11:%[^,]+]]
   // CK19-DAG: [[VAR11]] = getelementptr {{.*}}ptr [[VAR111:[^,]+]], i{{.+}} 2
   // CK19-DAG: [[VAR111]] = load ptr, ptr [[VAR1111:%[^,]+]],
   // CK19-DAG: [[VAR1111]] = getelementptr {{.*}}ptr [[VAR11111:[^,]+]], i{{.+}} 1
-  // CK19-DAG: [[VAR11111]] = load ptr, ptr [[PTR]]
+  // CK19-DAG: [[VAR11111]] = load ptr, ptr [[PTR:%mptr]]
   // CK19-DAG: [[SEC1:%.+]] = getelementptr {{.*}}i32, ptr [[SEC11:%.+]], i{{.*}} 3
   // CK19-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]]
   // CK19-DAG: [[SEC111]] = getelementptr {{.*}}ptr [[SEC1111:[^,]+]], i{{.+}} 2
@@ -1259,10 +1265,12 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC11111]] = getelementptr {{.*}}ptr [[SEC111111:[^,]+]], i{{.+}} 1
   // CK19-DAG: [[SEC111111]] = load ptr, ptr [[PTR]]
 
-  // CK19-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
-  // CK19-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-  // CK19-DAG: store ptr [[VAR11]], ptr [[BP2]]
-  // CK19-DAG: store ptr [[SEC1]], ptr [[P2]]
+  // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
+  // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
+  // CK19-USE-DAG: store ptr [[VAR11]], ptr [[BP2]]
+  // CK19-USE-DAG: store ptr [[SEC1]], ptr [[P2]]
+  // CK19-NOUSE-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+  // CK19-NOUSE-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
 
   // CK19-USE: call void [[CALL29:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL29:@.+]]()
@@ -1766,7 +1774,7 @@ void explicit_maps_single (int ii){
 
   // Region 42
 
-  // &mptras[0], &mptras[0], 0, IMPLICIT | PARAM
+  // [ &mptras[0], &mptras[0], 0, IMPLICIT | PARAM ]
   // &mptras[0][2][0], &mptras[0][2][0], sizeof(mptras[:1][2][:13]), TO | FROM
   // &mptr[0][2], &mptr[0][2][0], sizeof(void*), ATTACH
 
@@ -1780,19 +1788,21 @@ void explicit_maps_single (int ii){
 
   // CK19-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
-  // CK19-DAG: store ptr [[VAR0]], ptr [[P0]]
-  // CK19-DAG: [[VAR0]] = load ptr, ptr [[PTR:%mptras]]
+  // CK19-USE-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
+  // CK19-USE-DAG: store ptr [[VAR0]], ptr [[P0]]
+  // CK19-USE-DAG: [[VAR0]] = load ptr, ptr [[PTR:%mptras]]
 
   // CK19-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
-  // CK19-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-USE-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+  // CK19-USE-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+  // CK19-NOUSE-DAG: store ptr [[VAR1:%.+]], ptr [[BP0]]
+  // CK19-NOUSE-DAG: store ptr [[SEC1:%.+]], ptr [[P0]]
   // CK19-DAG: [[VAR1]] = load ptr, ptr [[VAR11:%[^,]+]]
   // CK19-DAG: [[VAR11]] = getelementptr {{.*}}ptr [[VAR111:[^,]+]], i{{.+}} 2
   // CK19-DAG: [[VAR111]] = load ptr, ptr [[VAR1111:%[^,]+]],
   // CK19-DAG: [[VAR1111]] = getelementptr {{.*}}ptr [[VAR11111:[^,]+]], i{{.+}} 0
-  // CK19-DAG: [[VAR11111]] = load ptr, ptr [[PTR]],
+  // CK19-DAG: [[VAR11111]] = load ptr, ptr [[PTR:%mptras]],
   // CK19-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[SEC11:[^,]+]], i{{.+}} 0
   // CK19-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]]
   // CK19-DAG: [[SEC111]] = getelementptr {{.*}}ptr [[SEC1111:[^,]+]], i{{.+}} 2
@@ -1800,10 +1810,12 @@ void explicit_maps_single (int ii){
   // CK19-DAG: [[SEC11111]] = getelementptr {{.*}}ptr [[SEC111111:[^,]+]], i{{.+}} 0
   // CK19-DAG: [[SEC111111]] = load ptr, ptr [[PTR]],
 
-  // CK19-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
-  // CK19-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-  // CK19-DAG: store ptr [[VAR11]], ptr [[BP2]]
-  // CK19-DAG: store ptr [[SEC1]], ptr [[P2]]
+  // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
+  // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
+  // CK19-USE-DAG: store ptr [[VAR11]], ptr [[BP2]]
+  // CK19-USE-DAG: store ptr [[SEC1]], ptr [[P2]]
+  // CK19-NOUSE-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+  // CK19-NOUSE-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
 
   // CK19-USE: call void [[CALL42:@.+]](ptr {{[^,]+}})
   // CK19-NOUSE: call void [[CALL42:@.+]]()
