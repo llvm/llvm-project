@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86RegisterInfo.h"
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86FrameLowering.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"

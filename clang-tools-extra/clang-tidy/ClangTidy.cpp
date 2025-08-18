@@ -424,6 +424,10 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
 
+  // Avoid processing system headers, unless the user explicitly requests it
+  if (!Context.getOptions().SystemHeaders.value_or(false))
+    FinderOptions.IgnoreSystemHeaders = true;
+
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));
 

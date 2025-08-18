@@ -9,17 +9,17 @@
 #include <clc/opencl/relational/all.h>
 #include <clc/relational/clc_all.h>
 
-#define ALL_ID(TYPE) _CLC_OVERLOAD _CLC_DEF int all(TYPE v)
+#define __CLC_ALL_ID(TYPE) _CLC_OVERLOAD _CLC_DEF int all(TYPE v)
 
-#define ALL_VECTORIZE(TYPE)                                                    \
-  ALL_ID(TYPE) { return __clc_all(v); }                                        \
-  ALL_ID(TYPE##2) { return __clc_all(v); }                                     \
-  ALL_ID(TYPE##3) { return __clc_all(v); }                                     \
-  ALL_ID(TYPE##4) { return __clc_all(v); }                                     \
-  ALL_ID(TYPE##8) { return __clc_all(v); }                                     \
-  ALL_ID(TYPE##16) { return __clc_all(v); }
+#define __CLC_ALL_VECTORIZE(TYPE)                                              \
+  __CLC_ALL_ID(TYPE) { return __clc_all(v); }                                  \
+  __CLC_ALL_ID(TYPE##2) { return __clc_all(v); }                               \
+  __CLC_ALL_ID(TYPE##3) { return __clc_all(v); }                               \
+  __CLC_ALL_ID(TYPE##4) { return __clc_all(v); }                               \
+  __CLC_ALL_ID(TYPE##8) { return __clc_all(v); }                               \
+  __CLC_ALL_ID(TYPE##16) { return __clc_all(v); }
 
-ALL_VECTORIZE(char)
-ALL_VECTORIZE(short)
-ALL_VECTORIZE(int)
-ALL_VECTORIZE(long)
+__CLC_ALL_VECTORIZE(char)
+__CLC_ALL_VECTORIZE(short)
+__CLC_ALL_VECTORIZE(int)
+__CLC_ALL_VECTORIZE(long)
