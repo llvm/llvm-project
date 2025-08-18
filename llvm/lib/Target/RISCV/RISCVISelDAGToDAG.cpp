@@ -727,31 +727,24 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
   if (!Subtarget->hasVendorXqcibm())
     return false;
 
-  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-  if (!N1C)
+  using namespace SDPatternMatch;
+
+  SDValue And;
+  APInt MaskImm, OrImm;
+  if (!sd_match(Node, m_Or(m_OneUse(m_And(m_Value(And), m_ConstInt(MaskImm))),
+                           m_ConstInt(OrImm))))
     return false;
-
-  SDValue And = Node->getOperand(0);
-
-  if (And.getOpcode() != ISD::AND)
-    return false;
-
-  auto *N2C = dyn_cast<ConstantSDNode>(And->getOperand(1));
-  if (!And.hasOneUse() || !N2C)
-    return false;
-
-  int32_t OrImm = N1C->getSExtValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
   // cases than just looking for AND with imm.
-  KnownBits Known = CurDAG->computeKnownBits(And);
+  KnownBits Known = CurDAG->computeKnownBits(Node->getOperand(0));
 
   // Non-zero in the sense that they're not provably zero, which is the key
   // point if we want to use this value.
-  uint64_t NotKnownZero = (~Known.Zero).getZExtValue();
+  APInt NotKnownZero = ~Known.Zero;
 
   // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
-  if (!isShiftedMask_32(Known.Zero.getZExtValue()))
+  if (!Known.Zero.isShiftedMask())
     return false;
 
   // The bits being inserted must only set those bits that are known to be zero.
@@ -764,14 +757,14 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
   // QC_INSB(I) dst, src, #width, #shamt.
   MVT VT = Node->getSimpleValueType(0);
   unsigned BitWidth = VT.getSizeInBits();
-  const unsigned ShAmt = llvm::countr_one(NotKnownZero);
-  const unsigned Width = BitWidth - APInt(BitWidth, NotKnownZero).popcount();
+  const unsigned ShAmt = llvm::countr_one(NotKnownZero.getZExtValue());
+  const unsigned Width = BitWidth - NotKnownZero.popcount();
 
   SDLoc DL(Node);
   SDValue ImmNode;
   auto Opc = RISCV::QC_INSB;
 
-  int32_t LIImm = OrImm >> ShAmt;
+  int32_t LIImm = OrImm.getSExtValue() >> ShAmt;
 
   if (isInt<5>(LIImm)) {
     Opc = RISCV::QC_INSBI;
@@ -780,8 +773,7 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
     ImmNode = selectImm(CurDAG, DL, MVT::i32, LIImm, *Subtarget);
   }
 
-  SDValue Ops[] = {And.getOperand(0), ImmNode,
-                   CurDAG->getTargetConstant(Width, DL, VT),
+  SDValue Ops[] = {And, ImmNode, CurDAG->getTargetConstant(Width, DL, VT),
                    CurDAG->getTargetConstant(ShAmt, DL, VT)};
   SDNode *BitIns = CurDAG->getMachineNode(Opc, DL, VT, Ops);
   ReplaceNode(Node, BitIns);
