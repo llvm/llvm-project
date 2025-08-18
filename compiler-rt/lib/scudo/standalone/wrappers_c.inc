@@ -247,16 +247,17 @@ void SCUDO_PREFIX(malloc_postinit)() {
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
   if (param == M_DECAY_TIME) {
     if (SCUDO_ANDROID) {
-      // Before changing the interval, reset the memory usage status by doing a
-      // M_PURGE call so that we can minimize the impact of any unreleased pages
-      // introduced by interval transition.
-      SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
-
       // The values allowed on Android are {-1, 0, 1}. "1" means the longest
       // interval.
       CHECK(value >= -1 && value <= 1);
       if (value == 1)
         value = INT32_MAX;
+      else if (value == 0) {
+        // Before disabling the interval, reset the memory usage status by doing
+        // a M_PURGE call so that we can minimize the impact of any unreleased
+        // pages introduced by interval transition.
+        SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
+      }
     }
 
     SCUDO_ALLOCATOR.setOption(scudo::Option::ReleaseInterval,
