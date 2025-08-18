@@ -64,13 +64,13 @@ Options
 
 .. option:: CheckDestructors
 
-  If turned on, the check does apply to destructors too. Otherwise destructors
+  If `true`, the check does apply to destructors too. Otherwise destructors
   are ignored by the check.
   Default value is `false`.
 
 .. option:: CheckOperators
 
-  If turned on, the check does apply to overloaded C++ operators (as virtual
+  If `true`, the check does apply to overloaded C++ operators (as virtual
   member functions) too. This includes other special member functions (like
   conversions) too. This option is probably useful only in rare cases because
   operators and conversions are not often virtual functions.

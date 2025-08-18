@@ -34,8 +34,8 @@ namespace ignore_selected {
 class Test1: public IgnoreSelected {
 public:
   void f();
-  // CHECK-NOTES: :[[@LINE-1]]:8: warning: visibility of function 'f'
-  // CHECK-NOTES: :9:16: note: function declared here
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'f'
+  // CHECK-MESSAGES: :9:16: note: function declared here
   void ignored_f(int);
 };
 class Test2: public a::IgnoreSelected {
@@ -54,7 +54,7 @@ class IgnoreFunctionsTest: public IgnoreFunctions {
 public:
   void f1();
   void f2();
-  // CHECK-NOTES: :[[@LINE-1]]:8: warning: visibility of function 'f2'
-  // CHECK-NOTES: :[[@LINE-9]]:16: note: function declared here
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'f2'
+  // CHECK-MESSAGES: :[[@LINE-9]]:16: note: function declared here
   void ignored_f();
 };

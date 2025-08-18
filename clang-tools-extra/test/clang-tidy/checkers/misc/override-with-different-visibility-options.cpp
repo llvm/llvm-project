@@ -21,12 +21,12 @@ protected:
 class B: public A {
 public:
   void f1();
-  // CHECK-NOTES-WIDENING: :[[@LINE-1]]:8: warning: visibility of function 'f1'
-  // CHECK-NOTES-WIDENING: :[[@LINE-8]]:16: note: function declared here
+  // CHECK-MESSAGES-WIDENING: :[[@LINE-1]]:8: warning: visibility of function 'f1'
+  // CHECK-MESSAGES-WIDENING: :[[@LINE-8]]:16: note: function declared here
 private:
   void f2();
-  // CHECK-NOTES-NARROWING: :[[@LINE-1]]:8: warning: visibility of function 'f2'
-  // CHECK-NOTES-NARROWING: :[[@LINE-11]]:16: note: function declared here
+  // CHECK-MESSAGES-NARROWING: :[[@LINE-1]]:8: warning: visibility of function 'f2'
+  // CHECK-MESSAGES-NARROWING: :[[@LINE-11]]:16: note: function declared here
 };
 
 }
@@ -41,8 +41,8 @@ public:
 class B: public A {
 protected:
   ~B();
-  // CHECK-NOTES-DTORS: :[[@LINE-1]]:3: warning: visibility of function '~B'
-  // CHECK-NOTES-DTORS: :[[@LINE-7]]:11: note: function declared here
+  // CHECK-MESSAGES-DTORS: :[[@LINE-1]]:3: warning: visibility of function '~B'
+  // CHECK-MESSAGES-DTORS: :[[@LINE-7]]:11: note: function declared here
 };
 
 }
@@ -59,17 +59,17 @@ class A {
 class B: public A {
 protected:
   A& operator=(const A&);
-  // CHECK-NOTES-OPS: :[[@LINE-1]]:6: warning: visibility of function 'operator='
-  // CHECK-NOTES-OPS: :[[@LINE-10]]:14: note: function declared here
+  // CHECK-MESSAGES-OPS: :[[@LINE-1]]:6: warning: visibility of function 'operator='
+  // CHECK-MESSAGES-OPS: :[[@LINE-10]]:14: note: function declared here
   A& operator++();
-  // CHECK-NOTES-OPS: :[[@LINE-1]]:6: warning: visibility of function 'operator++'
-  // CHECK-NOTES-OPS: :[[@LINE-12]]:14: note: function declared here
+  // CHECK-MESSAGES-OPS: :[[@LINE-1]]:6: warning: visibility of function 'operator++'
+  // CHECK-MESSAGES-OPS: :[[@LINE-12]]:14: note: function declared here
   int operator()(int);
-  // CHECK-NOTES-OPS: :[[@LINE-1]]:7: warning: visibility of function 'operator()'
-  // CHECK-NOTES-OPS: :[[@LINE-14]]:15: note: function declared here
+  // CHECK-MESSAGES-OPS: :[[@LINE-1]]:7: warning: visibility of function 'operator()'
+  // CHECK-MESSAGES-OPS: :[[@LINE-14]]:15: note: function declared here
   operator double() const;
-  // CHECK-NOTES-OPS: :[[@LINE-1]]:3: warning: visibility of function 'operator double'
-  // CHECK-NOTES-OPS: :[[@LINE-16]]:11: note: function declared here
+  // CHECK-MESSAGES-OPS: :[[@LINE-1]]:3: warning: visibility of function 'operator double'
+  // CHECK-MESSAGES-OPS: :[[@LINE-16]]:11: note: function declared here
 };
 
 }
