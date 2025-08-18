@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -2608,30 +2609,21 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
           << diag::TraitNotSatisfiedReason::InheritedCtr;
   }
 
-  bool HasInherited = llvm::any_of(D->decls(), [](auto const *Sub) {
-    bool Result = false;
-    if (auto *UD = dyn_cast<UsingDecl>(Sub)) {
-      Result = llvm::any_of(UD->shadows(), [](auto const &I) {
-        return isa<ConstructorUsingShadowDecl>(I);
-      });
-    }
-    return isa<ConstructorUsingShadowDecl>(Sub) || Result;
-  });
-
-  if (HasInherited) {
+  if (llvm::any_of(D->decls(), [](auto const *Sub) {
+        return isa<ConstructorUsingShadowDecl>(Sub);
+      })) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::InheritedCtr;
   }
 
   for (const FieldDecl *Field : D->fields()) {
-    switch (Field->getAccess()) {
+    auto AccessSpecifier = Field->getAccess();
+    switch (AccessSpecifier) {
     case AS_private:
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::PrivateDirectDataMember;
-      break;
     case AS_protected:
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::ProtectedDirectDataMember;
+          << diag::TraitNotSatisfiedReason::PrivateProtectedDirectDataMember
+          << (AccessSpecifier == AS_protected);
       break;
     default:
       break;
@@ -2645,14 +2637,13 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
           << B.getSourceRange();
       continue;
     }
-    switch (B.getAccessSpecifier()) {
+    auto AccessSpecifier = B.getAccessSpecifier();
+    switch (AccessSpecifier) {
     case AS_private:
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::PrivateDirectBase;
-      break;
     case AS_protected:
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::ProtectedDirectBase;
+          << diag::TraitNotSatisfiedReason::PrivateProtectedDirectBase
+          << (AccessSpecifier == AS_protected);
       break;
     default:
       break;

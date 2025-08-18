@@ -1819,10 +1819,8 @@ def note_unsatisfied_trait_reason
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
            "%IncompleteArrayType{is an incomplete array type}|"
-           "%PrivateDirectDataMember{has a private direct data member}|"
-           "%ProtectedDirectDataMember{has a protected direct data member}|"
-           "%PrivateDirectBase{has a private direct base}|"
-           "%ProtectedDirectBase{has a protected direct base}"
+           "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
+           "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
