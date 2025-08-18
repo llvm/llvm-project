@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// check that functions are marked [[nodiscard]] as an extension in C++17
+// check that functions are marked [[nodiscard]]
 
 // [[nodiscard]] std::make_unique(Args&&...);
 // [[nodiscard]] std::make_unique(size_t);
