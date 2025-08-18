@@ -16329,8 +16329,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   case ISD::ABDU:
   case ISD::ABDS:
-    // (trunc (abdu/abds a, b)) → (abdu/abds (trunc a), (trunc b))
-    if (!LegalOperations || N0.hasOneUse()) {
+    // (trunc (abdu/abds a, b)) -> (abdu/abds (trunc a), (trunc b))
+    if ((!LegalOperations || N0.hasOneUse()) &&
+        TLI.isOperationLegal(N0.getOpcode(), VT)) {
       EVT SrcVT = N0.getValueType();
       EVT TruncVT = VT;
       unsigned SrcBits = SrcVT.getScalarSizeInBits();
@@ -16352,7 +16353,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         CanFold = SignBitsA > NeededBits && SignBitsB > NeededBits;
       }
 
-      if (CanFold && TLI.isOperationLegal(N0.getOpcode(), VT)) {
+      if (CanFold) {
         SDValue NewA = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, A);
         SDValue NewB = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, B);
         return DAG.getNode(N0.getOpcode(), DL, TruncVT, NewA, NewB);
