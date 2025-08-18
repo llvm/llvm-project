@@ -1161,18 +1161,6 @@ mlir::Value static getZeroLowerBounds(mlir::Location loc,
   return builder.genShift(loc, lowerBounds);
 }
 
-static bool
-isSimplyContiguous(const Fortran::evaluate::ActualArgument &arg,
-                   Fortran::evaluate::FoldingContext &foldingContext) {
-  if (const auto *expr = arg.UnwrapExpr())
-    return Fortran::evaluate::IsSimplyContiguous(*expr, foldingContext);
-  const Fortran::semantics::Symbol *sym = arg.GetAssumedTypeDummy();
-  assert(sym &&
-         "expect ActualArguments to be expression or assumed-type symbols");
-  return sym->Rank() == 0 ||
-         Fortran::evaluate::IsSimplyContiguous(*sym, foldingContext);
-}
-
 static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
   mlir::Value base = entity;
   bool foundParameter = false;
@@ -1215,9 +1203,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     const Fortran::lower::CallerInterface::PassedEntity &arg,
     CallContext &callContext) {
 
-  Fortran::evaluate::FoldingContext &foldingContext =
-      callContext.converter.getFoldingContext();
-
   // Step 1: get the actual argument, which includes addressing the
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
@@ -1258,25 +1243,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
-  // The simple contiguity of the actual is "lost" when passing a polymorphic
-  // to a non polymorphic entity because the dummy dynamic type matters for
-  // the contiguity.
-  bool mustDoCopyIn = actual.isArray() && arg.mustBeMadeContiguous() &&
-                      (passingPolymorphicToNonPolymorphic ||
-                       !isSimplyContiguous(*arg.entity, foldingContext));
-  bool mustDoCopyOut = mustDoCopyIn && arg.mayBeModifiedByCall();
-  bool newMustDoCopyIn = false;
-  bool newMustDoCopyOut = false;
-  newMustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
-  newMustDoCopyOut = newMustDoCopyIn && arg.entity->GetMayNeedCopyOut();
-#if 1
-  llvm::dbgs() << "copyinout: CALLER " << "copy-in: old=" << mustDoCopyIn
-               << ", new=" << newMustDoCopyIn
-               << "| copy-out: old=" << mustDoCopyOut
-               << ", new=" << newMustDoCopyOut << "\n";
-#endif
-  mustDoCopyIn = newMustDoCopyIn;
-  mustDoCopyOut = newMustDoCopyOut;
+  bool mustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
+  bool mustDoCopyOut = mustDoCopyIn && arg.entity->GetMayNeedCopyOut();
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
