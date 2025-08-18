@@ -3600,8 +3600,9 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     if (StringLiteral *SL = dyn_cast<StringLiteral>(SubExpr)) {
       // Get the length of the string.
       uint64_t StrLen = SL->getLength();
-      if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
-        StrLen = cast<ConstantArrayType>(AT)->getZExtSize();
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+          CAT && CAT->getSize().ult(StrLen))
+        StrLen = CAT->getZExtSize();
       StructuredList->resizeInits(Context, StrLen);
 
       // Build a literal for each character in the string, and put them into
@@ -3623,8 +3624,9 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
       // Get the length of the string.
       uint64_t StrLen = Str.size();
-      if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
-        StrLen = cast<ConstantArrayType>(AT)->getZExtSize();
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+          CAT && CAT->getSize().ult(StrLen))
+        StrLen = CAT->getZExtSize();
       StructuredList->resizeInits(Context, StrLen);
 
       // Build a literal for each character in the string, and put them into
