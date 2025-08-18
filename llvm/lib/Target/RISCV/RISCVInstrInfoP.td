@@ -25,7 +25,7 @@ def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
 }
 
 // A 8-bit signed immediate allowing range [-128, 255]
-// but represented as [-128, 127].
+// but represented as [-128, 255].
 def simm8_unsigned : RISCVOp {
   let ParserMatchClass = SImm8UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
@@ -62,49 +62,40 @@ def simm10_unsigned : RISCVOp {
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class PLI_i<bits<7> funct7, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins simm10:$imm10), opcodestr, "$rd, $imm10", [],
+// Common base for pli.b/h/w and plui.h/w
+class RVPLoadImm_i<bits<7> funct7, dag ins, string opcodestr,
+                   string argstr>
+    : RVInst<(outs GPR:$rd), ins, opcodestr, argstr, [],
              InstFormatOther> {
-  bits<10> imm10;
   bits<5> rd;
 
   let Inst{31-25} = funct7;
+  let Inst{14-12} = 0b010;
+  let Inst{11-7} = rd;
+  let Inst{6-0} = OPC_OP_IMM_32.Value;
+
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+// Base for pli.h/w.
+class PLI_i<bits<7> funct7, string opcodestr>
+    : RVPLoadImm_i<funct7, (ins simm10:$imm10), opcodestr, "$rd, $imm10"> {
+  bits<10> imm10;
+
   let Inst{24-16} = imm10{8-0};
   let Inst{15}    = imm10{9};
-  let Inst{14-12} = 0b010;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_IMM_32.Value;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+// Base for plui.h/w.
 class PLUI_i<bits<7> funct7, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins simm10_unsigned:$imm10), opcodestr,
-             "$rd, $imm10", [], InstFormatOther> {
+    : RVPLoadImm_i<funct7, (ins simm10_unsigned:$imm10), opcodestr,
+                   "$rd, $imm10"> {
   bits<10> imm10;
-  bits<5> rd;
 
-  let Inst{31-25} = funct7;
   let Inst{24}    = imm10{0};
   let Inst{23-15} = imm10{9-1};
-  let Inst{14-12} = 0b010;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_IMM_32.Value;
-}
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class PLI_B_i<bits<8> funct8, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins simm8_unsigned:$imm8), opcodestr,
-             "$rd, $imm8", [], InstFormatOther> {
-  bits<8> imm8;
-  bits<5> rd;
-
-  let Inst{31-24} = funct8;
-  let Inst{23-16} = imm8;
-  let Inst{15}    = 0b0;
-  let Inst{14-12} = 0b010;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_IMM_32.Value;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -180,12 +171,31 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
     : RVInstRBase<funct3, OPC_OP_32, (outs GPR:$rd_wb),
-                  (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
+                  (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr,
+                  "$rd, $rs1, $rs2"> {
   let Inst{31} = 0b1;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
 
   let Constraints = "$rd = $rd_wb";
+}
+
+// Common base for pli.db/h/w and plui.dh/w
+class RVPPairLoadImm_i<bits<7> funct7, dag ins, string opcodestr,
+                       string argstr>
+    : RVInst<(outs GPRPairRV32:$rd), ins, opcodestr, argstr, [],
+             InstFormatOther> {
+  bits<5> rd;
+
+  let Inst{31-25} = funct7;
+  let Inst{14-12} = 0b010;
+  let Inst{11-8}  = rd{4-1};
+  let Inst{7}     = 0b0;
+  let Inst{6-0}   = OPC_OP_IMM_32.Value;
+
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -229,8 +239,16 @@ let Predicates = [HasStdExtP] in
 def PLI_H : PLI_i<0b1011000, "pli.h">;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLI_W : PLI_i<0b1011001, "pli.w">;
-let Predicates = [HasStdExtP] in
-def PLI_B : PLI_B_i<0b10110100, "pli.b">;
+let Predicates = [HasStdExtP] in {
+  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_unsigned:$imm8), "pli.b",
+                           "$rd, $imm8"> {
+    bits<8> imm8;
+
+    let Inst{24}    = 0b0;
+    let Inst{23-16} = imm8;
+    let Inst{15}    = 0b0;
+  }
+}
 
 let Predicates = [HasStdExtP] in {
   def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
@@ -578,3 +596,30 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PPACKT_W    : RVPBinary_rr<0b0110, 0b01, 0b100, "ppackt.w">;
   def PACKT_RV64  : RVPBinary_rr<0b0110, 0b11, 0b100, "packt">;
 } // Predicates = [HasStdExtP, IsRV64]
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def PLI_DH : RVPPairLoadImm_i<0b0011000, (ins simm10:$imm10), "pli.dh",
+                                "$rd, $imm10"> {
+    bits<10> imm10;
+
+    let Inst{24-16} = imm10{8-0};
+    let Inst{15}    = imm10{9};
+  }
+
+  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_unsigned:$imm8), "pli.db",
+                                "$rd, $imm8"> {
+    bits<8> imm8;
+
+    let Inst{24}    = 0b0;
+    let Inst{23-16} = imm8;
+    let Inst{15}    = 0b0;
+  }
+
+  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_unsigned:$imm10),
+                                 "plui.dh", "$rd, $imm10"> {
+    bits<10> imm10;
+
+    let Inst{24}    = imm10{0};
+    let Inst{23-15} = imm10{9-1};
+  }
+}
