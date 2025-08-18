@@ -1,0 +1,28 @@
+; Regression test for:
+;  - DW_AT_ranges not being read properly
+
+; clang test.cpp --target=i686-pc-linux -g -O2
+; 01 
+; 02 float foo(float a) {
+; 03   return a+a;
+; 04 }
+; 05 
+; 06 int main(int argc, char **argv) {
+; 07   float my_var = argc;
+; 08   for (int i = 0; i < 4; i++) {
+; 09     float my_local_var = (float)argv[i][0];
+; 10     my_var += foo(my_local_var);
+; 11   }
+; 12   return (int)my_var;
+; 13 }
+
+; RUN: llvm-debuginfo-analyzer --attribute=all \
+; RUN:                         --print=all \
+; RUN:                         --output-sort=offset \
+; RUN:                         %p/Inputs/DW_AT_ranges.o 2>&1 | \
+; RUN: FileCheck %s
+
+; Make sure these two ranges are present and point to the correct offsets
+; CHECK: [006] {Range} Lines 3:10 [0x0000001255:0x0000001258]
+; CHECK: [006] {Range} Lines 3:10 [0x0000001288:0x000000128b]
+

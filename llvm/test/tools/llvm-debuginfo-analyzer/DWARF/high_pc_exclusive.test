@@ -1,0 +1,28 @@
+; Regression test for:
+;  - Instructions at DW_AT_high_pc of a scope incorrectly included in the scope
+
+; clang test.cpp --target=i686-pc-linux -g -O0
+; 1
+; 2 int main(void) {
+; 3   float ret = 0;
+; 4   for (int i = 0; i < 10; i++) {
+; 5     ret += i;
+; 6   }
+; 7   return ret;
+; 8 }
+; 9
+
+; RUN: llvm-debuginfo-analyzer --attribute=all \
+; RUN:                         --print=all \
+; RUN:                         --output-sort=offset \
+; RUN:                         %p/Inputs/high_pc_exclusive.o 2>&1 | \
+; RUN: FileCheck %s
+
+; Make sure the line mapping at 0x122c does not show up at the scope level 004
+; CHECK-NOT: [0x000000122c][004] 7 {Line}
+
+; Make sure it *does* appear at scope level 003
+; CHECK: [0x000000122c][003] 7 {Line}
+
+
+
