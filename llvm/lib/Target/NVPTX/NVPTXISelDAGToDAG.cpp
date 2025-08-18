@@ -1051,6 +1051,7 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
 }
 
 static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
+  Addr = stripAssertAlign(Addr);
   APInt AccumulatedOffset(64u, 0);
   while (isAddLike(Addr)) {
     const auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
