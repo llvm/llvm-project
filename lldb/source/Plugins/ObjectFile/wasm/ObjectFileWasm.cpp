@@ -282,12 +282,10 @@ ParseFunctions(SectionSP code_section_sp) {
 }
 
 struct WasmSegment {
-  WasmSegment(SectionSP section_sp, lldb::offset_t offset, uint32_t size,
-              uint32_t flags)
-      : address_range(section_sp, offset, size), flags(flags) {};
+  WasmSegment(SectionSP section_sp, lldb::offset_t offset, uint32_t size)
+      : address_range(section_sp, offset, size) {};
   std::string name;
   AddressRange address_range;
-  uint32_t flags = 0;
 };
 
 static llvm::Expected<std::vector<WasmSegment>>
@@ -309,11 +307,27 @@ ParseData(SectionSP data_section_sp) {
     if (flags > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("segment flags overflows uint32_t");
 
+    // Data segments have a mode that identifies them as either passive or
+    // active. An active data segment copies its contents into a memory during
+    // instantiation, as specified by a memory index and a constant expression
+    // defining an offset into that memory.
+    if (flags & llvm::wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX) {
+      const uint64_t memidx = data.GetULEB128(&offset);
+      if (memidx > std::numeric_limits<uint32_t>::max())
+        return llvm::createStringError("memidx overflows uint32_t");
+    }
+
+    if ((flags & llvm::wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
+      // Skip over the constant expression.
+      for (uint8_t b = 0; b != llvm::wasm::WASM_OPCODE_END;)
+        b = data.GetU8(&offset);
+    }
+
     const uint64_t segment_size = data.GetULEB128(&offset);
     if (segment_size > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("segment size overflows uint32_t");
 
-    segments.emplace_back(data_section_sp, offset, segment_size, flags);
+    segments.emplace_back(data_section_sp, offset, segment_size);
 
     std::optional<lldb::offset_t> next_offset =
         llvm::checkedAddUnsigned(offset, segment_size);
@@ -465,7 +479,7 @@ void ObjectFileWasm::ParseSymtab(Symtab &symtab) {
         /*vm_size=*/segment_size,
         /*file_offset=*/segment_addr,
         /*file_size=*/segment_size,
-        /*log2align=*/0, segment.flags);
+        /*log2align=*/0, /*flags=*/0);
     m_sections_up->AddSection(segment_sp);
     GetModule()->GetSectionList()->AddSection(segment_sp);
   }
