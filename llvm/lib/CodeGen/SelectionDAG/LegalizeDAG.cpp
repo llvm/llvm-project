@@ -1012,6 +1012,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_VOID:
   case ISD::STACKSAVE:
+  case ISD::STACKADDRESS:
     Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
   case ISD::GET_DYNAMIC_AREA_OFFSET:
@@ -1127,7 +1128,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::ADJUST_TRAMPOLINE:
   case ISD::FRAMEADDR:
   case ISD::RETURNADDR:
-  case ISD::STACKADDRESS:
   case ISD::ADDROFRETURNADDR:
   case ISD::SPONENTRY:
     // These operations lie about being legal: when they claim to be legal,
@@ -3681,6 +3681,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
+  case ISD::STACKADDRESS:
   case ISD::STACKSAVE:
     // Expand to CopyFromReg if the target set
     // StackPointerRegisterToSaveRestore.
