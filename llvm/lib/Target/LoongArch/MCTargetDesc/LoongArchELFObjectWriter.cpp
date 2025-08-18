@@ -21,26 +21,23 @@ using namespace llvm;
 namespace {
 class LoongArchELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool EnableRelax);
+  LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
 
   ~LoongArchELFObjectWriter() override;
 
   bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
-    return EnableRelax;
+    return true;
   }
 
 protected:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
-  bool EnableRelax;
 };
 } // end namespace
 
-LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit,
-                                                   bool EnableRelax)
+LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_LOONGARCH,
-                              /*HasRelocationAddend=*/true),
-      EnableRelax(EnableRelax) {}
+                              /*HasRelocationAddend=*/true) {}
 
 LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
 
@@ -103,6 +100,6 @@ unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool Relax) {
-  return std::make_unique<LoongArchELFObjectWriter>(OSABI, Is64Bit, Relax);
+llvm::createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit) {
+  return std::make_unique<LoongArchELFObjectWriter>(OSABI, Is64Bit);
 }
