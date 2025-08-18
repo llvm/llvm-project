@@ -2154,6 +2154,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ExtVectorType:
     OS << "ext_vector_type";
     break;
+  case attr::CFISalt:
+    OS << "cfi_salt(\"" << cast<CFISaltAttr>(T->getAttr())->getSalt() << "\")";
+    break;
   }
   OS << "))";
 }

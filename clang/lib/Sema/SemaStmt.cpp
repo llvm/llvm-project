@@ -316,17 +316,10 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
       }
     }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
-    if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
-      const NamedDecl *OffendingDecl = nullptr;
-      const auto *A = Ctor->getAttr<WarnUnusedResultAttr>();
-      if (!A) {
-        OffendingDecl = Ctor->getParent();
-        A = OffendingDecl->getAttr<WarnUnusedResultAttr>();
-      }
-      if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
-                            /*isCtor=*/true))
-        return;
-    }
+    auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
+    if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
+                          /*isCtor=*/true))
+      return;
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     if (const TagDecl *TD = ILE->getType()->getAsTagDecl()) {
 

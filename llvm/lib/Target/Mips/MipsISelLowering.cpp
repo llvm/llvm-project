@@ -2325,10 +2325,7 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
     SDValue TlsGetAddr = DAG.getExternalSymbol("__tls_get_addr", PtrVT);
 
     ArgListTy Args;
-    ArgListEntry Entry;
-    Entry.Node = Argument;
-    Entry.Ty = PtrTy;
-    Args.push_back(Entry);
+    Args.emplace_back(Argument, PtrTy);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(DL)
@@ -3160,17 +3157,19 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
   return false;
 }
 
-static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT,
-                            MVT LocVT, CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   static const MCPhysReg F64Regs[] = { Mips::D6, Mips::D7 };
 
   return CC_MipsO32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State, F64Regs);
 }
 
-static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT,
-                            MVT LocVT, CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   static const MCPhysReg F64Regs[] = { Mips::D12_64, Mips::D14_64 };
 
   return CC_MipsO32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State, F64Regs);
@@ -3178,7 +3177,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT,
 
 static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                       CCState &State) LLVM_ATTRIBUTE_UNUSED;
+                       Type *OrigTy, CCState &State) LLVM_ATTRIBUTE_UNUSED;
 
 #include "MipsGenCallingConv.inc"
 
@@ -3392,8 +3391,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       MemcpyInByVal ? 0 : ABI.GetCalleeAllocdArgSizeInBytes(CallConv);
   CCInfo.AllocateStack(ReservedArgArea, Align(1));
 
-  CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs(),
-                             ES ? ES->getSymbol() : nullptr);
+  CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs());
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned StackSize = CCInfo.getStackSize();
@@ -3688,10 +3686,7 @@ SDValue MipsTargetLowering::LowerCallResult(
   MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                      *DAG.getContext());
 
-  const ExternalSymbolSDNode *ES =
-      dyn_cast_or_null<const ExternalSymbolSDNode>(CLI.Callee.getNode());
-  CCInfo.AnalyzeCallResult(Ins, RetCC_Mips, CLI.RetTy,
-                           ES ? ES->getSymbol() : nullptr);
+  CCInfo.AnalyzeCallResult(Ins, RetCC_Mips, CLI.OrigRetTy);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
