@@ -64,7 +64,7 @@ void Block::removePointer(Pointer *P) {
 }
 
 void Block::cleanup() {
-  if (Pointers == nullptr && !IsDynamic && isDead())
+  if (Pointers == nullptr && !isDynamic() && isDead())
     (reinterpret_cast<DeadBlock *>(this + 1) - 1)->free();
 }
 
@@ -123,7 +123,7 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   Prev = nullptr;
   Root = this;
 
-  B.IsDynamic = Blk->IsDynamic;
+  B.DynAllocId = Blk->DynAllocId;
 
   // Transfer pointers.
   B.Pointers = Blk->Pointers;
