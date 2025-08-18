@@ -857,14 +857,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUresult Res;
     size_t N = Size / PatternSize;
     if (PatternSize == 1) {
-      Res = cuMemsetD8Async((CUdeviceptr)TgtPtr, *((const uint8_t *)PatternPtr),
-                            N, Stream);
+      Res = cuMemsetD8Async((CUdeviceptr)TgtPtr,
+                            *(static_cast<const uint8_t *>(PatternPtr)), N,
+                            Stream);
     } else if (PatternSize == 2) {
       Res = cuMemsetD16Async((CUdeviceptr)TgtPtr,
-                             *((const uint16_t *)PatternPtr), N, Stream);
+                             *(static_cast<const uint16_t *>(PatternPtr)), N,
+                             Stream);
     } else if (PatternSize == 4) {
       Res = cuMemsetD32Async((CUdeviceptr)TgtPtr,
-                             *((const uint32_t *)PatternPtr), N, Stream);
+                             *(static_cast<const uint32_t *>(PatternPtr)), N,
+                             Stream);
     } else {
       // For larger patterns we can do a series of strided fills to copy the
       // pattern efficiently
@@ -880,15 +883,18 @@ struct CUDADeviceTy : public GenericDeviceTy {
         if (MemsetSize == 4) {
           Res = cuMemsetD2D32Async(
               (CUdeviceptr)TgtPtr + Step * MemsetSize, Pitch,
-              *((const uint32_t *)PatternPtr + Step), 1u, Height, Stream);
+              *(static_cast<const uint32_t *>(PatternPtr) + Step), 1u, Height,
+              Stream);
         } else if (MemsetSize == 2) {
           Res = cuMemsetD2D16Async(
               (CUdeviceptr)TgtPtr + Step * MemsetSize, Pitch,
-              *((const uint16_t *)PatternPtr + Step), 1u, Height, Stream);
+              *(static_cast<const uint16_t *>(PatternPtr) + Step), 1u, Height,
+              Stream);
         } else {
-          Res = cuMemsetD2D8Async((CUdeviceptr)TgtPtr + Step * MemsetSize,
-                                  Pitch, *((const uint8_t *)PatternPtr + Step),
-                                  1u, Height, Stream);
+          Res = cuMemsetD2D8Async(
+              (CUdeviceptr)TgtPtr + Step * MemsetSize, Pitch,
+              *(static_cast<const uint8_t *>(PatternPtr) + Step), 1u, Height,
+              Stream);
         }
       }
     }

@@ -2594,7 +2594,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
-      Status = hsa_amd_memory_fill(TgtPtr, *(uint32_t *)(PatternPtr),
+      Status = hsa_amd_memory_fill(TgtPtr,
+                                   *static_cast<const uint32_t *>(PatternPtr),
                                    Size / PatternSize);
 
       if (auto Err =
