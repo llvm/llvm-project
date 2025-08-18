@@ -243,3 +243,23 @@ define void @store_null() {
   store i32 0, ptr addrspace(7) null, align 4
   ret void
 }
+
+define i32 @load_poison() {
+; CHECK-LABEL: define i32 @load_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = load i32, ptr addrspace(7) poison, align 4
+  ret i32 %x
+}
+
+define void @store_poison() {
+; CHECK-LABEL: define void @store_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(7) poison, align 4
+  ret void
+}
