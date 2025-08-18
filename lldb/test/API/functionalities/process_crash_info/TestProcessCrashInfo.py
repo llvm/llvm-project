@@ -38,7 +38,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
             patterns=[
                 "Extended Crash Information",
                 "Crash-Info Annotations",
-                "pointer being freed was not allocated",
+                "BUG IN CLIENT OF LIBMALLOC",
             ],
         )
 
@@ -67,7 +67,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         self.assertTrue(crash_info.IsValid())
 
-        self.assertIn("pointer being freed was not allocated", stream.GetData())
+        self.assertIn("BUG IN CLIENT OF LIBMALLOC", stream.GetData())
 
     # dyld leaves permanent crash_info records when testing on device.
     @skipIfDarwinEmbedded
