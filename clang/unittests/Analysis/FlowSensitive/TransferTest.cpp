@@ -3585,10 +3585,29 @@ TEST(TransferTest, StaticCastNoOp) {
 
 TEST(TransferTest, StaticCastBaseToDerived) {
   std::string Code = R"cc(
-    struct Base {};
-    struct Derived : public Base {};
-    void target(Base* B) {
-      Derived* D = static_cast<Derived*>(B);
+    struct Base {
+      char c;
+    };
+    struct Intermediate : public Base {
+      bool b;
+    };
+    struct Derived : public Intermediate {
+      int i;
+    };
+    Base& getBaseRef();
+    void target(Base* BPtr) {
+      Derived* DPtr = static_cast<Derived*>(BPtr);
+      DPtr->c;
+      DPtr->b;
+      DPtr->i;
+      Derived& DRef = static_cast<Derived&>(*BPtr);
+      DRef.c;
+      DRef.b;
+      DRef.i;
+      Derived& DRefFromFunc = static_cast<Derived&>(getBaseRef());
+      DRefFromFunc.c;
+      DRefFromFunc.b;
+      DRefFromFunc.i;
       // [[p]]
     }
   )cc";
@@ -3599,11 +3618,18 @@ TEST(TransferTest, StaticCastBaseToDerived) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
-        ASSERT_THAT(BDecl, NotNull());
+        const ValueDecl *BPtrDecl = findValueDecl(ASTCtx, "BPtr");
+        ASSERT_THAT(BPtrDecl, NotNull());
 
-        const ValueDecl *DDecl = findValueDecl(ASTCtx, "D");
-        ASSERT_THAT(DDecl, NotNull());
+        const ValueDecl *DPtrDecl = findValueDecl(ASTCtx, "DPtr");
+        ASSERT_THAT(DPtrDecl, NotNull());
+
+        const ValueDecl *DRefDecl = findValueDecl(ASTCtx, "DRef");
+        ASSERT_THAT(DRefDecl, NotNull());
+
+        const ValueDecl *DRefFromFuncDecl =
+            findValueDecl(ASTCtx, "DRefFromFunc");
+        ASSERT_THAT(DRefFromFuncDecl, NotNull());
 
         const auto *Cast = ast_matchers::selectFirst<CXXStaticCastExpr>(
             "cast",
@@ -3612,7 +3638,11 @@ TEST(TransferTest, StaticCastBaseToDerived) {
         ASSERT_THAT(Cast, NotNull());
         ASSERT_EQ(Cast->getCastKind(), CK_BaseToDerived);
 
-        EXPECT_EQ(Env.getValue(*BDecl), Env.getValue(*DDecl));
+        EXPECT_EQ(Env.getValue(*BPtrDecl), Env.getValue(*DPtrDecl));
+        EXPECT_EQ(&Env.get<PointerValue>(*BPtrDecl)->getPointeeLoc(),
+                  Env.getStorageLocation(*DRefDecl));
+        // For DRefFromFunc, not crashing when analyzing the field accesses is
+        // enough.
       });
 }
 
