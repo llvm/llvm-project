@@ -1366,7 +1366,7 @@ struct AAAMDGPUUniformArgument : public AAAMDGPUUniform {
             IRPosition::argument(*Arg), this, DepClassTy::REQUIRED);
         return AA && AA->isValidState();
       }
-      TargetTransformInfo *TTI =
+      const TargetTransformInfo *TTI =
           A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
               *CB->getFunction());
       return TTI->isAlwaysUniform(V);
