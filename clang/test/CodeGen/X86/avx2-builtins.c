@@ -920,6 +920,7 @@ __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
   // CHECK: mul <4 x i64> %{{.*}}, %{{.*}}
   return _mm256_mul_epi32(a, b);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_mul_epi32((__m256i)(__v8si){+1, -2, +3, -4, +5, -6, +7, -8}, (__m256i)(__v8si){-16, -14, +12, +10, -8, +6, -4, +2}), -16, 36, -40, -28));
 
 __m256i test_mm256_mul_epu32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mul_epu32
@@ -928,6 +929,7 @@ __m256i test_mm256_mul_epu32(__m256i a, __m256i b) {
   // CHECK: mul <4 x i64> %{{.*}}, %{{.*}}
   return _mm256_mul_epu32(a, b);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_mul_epu32((__m256i)(__v8si){+1, -2, +3, -4, +5, -6, +7, -8}, (__m256i)(__v8si){-16, -14, +12, +10, -8, +6, -4, +2}), 4294967280, 36, 21474836440, 30064771044));
 
 __m256i test_mm256_mulhi_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mulhi_epu16

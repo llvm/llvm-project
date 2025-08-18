@@ -420,7 +420,7 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
 }
 
 class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
-    : RVInst<(outs VR:$vd), (ins VR:$vs2, VMaskOp:$vm),
+    : RVInst<(outs VR:$vd), (ins VR:$vs2),
              opcodestr, "$vd, $vs2", [], InstFormatR> {
   bits<5> vs2;
   bits<5> vd;

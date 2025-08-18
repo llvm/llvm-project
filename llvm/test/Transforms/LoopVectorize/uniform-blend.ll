@@ -6,7 +6,7 @@
 define void @blend_uniform_iv_trunc(i1 %c) {
 ; CHECK-LABEL: define void @blend_uniform_iv_trunc(
 ; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -22,10 +22,9 @@ define void @blend_uniform_iv_trunc(i1 %c) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC_2:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_NEXT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_NEXT]]:
@@ -66,7 +65,7 @@ exit:                                             ; preds = %loop.latch
 define void @blend_uniform_iv(i1 %c) {
 ; CHECK-LABEL: define void @blend_uniform_iv(
 ; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -81,10 +80,9 @@ define void @blend_uniform_iv(i1 %c) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_NEXT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_NEXT]]:
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
@@ -124,7 +122,7 @@ exit:                                             ; preds = %loop.latch
 define void @blend_chain_iv(i1 %c) {
 ; CHECK-LABEL: define void @blend_chain_iv(
 ; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
@@ -156,10 +154,9 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_NEXT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_NEXT]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_NEXT_2:.*]], label %[[LOOP_NEXT_3:.*]]

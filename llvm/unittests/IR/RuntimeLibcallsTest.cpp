@@ -23,7 +23,7 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
       RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("unsupported").empty());
 
   for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls()) {
-    const char *Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC);
+    StringRef Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC);
     EXPECT_TRUE(is_contained(
         RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name), LC));
   }

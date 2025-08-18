@@ -676,3 +676,35 @@ func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
   emitc.verbatim "{a} " args %arg0, %arg1 : !emitc.ptr<i32>, i32
   return
 }
+
+// -----
+
+// expected-error @+1 {{'emitc.field' op field must be nested within an emitc.class operation}}
+emitc.field @testField : !emitc.array<1xf32>
+
+// -----
+
+// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+%1 = emitc.get_field @testField : !emitc.array<1xf32>
+
+// -----
+
+emitc.func @testMethod() {
+  %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  %1 = get_field @testField : !emitc.array<1xf32>
+  %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+emitc.class @testClass {
+  emitc.func @testMethod() {
+    %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+    // expected-error @+1 {{'emitc.get_field' op field '@testField' not found in the class}}
+    %1 = get_field @testField : !emitc.array<1xf32>
+    %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+    return
+  }
+}

@@ -340,7 +340,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-lower-kernel-attributes",
       "amdgpu-propagate-attributes-early",
       "amdgpu-propagate-attributes-late",
-      "amdgpu-unify-metadata",
       "amdgpu-printf-runtime-binding",
       "amdgpu-always-inline"};
   if (llvm::is_contained(PassNameExactToIgnore, Pass))

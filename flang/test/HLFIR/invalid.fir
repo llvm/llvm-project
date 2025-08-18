@@ -1555,3 +1555,96 @@ func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<
   %0 = hlfir.reshape %arg0 %arg1 pad %arg2 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2,?>>) -> !hlfir.expr<?x!fir.char<1,?>>
   return
 }
+
+// -----
+
+func.func @bad_eoshift1(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?x?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift2(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift3(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.eoshift' op output array's shape conflicts with the input array's shape}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, i32) -> !hlfir.expr<2x3xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift4(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'hlfir.eoshift' op DIM must be >= 1}}
+  %0 = hlfir.eoshift %arg0 %arg1 dim %c0 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift5(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c10 = arith.constant 10 : index
+  // expected-error@+1 {{'hlfir.eoshift' op DIM must be <= input array's rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 dim %c10 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift6(%arg0: !hlfir.expr<2x2xi32>, %arg1: !hlfir.expr<2x2xi32>) {
+  // expected-error@+1 {{'hlfir.eoshift' op SHIFT's rank must be 1 less than the input array's rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift7(%arg0: !hlfir.expr<?x2xi32>, %arg1: !hlfir.expr<3xi32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.eoshift' op SHAPE(ARRAY)(2) must be equal to SHAPE(SHIFT)(1): 2 != 3}}
+  %0 = hlfir.eoshift %arg0 %arg1 dim %c1 : (!hlfir.expr<?x2xi32>, !hlfir.expr<3xi32>, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift8(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.eoshift' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,?>>, i32) -> !hlfir.expr<?x!fir.char<2,?>>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift9(%arg0: !hlfir.expr<?x!fir.char<1,1>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.eoshift' op character LEN mismatch}}
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,1>>, i32) -> !hlfir.expr<?x!fir.char<1,2>>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift10(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32, %arg2: f32) {
+  // expected-error@+1 {{'hlfir.eoshift' op ARRAY and BOUNDARY operands must have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 boundary %arg2 : (!hlfir.expr<2x2xi32>, i32, f32) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift11(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32, %arg2: !hlfir.expr<2x2xi32>) {
+  // expected-error@+1 {{'hlfir.eoshift' op BOUNDARY's rank must be 1 less than the input array's rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 boundary %arg2 : (!hlfir.expr<2x2xi32>, i32, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}

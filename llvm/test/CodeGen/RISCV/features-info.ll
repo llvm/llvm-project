@@ -27,8 +27,6 @@
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
-; CHECK-NEXT:   experimental-smctr               - 'Smctr' (Control Transfer Records Machine Level).
-; CHECK-NEXT:   experimental-ssctr               - 'Ssctr' (Control Transfer Records Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
 ; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
@@ -145,6 +143,7 @@
 ; CHECK-NEXT:   smcdeleg                         - 'Smcdeleg' (Counter Delegation Machine Level).
 ; CHECK-NEXT:   smcntrpmf                        - 'Smcntrpmf' (Cycle and Instret Privilege Mode Filtering).
 ; CHECK-NEXT:   smcsrind                         - 'Smcsrind' (Indirect CSR Access Machine Level).
+; CHECK-NEXT:   smctr                            - 'Smctr' (Control Transfer Records Machine Level).
 ; CHECK-NEXT:   smdbltrp                         - 'Smdbltrp' (Double Trap Machine Level).
 ; CHECK-NEXT:   smepmp                           - 'Smepmp' (Enhanced Physical Memory Protection).
 ; CHECK-NEXT:   smmpm                            - 'Smmpm' (Machine-level Pointer Masking for M-mode).
@@ -157,6 +156,7 @@
 ; CHECK-NEXT:   sscofpmf                         - 'Sscofpmf' (Count Overflow and Mode-Based Filtering).
 ; CHECK-NEXT:   sscounterenw                     - 'Sscounterenw' (Support writeable scounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   sscsrind                         - 'Sscsrind' (Indirect CSR Access Supervisor Level).
+; CHECK-NEXT:   ssctr                            - 'Ssctr' (Control Transfer Records Supervisor Level).
 ; CHECK-NEXT:   ssdbltrp                         - 'Ssdbltrp' (Double Trap Supervisor Level).
 ; CHECK-NEXT:   ssnpm                            - 'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode).
 ; CHECK-NEXT:   sspm                             - 'Sspm' (Indicates Supervisor-mode Pointer Masking).

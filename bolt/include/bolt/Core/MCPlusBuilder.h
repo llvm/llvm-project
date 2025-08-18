@@ -740,6 +740,10 @@ public:
     return false;
   }
 
+  /// Return true if the hlt instruction under the x86, otherwise, default to
+  /// false.
+  virtual bool isX86HLT(const MCInst &Inst) const { return false; }
+
   /// Return the width, in bytes, of the memory access performed by \p Inst, if
   /// this is a pop instruction. Return zero otherwise.
   virtual int getPopSize(const MCInst &Inst) const {

@@ -16,7 +16,7 @@
 #define __CLC_BODY <clc/integer/clc_bitfield_insert.inc>
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // cl_khr_extended_bit_ops
 

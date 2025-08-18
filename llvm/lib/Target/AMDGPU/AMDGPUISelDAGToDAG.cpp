@@ -1196,18 +1196,25 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
 void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
+  SDVTList VTList;
   unsigned Opc;
-  if (Subtarget->hasMADIntraFwdBug())
-    Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
-                 : AMDGPU::V_MAD_U64_U32_gfx11_e64;
-  else
-    Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+  if (Subtarget->hasMadU64U32NoCarry()) {
+    VTList = CurDAG->getVTList(MVT::i64);
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
+  } else {
+    VTList = CurDAG->getVTList(MVT::i64, MVT::i1);
+    if (Subtarget->hasMADIntraFwdBug()) {
+      Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
+                   : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+    } else {
+      Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+    }
+  }
 
   SDValue Zero = CurDAG->getTargetConstant(0, SL, MVT::i64);
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = {N->getOperand(0), N->getOperand(1), Zero, Clamp};
-  SDNode *Mad = CurDAG->getMachineNode(
-      Opc, SL, CurDAG->getVTList(MVT::i64, MVT::i1), Ops);
+  SDNode *Mad = CurDAG->getMachineNode(Opc, SL, VTList, Ops);
   if (!SDValue(N, 0).use_empty()) {
     SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32);
     SDNode *Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,

@@ -111,6 +111,13 @@ Diagnostics which have a corresponding warning option, are named
 ``-Wliteral-conversion`` will be reported with check name
 ``clang-diagnostic-literal-conversion``.
 
+Clang compiler errors (such as syntax errors, semantic errors, or other failures
+that prevent Clang from compiling the code) are reported with the check name
+``clang-diagnostic-error``. These represent fundamental compilation failures that
+must be fixed before :program:`clang-tidy` can perform its analysis. Unlike other
+diagnostics, ``clang-diagnostic-error`` cannot be disabled, as :program:`clang-tidy`
+requires valid code to function.
+
 The ``-fix`` flag instructs :program:`clang-tidy` to fix found errors if
 supported by corresponding checks.
 

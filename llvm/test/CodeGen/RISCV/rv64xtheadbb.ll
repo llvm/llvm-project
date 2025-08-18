@@ -635,6 +635,26 @@ define signext i32 @sexti1_i32_2(i1 %a) nounwind {
   ret i32 %sext
 }
 
+; Make sure we don't use not+th.ext
+define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
+; RV64I-LABEL: sexti1_i32_setcc:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sexti1_i32_setcc:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    srli a0, a0, 63
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
+; RV64XTHEADBB-NEXT:    ret
+  %icmp = icmp sgt i32 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
+}
+
 define i64 @sexti1_i64(i64 %a) nounwind {
 ; RV64I-LABEL: sexti1_i64:
 ; RV64I:       # %bb.0:
@@ -664,6 +684,26 @@ define i64 @sexti1_i64_2(i1 %a) nounwind {
 ; RV64XTHEADBB-NEXT:    ret
   %sext = sext i1 %a to i64
   ret i64 %sext
+}
+
+; Make sure we don't use not+th.ext
+define zeroext i8 @sexti1_i64_setcc(i64 %a) {
+; RV64I-LABEL: sexti1_i64_setcc:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sexti1_i64_setcc:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    srli a0, a0, 63
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
+; RV64XTHEADBB-NEXT:    ret
+  %icmp = icmp sgt i64 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
 }
 
 define signext i32 @sextb_i32(i32 signext %a) nounwind {

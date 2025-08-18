@@ -8942,10 +8942,7 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -16662,6 +16659,13 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
       DAG.computeKnownBits(Src.getOperand(1)).countMaxActiveBits() <= 5)
     return DAG.getNode(RISCVISD::SLLW, SDLoc(N), VT, Src.getOperand(0),
                        Src.getOperand(1));
+
+  // Fold (sext_inreg (xor (setcc), -1), i1) -> (add (setcc), -1)
+  if (Opc == ISD::XOR && SrcVT == MVT::i1 &&
+      isAllOnesConstant(Src.getOperand(1)) &&
+      Src.getOperand(0).getOpcode() == ISD::SETCC)
+    return DAG.getNode(ISD::ADD, SDLoc(N), VT, Src.getOperand(0),
+                       DAG.getAllOnesConstant(SDLoc(N), VT));
 
   return SDValue();
 }

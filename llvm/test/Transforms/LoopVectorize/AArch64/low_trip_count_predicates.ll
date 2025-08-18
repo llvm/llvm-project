@@ -474,7 +474,7 @@ while.end:
 define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @tc4(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[TMP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -490,12 +490,10 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD]] = add i32 [[SUM_0179]], [[TMP5]]

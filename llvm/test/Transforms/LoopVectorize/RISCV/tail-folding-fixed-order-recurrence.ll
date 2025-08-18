@@ -603,8 +603,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; IF-EVL-NEXT:    [[PREV_EVL:%.*]] = phi i32 [ [[TMP5]], %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP11]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP11]] to i64
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 1, [[TMP7]]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP8]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP7]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP20]] = add <vscale x 2 x i64> [[VEC_IND]], splat (i64 42)
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.splice.nxv2i64(<vscale x 2 x i64> [[VECTOR_RECUR]], <vscale x 2 x i64> [[TMP20]], i32 -1, <vscale x 2 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP11]])
@@ -647,8 +646,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; NO-VP-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i64> [[TMP6]], splat (i64 1)
 ; NO-VP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP7]]
-; NO-VP-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP3]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP14]], 2

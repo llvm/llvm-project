@@ -289,7 +289,7 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   }
 
   // Apply the offsets.
-  Address vtableField = loadCXXThisAddress();
+  Address classAddr = loadCXXThisAddress();
   if (!nonVirtualOffset.isZero() || virtualOffset) {
     cgm.errorNYI(loc,
                  "initializeVTablePointer: non-virtual and virtual offset");
@@ -300,9 +300,9 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space.
   assert(!cir::MissingFeatures::addressSpace());
-  // TODO(cir): This should be cir.vtable.get_vptr.
-  vtableField = builder.createElementBitCast(loc, vtableField,
-                                             vtableAddressPoint.getType());
+  auto vtablePtr = cir::VTableGetVPtrOp::create(
+      builder, loc, builder.getPtrToVPtrType(), classAddr.getPointer());
+  Address vtableField = Address(vtablePtr, classAddr.getAlignment());
   builder.createStore(loc, vtableAddressPoint, vtableField);
   assert(!cir::MissingFeatures::opTBAA());
   assert(!cir::MissingFeatures::createInvariantGroup());
@@ -655,6 +655,23 @@ Address CIRGenFunction::getAddressOfBaseClass(
   value = value.withElementType(builder, baseValueTy);
 
   return value;
+}
+
+mlir::Value CIRGenFunction::getVTablePtr(mlir::Location loc, Address thisAddr,
+                                         const CXXRecordDecl *rd) {
+  auto vtablePtr = cir::VTableGetVPtrOp::create(
+      builder, loc, builder.getPtrToVPtrType(), thisAddr.getPointer());
+  Address vtablePtrAddr = Address(vtablePtr, thisAddr.getAlignment());
+
+  auto vtable = builder.createLoad(loc, vtablePtrAddr);
+  assert(!cir::MissingFeatures::opTBAA());
+
+  if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+      cgm.getCodeGenOpts().StrictVTablePointers) {
+    assert(!cir::MissingFeatures::createInvariantGroup());
+  }
+
+  return vtable;
 }
 
 void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,

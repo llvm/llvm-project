@@ -140,7 +140,7 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_clz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_clzll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_cosf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_cosf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_ddiv_rn(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
@@ -159,7 +159,7 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_double2uint_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_mul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_umul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_fast_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_ull2double_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_ull2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_ull2double_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64

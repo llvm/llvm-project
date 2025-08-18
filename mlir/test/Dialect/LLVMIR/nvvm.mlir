@@ -524,15 +524,15 @@ func.func @wgmma_wait_group_sync_aligned() {
 }
 
 func.func @griddepcontrol_wait() {
-  // CHECK: nvvm.griddepcontrol.wait
-  nvvm.griddepcontrol.wait
+  // CHECK: nvvm.griddepcontrol wait
+  nvvm.griddepcontrol wait
   return
 }
 
 func.func @griddepcontrol_launch_dependents()
 {
-  // CHECK: nvvm.griddepcontrol.launch.dependents
-  nvvm.griddepcontrol.launch.dependents
+  // CHECK: nvvm.griddepcontrol launch_dependents
+  nvvm.griddepcontrol launch_dependents
   return
 }
 

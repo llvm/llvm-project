@@ -295,27 +295,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (hasVectorValue(Def))
     return Data.VPV2Vector[Def];
 
-  auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
+  auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
-      if (LoopVectorPreHeader)
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    }
-
-    // Place the code for broadcasting invariant variables in the new preheader.
     // Broadcast the scalar into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-
     return Shuf;
   };
 

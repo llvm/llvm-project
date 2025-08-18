@@ -1750,6 +1750,39 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetVPtr
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
+  let summary = "Get a the address of the vtable pointer for an object";
+  let description = [{
+    The `vtable.get_vptr` operation retrieves the address of the vptr for a
+    C++ object. This operation requires that the object pointer points to
+    the start of a complete object. (TODO: Describe how we get that).
+    The vptr will always be at offset zero in the object, but this operation
+    is more explicit about what is being retrieved than a direct bitcast.
+
+    The return type is always `!cir.ptr<!cir.vptr>`.
+
+    Example:
+    ```mlir
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the vptr address", [MemRead]>:$src
+  );
+
+  let results = (outs CIR_PtrToVPtr:$result);
+
+  let assemblyFormat = [{
+      $src `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -2208,6 +2241,68 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addTypes(resType);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// ReturnAddrOp and FrameAddrOp
+//===----------------------------------------------------------------------===//
+
+class CIR_FuncAddrBuiltinOp<string mnemonic> : CIR_Op<mnemonic, []> {
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_VoidPtrType:$result);
+  let assemblyFormat = [{
+    `(` $level `)` attr-dict
+  }];
+}
+
+def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
+  let summary =
+      "The return address of the current function, or of one of its callers";
+
+  let description = [{
+    Represents a call to builtin function ` __builtin_return_address` in CIR.
+    This builtin function returns the return address of the current function,
+    or of one of its callers.
+
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the return address of the current function,
+    value of 1 yields the return address of the caller of the current function,
+    and so forth.
+
+    Examples:
+
+    ```mlir
+    %p = return_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
+}
+
+def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
+  let summary =
+      "The frame address of the current function, or of one of its callers";
+
+  let description = [{
+    Represents a call to builtin function ` __builtin_frame_address` in CIR.
+    This builtin function returns the frame address of the current function,
+    or of one of its callers. The frame is the area on the stack that holds
+    local variables and saved registers. The frame address is normally the
+    address of the first word pushed on to the stack by the function.
+    However, the exact definition depends upon the processor and the calling
+    convention. If the processor has a dedicated frame pointer register, and
+    the function has a frame, then __builtin_frame_address returns the value of
+    the frame pointer register.
+
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the frame address of the current function,
+    value of 1 yields the frame address of the caller of the current function,
+    and so forth.
+
+    Examples:
+
+    ```mlir
+    %p = frame_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//

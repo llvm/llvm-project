@@ -941,6 +941,20 @@ llvm.func @rocdl.permlanex16(%src0 : f32, %src1 : i32, %src2 : vector<2 x f32>, 
   llvm.return %ret0 : f32
 }
 
+llvm.func @rocdl.permlane16.swap(%src : i32) -> !llvm.struct<(i32, i32)> {
+  // CHECK-LABEL: rocdl.permlane16.swap
+  // CHECK: call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %{{.*}}, i32 %{{.*}}, i1 false, i1 true)
+  %ret = rocdl.permlane16.swap %src, %src, 0, -1  : (i32, i32) -> !llvm.struct<(i32, i32)>
+  llvm.return %ret : !llvm.struct<(i32, i32)>
+}
+
+llvm.func @rocdl.permlane32.swap(%src : i32) -> !llvm.struct<(i32, i32)> {
+  // CHECK-LABEL: rocdl.permlane32.swap
+  // CHECK: call { i32, i32 } @llvm.amdgcn.permlane32.swap(i32 %{{.*}}, i32 %{{.*}}, i1 false, i1 true)
+  %ret = rocdl.permlane32.swap %src, %src, 0, -1  : (i32, i32) -> !llvm.struct<(i32, i32)>
+  llvm.return %ret : !llvm.struct<(i32, i32)>
+}
+
 llvm.func @rocdl.wmma.fp8(%arg0 : vector<2 x i32>, %arg1 : vector<8xf32>) -> vector<8xf32> {
   // CHECK: call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v8f32.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, <8 x float> %{{.*}})
   %r0 = rocdl.wmma.f32.16x16x16.fp8_fp8 %arg0, %arg0, %arg1: (vector<2xi32>, vector<2xi32>, vector<8xf32>) -> vector<8xf32>

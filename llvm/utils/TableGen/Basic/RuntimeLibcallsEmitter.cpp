@@ -459,17 +459,14 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
   OS << "iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::"
         "lookupLibcallImplNameImpl(StringRef Name) {\n";
 
-  // Emit pair of RTLIB::LibcallImpl, size of the string name. It's important to
-  // avoid strlen on the string table entries.
-  OS << "  static constexpr std::pair<uint16_t, uint16_t> HashTableNameToEnum["
-     << Lookup.size() << "] = {\n";
+  // Emit RTLIB::LibcallImpl values
+  OS << "  static constexpr uint16_t HashTableNameToEnum[" << Lookup.size()
+     << "] = {\n";
 
   for (auto [FuncName, Hash, TableVal] : Lookup) {
-    OS << "    {" << TableVal << ", " << FuncName.size() << "},";
-
-    if (TableVal != 0) {
+    OS << "    " << TableVal << ',';
+    if (TableVal != 0)
       OS << " // " << format_hex(Hash, 16) << ", " << FuncName;
-    }
 
     OS << '\n';
   }
@@ -480,11 +477,12 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
      << ";\n\n"
         "  for (int I = 0; I != "
      << Collisions << R"(; ++I) {
-    auto [Entry, StringSize] = HashTableNameToEnum[Idx + I];
+    const uint16_t Entry = HashTableNameToEnum[Idx + I];
     const uint16_t StrOffset = RuntimeLibcallNameOffsetTable[Entry];
+    const uint8_t StrSize = RuntimeLibcallNameSizeTable[Entry];
     StringRef Str(
       &RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTableStorage[StrOffset],
-      StringSize);
+      StrSize);
     if (Str == Name)
       return libcallImplNameHit(Entry, StrOffset);
   }
@@ -519,6 +517,15 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
     OS << formatv("  {}, // {}\n", Table.GetStringOffset(ImplName), ImplName);
   }
   OS << "};\n";
+
+  OS << R"(
+const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
+)";
+
+  OS << "  0,\n";
+  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
+    OS << "  " << LibCallImpl.getLibcallFuncName().size() << ",\n";
+  OS << "};\n\n";
 
   // Emit the reverse mapping from implementation libraries to RTLIB::Libcall
   OS << "const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::"

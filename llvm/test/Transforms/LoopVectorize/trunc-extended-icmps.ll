@@ -145,10 +145,9 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i16, ptr [[SRC_1]], i64 [[IV]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i16, ptr [[GEP_SRC_1]], align 2
 ; CHECK-NEXT:    [[I3:%.*]] = sext i16 [[I2]] to i32

@@ -1815,17 +1815,18 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    lsl z1.h, z1.h, #15
-; CHECK-NEXT:    asr z1.h, z1.h, #15
+; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    lsl z1.h, z1.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    asr z1.h, z1.h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
@@ -2572,15 +2573,16 @@ define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    lsl z1.d, z1.d, #63
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    lsl z0.d, z0.d, #63
-; CHECK-NEXT:    asr z1.d, z1.d, #63
+; CHECK-NEXT:    lsl z1.d, z1.d, #63
 ; CHECK-NEXT:    asr z0.d, z0.d, #63
-; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    asr z1.d, z1.d, #63
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]

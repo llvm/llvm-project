@@ -1108,12 +1108,10 @@ define i64 @cost_loop_invariant_recipes(i1 %x, i64 %y) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> [[TMP3]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT_I_I_I:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RED_MUL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT_I_I_I:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 1, [[SCALAR_PH]] ], [ [[RED_MUL:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X]], true
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[NOT_X]] to i64
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[Y]], [[EXT]]
@@ -1165,12 +1163,10 @@ define i32 @narrowed_reduction(ptr %a, i1 %cmp) #0 {
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i1 [[TMP20]] to i32
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INC:%.*]], [[LOOP1]] ]
-; CHECK-NEXT:    [[OR13:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[VEC_EPILOG_PH]] ], [ [[OR:%.*]], [[LOOP1]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[VEC_EPILOG_PH]] ], [ [[INC:%.*]], [[LOOP1]] ]
+; CHECK-NEXT:    [[OR13:%.*]] = phi i32 [ 0, [[VEC_EPILOG_PH]] ], [ [[OR:%.*]], [[LOOP1]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR13]], 1
 ; CHECK-NEXT:    [[OR]] = or i32 [[AND]], [[CONV]]
 ; CHECK-NEXT:    [[INC]] = add i32 [[IV]], 1
