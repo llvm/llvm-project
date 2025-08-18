@@ -20,13 +20,13 @@ using namespace llvm;
 static bool finalizeLinkage(Module &M) {
   bool MadeChange = false;
 
-  // Convert private global variables to internal linkage.
-  for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasPrivateLinkage()) {
+  // Convert private globals and external globals with no usage to internal
+  // linkage.
+  for (GlobalVariable &GV : M.globals())
+    if (GV.hasPrivateLinkage() || (GV.hasExternalLinkage() && GV.use_empty())) {
       GV.setLinkage(GlobalValue::InternalLinkage);
       MadeChange = true;
     }
-  }
 
   SmallVector<Function *> Funcs;
 

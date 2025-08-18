@@ -19,14 +19,35 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 
 namespace clang::lifetimes {
 
+/// Enum to track the confidence level of a potential error.
+enum class Confidence {
+  None,
+  Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
+  Definite // Reported as a definite error (-Wlifetime-safety-permissive)
+};
+
+class LifetimeSafetyReporter {
+public:
+  LifetimeSafetyReporter() = default;
+  virtual ~LifetimeSafetyReporter() = default;
+
+  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                                  SourceLocation FreeLoc,
+                                  Confidence Confidence) {}
+};
+
 /// The main entry point for the analysis.
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC);
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter);
 
 namespace internal {
 // Forward declarations of internal types.
@@ -53,6 +74,7 @@ template <typename Tag> struct ID {
     IDBuilder.AddInteger(Value);
   }
 };
+
 template <typename Tag>
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
   return OS << ID.Value;
@@ -78,7 +100,8 @@ using ProgramPoint = const Fact *;
 /// encapsulates the various dataflow analyses.
 class LifetimeSafetyAnalysis {
 public:
-  LifetimeSafetyAnalysis(AnalysisDeclContext &AC);
+  LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                         LifetimeSafetyReporter *Reporter);
   ~LifetimeSafetyAnalysis();
 
   void run();
@@ -87,7 +110,7 @@ public:
   LoanSet getLoansAtPoint(OriginID OID, ProgramPoint PP) const;
 
   /// Returns the set of loans that have expired at a specific program point.
-  LoanSet getExpiredLoansAtPoint(ProgramPoint PP) const;
+  std::vector<LoanID> getExpiredLoansAtPoint(ProgramPoint PP) const;
 
   /// Finds the OriginID for a given declaration.
   /// Returns a null optional if not found.
@@ -110,6 +133,7 @@ public:
 
 private:
   AnalysisDeclContext &AC;
+  LifetimeSafetyReporter *Reporter;
   std::unique_ptr<LifetimeFactory> Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
@@ -117,5 +141,26 @@ private:
 };
 } // namespace internal
 } // namespace clang::lifetimes
+
+namespace llvm {
+template <typename Tag>
+struct DenseMapInfo<clang::lifetimes::internal::ID<Tag>> {
+  using ID = clang::lifetimes::internal::ID<Tag>;
+
+  static inline ID getEmptyKey() {
+    return {DenseMapInfo<uint32_t>::getEmptyKey()};
+  }
+
+  static inline ID getTombstoneKey() {
+    return {DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const ID &Val) {
+    return DenseMapInfo<uint32_t>::getHashValue(Val.Value);
+  }
+
+  static bool isEqual(const ID &LHS, const ID &RHS) { return LHS == RHS; }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H

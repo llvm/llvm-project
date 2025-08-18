@@ -326,7 +326,14 @@ static int initCnt = 0;
 // A helper function that will be called during the JIT's initialization.
 static void initCallback() { initCnt += 1; }
 
-TEST(GlobalCtorJit, MAYBE_JITCallback) {
+TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  ASSERT_TRUE(!!tmBuilderOrError);
+  if (tmBuilderOrError->getTargetTriple().isAArch64()) {
+    GTEST_SKIP() << "Skipping global ctor initialization test on Aarch64 "
+                    "because of bug #71963";
+    return;
+  }
   std::string moduleStr = R"mlir(
   llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
   llvm.func @ctor() {
@@ -347,6 +354,8 @@ TEST(GlobalCtorJit, MAYBE_JITCallback) {
   ExecutionEngineOptions jitOptions;
   auto jitOrError = ExecutionEngine::create(*module, jitOptions);
   ASSERT_TRUE(!!jitOrError);
+  // validate initialization is not run on construction
+  ASSERT_EQ(initCnt, 0);
   auto jit = std::move(jitOrError.get());
   // Define any extra symbols so they're available at initialization.
   jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
@@ -356,6 +365,10 @@ TEST(GlobalCtorJit, MAYBE_JITCallback) {
         llvm::JITSymbolFlags::Exported};
     return symbolMap;
   });
+  jit->initialize();
+  // validate the side effect of initialization
+  ASSERT_EQ(initCnt, 1);
+  // next initialization should be noop
   jit->initialize();
   ASSERT_EQ(initCnt, 1);
 }
