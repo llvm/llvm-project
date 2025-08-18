@@ -20,7 +20,7 @@ struct HasDtor {
 // CHECK-NEXT:   cir.alloca !cir.array<!rec_HasDtor x 5>, !cir.ptr<!cir.array<!rec_HasDtor x 5>>, ["openacc.private.init"]
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}):
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}):
 // CHECK-NEXT:   cir.array.dtor %[[ARG]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> {
 // CHECK-NEXT:   ^bb0(%[[ARG1:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
 // CHECK-NEXT:     cir.call @_ZN7HasDtorD1Ev(%[[ARG1]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
