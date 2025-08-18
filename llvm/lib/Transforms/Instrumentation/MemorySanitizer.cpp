@@ -3857,7 +3857,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //       Three operands:
   //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
   //                       (<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
-  //         (the result of multiply-add'ing %a and %b is accumulated with %s)
+  //         (this is equivalent to multiply-add on %a and %b, followed by
+  //          adding/"accumulating" %s. "Accumulation" stores the result in one
+  //          of the source registers, but this accumulate vs. add distinction
+  //          is lost when dealing with LLVM intrinsics.)
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
@@ -3872,6 +3875,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Sa = nullptr;
     Value *Sb = nullptr;
 
+    assert(I.arg_size() == 2 || I.arg_size() == 3);
     if (I.arg_size() == 2) {
       Va = I.getOperand(0);
       Vb = I.getOperand(1);
@@ -3885,8 +3889,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       Sa = getShadow(&I, 1);
       Sb = getShadow(&I, 2);
-    } else {
-      assert(I.arg_size() == 2 || I.arg_size() == 3);
     }
 
     FixedVectorType *ParamType = cast<FixedVectorType>(Va->getType());
