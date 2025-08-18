@@ -2378,6 +2378,19 @@ SILoadStoreOptimizer::collectMergeableInsts(
     if (Swizzled != -1 && MI.getOperand(Swizzled).getImm())
       continue;
 
+    if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      const MachineOperand *Fmt =
+          TII->getNamedOperand(MI, AMDGPU::OpName::format);
+      if (!Fmt) {
+        LLVM_DEBUG(dbgs() << "Skip tbuffer without format operand: " << MI);
+        continue;
+      }
+      if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
+        LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
+        continue;
+      }
+    }
+
     CombineInfo CI;
     CI.setMI(MI, *this);
     CI.Order = Order++;
