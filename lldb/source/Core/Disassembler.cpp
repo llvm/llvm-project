@@ -28,6 +28,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -45,6 +46,7 @@
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -408,116 +410,116 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
   // Stateful annotator: updates live_vars and returns only what should be
   // printed for THIS instruction.
-  auto annotate_variables = [&](Instruction &inst) -> std::vector<std::string> {
+  auto annotate_static =
+    [&](Instruction &inst, Target &target, ModuleSP module_sp)
+      -> std::vector<std::string> {
+
     std::vector<std::string> events;
 
-    StackFrame *frame = exe_ctx.GetFramePtr();
-    TargetSP target_sp = exe_ctx.GetTargetSP();
-    ProcessSP process_sp = exe_ctx.GetProcessSP();
-    if (!frame || !target_sp || !process_sp)
-      return events;
+    // Reset per-instruction seen flags.
+    for (auto &kv : live_vars) kv.second.seen_this_inst = false;
 
-    // Reset "seen" flags for this instruction.
-    for (auto &kv : live_vars)
-      kv.second.seen_this_inst = false;
-
-    addr_t current_pc = inst.GetAddress().GetLoadAddress(target_sp.get());
-    addr_t original_pc =
-        frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
-
-    // We temporarily move the frame PC so variable locations resolve at this
-    // instruction.
-    if (!frame->ChangePC(current_pc))
-      return events;
-
-    VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
-    if (!var_list_sp) {
-      // No variables in scope: everything previously live becomes <undef>.
-      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
+    const Address &iaddr = inst.GetAddress();
+    if (!module_sp) {
+      // Everything previously live becomes <undef>.
+      for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
         auto Cur = I++;
-        events.push_back(
-            llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
-      frame->ChangePC(original_pc);
       return events;
     }
 
-    SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
-    addr_t func_load_addr =
-        sc.function ? sc.function->GetAddress().GetLoadAddress(target_sp.get())
-                    : LLDB_INVALID_ADDRESS;
+    // Resolve innermost block at this *file* address.
+    SymbolContext sc;
+    const lldb::SymbolContextItem mask =
+        eSymbolContextFunction | eSymbolContextBlock;
+    if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) || !sc.function) {
+      // No function context: everything dies here.
+      for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
+        auto Cur = I++;
+        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        live_vars.erase(Cur);
+      }
+      return events;
+    }
 
-    // Walk all in-scope variables and try to resolve a location.
-    for (const VariableSP &var_sp : *var_list_sp) {
-      if (!var_sp)
+    Block *B = sc.block; ///< Innermost block containing iaddr.
+    VariableList var_list;
+    if (B) {
+      auto filter = [](Variable *v) -> bool {
+        return v && !v->IsArtificial();
+      };
+
+      B->AppendVariables(/*can_create*/ true,
+                        /*get_parent_variables*/ true,
+                        /*stop_if_block_is_inlined_function*/ false,
+                        /*filter*/ filter,
+                        /*variable_list*/ &var_list);
+    }
+
+    const lldb::addr_t pc_file   = iaddr.GetFileAddress();
+    const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
+
+    // ABI from Target (pretty reg names if plugin exists). Safe to be null.
+    lldb::ProcessSP no_process;
+    lldb::ABISP abi_sp = ABI::FindPlugin(no_process, target.GetArchitecture());
+    ABI *abi = abi_sp.get();
+
+    llvm::DIDumpOptions opts;
+    opts.ShowAddresses = false;
+    if (abi)
+      opts.PrintRegisterOnly = true;
+
+    for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
+      lldb::VariableSP v = var_list.GetVariableAtIndex(i);
+      if (!v || v->IsArtificial())
         continue;
 
-      // The var_id is a lldb::user_id_t – stable key.
-      const auto var_id = var_sp->GetID();
-      const char *name_cstr = var_sp->GetName().AsCString();
-      llvm::StringRef name = name_cstr ? name_cstr : "<anon>";
+      const char *nm = v->GetName().AsCString();
+      llvm::StringRef name = nm ? nm : "<anon>";
 
-      auto &expr_list = var_sp->LocationExpressionList();
-      if (!expr_list.IsValid())
+      lldb_private::DWARFExpressionList &exprs = v->LocationExpressionList();
+      if (!exprs.IsValid())
         continue;
 
-      auto entry_or_err =
-          expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc);
+      auto entry_or_err = exprs.GetExpressionEntryAtAddress(func_file, pc_file);
       if (!entry_or_err)
         continue;
 
       auto entry = *entry_or_err;
 
-      // Check range if present.
-      if (entry.file_range &&
-          !entry.file_range->ContainsFileAddress(
-              (current_pc - func_load_addr) + expr_list.GetFuncFileAddress()))
+      StreamString loc_ss;
+      entry.expr->DumpLocation(&loc_ss, eDescriptionLevelBrief, abi, opts);
+      llvm::StringRef loc = llvm::StringRef(loc_ss.GetString()).trim();
+      if (loc.empty())
         continue;
 
-      // Render a compact location string.
-      ABI *abi = process_sp->GetABI().get();
-      llvm::DIDumpOptions opts;
-      opts.ShowAddresses = false;
-      opts.PrintRegisterOnly = true;
-
-      StreamString loc_str;
-      entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
-      llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
-      if (loc_clean.empty())
-        continue;
-
-      auto insert_res =
-          live_vars.insert({var_id, VarState{std::string(name), loc_clean.str(),
-                                             /*seen_this_inst*/ true}});
-      if (insert_res.second) {
-        // Newly inserted → print.
-        events.push_back(llvm::formatv("{0} = {1}", name, loc_clean).str());
+      auto ins = live_vars.insert({v->GetID(),
+                                  VarState{name.str(), loc.str(), /*seen*/ true}});
+      if (ins.second) {
+        // Newly live.
+        events.push_back(llvm::formatv("{0} = {1}", name, loc).str());
       } else {
-        // Already present.
-        VarState &vs = insert_res.first->second;
+        VarState &vs = ins.first->second;
         vs.seen_this_inst = true;
-        if (vs.last_loc != loc_clean) {
-          vs.last_loc = loc_clean.str();
-          events.push_back(
-              llvm::formatv("{0} = {1}", vs.name, loc_clean).str());
+        if (vs.last_loc != loc) {
+          vs.last_loc = loc.str();
+          events.push_back(llvm::formatv("{0} = {1}", vs.name, loc).str());
         }
       }
     }
 
     // Anything previously live that we didn't see a location for at this inst
     // is now <undef>.
-    for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
+    for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
       auto Cur = I++;
       if (!Cur->second.seen_this_inst) {
-        events.push_back(
-            llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
     }
 
-    // Restore PC.
-    frame->ChangePC(original_pc);
     return events;
   };
 
@@ -692,8 +694,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
                  address_text_size);
 
-      if (options & eOptionRichAnnotations) {
-        std::vector<std::string> annotations = annotate_variables(*inst);
+      if ((options & eOptionRichAnnotations) && target_sp) {
+        auto annotations = annotate_static(*inst, *target_sp, module_sp);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
           inst_line.FillLastLineToColumn(annotation_column, ' ');
