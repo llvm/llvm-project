@@ -2400,17 +2400,17 @@ static void collectHwModesReferencedForEncodings(
     NamespacesHwModesMap &NamespacesWithHwModes) {
   SmallBitVector BV(HWM.getNumModeIds());
   for (const auto &MS : HWM.getHwModeSelects()) {
-    for (const HwModeSelect::PairType &P : MS.second.Items) {
-      if (P.second->isSubClassOf("InstructionEncoding")) {
+    for (auto [HwModeID, EncodingDef] : MS.second.Items) {
+      if (EncodingDef->isSubClassOf("InstructionEncoding")) {
         std::string DecoderNamespace =
-            P.second->getValueAsString("DecoderNamespace").str();
-        if (P.first == DefaultMode) {
+            EncodingDef->getValueAsString("DecoderNamespace").str();
+        if (HwModeID == DefaultMode) {
           NamespacesWithHwModes[DecoderNamespace].insert("");
         } else {
           NamespacesWithHwModes[DecoderNamespace].insert(
-              HWM.getMode(P.first).Name);
+              HWM.getMode(HwModeID).Name);
         }
-        BV.set(P.first);
+        BV.set(HwModeID);
       }
     }
   }
@@ -2494,13 +2494,13 @@ namespace {
     const Record *InstDef = NumberedInstruction->TheDef;
     if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, HWM);
-      for (auto &[ModeId, Encoding] : EBM) {
+      for (auto [HwModeID, EncodingDef] : EBM) {
         // DecoderTables with DefaultMode should not have any suffix.
-        if (ModeId == DefaultMode) {
-          NumberedEncodings.emplace_back(Encoding, NumberedInstruction, "");
+        if (HwModeID == DefaultMode) {
+          NumberedEncodings.emplace_back(EncodingDef, NumberedInstruction, "");
         } else {
-          NumberedEncodings.emplace_back(Encoding, NumberedInstruction,
-                                         HWM.getMode(ModeId).Name);
+          NumberedEncodings.emplace_back(EncodingDef, NumberedInstruction,
+                                         HWM.getMode(HwModeID).Name);
         }
       }
       continue;
