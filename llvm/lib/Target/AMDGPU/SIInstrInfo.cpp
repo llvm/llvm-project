@@ -2905,7 +2905,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                                        MachineBasicBlock &RestoreBB,
                                        const DebugLoc &DL, int64_t BrOffset,
                                        RegScavenger *RS) const {
-  assert(RS && "RegScavenger required for long branching");
   assert(MBB.empty() &&
          "new block should be inserted for expanding unconditional branch");
   assert(MBB.pred_size() == 1);
