@@ -4035,12 +4035,13 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         break;
       case ISD::SETULE:
       case ISD::SETUGT: {
-        assert(!C.isAllOnes() && "C should not be -1 here");
-        APInt CPlusOne = C + 1;
-        if (isLegalCmpImmed(CPlusOne) ||
-            (NumImmForC > numberOfInstrToLoadImm(CPlusOne))) {
-          CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
-          RHS = DAG.getConstant(CPlusOne, DL, VT);
+        if (!C.isAllOnes()) {
+          APInt CPlusOne = C + 1;
+          if (isLegalCmpImmed(CPlusOne) ||
+              (NumImmForC > numberOfInstrToLoadImm(CPlusOne))) {
+            CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
+            RHS = DAG.getConstant(CPlusOne, DL, VT);
+          }
         }
         break;
       }
