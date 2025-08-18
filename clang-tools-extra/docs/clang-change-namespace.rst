@@ -110,6 +110,60 @@ This will overwrite `test.cc` to look like this:
 Note, that we've successfully moved the class `Y` from namespace `na::nb` to
 namespace `x::y`.
 
+Caveats
+=======
+
+Content already exists in new namespace
+---------------------------------------
+
+Consider this `test.cc` example that defines two `class A` one inside the
+namespace `a` and one in namespace `b`:
+
+.. code-block:: c++
+
+  namespace a {
+  class A {
+      int classAFromWithinNamespace_a;
+  };
+  } // namespace a
+
+  namespace b {
+  class A {
+      int classAFromWithinNamespace_b;
+  };
+  } //namespace b
+
+Let's move everything from the namespace `a` to the global namespace
+(`--new_namespace ""` means global namespace):
+
+.. code-block:: console
+
+  clang-change-namespace \
+    --old_namespace "a" \
+    --new_namespace "b" \
+    --file_pattern test.cc \
+    test.cc
+
+As expected we now have to definitions of `class A` inside the namespace `b`:
+
+.. code-block:: c++
+
+  namespace b {
+  class A {
+    int classAFromWithinNamespace_a;
+  };
+  } // namespace b
+
+  namespace b {
+  class A {
+      int classAFromWithinNamespace_b;
+  };
+  } //namespace b
+
+The re-factoring looks correct but the code will not compile due to the name
+duplication. It is not up to the tool to ensure compilability in that sense.
+But one has to be aware of that.
+
 :program:`clang-change-namespace` Command Line Options
 ======================================================
 
