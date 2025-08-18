@@ -96,6 +96,12 @@ public:
     mutable std::shared_mutex mutex;
   };
 
+  /**
+   * @brief A read-only view of libraries filtered by state and kind.
+   *
+   * Lets you loop over only the libraries in a map that match a given State
+   * and PathType.
+   */
   class FilteredView {
   public:
     using Map = StringMap<std::shared_ptr<LibraryInfo>>;
@@ -127,7 +133,8 @@ public:
           if (it->second->getState() == state && it->second->getKind() == kind)
             break;
       }
-      Iterator it, end;
+      Iterator it;
+      Iterator end;
       State state;
       PathType kind;
     };
@@ -143,7 +150,8 @@ public:
     }
 
   private:
-    Iterator begin_, end_;
+    Iterator begin_;
+    Iterator end_;
     State state_;
     PathType kind_;
   };
@@ -187,16 +195,14 @@ public:
 
   void markLoaded(StringRef path) {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path); it != libraries.end()) {
+    if (auto it = libraries.find(path); it != libraries.end())
       it->second->setState(State::Loaded);
-    }
   }
 
   void markQueried(StringRef path) {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path); it != libraries.end()) {
+    if (auto it = libraries.find(path); it != libraries.end())
       it->second->setState(State::Queried);
-    }
   }
 
   std::shared_ptr<LibraryInfo> getLibrary(StringRef path) {
@@ -259,6 +265,32 @@ struct SearchPolicy {
   }
 };
 
+struct SymbolEnumeratorOptions {
+  enum Filter : uint32_t {
+    None = 0,
+    IgnoreUndefined = 1 << 0,
+    IgnoreWeak = 1 << 1,
+    IgnoreIndirect = 1 << 2,
+    IgnoreHidden = 1 << 3,
+    IgnoreNonGlobal = 1 << 4
+  };
+
+  static SymbolEnumeratorOptions defaultOptions() {
+    return {Filter::IgnoreUndefined | Filter::IgnoreWeak |
+            Filter::IgnoreIndirect};
+  }
+  uint32_t FilterFlags = Filter::None;
+};
+
+struct SearchConfig {
+  SearchPolicy policy;
+  SymbolEnumeratorOptions options;
+
+  SearchConfig()
+      : policy(SearchPolicy::defaultPlan()), // default plan
+        options(SymbolEnumeratorOptions::defaultOptions()) {}
+};
+
 /// Scans libraries and resolves Symbols across user and system paths.
 ///
 /// Supports symbol enumeration and filtering via SymbolEnumerator, and tracks
@@ -274,30 +306,18 @@ public:
 
     using OnEachSymbolFn = std::function<EnumerateResult(StringRef Sym)>;
 
-    enum Filter : uint32_t {
-      None = 0,
-      IgnoreUndefined = 1 << 0,
-      IgnoreWeak = 1 << 1,
-      IgnoreIndirect = 1 << 2,
-      IgnoreHidden = 1 << 3,
-      IgnoreNonGlobal = 1 << 4
-    };
-
-    struct Options {
-      static uint32_t defaultFlag() {
-        return SymbolEnumerator::Filter::IgnoreUndefined |
-               SymbolEnumerator::Filter::IgnoreWeak |
-               SymbolEnumerator::Filter::IgnoreIndirect;
-      }
-      uint32_t FilterFlags = Filter::None;
-    };
-
     static bool enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
-                                 const Options &Opts);
+                                 const SymbolEnumeratorOptions &Opts);
   };
 
+  /// Tracks a set of symbols and the libraries where they are resolved.
+  ///
+  /// SymbolQuery is used to keep track of which symbols have been resolved
+  /// to which libraries. It supports concurrent read/write access using a
+  /// shared mutex, allowing multiple readers or a single writer at a time.
   class SymbolQuery {
   public:
+    /// Holds the result for a single symbol.
     struct Result {
       std::string Name;
       std::string ResolvedLibPath;
@@ -418,20 +438,21 @@ public:
     });
   }
 
-  void searchSymbolsInLibraries(
-      std::vector<std::string> &symbolNames, OnSearchComplete callback,
-      const SearchPolicy &policy = SearchPolicy::defaultPlan());
+  void searchSymbolsInLibraries(std::vector<std::string> &symbolNames,
+                                OnSearchComplete callback,
+                                const SearchConfig &config = SearchConfig());
 
 private:
   bool scanLibrariesIfNeeded(PathType K);
-  void resolveSymbolsInLibrary(LibraryInfo &library, SymbolQuery &query);
+  void resolveSymbolsInLibrary(LibraryInfo &library, SymbolQuery &query,
+                               const SymbolEnumeratorOptions &Opts);
   bool
   symbolExistsInLibrary(const LibraryInfo &library, StringRef symbol,
                         std::vector<std::string> *matchedSymbols = nullptr);
 
   bool symbolExistsInLibrary(const LibraryInfo &lib, StringRef symbolName,
                              std::vector<std::string> *allSymbols,
-                             const SymbolEnumerator::Options &opts);
+                             const SymbolEnumeratorOptions &opts);
 
   std::shared_ptr<LibraryPathCache> m_cache;
   std::shared_ptr<PathResolver> m_PathResolver;
@@ -459,7 +480,7 @@ public:
   }
   void resolveSymbols(std::vector<std::string> Symbols,
                       LibraryResolver::OnSearchComplete OnCompletion,
-                      const SearchPolicy &policy = SearchPolicy::defaultPlan());
+                      const SearchConfig &config = SearchConfig());
 
   ~LibraryResolutionDriver() = default;
 
