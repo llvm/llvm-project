@@ -773,8 +773,9 @@ public:
   /// \param[in] NumIters Number of loop iterations
   /// \param[in] NumThreads Number of GPU threads
   /// \param[in] ThreadChunk Size of thread chunk
-  /// \param[in] OneIterationPerThread Assume that one thread executes
-  ///                                  only one loop iter or one thread chunk
+  /// \param[in] OneIterationPerThread If true/nonzero, each thread executes
+  /// only one loop iteration or one thread chunk. This avoids an outer loop
+  /// over all loop iterations/chunks.
   static void For(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                   Ty NumIters, Ty NumThreads, Ty ThreadChunk,
                   uint8_t OneIterationPerThread) {
@@ -821,8 +822,9 @@ public:
   /// \param[in] Arg Pointer to struct which contains loop body args
   /// \param[in] NumIters Number of loop iterations
   /// \param[in] BlockChunk Size of block chunk
-  /// \param[in] OneIterationPerThread Assume that one thread executes
-  ///                                  only one loop iter or one block chunk
+  /// \param[in] OneIterationPerThread If true/nonzero, each thread executes
+  /// only one loop iteration or one thread chunk. This avoids an outer loop
+  /// over all loop iterations/chunks.
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                          Ty NumIters, Ty BlockChunk,
                          uint8_t OneIterationPerThread) {
@@ -878,8 +880,9 @@ public:
   /// \param[in] NumThreads Number of GPU threads
   /// \param[in] BlockChunk Size of block chunk
   /// \param[in] ThreadChunk Size of thread chunk
-  /// \param[in] OneIterationPerThread Assume that one thread executes
-  ///                                  only one loop iter or one block chunk
+  /// \param[in] OneIterationPerThread If true/nonzero, each thread executes
+  /// only one loop iteration or one thread chunk. This avoids an outer loop
+  /// over all loop iterations/chunks.
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
                             Ty BlockChunk, Ty ThreadChunk,
