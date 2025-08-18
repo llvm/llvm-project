@@ -797,7 +797,8 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
   inits.append(newInitOperands.begin(), newInitOperands.end());
   auto newLoop = scf::ForOp::create(
       rewriter, loc, loopOp.getLowerBound(), loopOp.getUpperBound(),
-      loopOp.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {});
+      loopOp.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {},
+      loopOp.getUnsignedCmp());
 
   // Move the loop body to the new op.
   Block *loopBody = loopOp.getBody();
@@ -935,7 +936,8 @@ static LogicalResult addInitOperandsToLoopNest(
     auto newLoop = scf::ForOp::create(
         rewriter, forLoop.getLoc(), forLoop.getLowerBound(),
         forLoop.getUpperBound(), forLoop.getStep(), newInits,
-        [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {});
+        [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {},
+        forLoop.getUnsignedCmp());
 
     // Merge the body of the new loop with the body of the old loops.
     SmallVector<Value> sourceBlockArgs;

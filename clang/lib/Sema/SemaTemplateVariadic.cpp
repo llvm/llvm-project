@@ -155,21 +155,22 @@ class CollectUnexpandedParameterPacksVisitor
 
     /// Suppress traversal into types that do not contain
     /// unexpanded parameter packs.
-    bool TraverseType(QualType T) override {
+    bool TraverseType(QualType T, bool TraverseQualifier = true) override {
       if ((!T.isNull() && T->containsUnexpandedParameterPack()) ||
           InLambdaOrBlock)
-        return DynamicRecursiveASTVisitor::TraverseType(T);
+        return DynamicRecursiveASTVisitor::TraverseType(T, TraverseQualifier);
 
       return true;
     }
 
     /// Suppress traversal into types with location information
     /// that do not contain unexpanded parameter packs.
-    bool TraverseTypeLoc(TypeLoc TL) override {
+    bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) override {
       if ((!TL.getType().isNull() &&
            TL.getType()->containsUnexpandedParameterPack()) ||
           InLambdaOrBlock)
-        return DynamicRecursiveASTVisitor::TraverseTypeLoc(TL);
+        return DynamicRecursiveASTVisitor::TraverseTypeLoc(TL,
+                                                           TraverseQualifier);
 
       return true;
     }
@@ -195,10 +196,12 @@ class CollectUnexpandedParameterPacksVisitor
 
     /// Suppress traversal of pack expansion expressions and types.
     ///@{
-    bool TraversePackExpansionType(PackExpansionType *T) override {
+    bool TraversePackExpansionType(PackExpansionType *T,
+                                   bool TraverseQualifier) override {
       return true;
     }
-    bool TraversePackExpansionTypeLoc(PackExpansionTypeLoc TL) override {
+    bool TraversePackExpansionTypeLoc(PackExpansionTypeLoc TL,
+                                      bool TraverseQualifier) override {
       return true;
     }
     bool TraversePackExpansionExpr(PackExpansionExpr *E) override {
@@ -208,10 +211,12 @@ class CollectUnexpandedParameterPacksVisitor
     bool TraversePackIndexingExpr(PackIndexingExpr *E) override {
       return DynamicRecursiveASTVisitor::TraverseStmt(E->getIndexExpr());
     }
-    bool TraversePackIndexingType(PackIndexingType *E) override {
+    bool TraversePackIndexingType(PackIndexingType *E,
+                                  bool TraverseQualifier) override {
       return DynamicRecursiveASTVisitor::TraverseStmt(E->getIndexExpr());
     }
-    bool TraversePackIndexingTypeLoc(PackIndexingTypeLoc TL) override {
+    bool TraversePackIndexingTypeLoc(PackIndexingTypeLoc TL,
+                                     bool TraverseQualifier) override {
       return DynamicRecursiveASTVisitor::TraverseStmt(TL.getIndexExpr());
     }
 
@@ -525,8 +530,7 @@ bool Sema::DiagnoseUnexpandedParameterPack(const CXXScopeSpec &SS,
   // C++0x [temp.variadic]p5:
   //   An appearance of a name of a parameter pack that is not expanded is
   //   ill-formed.
-  if (!SS.getScopeRep() ||
-      !SS.getScopeRep()->containsUnexpandedParameterPack())
+  if (!SS.getScopeRep().containsUnexpandedParameterPack())
     return false;
 
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -654,7 +658,7 @@ Sema::ActOnPackExpansion(const ParsedTemplateArgument &Arg,
       return ParsedTemplateArgument();
 
     return ParsedTemplateArgument(Arg.getKind(), Result.get().getAsOpaquePtr(),
-                                  Arg.getLocation());
+                                  Arg.getNameLoc());
   }
 
   case ParsedTemplateArgument::NonType: {
@@ -663,12 +667,12 @@ Sema::ActOnPackExpansion(const ParsedTemplateArgument &Arg,
       return ParsedTemplateArgument();
 
     return ParsedTemplateArgument(Arg.getKind(), Result.get(),
-                                  Arg.getLocation());
+                                  Arg.getNameLoc());
   }
 
   case ParsedTemplateArgument::Template:
     if (!Arg.getAsTemplate().get().containsUnexpandedParameterPack()) {
-      SourceRange R(Arg.getLocation());
+      SourceRange R(Arg.getNameLoc());
       if (Arg.getScopeSpec().isValid())
         R.setBegin(Arg.getScopeSpec().getBeginLoc());
       Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
@@ -1115,8 +1119,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
       break;
 
     case DeclaratorChunk::MemberPointer:
-      if (Chunk.Mem.Scope().getScopeRep() &&
-          Chunk.Mem.Scope().getScopeRep()->containsUnexpandedParameterPack())
+      if (Chunk.Mem.Scope().getScopeRep().containsUnexpandedParameterPack())
         return true;
       break;
     }
@@ -1300,9 +1303,9 @@ TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
   case TemplateArgument::TemplateExpansion:
     Ellipsis = OrigLoc.getTemplateEllipsisLoc();
     NumExpansions = Argument.getNumTemplateExpansions();
-    return TemplateArgumentLoc(Context, Argument.getPackExpansionPattern(),
-                               OrigLoc.getTemplateQualifierLoc(),
-                               OrigLoc.getTemplateNameLoc());
+    return TemplateArgumentLoc(
+        Context, Argument.getPackExpansionPattern(), OrigLoc.getTemplateKWLoc(),
+        OrigLoc.getTemplateQualifierLoc(), OrigLoc.getTemplateNameLoc());
 
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
