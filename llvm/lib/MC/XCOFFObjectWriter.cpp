@@ -550,13 +550,13 @@ CsectGroup &XCOFFWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
 
 static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   if (XSym->isDefined())
-    return cast<MCSectionXCOFF>(XSym->getFragment()->getParent());
+    return static_cast<MCSectionXCOFF *>(XSym->getFragment()->getParent());
   return XSym->getRepresentedCsect();
 }
 
 void XCOFFWriter::executePostLayoutBinding() {
   for (const auto &S : *Asm) {
-    const auto *MCSec = cast<const MCSectionXCOFF>(&S);
+    auto *MCSec = static_cast<const MCSectionXCOFF *>(&S);
     assert(!SectionMap.contains(MCSec) && "Cannot add a section twice.");
 
     // If the name does not fit in the storage provided in the symbol table
@@ -747,7 +747,7 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
       FixedValue = TOCEntryOffset;
     }
   } else if (Type == XCOFF::RelocationType::R_RBR) {
-    MCSectionXCOFF *ParentSec = cast<MCSectionXCOFF>(F.getParent());
+    auto *ParentSec = static_cast<MCSectionXCOFF *>(F.getParent());
     assert((SymASec->getMappingClass() == XCOFF::XMC_PR &&
             ParentSec->getMappingClass() == XCOFF::XMC_PR) &&
            "Only XMC_PR csect may have the R_RBR relocation.");
@@ -768,7 +768,7 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
   }
 
   XCOFFRelocation Reloc = {Index, FixupOffsetInCsect, SignAndSize, Type};
-  MCSectionXCOFF *RelocationSec = cast<MCSectionXCOFF>(F.getParent());
+  auto *RelocationSec = static_cast<MCSectionXCOFF *>(F.getParent());
   assert(SectionMap.contains(RelocationSec) &&
          "Expected containing csect to exist in map.");
   SectionMap[RelocationSec]->Relocations.push_back(Reloc);

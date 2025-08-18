@@ -134,7 +134,7 @@ struct RuntimeLibcallsInfo {
 
   /// Check if this is valid libcall for the current module, otherwise
   /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const;
+  LLVM_ABI RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const;
 
 private:
   static const RTLIB::LibcallImpl

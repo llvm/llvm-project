@@ -482,6 +482,8 @@ struct CallSiteInfo {
 
   MachineInstrLoc CallLocation;
   std::vector<ArgRegPair> ArgForwardingRegs;
+  /// Numeric callee type identifiers for the callgraph section.
+  std::vector<uint64_t> CalleeTypeIds;
 
   bool operator==(const CallSiteInfo &Other) const {
     return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
@@ -511,6 +513,7 @@ template <> struct MappingTraits<CallSiteInfo> {
     YamlIO.mapRequired("offset", CSInfo.CallLocation.Offset);
     YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
                        std::vector<CallSiteInfo::ArgRegPair>());
+    YamlIO.mapOptional("calleeTypeIds", CSInfo.CalleeTypeIds);
   }
 
   static const bool flow = true;

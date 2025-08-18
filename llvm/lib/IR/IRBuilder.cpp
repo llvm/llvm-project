@@ -1144,9 +1144,32 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   return CreateShuffleVector(V, Zeros, Name + ".splat");
 }
 
-Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
-    Type *ElTy, Value *Base, unsigned Dimension, unsigned LastIndex,
-    MDNode *DbgInfo) {
+Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
+                                             const Twine &Name) {
+  assert(Ops.size() >= 2 && Ops.size() <= 8 &&
+         "Unexpected number of operands to interleave");
+
+  // Make sure all operands are the same type.
+  assert(isa<VectorType>(Ops[0]->getType()) && "Unexpected type");
+
+#ifndef NDEBUG
+  for (unsigned I = 1; I < Ops.size(); I++) {
+    assert(Ops[I]->getType() == Ops[0]->getType() &&
+           "Vector interleave expects matching operand types!");
+  }
+#endif
+
+  unsigned IID = Intrinsic::getInterleaveIntrinsicID(Ops.size());
+  auto *SubvecTy = cast<VectorType>(Ops[0]->getType());
+  Type *DestTy = VectorType::get(SubvecTy->getElementType(),
+                                 SubvecTy->getElementCount() * Ops.size());
+  return CreateIntrinsic(IID, {DestTy}, Ops, {}, Name);
+}
+
+Value *IRBuilderBase::CreatePreserveArrayAccessIndex(Type *ElTy, Value *Base,
+                                                     unsigned Dimension,
+                                                     unsigned LastIndex,
+                                                     MDNode *DbgInfo) {
   auto *BaseType = Base->getType();
   assert(isa<PointerType>(BaseType) &&
          "Invalid Base ptr type for preserve.array.access.index.");

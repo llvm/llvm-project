@@ -1809,8 +1809,13 @@ operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
 }
 
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
-GetTopLevelOperation(const Expr<SomeType> &expr) {
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr) {
   return operation::ArgumentExtractor<true>{}(expr);
+}
+
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr) {
+  return operation::ArgumentExtractor<false>{}(expr);
 }
 
 namespace operation {
@@ -1936,6 +1941,33 @@ bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x) {
     return false;
   }
 }
+
+struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
+  using Base = evaluate::AnyTraverse<VariableFinder>;
+  using SomeExpr = Expr<SomeType>;
+  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
+
+  using Base::operator();
+
+  template <typename T>
+  bool operator()(const evaluate::Designator<T> &x) const {
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
+  }
+
+  template <typename T>
+  bool operator()(const evaluate::FunctionRef<T> &x) const {
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
+  }
+
+private:
+  const SomeExpr &var;
+};
+
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &sub, const Expr<SomeType> &super) {
+  return VariableFinder{sub}(super);
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

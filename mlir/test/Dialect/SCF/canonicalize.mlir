@@ -867,41 +867,6 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
 
 // -----
 
-// CHECK-LABEL: @cond_prop
-func.func @cond_prop(%arg0 : i1) -> index {
-  %res = scf.if %arg0 -> index {
-    %res1 = scf.if %arg0 -> index {
-      %v1 = "test.get_some_value1"() : () -> index
-      scf.yield %v1 : index
-    } else {
-      %v2 = "test.get_some_value2"() : () -> index
-      scf.yield %v2 : index
-    }
-    scf.yield %res1 : index
-  } else {
-    %res2 = scf.if %arg0 -> index {
-      %v3 = "test.get_some_value3"() : () -> index
-      scf.yield %v3 : index
-    } else {
-      %v4 = "test.get_some_value4"() : () -> index
-      scf.yield %v4 : index
-    }
-    scf.yield %res2 : index
-  }
-  return %res : index
-}
-// CHECK-NEXT:  %[[if:.+]] = scf.if %arg0 -> (index) {
-// CHECK-NEXT:    %[[c1:.+]] = "test.get_some_value1"() : () -> index
-// CHECK-NEXT:    scf.yield %[[c1]] : index
-// CHECK-NEXT:  } else {
-// CHECK-NEXT:    %[[c4:.+]] = "test.get_some_value4"() : () -> index
-// CHECK-NEXT:    scf.yield %[[c4]] : index
-// CHECK-NEXT:  }
-// CHECK-NEXT:  return %[[if]] : index
-// CHECK-NEXT:}
-
-// -----
-
 // CHECK-LABEL: @replace_if_with_cond1
 func.func @replace_if_with_cond1(%arg0 : i1) -> (i32, i1) {
   %true = arith.constant true

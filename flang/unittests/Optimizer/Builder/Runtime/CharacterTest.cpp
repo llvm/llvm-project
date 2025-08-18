@@ -33,10 +33,10 @@ void checkCharCompare1(
     fir::FirOpBuilder &builder, mlir::Type type, llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
   mlir::Type i32Ty = IntegerType::get(builder.getContext(), 32);
-  mlir::Value lhsBuff = builder.create<fir::UndefOp>(loc, type);
-  mlir::Value lhsLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value rhsBuff = builder.create<fir::UndefOp>(loc, type);
-  mlir::Value rhsLen = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value lhsBuff = fir::UndefOp::create(builder, loc, type);
+  mlir::Value lhsLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value rhsBuff = fir::UndefOp::create(builder, loc, type);
+  mlir::Value rhsLen = fir::UndefOp::create(builder, loc, i32Ty);
   mlir::Value res = fir::runtime::genCharCompare(builder, loc,
       mlir::arith::CmpIPredicate::eq, lhsBuff, lhsLen, rhsBuff, rhsLen);
   checkCallOpFromResultBox(lhsBuff, fctName, 4, /*addLocArgs=*/false);
@@ -72,10 +72,10 @@ void checkCharCompare2(
   fir::factory::CharacterExprHelper charHelper(builder, loc);
   mlir::Type i32Ty = IntegerType::get(builder.getContext(), 32);
   mlir::Type boxCharTy = fir::BoxCharType::get(builder.getContext(), kind);
-  mlir::Value lhsBuff = builder.create<fir::UndefOp>(loc, boxCharTy);
-  mlir::Value lhsLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value rhsBuff = builder.create<fir::UndefOp>(loc, boxCharTy);
-  mlir::Value rhsLen = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value lhsBuff = fir::UndefOp::create(builder, loc, boxCharTy);
+  mlir::Value lhsLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value rhsBuff = fir::UndefOp::create(builder, loc, boxCharTy);
+  mlir::Value rhsLen = fir::UndefOp::create(builder, loc, i32Ty);
   fir::ExtendedValue lhs = charHelper.toExtendedValue(lhsBuff, lhsLen);
   fir::ExtendedValue rhs = charHelper.toExtendedValue(rhsBuff, rhsLen);
   mlir::Value res = fir::runtime::genCharCompare(
@@ -97,11 +97,11 @@ void checkGenIndex(
     fir::FirOpBuilder &builder, llvm::StringRef fctName, unsigned kind) {
   auto loc = builder.getUnknownLoc();
   mlir::Type i32Ty = IntegerType::get(builder.getContext(), 32);
-  mlir::Value stringBase = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value stringLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value substringBase = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value substringLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value back = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value stringBase = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value stringLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value substringBase = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value substringLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value back = fir::UndefOp::create(builder, loc, i32Ty);
   mlir::Value res = fir::runtime::genIndex(builder, loc, kind, stringBase,
       stringLen, substringBase, substringLen, back);
   checkCallOp(res.getDefiningOp(), fctName, 5, /*addLocArgs=*/false);
@@ -160,11 +160,11 @@ void checkGenScan(
   mlir::Type charTy = fir::CharacterType::get(builder.getContext(), kind, 10);
   mlir::Type boxTy = fir::BoxType::get(charTy);
   mlir::Type i32Ty = IntegerType::get(builder.getContext(), 32);
-  mlir::Value stringBase = builder.create<fir::UndefOp>(loc, boxTy);
-  mlir::Value stringLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value setBase = builder.create<fir::UndefOp>(loc, boxTy);
-  mlir::Value setLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value back = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value stringBase = fir::UndefOp::create(builder, loc, boxTy);
+  mlir::Value stringLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value setBase = fir::UndefOp::create(builder, loc, boxTy);
+  mlir::Value setLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value back = fir::UndefOp::create(builder, loc, i32Ty);
   mlir::Value res = fir::runtime::genScan(
       builder, loc, kind, stringBase, stringLen, setBase, setLen, back);
   checkCallOp(res.getDefiningOp(), fctName, 5, /*addLocArgs=*/false);
@@ -194,11 +194,11 @@ void checkGenVerify(
   mlir::Type charTy = fir::CharacterType::get(builder.getContext(), kind, 10);
   mlir::Type boxTy = fir::BoxType::get(charTy);
   mlir::Type i32Ty = IntegerType::get(builder.getContext(), 32);
-  mlir::Value stringBase = builder.create<fir::UndefOp>(loc, boxTy);
-  mlir::Value stringLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value setBase = builder.create<fir::UndefOp>(loc, boxTy);
-  mlir::Value setLen = builder.create<fir::UndefOp>(loc, i32Ty);
-  mlir::Value back = builder.create<fir::UndefOp>(loc, i32Ty);
+  mlir::Value stringBase = fir::UndefOp::create(builder, loc, boxTy);
+  mlir::Value stringLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value setBase = fir::UndefOp::create(builder, loc, boxTy);
+  mlir::Value setLen = fir::UndefOp::create(builder, loc, i32Ty);
+  mlir::Value back = fir::UndefOp::create(builder, loc, i32Ty);
   mlir::Value res = fir::runtime::genVerify(
       builder, loc, kind, stringBase, stringLen, setBase, setLen, back);
   checkCallOp(res.getDefiningOp(), fctName, 5, /*addLocArgs=*/false);

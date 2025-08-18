@@ -120,6 +120,8 @@ struct HoverInfo {
 
   /// Produce a user-readable information.
   markup::Document present() const;
+
+  std::string present(MarkupKind Kind) const;
 };
 
 inline bool operator==(const HoverInfo::PrintedType &LHS,

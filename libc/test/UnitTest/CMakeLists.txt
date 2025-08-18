@@ -69,6 +69,7 @@ add_unittest_framework_library(
     Test.h
     TestLogger.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string
@@ -91,12 +92,16 @@ add_unittest_framework_library(
     ${libc_death_test_srcs}
   HDRS
     ExecuteFunction.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_unittest_framework_library(
   LibcHermeticTestSupport
   SRCS
     HermeticTestUtils.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -160,6 +165,7 @@ add_unittest_framework_library(
     PrintfMatcher.h
   DEPENDS
     LibcTest
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.printf_core.core_structs
     libc.test.UnitTest.string_utils
@@ -173,6 +179,7 @@ add_unittest_framework_library(
     ScanfMatcher.h
   DEPENDS
     LibcTest
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
     libc.test.UnitTest.string_utils

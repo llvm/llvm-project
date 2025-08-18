@@ -525,6 +525,11 @@ public:
   }
 
   /// This method erases an operation that is known to have no uses.
+  ///
+  /// If the current insertion point is before the erased operation, it is
+  /// adjusted to the following operation (or the end of the block). If the
+  /// current insertion point is within the erased operation, the insertion
+  /// point is left in an invalid state.
   virtual void eraseOp(Operation *op);
 
   /// This method erases all operations in a block.
@@ -539,6 +544,9 @@ public:
   /// somewhere in the middle (or beginning) of the dest block, the source block
   /// must have no successors. Otherwise, the resulting IR would have
   /// unreachable operations.
+  ///
+  /// If the insertion point is within the source block, it is adjusted to the
+  /// destination block.
   virtual void inlineBlockBefore(Block *source, Block *dest,
                                  Block::iterator before,
                                  ValueRange argValues = {});
@@ -549,6 +557,9 @@ public:
   ///
   /// The source block must have no successors. Otherwise, the resulting IR
   /// would have unreachable operations.
+  ///
+  /// If the insertion point is within the source block, it is adjusted to the
+  /// destination block.
   void inlineBlockBefore(Block *source, Operation *op,
                          ValueRange argValues = {});
 
@@ -558,6 +569,9 @@ public:
   ///
   /// The dest block must have no successors. Otherwise, the resulting IR would
   /// have unreachable operation.
+  ///
+  /// If the insertion point is within the source block, it is adjusted to the
+  /// destination block.
   void mergeBlocks(Block *source, Block *dest, ValueRange argValues = {});
 
   /// Split the operations starting at "before" (inclusive) out of the given

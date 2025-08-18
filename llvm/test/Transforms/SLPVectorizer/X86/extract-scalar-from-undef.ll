@@ -6,15 +6,13 @@ define i64 @foo(i32 %tmp7) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 poison>, i32 [[TMP8:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i32> [[TMP0]], <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 poison, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 0>, <8 x i32> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 14, i32 poison, i32 poison, i32 7>
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i32> [[TMP2]], i32 0, i32 5
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <8 x i32> [[TMP13]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> [[TMP13]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> [[TMP6]], <8 x i32> <i32 8, i32 1, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <8 x i32> zeroinitializer, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <8 x i32> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP9]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 0, [[TMP10]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> zeroinitializer, [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = xor <8 x i32> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP10]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 0, [[TMP8]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = zext i32 [[OP_RDX]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP64]]
 ;

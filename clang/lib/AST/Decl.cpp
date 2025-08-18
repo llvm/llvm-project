@@ -5988,11 +5988,10 @@ bool clang::IsArmStreamingFunction(const FunctionDecl *FD,
     if (FD->hasAttr<ArmLocallyStreamingAttr>())
       return true;
 
-  if (const Type *Ty = FD->getType().getTypePtrOrNull())
-    if (const auto *FPT = Ty->getAs<FunctionProtoType>())
-      if (FPT->getAArch64SMEAttributes() &
-          FunctionType::SME_PStateSMEnabledMask)
-        return true;
+  assert(!FD->getType().isNull() && "Expected a valid FunctionDecl");
+  if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>())
+    if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+      return true;
 
   return false;
 }

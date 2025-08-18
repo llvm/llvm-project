@@ -66,9 +66,9 @@ cast(InType x) {
         cpp::max(OutFPBits::FRACTION_LEN, InFPBits::FRACTION_LEN);
     DyadicFloat<cpp::bit_ceil(MAX_FRACTION_LEN)> xd(x);
     return xd.template as<OutType, /*ShouldSignalExceptions=*/true>();
+  } else {
+    return static_cast<OutType>(x);
   }
-
-  return static_cast<OutType>(x);
 }
 
 } // namespace LIBC_NAMESPACE::fputil

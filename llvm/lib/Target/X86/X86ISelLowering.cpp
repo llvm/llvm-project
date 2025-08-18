@@ -5001,8 +5001,11 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   EVT VT = Op.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
-  assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
+
+  // Can't split constant.
+  if ((SizeInBits % EltSizeInBits) != 0)
+    return false;
 
   // Bitcast a source array of element bits to the target size.
   auto CastBitData = [&](APInt &UndefSrcElts, ArrayRef<APInt> SrcEltBits) {
@@ -58071,11 +58074,9 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
     // res, flags2 = sub 0, (and X, Y)
     // cload/cstore ..., cond_ne, flag2
     // ->
-    // res, flags2 = and X, Y
+    // res, flags2 = cmp (and X, Y), 0
     // cload/cstore ..., cond_ne, flag2
-    Ops[4] = DAG.getNode(X86ISD::AND, DL, Sub->getVTList(), Op1.getOperand(0),
-                         Op1.getOperand(1))
-                 .getValue(1);
+    Ops[4] = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Op1, Sub.getOperand(0));
   } else {
     return SDValue();
   }

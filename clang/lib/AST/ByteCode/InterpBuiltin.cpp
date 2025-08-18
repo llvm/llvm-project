@@ -240,9 +240,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
         T CB = PB.deref<T>();
         if (CA > CB)
           return returnResult(1);
-        else if (CA < CB)
+        if (CA < CB)
           return returnResult(-1);
-        else if (CA.isZero() || CB.isZero())
+        if (CA.isZero() || CB.isZero())
           return returnResult(0);
       });
       continue;
@@ -253,7 +253,7 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
     if (CA > CB)
       return returnResult(1);
-    else if (CA < CB)
+    if (CA < CB)
       return returnResult(-1);
     if (CA == 0 || CB == 0)
       return returnResult(0);
@@ -1048,7 +1048,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
           PtrArg = ICE->getSubExpr();
       }
 
-      if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+      if (const auto *PtrTy = PtrArg->getType()->getAs<PointerType>()) {
         QualType PointeeType = PtrTy->getPointeeType();
         if (!PointeeType->isIncompleteType() &&
             S.getASTContext().getTypeAlignInChars(PointeeType) >= Size) {
@@ -1099,10 +1099,8 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
   Pointer &Result = S.Stk.peek<Pointer>();
 
   Result.elem<Floating>(0) = Arg1;
-  Result.atIndex(0).initialize();
   Result.elem<Floating>(1) = Arg2;
-  Result.atIndex(1).initialize();
-  Result.initialize();
+  Result.initializeAllElements();
 
   return true;
 }
@@ -1728,9 +1726,9 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
         Dst.elem<T>(I) =
             T::from(Arg.elem<T>(I).toAPSInt().reverseBits().getZExtValue());
       }
-      Dst.atIndex(I).initialize();
     });
   }
+  Dst.initializeAllElements();
 
   return true;
 }
@@ -1967,7 +1965,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
         if (A < B) {
           pushInteger(S, -1, Call->getType());
           return true;
-        } else if (A > B) {
+        }
+        if (A > B) {
           pushInteger(S, 1, Call->getType());
           return true;
         }
@@ -1979,7 +1978,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
       if (A < B) {
         pushInteger(S, -1, Call->getType());
         return true;
-      } else if (A > B) {
+      }
+      if (A > B) {
         pushInteger(S, 1, Call->getType());
         return true;
       }
@@ -2312,12 +2312,10 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
       llvm_unreachable("Wrong builtin ID");
     }
 
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      const Pointer &E = Dst.atIndex(I);
-      E.deref<T>() = static_cast<T>(Result);
-      E.initialize();
-    });
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
+  Dst.initializeAllElements();
 
   return true;
 }

@@ -68,6 +68,9 @@ It can be used like this:
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
 
+  When compiling with target offloading, ``__has_builtin`` only considers the
+  currently active target.
+
 ``__has_constexpr_builtin``
 ---------------------------
 
@@ -845,6 +848,14 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
  T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.

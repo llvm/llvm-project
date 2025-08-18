@@ -24,6 +24,18 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   switch (N->getOpcode()) {
   default:
     return SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+  case RISCVISD::TUPLE_EXTRACT:
+    assert(N->getNumOperands() == 2 && "Expected three operands!");
+    assert(N->getOperand(1).getOpcode() == ISD::TargetConstant &&
+           N->getOperand(1).getValueType() == MVT::i32 &&
+           "Expected index to be an i32 target constant!");
+    break;
+  case RISCVISD::TUPLE_INSERT:
+    assert(N->getNumOperands() == 3 && "Expected three operands!");
+    assert(N->getOperand(2).getOpcode() == ISD::TargetConstant &&
+           N->getOperand(2).getValueType() == MVT::i32 &&
+           "Expected index to be an i32 target constant!");
+    break;
   case RISCVISD::VQDOT_VL:
   case RISCVISD::VQDOTU_VL:
   case RISCVISD::VQDOTSU_VL: {

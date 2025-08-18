@@ -30,10 +30,10 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC1VF4-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP4]])
 ; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP6]], 9223372036854775807
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP6]], i64 331
-; IC1VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 19999, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 331, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 19999, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
 ; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -102,10 +102,10 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC4VF4-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[RDX_MINMAX11]])
 ; IC4VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP18]], 9223372036854775807
 ; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP18]], i64 331
-; IC4VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
-; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 19999, %[[ENTRY]] ]
-; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 331, %[[ENTRY]] ]
+; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 19999, %[[ENTRY]] ]
+; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
 ; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -162,10 +162,10 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC4VF1-NEXT:    [[RDX_MINMAX5:%.*]] = call i64 @llvm.smin.i64(i64 [[RDX_MINMAX4]], i64 [[TMP18]])
 ; IC4VF1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[RDX_MINMAX5]], 9223372036854775807
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 331
-; IC4VF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 19999, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 331, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 19999, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
 ; IC4VF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -232,10 +232,10 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC1VF4-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[TMP5]])
 ; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP7]], i16 0
-; IC1VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[MIDDLE_BLOCK]] ], [ 12, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
 ; IC1VF4-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -532,10 +532,10 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF1-NEXT:    [[RDX_MINMAX5:%.*]] = call i16 @llvm.smin.i16(i16 [[RDX_MINMAX4]], i16 [[TMP22]])
 ; IC4VF1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[RDX_MINMAX5]], 32767
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[RDX_MINMAX5]], i16 0
-; IC4VF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[MIDDLE_BLOCK]] ], [ 12, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
 ; IC4VF1-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -603,10 +603,10 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC1VF4-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[TMP5]])
 ; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP7]], i16 0
-; IC1VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[MIDDLE_BLOCK]] ], [ 12, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
 ; IC1VF4-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -903,10 +903,10 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF1-NEXT:    [[RDX_MINMAX5:%.*]] = call i16 @llvm.smin.i16(i16 [[RDX_MINMAX4]], i16 [[TMP22]])
 ; IC4VF1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[RDX_MINMAX5]], 32767
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[RDX_MINMAX5]], i16 0
-; IC4VF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[MIDDLE_BLOCK]] ], [ 12, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
 ; IC4VF1-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -971,10 +971,10 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC1VF4-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP4]])
 ; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP6]], -1
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP6]], i64 331
-; IC1VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 9223372036854775807, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 331, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ]
+; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
 ; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1043,10 +1043,10 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC4VF4-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX11]])
 ; IC4VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP18]], -1
 ; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP18]], i64 331
-; IC4VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
-; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 9223372036854775807, %[[ENTRY]] ]
-; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 331, %[[ENTRY]] ]
+; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ]
+; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
 ; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1103,10 +1103,10 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC4VF1-NEXT:    [[RDX_MINMAX5:%.*]] = call i64 @llvm.umin.i64(i64 [[RDX_MINMAX4]], i64 [[TMP18]])
 ; IC4VF1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[RDX_MINMAX5]], -1
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 331
-; IC4VF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 9223372036854775807, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 331, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ]
+; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
 ; IC4VF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

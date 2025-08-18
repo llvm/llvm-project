@@ -201,7 +201,7 @@ Status MinidumpFileBuilder::AddSystemInfo() {
     return error;
   };
 
-  llvm::minidump::SystemInfo sys_info;
+  llvm::minidump::SystemInfo sys_info{};
   sys_info.ProcessorArch =
       static_cast<llvm::support::little_t<ProcessorArchitecture>>(arch);
   // Global offset to beginning of a csd_string in a data section
@@ -378,7 +378,7 @@ Status MinidumpFileBuilder::AddModuleList() {
     helper_data.AppendData(&signature, sizeof(llvm::support::ulittle32_t));
     helper_data.AppendData(uuid.begin(), uuid.size());
 
-    llvm::minidump::Module m;
+    llvm::minidump::Module m{};
     m.BaseOfImage = static_cast<llvm::support::ulittle64_t>(
         mod->GetObjectFile()->GetBaseAddress().GetLoadAddress(&target));
     m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(mod_size);
@@ -745,7 +745,7 @@ lldb_private::Status MinidumpFileBuilder::AddMiscInfo() {
   if (error.Fail())
     return error;
 
-  lldb_private::minidump::MinidumpMiscInfo misc_info;
+  lldb_private::minidump::MinidumpMiscInfo misc_info{};
   misc_info.size = static_cast<llvm::support::ulittle32_t>(
       sizeof(lldb_private::minidump::MinidumpMiscInfo));
   // Default set flags1 to 0, in case that we will not be able to

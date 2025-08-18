@@ -719,6 +719,29 @@ def AMDGPU_SchedBarrierOp :
   }];
 }
 
+def AMDGPU_MemoryCounterWaitOp :
+  AMDGPU_Op<"memory_counter_wait">,
+  Arguments<(ins
+      OptionalAttr<I32Attr>:$load,
+      OptionalAttr<I32Attr>:$store,
+      OptionalAttr<I32Attr>:$ds,
+      OptionalAttr<I32Attr>:$exp
+    )>
+  {
+  let summary = "Wait for specified hardware counters";
+  let description = [{
+    Wait for the specified counters to be less-than or equal-to the provided
+    values before continuing.
+
+    Counters can lower to different instructions on different architectires,
+    including clamping to the some HW supported max value or combining multiple
+    counters into one.
+  }];
+  let assemblyFormat = [{
+    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` ) attr-dict
+  }];
+}
+
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
     "The possible permutations of the lanes storing B available in an MFMA",
     [
@@ -898,6 +921,7 @@ def AMDGPU_GatherToLDSOp :
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def AMDGPU_TransposeLoadOp :

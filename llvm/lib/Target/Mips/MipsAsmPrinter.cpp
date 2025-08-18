@@ -737,14 +737,18 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
       FS = F->getFnAttribute("target-features").getValueAsString();
 
+    std::string strFS = FS.str();
+    if (M.size() && F->getFnAttribute("use-soft-float").getValueAsBool())
+      strFS += strFS.empty() ? "+soft-float" : ",+soft-float";
+
     // Compute MIPS architecture attributes based on the default subtarget
     // that we'd have constructed.
     // FIXME: For ifunc related functions we could iterate over and look
     // for a feature string that doesn't match the default one.
     StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
     const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-    const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM,
-                            std::nullopt);
+    const MipsSubtarget STI(TT, CPU, StringRef(strFS), MTM.isLittleEndian(),
+                            MTM, std::nullopt);
 
     bool IsABICalls = STI.isABICalls();
     const MipsABIInfo &ABI = MTM.getABI();

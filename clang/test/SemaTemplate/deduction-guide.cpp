@@ -966,3 +966,19 @@ Expand<Type, Invocable<>> _{};
 // CHECK-NEXT:   | `-ParmVarDecl {{.+}} 'T...' pack
 
 }
+
+namespace GH134613 {
+template <typename R> struct Foo {
+  using value_type = R;
+
+  Foo() = default;
+  Foo(Foo<Foo<R>> &&rhs) {}
+};
+
+void main() {
+  auto r1 = Foo(Foo<Foo<int>>{});
+
+  static_assert(__is_same(decltype(r1)::value_type, int));
+}
+
+}

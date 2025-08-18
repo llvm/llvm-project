@@ -424,6 +424,9 @@ protected:
 
   ArrayRef<Elf_Word> getShndxTable(const Elf_Shdr *Symtab) const;
 
+  void printSFrameHeader(const SFrameParser<ELFT::Endianness> &Parser);
+  void printSFrameFDEs(const SFrameParser<ELFT::Endianness> &Parser);
+
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 };
@@ -6440,6 +6443,90 @@ template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
 }
 
 template <typename ELFT>
+void ELFDumper<ELFT>::printSFrameHeader(
+    const SFrameParser<ELFT::Endianness> &Parser) {
+  DictScope HeaderScope(W, "Header");
+
+  const sframe::Preamble<ELFT::Endianness> &Preamble = Parser.getPreamble();
+  W.printHex("Magic", Preamble.Magic.value());
+  W.printEnum("Version", Preamble.Version.value(), sframe::getVersions());
+  W.printFlags("Flags", Preamble.Flags.value(), sframe::getFlags());
+
+  const sframe::Header<ELFT::Endianness> &Header = Parser.getHeader();
+  W.printEnum("ABI", Header.ABIArch.value(), sframe::getABIs());
+
+  W.printNumber(("CFA fixed FP offset" +
+                 Twine(Parser.usesFixedFPOffset() ? "" : " (unused)"))
+                    .str(),
+                Header.CFAFixedFPOffset.value());
+
+  W.printNumber(("CFA fixed RA offset" +
+                 Twine(Parser.usesFixedRAOffset() ? "" : " (unused)"))
+                    .str(),
+                Header.CFAFixedRAOffset.value());
+
+  W.printNumber("Auxiliary header length", Header.AuxHdrLen.value());
+  W.printNumber("Num FDEs", Header.NumFDEs.value());
+  W.printNumber("Num FREs", Header.NumFREs.value());
+  W.printNumber("FRE subsection length", Header.FRELen.value());
+  W.printNumber("FDE subsection offset", Header.FDEOff.value());
+  W.printNumber("FRE subsection offset", Header.FREOff.value());
+
+  if (Expected<ArrayRef<uint8_t>> Aux = Parser.getAuxHeader())
+    W.printHexList("Auxiliary header", *Aux);
+  else
+    reportWarning(Aux.takeError(), FileName);
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::printSFrameFDEs(
+    const SFrameParser<ELFT::Endianness> &Parser) {
+  typename SFrameParser<ELFT::Endianness>::FDERange FDEs;
+  if (Error Err = Parser.fdes().moveInto(FDEs)) {
+    reportWarning(std::move(Err), FileName);
+    return;
+  }
+
+  ListScope IndexScope(W, "Function Index");
+  for (auto It = FDEs.begin(); It != FDEs.end(); ++It) {
+    DictScope FDEScope(
+        W,
+        formatv("FuncDescEntry [{0}]", std::distance(FDEs.begin(), It)).str());
+
+    W.printHex("PC", Parser.getAbsoluteStartAddress(It));
+    W.printHex("Size", It->Size);
+    W.printHex("Start FRE Offset", It->StartFREOff);
+    W.printNumber("Num FREs", It->NumFREs);
+
+    {
+      DictScope InfoScope(W, "Info");
+      W.printEnum("FRE Type", It->getFREType(), sframe::getFRETypes());
+      W.printEnum("FDE Type", It->getFDEType(), sframe::getFDETypes());
+      switch (Parser.getHeader().ABIArch) {
+      case sframe::ABI::AArch64EndianBig:
+      case sframe::ABI::AArch64EndianLittle:
+        W.printEnum("PAuth Key", sframe::AArch64PAuthKey(It->getPAuthKey()),
+                    sframe::getAArch64PAuthKeys());
+        break;
+      case sframe::ABI::AMD64EndianLittle:
+        // unused
+        break;
+      }
+
+      W.printHex("Raw", It->Info);
+    }
+
+    W.printHex(
+        ("Repetitive block size" +
+         Twine(It->getFDEType() == sframe::FDEType::PCMask ? "" : " (unused)"))
+            .str(),
+        It->RepSize);
+
+    W.printHex("Padding2", It->Padding2);
+  }
+}
+
+template <typename ELFT>
 void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
   constexpr endianness E = ELFT::Endianness;
   for (object::SectionRef Section :
@@ -6456,8 +6543,8 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
       continue;
     }
 
-    Expected<object::SFrameParser<E>> Parser =
-        object::SFrameParser<E>::create(arrayRefFromStringRef(SectionContent));
+    Expected<object::SFrameParser<E>> Parser = object::SFrameParser<E>::create(
+        arrayRefFromStringRef(SectionContent), Section.getAddress());
     if (!Parser) {
       reportWarning(createError("invalid sframe section: " +
                                 toString(Parser.takeError())),
@@ -6465,32 +6552,8 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
       continue;
     }
 
-    DictScope HeaderScope(W, "Header");
-
-    const sframe::Preamble<E> &Preamble = Parser->getPreamble();
-    W.printHex("Magic", Preamble.Magic.value());
-    W.printEnum("Version", Preamble.Version.value(), sframe::getVersions());
-    W.printFlags("Flags", Preamble.Flags.value(), sframe::getFlags());
-
-    const sframe::Header<E> &Header = Parser->getHeader();
-    W.printEnum("ABI", Header.ABIArch.value(), sframe::getABIs());
-
-    W.printNumber(("CFA fixed FP offset" +
-                   Twine(Parser->usesFixedFPOffset() ? "" : " (unused)"))
-                      .str(),
-                  Header.CFAFixedFPOffset.value());
-
-    W.printNumber(("CFA fixed RA offset" +
-                   Twine(Parser->usesFixedRAOffset() ? "" : " (unused)"))
-                      .str(),
-                  Header.CFAFixedRAOffset.value());
-
-    W.printNumber("Auxiliary header length", Header.AuxHdrLen.value());
-    W.printNumber("Num FDEs", Header.NumFDEs.value());
-    W.printNumber("Num FREs", Header.NumFREs.value());
-    W.printNumber("FRE subsection length", Header.FRELen.value());
-    W.printNumber("FDE subsection offset", Header.FDEOff.value());
-    W.printNumber("FRE subsection offset", Header.FREOff.value());
+    printSFrameHeader(*Parser);
+    printSFrameFDEs(*Parser);
   }
 }
 

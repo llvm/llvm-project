@@ -10,6 +10,7 @@
 #define FORTRAN_EVALUATE_TOOLS_H_
 
 #include "traverse.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/template.h"
 #include "flang/Common/unwrap.h"
@@ -1397,6 +1398,8 @@ enum class Operator {
   True,
 };
 
+using OperatorSet = common::EnumSet<Operator, 32>;
+
 std::string ToString(Operator op);
 
 template <typename... Ts, int Kind>
@@ -1509,8 +1512,17 @@ Operator OperationCode(const evaluate::ProcedureDesignator &proc);
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
 GetTopLevelOperation(const Expr<SomeType> &expr);
 
+// Return information about the top-level operation (ignoring parentheses, and
+// resizing converts)
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr);
+
 // Check if expr is same as x, or a sequence of Convert operations on x.
 bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
+
+// Check if the Variable appears as a subexpression of the expression.
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &var, const Expr<SomeType> &super);
 
 // Strip away any top-level Convert operations (if any exist) and return
 // the input value. A ComplexConstructor(x, 0) is also considered as a

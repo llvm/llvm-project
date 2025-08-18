@@ -17,8 +17,8 @@ define i32 @gep_nusw_nuw(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   %11:_(p0) = nuw nusw G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %11(p0) :: (load (s32) from %ir.gep2)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.gep2)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -77,8 +77,8 @@ define i32 @gep_nusw(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   %11:_(p0) = nusw G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %11(p0) :: (load (s32) from %ir.gep2)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nusw G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.gep2)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0

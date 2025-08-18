@@ -352,6 +352,10 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     if (!storeOp)
       return failure();
 
+    int64_t offsetSize = static_cast<int64_t>(storeOp.getOffsets().size());
+    if ((offsetSize != 0) || storeOp.getConstOffsetsAttr())
+      return failure();
+
     xegpu::TensorDescType tensorDescTy = storeOp.getTensorDescType();
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
@@ -464,6 +468,11 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
           warpOp, "warp result is not a xegpu::LoadNd op");
 
     auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
+
+    int64_t offsetSize = static_cast<int64_t>(loadOp.getOffsets().size());
+    if ((offsetSize != 0) || loadOp.getConstOffsetsAttr())
+      return failure();
+
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
@@ -767,6 +776,11 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     auto prefetchOp = dyn_cast_or_null<xegpu::PrefetchNdOp>(lastNode);
     if (!prefetchOp)
       return failure();
+
+    int64_t offsetSize = static_cast<int64_t>(prefetchOp.getOffsets().size());
+    if ((offsetSize != 0) || prefetchOp.getConstOffsetsAttr())
+      return failure();
+
     xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(

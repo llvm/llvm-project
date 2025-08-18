@@ -929,12 +929,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     if (!AllConstantInt)
       break;
 
-    // TODO: Try to intersect two inrange attributes?
-    if (!InRange) {
-      InRange = GEP->getInRange();
-      if (InRange)
-        // Adjust inrange by offset until now.
-        InRange = InRange->sextOrTrunc(BitWidth).subtract(Offset);
+    // Adjust inrange offset and intersect inrange attributes
+    if (auto GEPRange = GEP->getInRange()) {
+      auto AdjustedGEPRange = GEPRange->sextOrTrunc(BitWidth).subtract(Offset);
+      InRange =
+          InRange ? InRange->intersectWith(AdjustedGEPRange) : AdjustedGEPRange;
     }
 
     Ptr = cast<Constant>(GEP->getOperand(0));
@@ -1374,7 +1373,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
     return flushDenormalConstantFP(CFP, Inst, IsOutput);
 
-  if (isa<ConstantAggregateZero, UndefValue, ConstantExpr>(Operand))
+  if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
 
   Type *Ty = Operand->getType();
@@ -1389,6 +1388,9 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
 
     Ty = VecTy->getElementType();
   }
+
+  if (isa<ConstantExpr>(Operand))
+    return Operand;
 
   if (const auto *CV = dyn_cast<ConstantVector>(Operand)) {
     SmallVector<Constant *, 16> NewElts;
@@ -2004,21 +2006,20 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
+static APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
 }
 
-static const APFloat FlushToPositiveZero(const APFloat &V) {
+static APFloat FlushToPositiveZero(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), false);
   return V;
 }
 
-static const APFloat
-FlushWithDenormKind(const APFloat &V,
-                    DenormalMode::DenormalModeKind DenormKind) {
+static APFloat FlushWithDenormKind(const APFloat &V,
+                                   DenormalMode::DenormalModeKind DenormKind) {
   assert(DenormKind != DenormalMode::DenormalModeKind::Invalid &&
          DenormKind != DenormalMode::DenormalModeKind::Dynamic);
   switch (DenormKind) {
@@ -2630,14 +2631,14 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_ceil_d:
         return ConstantFoldFP(
             ceil, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
         return ConstantFoldFP(
             fabs, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_floor_ftz_f:
@@ -2645,7 +2646,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_floor_d:
         return ConstantFoldFP(
             floor, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_rcp_rm_ftz_f:
@@ -2707,7 +2708,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return nullptr;
         return ConstantFoldFP(
             sqrt, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       // AMDGCN Intrinsics:

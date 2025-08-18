@@ -88,6 +88,12 @@ Improvements and New Features
 
 - ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performance improvement.
 
+- As an experimental feature, Hardening now supports assertion semantics that allow customizing how a hardening
+  assertion failure is handled. The four available semantics, modeled on C++26 Contracts, are ``ignore``, ``observe``,
+  ``quick-enforce`` and ``enforce``. The ``observe`` semantic is intended to make it easier to adopt Hardening in
+  production but should not be used outside of this scenario. Please refer to the :ref:`Hardening documentation
+  <hardening>` for details.
+
 Deprecations and Removals
 -------------------------
 

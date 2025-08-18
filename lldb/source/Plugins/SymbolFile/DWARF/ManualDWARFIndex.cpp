@@ -28,8 +28,8 @@
 
 using namespace lldb_private;
 using namespace lldb;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 void ManualDWARFIndex::Index() {
   if (m_indexed)

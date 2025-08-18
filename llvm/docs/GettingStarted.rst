@@ -240,8 +240,10 @@ Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
 Linux              AArch64               GCC, Clang
+Linux              LoongArch             GCC, Clang
 Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
+Linux              RISC-V                GCC, Clang
 Linux              SystemZ               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 DragonFlyBSD       amd64                 GCC, Clang

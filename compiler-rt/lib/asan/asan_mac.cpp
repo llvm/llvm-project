@@ -103,6 +103,8 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 //   dispatch_after()
 //   dispatch_group_async_f()
 //   dispatch_group_async()
+//   dispatch_apply()
+//   dispatch_apply_f()
 // TODO(glider): libdispatch API contains other functions that we don't support
 // yet.
 //
@@ -176,7 +178,7 @@ void asan_dispatch_call_block_and_release(void *block) {
   asan_register_worker_thread(context->parent_tid, &stack);
   // Call the original dispatcher for the block.
   context->func(context->block);
-  asan_free(context, &stack, FROM_MALLOC);
+  asan_free(context, &stack);
 }
 
 }  // namespace __asan
@@ -243,13 +245,31 @@ INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
                                asan_dispatch_call_block_and_release);
 }
 
-#if !defined(MISSING_BLOCKS_SUPPORT)
+extern "C" void asan_dispatch_apply_f_work(void *context, size_t iteration) {
+  GET_STACK_TRACE_THREAD;
+  asan_block_context_t *asan_ctxt = (asan_block_context_t *)context;
+  asan_register_worker_thread(asan_ctxt->parent_tid, &stack);
+  ((void (*)(void *, size_t))asan_ctxt->func)(asan_ctxt->block, iteration);
+}
+
+INTERCEPTOR(void, dispatch_apply_f, size_t iterations, dispatch_queue_t queue,
+            void *ctxt, void (*work)(void *, size_t)) {
+  GET_STACK_TRACE_THREAD;
+  asan_block_context_t *asan_ctxt =
+      alloc_asan_context(ctxt, (dispatch_function_t)work, &stack);
+  REAL(dispatch_apply_f)(iterations, queue, (void *)asan_ctxt,
+                         asan_dispatch_apply_f_work);
+}
+
+#  if !defined(MISSING_BLOCKS_SUPPORT)
 extern "C" {
 void dispatch_async(dispatch_queue_t dq, void(^work)(void));
 void dispatch_group_async(dispatch_group_t dg, dispatch_queue_t dq,
                           void(^work)(void));
 void dispatch_after(dispatch_time_t when, dispatch_queue_t queue,
                     void(^work)(void));
+void dispatch_apply(size_t iterations, dispatch_queue_t queue,
+                    void (^block)(size_t iteration));
 void dispatch_source_set_cancel_handler(dispatch_source_t ds,
                                         void(^work)(void));
 void dispatch_source_set_event_handler(dispatch_source_t ds, void(^work)(void));
@@ -332,6 +352,20 @@ INTERCEPTOR(void *, dispatch_mach_create_f, const char *label,
       });
 }
 
-#endif
+INTERCEPTOR(void, dispatch_apply, size_t iterations, dispatch_queue_t queue,
+            void (^block)(size_t iteration)) {
+  ENABLE_FRAME_POINTER;
+  int parent_tid = GetCurrentTidOrInvalid();
+
+  void (^asan_block)(size_t) = ^(size_t iteration) {
+    GET_STACK_TRACE_THREAD;
+    asan_register_worker_thread(parent_tid, &stack);
+    block(iteration);
+  };
+
+  REAL(dispatch_apply)(iterations, queue, asan_block);
+}
+
+#  endif
 
 #endif  // SANITIZER_APPLE

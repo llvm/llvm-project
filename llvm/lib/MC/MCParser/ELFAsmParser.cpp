@@ -644,8 +644,8 @@ EndStmt:
   }
 
   if (UseLastGroup) {
-    if (const MCSectionELF *Section =
-            cast_or_null<MCSectionELF>(getStreamer().getCurrentSectionOnly()))
+    if (auto *Section = static_cast<const MCSectionELF *>(
+            getStreamer().getCurrentSectionOnly()))
       if (const MCSymbol *Group = Section->getGroup()) {
         GroupName = Group->getName();
         IsComdat = Section->isComdat();

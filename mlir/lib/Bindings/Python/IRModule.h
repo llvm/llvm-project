@@ -624,6 +624,13 @@ public:
   void moveAfter(PyOperationBase &other);
   void moveBefore(PyOperationBase &other);
 
+  /// Given an operation 'other' that is within the same parent block, return
+  /// whether the current operation is before 'other' in the operation list
+  /// of the parent block.
+  /// Note: This function has an average complexity of O(1), but worst case may
+  /// take O(N) where N is the number of operations within the parent block.
+  bool isBeforeInBlock(PyOperationBase &other);
+
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.
   bool verify();

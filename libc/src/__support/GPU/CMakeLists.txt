@@ -16,6 +16,7 @@ add_object_library(
   HDRS
     allocator.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.RPC.rpc_client
     libc.src.__support.CPP.atomic

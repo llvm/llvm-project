@@ -243,8 +243,6 @@ public:
   createObjectTargetWriter() const override {
     return createPPCXCOFFObjectWriter(TT.isArch64Bit());
   }
-
-  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 };
 
 } // end anonymous namespace
@@ -277,13 +275,6 @@ ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
   return std::nullopt;
-}
-
-std::optional<MCFixupKind>
-XCOFFPPCAsmBackend::getFixupKind(StringRef Name) const {
-  return StringSwitch<std::optional<MCFixupKind>>(Name)
-      .Case("R_REF", PPC::fixup_ppc_nofixup)
-      .Default(std::nullopt);
 }
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,

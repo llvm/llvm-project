@@ -1116,11 +1116,12 @@ bool ClauseProcessor::processInReduction(
         collectReductionSyms(clause, inReductionSyms);
 
         ReductionProcessor rp;
-        rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
-            currentLocation, converter,
-            std::get<typename omp::clause::ReductionOperatorList>(clause.t),
-            inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-            inReductionSyms);
+        if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
+                currentLocation, converter,
+                std::get<typename omp::clause::ReductionOperatorList>(clause.t),
+                inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
+                inReductionSyms))
+          inReductionSyms.clear();
 
         // Copy local lists into the output.
         llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
@@ -1461,10 +1462,12 @@ bool ClauseProcessor::processReduction(
         }
 
         ReductionProcessor rp;
-        rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
-            currentLocation, converter,
-            std::get<typename omp::clause::ReductionOperatorList>(clause.t),
-            reductionVars, reduceVarByRef, reductionDeclSymbols, reductionSyms);
+        if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
+                currentLocation, converter,
+                std::get<typename omp::clause::ReductionOperatorList>(clause.t),
+                reductionVars, reduceVarByRef, reductionDeclSymbols,
+                reductionSyms))
+          reductionSyms.clear();
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
@@ -1486,11 +1489,12 @@ bool ClauseProcessor::processTaskReduction(
         collectReductionSyms(clause, taskReductionSyms);
 
         ReductionProcessor rp;
-        rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
-            currentLocation, converter,
-            std::get<typename omp::clause::ReductionOperatorList>(clause.t),
-            taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-            taskReductionSyms);
+        if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
+                currentLocation, converter,
+                std::get<typename omp::clause::ReductionOperatorList>(clause.t),
+                taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
+                taskReductionSyms))
+          taskReductionSyms.clear();
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
                    std::back_inserter(result.taskReductionVars));

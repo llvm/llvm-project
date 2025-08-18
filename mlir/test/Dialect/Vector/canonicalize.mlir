@@ -2347,6 +2347,19 @@ func.func @shuffle_1d() -> vector<4xi32> {
 
 // -----
 
+// Ensure shuffle dense resource elements not crash.
+
+// CHECK-LABEL: func.func @shuffle_1d_dense_resource
+//       CHECK:    vector.shuffle
+func.func @shuffle_1d_dense_resource() -> vector<4xi32> {
+  %v0 = arith.constant dense_resource<__elided__> : vector<3xi32>
+  %v1 = arith.constant dense_resource<__elided__> : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 2, 5, 1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
 // Check that poison indices pick the first element of the first non-poison
 // input vector. That is, %v[0] (i.e., 5) in this test.
 
@@ -2545,118 +2558,6 @@ func.func @insert_2d_splat_constant()
   %d = vector.insert %cst_1d, %vcst[0] : vector<3xi32> into vector<2x3xi32>
   %e = vector.insert %cst_1d, %vcst[1] : vector<3xi32> into vector<2x3xi32>
   return %a, %b, %c, %d, %e : vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>
-}
-
-// -----
-
-// CHECK-LABEL: func @insert_element_fold
-//       CHECK:   %[[V:.+]] = arith.constant dense<[0, 1, 7, 3]> : vector<4xi32>
-//       CHECK:   return %[[V]]
-func.func @insert_element_fold() -> vector<4xi32> {
-  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
-  %s = arith.constant 7 : i32
-  %i = arith.constant 2 : i32
-  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
-  return %1 : vector<4xi32>
-}
-
-// -----
-
-// CHECK-LABEL: func @insert_element_invalid_fold
-func.func @insert_element_invalid_fold() -> vector<1xf32> {
-  // Out-of-bound index here.
-  %c26 = arith.constant 26 : index
-  %cst_2 = arith.constant 1.60215309E+9 : f32
-  %cst_20 = arith.constant dense<1.60215309E+9> : vector<1xf32>
-// CHECK: vector.insertelement
-  %46 = vector.insertelement %cst_2, %cst_20[%c26 : index] : vector<1xf32>
-  return %46 : vector<1xf32>
-}
-
-
-// -----
-
-// Do not crash on poison
-// CHECK-LABEL: func @insert_poison_fold1
-//       CHECK:   vector.insertelement
-func.func @insert_poison_fold1() -> vector<4xi32> {
-  %v = ub.poison : vector<4xi32>
-  %s = arith.constant 7 : i32
-  %i = arith.constant 2 : i32
-  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
-  return %1 : vector<4xi32>
-}
-
-// -----
-
-// Do not crash on poison
-// CHECK-LABEL: func @insert_poison_fold2
-//       CHECK:   vector.insertelement
-func.func @insert_poison_fold2() -> vector<4xi32> {
-  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
-  %s = ub.poison : i32
-  %i = arith.constant 2 : i32
-  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
-  return %1 : vector<4xi32>
-}
-
-// -----
-
-// Do not crash on poison
-// CHECK-LABEL: func @insert_poison_fold3
-//       CHECK:   vector.insertelement
-func.func @insert_poison_fold3() -> vector<4xi32> {
-  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
-  %s = arith.constant 7 : i32
-  %i = ub.poison : i32
-  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
-  return %1 : vector<4xi32>
-}
-
-// -----
-
-// CHECK-LABEL: func @extract_element_fold
-//       CHECK:   %[[C:.+]] = arith.constant 5 : i32
-//       CHECK:   return %[[C]]
-func.func @extract_element_fold() -> i32 {
-  %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
-  %i = arith.constant 2 : i32
-  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
-  return %1 : i32
-}
-
-// CHECK-LABEL: func @extract_element_splat_fold
-//  CHECK-SAME: (%[[ARG:.+]]: i32)
-//       CHECK:   return %[[ARG]]
-func.func @extract_element_splat_fold(%a : i32) -> i32 {
-  %v = vector.splat %a : vector<4xi32>
-  %i = arith.constant 2 : i32
-  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
-  return %1 : i32
-}
-
-// -----
-
-// Do not crash on poison
-// CHECK-LABEL: func @extract_element_poison_fold1
-//       CHECK:   vector.extractelement
-func.func @extract_element_poison_fold1() -> i32 {
-  %v = ub.poison : vector<4xi32>
-  %i = arith.constant 2 : i32
-  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
-  return %1 : i32
-}
-
-// -----
-
-// Do not crash on poison
-// CHECK-LABEL: func @extract_element_poison_fold2
-//       CHECK:   vector.extractelement
-func.func @extract_element_poison_fold2() -> i32 {
-  %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
-  %i = ub.poison : i32
-  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
-  return %1 : i32
 }
 
 // -----
@@ -2916,18 +2817,6 @@ func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
   %mask = vector.create_mask %c10, %c4 : vector<12x7xi1>
   %res = vector.extract_strided_slice %mask {offsets = [3], sizes = [5], strides = [1]} : vector<12x7xi1> to vector<5x7xi1>
   return %res : vector<5x7xi1>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @fold_extractelement_of_broadcast(
-//  CHECK-SAME:     %[[f:.*]]: f32
-//       CHECK:   return %[[f]]
-func.func @fold_extractelement_of_broadcast(%f: f32) -> f32 {
-  %0 = vector.broadcast %f : f32 to vector<15xf32>
-  %c5 = arith.constant 5 : index
-  %1 = vector.extractelement %0 [%c5 : index] : vector<15xf32>
-  return %1 : f32
 }
 
 // -----

@@ -19,6 +19,10 @@ Tags:
   SwiftReleaseOp: release
   SwiftRetainOp: retain
   SwiftDefaultOwnership: unretained
+- Name: OpaqueRefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: ORCRelease
+  SwiftRetainOp: ORCRetain
 - Name: NonCopyableType
   SwiftCopyable: false
   SwiftConformsTo: MySwiftModule.MySwiftNonCopyableProtocol

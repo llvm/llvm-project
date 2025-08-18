@@ -248,11 +248,10 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
         scf::YieldOp::create(b, loc, result);
       };
 
-      result =
-          rewriter
-              .create<scf::IfOp>(loc, condition, /*thenBuilder=*/loadBuilder,
+      result = scf::IfOp::create(rewriter, loc, condition,
+                                 /*thenBuilder=*/loadBuilder,
                                  /*elseBuilder=*/passThruBuilder)
-              .getResult(0);
+                   .getResult(0);
     }
 
     rewriter.replaceOp(op, result);

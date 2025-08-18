@@ -1970,6 +1970,13 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (!FD)
     return;
 
+  // Skip explicit specializations here as they may have
+  // a user-provided definition that may deliberately differ from the primary
+  // template. If an explicit specialization truly never returns, the user
+  // should explicitly mark it with [[noreturn]].
+  if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+    return;
+
   auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
@@ -2034,7 +2041,8 @@ bool Sema::CheckAttrTarget(const ParsedAttr &AL) {
   // Check whether the attribute is valid on the current target.
   if (!AL.existsInTarget(Context.getTargetInfo())) {
     if (AL.isRegularKeywordAttribute())
-      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target);
+      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target)
+          << AL << AL.getRange();
     else
       DiagnoseUnknownAttribute(AL);
     AL.setInvalid();
@@ -4797,10 +4805,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
 
 static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // This only applies to fields and variable declarations which have an array
-  // type.
+  // type or pointer type, with character elements.
   QualType QT = cast<ValueDecl>(D)->getType();
-  if (!QT->isArrayType() ||
-      !QT->getBaseElementTypeUnsafe()->isAnyCharacterType()) {
+  if ((!QT->isArrayType() && !QT->isPointerType()) ||
+      !QT->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     S.Diag(D->getBeginLoc(), diag::warn_attribute_non_character_array)
         << AL << AL.isRegularKeywordAttribute() << QT << AL.getRange();
     return;

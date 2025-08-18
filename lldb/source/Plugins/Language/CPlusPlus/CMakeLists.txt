@@ -35,8 +35,11 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibStdcppUniquePointer.cpp
   MsvcStl.cpp
   MsvcStlAtomic.cpp
+  MsvcStlDeque.cpp
   MsvcStlSmartPointer.cpp
+  MsvcStlTree.cpp
   MsvcStlTuple.cpp
+  MsvcStlUnordered.cpp
   MsvcStlVariant.cpp
   MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp

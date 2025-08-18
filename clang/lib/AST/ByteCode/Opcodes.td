@@ -510,6 +510,7 @@ def StoreBitFieldActivate : StoreBitFieldOpcode {}
 def StoreBitFieldActivatePop : StoreBitFieldOpcode {}
 
 def Activate : Opcode {}
+def ActivateThisField : Opcode { let Args = [ArgUint32]; }
 
 // [Pointer, Value] -> []
 def Init : StoreOpcode {}

@@ -270,28 +270,6 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   }
 };
 
-struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
-  using Base = evaluate::AnyTraverse<VariableFinder>;
-  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
-
-  using Base::operator();
-
-  template <typename T>
-  bool operator()(const evaluate::Designator<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-  template <typename T>
-  bool operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-private:
-  const SomeExpr &var;
-};
-
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
   return DesignatorCollector{}(expr);
 }
@@ -378,10 +356,6 @@ const SomeExpr *HasStorageOverlap(
     }
   }
   return nullptr;
-}
-
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
-  return VariableFinder{sub}(super);
 }
 
 // Check if the ActionStmt is actually a [Pointer]AssignmentStmt. This is

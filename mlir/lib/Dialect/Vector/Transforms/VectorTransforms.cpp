@@ -410,9 +410,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
           oldMaskType.getScalableDims().drop_front(unusedDimsBitVector.count());
       VectorType maskOpType =
           VectorType::get(newShape, rewriter.getI1Type(), newShapeScalableDims);
-      mask = rewriter
-                 .create<vector::ShapeCastOp>(contractOp.getLoc(), maskOpType,
-                                              maskingOp.getMask())
+      mask = vector::ShapeCastOp::create(rewriter, contractOp.getLoc(),
+                                         maskOpType, maskingOp.getMask())
                  .getResult();
     }
 
@@ -966,6 +965,28 @@ private:
   std::function<bool(BitCastOp)> controlFn;
 };
 
+static bool haveSameShapeAndScaling(Type t, Type u) {
+  auto tVec = dyn_cast<VectorType>(t);
+  auto uVec = dyn_cast<VectorType>(u);
+  if (!tVec) {
+    return !uVec;
+  }
+  if (!uVec) {
+    return false;
+  }
+  return tVec.getShape() == uVec.getShape() &&
+         tVec.getScalableDims() == uVec.getScalableDims();
+}
+
+/// If `type` is shaped, clone it with `newElementType`. Otherwise,
+/// return `newElementType`.
+static Type cloneOrReplace(Type type, Type newElementType) {
+  if (auto shapedType = dyn_cast<ShapedType>(type)) {
+    return shapedType.clone(newElementType);
+  }
+  return newElementType;
+}
+
 /// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
 ///
 /// Example:
@@ -989,16 +1010,14 @@ struct ReorderElementwiseOpsOnBroadcast final
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1)
       return failure();
-    if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
+    auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
+    if (!resultType)
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return rewriter.notifyMatchFailure(
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (op->getResults()[0].getType() != op->getOperand(0).getType())
-      return rewriter.notifyMatchFailure(op,
-                                         "result and operand type mismatch");
     if (isa<vector::FMAOp>(op)) {
       return rewriter.notifyMatchFailure(
           op,
@@ -1006,25 +1025,38 @@ struct ReorderElementwiseOpsOnBroadcast final
           "might be a scalar");
     }
 
-    // Get the type of the lhs operand
-    auto *lhsBcastOrSplat = op->getOperand(0).getDefiningOp();
-    if (!lhsBcastOrSplat ||
-        !isa<vector::BroadcastOp, vector::SplatOp>(*lhsBcastOrSplat))
+    Type resultElemType = resultType.getElementType();
+    // Get the type of the first non-constant operand
+    Operation *firstBroadcastOrSplat = nullptr;
+    for (Value operand : op->getOperands()) {
+      Operation *definingOp = operand.getDefiningOp();
+      if (!definingOp)
+        return failure();
+      if (definingOp->hasTrait<OpTrait::ConstantLike>())
+        continue;
+      if (!isa<vector::BroadcastOp, vector::SplatOp>(*definingOp))
+        return failure();
+      firstBroadcastOrSplat = definingOp;
+      break;
+    }
+    if (!firstBroadcastOrSplat)
       return failure();
-    auto lhsBcastOrSplatType = lhsBcastOrSplat->getOperand(0).getType();
+    Type unbroadcastResultType = cloneOrReplace(
+        firstBroadcastOrSplat->getOperand(0).getType(), resultElemType);
 
-    // Make sure that all operands are broadcast from identical types:
+    // Make sure that all operands are broadcast from identically-shaped types:
     //  * scalar (`vector.broadcast` + `vector.splat`), or
     //  * vector (`vector.broadcast`).
     // Otherwise the re-ordering wouldn't be safe.
-    if (!llvm::all_of(op->getOperands(), [&lhsBcastOrSplatType](Value val) {
-          auto bcast = val.getDefiningOp<vector::BroadcastOp>();
-          if (bcast)
-            return (bcast.getOperand().getType() == lhsBcastOrSplatType);
-          auto splat = val.getDefiningOp<vector::SplatOp>();
-          if (splat)
-            return (splat.getOperand().getType() == lhsBcastOrSplatType);
-          return false;
+    if (!llvm::all_of(op->getOperands(), [&unbroadcastResultType](Value val) {
+          if (auto bcastOp = val.getDefiningOp<vector::BroadcastOp>())
+            return haveSameShapeAndScaling(bcastOp.getOperand().getType(),
+                                           unbroadcastResultType);
+          if (auto splatOp = val.getDefiningOp<vector::SplatOp>())
+            return haveSameShapeAndScaling(splatOp.getOperand().getType(),
+                                           unbroadcastResultType);
+          SplatElementsAttr splatConst;
+          return matchPattern(val, m_Constant(&splatConst));
         })) {
       return failure();
     }
@@ -1033,18 +1065,33 @@ struct ReorderElementwiseOpsOnBroadcast final
     SmallVector<Value> srcValues;
     srcValues.reserve(op->getNumOperands());
     for (Value operand : op->getOperands()) {
-      srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+      SplatElementsAttr splatConst;
+      if (matchPattern(operand, m_Constant(&splatConst))) {
+        Attribute newConst;
+        Type elementType = getElementTypeOrSelf(operand.getType());
+        Type newType = cloneOrReplace(unbroadcastResultType, elementType);
+        if (auto newTypeShaped = dyn_cast<ShapedType>(newType)) {
+          newConst = splatConst.resizeSplat(newTypeShaped);
+        } else {
+          newConst = splatConst.getSplatValue<Attribute>();
+        }
+        Operation *newConstOp =
+            operand.getDefiningOp()->getDialect()->materializeConstant(
+                rewriter, newConst, newType, operand.getLoc());
+        srcValues.push_back(newConstOp->getResult(0));
+      } else {
+        srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+      }
     }
 
     // Create the "elementwise" Op
     Operation *elementwiseOp =
         rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        lhsBcastOrSplatType, op->getAttrs());
+                        unbroadcastResultType, op->getAttrs());
 
     // Replace the original Op with the elementwise Op
-    auto vectorType = op->getResultTypes()[0];
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        op, vectorType, elementwiseOp->getResults());
+        op, resultType, elementwiseOp->getResults());
 
     return success();
   }

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
@@ -37,6 +38,7 @@ expand_template(
         # All disabled, but required to substituted because they are not in quotes.
         "@LLVM_BUILD_EXAMPLES@": "0",
         "@LLVM_HAS_NVPTX_TARGET@": "0",
+        "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
@@ -903,8 +905,8 @@ cc_library(
 )
 
 cc_library(
-    name = "TestMesh",
-    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    name = "TestShard",
+    srcs = glob(["lib/Dialect/Shard/**/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -912,8 +914,8 @@ cc_library(
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
-        "//mlir:MeshDialect",
-        "//mlir:MeshTransforms",
+        "//mlir:ShardDialect",
+        "//mlir:ShardTransforms",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
         "//mlir:Support",

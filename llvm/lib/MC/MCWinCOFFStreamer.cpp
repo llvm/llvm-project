@@ -157,7 +157,8 @@ void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Ensure that the first and the second symbols relative to the section are
   // the section symbol and the COMDAT symbol.
   getAssembler().registerSymbol(*Section->getBeginSymbol());
-  if (auto *Sym = cast<MCSectionCOFF>(Section)->getCOMDATSymbol())
+  if (auto *Sym =
+          static_cast<const MCSectionCOFF *>(Section)->getCOMDATSymbol())
     getAssembler().registerSymbol(*Sym);
 }
 
@@ -279,6 +280,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
 void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
+  ensureHeadroom(2);
   addFixup(SRE, FK_SecRel_2);
   appendContents(2, 0);
 }
@@ -292,6 +294,7 @@ void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
   if (Offset)
     MCE = MCBinaryExpr::createAdd(
         MCE, MCConstantExpr::create(Offset, getContext()), getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_SecRel_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -307,6 +310,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
   if (Offset)
     MCE = MCBinaryExpr::createAdd(
         MCE, MCConstantExpr::create(Offset, getContext()), getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -317,6 +321,7 @@ void MCWinCOFFStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
   // Create Symbol for section number.
   const MCExpr *MCE = MCCOFFSectionNumberTargetExpr::create(
       *Symbol, this->getWriter(), getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -327,6 +332,7 @@ void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
   // Create Symbol for section offset.
   const MCExpr *MCE =
       MCCOFFSectionOffsetTargetExpr::create(*Symbol, getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
