@@ -246,7 +246,11 @@ be updated:
 
 .. code-block:: console
 
-  clang-change-namespace --old_namespace 'old' --new_namespace 'modern' --file_pattern test.cc test.cc
+  clang-change-namespace \
+    --old_namespace "old" \
+    --new_namespace "modern" \
+    --file_pattern test.cc \
+    test.cc
 
 .. code-block:: c++
 
