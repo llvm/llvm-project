@@ -85,6 +85,8 @@ const char *RelocationModelName(llvm::Reloc::Model Model);
 std::tuple<llvm::Reloc::Model, unsigned, bool>
 ParsePICArgs(const ToolChain &ToolChain, const llvm::opt::ArgList &Args);
 
+bool getStaticPIE(const llvm::opt::ArgList &Args, const ToolChain &TC);
+
 unsigned ParseFunctionAlignment(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args);
 
@@ -215,6 +217,9 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
 
+void addOpenCLBuiltinsLib(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args);
+
 void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs,
@@ -282,6 +287,12 @@ StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
 // Otherwise, return an empty string and issue a diagnosic message if needed.
 StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
                             const llvm::opt::ArgList &Args);
+
+// Convert ComplexRangeKind to a string that can be passed as a frontend option.
+std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
+
+// Render a frontend option corresponding to ComplexRangeKind.
+std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
 
 } // end namespace tools
 } // end namespace driver

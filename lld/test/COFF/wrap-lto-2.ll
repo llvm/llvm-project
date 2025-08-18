@@ -23,28 +23,30 @@
 ;; the wrapped symbol, when LTO or ThinLTO is involved. It checks for various
 ;; combinations of bitcode and regular objects.
 
+; RUN: mkdir -p %t.dir
+
 ;; LTO + LTO
-; RUN: lld-link -out:%t.bc-bc.exe %t.main.bc -libpath:%T %t.bc.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
+; RUN: lld-link -out:%t.bc-bc.exe %t.main.bc -libpath:%t.dir %t.bc.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
 ; RUN: llvm-objdump -d %t.bc-bc.exe | FileCheck %s --check-prefixes=CHECK,JMP
 
 ;; LTO + Object
-; RUN: lld-link -out:%t.bc-obj.exe %t.main.bc -libpath:%T %t.obj.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
+; RUN: lld-link -out:%t.bc-obj.exe %t.main.bc -libpath:%t.dir %t.obj.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
 ; RUN: llvm-objdump -d %t.bc-obj.exe | FileCheck %s --check-prefixes=CHECK,JMP
 
 ;; Object + LTO
-; RUN: lld-link -out:%t.obj-bc.exe %t.main.obj -libpath:%T %t.bc.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
+; RUN: lld-link -out:%t.obj-bc.exe %t.main.obj -libpath:%t.dir %t.bc.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
 ; RUN: llvm-objdump -d %t.obj-bc.exe | FileCheck %s --check-prefixes=CHECK,CALL
 
 ;; ThinLTO + ThinLTO
-; RUN: lld-link -out:%t.thin-thin.exe %t.main.thin -libpath:%T %t.thin.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
+; RUN: lld-link -out:%t.thin-thin.exe %t.main.thin -libpath:%t.dir %t.thin.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
 ; RUN: llvm-objdump -d %t.thin-thin.exe | FileCheck %s --check-prefixes=CHECK,JMP
 
 ;; ThinLTO + Object
-; RUN: lld-link -out:%t.thin-obj.exe %t.main.thin -libpath:%T %t.obj.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
+; RUN: lld-link -out:%t.thin-obj.exe %t.main.thin -libpath:%t.dir %t.obj.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
 ; RUN: llvm-objdump -d %t.thin-obj.exe | FileCheck %s --check-prefixes=CHECK,JMP
 
 ;; Object + ThinLTO
-; RUN: lld-link -out:%t.obj-thin.exe %t.main.obj -libpath:%T %t.thin.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
+; RUN: lld-link -out:%t.obj-thin.exe %t.main.obj -libpath:%t.dir %t.thin.lib -entry:entry -subsystem:console -wrap:bar -debug:symtab -lldsavetemps
 ; RUN: llvm-objdump -d %t.obj-thin.exe | FileCheck %s --check-prefixes=CHECK,CALL
 
 ;; Make sure that calls in entry() are not eliminated and that bar is

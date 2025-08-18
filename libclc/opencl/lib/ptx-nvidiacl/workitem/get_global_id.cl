@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/opencl/workitem/get_global_id.h>
-#include <clc/opencl/workitem/get_group_id.h>
-#include <clc/opencl/workitem/get_local_id.h>
-#include <clc/opencl/workitem/get_local_size.h>
+#include <clc/workitem/clc_get_global_id.h>
 
-_CLC_DEF _CLC_OVERLOAD size_t get_global_id(uint dim) {
-  return get_group_id(dim) * get_local_size(dim) + get_local_id(dim);
+_CLC_OVERLOAD _CLC_DEF size_t get_global_id(uint dim) {
+  return __clc_get_global_id(dim);
 }

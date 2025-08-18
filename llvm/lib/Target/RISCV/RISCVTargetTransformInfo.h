@@ -114,10 +114,13 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+    return ST->hasVInstructions();
+  }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
-    return ST->hasVInstructions() ? TailFoldingStyle::Data
-                                  : TailFoldingStyle::DataWithoutLaneMask;
+    return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
+                                  : TailFoldingStyle::None;
   }
   std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
@@ -397,6 +400,10 @@ public:
   }
 
   bool enableInterleavedAccessVectorization() const override { return true; }
+
+  bool enableMaskedInterleavedAccessVectorization() const override {
+    return ST->hasVInstructions();
+  }
 
   unsigned getMinTripCountTailFoldingThreshold() const override;
 

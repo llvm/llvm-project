@@ -681,7 +681,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
@@ -707,7 +707,7 @@ subroutine acc_parallel_loop
   END DO
 
 ! CHECK:      acc.parallel {{.*}} {
-! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield

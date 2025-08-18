@@ -62,6 +62,7 @@ class VarDecl;
 class ParmVarDecl;
 class InitListExpr;
 class HLSLBufferDecl;
+class HLSLVkBindingAttr;
 class HLSLResourceBindingAttr;
 class Type;
 class RecordType;
@@ -166,6 +167,9 @@ public:
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLVkBindingAttr *VkBinding);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);

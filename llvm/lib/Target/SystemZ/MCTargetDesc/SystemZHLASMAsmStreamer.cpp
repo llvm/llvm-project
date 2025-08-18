@@ -69,8 +69,8 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
 
 void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
                                             uint32_t Subsection) {
-  Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                Subsection);
+  MAI->printSwitchToSection(*Section, Subsection,
+                            getContext().getTargetTriple(), OS);
   MCStreamer::changeSection(Section, Subsection);
 }
 
@@ -137,10 +137,10 @@ void SystemZHLASMAsmStreamer::EmitComment() {
 }
 
 void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
-                                                   int64_t Value,
-                                                   unsigned ValueSize,
+                                                   int64_t Fill,
+                                                   uint8_t FillLen,
                                                    unsigned MaxBytesToEmit) {
-  emitAlignmentDS(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDS(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
 }
 
 void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,

@@ -19,8 +19,8 @@
 define dso_local double @foo() {
   %1 = alloca %struct.A, align 4
   %2 = alloca %struct.B, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2)
+  call void @llvm.lifetime.start.p0(ptr nonnull %1)
+  call void @llvm.lifetime.start.p0(ptr nonnull %2)
   call void @bar(ptr noundef nonnull %1, ptr noundef nonnull %2)
   %3 = load i32, ptr %1, align 4
   %4 = icmp sgt i32 %3, 0
@@ -48,8 +48,8 @@ define dso_local double @foo() {
 
 21:
   %22 = phi double [ 0.000000e+00, %0 ], [ %18, %9 ]
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %2)
+  call void @llvm.lifetime.end.p0(ptr nonnull %1)
   ret double %22
 }
 

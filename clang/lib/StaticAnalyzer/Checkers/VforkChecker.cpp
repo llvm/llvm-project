@@ -62,7 +62,8 @@ public:
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
 };
 
@@ -188,7 +189,7 @@ void VforkChecker::checkPreCall(const CallEvent &Call,
 }
 
 // Prohibit writes in child process (except for vfork's lhs).
-void VforkChecker::checkBind(SVal L, SVal V, const Stmt *S,
+void VforkChecker::checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   if (!isChildProcess(State))

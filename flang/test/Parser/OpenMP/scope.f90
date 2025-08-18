@@ -9,13 +9,13 @@ program omp_scope
 !CHECK: !$OMP END SCOPE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = scope
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = scope
 !PARSE-TREE: OmpClauseList -> OmpClause -> Private -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'i'
 !PARSE-TREE: Block
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = scope
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = scope
 !PARSE-TREE: OmpClauseList -> OmpClause -> Nowait
 
   !$omp scope private(i)

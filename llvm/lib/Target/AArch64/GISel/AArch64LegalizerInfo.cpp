@@ -287,6 +287,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .lower();
+
   getActionDefinitionsBuilder(
       {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
       .legalFor({{s32, s32}, {s64, s32}})
@@ -1288,6 +1292,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
+      .moreElementsToNextPow2(1)
+      .scalarize(1)
       .lower();
 
   // For fmul reductions we need to split up into individual operations. We
@@ -1644,6 +1650,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   };
+  auto LowerTriOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)},
+                   {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4)});
+    MI.eraseFromParent();
+    return true;
+  };
 
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
@@ -1792,6 +1804,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_UMULL);
+  case Intrinsic::aarch64_neon_sabd:
+    return LowerBinOp(TargetOpcode::G_ABDS);
+  case Intrinsic::aarch64_neon_uabd:
+    return LowerBinOp(TargetOpcode::G_ABDU);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
@@ -1818,6 +1834,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return LowerBinOp(TargetOpcode::G_USUBSAT);
     break;
   }
+  case Intrinsic::aarch64_neon_udot:
+    return LowerTriOp(AArch64::G_UDOT);
+  case Intrinsic::aarch64_neon_sdot:
+    return LowerTriOp(AArch64::G_SDOT);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

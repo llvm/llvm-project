@@ -1291,7 +1291,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
                                                 TuningFastImmVectorShift];
-  list<SubtargetFeature> ADLTuning = !listconcat(SKLTuning, ADLAdditionalTuning);
+  list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
+  list<SubtargetFeature> ADLTuning =
+      !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
   list<SubtargetFeature> ADLFeatures =
     !listconcat(TRMFeatures, ADLAdditionalFeatures);
 
@@ -1331,7 +1333,7 @@ def ProcessorFeatures {
   // Pantherlake
   list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listconcat(ARLSFeatures, PTLAdditionalFeatures);
+    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
 
 
   // Clearwaterforest
@@ -1342,7 +1344,7 @@ def ProcessorFeatures {
                                                   FeatureSM4,
                                                   FeatureUSERMSR];
   list<SubtargetFeature> CWFFeatures =
-    !listconcat(SRFFeatures, CWFAdditionalFeatures);
+    !listremove(!listconcat(SRFFeatures, CWFAdditionalFeatures), [FeatureWIDEKL]);
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,

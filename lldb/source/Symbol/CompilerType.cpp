@@ -354,12 +354,11 @@ bool CompilerType::IsSigned() const {
 }
 
 bool CompilerType::IsNullPtrType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() ==
-         lldb::eBasicTypeNullPtr;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeNullPtr;
 }
 
 bool CompilerType::IsBoolean() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
 }
 
 bool CompilerType::IsEnumerationIntegerTypeSigned() const {
@@ -379,7 +378,7 @@ bool CompilerType::IsPromotableIntegerType() const {
   if (IsUnscopedEnumerationType())
     return true;
 
-  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
+  switch (GetBasicTypeEnumeration()) {
   case lldb::eBasicTypeBool:
   case lldb::eBasicTypeChar:
   case lldb::eBasicTypeSignedChar:
@@ -455,8 +454,7 @@ bool CompilerType::IsContextuallyConvertibleToBool() const {
 }
 
 bool CompilerType::IsBasicType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() !=
-         lldb::eBasicTypeInvalid;
+  return GetBasicTypeEnumeration() != lldb::eBasicTypeInvalid;
 }
 
 std::string CompilerType::TypeDescription() {

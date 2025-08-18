@@ -811,7 +811,7 @@ void WinEHStatePass::updateEspForInAllocas(Function &F) {
       if (auto *Alloca = dyn_cast<AllocaInst>(&I)) {
         if (Alloca->isStaticAlloca())
           continue;
-        IRBuilder<> Builder(Alloca->getNextNonDebugInstruction());
+        IRBuilder<> Builder(Alloca->getNextNode());
         // SavedESP = llvm.stacksave()
         Value *SP = Builder.CreateStackSave();
         Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));
@@ -820,7 +820,7 @@ void WinEHStatePass::updateEspForInAllocas(Function &F) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() != Intrinsic::stackrestore)
           continue;
-        IRBuilder<> Builder(II->getNextNonDebugInstruction());
+        IRBuilder<> Builder(II->getNextNode());
         // SavedESP = llvm.stacksave()
         Value *SP = Builder.CreateStackSave();
         Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));

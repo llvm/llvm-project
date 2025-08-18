@@ -1,5 +1,6 @@
-// REQUIRES: aarch64-registered-target
+// REQUIRES: aarch64-registered-target,aarch64-host,system-linux
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=grace | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
 
 // CHECK: Extensions enabled for the given AArch64 target
 // CHECK-EMPTY:

@@ -192,8 +192,8 @@ struct RewriteExtractSliceFromCollapseShapeBase
     // Create the destination tensor using the above values.
     Type elementType = op.getSourceType().getElementType();
     SmallVector<OpFoldResult> outputShape = reifiedShapes[0];
-    Value dest = rewriter.create<tensor::EmptyOp>(op->getLoc(), outputShape,
-                                                  elementType);
+    Value dest = tensor::EmptyOp::create(rewriter, op->getLoc(), outputShape,
+                                         elementType);
 
     // Calculate the parameters for the tile loop nest.
     FailureOr<tensor::ExtractSliceFromCollapseHelper> params =
@@ -215,8 +215,8 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfFor
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     const unsigned numTiledDims = helper.getIterationSpaceSizes().size();
-    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
     SmallVector<Value> lbs(numTiledDims, zero);
     SmallVector<Value> steps(numTiledDims, one);
 
@@ -228,8 +228,8 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfFor
               helper.emitLoopNestBody(nestedBuilder, loc, outputIvs);
 
           // Insert the slice into the destination.
-          return {nestedBuilder.create<tensor::InsertSliceOp>(
-              loc, tile, iterArgs[0], insertParams)};
+          return {tensor::InsertSliceOp::create(nestedBuilder, loc, tile,
+                                                iterArgs[0], insertParams)};
         });
     rewriter.replaceOp(op, nest.results);
 
@@ -245,8 +245,9 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
                                 tensor::ExtractSliceFromCollapseHelper &helper,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto forallOp = rewriter.create<scf::ForallOp>(
-        loc, /*numThreads=*/getAsOpFoldResult(helper.getIterationSpaceSizes()),
+    auto forallOp = scf::ForallOp::create(
+        rewriter, loc,
+        /*numThreads=*/getAsOpFoldResult(helper.getIterationSpaceSizes()),
         /*outputs=*/dest,
         /*mapping=*/std::nullopt,
         [&](OpBuilder &nestedBuilder, Location loc, ValueRange regionArgs) {
@@ -261,10 +262,10 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
           auto [tile, insertParams] =
               helper.emitLoopNestBody(nestedBuilder, loc, outputIvs);
           // Insert the slice into the destination.
-          auto term = nestedBuilder.create<scf::InParallelOp>(loc);
+          auto term = scf::InParallelOp::create(nestedBuilder, loc);
           nestedBuilder.setInsertionPointToStart(term.getBody());
-          nestedBuilder.create<tensor::ParallelInsertSliceOp>(
-              loc, tile, outputArgs[0], insertParams);
+          tensor::ParallelInsertSliceOp::create(nestedBuilder, loc, tile,
+                                                outputArgs[0], insertParams);
         });
     rewriter.replaceOp(op, forallOp->getResult(0));
     return success();
@@ -355,8 +356,8 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
   MLIRContext *context = rootOp->getContext();
   OpBuilder builder(context);
   OwningOpRef<transform::NamedSequenceOp> transformOp =
-      builder.create<transform::NamedSequenceOp>(
-          rootOp->getLoc(),
+      transform::NamedSequenceOp::create(
+          builder, rootOp->getLoc(),
           /*sym_name=*/"test_sequence",
           /*function_type=*/
           TypeAttr::get(FunctionType::get(context, TypeRange{}, TypeRange{})),

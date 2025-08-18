@@ -3440,7 +3440,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (!ReportMultipleNearMisses)
     emitAsmTiedOperandConstraints(Target, Info, OS, HasOptionalOperands);
 
-  StringToOffsetTable StringTable;
+  StringToOffsetTable StringTable(/*AppendZero=*/false);
 
   size_t MaxNumOperands = 0;
   unsigned MaxMnemonicIndex = 0;
@@ -3451,8 +3451,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
     // Store a pascal-style length byte in the mnemonic.
     std::string LenMnemonic = char(MI->Mnemonic.size()) + MI->Mnemonic.lower();
-    MaxMnemonicIndex = std::max(
-        MaxMnemonicIndex, StringTable.GetOrAddStringOffset(LenMnemonic, false));
+    MaxMnemonicIndex = std::max(MaxMnemonicIndex,
+                                StringTable.GetOrAddStringOffset(LenMnemonic));
   }
 
   OS << "static const char MnemonicTable[] =\n";

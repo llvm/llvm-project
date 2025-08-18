@@ -1230,10 +1230,11 @@ unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
   return TTIImpl->getNumberOfParts(Tp);
 }
 
-InstructionCost
-TargetTransformInfo::getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
-                                               const SCEV *Ptr) const {
-  InstructionCost Cost = TTIImpl->getAddressComputationCost(Tp, SE, Ptr);
+InstructionCost TargetTransformInfo::getAddressComputationCost(
+    Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+    TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1294,8 +1295,9 @@ unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
 }
 
 Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
-    IntrinsicInst *Inst, Type *ExpectedType) const {
-  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
+    IntrinsicInst *Inst, Type *ExpectedType, bool CanCreate) const {
+  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType,
+                                                    CanCreate);
 }
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
@@ -1422,7 +1424,7 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
-uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
+APInt TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
 }
 
@@ -1483,6 +1485,10 @@ void TargetTransformInfo::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
   return TTIImpl->collectKernelLaunchBounds(F, LB);
+}
+
+bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
+  return TTIImpl->allowVectorElementIndexingUsingGEP();
 }
 
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
