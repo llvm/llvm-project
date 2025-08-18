@@ -123,6 +123,11 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 void doSCFStructuralTypeConversionWithTensorType(Operation *op,
                                                  TypeConverter converter);
 
+/// Retrieves the chip string from the XeVM target attribute of the parent
+/// GPU module operation. Returns the chip identifier if found, or nullopt
+/// if no GPU module parent or XeVM target attribute exists.
+std::optional<std::string> getChipStr(Operation *op);
+
 } // namespace xegpu
 
 } // namespace mlir

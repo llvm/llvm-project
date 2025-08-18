@@ -391,8 +391,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // Library functions.  These default to Expand, but we have instructions
   // for them.
   setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
-                      ISD::FROUNDEVEN, ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
-                     MVT::f32, Legal);
+                      ISD::FROUNDEVEN, ISD::FTRUNC},
+                     {MVT::f16, MVT::f32}, Legal);
+  setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
@@ -412,9 +413,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
-  if (Subtarget->has16BitInsts())
+  if (Subtarget->has16BitInsts()) {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
-  else {
+    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Legal);
+  } else {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
     setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
   }
@@ -586,14 +588,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
-
-  // FIXME: This is only partially true. If we have to do vector compares, any
-  // SGPR pair can be a condition register. If we have a uniform condition, we
-  // are better off doing SALU operations, where there is only one SCC. For now,
-  // we don't have a way of knowing during instruction selection if a condition
-  // will be uniform and we always use vector compares. Assume we are using
-  // vector compares until that is fixed.
-  setHasMultipleConditionRegisters(true);
 
   setMinCmpXchgSizeInBits(32);
   setSupportsUnalignedAtomics(false);
@@ -2632,7 +2626,7 @@ bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
   if (Flags.hasApproximateFuncs())
     return true;
   auto &Options = DAG.getTarget().Options;
-  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+  return Options.ApproxFuncFPMath;
 }
 
 bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
@@ -2755,7 +2749,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
   const auto &Options = getTargetMachine().Options;
   if (VT == MVT::f16 || Flags.hasApproximateFuncs() ||
-      Options.ApproxFuncFPMath || Options.UnsafeFPMath) {
+      Options.ApproxFuncFPMath) {
 
     if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
       // Log and multiply in f32 is good enough for f16.
@@ -3583,7 +3577,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) con
   if (N0.getValueType() == MVT::f32)
     return DAG.getNode(AMDGPUISD::FP_TO_FP16, DL, Op.getValueType(), N0);
 
-  if (getTargetMachine().Options.UnsafeFPMath) {
+  if (Op->getFlags().hasApproximateFuncs()) {
     // There is a generic expand for FP_TO_FP16 with unsafe fast math.
     return SDValue();
   }
@@ -4008,7 +4002,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
   case Intrinsic::amdgcn_rsq_clamp:
-  case Intrinsic::amdgcn_tanh: {
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_prng_b32: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -4844,92 +4839,9 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
-// Detect when CMP and SELECT use the same constant and fold them to avoid
-// loading the constant twice. Specifically handles patterns like:
-// %cmp = icmp eq i32 %val, 4242
-// %sel = select i1 %cmp, i32 4242, i32 %other
-// It can be optimized to reuse %val instead of 4242 in select.
-static SDValue
-foldCmpSelectWithSharedConstant(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                                const AMDGPUSubtarget *ST) {
-  SDValue Cond = N->getOperand(0);
-  SDValue TrueVal = N->getOperand(1);
-  SDValue FalseVal = N->getOperand(2);
-
-  // Check if condition is a comparison.
-  if (Cond.getOpcode() != ISD::SETCC)
-    return SDValue();
-
-  SDValue LHS = Cond.getOperand(0);
-  SDValue RHS = Cond.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-
-  bool isFloatingPoint = LHS.getValueType().isFloatingPoint();
-  bool isInteger = LHS.getValueType().isInteger();
-
-  // Handle simple floating-point and integer types only.
-  if (!isFloatingPoint && !isInteger)
-    return SDValue();
-
-  bool isEquality = CC == (isFloatingPoint ? ISD::SETOEQ : ISD::SETEQ);
-  bool isNonEquality = CC == (isFloatingPoint ? ISD::SETONE : ISD::SETNE);
-  if (!isEquality && !isNonEquality)
-    return SDValue();
-
-  SDValue ArgVal, ConstVal;
-  if ((isFloatingPoint && isa<ConstantFPSDNode>(RHS)) ||
-      (isInteger && isa<ConstantSDNode>(RHS))) {
-    ConstVal = RHS;
-    ArgVal = LHS;
-  } else if ((isFloatingPoint && isa<ConstantFPSDNode>(LHS)) ||
-             (isInteger && isa<ConstantSDNode>(LHS))) {
-    ConstVal = LHS;
-    ArgVal = RHS;
-  } else {
-    return SDValue();
-  }
-
-  // Check if constant should not be optimized - early return if not.
-  if (isFloatingPoint) {
-    const APFloat &Val = cast<ConstantFPSDNode>(ConstVal)->getValueAPF();
-    const GCNSubtarget *GCNST = static_cast<const GCNSubtarget *>(ST);
-
-    // Only optimize normal floating-point values (finite, non-zero, and
-    // non-subnormal as per IEEE 754), skip optimization for inlinable
-    // floating-point constants.
-    if (!Val.isNormal() || GCNST->getInstrInfo()->isInlineConstant(Val))
-      return SDValue();
-  } else {
-    int64_t IntVal = cast<ConstantSDNode>(ConstVal)->getSExtValue();
-
-    // Skip optimization for inlinable integer immediates.
-    // Inlinable immediates include: -16 to 64 (inclusive).
-    if (IntVal >= -16 && IntVal <= 64)
-      return SDValue();
-  }
-
-  // For equality and non-equality comparisons, patterns:
-  // select (setcc x, const), const, y -> select (setcc x, const), x, y
-  // select (setccinv x, const), y, const -> select (setccinv x, const), y, x
-  if (!(isEquality && TrueVal == ConstVal) &&
-      !(isNonEquality && FalseVal == ConstVal))
-    return SDValue();
-
-  SDValue SelectLHS = (isEquality && TrueVal == ConstVal) ? ArgVal : TrueVal;
-  SDValue SelectRHS =
-      (isNonEquality && FalseVal == ConstVal) ? ArgVal : FalseVal;
-  return DCI.DAG.getNode(ISD::SELECT, SDLoc(N), N->getValueType(0), Cond,
-                         SelectLHS, SelectRHS);
-}
-
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
-    return Folded;
-
-  // Try to fold CMP + SELECT patterns with shared constants (both FP and
-  // integer).
-  if (SDValue Folded = foldCmpSelectWithSharedConstant(N, DCI, Subtarget))
     return Folded;
 
   SDValue Cond = N->getOperand(0);

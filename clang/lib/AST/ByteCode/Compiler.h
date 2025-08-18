@@ -21,7 +21,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 class QualType;
@@ -41,6 +40,7 @@ template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
+template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -256,6 +256,8 @@ protected:
 
   OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
   OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
+  bool canClassify(const Expr *E) const { return Ctx.canClassify(E); }
+  bool canClassify(QualType T) const { return Ctx.canClassify(T); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {
@@ -280,6 +282,7 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
@@ -304,7 +307,7 @@ protected:
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
                           OptPrimType InitT);
   bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
-                     bool Activate);
+                     bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -334,6 +337,7 @@ private:
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
   friend class StmtExprScope<Emitter>;
+  friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -401,6 +405,8 @@ private:
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
+  bool refersToUnion(const Expr *E);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -421,6 +427,7 @@ protected:
   bool DiscardResult = false;
 
   bool InStmtExpr = false;
+  bool ToLValue = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().

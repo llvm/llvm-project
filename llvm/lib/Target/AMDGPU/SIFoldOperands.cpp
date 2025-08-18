@@ -468,6 +468,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
@@ -708,7 +709,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   // 16-bit SGPRs instead of 32-bit ones.
   if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
     Old.setSubReg(AMDGPU::NoSubRegister);
-  Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+  if (New->getReg().isPhysical())
+    Old.substPhysReg(New->getReg(), *TRI);
+  else
+    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
   Old.setIsUndef(New->isUndef());
   return true;
 }
@@ -1062,9 +1066,13 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:
@@ -1164,11 +1172,18 @@ void SIFoldOperandsImpl::foldOperand(
     // Grab the use operands first
     SmallVector<MachineOperand *, 4> UsesToProcess(
         llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
-    for (auto *RSUse : UsesToProcess) {
+    for (unsigned I = 0; I != UsesToProcess.size(); ++I) {
+      MachineOperand *RSUse = UsesToProcess[I];
       MachineInstr *RSUseMI = RSUse->getParent();
       unsigned OpNo = RSUseMI->getOperandNo(RSUse);
 
       if (SplatRC) {
+        if (RSUseMI->isCopy()) {
+          Register DstReg = RSUseMI->getOperand(0).getReg();
+          append_range(UsesToProcess,
+                       make_pointer_range(MRI->use_nodbg_operands(DstReg)));
+          continue;
+        }
         if (tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
           FoldableDef SplatDef(SplatVal, SplatRC);
           appendFoldCandidate(FoldList, RSUseMI, OpNo, SplatDef);
@@ -1974,7 +1989,9 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!FoldingImm && !OpToFold.isReg())
     return false;
 
-  if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
+  // Fold virtual registers and constant physical registers.
+  if (OpToFold.isReg() && OpToFold.getReg().isPhysical() &&
+      !TRI->isConstantPhysReg(OpToFold.getReg()))
     return false;
 
   // Prevent folding operands backwards in the function. For example,
@@ -2069,7 +2086,9 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F16_fake16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
-  case AMDGPU::V_PK_MAX_F16: {
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_PK_MAX_NUM_BF16: {
     if (MI.mayRaiseFPException())
       return nullptr;
 
@@ -2096,8 +2115,10 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
-    unsigned UnsetMods = (Op == AMDGPU::V_PK_MAX_F16) ? SISrcMods::OP_SEL_1
-                                                      : 0u;
+    unsigned UnsetMods =
+        (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
+            ? SISrcMods::OP_SEL_1
+            : 0u;
     if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
       return nullptr;
     return Src0;

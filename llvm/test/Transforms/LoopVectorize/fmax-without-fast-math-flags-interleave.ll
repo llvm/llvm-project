@@ -53,9 +53,8 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP7]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP8]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
@@ -76,8 +75,7 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP11]], <4 x float> [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-NEXT:    [[TMP17:%.*]] = and i1 [[CMP_N]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

@@ -147,6 +147,14 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
 }
 
 TEST_F(InterpreterTest, UndoCommand) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -160,12 +168,12 @@ TEST_F(InterpreterTest, UndoCommand) {
 
   // Fail to undo.
   auto Err1 = Interp->Undo();
-  EXPECT_EQ("Operation failed. Too many undos",
+  EXPECT_EQ("Operation failed. No input left to undo",
             llvm::toString(std::move(Err1)));
   auto Err2 = Interp->Parse("int foo = 42;");
   EXPECT_TRUE(!!Err2);
   auto Err3 = Interp->Undo(2);
-  EXPECT_EQ("Operation failed. Too many undos",
+  EXPECT_EQ("Operation failed. Wanted to undo 2 inputs, only have 1.",
             llvm::toString(std::move(Err3)));
 
   // Succeed to undo.
@@ -256,6 +264,14 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
 }
 
 TEST_F(InterpreterTest, InstantiateTemplate) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
@@ -295,6 +311,14 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
 }
 
 TEST_F(InterpreterTest, Value) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 

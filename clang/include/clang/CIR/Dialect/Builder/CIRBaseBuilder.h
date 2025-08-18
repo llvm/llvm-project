@@ -75,6 +75,18 @@ public:
     return getConstant(loc, cir::IntAttr::get(ty, value));
   }
 
+  mlir::Value getSignedInt(mlir::Location loc, int64_t val, unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/true);
+    return getConstAPInt(loc, type,
+                         llvm::APInt(numBits, val, /*isSigned=*/true));
+  }
+
+  mlir::Value getUnsignedInt(mlir::Location loc, uint64_t val,
+                             unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/false);
+    return getConstAPInt(loc, type, llvm::APInt(numBits, val));
+  }
+
   // Creates constant null value for integral type ty.
   cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     return getConstant(loc, getZeroInitAttr(ty));
@@ -198,6 +210,14 @@ public:
                            mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
+  }
+
+  /// Get constant address of a global variable as an MLIR attribute.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp,
+                                        mlir::ArrayAttr indices = {}) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
@@ -435,6 +455,10 @@ public:
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
+  }
+
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                           bool isShiftLeft) {
     return create<cir::ShiftOp>(loc, lhs.getType(), lhs, rhs, isShiftLeft);
@@ -480,8 +504,7 @@ public:
   static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          // TODO: Add LabelOp missing feature here
-          return mlir::isa<cir::AllocaOp>(&op);
+          return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);
         });
 
     if (last != block->rend())

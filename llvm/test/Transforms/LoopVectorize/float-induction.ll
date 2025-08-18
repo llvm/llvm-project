@@ -1655,7 +1655,7 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC4_INTERL1-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; VEC4_INTERL1:       middle.block:
-; VEC4_INTERL1-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; VEC4_INTERL1-NEXT:    br label [[EXIT:%.*]]
 ; VEC4_INTERL1:       scalar.ph:
 ; VEC4_INTERL1-NEXT:    br label [[LOOP:%.*]]
 ; VEC4_INTERL1:       loop:
@@ -1678,7 +1678,7 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC4_INTERL2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; VEC4_INTERL2:       middle.block:
-; VEC4_INTERL2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; VEC4_INTERL2-NEXT:    br label [[EXIT:%.*]]
 ; VEC4_INTERL2:       scalar.ph:
 ; VEC4_INTERL2-NEXT:    br label [[LOOP:%.*]]
 ; VEC4_INTERL2:       loop:
@@ -1705,7 +1705,7 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; VEC1_INTERL2:       middle.block:
-; VEC1_INTERL2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; VEC1_INTERL2-NEXT:    br label [[EXIT:%.*]]
 ; VEC1_INTERL2:       scalar.ph:
 ; VEC1_INTERL2-NEXT:    br label [[LOOP:%.*]]
 ; VEC1_INTERL2:       loop:

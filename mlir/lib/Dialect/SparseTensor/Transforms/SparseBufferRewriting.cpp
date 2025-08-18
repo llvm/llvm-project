@@ -931,10 +931,9 @@ createQuickSort(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   FlatSymbolRefAttr partitionFunc = getMangledSortHelperFunc(
       builder, func, {IndexType::get(context)}, kPartitionFuncNamePrefix, xPerm,
       ny, args.drop_back(nTrailingP), createPartitionFunc);
-  Value p = builder
-                .create<func::CallOp>(loc, partitionFunc,
-                                      TypeRange{IndexType::get(context)},
-                                      args.drop_back(nTrailingP))
+  Value p = func::CallOp::create(builder, loc, partitionFunc,
+                                 TypeRange{IndexType::get(context)},
+                                 args.drop_back(nTrailingP))
                 .getResult(0);
 
   Value lenLow = arith::SubIOp::create(builder, loc, p, lo);
@@ -1028,9 +1027,8 @@ static void createSortStableFunc(OpBuilder &builder, ModuleOp module,
   FlatSymbolRefAttr searchFunc = getMangledSortHelperFunc(
       builder, func, {IndexType::get(context)}, kBinarySearchFuncNamePrefix,
       xPerm, ny, operands, createBinarySearchFunc);
-  Value p = builder
-                .create<func::CallOp>(loc, searchFunc, TypeRange{c1.getType()},
-                                      operands)
+  Value p = func::CallOp::create(builder, loc, searchFunc,
+                                 TypeRange{c1.getType()}, operands)
                 .getResult(0);
 
   // Move the value at data[i] to a temporary location.
@@ -1317,7 +1315,7 @@ public:
 
     Value n = op.getN() ? op.getN() : constantIndex(rewriter, loc, 1);
     Value newSize = arith::AddIOp::create(rewriter, loc, size, n);
-    auto nValue = dyn_cast_or_null<arith::ConstantIndexOp>(n.getDefiningOp());
+    auto nValue = n.getDefiningOp<arith::ConstantIndexOp>();
     bool nIsOne = (nValue && nValue.value() == 1);
 
     if (!op.getInbounds()) {

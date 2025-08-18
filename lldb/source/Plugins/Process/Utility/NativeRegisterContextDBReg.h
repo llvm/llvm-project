@@ -51,7 +51,6 @@ public:
 
   lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
 
-protected:
   // Debug register type select
   enum DREGType { eDREGTypeWATCH = 0, eDREGTypeBREAK };
 
@@ -64,6 +63,7 @@ protected:
     uint32_t control;       // Breakpoint/watchpoint control value.
   };
 
+protected:
   std::array<struct DREG, 16> m_hbp_regs; // hardware breakpoints
   std::array<struct DREG, 16> m_hwp_regs; // hardware watchpoints
 

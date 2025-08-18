@@ -719,6 +719,29 @@ def AMDGPU_SchedBarrierOp :
   }];
 }
 
+def AMDGPU_MemoryCounterWaitOp :
+  AMDGPU_Op<"memory_counter_wait">,
+  Arguments<(ins
+      OptionalAttr<I32Attr>:$load,
+      OptionalAttr<I32Attr>:$store,
+      OptionalAttr<I32Attr>:$ds,
+      OptionalAttr<I32Attr>:$exp
+    )>
+  {
+  let summary = "Wait for specified hardware counters";
+  let description = [{
+    Wait for the specified counters to be less-than or equal-to the provided
+    values before continuing.
+
+    Counters can lower to different instructions on different architectires,
+    including clamping to the some HW supported max value or combining multiple
+    counters into one.
+  }];
+  let assemblyFormat = [{
+    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` ) attr-dict
+  }];
+}
+
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
     "The possible permutations of the lanes storing B available in an MFMA",
     [
@@ -884,7 +907,8 @@ def AMDGPU_GatherToLDSOp :
       The elements gathered by the subgroup will be written contiguously in order of lane ID
       starting at `$dst[$dstIndices]`. Byte-sized (ex. i8) or short-sized (ex. i16)
       types will be zero-padded/extended to 32 bits before being written. 96-bit types
-      (ex. vector<3xf32>) will be zero-padded to 128 bits before being written.
+      (ex. vector<3xf32>) will be zero-padded to 128 bits before being written. Only the
+      offsets held by lane 0 are used.
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
@@ -898,6 +922,7 @@ def AMDGPU_GatherToLDSOp :
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def AMDGPU_TransposeLoadOp :

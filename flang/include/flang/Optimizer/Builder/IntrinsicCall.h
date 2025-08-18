@@ -174,6 +174,7 @@ struct IntrinsicLibrary {
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAcosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAcospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
                                 mlir::Value, mlir::Value)>
   fir::ExtendedValue genAdjustRtCall(mlir::Type,
@@ -203,6 +204,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAsinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtand(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -419,6 +421,7 @@ struct IntrinsicLibrary {
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
@@ -438,6 +441,7 @@ struct IntrinsicLibrary {
                                mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genTanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,

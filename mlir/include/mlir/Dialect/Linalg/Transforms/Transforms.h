@@ -537,10 +537,20 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 };
+
 struct DropUnitDimsResult {
-  linalg::GenericOp resultOp;
+  IndexingMapOpInterface resultOp;
   SmallVector<Value> replacements;
 };
+using DroppedUnitDimsBuilder = std::function<IndexingMapOpInterface(
+    Location loc, OpBuilder &, IndexingMapOpInterface,
+    ArrayRef<Value> newOperands, ArrayRef<AffineMap> newIndexingMaps,
+    const llvm::SmallDenseSet<unsigned> &droppedDims)>;
+
+FailureOr<DropUnitDimsResult>
+dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
+             const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
+             const ControlDropUnitDims &options);
 FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
@@ -601,6 +611,13 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 /// affine.apply operations.
 /// The `indexingMap` + `indexingSizes` encoding suits StructuredOps and
 /// provides a gentle portability path for Linalg-like ops with affine maps.
+/// The padded shape is computed by evaluating the maximum accessed index per
+/// dimension, which may involve multiplying by constant factors derived from
+/// the affine indexing expressions. Currently, only a limited set of projected
+/// permuation indexing maps are supported, such as
+/// - affine_map<(d0, d1, d2) -> (d0, d1)>
+/// - affine_map<(d0, d1, d2) -> (d0, d1 + d2)>
+/// - affine_map<(d0, d1) -> (d0 * 3 + d1)>
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
@@ -1673,7 +1690,7 @@ struct DecomposeOuterUnitDimsPackOpPattern
 /// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
 ///
 /// Before:
 /// ```
@@ -1813,6 +1830,10 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 /// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns);
+
+/// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
+/// to equivalent `linalg.elementwise`.
+void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.

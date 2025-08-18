@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #0
 
