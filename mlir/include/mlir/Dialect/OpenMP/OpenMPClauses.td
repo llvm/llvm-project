@@ -1505,9 +1505,8 @@ class OpenMP_DynGroupprivateClauseSkip<
 
   let optAssemblyFormat = [{
     `dyn_groupprivate` `(`
-      ($modifier_first^)?
-      (`,` $modifier_second^)?
-      (`:` $dyn_groupprivate_size^ `:` type($dyn_groupprivate_size))?
+      custom<DynGroupprivateClause>($modifier_first, $modifier_second, 
+      $dyn_groupprivate_size, type($dyn_groupprivate_size))
     `)`
   }];
 }

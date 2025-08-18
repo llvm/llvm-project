@@ -1449,6 +1449,26 @@ func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
 
 // -----
 
+func.func @test_teams_dyn_groupprivate_errors_1(%dyn_size: i32) {
+  // expected-error @below {{duplicate dyn_groupprivate modifier 'strict'}}
+  omp.teams dyn_groupprivate(strict, strict : %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_2(%dyn_size: i32) {
+  // expected-error @below {{incompatible dyn_groupprivate modifiers: 'strict' and 'fallback' cannot be used together}}
+  omp.teams dyn_groupprivate(strict, fallback : %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
@@ -2437,6 +2457,20 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
       "omp.terminator"() : () -> ()
     }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
+}
+
+// -----
+
+func.func @test_target_dyn_groupprivate_errors(%dyn_size: i32) {
+  // expected-error @below {{duplicate dyn_groupprivate modifier 'strict'}}
+  omp.target dyn_groupprivate(strict, strict : %dyn_size : i32) {
+    omp.terminator
+  }
+  // expected-error @below {{incompatible dyn_groupprivate modifiers: 'strict' and 'fallback' cannot be used together}}
+  omp.target dyn_groupprivate(strict, fallback : %dyn_size : i32) {
+    omp.terminator
+  }
+  return
 }
 
 // -----
