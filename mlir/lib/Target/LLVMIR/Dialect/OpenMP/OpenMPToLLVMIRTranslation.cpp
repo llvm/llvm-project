@@ -3553,6 +3553,8 @@ llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
                             Operation *clauseOp, llvm::Value *basePointer,
                             llvm::Type *baseType, llvm::IRBuilderBase &builder,
                             LLVM::ModuleTranslation &moduleTranslation) {
+  // TODO: If the array is provably constant sized (e.g. from the type), work
+  // out constant size from the type and skip the calculation from the bounds.
   if (auto memberClause =
           mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(clauseOp)) {
     // This calculates the size to transfer based on bounds and the underlying

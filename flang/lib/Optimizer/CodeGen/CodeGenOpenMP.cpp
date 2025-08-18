@@ -59,6 +59,21 @@ struct MapInfoOpConversion
     : public OpenMPFIROpConversion<mlir::omp::MapInfoOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
+  mlir::omp::MapBoundsOp
+  createBoundsForCharString(mlir::ConversionPatternRewriter &rewriter,
+                            unsigned int len, mlir::Location loc) const {
+    mlir::Type i64Ty = rewriter.getIntegerType(64);
+    auto lBound = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
+    auto uBoundAndExt =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, len - 1);
+    auto stride = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
+    auto baseLb = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
+    auto mapBoundType = rewriter.getType<mlir::omp::MapBoundsType>();
+    return mlir::omp::MapBoundsOp::create(rewriter, loc, mapBoundType, lBound,
+                                          uBoundAndExt, uBoundAndExt, stride,
+                                          /*strideInBytes*/ false, baseLb);
+  }
+
   llvm::LogicalResult
   matchAndRewrite(mlir::omp::MapInfoOp curOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -68,13 +83,58 @@ struct MapInfoOpConversion
       return mlir::failure();
 
     llvm::SmallVector<mlir::NamedAttribute> newAttrs;
-    mlir::omp::MapInfoOp newOp;
+    mlir::omp::MapBoundsOp mapBoundsOp;
     for (mlir::NamedAttribute attr : curOp->getAttrs()) {
       if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr.getValue())) {
         mlir::Type newAttr;
         if (fir::isTypeWithDescriptor(typeAttr.getValue())) {
           newAttr = lowerTy().convertBoxTypeAsStruct(
               mlir::cast<fir::BaseBoxType>(typeAttr.getValue()));
+        } else if (fir::isa_char_string(fir::unwrapSequenceType(
+                       fir::unwrapPassByRefType(typeAttr.getValue()))) &&
+                   !characterWithDynamicLen(
+                       fir::unwrapPassByRefType(typeAttr.getValue()))) {
+          // Characters with a LEN param are represented as char
+          // arrays/strings, the initial lowering doesn't generate
+          // bounds for these, however, we require them to map the
+          // data appropriately in the later lowering stages. This
+          // is to prevent the need for unecessary caveats
+          // specific to Flang. We also strip the array from the
+          // type so that all variations of strings are treated
+          // identically and there's no caveats or specialisations
+          // required in the later stages. As an example, Boxed
+          // char strings will emit a single char array no matter
+          // the number of dimensions caused by additional array
+          // dimensions which needs specialised for, as it differs
+          // from the non-box variation which will emit each array
+          // wrapping the character array, e.g. given a type of
+          // the same dimensions, if one is boxed, the types would
+          // end up:
+          //
+          //     array<i8 x 16>
+          //  vs
+          //     array<10 x array< 10 x array<i8 x 16>>>
+          //
+          // This means we have to treat one specially in the
+          // lowering. So we try to "canonicalize" it here.
+          // TODO: Handle dynamic LEN characters.
+          if (auto ct = mlir::dyn_cast_or_null<fir::CharacterType>(
+                  fir::unwrapSequenceType(typeAttr.getValue()))) {
+            newAttr = converter->convertType(
+                fir::unwrapSequenceType(typeAttr.getValue()));
+            if (auto type = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(newAttr))
+              newAttr = type.getElementType();
+            // We do not generate for device, as MapBoundsOps are
+            // unsupported, as they're currently unused.
+            auto offloadMod =
+                llvm::dyn_cast_or_null<mlir::omp::OffloadModuleInterface>(
+                    *curOp->getParentOfType<mlir::ModuleOp>());
+            if (!offloadMod.getIsTargetDevice())
+              mapBoundsOp = createBoundsForCharString(rewriter, ct.getLen(),
+                                                      curOp.getLoc());
+          } else {
+            newAttr = converter->convertType(typeAttr.getValue());
+          }
         } else {
           newAttr = converter->convertType(typeAttr.getValue());
         }
@@ -84,8 +144,13 @@ struct MapInfoOpConversion
       }
     }
 
-    rewriter.replaceOpWithNewOp<mlir::omp::MapInfoOp>(
+    auto newOp = rewriter.replaceOpWithNewOp<mlir::omp::MapInfoOp>(
         curOp, resTypes, adaptor.getOperands(), newAttrs);
+    if (mapBoundsOp) {
+      rewriter.startOpModification(newOp);
+      newOp.getBoundsMutable().append(mlir::ValueRange{mapBoundsOp});
+      rewriter.finalizeOpModification(newOp);
+    }
 
     return mlir::success();
   }
