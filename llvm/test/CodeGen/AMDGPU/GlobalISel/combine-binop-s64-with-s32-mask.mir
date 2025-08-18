@@ -43,7 +43,28 @@ body:             |
     $sgpr0_sgpr1 = COPY %2(s64)
     SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
 ...
-
+---
+name: test_and_mask_hi_48bit_mask_rhs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-LABEL: name: test_and_mask_hi_48bit_mask_rhs
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -65536
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[UV1]](s32)
+    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = G_CONSTANT i64 -65536
+    %2:_(s64) = G_AND %0, %1
+    $sgpr0_sgpr1 = COPY %2(s64)
+    SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+...
 ---
 name: test_and_mask_lo_rhs
 tracksRegLiveness: true
@@ -81,6 +102,28 @@ body:             |
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = G_CONSTANT i64 4294967295
     %2:_(s64) = G_AND %1, %0
+    $sgpr0_sgpr1 = COPY %2(s64)
+    SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+...
+---
+name: test_and_mask_lo_36bit_mask_rhs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-LABEL: name: test_and_mask_lo_36bit_mask_rhs
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[AND]](s32)
+    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = G_CONSTANT i64 68719476735
+    %2:_(s64) = G_AND %0, %1
     $sgpr0_sgpr1 = COPY %2(s64)
     SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
 ...
@@ -170,7 +213,6 @@ body:             |
     $sgpr0_sgpr1 = COPY %2(s64)
     SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
 ...
-
 ---
 name: test_or_mask_lo_rhs
 tracksRegLiveness: true

@@ -9,7 +9,6 @@
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -519,7 +518,16 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
 }
 
 bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
-  const KnownBits &Known = VT->getKnownBits(Reg);
-  return Known.One.extractBits(32, 0).isAllOnes() ||
-         Known.One.extractBits(32, 32).isAllOnes();
+  auto Res = getIConstantVRegValWithLookThrough(Reg, MRI);
+  if (!Res)
+    return false;
+
+  const uint64_t Val = Res->Value.getZExtValue();
+  unsigned MaskIdx = 0;
+  unsigned MaskLen = 0;
+  if (!isShiftedMask_64(Val, MaskIdx, MaskLen))
+    return false;
+
+  // Check if high 32 bits or low 32 bits are all ones.
+  return (MaskLen == 64 - MaskIdx) || (MaskIdx == 0 && MaskLen >= 32);
 }
