@@ -986,6 +986,50 @@ define void @test_rewrite_mfma_f32_16x16x4f32(float %arg0, float %arg1, ptr addr
   ret void
 }
 
+define void @test_rewrite_mfma_f32_32x32x4f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
+; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[4:5], off offset:96
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[4:5], off offset:64
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x4_2b_f16 a[0:31], v[0:1], v[2:3], a[0:31]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:31]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <32 x float>, ptr addrspace(1) %ptr
+  %mai = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half> %arg0, <4 x half> %arg1, <32 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<32 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x4f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x4_4b_f16 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4f16(<4 x half> %arg0, <4 x half> %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
 define void @test_rewrite_mfma_f32_4x4x4f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: test_rewrite_mfma_f32_4x4x4f16:
 ; CHECK:       ; %bb.0:
