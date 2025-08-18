@@ -220,20 +220,17 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
-static bool isSMEABIRoutineCall(const CallInst &CI) {
+static bool isSMEABIRoutineCall(const CallInst &CI,
+                                const AArch64TargetLowering &TLI) {
   const auto *F = CI.getCalledFunction();
-  return F && StringSwitch<bool>(F->getName())
-                  .Case("__arm_sme_state", true)
-                  .Case("__arm_tpidr2_save", true)
-                  .Case("__arm_tpidr2_restore", true)
-                  .Case("__arm_za_disable", true)
-                  .Default(false);
+  return F && SMEAttrs(F->getName(), TLI).isSMEABIRoutine();
 }
 
 /// Returns true if the function has explicit operations that can only be
 /// lowered using incompatible instructions for the selected mode. This also
 /// returns true if the function F may use or modify ZA state.
-static bool hasPossibleIncompatibleOps(const Function *F) {
+static bool hasPossibleIncompatibleOps(const Function *F,
+                                       const AArch64TargetLowering &TLI) {
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       // Be conservative for now and assume that any call to inline asm or to
@@ -242,7 +239,7 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
       // all native LLVM instructions can be lowered to compatible instructions.
       if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
           (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
-           isSMEABIRoutineCall(cast<CallInst>(I))))
+           isSMEABIRoutineCall(cast<CallInst>(I), TLI)))
         return true;
     }
   }
@@ -290,7 +287,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.requiresPreservingAllZAState()) {
-    if (hasPossibleIncompatibleOps(Callee))
+    if (hasPossibleIncompatibleOps(Callee, *getTLI()))
       return false;
   }
 
@@ -357,7 +354,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   // change only once and avoid inlining of G into F.
 
   SMEAttrs FAttrs(*F);
-  SMECallAttrs CallAttrs(Call);
+  SMECallAttrs CallAttrs(Call, getTLI());
 
   if (SMECallAttrs(FAttrs, CallAttrs.callee()).requiresSMChange()) {
     if (F == Call.getCaller()) // (1)
@@ -4912,11 +4909,33 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // load/store dependencies, to expose more parallel memory access streams,
   // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();
-  if (Header == L->getLoopLatch()) {
+  BasicBlock *Latch = L->getLoopLatch();
+  if (Header == Latch) {
     // Estimate the size of the loop.
     unsigned Size;
     unsigned Width = 10;
     if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
+      return;
+
+    // Try to find an unroll count that maximizes the use of the instruction
+    // window, i.e. trying to fetch as many instructions per cycle as possible.
+    unsigned MaxInstsPerLine = 16;
+    unsigned UC = 1;
+    unsigned BestUC = 1;
+    unsigned SizeWithBestUC = BestUC * Size;
+    while (UC <= 8) {
+      unsigned SizeWithUC = UC * Size;
+      if (SizeWithUC > 48)
+        break;
+      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
+          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+        BestUC = UC;
+        SizeWithBestUC = BestUC * Size;
+      }
+      UC++;
+    }
+
+    if (BestUC == 1)
       return;
 
     SmallPtrSet<Value *, 8> LoadedValuesPlus;
@@ -4940,25 +4959,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       }
     }
 
-    // Try to find an unroll count that maximizes the use of the instruction
-    // window, i.e. trying to fetch as many instructions per cycle as possible.
-    unsigned MaxInstsPerLine = 16;
-    unsigned UC = 1;
-    unsigned BestUC = 1;
-    unsigned SizeWithBestUC = BestUC * Size;
-    while (UC <= 8) {
-      unsigned SizeWithUC = UC * Size;
-      if (SizeWithUC > 48)
-        break;
-      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
-          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
-        BestUC = UC;
-        SizeWithBestUC = BestUC * Size;
-      }
-      UC++;
-    }
-
-    if (BestUC == 1 || none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
+    if (none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
           return LoadedValuesPlus.contains(SI->getOperand(0));
         }))
       return;
@@ -4971,7 +4972,6 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // Try to runtime-unroll loops with early-continues depending on loop-varying
   // loads; this helps with branch-prediction for the early-continues.
   auto *Term = dyn_cast<BranchInst>(Header->getTerminator());
-  auto *Latch = L->getLoopLatch();
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || !Term->isConditional() || Preds.size() == 1 ||
       !llvm::is_contained(Preds, Header) ||
