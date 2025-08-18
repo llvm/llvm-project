@@ -7,7 +7,7 @@ define void @test_simplify_scev_during_expansion_flags(i64 %start) {
 ; CHECK-LABEL: define void @test_simplify_scev_during_expansion_flags(
 ; CHECK-SAME: i64 [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START_NEG:%.*]] = sub nsw i64 0, [[START]]
+; CHECK-NEXT:    [[START_NEG:%.*]] = sub i64 0, [[START]]
 ; CHECK-NEXT:    [[START_MUL:%.*]] = ashr exact i64 [[START_NEG]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 404, [[START_NEG]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 null, i8 0, i64 [[TMP1]], i1 false)

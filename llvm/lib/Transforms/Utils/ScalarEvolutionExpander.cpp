@@ -317,15 +317,9 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   }
 
   // If we haven't found this binop, insert it.
-  Value *Op = Builder.CreateBinOp(Opcode, LHS, RHS);
-  if (auto *BO = dyn_cast<Instruction>(Op)) {
-    BO->setDebugLoc(Loc);
-    if (Flags & SCEV::FlagNUW)
-      BO->setHasNoUnsignedWrap();
-    if (Flags & SCEV::FlagNSW)
-      BO->setHasNoSignedWrap();
-  }
-
+  Builder.SetCurrentDebugLocation(Loc);
+  Value *Op = Builder.CreateBinOpNoWrapFlags(
+      Opcode, LHS, RHS, Flags & SCEV::FlagNUW, Flags & SCEV::FlagNSW);
   return Op;
 }
 
