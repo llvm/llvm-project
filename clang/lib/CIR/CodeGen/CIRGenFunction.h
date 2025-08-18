@@ -23,6 +23,7 @@
 #include "Address.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -30,6 +31,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "llvm/ADT/ScopedHashTable.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -101,6 +103,14 @@ public:
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
+
+  /// The symbol table maps a variable name to a value in the current scope.
+  /// Entering a function creates a new scope, and the function arguments are
+  /// added to the mapping. When the processing of a function is terminated,
+  /// the scope is destroyed and the mappings created in this scope are
+  /// dropped.
+  using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
+  SymTableTy symbolTable;
 
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
@@ -324,6 +334,9 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  using SymTableScopeTy =
+      llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
+
   /// Hold counters for incrementally naming temporaries
   unsigned counterRefTmp = 0;
   unsigned counterAggTmp = 0;
@@ -336,6 +349,15 @@ public:
   mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
+
+  /// True if an insertion point is defined. If not, this indicates that the
+  /// current code being emitted is unreachable.
+  /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
+  /// since we don't yet force null insertion point to designate behavior (like
+  /// LLVM's codegen does) and we probably shouldn't.
+  bool haveInsertPoint() const {
+    return builder.getInsertionBlock() != nullptr;
+  }
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
@@ -489,7 +511,18 @@ public:
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
     localDeclMap.insert({vd, addr});
-    // TODO: Add symbol table support
+
+    // Add to the symbol table if not there already.
+    if (symbolTable.count(vd))
+      return;
+    symbolTable.insert(vd, addr.getPointer());
+  }
+
+  /// Removes a declaration from the address-relationship.  This is a function
+  /// that shouldn't need to be used except in cases where we're adding/removing
+  /// things that aren't part of the language-semantics AST.
+  void removeAddrOfLocalVar(const clang::VarDecl *vd) {
+    localDeclMap.erase(vd);
   }
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
@@ -499,6 +532,30 @@ public:
 
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
+
+  struct VPtr {
+    clang::BaseSubobject base;
+    const clang::CXXRecordDecl *nearestVBase;
+    clang::CharUnits offsetFromNearestVBase;
+    const clang::CXXRecordDecl *vtableClass;
+  };
+
+  using VPtrsVector = llvm::SmallVector<VPtr, 4>;
+  VPtrsVector getVTablePointers(const clang::CXXRecordDecl *vtableClass);
+  void getVTablePointers(clang::BaseSubobject base,
+                         const clang::CXXRecordDecl *nearestVBase,
+                         clang::CharUnits offsetFromNearestVBase,
+                         bool baseIsNonVirtualPrimaryBase,
+                         const clang::CXXRecordDecl *vtableClass,
+                         VPtrsVector &vptrs);
+  /// Return the Value of the vtable pointer member pointed to by thisAddr.
+  mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
+                           const clang::CXXRecordDecl *vtableClass);
+
+  /// Returns whether we should perform a type checked load when loading a
+  /// virtual function for virtual calls to members of RD. This is generally
+  /// true when both vcall CFI and whole-program-vtables are enabled.
+  bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
 
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
@@ -547,6 +604,10 @@ public:
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
   }
+
+  void initializeVTablePointers(mlir::Location loc,
+                                const clang::CXXRecordDecl *rd);
+  void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
 
   /// Return the address of a local variable.
   Address getAddrOfLocalVar(const clang::VarDecl *vd) {
@@ -601,9 +662,13 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// The cleanup depth enclosing all the cleanups associated with the
+  /// parameters.
+  EHScopeStack::stable_iterator prologueCleanupDepth;
+
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
-  void popCleanupBlocks(size_t oldCleanupStackDepth);
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth);
   void popCleanupBlock();
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
@@ -622,7 +687,7 @@ public:
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
   class RunCleanupsScope {
-    size_t cleanupStackDepth, oldCleanupStackDepth;
+    EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
 
   protected:
     bool performCleanup;
@@ -638,7 +703,7 @@ public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
-      cleanupStackDepth = cgf.ehStack.getStackDepth();
+      cleanupStackDepth = cgf.ehStack.stable_begin();
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
       cgf.currentCleanupStackDepth = cleanupStackDepth;
     }
@@ -663,7 +728,7 @@ public:
   };
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
-  size_t currentCleanupStackDepth;
+  EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
 
 public:
   /// Represents a scope, including function bodies, compound statements, and
@@ -825,6 +890,18 @@ public:
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
+public:
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
+                                      SourceLocation loc,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, const Expr *expr,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
@@ -876,6 +953,9 @@ public:
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *array);
+
+  RValue emitAtomicExpr(AtomicExpr *e);
+  void emitAtomicInit(Expr *init, LValue dest);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1007,7 +1087,7 @@ public:
   RValue emitCXXMemberOrOperatorMemberCallExpr(
       const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
       ReturnValueSlot returnValue, bool hasQualifier,
-      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
@@ -1015,6 +1095,8 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1042,6 +1124,8 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
+
+  mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
 
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
@@ -1084,6 +1168,8 @@ public:
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
+  LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
+                                             mlir::Value &result);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -1124,6 +1210,9 @@ public:
                              std::optional<mlir::Location> elseLoc = {});
 
   mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+
+  mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
+  mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
@@ -1181,7 +1270,7 @@ public:
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
-                                   LValueBaseInfo *baseInfo);
+                                   LValueBaseInfo *baseInfo = nullptr);
 
   /// Emits a reference binding to the passed in expression.
   RValue emitReferenceBindingToExpr(const Expr *e);

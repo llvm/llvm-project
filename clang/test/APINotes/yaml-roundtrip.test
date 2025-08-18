@@ -24,7 +24,7 @@ CHECK-NEXT: 25c26
 CHECK-NEXT: <         Nullability:     S
 CHECK-NEXT: ---
 CHECK-NEXT: >         Nullability:     Unspecified
-CHECK-NEXT: 28c29,30
+CHECK-NEXT: 28c29
 CHECK-NEXT: <         Nullability:     Scalar
 CHECK-NEXT: ---
 CHECK-NEXT: >         Nullability:     Unspecified

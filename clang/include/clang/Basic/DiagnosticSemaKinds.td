@@ -10423,9 +10423,10 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
-def warn_format_conversion_argument_type_mismatch_signedness : Warning<
-  warn_format_conversion_argument_type_mismatch.Summary>,
-  InGroup<FormatSignedness>, DefaultIgnore;
+def warn_format_conversion_argument_type_mismatch_signedness: Warning<
+      "format specifies type %0 but the argument has %select{type|underlying "
+      "type}2 %1, which differs in signedness" >
+    , InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;
@@ -10537,8 +10538,10 @@ def warn_format_cmp_sensitivity_mismatch : Warning<
   "it should be %select{unspecified|private|public|sensitive}1">, InGroup<Format>;
 def warn_format_cmp_specifier_mismatch : Warning<
   "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
-def warn_format_cmp_specifier_sign_mismatch : Warning<
-  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_sign_mismatch
+    : Warning<"signedness of format specifier '%0' is incompatible with '%1'">,
+      InGroup<FormatSignedness>,
+      DefaultIgnore;
 def warn_format_cmp_specifier_mismatch_pedantic : Extension<
   warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
 def note_format_cmp_with : Note<
@@ -10668,9 +10671,15 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
    "the full-expression">, InGroup<DanglingCapture>;
 
-def warn_experimental_lifetime_safety_dummy_warning : Warning<
-   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
-   InGroup<LifetimeSafety>, DefaultIgnore;
+// Diagnostics based on the Lifetime safety analysis.
+def warn_lifetime_safety_loan_expires_permissive : Warning<
+   "object whose reference is captured does not live long enough">, 
+   InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
+def warn_lifetime_safety_loan_expires_strict : Warning<
+   "object whose reference is captured may not live long enough">,
+   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -13234,9 +13243,9 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
-def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
-    : Error<"not supported for "
-            "function pointers with a reference type %select{return "
+def err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union
+    : Error<"not supported with the multivalue ABI for "
+            "function pointers with a struct/union as %select{return "
             "value|parameter}0">;
 
 // OpenACC diagnostics.
@@ -13529,7 +13538,7 @@ def err_acc_invalid_modifier
 def err_acc_invalid_default_type
     : Error<"invalid value %0 in '%1' clause; valid values are %2">;
 def err_acc_device_type_multiple_archs
-    : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
+    : Error<"OpenACC 'device_type' clause on a '%0' construct only permits "
             "one architecture">;
 def warn_acc_var_referenced_non_const_array
     : Warning<"variable of array type %0 referenced in OpenACC '%1' clause "

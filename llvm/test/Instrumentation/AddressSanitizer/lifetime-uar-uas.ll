@@ -8,9 +8,6 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
-
 define i32 @basic_test(i64 %i) sanitize_address {
   ; CHECK-LABEL: define i32 @basic_test(
 
@@ -22,7 +19,7 @@ entry:
   ; CHECK-UAS: store i64 -868082052615769615, ptr %{{[0-9]+}}
   ; CHECK-UAS-SS-NOT: store i64
 
-  call void @llvm.lifetime.start.p0(i64 2, ptr %c)
+  call void @llvm.lifetime.start.p0(ptr %c)
   ; Memory is unpoisoned at llvm.lifetime.start: 01
   ; CHECK-UAS: store i8 2, ptr %{{[0-9]+}}
 
@@ -30,7 +27,7 @@ entry:
   store volatile i32 0, ptr %retval
   store volatile i8 0, ptr %ci, align 1
 
-  call void @llvm.lifetime.end.p0(i64 2, ptr %c)
+  call void @llvm.lifetime.end.p0(ptr %c)
   ; Memory is poisoned at llvm.lifetime.end: F8
   ; CHECK-UAS: store i8 -8, ptr %{{[0-9]+}}
   ; CHECK-UAS-SS-NOT: store i8 -8,

@@ -208,7 +208,7 @@ Error initPlugins(OffloadContext &Context) {
 }
 
 Error olInit_impl() {
-  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
 
   if (isOffloadInitialized()) {
     OffloadContext::get().RefCount++;
@@ -226,7 +226,7 @@ Error olInit_impl() {
 }
 
 Error olShutDown_impl() {
-  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
 
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
@@ -487,15 +487,12 @@ Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
-    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo))
+    // We don't need to release the queue and we would like the ability for
+    // other offload threads to submit work concurrently, so pass "false" here
+    // so we don't release the underlying queue object.
+    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo, false))
       return Err;
   }
-
-  // Recreate the stream resource so the queue can be reused
-  // TODO: Would be easier for the synchronization to (optionally) not release
-  // it to begin with.
-  if (auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo))
-    return Res;
 
   return Error::success();
 }
@@ -530,6 +527,12 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
   switch (PropName) {
   case OL_QUEUE_INFO_DEVICE:
     return Info.write<ol_device_handle_t>(Queue->Device);
+  case OL_QUEUE_INFO_EMPTY: {
+    auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
+    if (auto Err = Pending.takeError())
+      return Err;
+    return Info.write<bool>(!*Pending);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetQueueInfo enum '%i' is invalid", PropName);
@@ -741,7 +744,7 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
                        ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
   auto &Device = Program->Image->getDevice();
 
-  std::lock_guard<std::mutex> Lock{Program->SymbolListMutex};
+  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
 
   switch (Kind) {
   case OL_SYMBOL_KIND_KERNEL: {
@@ -762,7 +765,7 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
-    auto &Global = Program->KernelSymbols[Name];
+    auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
       GlobalTy GlobalObj{Name};
       if (auto Res =
@@ -828,6 +831,13 @@ Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
 Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
                                ol_symbol_info_t PropName, size_t *PropSizeRet) {
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
+}
+
+Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
+                                ol_host_function_cb_t Callback,
+                                void *UserData) {
+  return Queue->Device->Device->enqueueHostCall(Callback, UserData,
+                                                Queue->AsyncInfo);
 }
 
 } // namespace offload

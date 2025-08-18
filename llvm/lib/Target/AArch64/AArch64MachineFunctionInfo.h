@@ -231,6 +231,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
+  // true if PStateSMReg is used.
+  bool PStateSMRegUsed = false;
+
   // Holds a pointer to a buffer that is large enough to represent
   // all SME ZA state and any additional state required by the
   // __arm_sme_save/restore support routines.
@@ -273,6 +276,9 @@ public:
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
+
+  unsigned isPStateSMRegUsed() const { return PStateSMRegUsed; };
+  void setPStateSMRegUsed(bool Used = true) { PStateSMRegUsed = Used; };
 
   int64_t getVGIdx() const { return VGIdx; };
   void setVGIdx(unsigned Idx) { VGIdx = Idx; };
