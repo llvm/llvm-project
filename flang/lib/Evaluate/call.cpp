@@ -260,8 +260,8 @@ static void DetermineCopyInOutArgument(
     // Actual argument expressions that aren’t variables are copy-in, but
     // not copy-out.
     actual.SetMayNeedCopyIn();
-  } else if (bool actualIsArray{actual.Rank() > 0}; actualIsArray &&
-             !IsSimplyContiguous(actual, sc.foldingContext())) {
+  } else if (bool actualIsArray{actual.Rank() > 0};
+    actualIsArray &&!IsSimplyContiguous(actual, sc.foldingContext())) {
     // Actual arguments that are variables are copy-in when non-contiguous.
     // They are copy-out when don't have vector subscripts
     actual.SetMayNeedCopyIn();
