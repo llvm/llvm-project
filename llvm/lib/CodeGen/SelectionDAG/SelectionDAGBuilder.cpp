@@ -7983,6 +7983,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                        I.getArgOperand(Idx)->getType());
       Arg.setAttributes(&I, Idx);
 
+      // If we have an explicit sret argument that is an Instruction, (i.e., it
+      // might point to function-local memory), we can't meaningfully tail-call.
       if (Arg.IsSRet && isa<Instruction>(I.getArgOperand(Idx)))
         isTailCall = false;
 
