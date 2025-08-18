@@ -133,8 +133,7 @@ namespace `a` and one in namespace `b`:
   };
   } //namespace b
 
-Let's move everything from the namespace `a` to the global namespace
-(`--new_namespace ""` means global namespace):
+Let's move everything from namespace `a` to namespace `b`:
 
 .. code-block:: console
 
