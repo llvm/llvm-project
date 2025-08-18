@@ -19,6 +19,7 @@
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
@@ -334,14 +335,36 @@ public:
     return messages_.emplace_back(std::forward<A>(args)...);
   }
 
+  // AddWarning bypasses the language feature control, it is only exposed for
+  // legacy code that cannot be easily refactored to use Warn().
   template <typename... A>
-  Message &Say(common::LanguageFeature feature, A &&...args) {
-    return Say(std::forward<A>(args)...).set_languageFeature(feature);
+  Message &AddWarning(common::UsageWarning warning, A &&...args) {
+    return messages_.emplace_back(warning, std::forward<A>(args)...);
   }
 
   template <typename... A>
-  Message &Say(common::UsageWarning warning, A &&...args) {
-    return Say(std::forward<A>(args)...).set_usageWarning(warning);
+  Message &AddWarning(common::LanguageFeature feature, A &&...args) {
+    return messages_.emplace_back(feature, std::forward<A>(args)...);
+  }
+
+  template <typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      common::LanguageFeature feature, A &&...args) {
+    if (!isInModuleFile && control.ShouldWarn(feature)) {
+      return &AddWarning(feature, std::forward<A>(args)...);
+    }
+    return nullptr;
+  }
+
+  template <typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      common::UsageWarning warning, A &&...args) {
+    if (!isInModuleFile && control.ShouldWarn(warning)) {
+      return &AddWarning(warning, std::forward<A>(args)...);
+    }
+    return nullptr;
   }
 
   void Annex(Messages &&that) {
@@ -422,24 +445,6 @@ public:
     return Say(at.value_or(at_), std::forward<A>(args)...);
   }
 
-  template <typename... A>
-  Message *Say(common::LanguageFeature feature, A &&...args) {
-    Message *msg{Say(std::forward<A>(args)...)};
-    if (msg) {
-      msg->set_languageFeature(feature);
-    }
-    return msg;
-  }
-
-  template <typename... A>
-  Message *Say(common::UsageWarning warning, A &&...args) {
-    Message *msg{Say(std::forward<A>(args)...)};
-    if (msg) {
-      msg->set_usageWarning(warning);
-    }
-    return msg;
-  }
-
   Message *Say(Message &&msg) {
     if (messages_ != nullptr) {
       if (contextMessage_) {
@@ -449,6 +454,39 @@ public:
     } else {
       return nullptr;
     }
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      FeatureOrUsageWarning feature, CharBlock at, A &&...args) {
+    if (messages_ != nullptr) {
+      if (Message *
+          msg{messages_->Warn(isInModuleFile, control, feature, at,
+              std::forward<A>(args)...)}) {
+        if (contextMessage_) {
+          msg->SetContext(contextMessage_.get());
+        }
+        return msg;
+      }
+    }
+    return nullptr;
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      FeatureOrUsageWarning feature, A &&...args) {
+    return Warn(
+        isInModuleFile, control, feature, at_, std::forward<A>(args)...);
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      FeatureOrUsageWarning feature, std::optional<CharBlock> at, A &&...args) {
+    return Warn(isInModuleFile, control, feature, at.value_or(at_),
+        std::forward<A>(args)...);
   }
 
 private:

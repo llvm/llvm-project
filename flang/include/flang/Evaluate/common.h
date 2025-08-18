@@ -255,6 +255,16 @@ public:
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
   }
+  template <typename... A>
+  parser::Message *Warn(common::LanguageFeature feature, A &&...args) {
+    return messages_.Warn(/*isInModuleFile=*/false, languageFeatures_, feature,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(common::UsageWarning warning, A &&...args) {
+    return messages_.Warn(/*isInModuleFile=*/false, languageFeatures_, warning,
+        std::forward<A>(args)...);
+  }
   std::optional<parser::CharBlock> moduleFileName() const {
     return moduleFileName_;
   }
