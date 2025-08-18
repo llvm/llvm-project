@@ -3282,6 +3282,52 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   BTC->replaceAllUsesWith(TCMO);
 }
 
+void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(LoopRegion->getEntry()));
+  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
+  // excluding ones in replicate regions. Those are not materialized explicitly
+  // yet. Those vector users are still handled in VPReplicateRegion::execute(),
+  // via shouldPack().
+  // TODO: materialize build vectors for replicating recipes in replicating
+  // regions.
+  // TODO: materialize build vectors for VPInstructions.
+  for (VPBasicBlock *VPBB :
+       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      auto UsesVectorOrInsideReplicateRegion = [RepR, LoopRegion](VPUser *U) {
+        VPRegionBlock *ParentRegion =
+            cast<VPRecipeBase>(U)->getParent()->getParent();
+        return !U->usesScalars(RepR) || ParentRegion != LoopRegion;
+      };
+      if (!RepR || RepR->isSingleScalar() ||
+          none_of(RepR->users(), UsesVectorOrInsideReplicateRegion))
+        continue;
+
+      Type *ScalarTy = TypeInfo.inferScalarType(RepR);
+      unsigned Opcode = ScalarTy->isStructTy()
+                            ? VPInstruction::BuildStructVector
+                            : VPInstruction::BuildVector;
+      auto *BuildVector = new VPInstruction(Opcode, {RepR});
+      BuildVector->insertAfter(RepR);
+
+      RepR->replaceUsesWithIf(
+          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
+                           VPUser &U, unsigned) {
+            return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
+          });
+    }
+  }
+}
+
 void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
                                                  VPBasicBlock *VectorPHVPBB,
                                                  bool TailByMasking,
