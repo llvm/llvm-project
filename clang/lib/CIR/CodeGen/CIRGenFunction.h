@@ -540,7 +540,8 @@ public:
     Address oldAddr = Address::invalid();
 
   public:
-    DeclMapRevertingRAII(CIRGenFunction &cgf, const VarDecl *vd) : cgf(cgf), vd(vd) {
+    DeclMapRevertingRAII(CIRGenFunction &cgf, const VarDecl *vd)
+        : cgf(cgf), vd(vd) {
       auto mapItr = cgf.localDeclMap.find(vd);
 
       if (mapItr != cgf.localDeclMap.end())

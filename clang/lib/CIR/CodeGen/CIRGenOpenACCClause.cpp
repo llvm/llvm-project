@@ -409,7 +409,7 @@ class OpenACCClauseCIREmitter final
         Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
     tempDeclEmission.EmittedAsOffload = true;
 
-    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf,temporary};
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
     cgf.setAddrOfLocalVar(
         temporary,
         Address{fromArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
