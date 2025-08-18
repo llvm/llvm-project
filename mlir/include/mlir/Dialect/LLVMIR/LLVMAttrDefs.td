@@ -1326,11 +1326,7 @@ def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
                         "StringAttr":$chip,
                         OptionalParameter<"StringAttr", "">:$features);
 
-  let assemblyFormat = [{`<`
-      `triple` `=` $triple `,`
-      `chip` `=` $chip
-      (`,` `features` `=` $features^)?
-  `>`}];
+  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
 
   let extraClassDeclaration = [{
     FailureOr<Attribute> query(DataLayoutEntryKey key);

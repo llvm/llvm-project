@@ -15,9 +15,9 @@ def LLVMTargetToDataLayout : Pass<"llvm-target-to-data-layout"> {
   let summary = "Derive data layout attributes from LLVM target attributes";
   let dependentDialects = ["mlir::DLTIDialect"];
   let description = [{
-    Finds a LLVM-dialect `TargetAttrInterface`-implementing
-    attribute attached to the target op and derives `DataLayoutSpecInterface`-implementing data layout
-    attributes from the specified target's LLVM-backend.
+    Derive a `DataLayoutSpecInterface`-implementing data layout attribute from
+    the LLVM-backend target specified by the `TargetAttrInterface`-implementing
+    attribute attached to the target op at the name `llvm.target`.
   }];
   let options = [
     Option<"initializeLLVMTargets", "initialize-llvm-targets", "bool",

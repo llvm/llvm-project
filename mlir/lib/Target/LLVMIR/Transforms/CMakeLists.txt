@@ -5,13 +5,7 @@ add_mlir_dialect_library(MLIRTargetLLVMIRTransforms
   MLIRTargetLLVMIRTransformsIncGen
 
   LINK_COMPONENTS
-  #Core
-  #IPO
-  #IRReader
-  #Linker
   MC
-  #Passes
-  #Support
   Target
   TargetParser
   AllTargetsAsmParsers
@@ -21,10 +15,8 @@ add_mlir_dialect_library(MLIRTargetLLVMIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRDLTIDialect
-  MLIRIR
   MLIRLLVMDialect
   MLIRPass
   MLIRTargetLLVM
   MLIRTargetLLVMIRImport
-  MLIRTransforms
   )

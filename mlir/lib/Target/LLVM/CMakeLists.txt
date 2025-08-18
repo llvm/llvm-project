@@ -16,7 +16,6 @@ add_mlir_library(MLIRTargetLLVM
   Passes
   Support
   Target
-
   LINK_LIBS PUBLIC
   MLIRExecutionEngineUtils
   MLIRTargetLLVMIRExport

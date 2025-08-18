@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H
-#define MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H
+#ifndef MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H
+#define MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -137,4 +137,4 @@ private:
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H
+#endif // MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H
