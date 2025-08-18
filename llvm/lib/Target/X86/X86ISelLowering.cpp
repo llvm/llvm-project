@@ -28310,14 +28310,6 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   return FrameAddr;
 }
 
-SDValue X86TargetLowering::LowerSTACKADDRESS(SDValue Op,
-                                             SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  return DAG.getCopyFromReg(DAG.getEntryNode(), dl,
-                            Subtarget.getRegisterInfo()->getStackRegister(),
-                            Op->getValueType(0));
-}
-
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
@@ -33671,7 +33663,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::RETURNADDR:         return LowerRETURNADDR(Op, DAG);
   case ISD::ADDROFRETURNADDR:   return LowerADDROFRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:          return LowerFRAMEADDR(Op, DAG);
-  case ISD::STACKADDRESS:       return LowerSTACKADDRESS(Op, DAG);
   case ISD::FRAME_TO_ARGS_OFFSET:
                                 return LowerFRAME_TO_ARGS_OFFSET(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG);
