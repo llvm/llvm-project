@@ -45,6 +45,11 @@ function(compile_to_bc)
   get_filename_component( ARG_OUTPUT_DIR ${ARG_OUTPUT} DIRECTORY )
   file( MAKE_DIRECTORY ${ARG_OUTPUT_DIR} )
 
+  set( COMMAND_ADDITIONAL_OPTIONS )
+  if( CMAKE_VERSION VERSION_GREATER_EQUAL "3.27" )
+    list( APPEND COMMAND_ADDITIONAL_OPTIONS DEPENDS_EXPLICIT_ONLY )
+  endif()
+
   add_custom_command(
     OUTPUT ${ARG_OUTPUT}${TMP_SUFFIX}
     COMMAND ${clang_exe}
@@ -64,13 +69,13 @@ function(compile_to_bc)
       ${ARG_INPUT}
       ${ARG_DEPENDENCIES}
     DEPFILE ${ARG_OUTPUT}.d
+    ${COMMAND_ADDITIONAL_OPTIONS}
   )
-  # FIXME: The target is added to ensure the parallel build of source files.
-  # However, this may result in a large number of targets.
-  # Starting with CMake 3.27, DEPENDS_EXPLICIT_ONLY can be used with
-  # add_custom_command to enable parallel build.
-  # Refer to https://gitlab.kitware.com/cmake/cmake/-/issues/17097 for details.
-  add_custom_target( ${ARG_TARGET} DEPENDS ${ARG_OUTPUT}${TMP_SUFFIX} )
+  # If DEPENDS_EXPLICIT_ONLY isn't available, add target to ensure the parallel
+  # build of source files on Windows.
+  if( CMAKE_VERSION VERSION_LESS "3.27" )
+    add_custom_target( ${ARG_TARGET} DEPENDS ${ARG_OUTPUT}${TMP_SUFFIX} )
+  endif()
 
   if( ${FILE_EXT} STREQUAL ".ll" )
     add_custom_command(
@@ -324,7 +329,9 @@ function(add_libclc_builtin_set)
         -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
     )
-    list( APPEND compile_tgts ${tgt} )
+    if( CMAKE_VERSION VERSION_LESS "3.27" )
+      list( APPEND compile_tgts ${tgt} )
+    endif()
 
     # Collect all files originating in LLVM IR separately
     get_filename_component( file_ext ${file} EXT )
