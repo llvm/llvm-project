@@ -424,14 +424,7 @@ void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
   IO.mapRequired("ParameterType", L.Header.Type);
   IO.mapRequired("ShaderVisibility", L.Header.Visibility);
 
-  // If a parameter type is invalid, we don't have a body to parse.
-  if (!dxbc::isValidParameterType(L.Header.Type))
-    return;
-
-  // parses the body of a given root parameter type
-  dxbc::RootParameterType PT =
-      static_cast<dxbc::RootParameterType>(L.Header.Type);
-  switch (PT) {
+  switch (L.Header.Type) {
   case dxbc::RootParameterType::Constants32Bit: {
     DXContainerYAML::RootConstantsYaml &Constants =
         S.Parameters.getOrInsertConstants(L);

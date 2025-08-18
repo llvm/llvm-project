@@ -28,6 +28,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -172,7 +173,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << "Definition for '" << F.getName() << "':\n";
     // start root signature header
     OS << "Flags: " << format_hex(RS.Flags, 8) << "\n"
-       << "Version: " << RS.Version << "\n"
+       << "Version: "
+       << enumToStringRef(RS.Version, dxbc::getRootSignatureVersions()) << "\n"
        << "RootParametersOffset: " << RS.RootParameterOffset << "\n"
        << "NumParameters: " << RS.ParametersContainer.size() << "\n";
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
@@ -181,12 +183,13 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       const dxbc::RTS0::v1::RootParameterHeader Header =
           RS.ParametersContainer.getHeader(I);
 
-      OS << "- Parameter Type: " << Type << "\n"
-         << "  Shader Visibility: " << Header.ShaderVisibility << "\n";
-
-      assert(dxbc::isValidParameterType(Type) && "Invalid Parameter Type");
-      dxbc::RootParameterType PT = static_cast<dxbc::RootParameterType>(Type);
-      switch (PT) {
+      OS << "- Parameter Type: "
+         << enumToStringRef(Type, dxbc::getRootParameterTypes()) << "\n"
+         << "  Shader Visibility: "
+         << enumToStringRef(Header.ShaderVisibility,
+                            dxbc::getShaderVisibility())
+         << "\n";
+      switch (Type) {
       case dxbc::RootParameterType::Constants32Bit: {
         const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
@@ -212,7 +215,10 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
         for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
-          OS << "  - Range Type: " << Range.RangeType << "\n"
+          OS << "  - Range Type: "
+             << enumToStringRef(Range.RangeType,
+                                dxbc::getDescriptorRangeTypes())
+             << "\n"
              << "    Register Space: " << Range.RegisterSpace << "\n"
              << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
              << "    Num Descriptors: " << Range.NumDescriptors << "\n"

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 
 #include <cmath>
 

@@ -278,18 +278,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         dxbc::RTS0::v1::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
                                          L.Header.Offset};
 
-        if (!dxbc::isValidParameterType(L.Header.Type)) {
-          // Handling invalid parameter type edge case. We intentionally let
-          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
-          // for that to be used as a testing tool more effectively.
-          RS.ParametersContainer.addInvalidParameter(Header);
-          continue;
-        }
-
-        dxbc::RootParameterType ParameterType =
-            static_cast<dxbc::RootParameterType>(L.Header.Type);
-
-        switch (ParameterType) {
+        switch (L.Header.Type) {
         case dxbc::RootParameterType::Constants32Bit: {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);

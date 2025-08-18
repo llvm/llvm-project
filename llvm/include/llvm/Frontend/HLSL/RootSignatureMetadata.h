@@ -19,7 +19,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/Compiler.h"
-#include <cstdint>
 
 namespace llvm {
 class LLVMContext;

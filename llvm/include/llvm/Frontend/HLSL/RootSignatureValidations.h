@@ -15,7 +15,6 @@
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREVALIDATIONS_H
 
 #include "llvm/ADT/IntervalMap.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Compiler.h"
 
