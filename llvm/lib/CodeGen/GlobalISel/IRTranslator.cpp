@@ -2525,6 +2525,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       Opc = ID == Intrinsic::vector_reduce_fadd
                 ? TargetOpcode::G_VECREDUCE_SEQ_FADD
                 : TargetOpcode::G_VECREDUCE_SEQ_FMUL;
+      if (!MRI->getType(VecSrc).isVector())
+        Opc = ID == Intrinsic::vector_reduce_fadd ? TargetOpcode::G_FADD
+                                                  : TargetOpcode::G_FMUL;
       MIRBuilder.buildInstr(Opc, {Dst}, {ScalarSrc, VecSrc},
                             MachineInstr::copyFlagsFromInstruction(CI));
       return true;
@@ -3520,7 +3523,7 @@ void IRTranslator::finishPendingPhis() {
     Verifier.setCurrentInst(PI);
 #endif // ifndef NDEBUG
 
-    SmallSet<const MachineBasicBlock *, 16> SeenPreds;
+    SmallPtrSet<const MachineBasicBlock *, 16> SeenPreds;
     for (unsigned i = 0; i < PI->getNumIncomingValues(); ++i) {
       auto IRPred = PI->getIncomingBlock(i);
       ArrayRef<Register> ValRegs = getOrCreateVRegs(*PI->getIncomingValue(i));

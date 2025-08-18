@@ -24441,7 +24441,7 @@ public:
       // correct, replace internal uses with undef, and mark for eventual
       // deletion.
 #ifndef NDEBUG
-      SmallSet<Value *, 4> IgnoreSet;
+      SmallPtrSet<Value *, 4> IgnoreSet;
       for (ArrayRef<Value *> RdxOps : ReductionOps)
         IgnoreSet.insert_range(RdxOps);
 #endif
