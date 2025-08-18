@@ -1161,18 +1161,6 @@ mlir::Value static getZeroLowerBounds(mlir::Location loc,
   return builder.genShift(loc, lowerBounds);
 }
 
-static bool
-isSimplyContiguous(const Fortran::evaluate::ActualArgument &arg,
-                   Fortran::evaluate::FoldingContext &foldingContext) {
-  if (const auto *expr = arg.UnwrapExpr())
-    return Fortran::evaluate::IsSimplyContiguous(*expr, foldingContext);
-  const Fortran::semantics::Symbol *sym = arg.GetAssumedTypeDummy();
-  assert(sym &&
-         "expect ActualArguments to be expression or assumed-type symbols");
-  return sym->Rank() == 0 ||
-         Fortran::evaluate::IsSimplyContiguous(*sym, foldingContext);
-}
-
 static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
   mlir::Value base = entity;
   bool foundParameter = false;
@@ -1204,15 +1192,16 @@ static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
 ///   fir.box_char...).
 /// This function should only be called with an actual that is present.
 /// The optional aspects must be handled by this function user.
+///
+/// Note: while Fortran::lower::CallerInterface::PassedEntity (the type of arg)
+/// is technically a template type, in the prepare*ActualArgument() calls
+/// it resolves to Fortran::evaluate::ActualArgument *
 static PreparedDummyArgument preparePresentUserCallActualArgument(
     mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::lower::PreparedActualArgument &preparedActual,
     mlir::Type dummyType,
     const Fortran::lower::CallerInterface::PassedEntity &arg,
     CallContext &callContext) {
-
-  Fortran::evaluate::FoldingContext &foldingContext =
-      callContext.converter.getFoldingContext();
 
   // Step 1: get the actual argument, which includes addressing the
   // element if this is an array in an elemental call.
@@ -1254,13 +1243,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
-  // The simple contiguity of the actual is "lost" when passing a polymorphic
-  // to a non polymorphic entity because the dummy dynamic type matters for
-  // the contiguity.
-  const bool mustDoCopyInOut =
-      actual.isArray() && arg.mustBeMadeContiguous() &&
-      (passingPolymorphicToNonPolymorphic ||
-       !isSimplyContiguous(*arg.entity, foldingContext));
+  Fortran::evaluate::FoldingContext &foldingContext{
+      callContext.converter.getFoldingContext()};
+  auto [suggestCopyIn, suggestCopyOut] = Fortran::evaluate::MayNeedCopyInOut(
+      *arg.entity, arg.characteristics, foldingContext);
+  bool mustDoCopyIn = actual.isArray() && suggestCopyIn;
+  bool mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
@@ -1370,7 +1358,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyInOut) {
+    } else if (mustDoCopyIn) {
       // Copy-in non contiguous variables.
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
@@ -1379,7 +1367,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      entity = genCopyIn(entity, arg.mayBeModifiedByCall());
+      entity = genCopyIn(entity, mustDoCopyOut);
     }
   } else {
     const Fortran::lower::SomeExpr *expr = arg.entity->UnwrapExpr();

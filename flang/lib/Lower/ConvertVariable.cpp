@@ -1111,7 +1111,7 @@ static bool needsRepack(Fortran::lower::AbstractConverter &converter,
   const auto &attrs = sym.attrs();
   if (!converter.getLoweringOptions().getRepackArrays() ||
       !converter.isRegisteredDummySymbol(sym) ||
-      !Fortran::semantics::IsAssumedShape(sym) ||
+      !Fortran::evaluate::IsAssumedShape(sym) ||
       Fortran::evaluate::IsSimplyContiguous(sym,
                                             converter.getFoldingContext()) ||
       // TARGET dummy may be accessed indirectly, so it is unsafe

@@ -1206,7 +1206,7 @@ void CheckHelper::CheckObjectEntity(
   if (derived && derived->IsVectorType()) {
     CHECK(type);
     std::string typeName{type->AsFortran()};
-    if (IsAssumedShape(symbol)) {
+    if (evaluate::IsAssumedShape(symbol)) {
       SayWithDeclaration(symbol,
           "Assumed-shape entity of %s type is not supported"_err_en_US,
           typeName);
@@ -2427,7 +2427,8 @@ void CheckHelper::CheckVolatile(const Symbol &symbol,
 
 void CheckHelper::CheckContiguous(const Symbol &symbol) {
   if (evaluate::IsVariable(symbol) &&
-      ((IsPointer(symbol) && symbol.Rank() > 0) || IsAssumedShape(symbol) ||
+      ((IsPointer(symbol) && symbol.Rank() > 0) ||
+          evaluate::IsAssumedShape(symbol) ||
           evaluate::IsAssumedRank(symbol))) {
   } else {
     parser::MessageFixedText msg{symbol.owner().IsDerivedType()
