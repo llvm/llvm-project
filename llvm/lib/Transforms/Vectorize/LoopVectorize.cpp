@@ -7254,8 +7254,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, BestVPlan);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
