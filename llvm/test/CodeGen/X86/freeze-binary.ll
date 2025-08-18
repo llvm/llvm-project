@@ -490,18 +490,19 @@ define i32 @freeze_ashr_exact(i32 %a0) nounwind {
 define i32 @freeze_ashr_exact_extra_use(i32 %a0, ptr %escape) nounwind {
 ; X86-LABEL: freeze_ashr_exact_extra_use:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sarl $3, %eax
-; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    sarl $3, %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarl $6, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr_exact_extra_use:
 ; X64:       # %bb.0:
+; X64-NEXT:    sarl $3, %edi
+; X64-NEXT:    movl %edi, (%rsi)
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    sarl $3, %eax
-; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    sarl $6, %eax
 ; X64-NEXT:    retq
   %x = ashr exact i32 %a0, 3
@@ -603,18 +604,19 @@ define i32 @freeze_lshr_exact(i32 %a0) nounwind {
 define i32 @freeze_lshr_exact_extra_use(i32 %a0, ptr %escape) nounwind {
 ; X86-LABEL: freeze_lshr_exact_extra_use:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $3, %eax
-; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $3, %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shrl $5, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr_exact_extra_use:
 ; X64:       # %bb.0:
+; X64-NEXT:    shrl $3, %edi
+; X64-NEXT:    movl %edi, (%rsi)
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $3, %eax
-; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    shrl $5, %eax
 ; X64-NEXT:    retq
   %x = lshr exact i32 %a0, 3
@@ -814,11 +816,9 @@ define i32 @freeze_saddo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
 ;
 ; X64-LABEL: freeze_saddo:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    addb %cl, %dl
-; X64-NEXT:    adcl $0, %edi
-; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    adcl %esi, %eax
 ; X64-NEXT:    retq
   %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
   %b.o = extractvalue {i8, i1} %b, 1
@@ -844,11 +844,9 @@ define i32 @freeze_uaddo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
 ;
 ; X64-LABEL: freeze_uaddo:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    addb %cl, %dl
-; X64-NEXT:    adcl $0, %edi
-; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    adcl %esi, %eax
 ; X64-NEXT:    retq
   %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
   %b.o = extractvalue {i8, i1} %b, 1
@@ -878,11 +876,8 @@ define i32 @freeze_ssubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
 ; X64-LABEL: freeze_ssubo:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    addb %cl, %dl
-; X64-NEXT:    setb %dil
-; X64-NEXT:    andl $1, %edi
-; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    subl %esi, %eax
 ; X64-NEXT:    retq
   %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
@@ -913,11 +908,8 @@ define i32 @freeze_usubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
 ; X64-LABEL: freeze_usubo:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    addb %cl, %dl
-; X64-NEXT:    setb %dil
-; X64-NEXT:    andl $1, %edi
-; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    subl %esi, %eax
 ; X64-NEXT:    retq
   %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
@@ -931,6 +923,7 @@ define i32 @freeze_usubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
   %r = sub i32 %v, %a1
   ret i32 %r
 }
+
 
 define i32 @freeze_scmp(i32 %a0) nounwind {
 ; X86-LABEL: freeze_scmp:
