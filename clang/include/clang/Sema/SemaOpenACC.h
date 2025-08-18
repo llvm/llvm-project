@@ -240,7 +240,11 @@ public:
   // Creates a VarDecl with a proper default init for the purposes of a
   // `private`/'firstprivate'/'reduction' clause, so it can be used to generate
   // a recipe later.
-  VarDecl *CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr);
+  //  The first entry is the recipe itself, the second is any required
+  //  'temporary' created for the init (in the case of a copy), such as with
+  //  firstprivate.
+  std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
+                                                   const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
