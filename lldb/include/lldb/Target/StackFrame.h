@@ -241,8 +241,9 @@ public:
     return m_reg_context_sp;
   }
 
-  /// Retrieve the list of variables that are in scope at this StackFrame's
-  /// pc.
+  /// Retrieve the list of variables whose scope either:
+  /// * contains this StackFrame's pc,
+  /// * is a child of this StackFrame's current scope.
   ///
   /// A frame that is not live may return an empty VariableList for a given
   /// pc value even though variables would be available at this point if it
@@ -274,6 +275,9 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param[in] must_have_valid_location
+  ///     Whether to filter variables whose location is not available at this
+  ///     StackFrame's pc.
   /// \return
   ///     A pointer to a list of variables.
   lldb::VariableListSP

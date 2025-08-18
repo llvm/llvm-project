@@ -413,12 +413,10 @@ define i16 @iv_and_step_trunc() {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[REC_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[REC_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[IV_NEXT]] to i16

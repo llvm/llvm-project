@@ -13,7 +13,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG21]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ], !dbg [[DBG22:![0-9]+]]
-; CHECK-NEXT:    br label %[[FOR_COND5_PREHEADER1:.*]]
+; CHECK-NEXT:    br label %[[FOR_COND5_PREHEADER1:.*]], !dbg [[DBG21]]
 ; CHECK:       [[FOR_COND5_PREHEADER1]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[FOR_COND5_PREHEADER1]] ], !dbg [[DBG23:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]]

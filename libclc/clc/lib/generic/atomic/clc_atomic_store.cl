@@ -8,8 +8,8 @@
 
 #include <clc/atomic/clc_atomic_store.h>
 
-#define FUNCTION __clc_atomic_store
-#define __IMPL_FUNCTION __scoped_atomic_store_n
+#define __CLC_FUNCTION __clc_atomic_store
+#define __CLC_IMPL_FUNCTION __scoped_atomic_store_n
 #define __CLC_RETURN_VOID
 
 #define __CLC_BODY <clc_atomic_def.inc>
