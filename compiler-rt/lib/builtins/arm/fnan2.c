@@ -15,9 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-unsigned
-__fnan2 (unsigned a, unsigned b)
-{
+unsigned __fnan2(unsigned a, unsigned b) {
   unsigned aadj = (a << 1) + 0x00800000;
   unsigned badj = (b << 1) + 0x00800000;
   if (aadj > 0xff800000)

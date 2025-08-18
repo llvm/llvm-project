@@ -6,8 +6,8 @@
 // REQUIRES: librt_has_addsf3
 
 #include "int_lib.h"
-#include <stdio.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "fp_test.h"
 
