@@ -144,9 +144,9 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
-- Use of `__has_feature` to detect the `ptrauth_qualifier` and `ptrauth_intrinsics`
+- Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
   features has been deprecated, and is restricted to the arm64e target only. The
-  correct method to check for these features is to test for the `__PTRAUTH__`
+  correct method to check for these features is to test for the ``__PTRAUTH__``
   macro.
 
 Modified Compiler Flags
