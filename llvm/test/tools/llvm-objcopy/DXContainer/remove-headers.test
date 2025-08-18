@@ -17,11 +17,12 @@ Header:
 ##          = 276
 # CHECK: FileSize:       276
   FileSize:        1996
-# CHECK: PartCount:      5
+# CHECK-NEXT: PartCount:      5
   PartCount:       7
-# CHECK: PartOffsets:    [ 52, 68, 84, 212, 240 ]
+# CHECK-NEXT: PartOffsets:    [ 52, 68, 84, 212, 240 ]
   PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
 Parts:
+# CHECK-NEXT: Parts
 # CHECK-NOT: FKE1
 # CHECK-NOT: FKE4
   - Name:            FKE0
