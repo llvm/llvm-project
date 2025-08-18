@@ -5242,6 +5242,58 @@ static SDValue PerformFADDCombine(SDNode *N,
   return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
+// Helper function to check if an AND operation on a load can be eliminated.
+// Returns a replacement value if the load can be eliminated, else nullopt.
+static std::optional<SDValue>
+canEliminateLoadAND(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                    SDValue Val, SDValue Mask, SDValue AExt) {
+  if (Val->getOpcode() != NVPTXISD::LoadV2 &&
+      Val->getOpcode() != NVPTXISD::LoadV4) {
+    return std::nullopt;
+  }
+
+  ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
+  if (!MaskCnst) {
+    // Not an AND with a constant
+    return std::nullopt;
+  }
+
+  uint64_t MaskVal = MaskCnst->getZExtValue();
+  if (MaskVal != 0xff) {
+    // Not an AND that chops off top 8 bits
+    return std::nullopt;
+  }
+
+  MemSDNode *Mem = dyn_cast<MemSDNode>(Val);
+  if (!Mem) {
+    // Not a MemSDNode
+    return std::nullopt;
+  }
+
+  EVT MemVT = Mem->getMemoryVT();
+  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8) {
+    // We only handle the i8 case
+    return std::nullopt;
+  }
+
+  unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
+  if (ExtType == ISD::SEXTLOAD) {
+    // If the load is a sextload, the AND is needed to zero out the high 8 bits
+    return std::nullopt;
+  }
+
+  SDValue Result = Val;
+
+  if (AExt) {
+    // Re-insert the ext as a zext.
+    Result =
+        DCI.DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), AExt.getValueType(), Val);
+  }
+
+  // If we get here, the AND is unnecessary. Replace it with the load.
+  return Result;
+}
+
 static SDValue PerformANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   // The type legalizer turns a vector load of i8 values into a zextload to i16
@@ -5252,9 +5304,8 @@ static SDValue PerformANDCombine(SDNode *N,
   SDValue Val = N->getOperand(0);
   SDValue Mask = N->getOperand(1);
 
-  if (isa<ConstantSDNode>(Val)) {
+  if (isa<ConstantSDNode>(Val))
     std::swap(Val, Mask);
-  }
 
   SDValue AExt;
 
@@ -5264,49 +5315,24 @@ static SDValue PerformANDCombine(SDNode *N,
     Val = Val->getOperand(0);
   }
 
-  if (Val->getOpcode() == NVPTXISD::LoadV2 ||
-      Val->getOpcode() == NVPTXISD::LoadV4) {
-    ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
-    if (!MaskCnst) {
-      // Not an AND with a constant
-      return SDValue();
+  if (Val.getOpcode() == ISD::BUILD_VECTOR &&
+      Mask.getOpcode() == ISD::BUILD_VECTOR) {
+    assert(Val->getNumOperands() == Mask->getNumOperands() && !AExt);
+    for (unsigned I = 0; I < Val->getNumOperands(); ++I) {
+      // We know that the AExt is null and therefore the result of this call
+      // will be the BUILD_VECTOR operand or nullopt. Rather than create a new
+      // BUILD_VECTOR with the collection of operands, we can just use the
+      // original and ignore the result.
+      if (!canEliminateLoadAND(N, DCI, Val->getOperand(I), Mask->getOperand(I),
+                               AExt)
+               .has_value())
+        return SDValue();
     }
-
-    uint64_t MaskVal = MaskCnst->getZExtValue();
-    if (MaskVal != 0xff) {
-      // Not an AND that chops off top 8 bits
-      return SDValue();
-    }
-
-    MemSDNode *Mem = dyn_cast<MemSDNode>(Val);
-    if (!Mem) {
-      // Not a MemSDNode?!?
-      return SDValue();
-    }
-
-    EVT MemVT = Mem->getMemoryVT();
-    if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8) {
-      // We only handle the i8 case
-      return SDValue();
-    }
-
-    unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
-    if (ExtType == ISD::SEXTLOAD) {
-      // If for some reason the load is a sextload, the and is needed to zero
-      // out the high 8 bits
-      return SDValue();
-    }
-
-    bool AddTo = false;
-    if (AExt.getNode() != nullptr) {
-      // Re-insert the ext as a zext.
-      Val = DCI.DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N),
-                            AExt.getValueType(), Val);
-      AddTo = true;
-    }
-
-    // If we get here, the AND is unnecessary.  Just replace it with the load
-    DCI.CombineTo(N, Val, AddTo);
+    DCI.CombineTo(N, Val, false);
+  } else {
+    auto Result = canEliminateLoadAND(N, DCI, Val, Mask, AExt);
+    if (Result.has_value())
+      DCI.CombineTo(N, Result.value(), AExt.getNode() != nullptr);
   }
 
   return SDValue();
