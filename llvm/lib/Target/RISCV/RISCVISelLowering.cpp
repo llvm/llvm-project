@@ -16086,13 +16086,6 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   if (!CMask.isShiftedMask(ShAmt, Width))
     return SDValue();
 
-  // Width must be in 1..32 (inclusive).
-  if (Width > 32 || Width == 0)
-    return SDValue();
-
-  if (!isUInt<5>(ShAmt))
-    return SDValue();
-
   SDLoc DL(N);
 
   // `Inserted` needs to be right - shifted before it is put into the
