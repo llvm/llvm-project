@@ -165,7 +165,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     // FIXME: On Windows we should use FSCTL_SET_SPARSE and FSCTL_SET_ZERO_DATA
     // to make this a sparse region, if supported.
     assert(InitLock.Locked == FileLockRAII::Exclusive);
-    if (std::error_code EC = sys::fs::resize_file(FD, Capacity))
+    if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
       return createFileError(Result.Path, EC);
   } else {
     // Someone else initialized it.
@@ -222,7 +222,10 @@ void MappedFileRegionBumpPtr::destroyImpl() {
       assert(Size < Capacity);
       // sync to file system to make sure all contents are up-to-date.
       (void)Region.sync();
-      (void)sys::fs::resize_file(*FD, size());
+      // unmap the file before resizing since that is the requirement for
+      // some platforms.
+      Region.unmap();
+      (void)sys::fs::resize_file(*FD, Size);
       (void)unlockFileThreadSafe(*SharedLockFD);
     }
   }

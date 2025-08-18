@@ -410,6 +410,11 @@ LLVM_ABI std::error_code copy_file(const Twine &From, int ToFD);
 ///          platform-specific error_code.
 LLVM_ABI std::error_code resize_file(int FD, uint64_t Size);
 
+/// Resize path to size with sparse files explicitly enabled. It uses
+/// FSCTL_SET_SPARSE On Windows. This is the same as resize_file on
+/// non-Windows
+LLVM_ABI std::error_code resize_file_sparse(int FD, uint64_t Size);
+
 /// Resize \p FD to \p Size before mapping \a mapped_file_region::readwrite. On
 /// non-Windows, this calls \a resize_file(). On Windows, this is a no-op,
 /// since the subsequent mapping (via \c CreateFileMapping) automatically
