@@ -34,7 +34,7 @@
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-elf-got | \
 // RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,ELFGOT
 
-#if __has_feature(ptrauth_intrinsics)
+#if defined(__PTRAUTH__)
 // INTRIN: has_ptrauth_intrinsics
 void has_ptrauth_intrinsics() {}
 #else
