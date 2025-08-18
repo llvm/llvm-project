@@ -208,14 +208,14 @@ struct DecoderTableInfo {
 struct EncodingAndInst {
   const Record *EncodingDef;
   const CodeGenInstruction *Inst;
-  StringRef HwModeName;
+  unsigned HwModeID;
 
   EncodingAndInst(const Record *EncodingDef, const CodeGenInstruction *Inst,
-                  StringRef HwModeName = "")
-      : EncodingDef(EncodingDef), Inst(Inst), HwModeName(HwModeName) {}
+                  unsigned HwModeID = DefaultMode)
+      : EncodingDef(EncodingDef), Inst(Inst), HwModeID(HwModeID) {}
 };
 
-using NamespacesHwModesMap = std::map<std::string, std::set<StringRef>>;
+using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
@@ -2391,10 +2391,9 @@ static bool Check(DecodeStatus &Out, DecodeStatus In) {
 )";
 }
 
-// Collect all HwModes referenced by the target for encoding purposes,
-// returning a vector of corresponding names.
+// Collect all HwModes referenced by the target for encoding purposes.
 static void collectHwModesReferencedForEncodings(
-    const CodeGenHwModes &HWM, std::vector<StringRef> &Names,
+    const CodeGenHwModes &HWM, std::vector<unsigned> &HwModeIDs,
     NamespacesHwModesMap &NamespacesWithHwModes) {
   SmallBitVector BV(HWM.getNumModeIds());
   for (const auto &MS : HWM.getHwModeSelects()) {
@@ -2402,34 +2401,28 @@ static void collectHwModesReferencedForEncodings(
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
         std::string DecoderNamespace =
             EncodingDef->getValueAsString("DecoderNamespace").str();
-        if (HwModeID == DefaultMode) {
-          NamespacesWithHwModes[DecoderNamespace].insert("");
-        } else {
-          NamespacesWithHwModes[DecoderNamespace].insert(
-              HWM.getMode(HwModeID).Name);
-        }
+        NamespacesWithHwModes[DecoderNamespace].insert(HwModeID);
         BV.set(HwModeID);
       }
     }
   }
-  transform(BV.set_bits(), std::back_inserter(Names), [&HWM](const int &M) {
-    if (M == DefaultMode)
-      return StringRef("");
-    return HWM.getModeName(M, /*IncludeDefault=*/true);
-  });
+  // FIXME: Can't do `HwModeIDs.assign(BV.set_bits_begin(), BV.set_bits_end())`
+  //   because const_set_bits_iterator_impl is not copy-assignable.
+  //   This breaks some MacOS builds.
+  append_range(HwModeIDs, BV.set_bits());
 }
 
 static void
 handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
-                                ArrayRef<StringRef> HwModeNames,
+                                ArrayRef<unsigned> HwModeIDs,
                                 NamespacesHwModesMap &NamespacesWithHwModes,
                                 std::vector<EncodingAndInst> &GlobalEncodings) {
   const Record *InstDef = Instr->TheDef;
 
   switch (DecoderEmitterSuppressDuplicates) {
   case SUPPRESSION_DISABLE: {
-    for (StringRef HwModeName : HwModeNames)
-      GlobalEncodings.emplace_back(InstDef, Instr, HwModeName);
+    for (unsigned HwModeID : HwModeIDs)
+      GlobalEncodings.emplace_back(InstDef, Instr, HwModeID);
     break;
   }
   case SUPPRESSION_LEVEL1: {
@@ -2437,17 +2430,17 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
         InstDef->getValueAsString("DecoderNamespace").str();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
-      for (StringRef HwModeName : It->second)
-        GlobalEncodings.emplace_back(InstDef, Instr, HwModeName);
+      for (unsigned HwModeID : It->second)
+        GlobalEncodings.emplace_back(InstDef, Instr, HwModeID);
     } else {
       // Only emit the encoding once, as it's DecoderNamespace doesn't
       // contain any HwModes.
-      GlobalEncodings.emplace_back(InstDef, Instr, "");
+      GlobalEncodings.emplace_back(InstDef, Instr, DefaultMode);
     }
     break;
   }
   case SUPPRESSION_LEVEL2:
-    GlobalEncodings.emplace_back(InstDef, Instr, "");
+    GlobalEncodings.emplace_back(InstDef, Instr, DefaultMode);
     break;
   }
 }
@@ -2478,13 +2471,13 @@ namespace {
 
   // First, collect all encoding-related HwModes referenced by the target.
   // And establish a mapping table between DecoderNamespace and HwMode.
-  // If HwModeNames is empty, add the empty string so we always have one HwMode.
+  // If HwModeNames is empty, add the default mode so we always have one HwMode.
   const CodeGenHwModes &HWM = Target.getHwModes();
-  std::vector<StringRef> HwModeNames;
+  std::vector<unsigned> HwModeIDs;
   NamespacesHwModesMap NamespacesWithHwModes;
-  collectHwModesReferencedForEncodings(HWM, HwModeNames, NamespacesWithHwModes);
-  if (HwModeNames.empty())
-    HwModeNames.push_back("");
+  collectHwModesReferencedForEncodings(HWM, HwModeIDs, NamespacesWithHwModes);
+  if (HwModeIDs.empty())
+    HwModeIDs.push_back(DefaultMode);
 
   const auto &NumberedInstructions = Target.getInstructions();
   NumberedEncodings.reserve(NumberedInstructions.size());
@@ -2492,20 +2485,14 @@ namespace {
     const Record *InstDef = NumberedInstruction->TheDef;
     if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, HWM);
-      for (auto [HwModeID, EncodingDef] : EBM) {
-        // DecoderTables with DefaultMode should not have any suffix.
-        if (HwModeID == DefaultMode) {
-          NumberedEncodings.emplace_back(EncodingDef, NumberedInstruction, "");
-        } else {
-          NumberedEncodings.emplace_back(EncodingDef, NumberedInstruction,
-                                         HWM.getMode(HwModeID).Name);
-        }
-      }
+      for (auto [HwModeID, EncodingDef] : EBM)
+        NumberedEncodings.emplace_back(EncodingDef, NumberedInstruction,
+                                       HwModeID);
       continue;
     }
     // This instruction is encoded the same on all HwModes.
     // According to user needs, provide varying degrees of suppression.
-    handleHwModesUnrelatedEncodings(NumberedInstruction, HwModeNames,
+    handleHwModesUnrelatedEncodings(NumberedInstruction, HwModeIDs,
                                     NamespacesWithHwModes, NumberedEncodings);
   }
   for (const Record *NumberedAlias :
@@ -2552,8 +2539,11 @@ namespace {
       }
       std::string DecoderNamespace =
           EncodingDef->getValueAsString("DecoderNamespace").str();
-      if (!NumberedEncoding.HwModeName.empty())
-        DecoderNamespace += "_" + NumberedEncoding.HwModeName.str();
+      // DecoderTables with DefaultMode should not have any suffix.
+      if (NumberedEncoding.HwModeID != DefaultMode) {
+        StringRef HwModeName = HWM.getModeName(NumberedEncoding.HwModeID);
+        DecoderNamespace += ("_" + HwModeName).str();
+      }
       EncMap[{DecoderNamespace, Size}].push_back(NEI);
     } else {
       NumEncodingsOmitted++;
