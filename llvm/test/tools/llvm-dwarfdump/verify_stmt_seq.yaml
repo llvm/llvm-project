@@ -3,7 +3,7 @@
 # I hope there are easier ways to construct tests like this.
 
 # RUN: yaml2obj %p/Inputs/verify_stmt_seq.yaml -o verify_stmt_seq.o
-# RUN: not llvm-dwarfdump -verify -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_INVALID
+# RUN: not llvm-dwarfdump -verify -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_INVALID --implicit-check-not=error:
 
 
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x0000002e, 0x000000fd)
@@ -23,5 +23,3 @@
 # CHECK_INVALID-NEXT: error: DW_AT_LLVM_stmt_sequence offset out of line table bounds occurred 1 time(s).
 # CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence encoding occurred 1 time(s).
 # CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence offset occurred 1 time(s).
-
-# CHECK_INVALID-NOT: error:

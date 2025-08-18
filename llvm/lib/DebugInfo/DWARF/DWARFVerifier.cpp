@@ -918,10 +918,8 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                [](const auto &Sequence, const uint64_t Offset) {
                                  return Sequence.StmtSeqOffset < Offset;
                                });
-    if (it != LineTable->Sequences.end() &&
-        it->StmtSeqOffset == *SectionOffset) {
-      ValidSequenceOffset = true;
-    }
+    ValidSequenceOffset =
+        it != LineTable->Sequences.end() && it->StmtSeqOffset == *SectionOffset;
 
     if (!ValidSequenceOffset)
       ReportError(
