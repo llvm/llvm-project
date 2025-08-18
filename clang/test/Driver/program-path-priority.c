@@ -1,5 +1,5 @@
 /// Don't create symlinks on Windows
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, system-cygwin
 
 /// Check the priority used when searching for tools
 /// Names and locations are usually in this order:

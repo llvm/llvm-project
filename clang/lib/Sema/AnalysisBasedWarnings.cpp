@@ -227,14 +227,11 @@ static bool hasRecursiveCallInPath(const FunctionDecl *FD, CFGBlock &Block) {
 
     // Skip function calls which are qualified with a templated class.
     if (const DeclRefExpr *DRE =
-            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts())) {
-      if (NestedNameSpecifier *NNS = DRE->getQualifier()) {
-        if (NNS->getKind() == NestedNameSpecifier::TypeSpec &&
-            isa<TemplateSpecializationType>(NNS->getAsType())) {
+            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts()))
+      if (NestedNameSpecifier NNS = DRE->getQualifier();
+          NNS.getKind() == NestedNameSpecifier::Kind::Type)
+        if (isa_and_nonnull<TemplateSpecializationType>(NNS.getAsType()))
           continue;
-        }
-      }
-    }
 
     const CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(CE);
     if (!MCE || isa<CXXThisExpr>(MCE->getImplicitObjectArgument()) ||
@@ -2783,6 +2780,31 @@ public:
   }
 };
 
+namespace clang::lifetimes {
+namespace {
+class LifetimeSafetyReporterImpl : public LifetimeSafetyReporter {
+
+public:
+  LifetimeSafetyReporterImpl(Sema &S) : S(S) {}
+
+  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                          SourceLocation FreeLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_loan_expires_permissive
+               : diag::warn_lifetime_safety_loan_expires_strict)
+        << IssueExpr->getEndLoc();
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getEndLoc();
+  }
+
+private:
+  Sema &S;
+};
+} // namespace
+} // namespace clang::lifetimes
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
      TranslationUnitDecl *TU) {
   if (!TU)
@@ -3032,8 +3054,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (AC.getCFG())
-      lifetimes::runLifetimeSafetyAnalysis(AC);
+    if (AC.getCFG()) {
+      lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+    }
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&

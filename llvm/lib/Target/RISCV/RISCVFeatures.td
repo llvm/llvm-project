@@ -1055,13 +1055,13 @@ def FeatureStdExtSupm
                      "Indicates User-mode Pointer Masking">;
 
 def FeatureStdExtSmctr
-    : RISCVExperimentalExtension<1, 0,
-                                 "Control Transfer Records Machine Level",
-                                 [FeatureStdExtSscsrind]>;
+    : RISCVExtension<1, 0,
+                     "Control Transfer Records Machine Level",
+                     [FeatureStdExtSscsrind]>;
 def FeatureStdExtSsctr
-    : RISCVExperimentalExtension<1, 0,
-                                 "Control Transfer Records Supervisor Level",
-                                 [FeatureStdExtSscsrind]>;
+    : RISCVExtension<1, 0,
+                     "Control Transfer Records Supervisor Level",
+                     [FeatureStdExtSscsrind]>;
 def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
                             AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
                                "'Smctr' (Control Transfer Records Machine Level) or "
@@ -1642,6 +1642,14 @@ def HasVendorXAndesVDot
       AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
                          "'XAndesVDot' (Andes Vector Dot Product Extension)">;
 
+def FeatureVendorXSMTVDot
+    : RISCVExtension<1, 0, "SpacemiT Vector Dot Product Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDot
+    : Predicate<"Subtarget->hasVendorXSMTVDot()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
+                         "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1699,6 +1707,18 @@ def TuneNLogNVRGather
 
 def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+
+def TuneDisableMISchedLoadClustering : SubtargetFeature<"disable-misched-load-clustering",
+    "EnableMISchedLoadClustering", "false", "Disable load clustering in the machine scheduler">;
+
+def TuneDisableMISchedStoreClustering : SubtargetFeature<"disable-misched-store-clustering",
+    "EnableMISchedStoreClustering", "false", "Disable store clustering in the machine scheduler">;
+
+def TuneDisablePostMISchedLoadClustering : SubtargetFeature<"disable-postmisched-load-clustering",
+    "EnablePostMISchedLoadClustering", "false", "Disable PostRA load clustering in the machine scheduler">;
+
+def TuneDisablePostMISchedStoreClustering : SubtargetFeature<"disable-postmisched-store-clustering",
+    "EnablePostMISchedStoreClustering", "false", "Disable PostRA store clustering in the machine scheduler">;
 
 def TuneDisableLatencySchedHeuristic
     : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
