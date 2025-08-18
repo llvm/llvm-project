@@ -560,8 +560,7 @@ public:
 };
 
 template <class _VoidPtr>
-class _LIBCPP_STANDALONE_DEBUG
-__tree_node_base : public __tree_end_node<__rebind_pointer_t<_VoidPtr, __tree_node_base<_VoidPtr> > > {
+class __tree_node_base : public __tree_end_node<__rebind_pointer_t<_VoidPtr, __tree_node_base<_VoidPtr> > > {
 public:
   using pointer                            = __rebind_pointer_t<_VoidPtr, __tree_node_base>;
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<_VoidPtr, __tree_end_node<pointer> >;
@@ -581,7 +580,7 @@ public:
 };
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
+class __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
