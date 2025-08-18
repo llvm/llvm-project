@@ -167,8 +167,8 @@ std::optional<parser::Message> CheckStatementFunction(
 // argument may need copy-in operation and the second Boolean specifies whether
 // copy-out may be necessary. This function works with implicit interface
 // procedures.
-std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &,
-    FoldingContext &);
+std::pair<bool, bool> MayNeedCopyInOut(
+    const ActualArgument &, FoldingContext &);
 
 // Returns a pair of Booleans. The first boolean specifies whether given actual
 // and dummy argument pair may need copy-in operation for the actual argument,

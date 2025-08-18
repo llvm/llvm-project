@@ -1446,8 +1446,8 @@ std::optional<parser::Message> CheckStatementFunction(
   return StmtFunctionChecker{sf, context}(expr);
 }
 
-std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
-    FoldingContext &fc) {
+std::pair<bool, bool> MayNeedCopyInOut(
+    const ActualArgument &actual, FoldingContext &fc) {
   bool mayNeedCopyIn{false};
   bool mayNeedCopyOut{false};
   if (actual.isAlternateReturn()) {
