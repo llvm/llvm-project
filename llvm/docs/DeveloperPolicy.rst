@@ -141,57 +141,79 @@ products.
 Maintainers are those volunteers; they are regular contributors who volunteer
 to take on additional community responsibilities beyond code contributions.
 Community members can find active and inactive maintainers for a project in the
-``Maintainers.rst`` file at the root directory of the individual project.
+``Maintainers.md`` file at the root directory of the individual project.
 
-Maintainers are volunteering to take on the following shared responsibilities
-within an area of a project:
+Maintainers are volunteering to take on shared responsibilities
+within an area of a project, not to exert power through that status.
+Actions and opinions of maintainers have equal weight to those of other contributors.
+Conflicts are resolved by the area teams (defined in `LP0004
+<https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_).
 
-* ensure that commits receive high-quality review, either by the maintainer
-  or by someone else,
-* help to confirm and comment on issues,
-* mediate code review disagreements through collaboration with other
-  maintainers (and other reviewers) to come to a consensus on how best to
-  proceed with disputed changes,
-* actively engage with relevant RFCs,
-* aid release managers with backporting and other release-related
-  activities,
-* be a point of contact for contributors who need help (answering questions
-  on Discord/Discourse or holding office hours).
+The main responsibilities of a maintainer are to:
+* **Code Review**: ensure that commits receive high-quality review, either by the
+  maintainer or by someone else,
+* **RFC Engagement**: actively engage with relevant RFCs, provide feedback, and
+  help drive discussions to conclusion,
+* **Mediation**: mediate code review and RFC disagreements through collaboration
+  with other maintainers (and other reviewers) to come to a consensus on how best
+  to proceed with disputed changes, by finding a common ground,
+* **Triage**: help to confirm and comment on issues, aid release managers with
+  backporting and other release-related activities,
+* **Point of Contact**: be a contact for contributors who need help (answering questions
+  on Discord/Discourse or holding office hours),
+* **Behaviour**: ensuring that they, and the community members they interact with,
+  abide by the :ref:`LLVM Community Code of Conduct`.
 
 Each top-level project in the monorepo will specify one or more
-lead maintainers who are responsible for ensuring community needs are
-met for that project. This role is like any other maintainer role,
-except the responsibilities span the project rather than a limited area
-within the project. If you cannot reach a maintainer or don't know which
-maintainer to reach out to, a lead maintainer is always a good choice
-to reach out to. If a project has no active lead maintainers, it may be a
+**lead maintainers** who are responsible for ensuring community needs are
+met for that project.
+
+This role is like any other maintainer role, except the responsibilities
+span the project rather than a limited area within the project.
+The hierarchy creates clear points of contact for contributors, where local
+maintainers should be contacted first.
+If you cannot reach a maintainer or don't know which
+maintainer to reach out to, a lead maintainer is always a good choice.
+
+Lead maintainers do not have additional privileges over other maintainers,
+for example overruling another maintainer's decision if consensus has been reached.
+They also don't need to know _everything_ that happens in the project.
+Having multiple lead maintainers can help cover all areas with reasonable depth,
+as well as allow for better coverage and response times.
+
+If a project has no active lead maintainers, it may be a
 reasonable candidate for removal from the monorepo. A discussion should be
-started on Discourse to find a new, active lead maintainer or whether the
+started on Discourse to find new, active lead maintainers or whether the
 project should be discontinued.
 
-All contributors with commit access to the LLVM Project are eligible to be a
-maintainer. However, we are looking for people who can commit to:
+All contributors with commit access to the LLVM Project are **eligible** to be a
+maintainer. However, we are looking for people who can commit to engaging in
+the responsibilities above consistently for at least three months in the previous
+6 months.
 
-* engaging in their responsibilities the majority of the days in a month,
-* ensuring that they, and the community members they interact with, abide by the
-  :ref:`LLVM Community Code of Conduct`, and
-* performing these duties for at least three months.
+In the interest of having a wider coverage of maintainers, we encourage any active
+collaborator to volunteer to a maintainer role, especially in areas currently without
+a maintainer.
+New projects are encouraged to seek out maintainers early in their development.
+As long as the proponents are committed to the responsibilities of a maintainer
+and have the support of the community, the time-frame restriction above can be waived.
 
 We recognize that priorities shift, job changes happen, burnout is real,
 extended vacations are a blessing, and people's lives are generally complex.
 Therefore, we want as little friction as possible for someone to become a
 maintainer or to step down as a maintainer.
 
-*To become a new maintainer*, you can volunteer yourself by posting a PR which
+**To become a new maintainer**, you can volunteer yourself by posting a PR which
 adds yourself to the area(s) you are volunteering for. Alternatively, an
 existing maintainer can nominate you by posting a PR, but the nominee must
 explicitly accept the PR so that it's clear they agree to volunteer within the
-proposed area(s). The PR will be accepted so long as at least one maintainer in
-the same project vouches for their ability to perform the responsibilities and
-there are no explicit objections raised by the community.
+proposed area(s). As long as the volunteer meets the requirements above, there
+are no objections from the community, and there are no other constraints (for
+example, too many maintainers in the target area already), the volunteer can
+be accepted as a maintainer.
 
-*To step down as a maintainer*, you can move your name to the "inactive
-maintainers" section of the ``Maintainers.rst`` file for the project, or remove
+**To step down as a maintainer**, you can move your name to the "inactive
+maintainers" section of the ``Maintainers.md`` file for the project, or remove
 your name entirely; no PR review is necessary. Additionally, any maintainer who
 has not been actively performing their responsibilities over an extended period
 of time can be moved to the "inactive maintainers" section by another active
@@ -205,8 +227,8 @@ with them is required. Stepping down or being removed as a maintainer is normal
 and does not prevent someone from resuming their activities as a maintainer in
 the future.
 
-*To resume activities as a maintainer*, you can post a PR moving your name from
-the "inactive maintainers" section of the ``Maintainers.rst`` file to the
+**To resume activities as a maintainer**, you can post a PR moving your name from
+the "inactive maintainers" section of the ``Maintainers.md`` file to the
 active maintainers list. Because the volunteer was already previously accepted,
 they will be re-accepted so long as at least one maintainer in the same project
 approves the PR and there are no explicit objections raised by the community.
