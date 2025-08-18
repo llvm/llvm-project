@@ -143,8 +143,6 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target, uint8_t *Data,
                                      uint64_t Value, bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
-    IsResolved = false;
   IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
@@ -173,20 +171,6 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // bits from the fixup value.
   for (unsigned I = 0; I != NumBytes; ++I) {
     Data[I] |= uint8_t((Value >> (I * 8)) & 0xff);
-  }
-}
-
-bool LoongArchAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
-                                                const MCValue &Target) {
-  switch (Fixup.getKind()) {
-  default:
-    return STI.hasFeature(LoongArch::FeatureRelax);
-  case FK_Data_1:
-  case FK_Data_2:
-  case FK_Data_4:
-  case FK_Data_8:
-  case FK_Data_leb128:
-    return !Target.isAbsolute();
   }
 }
 
@@ -491,9 +475,16 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     return false;
   }
 
-  IsResolved = Fallback();
   // If linker relaxation is enabled and supported by the current relocation,
-  // append a RELAX relocation.
+  // generate a relocation and then append a RELAX.
+  if (Fixup.isLinkerRelaxable())
+    IsResolved = false;
+  if (IsResolved && Fixup.isPCRel())
+    IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
+
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
     Asm->getWriter().recordRelocation(F, FA, MCValue::get(nullptr),
