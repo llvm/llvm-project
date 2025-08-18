@@ -61,7 +61,6 @@ public:
   bool hasSeen(StringRef canon_path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     return m_seen.contains(canon_path);
-    // return m_seen.count(canon_path) > 0;
   }
 
   bool hasSeenOrMark(StringRef canon_path) {
@@ -94,9 +93,9 @@ private:
   std::optional<PathInfo> read_realpath(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_realpathCache.find(path);
-    if (it != m_realpathCache.end()) {
+    if (it != m_realpathCache.end())
       return it->second;
-    }
+
     return std::nullopt;
   }
 
@@ -115,9 +114,9 @@ private:
   std::optional<std::string> read_link(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_readlinkCache.find(path);
-    if (it != m_readlinkCache.end()) {
+    if (it != m_readlinkCache.end())
       return it->second;
-    }
+
     return std::nullopt;
   }
 
@@ -129,9 +128,9 @@ private:
   std::optional<mode_t> read_lstat(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_lstatCache.find(path);
-    if (it != m_lstatCache.end()) {
+    if (it != m_lstatCache.end())
       return it->second;
-    }
+
     return std::nullopt;
   }
 
@@ -144,6 +143,9 @@ private:
 /// relative to a base and handle symbolic links. Caches results to reduce
 /// repeated system calls when enabled.
 class PathResolver {
+private:
+  std::shared_ptr<LibraryPathCache> m_cache;
+
 public:
   PathResolver(std::shared_ptr<LibraryPathCache> cache)
       : m_cache(std::move(cache)) {}
@@ -159,29 +161,32 @@ public:
                                             StringRef base = "",
                                             bool baseIsResolved = false,
                                             long symloopLevel = 40);
-
-private:
-  // mutable std::shared_mutex m_mutex;
-  std::shared_ptr<LibraryPathCache> m_cache;
 };
 
+/// Performs placeholder substitution in dynamic library paths.
+///
+/// Configures known placeholders (like @loader_path) and replaces them
+/// in input paths with their resolved values.
 class DylibSubstitutor {
 public:
   void configure(StringRef loaderPath);
 
   std::string substitute(StringRef input) const {
-    for (const auto &[ph, value] : placeholders_) {
-      if (input.starts_with(ph)) {
+    for (const auto &[ph, value] : placeholders) {
+      if (input.starts_with(ph))
         return (Twine(value) + input.drop_front(ph.size())).str();
-      }
     }
     return input.str();
   }
 
 private:
-  StringMap<std::string> placeholders_;
+  StringMap<std::string> placeholders;
 };
 
+/// Validates and normalizes dynamic library paths.
+///
+/// Uses a `PathResolver` to resolve paths to their canonical form and
+/// checks whether they point to valid shared libraries.
 class DylibPathValidator {
 public:
   DylibPathValidator(PathResolver &PR) : m_pathResolver(PR) {}
@@ -197,6 +202,7 @@ public:
     return real;
   }
 
+  /// Validate the given path as a shared library.
   std::optional<std::string> validate(StringRef path) const {
     auto realOpt = normalize(path);
     if (!realOpt)
@@ -356,8 +362,14 @@ private:
   std::deque<StringRef> m_unscannedSys;
 };
 
+/// Loads an object file and provides access to it.
+///
+/// Owns the underlying `ObjectFile` and ensures it is valid.
+/// Any errors encountered during construction are stored and
+/// returned when attempting to access the file.
 class ObjectFileLoader {
 public:
+  /// Construct an object file loader from the given path.
   explicit ObjectFileLoader(StringRef Path) {
     auto ObjOrErr = loadObjectFileWithOwnership(Path);
     if (ObjOrErr)
@@ -374,6 +386,7 @@ public:
   ObjectFileLoader(ObjectFileLoader &&) = default;
   ObjectFileLoader &operator=(ObjectFileLoader &&) = default;
 
+  /// Get the loaded object file, or return an error if loading failed.
   Expected<object::ObjectFile &> getObjectFile() {
     if (Err)
       return std::move(Err);
@@ -390,6 +403,7 @@ private:
   loadObjectFileWithOwnership(StringRef FilePath);
 };
 
+/// Scans libraries, resolves dependencies, and registers them.
 class LibraryScanner {
 public:
   using shouldScanFn = std::function<bool(StringRef)>;
@@ -398,11 +412,11 @@ public:
       LibraryScanHelper &H, LibraryManager &m_libMgr,
       shouldScanFn shouldScanCall = [](StringRef path) { return true; })
       : m_helper(H), m_libMgr(m_libMgr),
-        // m_libResolver(DylibPathResolver(H)),
         shouldScanCall(std::move(shouldScanCall)) {}
 
   void scanNext(PathType kind, size_t batchSize = 1);
 
+  /// Dependency info for a library.
   struct LibraryDepsInfo {
     llvm::BumpPtrAllocator Alloc;
     llvm::StringSaver Saver{Alloc};
@@ -422,7 +436,6 @@ public:
 private:
   LibraryScanHelper &m_helper;
   LibraryManager &m_libMgr;
-  // DylibPathResolver m_libResolver;
   shouldScanFn shouldScanCall;
 
   std::optional<std::string> shouldScan(StringRef filePath);

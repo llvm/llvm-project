@@ -116,9 +116,9 @@ public:
     assert(!Symbols.empty() && "Cannot build filter from empty symbol list.");
     BloomFilter filter(static_cast<uint32_t>(Symbols.size()), falsePositiveRate,
                        hashFunc);
-    for (const auto &sym : Symbols) {
+    for (const auto &sym : Symbols)
       filter.add(sym);
-    }
+
     return filter;
   }
 
