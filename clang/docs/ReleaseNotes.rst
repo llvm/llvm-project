@@ -230,6 +230,7 @@ Bug Fixes to AST Handling
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
 - Fixed ElaboratedTypes appearing within NestedNameSpecifier, which was not a
   legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
+- Fix unrecognized html tag causing undesirable comment lexing (#GH152944)
 - Fix comment lexing of special command names (#GH152943)
 
 Miscellaneous Bug Fixes
@@ -308,8 +309,12 @@ AST Matchers
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
 
+- Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
+  allows it to ignore nodes in system headers when traversing the AST.
+
 clang-format
 ------------
+- Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
 
 libclang
 --------
