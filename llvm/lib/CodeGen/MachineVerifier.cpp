@@ -2438,24 +2438,26 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     LaneBitmask SrcMaxLanemask = LaneBitmask::getAll();
 
     if (DstOp.getSubReg())
-      report("COPY_LANEMASK must use no sub-register index.", &DstOp, 0);
+      report("COPY_LANEMASK must not use a subregister index", &DstOp, 0);
 
     if (SrcOp.getSubReg())
-      report("COPY_LANEMASK must use no sub-register index.", &SrcOp, 1);
+      report("COPY_LANEMASK must not use a subregister index", &SrcOp, 1);
 
-    if (SrcReg.isVirtual()) {
+    if (LaneMask.none())
+      report("COPY_LANEMASK must read at least one lane", MI);
+
+    if (SrcReg.isPhysical()) {
+      const TargetRegisterClass *SrcRC = TRI->getMinimalPhysRegClass(SrcReg);
+      if (SrcRC)
+        SrcMaxLanemask = SrcRC->getLaneMask();
+    } else {
       SrcMaxLanemask = MRI->getMaxLaneMaskForVReg(SrcReg);
     }
 
-    if (LaneMask.none())
-      report("COPY_LANEMASK copies no lanes.", MI);
-
-    // In case of Src as virtual register, all lanes active implies the max
-    // lanemask bits active for that register class, else all bits would be set.
-    if (LaneMask.all() || (SrcMaxLanemask == LaneMask))
-      report(
-          "COPY should be instead of COPY_LANEMASK, as all lanes are copied.",
-          MI);
+    // If LaneMask is equal to OR greater than the SrcMaxLanemask, it
+    // impliess COPY_LANEMASK is trying to copy all lanes.
+    if (SrcMaxLanemask <= LaneMask)
+      report("COPY_LANEMASK cannot read all lanes", MI);
 
     break;
   }

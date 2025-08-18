@@ -3,7 +3,7 @@
 # This test checks for the correctness of the MIR parser for lanemask
 
 # CHECK-LABEL: name: test_lanemask_operand
-# CHECK: COPY_LANEMASK $vgpr0, lanemask(0x0000000000000020)
+# CHECK: COPY_LANEMASK $vgpr0, lanemask(0x0000000000000002)
 ---
 name: test_lanemask_operand
 tracksRegLiveness: true
@@ -11,7 +11,7 @@ body:             |
   bb.0:
     liveins: $vgpr0
 
-    $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(32)
+    $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(2)
     S_ENDPGM 0
 ...
 

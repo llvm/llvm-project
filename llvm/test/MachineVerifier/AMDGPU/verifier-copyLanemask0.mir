@@ -1,43 +1,5 @@
 # RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none %s 2>&1 | FileCheck %s
 
-# CHECK: *** Bad machine code: COPY_LANEMASK copies no lanes. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: $vgpr2 = COPY_LANEMASK $vgpr0, lanemask(0x0000000000000000)
-
-# CHECK: *** Bad machine code: COPY should be instead of COPY_LANEMASK, as all lanes are copied. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: $vgpr3 = COPY_LANEMASK $vgpr1, lanemask(0xFFFFFFFFFFFFFFFF)
-
-# CHECK: *** Bad machine code: COPY should be instead of COPY_LANEMASK, as all lanes are copied. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: %1:vgpr_32 = COPY_LANEMASK %0:vgpr_32, lanemask(0x0000000000000003)
-
-# CHECK: *** Bad machine code: COPY should be instead of COPY_LANEMASK, as all lanes are copied. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: %2:vgpr_32 = COPY_LANEMASK %1:vgpr_32, lanemask(0xFFFFFFFFFFFFFFFF)
-
-# CHECK: *** Bad machine code: COPY should be instead of COPY_LANEMASK, as all lanes are copied. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: %3:vreg_64 = COPY_LANEMASK $vgpr4_vgpr5, lanemask(0xFFFFFFFFFFFFFFFF)
-
-# CHECK: *** Bad machine code: COPY should be instead of COPY_LANEMASK, as all lanes are copied. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: $vgpr6_vgpr7 = COPY_LANEMASK %3:vreg_64, lanemask(0x000000000000000F)
-
-# CHECK: *** Bad machine code: COPY_LANEMASK must use no sub-register index. ***
-# CHECK-NEXT: - function:    test_copy_lanemask_instruction_0
-# CHECK-NEXT: - basic block: %bb.0
-# CHECK-NEXT: - instruction: %4:vgpr_32 = COPY_LANEMASK %3.sub0:vreg_64, lanemask(0x0000000000000003)
-
-# NOTE: For physical register, as we don't have way to obtain their maximal lanemask directly, so 
-# COPY_LANEMASK is illegal only if all lane bits are active irrespective.
-
 ---
 name: test_copy_lanemask_instruction_0
 tracksRegLiveness: true
@@ -46,13 +8,30 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     %0:vgpr_32 = IMPLICIT_DEF
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK must read at least one lane ***
     $vgpr2 = COPY_LANEMASK $vgpr0, lanemask(0)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK cannot read all lanes ***
     $vgpr3 = COPY_LANEMASK $vgpr1, lanemask(0xFFFFFFFFFFFFFFFF)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK cannot read all lanes ***
     $vgpr4_vgpr5 = COPY_LANEMASK $vgpr2_vgpr3, lanemask(0x000000000000000F)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK cannot read all lanes ***
     %1:vgpr_32 = COPY_LANEMASK %0, lanemask(0x0000000000000003)
-    %2:vgpr_32 = COPY_LANEMASK %1, lanemask(0xFFFFFFFFFFFFFFFF)
-    %3:vreg_64 = COPY_LANEMASK $vgpr4_vgpr5, lanemask(0xFFFFFFFFFFFFFFFF)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK cannot read all lanes ***
+    %2:vgpr_32 = COPY_LANEMASK %1, lanemask(0x0000000FFFFFFFFF)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK cannot read all lanes ***
+    %3:vreg_64 = COPY_LANEMASK $vgpr4_vgpr5, lanemask(0x00000000000000FF)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK cannot read all lanes ***
     $vgpr6_vgpr7 = COPY_LANEMASK %3, lanemask(0x000000000000000F)
+
+    ; CHECK: *** Bad machine code: COPY_LANEMASK must not use a subregister index ***
     %4:vgpr_32 = COPY_LANEMASK %3.sub0, lanemask(0x0000000000000003)
+
     S_ENDPGM 0
 ...

@@ -818,7 +818,7 @@ like:
 
 .. code-block:: text
 
-   $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(00000000000000C0)
+   $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(0x00000000000000C0)
    
 .. TODO: Describe the parsers default behaviour when optional YAML attributes
    are missing.
