@@ -107,12 +107,16 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   ss << getModifier() << getRegisterType(v) << ",";
 }
 
+/// Check if the operation needs to pack and unpack results.
 static bool needsPackUnpack(BasicPtxBuilderInterface interfaceOp) {
   return interfaceOp->getNumResults() > 1;
 }
 
-static SmallVector<Type>
-coalesceResultTypes(MLIRContext *ctx, BasicPtxBuilderInterface interfaceOp) {
+/// Pack the result types of the interface operation.
+/// If the operation has multiple results, it packs them into a struct
+/// type. Otherwise, it returns the original result types.
+static SmallVector<Type> packResultTypes(MLIRContext *ctx,
+                                         BasicPtxBuilderInterface interfaceOp) {
   TypeRange results = interfaceOp->getResultTypes();
 
   if (!needsPackUnpack(interfaceOp))
@@ -128,7 +132,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(interfaceOp->getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
 
-  SmallVector<Type> resultTypes = coalesceResultTypes(ctx, interfaceOp);
+  SmallVector<Type> resultTypes = packResultTypes(ctx, interfaceOp);
 
   // Remove the last comma from the constraints string.
   if (!registerConstraints.empty() &&
