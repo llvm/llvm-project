@@ -104,8 +104,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   // it is a function (avoiding a grammar ambiguity).
   bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
-      (llvm::isa<FunctionType>(op->getResult(0).getType()) ||
-       llvm::isa<GraphType>(op->getResult(0).getType())))
+      isa<GraphType>(op->getResult(0).getType()))
     wrapped = true;
 
   if (wrapped)
@@ -2842,8 +2841,8 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
         os << ") -> ";
         ArrayRef<Type> results = graphTy.getResults();
-        if (results.size() == 1 && !(llvm::isa<FunctionType>(results[0]) ||
-                                     llvm::isa<GraphType>(results[0]))) {
+        if (results.size() == 1 &&
+            !(isa<FunctionType>(results[0]) || isa<GraphType>(results[0]))) {
           printType(results[0]);
         } else {
           os << '(';

@@ -1,5 +1,4 @@
-//===- ArmGraphOps.cpp - MLIR SPIR-V SPV_ARM_graph operations
-//------------------------------===//
+//===- ArmGraphOps.cpp - MLIR SPIR-V SPV_ARM_graph operations -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,6 +21,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 using namespace mlir::spirv::AttrNames;
@@ -32,10 +32,7 @@ using namespace mlir::spirv::AttrNames;
 
 ParseResult spirv::GraphARMOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
-  SmallVector<OpAsmParser::Argument> entryArgs;
-  SmallVector<DictionaryAttr> resultAttrs;
-  SmallVector<Type> resultTypes;
-  auto &builder = parser.getBuilder();
+  Builder &builder = parser.getBuilder();
 
   // Parse the name as a symbol.
   StringAttr nameAttr;
@@ -45,15 +42,18 @@ ParseResult spirv::GraphARMOp::parse(OpAsmParser &parser,
 
   // Parse the function signature.
   bool isVariadic = false;
+  SmallVector<OpAsmParser::Argument> entryArgs;
+  SmallVector<Type> resultTypes;
+  SmallVector<DictionaryAttr> resultAttrs;
   if (function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
           resultAttrs))
     return failure();
 
   SmallVector<Type> argTypes;
-  for (auto &arg : entryArgs)
+  for (OpAsmParser::Argument &arg : entryArgs)
     argTypes.push_back(arg.type);
-  auto grType = builder.getGraphType(argTypes, resultTypes);
+  GraphType grType = builder.getGraphType(argTypes, resultTypes);
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(grType));
 
@@ -136,26 +136,22 @@ LogicalResult spirv::GraphARMOp::verifyBody() {
   }
 
   GraphType grType = getFunctionType();
-  auto walkResult = walk([grType](Operation *op) -> WalkResult {
-    if (auto graphOutputsARMOp = dyn_cast<spirv::GraphOutputsARMOp>(op)) {
-      if (grType.getNumResults() != graphOutputsARMOp.getNumOperands())
-        return graphOutputsARMOp.emitOpError("is returning ")
-               << graphOutputsARMOp.getNumOperands()
-               << " value(s) but enclosing spirv.ARM.Graph requires "
-               << grType.getNumResults() << " result(s)";
+  auto walkResult = walk([grType](spirv::GraphOutputsARMOp op) -> WalkResult {
+    if (grType.getNumResults() != op.getNumOperands())
+      return op.emitOpError("is returning ")
+             << op.getNumOperands()
+             << " value(s) but enclosing spirv.ARM.Graph requires "
+             << grType.getNumResults() << " result(s)";
 
-      ValueTypeRange<OperandRange> graphOutputOperandTypes =
-          graphOutputsARMOp.getValue().getType();
-      for (unsigned i = 0, size = graphOutputOperandTypes.size(); i < size;
-           ++i) {
-        Type graphOutputOperandType = graphOutputOperandTypes[i];
-        Type grResultType = grType.getResult(i);
-        if (graphOutputOperandType != grResultType)
-          return graphOutputsARMOp.emitError("type of return operand ")
-                 << i << " (" << graphOutputOperandType
-                 << ") doesn't match graph result type (" << grResultType
-                 << ")";
-      }
+    ValueTypeRange<OperandRange> graphOutputOperandTypes =
+        op.getValue().getType();
+    for (unsigned i = 0, size = graphOutputOperandTypes.size(); i < size; ++i) {
+      Type graphOutputOperandType = graphOutputOperandTypes[i];
+      Type grResultType = grType.getResult(i);
+      if (graphOutputOperandType != grResultType)
+        return op.emitError("type of return operand ")
+               << i << " (" << graphOutputOperandType
+               << ") doesn't match graph result type (" << grResultType << ")";
     }
     return WalkResult::advance();
   });
@@ -169,23 +165,20 @@ void spirv::GraphARMOp::build(OpBuilder &builder, OperationState &state,
   state.addAttribute(SymbolTable::getSymbolAttrName(),
                      builder.getStringAttr(name));
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
-  state.attributes.append(attrs.begin(), attrs.end());
+  state.attributes.append(attrs);
   state.addAttribute(getEntryPointAttrName(state.name),
                      builder.getBoolAttr(entryPoint));
   state.addRegion();
 }
 
-// Returns the argument types of this function.
 ArrayRef<Type> spirv::GraphARMOp::getArgumentTypes() {
   return getFunctionType().getInputs();
 }
 
-// Returns the result types of this function.
 ArrayRef<Type> spirv::GraphARMOp::getResultTypes() {
   return getFunctionType().getResults();
 }
 
-// CallableOpInterface
 Region *spirv::GraphARMOp::getCallableRegion() {
   return isExternal() ? nullptr : &getBody();
 }
@@ -229,12 +222,11 @@ void spirv::GraphEntryPointARMOp::build(OpBuilder &builder,
 
 ParseResult spirv::GraphEntryPointARMOp::parse(OpAsmParser &parser,
                                                OperationState &result) {
-  SmallVector<Attribute, 4> interfaceVars;
-
   FlatSymbolRefAttr fn;
   if (parser.parseAttribute(fn, Type(), kFnNameAttrName, result.attributes))
     return failure();
 
+  SmallVector<Attribute, 4> interfaceVars;
   if (!parser.parseOptionalComma()) {
     // Parse the interface variables
     if (parser.parseCommaSeparatedList([&]() -> ParseResult {
@@ -258,7 +250,6 @@ void spirv::GraphEntryPointARMOp::print(OpAsmPrinter &printer) {
   printer.printSymbolName(getFn());
   ArrayRef<Attribute> interfaceVars = getInterface().getValue();
   if (!interfaceVars.empty()) {
-    printer << ", ";
-    llvm::interleaveComma(interfaceVars, printer);
+    printer << ", " << llvm::interleaved(interfaceVars);
   }
 }

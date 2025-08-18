@@ -160,10 +160,8 @@ void UpdateVCEPass::runOnOperation() {
 
     // If the op is FunctionLike make sure to process input and result types
     if (auto funcOpInterface = dyn_cast<FunctionOpInterface>(op)) {
-      ArrayRef<Type> inputTypes = funcOpInterface.getArgumentTypes();
-      ArrayRef<Type> resultTypes = funcOpInterface.getResultTypes();
-      valueTypes.append(inputTypes.begin(), inputTypes.end());
-      valueTypes.append(resultTypes.begin(), resultTypes.end());
+      llvm::append_range(valueTypes, funcOpInterface.getArgumentTypes());
+      llvm::append_range(valueTypes, funcOpInterface.getResultTypes());
     }
 
     // Requirements from values' types

@@ -51,7 +51,7 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     that is unique in the enclosing module op.
 
     This op itself takes no operands and generates no results. Its region
-    can take zero or more arguments and return zero or more values.
+    can take zero or more arguments and return one or more values.
 
     ```
     spv-graph-arm-op ::= `spirv.ARM.Graph` function-signature
@@ -119,10 +119,6 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
     Result Type must be an OpTypeTensorARM.
     GraphConstantID must be a 32-bit integer literal.
 
-    ```
-    spv-graph-constant-arm-op ::= `spirv.ARM.GraphConstant` { graph_constant_id = 42 : i32 }
-    ```
-
     #### Example:
 
     ```mlir
@@ -167,11 +163,6 @@ def SPIRV_GraphEntryPointARMOp : SPIRV_GraphARMOp<"GraphEntryPoint", [InModuleSc
     `spirv.GlobalVariable`s referenced by the entry point’s static call
     tree, within the interface’s storage classes.
 
-    ```
-    entry-point-op ::= ssa-id `=` `spirv.ARM.GraphEntryPoint`
-                       symbol-reference (`, ` symbol-reference)*
-    ```
-
     #### Example:
 
     ```mlir
@@ -213,10 +204,6 @@ def SPIRV_GraphOutputsARMOp : SPIRV_GraphARMOp<"GraphOutputs", [InGraphScope, Pu
     instruction is in.
 
     This instruction must be the last instruction in a block.
-
-    ```
-    graph-output-op ::= `spirv.ARM.GraphOutputs` ssa-use `:` type-list-no-parens
-    ```
 
     #### Example:
 
