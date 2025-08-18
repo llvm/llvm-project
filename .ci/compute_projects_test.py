@@ -162,7 +162,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-cir check-clang-tools",
+            "check-clang check-clang-cir check-clang-tools check-lldb",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
