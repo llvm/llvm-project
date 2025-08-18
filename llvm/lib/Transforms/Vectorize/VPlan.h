@@ -2522,7 +2522,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const = 0;
+  virtual bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.
