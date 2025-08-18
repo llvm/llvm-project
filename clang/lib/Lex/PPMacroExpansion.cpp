@@ -1089,7 +1089,6 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
 /// specified by the identifier as a standard language feature.
 static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
   const LangOptions &LangOpts = PP.getLangOpts();
-  const TargetInfo &Target = PP.getTargetInfo();
 
   // Normalize the feature name, __foo__ becomes foo.
   if (Feature.starts_with("__") && Feature.ends_with("__") &&
