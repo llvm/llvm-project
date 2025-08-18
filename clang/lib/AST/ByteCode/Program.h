@@ -73,6 +73,10 @@ public:
     return Globals[Idx]->block();
   }
 
+  bool isGlobalInitialized(unsigned Index) const {
+    return getPtrGlobal(Index).isInitialized();
+  }
+
   /// Finds a global's index.
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
   std::optional<unsigned> getGlobal(const Expr *E);
