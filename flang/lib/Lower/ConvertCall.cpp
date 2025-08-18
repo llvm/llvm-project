@@ -1204,6 +1204,10 @@ static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
 ///   fir.box_char...).
 /// This function should only be called with an actual that is present.
 /// The optional aspects must be handled by this function user.
+///
+/// Note: while Fortran::lower::CallerInterface::PassedEntity (the type of arg)
+/// is technically a template type, in the prepare*ActualArgument() calls
+/// it resolves to Fortran::evaluate::ActualArgument *
 static PreparedDummyArgument preparePresentUserCallActualArgument(
     mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::lower::PreparedActualArgument &preparedActual,
@@ -1263,21 +1267,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   bool mustDoCopyOut = mustDoCopyIn && arg.mayBeModifiedByCall();
   bool newMustDoCopyIn = false;
   bool newMustDoCopyOut = false;
-  if constexpr (Fortran::lower::CallerInterface::PassedEntity::isCaller) {
-    newMustDoCopyIn = arg.entity->GetMayNeedCopyIn();
-    newMustDoCopyOut = arg.entity->GetMayNeedCopyOut();
+  newMustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
+  newMustDoCopyOut = newMustDoCopyIn && arg.entity->GetMayNeedCopyOut();
 #if 1
-    llvm::dbgs() << "copyinout: CALLER " << "copy-in: old=" << mustDoCopyIn
-                 << ", new=" << newMustDoCopyIn
-                 << "| copy-out: old=" << mustDoCopyOut
-                 << ", new=" << newMustDoCopyOut << "\n";
+  llvm::dbgs() << "copyinout: CALLER " << "copy-in: old=" << mustDoCopyIn
+               << ", new=" << newMustDoCopyIn
+               << "| copy-out: old=" << mustDoCopyOut
+               << ", new=" << newMustDoCopyOut << "\n";
 #endif
-  } else {
-#if 1
-    llvm::dbgs() << "copyinout: CALLEE " << "copy-in=" << mustDoCopyIn
-                 << ", copy-out=" << mustDoCopyOut << "\n";
-#endif
-  }
   mustDoCopyIn = newMustDoCopyIn;
   mustDoCopyOut = newMustDoCopyOut;
 

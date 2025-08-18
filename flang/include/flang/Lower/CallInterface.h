@@ -159,8 +159,6 @@ public:
   /// PassedEntity is what is provided back to the CallInterface user.
   /// It describe how the entity is plugged in the interface
   struct PassedEntity {
-    /// Helps with caller/callee differentiation
-    static constexpr bool isCaller = std::is_same_v<T, CallerInterface>;
     /// Is the dummy argument optional?
     bool isOptional() const;
     /// Can the argument be modified by the callee?

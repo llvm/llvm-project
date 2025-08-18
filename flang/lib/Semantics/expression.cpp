@@ -4389,6 +4389,7 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
     if (chars->functionResult) {
       const auto &result{*chars->functionResult};
       ProcedureRef procRef{std::move(proc), std::move(arguments)};
+      procRef.DetermineCopyInOut();
       if (result.IsProcedurePointer()) {
         return Expr<SomeType>{std::move(procRef)};
       } else {
