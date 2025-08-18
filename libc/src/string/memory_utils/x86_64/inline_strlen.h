@@ -15,97 +15,84 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace sse2 {
-[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
-  using Vector __attribute__((may_alias)) = __m128i;
+namespace string_length_internal {
+// Return a bit-mask with the nth bit set if the nth-byte in block_ptr is zero.
+template<typename Vector, typename Mask> Mask CompareAndMask(const Vector *block_ptr);
 
-  Vector z = _mm_setzero_si128();
+template <typename Vector, typename Mask, decltype(CompareAndMask<Vector, Mask>)>
+size_t string_length_vector(const char *src) {
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
+
   const Vector *block_ptr =
       reinterpret_cast<const Vector *>(src - misalign_bytes);
-  Vector v = _mm_load_si128(block_ptr);
-  Vector vcmp = _mm_cmpeq_epi8(z, v);
-  // shift away results in irrelevant bytes.
-  uint32_t cmp = _mm_movemask_epi8(vcmp) >> misalign_bytes;
+  auto cmp = CompareAndMask<Vector, Mask>(block_ptr) >> misalign_bytes;
   if (cmp)
     return cpp::countr_zero(cmp);
 
   while (true) {
     block_ptr++;
-    v = _mm_load_si128(block_ptr);
-    vcmp = _mm_cmpeq_epi8(z, v);
-    cmp = _mm_movemask_epi8(vcmp);
+    cmp = CompareAndMask<Vector, Mask>(block_ptr);
     if (cmp)
       return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
                                  reinterpret_cast<uintptr_t>(src) +
                                  cpp::countr_zero(cmp));
   }
 }
+
+template <>
+uint32_t CompareAndMask<__m128i, uint32_t>(const __m128i *block_ptr) {
+  __m128i v = _mm_load_si128(block_ptr);
+  __m128i z = _mm_setzero_si128();
+  __m128i c = _mm_cmpeq_epi8(z, v);
+  return _mm_movemask_epi8(c);
+}
+
+namespace sse2 {
+size_t string_length(const char *src) {
+  return string_length_vector<__m128i, uint32_t, CompareAndMask<__m128i, uint32_t>>(
+      src);
+}
 } // namespace sse2
 
 #if defined(__AVX2__)
+template <>
+uint32_t CompareAndMask<__m256i, uint32_t>(const __m256i *block_ptr) {
+  __m256i v = _mm256_load_si256(block_ptr);
+  __m256i z = _mm256_setzero_si256();
+  __m256i c = _mm256_cmpeq_epi8(z, v);
+  return _mm256_movemask_epi8(c);
+}
+
 namespace avx2 {
-[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
-  using Vector __attribute__((may_alias)) = __mm256i;
-
-  Vector z = _mm256_setzero_si256();
-  uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
-  const Vector *block_ptr =
-      reinterpret_cast<const Vector *>(src - misalign_bytes);
-  Vector v = _mm256_load_si256(block_ptr);
-  Vector vcmp = _mm256_cmpeq_epi8(z, v);
-  // shift away results in irrelevant bytes.
-  int cmp = _mm256_movemask_epi8(vcmp) >> misalign_bytes;
-  if (cmp)
-    return cpp::countr_zero(cmp);
-
-  while (true) {
-    block_ptr++;
-    v = _mm256_load_si256(block_ptr);
-    vcmp = _mm256_cmpeq_epi8(z, v);
-    cmp = _mm256_movemask_epi8(vcmp);
-    if (cmp)
-      return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
-                                 reinterpret_cast<uintptr_t>(src) +
-                                 cpp::countr_zero(cmp));
-  }
+size_t string_length(const char* src) {
+  return string_length_vector<__m256i, uint32_t, CompareAndMask<__m256i, uint32_t>>(src);
 }
 } // namespace avx2
 #endif
 
 #if defined(__AVX512F__)
+template <>
+__mmask64
+CompareAndMask<__m512i, __mmask64> (const __m512i *block_ptr)
+{
+  __m512i v = _mm512_load_si512(block_ptr);
+  __m512i z = _mm512_setzero_si512();
+  return _mm512_cmp_epu8_mask(z, v, _MM_CMPINT_EQ);
+}
 namespace avx512 {
-[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
-  using Vector __attribute__((may_alias)) = __mm512i;
-
-  Vector z = _mm512_setzero_si512();
-  uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
-  const Vector *block_ptr =
-      reinterpret_cast<const Vector *>(src - misalign_bytes);
-  Vector v = _mm512_load_si512(block_ptr);
-  __mmask64 cmp = _mm512_cmp_epu8_mask(z, v, _MM_CMPINT_EQ) >> misalign_bytes;
-  if (cmp)
-    return cpp::countr_zero(cmp);
-
-  while (true) {
-    block_ptr++;
-    Vector v = _mm512_load_si512(block_ptr);
-    __mmask64 cmp = _mm512_cmp_epu8_mask(z, v, _MM_CMPINT_EQ);
-    if (cmp)
-      return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
-                                 reinterpret_cast<uintptr_t>(src) +
-                                 cpp::countr_zero(cmp));
-  }
+size_t string_length(const char* src) {
+  return string_length_vector<__m512i, __mmask64, CompareAndMask<__m512i, __mmask64>>(src);
 }
 } // namespace avx512
 #endif
+} // string_length_internal
 
 #if defined(__AVX512F__)
-namespace string_length_impl = avx512;
-#elif defined(__AVX2__)
-namespace string_length_impl = avx2;
+namespace string_length_impl = string_length_internal::avx512;
+#elif defined (__AVX2__)
+namespace string_length_impl = string_length_internal::avx2;
 #else
-namespace string_length_impl = sse2;
+namespace string_length_impl = string_length_internal::sse2;
 #endif
 
 } // namespace LIBC_NAMESPACE_DECL
