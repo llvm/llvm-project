@@ -27,6 +27,26 @@
 
 namespace mlir {
 
+// Find all reachable blocks in the region and add them to the visitedBlocks
+// set.
+static void findReachableBlocks(Region &region,
+                                DenseSet<Block *> &reachableBlocks) {
+  Block *entryBlock = &region.front();
+  reachableBlocks.insert(entryBlock);
+  // Traverse the CFG and add all reachable blocks to the blockList.
+  SmallVector<Block *> worklist({entryBlock});
+  while (!worklist.empty()) {
+    Block *block = worklist.pop_back_val();
+    Operation *terminator = &block->back();
+    for (Block *successor : terminator->getSuccessors()) {
+      if (reachableBlocks.contains(successor))
+        continue;
+      worklist.push_back(successor);
+      reachableBlocks.insert(successor);
+    }
+  }
+}
+
 namespace {
 struct WalkAndApplyPatternsAction final
     : tracing::ActionImpl<WalkAndApplyPatternsAction> {
@@ -98,6 +118,8 @@ void walkAndApplyPatterns(Operation *op,
       regionIt = region->begin();
       if (regionIt != region->end())
         blockIt = regionIt->begin();
+      if (!llvm::hasSingleElement(*region))
+        findReachableBlocks(*region, reachableBlocks);
     }
     // Advance the iterator to the next reachable operation.
     void advance() {
@@ -105,6 +127,9 @@ void walkAndApplyPatterns(Operation *op,
       hasVisitedRegions = false;
       if (blockIt == regionIt->end()) {
         ++regionIt;
+        while (regionIt != region->end() &&
+               !reachableBlocks.contains(&*regionIt))
+          ++regionIt;
         if (regionIt != region->end())
           blockIt = regionIt->begin();
         return;
@@ -121,6 +146,8 @@ void walkAndApplyPatterns(Operation *op,
     Region::iterator regionIt;
     // The Operation currently being iterated over.
     Block::iterator blockIt;
+    // The set of blocks that are reachable in the current region.
+    DenseSet<Block *> reachableBlocks;
     // Whether we've visited the nested regions of the current op already.
     bool hasVisitedRegions = false;
   };
