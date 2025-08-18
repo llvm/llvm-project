@@ -1,4 +1,4 @@
-//===-- Half-precision cosh(x) function -----------------------------------===//
+//===-- Shared coshf16 function ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/coshf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_COSHF16_H
+#define LLVM_LIBC_SHARED_MATH_COSHF16_H
+
+#include "shared/libc_common.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/coshf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, coshf16, (float16 x)) { return math::coshf16(x); }
+using math::coshf16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SHARED_MATH_COSHF16_H

@@ -1395,7 +1395,6 @@ add_entrypoint_object(
   HDRS
     ../exp2f16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -1404,6 +1403,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -1433,7 +1433,6 @@ add_entrypoint_object(
   HDRS
     ../exp2m1f16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.common
@@ -1446,6 +1445,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -1568,7 +1568,6 @@ add_entrypoint_object(
   HDRS
     ../expm1f16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -1579,6 +1578,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -1949,7 +1949,6 @@ add_entrypoint_object(
   HDRS
     ../log10f16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -1960,6 +1959,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -2038,7 +2038,6 @@ add_entrypoint_object(
   HDRS
     ../log2f16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -2049,6 +2048,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -2093,7 +2093,6 @@ add_entrypoint_object(
   HDRS
     ../logf16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -2104,6 +2103,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -3918,14 +3918,7 @@ add_entrypoint_object(
   HDRS
     ../coshf16.h
   DEPENDS
-    .expxf16
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.coshf16
 )
 
 add_entrypoint_object(
@@ -3948,7 +3941,6 @@ add_entrypoint_object(
   HDRS
     ../sinhf16.h
   DEPENDS
-    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.except_value_utils
@@ -3956,6 +3948,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -3980,7 +3973,6 @@ add_entrypoint_object(
   HDRS
     ../tanhf16.h
   DEPENDS
-    .expxf16
     libc.hdr.fenv_macros
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.cast
@@ -3992,6 +3984,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.src.__support.math.expxf16_utils
 )
 
 add_entrypoint_object(
@@ -4954,21 +4947,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.mul
-)
-
-add_header_library(
-  expxf16
-  HDRS
-    expxf16.h
-  DEPENDS
-    libc.hdr.stdint_proxy
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.macros.attributes
-    libc.src.__support.math.expf16_utils
-    libc.src.__support.math.exp10_float16_constants
 )
 
 add_entrypoint_object(
