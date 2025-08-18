@@ -1254,15 +1254,14 @@ using ExtensionClausesT =
 template <typename T, typename I, typename E>
 using EmptyClausesT = std::variant<
     AcqRelT<T, I, E>, AcquireT<T, I, E>, CaptureT<T, I, E>, CompareT<T, I, E>,
-    DynamicAllocatorsT<T, I, E>, DynGroupprivateT<T, I, E>, FullT<T, I, E>,
-    InbranchT<T, I, E>, MergeableT<T, I, E>, NogroupT<T, I, E>,
-    NoOpenmpRoutinesT<T, I, E>, NoOpenmpT<T, I, E>, NoParallelismT<T, I, E>,
-    NotinbranchT<T, I, E>, NowaitT<T, I, E>, ReadT<T, I, E>, RelaxedT<T, I, E>,
-    ReleaseT<T, I, E>, ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>,
-    SimdT<T, I, E>, ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>,
-    UnifiedSharedMemoryT<T, I, E>, UnknownT<T, I, E>, UntiedT<T, I, E>,
-    UseT<T, I, E>, WeakT<T, I, E>, WriteT<T, I, E>,
-    NoOpenmpConstructsT<T, I, E>, SelfMapsT<T, I, E>>;
+    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, InbranchT<T, I, E>,
+    MergeableT<T, I, E>, NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>,
+    NoOpenmpT<T, I, E>, NoParallelismT<T, I, E>, NotinbranchT<T, I, E>,
+    NowaitT<T, I, E>, ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
+    ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
+    ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
+    UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
+    WriteT<T, I, E>, NoOpenmpConstructsT<T, I, E>, SelfMapsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
