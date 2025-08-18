@@ -53,6 +53,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
+  S.setEvalLocation(VD->getLocation());
   EvalResult.setSource(VD);
 
   if (const Expr *Init = VD->getAnyInitializer()) {
@@ -97,10 +98,7 @@ bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
     this->Params.insert({PD, {0, false}});
   }
 
-  if (!this->visit(E))
-    return false;
-  PrimType T = Ctx.classify(E).value_or(PT_Ptr);
-  return this->emitPop(T, E);
+  return this->visitExpr(E, /*DestroyToplevelScope=*/false);
 }
 
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
@@ -291,7 +289,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, const SourceInfo &Info) {
 
   Block *B = getLocal(I);
 
-  if (!CheckLocalLoad(S, OpPC, Pointer(B)))
+  if (!CheckLocalLoad(S, OpPC, B))
     return false;
 
   S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));

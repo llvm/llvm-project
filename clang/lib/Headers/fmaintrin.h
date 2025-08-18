@@ -35,7 +35,8 @@
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_fmadd_ps(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfmaddps((__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+  return (__m128)__builtin_elementwise_fma((__v4sf)__A, (__v4sf)__B,
+                                           (__v4sf)__C);
 }
 
 /// Computes a multiply-add of 128-bit vectors of [2 x double].
@@ -55,7 +56,8 @@ _mm_fmadd_ps(__m128 __A, __m128 __B, __m128 __C)
 static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_fmadd_pd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfmaddpd((__v2df)__A, (__v2df)__B, (__v2df)__C);
+  return (__m128d)__builtin_elementwise_fma((__v2df)__A, (__v2df)__B,
+                                            (__v2df)__C);
 }
 
 /// Computes a scalar multiply-add of the single-precision values in the
@@ -133,7 +135,8 @@ _mm_fmadd_sd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_fmsub_ps(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfmaddps((__v4sf)__A, (__v4sf)__B, -(__v4sf)__C);
+  return (__m128)__builtin_elementwise_fma((__v4sf)__A, (__v4sf)__B,
+                                           -(__v4sf)__C);
 }
 
 /// Computes a multiply-subtract of 128-bit vectors of [2 x double].
@@ -153,7 +156,8 @@ _mm_fmsub_ps(__m128 __A, __m128 __B, __m128 __C)
 static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_fmsub_pd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfmaddpd((__v2df)__A, (__v2df)__B, -(__v2df)__C);
+  return (__m128d)__builtin_elementwise_fma((__v2df)__A, (__v2df)__B,
+                                            -(__v2df)__C);
 }
 
 /// Computes a scalar multiply-subtract of the single-precision values in
@@ -231,7 +235,8 @@ _mm_fmsub_sd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_fnmadd_ps(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfmaddps(-(__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+  return (__m128)__builtin_elementwise_fma(-(__v4sf)__A, (__v4sf)__B,
+                                           (__v4sf)__C);
 }
 
 /// Computes a negated multiply-add of 128-bit vectors of [2 x double].
@@ -251,7 +256,8 @@ _mm_fnmadd_ps(__m128 __A, __m128 __B, __m128 __C)
 static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_fnmadd_pd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfmaddpd(-(__v2df)__A, (__v2df)__B, (__v2df)__C);
+  return (__m128d)__builtin_elementwise_fma(-(__v2df)__A, (__v2df)__B,
+                                            (__v2df)__C);
 }
 
 /// Computes a scalar negated multiply-add of the single-precision values in
@@ -329,7 +335,8 @@ _mm_fnmadd_sd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_fnmsub_ps(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfmaddps(-(__v4sf)__A, (__v4sf)__B, -(__v4sf)__C);
+  return (__m128)__builtin_elementwise_fma(-(__v4sf)__A, (__v4sf)__B,
+                                           -(__v4sf)__C);
 }
 
 /// Computes a negated multiply-subtract of 128-bit vectors of [2 x double].
@@ -349,7 +356,8 @@ _mm_fnmsub_ps(__m128 __A, __m128 __B, __m128 __C)
 static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_fnmsub_pd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfmaddpd(-(__v2df)__A, (__v2df)__B, -(__v2df)__C);
+  return (__m128d)__builtin_elementwise_fma(-(__v2df)__A, (__v2df)__B,
+                                            -(__v2df)__C);
 }
 
 /// Computes a scalar negated multiply-subtract of the single-precision
@@ -531,7 +539,8 @@ _mm_fmsubadd_pd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_fmadd_ps(__m256 __A, __m256 __B, __m256 __C)
 {
-  return (__m256)__builtin_ia32_vfmaddps256((__v8sf)__A, (__v8sf)__B, (__v8sf)__C);
+  return (__m256)__builtin_elementwise_fma((__v8sf)__A, (__v8sf)__B,
+                                           (__v8sf)__C);
 }
 
 /// Computes a multiply-add of 256-bit vectors of [4 x double].
@@ -551,7 +560,8 @@ _mm256_fmadd_ps(__m256 __A, __m256 __B, __m256 __C)
 static __inline__ __m256d __DEFAULT_FN_ATTRS256
 _mm256_fmadd_pd(__m256d __A, __m256d __B, __m256d __C)
 {
-  return (__m256d)__builtin_ia32_vfmaddpd256((__v4df)__A, (__v4df)__B, (__v4df)__C);
+  return (__m256d)__builtin_elementwise_fma((__v4df)__A, (__v4df)__B,
+                                            (__v4df)__C);
 }
 
 /// Computes a multiply-subtract of 256-bit vectors of [8 x float].
@@ -571,7 +581,8 @@ _mm256_fmadd_pd(__m256d __A, __m256d __B, __m256d __C)
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_fmsub_ps(__m256 __A, __m256 __B, __m256 __C)
 {
-  return (__m256)__builtin_ia32_vfmaddps256((__v8sf)__A, (__v8sf)__B, -(__v8sf)__C);
+  return (__m256)__builtin_elementwise_fma((__v8sf)__A, (__v8sf)__B,
+                                           -(__v8sf)__C);
 }
 
 /// Computes a multiply-subtract of 256-bit vectors of [4 x double].
@@ -591,7 +602,8 @@ _mm256_fmsub_ps(__m256 __A, __m256 __B, __m256 __C)
 static __inline__ __m256d __DEFAULT_FN_ATTRS256
 _mm256_fmsub_pd(__m256d __A, __m256d __B, __m256d __C)
 {
-  return (__m256d)__builtin_ia32_vfmaddpd256((__v4df)__A, (__v4df)__B, -(__v4df)__C);
+  return (__m256d)__builtin_elementwise_fma((__v4df)__A, (__v4df)__B,
+                                            -(__v4df)__C);
 }
 
 /// Computes a negated multiply-add of 256-bit vectors of [8 x float].
@@ -611,7 +623,8 @@ _mm256_fmsub_pd(__m256d __A, __m256d __B, __m256d __C)
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_fnmadd_ps(__m256 __A, __m256 __B, __m256 __C)
 {
-  return (__m256)__builtin_ia32_vfmaddps256(-(__v8sf)__A, (__v8sf)__B, (__v8sf)__C);
+  return (__m256)__builtin_elementwise_fma(-(__v8sf)__A, (__v8sf)__B,
+                                           (__v8sf)__C);
 }
 
 /// Computes a negated multiply-add of 256-bit vectors of [4 x double].
@@ -631,7 +644,8 @@ _mm256_fnmadd_ps(__m256 __A, __m256 __B, __m256 __C)
 static __inline__ __m256d __DEFAULT_FN_ATTRS256
 _mm256_fnmadd_pd(__m256d __A, __m256d __B, __m256d __C)
 {
-  return (__m256d)__builtin_ia32_vfmaddpd256(-(__v4df)__A, (__v4df)__B, (__v4df)__C);
+  return (__m256d)__builtin_elementwise_fma(-(__v4df)__A, (__v4df)__B,
+                                            (__v4df)__C);
 }
 
 /// Computes a negated multiply-subtract of 256-bit vectors of [8 x float].
@@ -651,7 +665,8 @@ _mm256_fnmadd_pd(__m256d __A, __m256d __B, __m256d __C)
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_fnmsub_ps(__m256 __A, __m256 __B, __m256 __C)
 {
-  return (__m256)__builtin_ia32_vfmaddps256(-(__v8sf)__A, (__v8sf)__B, -(__v8sf)__C);
+  return (__m256)__builtin_elementwise_fma(-(__v8sf)__A, (__v8sf)__B,
+                                           -(__v8sf)__C);
 }
 
 /// Computes a negated multiply-subtract of 256-bit vectors of [4 x double].
@@ -671,7 +686,8 @@ _mm256_fnmsub_ps(__m256 __A, __m256 __B, __m256 __C)
 static __inline__ __m256d __DEFAULT_FN_ATTRS256
 _mm256_fnmsub_pd(__m256d __A, __m256d __B, __m256d __C)
 {
-  return (__m256d)__builtin_ia32_vfmaddpd256(-(__v4df)__A, (__v4df)__B, -(__v4df)__C);
+  return (__m256d)__builtin_elementwise_fma(-(__v4df)__A, (__v4df)__B,
+                                            -(__v4df)__C);
 }
 
 /// Computes a multiply with alternating add/subtract of 256-bit vectors of

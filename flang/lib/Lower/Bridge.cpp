@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertCall.h"
@@ -20,7 +21,6 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/Cuda.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
@@ -475,7 +475,9 @@ public:
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA));
+                                  Fortran::common::LanguageFeature::CUDA),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::Coarray));
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
@@ -1400,21 +1402,23 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
-        sym.has<Fortran::semantics::UseDetails>()) {
-      if (!shallowLookupSymbol(sym) &&
-          !GetSymbolDSA(sym).test(
-              Fortran::semantics::Symbol::Flag::OmpShared)) {
-        // Do concurrent loop variables are not mapped yet since they are local
-        // to the Do concurrent scope (same for OpenMP loops).
-        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
-        builder->setInsertionPointToStart(builder->getAllocaBlock());
-        mlir::Type tempTy = genType(sym);
-        mlir::Value temp =
-            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
-        bindIfNewSymbol(sym, temp);
-        builder->restoreInsertionPoint(insPt);
-      }
+    if (!shallowLookupSymbol(sym) &&
+        (isUnordered ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+      // Do concurrent loop variables are not mapped yet since they are
+      // local to the Do concurrent scope (same for OpenMP loops).
+      mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(builder->getAllocaBlock());
+      mlir::Type tempTy = genType(sym);
+      mlir::Value temp =
+          builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+      bindIfNewSymbol(sym, temp);
+      builder->restoreInsertionPoint(insPt);
     }
     auto entry = lookupSymbol(sym);
     (void)entry;
@@ -1458,7 +1462,7 @@ private:
 
   void genBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
-    builder->create<mlir::cf::BranchOp>(toLocation(), targetBlock);
+    mlir::cf::BranchOp::create(*builder, toLocation(), targetBlock);
   }
 
   void genConditionalBranch(mlir::Value cond, mlir::Block *trueTarget,
@@ -1467,9 +1471,9 @@ private:
     assert(falseTarget && "missing conditional branch false block");
     mlir::Location loc = toLocation();
     mlir::Value bcc = builder->createConvert(loc, builder->getI1Type(), cond);
-    builder->create<mlir::cf::CondBranchOp>(loc, bcc, trueTarget,
-                                            mlir::ValueRange{}, falseTarget,
-                                            mlir::ValueRange{});
+    mlir::cf::CondBranchOp::create(*builder, loc, bcc, trueTarget,
+                                   mlir::ValueRange{}, falseTarget,
+                                   mlir::ValueRange{});
   }
   void genConditionalBranch(mlir::Value cond,
                             Fortran::lower::pft::Evaluation *trueTarget,
@@ -1637,28 +1641,28 @@ private:
     assert((inArithmeticIfContext || !realSelector) && "invalid selector type");
     mlir::Value zero;
     if (inArithmeticIfContext)
-      zero =
-          realSelector
-              ? builder->create<mlir::arith::ConstantOp>(
-                    loc, selectorType, builder->getFloatAttr(selectorType, 0.0))
-              : builder->createIntegerConstant(loc, selectorType, 0);
+      zero = realSelector
+                 ? mlir::arith::ConstantOp::create(
+                       *builder, loc, selectorType,
+                       builder->getFloatAttr(selectorType, 0.0))
+                 : builder->createIntegerConstant(loc, selectorType, 0);
     for (auto label : llvm::enumerate(labelList)) {
       mlir::Value cond;
       if (realSelector) // inArithmeticIfContext
-        cond = builder->create<mlir::arith::CmpFOp>(
-            loc,
+        cond = mlir::arith::CmpFOp::create(
+            *builder, loc,
             label.index() == 0 ? mlir::arith::CmpFPredicate::OLT
                                : mlir::arith::CmpFPredicate::OGT,
             selector, zero);
       else if (inArithmeticIfContext) // INTEGER selector
-        cond = builder->create<mlir::arith::CmpIOp>(
-            loc,
+        cond = mlir::arith::CmpIOp::create(
+            *builder, loc,
             label.index() == 0 ? mlir::arith::CmpIPredicate::slt
                                : mlir::arith::CmpIPredicate::sgt,
             selector, zero);
       else // A value of 0 is an IO ERR branch: invert comparison.
-        cond = builder->create<mlir::arith::CmpIOp>(
-            loc,
+        cond = mlir::arith::CmpIOp::create(
+            *builder, loc,
             valueList[label.index()] == 0 ? mlir::arith::CmpIPredicate::ne
                                           : mlir::arith::CmpIPredicate::eq,
             selector,
@@ -1715,7 +1719,7 @@ private:
     if (blockIsUnterminated()) {
       bridge.openAccCtx().finalizeAndKeep();
       bridge.fctCtx().finalizeAndKeep();
-      builder->create<mlir::func::ReturnOp>(toLocation(), retval);
+      mlir::func::ReturnOp::create(*builder, toLocation(), retval);
     }
     if (!earlyReturn) {
       bridge.openAccCtx().pop();
@@ -1732,7 +1736,13 @@ private:
     Fortran::lower::SymbolBox resultSymBox = lookupSymbol(resultSym);
     mlir::Location loc = toLocation();
     if (!resultSymBox) {
-      mlir::emitError(loc, "internal error when processing function return");
+      // Create a dummy undefined value of the expected return type.
+      // This prevents improper cleanup of StatementContext, which would lead
+      // to a crash due to a block with no terminator. See issue #126452.
+      mlir::FunctionType funcType = builder->getFunction().getFunctionType();
+      mlir::Type resultType = funcType.getResult(0);
+      mlir::Value undefResult = builder->create<fir::UndefOp>(loc, resultType);
+      genExitRoutine(false, undefResult);
       return;
     }
     mlir::Value resultVal = resultSymBox.match(
@@ -1795,7 +1805,7 @@ private:
     if (mlir::Block *finalBlock = funit.finalBlock) {
       // The current block must end with a terminator.
       if (blockIsUnterminated())
-        builder->create<mlir::cf::BranchOp>(toLocation(), finalBlock);
+        mlir::cf::BranchOp::create(*builder, toLocation(), finalBlock);
       // Set insertion point to final block.
       builder->setInsertionPoint(finalBlock, finalBlock->end());
     }
@@ -1828,8 +1838,9 @@ private:
     mlir::Value cond =
         builder->createConvert(loc, builder->getI1Type(), condExpr);
     if (negate)
-      cond = builder->create<mlir::arith::XOrIOp>(
-          loc, cond, builder->createIntegerConstant(loc, cond.getType(), 1));
+      cond = mlir::arith::XOrIOp::create(
+          *builder, loc, cond,
+          builder->createIntegerConstant(loc, cond.getType(), 1));
     return cond;
   }
 
@@ -1912,7 +1923,7 @@ private:
     stmtCtx.finalizeAndReset();
     // Raise an exception if REAL expr is a NaN.
     if (mlir::isa<mlir::FloatType>(expr.getType()))
-      expr = builder->create<mlir::arith::AddFOp>(toLocation(), expr, expr);
+      expr = mlir::arith::AddFOp::create(*builder, toLocation(), expr, expr);
     // An empty valueList indicates to genMultiwayBranch that the branch is
     // an ArithmeticIfStmt that has two branches on value 0 or 0.0.
     llvm::SmallVector<int64_t> valueList;
@@ -2114,6 +2125,9 @@ private:
                              .first);
       }
     }
+
+    if (!doConcurrentLoopOp)
+      return;
 
     llvm::SmallVector<bool> reduceVarByRef;
     llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
@@ -2517,27 +2531,28 @@ private:
       mlir::Value tripCount;
       if (info.hasRealControl) {
         auto diff1 =
-            builder->create<mlir::arith::SubFOp>(loc, upperValue, lowerValue);
+            mlir::arith::SubFOp::create(*builder, loc, upperValue, lowerValue);
         auto diff2 =
-            builder->create<mlir::arith::AddFOp>(loc, diff1, stepValue);
-        tripCount = builder->create<mlir::arith::DivFOp>(loc, diff2, stepValue);
+            mlir::arith::AddFOp::create(*builder, loc, diff1, stepValue);
+        tripCount =
+            mlir::arith::DivFOp::create(*builder, loc, diff2, stepValue);
         tripCount =
             builder->createConvert(loc, builder->getIndexType(), tripCount);
       } else {
         auto diff1 =
-            builder->create<mlir::arith::SubIOp>(loc, upperValue, lowerValue);
+            mlir::arith::SubIOp::create(*builder, loc, upperValue, lowerValue);
         auto diff2 =
-            builder->create<mlir::arith::AddIOp>(loc, diff1, stepValue);
+            mlir::arith::AddIOp::create(*builder, loc, diff1, stepValue);
         tripCount =
-            builder->create<mlir::arith::DivSIOp>(loc, diff2, stepValue);
+            mlir::arith::DivSIOp::create(*builder, loc, diff2, stepValue);
       }
       if (forceLoopToExecuteOnce) { // minimum tripCount is 1
         mlir::Value one =
             builder->createIntegerConstant(loc, tripCount.getType(), 1);
-        auto cond = builder->create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::slt, tripCount, one);
+        auto cond = mlir::arith::CmpIOp::create(
+            *builder, loc, mlir::arith::CmpIPredicate::slt, tripCount, one);
         tripCount =
-            builder->create<mlir::arith::SelectOp>(loc, cond, one, tripCount);
+            mlir::arith::SelectOp::create(*builder, loc, cond, one, tripCount);
       }
       info.tripVariable = builder->createTemporary(loc, tripCount.getType());
       fir::StoreOp::create(*builder, loc, tripCount, info.tripVariable);
@@ -2549,8 +2564,8 @@ private:
       tripCount = fir::LoadOp::create(*builder, loc, info.tripVariable);
       mlir::Value zero =
           builder->createIntegerConstant(loc, tripCount.getType(), 0);
-      auto cond = builder->create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sgt, tripCount, zero);
+      auto cond = mlir::arith::CmpIOp::create(
+          *builder, loc, mlir::arith::CmpIPredicate::sgt, tripCount, zero);
       if (info.maskExpr) {
         genConditionalBranch(cond, info.maskBlock, info.exitBlock);
         startBlock(info.maskBlock);
@@ -2653,8 +2668,9 @@ private:
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
         builder->setInsertionPointToEnd(doLoopOp.getBody());
         llvm::SmallVector<mlir::Value, 2> results;
-        results.push_back(builder->create<mlir::arith::AddIOp>(
-            loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr));
+        results.push_back(mlir::arith::AddIOp::create(
+            *builder, loc, doLoopOp.getInductionVar(), doLoopOp.getStep(),
+            iofAttr));
         // Step loopVariable to help optimizations such as vectorization.
         // Induction variable elimination will clean up as necessary.
         mlir::Value step = builder->createConvert(
@@ -2662,7 +2678,7 @@ private:
         mlir::Value loopVar =
             fir::LoadOp::create(*builder, loc, info.loopVariable);
         results.push_back(
-            builder->create<mlir::arith::AddIOp>(loc, loopVar, step, iofAttr));
+            mlir::arith::AddIOp::create(*builder, loc, loopVar, step, iofAttr));
         fir::ResultOp::create(*builder, loc, results);
         builder->setInsertionPointAfter(doLoopOp);
         // The loop control variable may be used after the loop.
@@ -2676,7 +2692,7 @@ private:
           fir::LoadOp::create(*builder, loc, info.tripVariable);
       mlir::Value one =
           builder->createIntegerConstant(loc, tripCount.getType(), 1);
-      tripCount = builder->create<mlir::arith::SubIOp>(loc, tripCount, one);
+      tripCount = mlir::arith::SubIOp::create(*builder, loc, tripCount, one);
       fir::StoreOp::create(*builder, loc, tripCount, info.tripVariable);
       mlir::Value value = fir::LoadOp::create(*builder, loc, info.loopVariable);
       mlir::Value step;
@@ -2685,9 +2701,10 @@ private:
       else
         step = genControlValue(info.stepExpr, info);
       if (info.hasRealControl)
-        value = builder->create<mlir::arith::AddFOp>(loc, value, step);
+        value = mlir::arith::AddFOp::create(*builder, loc, value, step);
       else
-        value = builder->create<mlir::arith::AddIOp>(loc, value, step, iofAttr);
+        value =
+            mlir::arith::AddIOp::create(*builder, loc, value, step, iofAttr);
       fir::StoreOp::create(*builder, loc, value, info.loopVariable);
 
       genBranch(info.headerBlock);
@@ -3184,8 +3201,8 @@ private:
       assert(funit && "not inside main program, function or subroutine");
       mlir::Block *continueBlock =
           builder->getBlock()->splitBlock(builder->getBlock()->end());
-      builder->create<mlir::cf::CondBranchOp>(toLocation(), exitCond,
-                                              funit->finalBlock, continueBlock);
+      mlir::cf::CondBranchOp::create(*builder, toLocation(), exitCond,
+                                     funit->finalBlock, continueBlock);
       builder->setInsertionPointToEnd(continueBlock);
     }
   }
@@ -3353,8 +3370,8 @@ private:
           step = fir::getBase(
               genExprValue(*Fortran::semantics::GetExpr(*expr), stmtCtx));
         else
-          step = builder->create<mlir::arith::ConstantIndexOp>(
-              loc, 1); // Use index type directly
+          step = mlir::arith::ConstantIndexOp::create(
+              *builder, loc, 1); // Use index type directly
 
         // Ensure lb, ub, and step are of index type using fir.convert
         lb = fir::ConvertOp::create(*builder, loc, idxTy, lb);
@@ -3625,7 +3642,8 @@ private:
       auto genCond = [&](mlir::Value rhs,
                          mlir::arith::CmpIPredicate pred) -> mlir::Value {
         if (!isCharSelector)
-          return builder->create<mlir::arith::CmpIOp>(loc, pred, selector, rhs);
+          return mlir::arith::CmpIOp::create(*builder, loc, pred, selector,
+                                             rhs);
         fir::factory::CharacterExprHelper charHelper{*builder, loc};
         std::pair<mlir::Value, mlir::Value> lhsVal =
             charHelper.createUnboxChar(selector);
@@ -3840,9 +3858,9 @@ private:
       mlir::Block *selectCaseBlock = insertBlock(blockList[0]);
       mlir::Block *assumedSizeBlock =
           rankStarBlock ? rankStarBlock : defaultBlock;
-      builder->create<mlir::cf::CondBranchOp>(
-          loc, isAssumedSize, assumedSizeBlock, mlir::ValueRange{},
-          selectCaseBlock, mlir::ValueRange{});
+      mlir::cf::CondBranchOp::create(*builder, loc, isAssumedSize,
+                                     assumedSizeBlock, mlir::ValueRange{},
+                                     selectCaseBlock, mlir::ValueRange{});
       startBlock(selectCaseBlock);
     }
     // Create fir.select_case for the other rank cases.
@@ -4813,7 +4831,9 @@ private:
 
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
-                           hlfir::Entity &lhs, hlfir::Entity &rhs) {
+                           hlfir::Entity &lhs, hlfir::Entity &rhs,
+                           bool isWholeAllocatableAssignment,
+                           bool keepLhsLengthInAllocatableAssignment) {
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
@@ -4878,6 +4898,28 @@ private:
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
+      if (Fortran::lower::isTransferWithConversion(rhs)) {
+        mlir::OpBuilder::InsertionGuard insertionGuard(builder);
+        auto elementalOp =
+            mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp());
+        assert(elementalOp && "expect elemental op");
+        auto designateOp =
+            *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
+        builder.setInsertionPoint(elementalOp);
+        // Create a temp to transfer the rhs before applying the conversion.
+        hlfir::Entity entity{designateOp.getMemref()};
+        auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, entity);
+        auto transferKindAttr = cuf::DataTransferKindAttr::get(
+            builder.getContext(), cuf::DataTransferKind::DeviceHost);
+        cuf::DataTransferOp::create(builder, loc, designateOp.getMemref(), temp,
+                                    /*shape=*/mlir::Value{}, transferKindAttr);
+        designateOp.getMemrefMutable().assign(temp);
+        builder.setInsertionPointAfter(elementalOp);
+        hlfir::AssignOp::create(builder, loc, elementalOp, lhs,
+                                isWholeAllocatableAssignment,
+                                keepLhsLengthInAllocatableAssignment);
+        return;
+      }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
@@ -4887,7 +4929,6 @@ private:
 
     // device = device
     if (lhsIsDevice && rhsIsDevice) {
-      assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
@@ -5026,7 +5067,9 @@ private:
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
       if (isCUDATransfer && !hasCUDAImplicitTransfer)
-        genCUDADataTransfer(builder, loc, assign, lhs, rhs);
+        genCUDADataTransfer(builder, loc, assign, lhs, rhs,
+                            isWholeAllocatableAssignment,
+                            keepLhsLengthInAllocatableAssignment);
       else
         hlfir::AssignOp::create(builder, loc, rhs, lhs,
                                 isWholeAllocatableAssignment,
@@ -5631,7 +5674,7 @@ private:
     if (Fortran::lower::isInOpenACCLoop(*builder))
       Fortran::lower::genEarlyReturnInOpenACCLoop(*builder, loc);
     else
-      builder->create<mlir::cf::BranchOp>(loc, funit->finalBlock);
+      mlir::cf::BranchOp::create(*builder, loc, funit->finalBlock);
   }
 
   void genFIR(const Fortran::parser::CycleStmt &) {

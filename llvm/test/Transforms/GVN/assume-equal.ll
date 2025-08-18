@@ -343,6 +343,50 @@ meh:
   ret i1 %k
 }
 
+define i8 @assume_ptr_eq_different_prov_matters(ptr %p, ptr %p2) {
+; CHECK-LABEL: define i8 @assume_ptr_eq_different_prov_matters(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P2]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %cmp = icmp eq ptr %p, %p2
+  call void @llvm.assume(i1 %cmp)
+  %v = load i8, ptr %p2
+  ret i8 %v
+}
+
+define i1 @assume_ptr_eq_different_prov_does_not_matter(ptr %p, ptr %p2) {
+; CHECK-LABEL: define i1 @assume_ptr_eq_different_prov_does_not_matter(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P]], null
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %cmp = icmp eq ptr %p, %p2
+  call void @llvm.assume(i1 %cmp)
+  %c = icmp eq ptr %p2, null
+  ret i1 %c
+}
+
+define i8 @assume_ptr_eq_same_prov(ptr %p, i64 %x) {
+; CHECK-LABEL: define i8 @assume_ptr_eq_same_prov(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %p2 = getelementptr i8, ptr %p, i64 %x
+  %cmp = icmp eq ptr %p, %p2
+  call void @llvm.assume(i1 %cmp)
+  %v = load i8, ptr %p2
+  ret i8 %v
+}
+
 declare noalias ptr @_Znwm(i64)
 declare void @_ZN1AC1Ev(ptr)
 declare void @llvm.assume(i1)

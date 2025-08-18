@@ -254,7 +254,8 @@ bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN);
   F.setVarFixups({Fixup});
   F.setLinkerRelaxable();
-  F.getParent()->setLinkerRelaxable();
+  if (!F.getParent()->isLinkerRelaxable())
+    F.getParent()->setFirstLinkerRelaxable(F.getLayoutOrder());
   return true;
 }
 

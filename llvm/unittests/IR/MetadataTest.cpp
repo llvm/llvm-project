@@ -1470,17 +1470,10 @@ TEST_F(DILocationTest, Merge) {
     PickMergedSourceLocations = false;
   }
 
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
 #define EXPECT_ATOM(Loc, Group, Rank)                                          \
   EXPECT_EQ(Group, M->getAtomGroup());                                         \
   EXPECT_EQ(Rank, M->getAtomRank());
-#else
-#define EXPECT_ATOM(Loc, Group, Rank)                                          \
-  EXPECT_EQ(0u, M->getAtomGroup());                                            \
-  EXPECT_EQ(0u, M->getAtomRank());                                             \
-  (void)Group;                                                                 \
-  (void)Rank;
-#endif
+
   // Identical, including source atom numbers.
   {
     auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
@@ -1753,15 +1746,8 @@ TEST_F(DILocationTest, KeyInstructions) {
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 1u);
   DILocation *A1 =
       DILocation::get(Context, 1, 0, getSubprogram(), nullptr, false, 1, 2);
-  // The group is only applied to the DILocation if we've built LLVM with
-  // EXPERIMENTAL_KEY_INSTRUCTIONS.
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   EXPECT_EQ(A1->getAtomGroup(), 1u);
   EXPECT_EQ(A1->getAtomRank(), 2u);
-#else
-  EXPECT_EQ(A1->getAtomGroup(), 0u);
-  EXPECT_EQ(A1->getAtomRank(), 0u);
-#endif
 
   // Group number 1 has been "used" so next available is 2.
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 2u);

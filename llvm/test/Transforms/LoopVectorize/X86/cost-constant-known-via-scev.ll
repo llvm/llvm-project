@@ -62,7 +62,7 @@ exit:
 ; Test case for https://github.com/llvm/llvm-project/issues/109528.
 define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-LABEL: define i64 @second_lshr_operand_zero_via_scev() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXT_0:%.*]] = sext i8 0 to i32
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -97,12 +97,10 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[BIN_RDX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOPS:.*]]
 ; CHECK:       [[LOOPS]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOPS]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOPS]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOPS]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOPS]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[IV]] to i32

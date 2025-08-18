@@ -63,21 +63,21 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 
-static constexpr uint64_t MEMORY_SIZE = 16384;
-static uint8_t memory[MEMORY_SIZE];
-static LIBC_NAMESPACE::cpp::Atomic<size_t> used = 0;
+static constexpr uint64_t ALIGNMENT = alignof(double);
+static constexpr uint64_t MEMORY_SIZE = 256 * 1024 /* 256 KiB */;
+alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
+static size_t ptr = 0;
 
 extern "C" {
 
-// For simple test purposes.
-void *malloc(size_t s) {
-  // Emulate the alignment of std::max_align_t.
-  constexpr size_t DEFAULT_ALIGNMENT = alignof(long double);
-  s += (-s) & (DEFAULT_ALIGNMENT - 1); // Align to default alignment.
-  auto res = used.fetch_add(s, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
-  if (res + s > MEMORY_SIZE)
-    return nullptr; // Out of memory.
-  return &memory[res];
+void *malloc(size_t size) {
+  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
+  size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+  size_t old_ptr =
+      ref.fetch_add(size, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  if (static_cast<size_t>(old_ptr + size) >= MEMORY_SIZE)
+    return nullptr;
+  return &memory[old_ptr];
 }
 
 void free(void *) {}
