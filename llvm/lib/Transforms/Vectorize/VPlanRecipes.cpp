@@ -3857,7 +3857,6 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   ElementCount WideVF = State.VF * InterleaveFactor;
   auto *VecTy = VectorType::get(ScalarTy, WideVF);
 
-  VPValue *BlockInMask = getMask();
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
   Value *EVL = State.get(getEVL(), VPLane(0));
@@ -3866,19 +3865,14 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
       /* NUW= */ true, /* NSW= */ true);
   LLVMContext &Ctx = State.Builder.getContext();
 
-  auto CreateGroupMask = [&BlockInMask, &State,
-                          &InterleaveFactor]() -> Value * {
-    auto *ResBlockInMask = State.get(BlockInMask);
-    SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
-    return interleaveVectors(State.Builder, Ops, "interleaved.mask");
-  };
-
   Value *GroupMask = nullptr;
-  if (BlockInMask)
-    GroupMask = CreateGroupMask();
-  else
+  if (VPValue *BlockInMask = getMask()) {
+    SmallVector<Value *> Ops(InterleaveFactor, State.get(BlockInMask));
+    GroupMask = interleaveVectors(State.Builder, Ops, "interleaved.mask");
+  } else {
     GroupMask =
         State.Builder.CreateVectorSplat(WideVF, State.Builder.getTrue());
+  }
 
   const DataLayout &DL = Instr->getDataLayout();
   // Vectorize the interleaved load group.
