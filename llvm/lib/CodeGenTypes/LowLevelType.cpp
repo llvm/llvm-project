@@ -19,18 +19,21 @@ using namespace llvm;
 LLT::LLT(MVT VT) {
   if (VT.isVector()) {
     bool asVector = VT.getVectorMinNumElements() > 1 || VT.isScalableVector();
-    init(/*IsPointer=*/false, asVector, /*IsScalar=*/!asVector,
+    init(/*IsPointer=*/false, asVector, /*IsScalar=*/!asVector, /*isBfloat=*/false,
          VT.getVectorElementCount(), VT.getVectorElementType().getSizeInBits(),
          /*AddressSpace=*/0);
   } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    init(/*IsPointer=*/false, /*IsVector=*/false, /*IsScalar=*/true,
+    MVT ElemVT = VT.getVectorElementType();
+    bool isElemBfloat = (ElemVT == MVT::bf16);
+    init(/*IsPointer=*/false, /*IsVector=*/false, /*IsScalar=*/true, /*isBfloat=*/isElemBfloat,
          ElementCount::getFixed(0), VT.getSizeInBits(), /*AddressSpace=*/0);
   } else {
     IsScalar = false;
     IsPointer = false;
     IsVector = false;
+    IsBfloat = false;
     RawData = 0;
   }
 }

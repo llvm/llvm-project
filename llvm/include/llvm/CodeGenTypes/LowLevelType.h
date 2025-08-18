@@ -41,8 +41,14 @@ class raw_ostream;
 class LLT {
 public:
   /// Get a low-level scalar or aggregate "bag of bits".
-  static constexpr LLT scalar(unsigned SizeInBits, bool isBfloat) {
-    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true, /*isBfloat=*/isBfloat,
+  static constexpr LLT scalar(unsigned SizeInBits) {
+    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true, /*isBfloat=*/false,
+               ElementCount::getFixed(0), SizeInBits,
+               /*AddressSpace=*/0};
+  }
+
+  static constexpr LLT scalar_bfloat(unsigned SizeInBits) {
+    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true, /*isBfloat=*/true,
                ElementCount::getFixed(0), SizeInBits,
                /*AddressSpace=*/0};
   }
@@ -76,6 +82,7 @@ public:
     return LLT{ScalarTy.isPointer(),
                /*isVector=*/true,
                /*isScalar=*/false,
+               /*isBfloat=*/false,
                EC,
                ScalarTy.getSizeInBits().getFixedValue(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
@@ -83,13 +90,13 @@ public:
 
  // Get a 16-bit brain float value.
   static constexpr LLT bfloat16() {
-    return scalar(16, true);
+    return scalar_bfloat(16);
   }
 
   /// Get a 16-bit IEEE half value.
   /// TODO: Add IEEE semantics to type - This currently returns a simple `scalar(16)`.
   static constexpr LLT float16() {
-    return scalar(16, false);
+    return scalar(16);
   }
 
   /// Get a 32-bit IEEE float value.
@@ -142,10 +149,10 @@ public:
                          ElementCount EC, uint64_t SizeInBits,
                          unsigned AddressSpace)
       : LLT() {
-    init(isPointer, isVector, isScalar, isBfloat, E C, SizeInBits, AddressSpace);
+    init(isPointer, isVector, isScalar, isBfloat, EC, SizeInBits, AddressSpace);
   }
   explicit constexpr LLT()
-      : IsScalar(false), IsPointer(false), IsVector(false), isBfloat(false), RawData(0) {}
+      : IsScalar(false), IsPointer(false), IsVector(false), IsBfloat(false), RawData(0) {}
 
   LLVM_ABI explicit LLT(MVT VT);
 
@@ -160,7 +167,7 @@ public:
   constexpr bool isPointerOrPointerVector() const {
     return IsPointer && isValid();
   }
-  constexpr bool isBfloat() const { return isBfloat; }
+  constexpr bool isBfloat() const { return IsBfloat; }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
@@ -250,10 +257,7 @@ public:
     }
 
     assert(getScalarSizeInBits() % Factor == 0);
-    if(isBfloat()) {
-      return scalar(getScalarSizeInBits() / Factor, true);
-    }
-    return scalar(getScalarSizeInBits() / Factor, false);
+    return scalar(getScalarSizeInBits() / Factor);
   }
 
   /// Produce a vector type that is \p Factor times bigger, preserving the
