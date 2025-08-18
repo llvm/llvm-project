@@ -603,7 +603,7 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() {
-    return *reinterpret_cast<__node_value_type*>(&__buffer_);
+    return *reinterpret_cast<__node_value_type*>(__buffer_);
   }
 #endif
 
