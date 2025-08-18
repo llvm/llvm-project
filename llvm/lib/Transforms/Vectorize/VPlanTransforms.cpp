@@ -2291,7 +2291,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
   // Remove dead EVL mask.
   if (EVLMask->getNumUsers() == 0)
-    EVLMask->getDefiningRecipe()->eraseFromParent();
+    ToErase.push_back(EVLMask->getDefiningRecipe());
 
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());

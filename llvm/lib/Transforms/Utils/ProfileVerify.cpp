@@ -8,10 +8,8 @@
 
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/ADT/DynamicAPInt.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"

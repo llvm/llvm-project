@@ -18,7 +18,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <utility>

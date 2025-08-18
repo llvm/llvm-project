@@ -35,7 +35,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/AArch64BuildAttributes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 

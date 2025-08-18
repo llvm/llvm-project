@@ -4,7 +4,7 @@
 # Imm overflow
 pli.h a0, 0x400 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [-512, 511]
 plui.h a1, 0x400 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-512, 1023]
-pli.b a0, 0x200 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [0, 255]
+pli.b a0, 0x200 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [-128, 255]
 
 pslli.b a6, a7, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 7]
 pslli.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 15]

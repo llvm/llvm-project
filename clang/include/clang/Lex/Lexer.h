@@ -143,9 +143,6 @@ class Lexer : public PreprocessorLexer {
   /// True if this is the first time we're lexing the input file.
   bool IsFirstTimeLexingFile;
 
-  /// True if current lexing token is the first pp-token.
-  bool IsFirstPPToken;
-
   // NewLinePtr - A pointer to new line character '\n' being lexed. For '\r\n',
   // it also points to '\n.'
   const char *NewLinePtr;

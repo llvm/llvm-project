@@ -5,6 +5,7 @@ add_clang_unittest(LexTests
   LexerTest.cpp
   LexHLSLRootSignatureTest.cpp
   ModuleDeclStateTest.cpp
+  NoTrivialPPDirectiveTracerTest.cpp
   PPCallbacksTest.cpp
   PPConditionalDirectiveRecordTest.cpp
   PPDependencyDirectivesTest.cpp
