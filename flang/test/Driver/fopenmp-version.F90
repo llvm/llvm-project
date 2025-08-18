@@ -26,4 +26,4 @@
 
 !RUN: %flang -c -fopenmp -fopenmp-version=61 %s 2>&1 | FileCheck --check-prefix=FUTURE %s
 
-!FUTURE: The specification for OpenMP 61 is still under development; the behavior of new features is subject to change
+!FUTURE: The specification for OpenMP version 61 is still under development; the syntax and semantics of new features may be subject to change
