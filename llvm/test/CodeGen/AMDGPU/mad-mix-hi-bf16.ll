@@ -141,7 +141,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_fma_mixlo_bf16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1250-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v3, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]

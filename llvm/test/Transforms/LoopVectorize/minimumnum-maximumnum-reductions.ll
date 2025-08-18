@@ -5,7 +5,7 @@
 define float @maximumnum_intrinsic(ptr readonly %x) {
 ; CHECK-LABEL: define float @maximumnum_intrinsic(
 ; CHECK-SAME: ptr readonly [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -14,9 +14,8 @@ define float @maximumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
@@ -28,12 +27,10 @@ define float @maximumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = tail call float @llvm.maximumnum.f32(float [[RED]], float [[L]])
@@ -64,7 +61,7 @@ exit:
 define float @maximumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-LABEL: define float @maximumnum_intrinsic_fast(
 ; CHECK-SAME: ptr readonly [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -73,9 +70,8 @@ define float @maximumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call fast <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = call fast <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
@@ -87,12 +83,10 @@ define float @maximumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmax.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = tail call fast float @llvm.maximumnum.f32(float [[RED]], float [[L]])
@@ -123,7 +117,7 @@ exit:
 define float @minimumnum_intrinsic(ptr readonly %x) {
 ; CHECK-LABEL: define float @minimumnum_intrinsic(
 ; CHECK-SAME: ptr readonly [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -132,9 +126,8 @@ define float @minimumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
@@ -146,12 +139,10 @@ define float @minimumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = tail call float @llvm.minimumnum.f32(float [[RED]], float [[L]])
@@ -182,7 +173,7 @@ exit:
 define float @minimumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-LABEL: define float @minimumnum_intrinsic_fast(
 ; CHECK-SAME: ptr readonly [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -191,9 +182,8 @@ define float @minimumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call fast <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = call fast <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
@@ -205,12 +195,10 @@ define float @minimumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmin.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = tail call fast float @llvm.minimumnum.f32(float [[RED]], float [[L]])

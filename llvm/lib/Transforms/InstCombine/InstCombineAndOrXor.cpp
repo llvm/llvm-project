@@ -11,10 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -3589,6 +3592,230 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
+/// Match \p V as "shufflevector -> bitcast" or "extractelement -> zext -> shl"
+/// patterns, which extract vector elements and pack them in the same relative
+/// positions.
+///
+/// \p Vec is the underlying vector being extracted from.
+/// \p Mask is a bitmask identifying which packed elements are obtained from the
+/// vector.
+/// \p VecOffset is the vector element corresponding to index 0 of the
+/// mask.
+static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
+                                          int64_t &VecOffset,
+                                          SmallBitVector &Mask,
+                                          const DataLayout &DL) {
+  static const auto m_ConstShlOrSelf = [](const auto &Base, uint64_t &ShlAmt) {
+    ShlAmt = 0;
+    return m_CombineOr(m_Shl(Base, m_ConstantInt(ShlAmt)), Base);
+  };
+
+  // First try to match extractelement -> zext -> shl
+  uint64_t VecIdx, ShlAmt;
+  if (match(V, m_ConstShlOrSelf(m_ZExtOrSelf(m_ExtractElt(
+                                    m_Value(Vec), m_ConstantInt(VecIdx))),
+                                ShlAmt))) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy)
+      return false;
+    auto *EltTy = dyn_cast<IntegerType>(VecTy->getElementType());
+    if (!EltTy)
+      return false;
+
+    const unsigned EltBitWidth = EltTy->getBitWidth();
+    const unsigned TargetBitWidth = V->getType()->getIntegerBitWidth();
+    if (TargetBitWidth % EltBitWidth != 0 || ShlAmt % EltBitWidth != 0)
+      return false;
+    const unsigned TargetEltWidth = TargetBitWidth / EltBitWidth;
+    const unsigned ShlEltAmt = ShlAmt / EltBitWidth;
+
+    const unsigned MaskIdx =
+        DL.isLittleEndian() ? ShlEltAmt : TargetEltWidth - ShlEltAmt - 1;
+
+    VecOffset = static_cast<int64_t>(VecIdx) - static_cast<int64_t>(MaskIdx);
+    Mask.resize(TargetEltWidth);
+    Mask.set(MaskIdx);
+    return true;
+  }
+
+  // Now try to match a bitcasted subvector.
+  Instruction *SrcVecI;
+  if (!match(V, m_BitCast(m_Instruction(SrcVecI))))
+    return false;
+
+  auto *SrcTy = dyn_cast<FixedVectorType>(SrcVecI->getType());
+  if (!SrcTy)
+    return false;
+
+  Mask.resize(SrcTy->getNumElements());
+
+  // First check for a subvector obtained from a shufflevector.
+  if (isa<ShuffleVectorInst>(SrcVecI)) {
+    Constant *ConstVec;
+    ArrayRef<int> ShuffleMask;
+    if (!match(SrcVecI, m_Shuffle(m_Value(Vec), m_Constant(ConstVec),
+                                  m_Mask(ShuffleMask))))
+      return false;
+
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy)
+      return false;
+
+    const unsigned NumVecElts = VecTy->getNumElements();
+    bool FoundVecOffset = false;
+    for (unsigned Idx = 0; Idx < ShuffleMask.size(); ++Idx) {
+      if (ShuffleMask[Idx] == PoisonMaskElem)
+        return false;
+      const unsigned ShuffleIdx = ShuffleMask[Idx];
+      if (ShuffleIdx >= NumVecElts) {
+        const unsigned ConstIdx = ShuffleIdx - NumVecElts;
+        auto *ConstElt =
+            dyn_cast<ConstantInt>(ConstVec->getAggregateElement(ConstIdx));
+        if (!ConstElt || !ConstElt->isNullValue())
+          return false;
+        continue;
+      }
+
+      if (FoundVecOffset) {
+        if (VecOffset + Idx != ShuffleIdx)
+          return false;
+      } else {
+        if (ShuffleIdx < Idx)
+          return false;
+        VecOffset = ShuffleIdx - Idx;
+        FoundVecOffset = true;
+      }
+      Mask.set(Idx);
+    }
+    return FoundVecOffset;
+  }
+
+  // Check for a subvector obtained as an (insertelement V, 0, idx)
+  uint64_t InsertIdx;
+  if (!match(SrcVecI,
+             m_InsertElt(m_Value(Vec), m_Zero(), m_ConstantInt(InsertIdx))))
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecTy)
+    return false;
+  VecOffset = 0;
+  bool AlreadyInsertedMaskedElt = Mask.test(InsertIdx);
+  Mask.set();
+  if (!AlreadyInsertedMaskedElt)
+    Mask.reset(InsertIdx);
+  return true;
+}
+
+/// Try to fold the join of two scalar integers whose contents are packed
+/// elements of the same vector.
+static Instruction *foldIntegerPackFromVector(Instruction &I,
+                                              InstCombiner::BuilderTy &Builder,
+                                              const DataLayout &DL) {
+  assert(I.getOpcode() == Instruction::Or);
+  Value *LhsVec, *RhsVec;
+  int64_t LhsVecOffset, RhsVecOffset;
+  SmallBitVector Mask;
+  if (!matchSubIntegerPackFromVector(I.getOperand(0), LhsVec, LhsVecOffset,
+                                     Mask, DL))
+    return nullptr;
+  if (!matchSubIntegerPackFromVector(I.getOperand(1), RhsVec, RhsVecOffset,
+                                     Mask, DL))
+    return nullptr;
+  if (LhsVec != RhsVec || LhsVecOffset != RhsVecOffset)
+    return nullptr;
+
+  // Convert into shufflevector -> bitcast;
+  const unsigned ZeroVecIdx =
+      cast<FixedVectorType>(LhsVec->getType())->getNumElements();
+  SmallVector<int> ShuffleMask(Mask.size(), ZeroVecIdx);
+  for (unsigned Idx : Mask.set_bits()) {
+    assert(LhsVecOffset + Idx >= 0);
+    ShuffleMask[Idx] = LhsVecOffset + Idx;
+  }
+
+  Value *MaskedVec = Builder.CreateShuffleVector(
+      LhsVec, Constant::getNullValue(LhsVec->getType()), ShuffleMask,
+      I.getName() + ".v");
+  return CastInst::Create(Instruction::BitCast, MaskedVec, I.getType());
+}
+
+/// Match \p V as "lshr -> mask -> zext -> shl".
+///
+/// \p Int is the underlying integer being extracted from.
+/// \p Mask is a bitmask identifying which bits of the integer are being
+/// extracted. \p Offset identifies which bit of the result \p V corresponds to
+/// the least significant bit of \p Int
+static bool matchZExtedSubInteger(Value *V, Value *&Int, APInt &Mask,
+                                  uint64_t &Offset, bool &IsShlNUW,
+                                  bool &IsShlNSW) {
+  Value *ShlOp0;
+  uint64_t ShlAmt = 0;
+  if (!match(V, m_OneUse(m_Shl(m_Value(ShlOp0), m_ConstantInt(ShlAmt)))))
+    return false;
+
+  IsShlNUW = cast<BinaryOperator>(V)->hasNoUnsignedWrap();
+  IsShlNSW = cast<BinaryOperator>(V)->hasNoSignedWrap();
+
+  Value *ZExtOp0;
+  if (!match(ShlOp0, m_OneUse(m_ZExt(m_Value(ZExtOp0)))))
+    return false;
+
+  Value *MaskedOp0;
+  const APInt *ShiftedMaskConst = nullptr;
+  if (!match(ZExtOp0, m_CombineOr(m_OneUse(m_And(m_Value(MaskedOp0),
+                                                 m_APInt(ShiftedMaskConst))),
+                                  m_Value(MaskedOp0))))
+    return false;
+
+  uint64_t LShrAmt = 0;
+  if (!match(MaskedOp0,
+             m_CombineOr(m_OneUse(m_LShr(m_Value(Int), m_ConstantInt(LShrAmt))),
+                         m_Value(Int))))
+    return false;
+
+  if (LShrAmt > ShlAmt)
+    return false;
+  Offset = ShlAmt - LShrAmt;
+
+  Mask = ShiftedMaskConst ? ShiftedMaskConst->shl(LShrAmt)
+                          : APInt::getBitsSetFrom(
+                                Int->getType()->getScalarSizeInBits(), LShrAmt);
+
+  return true;
+}
+
+/// Try to fold the join of two scalar integers whose bits are unpacked and
+/// zexted from the same source integer.
+static Value *foldIntegerRepackThroughZExt(Value *Lhs, Value *Rhs,
+                                           InstCombiner::BuilderTy &Builder) {
+
+  Value *LhsInt, *RhsInt;
+  APInt LhsMask, RhsMask;
+  uint64_t LhsOffset, RhsOffset;
+  bool IsLhsShlNUW, IsLhsShlNSW, IsRhsShlNUW, IsRhsShlNSW;
+  if (!matchZExtedSubInteger(Lhs, LhsInt, LhsMask, LhsOffset, IsLhsShlNUW,
+                             IsLhsShlNSW))
+    return nullptr;
+  if (!matchZExtedSubInteger(Rhs, RhsInt, RhsMask, RhsOffset, IsRhsShlNUW,
+                             IsRhsShlNSW))
+    return nullptr;
+  if (LhsInt != RhsInt || LhsOffset != RhsOffset)
+    return nullptr;
+
+  APInt Mask = LhsMask | RhsMask;
+
+  Type *DestTy = Lhs->getType();
+  Value *Res = Builder.CreateShl(
+      Builder.CreateZExt(
+          Builder.CreateAnd(LhsInt, Mask, LhsInt->getName() + ".mask"), DestTy,
+          LhsInt->getName() + ".zext"),
+      ConstantInt::get(DestTy, LhsOffset), "", IsLhsShlNUW && IsRhsShlNUW,
+      IsLhsShlNSW && IsRhsShlNSW);
+  Res->takeName(Lhs);
+  return Res;
+}
+
 // A decomposition of ((X & Mask) * Factor). The NUW / NSW bools
 // track these properities for preservation. Note that we can decompose
 // equivalent select form of this expression (e.g. (!(X & Mask) ? 0 : Mask *
@@ -3690,6 +3917,8 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
     return Res;
+  if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
+    return Res;
 
   return nullptr;
 }
@@ -3766,6 +3995,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
     return X;
 
+  if (Instruction *X = foldIntegerPackFromVector(I, Builder, DL))
+    return X;
+
   // (A & B) | (C & D) -> A ^ D where A == ~C && B == ~D
   // (A & B) | (C & D) -> A ^ C where A == ~D && B == ~C
   if (Value *V = foldOrOfInversions(I, Builder))
@@ -3819,7 +4051,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    if (Value *Res = foldBitmaskMul(I.getOperand(0), I.getOperand(1), Builder))
+    if (Value *Res = foldDisjointOr(I.getOperand(0), I.getOperand(1)))
       return replaceInstUsesWith(I, Res);
 
     if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1)))

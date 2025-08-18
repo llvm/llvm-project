@@ -35,6 +35,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCValue;
+class Triple;
 class raw_ostream;
 
 namespace WinEH {
@@ -484,6 +485,9 @@ public:
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
+
+  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
+                                    const Triple &, raw_ostream &) const {}
 
   /// Return true if the .section directive should be omitted when
   /// emitting \p SectionName.  For example:

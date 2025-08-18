@@ -13,6 +13,7 @@
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -163,8 +164,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
     const auto *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
-    if (const auto *RT = QT->getAs<ReferenceType>())
-      QT = RT->getPointeeType();
+    if (QT->isPointerOrReferenceType())
+      QT = QT->getPointeeType();
   }
   assert(!QT.isNull());
 
@@ -179,17 +180,15 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
     Desc = allocateDescriptor(D);
 
   assert(Desc);
-  Desc->makeDummy();
-
-  assert(Desc->isDummy());
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
       Global(Ctx.getEvalID(), getCurrentDecl(), Desc, /*IsStatic=*/true,
-             /*IsExtern=*/false, IsWeak);
+             /*IsExtern=*/false, IsWeak, /*IsDummy=*/true);
   G->block()->invokeCtor();
+  assert(G->block()->isDummy());
 
   Globals.push_back(G);
   DummyVariables[D.getOpaqueValue()] = I;
@@ -324,7 +323,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       const auto *RT = Spec.getType()->getAs<RecordType>();
       if (!RT)
         return nullptr;
-      const RecordDecl *BD = RT->getDecl();
+      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -341,7 +340,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       if (!RT)
         return nullptr;
 
-      const RecordDecl *BD = RT->getDecl();
+      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -398,7 +397,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
   // Classes and structures.
   if (const auto *RT = Ty->getAs<RecordType>()) {
-    if (const auto *Record = getOrCreateRecord(RT->getDecl()))
+    if (const auto *Record =
+            getOrCreateRecord(RT->getOriginalDecl()->getDefinitionOrSelf()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable, IsVolatile);
     return allocateDescriptor(D, MDSize);
@@ -418,7 +418,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         }
         return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
                                   IsMutable);
-      } else {
+      }
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
@@ -430,7 +430,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
           return {};
         return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
-      }
     }
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
@@ -440,14 +439,13 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, MDSize, IsConst, IsTemporary,
                                   Descriptor::UnknownSize{});
-      } else {
+      }
         const Descriptor *Desc = createDescriptor(
             D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
-      }
     }
   }
 

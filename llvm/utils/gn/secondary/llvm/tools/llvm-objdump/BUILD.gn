@@ -63,6 +63,7 @@ driver_executable("llvm-objdump") {
   ]
   sources = [
     "COFFDump.cpp",
+    "DXContainerDump.cpp",
     "ELFDump.cpp",
     "MachODump.cpp",
     "OffloadDump.cpp",

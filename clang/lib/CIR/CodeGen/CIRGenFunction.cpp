@@ -28,8 +28,6 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
   ehStack.setCGF(this);
-  currentCleanupStackDepth = 0;
-  assert(ehStack.getStackDepth() == 0);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -216,15 +214,18 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
 void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
-  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
-  assert(namedVar && "Needs a named decl");
-  assert(!cir::MissingFeatures::cgfSymbolTable());
+  assert(isa<NamedDecl>(var) && "Needs a named decl");
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  assert(allocaOp && "expected cir::AllocaOp");
+
   if (isParam)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  symbolTable.insert(var, allocaOp);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -357,7 +358,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   // destructor or a non-trivially copyable type.
   if (const RecordType *recordType =
           returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(recordType->getDecl()))
+    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+            recordType->getOriginalDecl()->getDefinitionOrSelf()))
       return classDecl->hasTrivialDestructor();
   }
   return returnType.isTriviallyCopyableType(astContext);
@@ -382,6 +384,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
@@ -406,6 +409,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const Decl *d = gd.getDecl();
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -473,15 +478,18 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   // TODO(cir): Use prologueCleanupDepth here.
-  bool hasCleanups = ehStack.getStackDepth() != currentCleanupStackDepth;
+  bool hasCleanups = ehStack.stable_begin() != prologueCleanupDepth;
   if (hasCleanups) {
     assert(!cir::MissingFeatures::generateDebugInfo());
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
-    popCleanupBlocks(currentCleanupStackDepth);
+    popCleanupBlocks(prologueCleanupDepth);
   }
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
+
   auto result = mlir::LogicalResult::success();
   if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
     emitCompoundStmtWithoutScope(*block);
@@ -528,6 +536,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   FunctionArgList args;
   QualType retTy = buildFunctionArgList(gd, args);
 
+  // Create a scope in the symbol table to hold variable declarations.
+  SymTableScopeTy varScope(symbolTable);
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
@@ -783,9 +793,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     }
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
-    cgm.errorNYI(e->getSourceRange(),
-                 "CompoundAssignOperator with ComplexType");
-    return LValue();
+
+    return emitComplexCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:
@@ -801,6 +810,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
     return emitCastLValue(cast<CastExpr>(e));
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   }
 }
 
@@ -809,6 +820,10 @@ static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
   llvm::raw_svector_ostream out(buffer);
   out << name << cnt;
   return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterRefTmpAsString() {
+  return getVersionedTmpName("ref.tmp", counterRefTmp++);
 }
 
 std::string CIRGenFunction::getCounterAggTmpAsString() {
@@ -820,7 +835,9 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Ignore empty classes in C++.
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getDecl())->isEmpty())
+      if (cast<CXXRecordDecl>(rt->getOriginalDecl())
+              ->getDefinitionOrSelf()
+              ->isEmpty())
         return;
     }
   }
@@ -921,6 +938,146 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
 
   baseType = eltType;
   return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
+}
+
+mlir::Value CIRGenFunction::emitAlignmentAssumption(
+    mlir::Value ptrValue, QualType ty, SourceLocation loc,
+    SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
+  assert(!cir::MissingFeatures::sanitizers());
+  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
+                                      alignment, offsetValue);
+}
+
+mlir::Value CIRGenFunction::emitAlignmentAssumption(
+    mlir::Value ptrValue, const Expr *expr, SourceLocation assumptionLoc,
+    int64_t alignment, mlir::Value offsetValue) {
+  QualType ty = expr->getType();
+  SourceLocation loc = expr->getExprLoc();
+  return emitAlignmentAssumption(ptrValue, ty, loc, assumptionLoc, alignment,
+                                 offsetValue);
+}
+
+// TODO(cir): Most of this function can be shared between CIRGen
+// and traditional LLVM codegen
+void CIRGenFunction::emitVariablyModifiedType(QualType type) {
+  assert(type->isVariablyModifiedType() &&
+         "Must pass variably modified type to EmitVLASizes!");
+
+  // We're going to walk down into the type and look for VLA
+  // expressions.
+  do {
+    assert(type->isVariablyModifiedType());
+
+    const Type *ty = type.getTypePtr();
+    switch (ty->getTypeClass()) {
+    case Type::CountAttributed:
+    case Type::PackIndexing:
+    case Type::ArrayParameter:
+    case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
+    case Type::PredefinedSugar:
+      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
+      break;
+
+#define TYPE(Class, Base)
+#define ABSTRACT_TYPE(Class, Base)
+#define NON_CANONICAL_TYPE(Class, Base)
+#define DEPENDENT_TYPE(Class, Base) case Type::Class:
+#define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base)
+#include "clang/AST/TypeNodes.inc"
+      llvm_unreachable(
+          "dependent type must be resolved before the CIR codegen");
+
+    // These types are never variably-modified.
+    case Type::Builtin:
+    case Type::Complex:
+    case Type::Vector:
+    case Type::ExtVector:
+    case Type::ConstantMatrix:
+    case Type::Record:
+    case Type::Enum:
+    case Type::Using:
+    case Type::TemplateSpecialization:
+    case Type::ObjCTypeParam:
+    case Type::ObjCObject:
+    case Type::ObjCInterface:
+    case Type::ObjCObjectPointer:
+    case Type::BitInt:
+      llvm_unreachable("type class is never variably-modified!");
+
+    case Type::Adjusted:
+      type = cast<clang::AdjustedType>(ty)->getAdjustedType();
+      break;
+
+    case Type::Decayed:
+      type = cast<clang::DecayedType>(ty)->getPointeeType();
+      break;
+
+    case Type::Pointer:
+      type = cast<clang::PointerType>(ty)->getPointeeType();
+      break;
+
+    case Type::BlockPointer:
+      type = cast<clang::BlockPointerType>(ty)->getPointeeType();
+      break;
+
+    case Type::LValueReference:
+    case Type::RValueReference:
+      type = cast<clang::ReferenceType>(ty)->getPointeeType();
+      break;
+
+    case Type::MemberPointer:
+      type = cast<clang::MemberPointerType>(ty)->getPointeeType();
+      break;
+
+    case Type::ConstantArray:
+    case Type::IncompleteArray:
+      // Losing element qualification here is fine.
+      type = cast<clang::ArrayType>(ty)->getElementType();
+      break;
+
+    case Type::VariableArray: {
+      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType VLA");
+      break;
+    }
+
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      type = cast<clang::FunctionType>(ty)->getReturnType();
+      break;
+
+    case Type::Paren:
+    case Type::TypeOf:
+    case Type::UnaryTransform:
+    case Type::Attributed:
+    case Type::BTFTagAttributed:
+    case Type::SubstTemplateTypeParm:
+    case Type::MacroQualified:
+      // Keep walking after single level desugaring.
+      type = type.getSingleStepDesugaredType(getContext());
+      break;
+
+    case Type::Typedef:
+    case Type::Decltype:
+    case Type::Auto:
+    case Type::DeducedTemplateSpecialization:
+      // Stop walking: nothing to do.
+      return;
+
+    case Type::TypeOfExpr:
+      // Stop walking: emit typeof expression.
+      emitIgnoredExpr(cast<clang::TypeOfExprType>(ty)->getUnderlyingExpr());
+      return;
+
+    case Type::Atomic:
+      type = cast<clang::AtomicType>(ty)->getValueType();
+      break;
+
+    case Type::Pipe:
+      type = cast<clang::PipeType>(ty)->getElementType();
+      break;
+    }
+  } while (type->isVariablyModifiedType());
 }
 
 } // namespace clang::CIRGen

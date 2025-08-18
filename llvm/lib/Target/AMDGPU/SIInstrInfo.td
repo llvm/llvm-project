@@ -908,6 +908,32 @@ def SupportedRoundMode : TImmLeaf<i32, [{
          Imm == (int)RoundingMode::TowardNegative;
 }]>;
 
+def VOP3PModsNeg : SDNodeXForm<timm, [{
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (N->getZExtValue())
+    Mods ^= SISrcMods::NEG;
+  return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
+}]>;
+
+def VOP3PModsNegs : SDNodeXForm<timm, [{
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (N->getZExtValue())
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
+}]>;
+
+def VOP3PModsNegAbs : SDNodeXForm<timm, [{
+  unsigned Val = N->getZExtValue();
+  unsigned Mods = SISrcMods::OP_SEL_1; // default: none
+  if (Val == 1) // neg
+    Mods ^= SISrcMods::NEG;
+  if (Val == 2) // abs
+    Mods ^= SISrcMods::ABS;
+  if (Val == 3) // neg and abs
+    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
+  return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
+}]>;
+
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   uint64_t Imm = N->getZExtValue();
   unsigned Bit = (Imm >> }] # bitnum # [{ ) & 1;
@@ -1310,8 +1336,18 @@ def bitop3_0 : DefaultOperand<BitOp3, 0>;
 def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
 def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 
+def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
+def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
+
+def MatrixAScaleFmt : CustomOperand<i32, 1, "MatrixAScaleFmt">;
+def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
+
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
+
+def ScaleSel : NamedIntOperand<"scale_sel"> {
+  let Validator = "isUInt<3>";
+}
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
@@ -1643,9 +1679,6 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
-def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
-def VOP3PModsNegs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegs">; // chfang: not use complex pattern?
-def VOP3PModsNegAbs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegAbs">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;
@@ -1770,6 +1803,7 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                               !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
                               !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
                               !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
                               !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
                               !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
                               !eq(VT.Size, 16)  : op16,
@@ -1920,6 +1954,8 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
+        !eq(VT, f64)    : VCSrc_f64,
+        !eq(VT, v2i32)  : VCSrc_v2b32,
         1               : VCSrc_b32);
 }
 
@@ -2672,8 +2708,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMatrixReuse = 0;
   field bit HasMatrixFMT = 0;
+  field bit HasMatrixScale = 0;
+  field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
@@ -2859,6 +2896,7 @@ def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
 def VOP_BF16_BF16 : VOPProfile<[bf16, bf16, untyped, untyped]>;
 def VOP1_I16_I32 :  VOPProfile<[i16, i32, untyped, untyped]>;
+def VOP_I16_V2F16 : VOPProfile<[i16, v2f16, untyped, untyped]>;
 
 def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
@@ -2926,8 +2964,13 @@ def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
 def VOP_V32F32_V6I32_F32 : VOPProfile <[v32f32, v6i32, f32, untyped]>;
 def VOP_V32F16_V6I32_F32 : VOPProfile <[v32f16, v6i32, f32, untyped]>;
 def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
+def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
+def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
+def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
+def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;
 def VOP_V6I32_V16F32_V16F32_F32 : VOPProfile<[v6i32, v16f32, v16f32, f32]>;
 def VOP_V2F16_I32_F32 : VOPProfile<[v2f16, i32, f32, untyped]>;
 def VOP_V2I16_F32_F32_F32 : VOPProfile<[v2i16, f32, f32, f32]>;
@@ -2941,11 +2984,35 @@ def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;
 def VOP_F16_F32_I32 : VOPProfile<[f16, f32, i32, untyped]>;
 def VOP_I32_BF16_I32_F32 : VOPProfile<[i32, bf16, i32, f32]>;
 def VOP_I32_F16_I32_F32 : VOPProfile<[i32, f16, i32, f32]>;
+def VOP_V16F16_V3I32_I32  : VOPProfile<[v16f16, v3i32, i32, untyped]>;
+def VOP_V16BF16_V3I32_I32 : VOPProfile<[v16bf16, v3i32, i32, untyped]>;
+def VOP_V8F16_V2I32_I32  : VOPProfile<[v8f16, v2i32, i32, untyped]>;
+def VOP_V8BF16_V2I32_I32 : VOPProfile<[v8bf16, v2i32, i32, untyped]>;
+def VOP_V8F16_I32_I32  : VOPProfile<[v8f16, i32, i32, untyped]>;
+def VOP_V8BF16_I32_I32 : VOPProfile<[v8bf16, i32, i32, untyped]>;
+def VOP_V16F32_V3I32_I32 : VOPProfile<[v16f32, v3i32, i32, untyped]>;
+def VOP_V8F32_V2I32_I32 : VOPProfile<[v8f32, v2i32, i32, untyped]>;
+def VOP_V8F32_I32_I32 : VOPProfile<[v8f32, i32, i32, untyped]>;
+def VOP_V2I32_V8BF16_F32 : VOPProfile<[v2i32, v8bf16, f32, untyped]>;
+def VOP_V2I32_V8F16_F32 : VOPProfile<[v2i32, v8f16, f32, untyped]>;
+def VOP_V2I32_V8F32_F32 : VOPProfile<[v2i32, v8f32, f32, untyped]>;
+def VOP_I32_V8F32_F32 : VOPProfile<[i32, v8f32, f32, untyped]>;
+def VOP_I32_V8F16_F32 : VOPProfile<[i32, v8f16, f32, untyped]>;
+def VOP_I32_V8BF16_F32 : VOPProfile<[i32, v8bf16, f32, untyped]>;
 def VOP_I32_F32_I32_F32 : VOPProfile<[i32, f32, i32, f32]>;
 
 def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;
 def VOP_V6I32_V32F16_I32_F32 : VOPProfile<[v6i32, v32f16, i32, f32]>;
 def VOP_V6I32_V32F32_I32_F32 : VOPProfile<[v6i32, v32f32, i32, f32]>;
+def VOP_V3I32_V16F16_I32_F32 : VOPProfile<[v3i32, v16f16, i32, f32]>;
+def VOP_V3I32_V16BF16_I32_F32 : VOPProfile<[v3i32, v16bf16, i32, f32]>;
+def VOP_V3I32_V16F32_I32_F32 : VOPProfile<[v3i32, v16f32, i32, f32]>;
+def VOP_V2I32_V8BF16_I32_F32 : VOPProfile<[v2i32, v8bf16, i32, f32]>;
+def VOP_V2I32_V8F16_I32_F32 : VOPProfile<[v2i32, v8f16, i32, f32]>;
+def VOP_V2I32_V8F32_I32_F32 : VOPProfile<[v2i32, v8f32, i32, f32]>;
+def VOP_I32_V8F32_I32_F32 : VOPProfile<[i32, v8f32, i32, f32]>;
+def VOP_I32_V8F16_I32_F32 : VOPProfile<[i32, v8f16, i32, f32]>;
+def VOP_I32_V8BF16_I32_F32 : VOPProfile<[i32, v8bf16, i32, f32]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;

@@ -654,11 +654,10 @@ bool RuntimeDyldELF::resolveLoongArch64ShortBranch(
     if (Loc == GlobalSymbolTable.end())
       return false;
     const auto &SymInfo = Loc->second;
-    Address =
-        uint64_t(Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
-            SymInfo.getOffset()));
+    Address = Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
+        SymInfo.getOffset());
   } else {
-    Address = uint64_t(Sections[Value.SectionID].getLoadAddress());
+    Address = Sections[Value.SectionID].getLoadAddress();
   }
   uint64_t Offset = RelI->getOffset();
   uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);
@@ -2822,7 +2821,7 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
       // object's sections to GOTs.
       for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
            SI != SE; ++SI) {
-        if (SI->relocation_begin() != SI->relocation_end()) {
+        if (!SI->relocations().empty()) {
           Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
           if (!RelSecOrErr)
             return make_error<RuntimeDyldError>(

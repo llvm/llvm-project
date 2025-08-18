@@ -156,6 +156,11 @@ void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
   auto *rewriteListener = dyn_cast_if_present<Listener>(listener);
 
+  // If the current insertion point is before the erased operation, we adjust
+  // the insertion point to be after the operation.
+  if (getInsertionPoint() == op->getIterator())
+    setInsertionPointAfter(op);
+
   // Fast path: If no listener is attached, the op can be dropped in one go.
   if (!rewriteListener) {
     op->erase();
@@ -319,6 +324,11 @@ void RewriterBase::inlineBlockBefore(Block *source, Block *dest,
     while (!source->empty())
       moveOpBefore(&source->front(), dest, before);
   }
+
+  // If the current insertion point is within the source block, adjust the
+  // insertion point to the destination block.
+  if (getInsertionBlock() == source)
+    setInsertionPoint(dest, getInsertionPoint());
 
   // Erase the source block.
   assert(source->empty() && "expected 'source' to be empty");

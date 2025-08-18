@@ -4050,6 +4050,10 @@ TEST_F(FormatTest, FormatsBitfields) {
                "  uchar : 8;\n"
                "  uchar other;\n"
                "};");
+  verifyFormat("struct foo {\n"
+               "  uint8_t i_am_a_bit_field_this_long\n"
+               "      : struct_with_constexpr::i_am_a_constexpr_lengthhhhh;\n"
+               "};");
   FormatStyle Style = getLLVMStyle();
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   verifyFormat("struct Bitfields {\n"
@@ -7055,7 +7059,7 @@ TEST_F(FormatTest, PutEmptyBlocksIntoOneLine) {
   verifyFormat("enum E {};");
   verifyFormat("enum E {}");
   FormatStyle Style = getLLVMStyle();
-  Style.SpaceInEmptyBlock = true;
+  Style.SpaceInEmptyBraces = FormatStyle::SIEB_Block;
   verifyFormat("void f() { }", "void f() {}", Style);
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
   verifyFormat("{ }", Style);
@@ -7083,7 +7087,7 @@ TEST_F(FormatTest, PutEmptyBlocksIntoOneLine) {
                Style);
 
   Style = getLLVMStyle(FormatStyle::LK_CSharp);
-  Style.SpaceInEmptyBlock = true;
+  Style.SpaceInEmptyBraces = FormatStyle::SIEB_Block;
   verifyFormat("Event += () => { };", Style);
 }
 
@@ -7558,7 +7562,7 @@ TEST_F(FormatTest, NoOperandAlignment) {
                Style);
 }
 
-TEST_F(FormatTest, BreakingBeforeNonAssigmentOperators) {
+TEST_F(FormatTest, BreakingBeforeNonAssignmentOperators) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
@@ -8614,13 +8618,21 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyFormat("extern \"C\" //\n"
                "    void f();");
 
-  FormatStyle Style = getLLVMStyle();
+  auto Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaa* const aaaaaaaaaaaa) {}",
                Style);
   verifyFormat("void aaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*\n"
                "                 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}",
+               Style);
+
+  Style = getLLVMStyleWithColumns(45);
+  Style.PenaltyReturnTypeOnItsOwnLine = 400;
+  verifyFormat("template <bool abool, // a comment\n"
+               "          bool anotherbool>\n"
+               "static inline std::pair<size_t, MyCustomType>\n"
+               "myfunc(const char *buf, const char *&err);",
                Style);
 }
 
@@ -12114,7 +12126,12 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
            "void b() const &;\n";
   verifyFormat(Prefix + "int *x;", Prefix + "int* x;", DerivePointerAlignment);
 
-  verifyGoogleFormat("MACRO(int*, std::function<void() &&>);");
+  constexpr StringRef Code("MACRO(int*, std::function<void() &&>);");
+  verifyFormat(Code, DerivePointerAlignment);
+
+  auto Style = getGoogleStyle();
+  Style.DerivePointerAlignment = true;
+  verifyFormat(Code, Style);
 }
 
 TEST_F(FormatTest, PointerAlignmentFallback) {
@@ -25577,6 +25594,30 @@ TEST_F(FormatTest, SpacesInConditionalStatement) {
   verifyFormat("MYIF( a )\n  return;", Spaces);
   verifyFormat("MYIF( a )\n  return;\nelse MYIF( b )\n  return;", Spaces);
   verifyFormat("MYIF( a )\n  return;\nelse\n  return;", Spaces);
+}
+
+TEST_F(FormatTest, SpaceInEmptyBraces) {
+  constexpr StringRef Code("void f() {}\n"
+                           "class Unit {};\n"
+                           "auto a = [] {};\n"
+                           "int x{};");
+  verifyFormat(Code);
+
+  auto Style = getWebKitStyle();
+  EXPECT_EQ(Style.SpaceInEmptyBraces, FormatStyle::SIEB_Always);
+
+  verifyFormat("void f() { }\n"
+               "class Unit { };\n"
+               "auto a = [] { };\n"
+               "int x { };",
+               Code, Style);
+
+  Style.SpaceInEmptyBraces = FormatStyle::SIEB_Block;
+  verifyFormat("void f() { }\n"
+               "class Unit { };\n"
+               "auto a = [] { };\n"
+               "int x {};",
+               Code, Style);
 }
 
 TEST_F(FormatTest, AlternativeOperators) {

@@ -552,7 +552,7 @@ public:
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
       // instructions do not.
-      if (SIInstrInfo::isFLAT(Inst) && mayAccessScratchThroughFlat(Inst))
+      if (TII->mayAccessScratchThroughFlat(Inst))
         return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
     }
@@ -565,7 +565,6 @@ public:
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
@@ -1381,6 +1380,20 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
         Modified = true;
       } else
         WaitcntInstr = &II;
+    } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
+      assert(ST->hasVMemToLDSLoad());
+      LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_lds_direct: " << II
+                        << "Before: " << Wait.LoadCnt << '\n';);
+      ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
+      LLVM_DEBUG(dbgs() << "After: " << Wait.LoadCnt << '\n';);
+
+      // It is possible (but unlikely) that this is the only wait instruction,
+      // in which case, we exit this loop without a WaitcntInstr to consume
+      // `Wait`. But that works because `Wait` was passed in by reference, and
+      // the callee eventually calls createNewWaitcnt on it. We test this
+      // possibility in an articial MIR test since such a situation cannot be
+      // recreated by running the memory legalizer.
+      II.eraseFromParent();
     } else {
       assert(Opcode == AMDGPU::S_WAITCNT_VSCNT);
       assert(II.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
@@ -1552,6 +1565,11 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
+    } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
+      // Architectures higher than GFX10 do not have direct loads to
+      // LDS, so no work required here yet.
+      II.eraseFromParent();
+      continue;
     } else {
       std::optional<InstCounterType> CT = counterTypeForInstr(Opcode);
       assert(CT.has_value());
@@ -2160,32 +2178,6 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   return false;
 }
 
-// This is a flat memory operation. Check to see if it has memory tokens for
-// either scratch or FLAT.
-bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
-    const MachineInstr &MI) const {
-  assert(TII->isFLAT(MI));
-
-  // SCRATCH instructions always access scratch.
-  if (TII->isFLATScratch(MI))
-    return true;
-
-  // GLOBAL instructions never access scratch.
-  if (TII->isFLATGlobal(MI))
-    return false;
-
-  // If there are no memory operands then conservatively assume the flat
-  // operation may access scratch.
-  if (MI.memoperands_empty())
-    return true;
-
-  // See if any memory operand specifies an address space that involves scratch.
-  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
-    unsigned AS = Memop->getAddrSpace();
-    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
-  });
-}
-
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
   return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
          (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
@@ -2349,6 +2341,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     case AMDGPU::S_MEMREALTIME:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
+    case AMDGPU::S_BARRIER_LEAVE:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
@@ -2442,6 +2435,7 @@ static bool isWaitInstr(MachineInstr &Inst) {
           Inst.getOperand(0).getReg() == AMDGPU::SGPR_NULL) ||
          Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT ||
          Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT ||
+         Opcode == AMDGPU::S_WAITCNT_lds_direct ||
          counterTypeForInstr(Opcode).has_value();
 }
 
