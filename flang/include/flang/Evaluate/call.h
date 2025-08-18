@@ -52,7 +52,7 @@ using SymbolRef = common::Reference<const Symbol>;
 
 class ActualArgument {
 public:
-  ENUM_CLASS(Attr, PassedObject, PercentVal, PercentRef, CopyIn, CopyOut);
+  ENUM_CLASS(Attr, PassedObject, PercentVal, PercentRef);
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
 
   // Dummy arguments that are TYPE(*) can be forwarded as actual arguments.
@@ -131,6 +131,7 @@ public:
     return *this;
   }
 
+  bool Matches(const characteristics::DummyArgument &) const;
   common::Intent dummyIntent() const { return dummyIntent_; }
   ActualArgument &set_dummyIntent(common::Intent intent) {
     dummyIntent_ = intent;
@@ -157,20 +158,6 @@ public:
   bool isPercentRef() const { return attrs_.test(Attr::PercentRef); };
   ActualArgument &set_isPercentRef() {
     attrs_ = attrs_ + Attr::PercentRef;
-    return *this;
-  }
-
-  // This actual argument may need copy-in before the procedure call
-  bool GetMayNeedCopyIn() const { return attrs_.test(Attr::CopyIn); };
-  ActualArgument &SetMayNeedCopyIn() {
-    attrs_ = attrs_ + Attr::CopyIn;
-    return *this;
-  }
-
-  // This actual argument may need copy-out after the procedure call
-  bool GetMayNeedCopyOut() const { return attrs_.test(Attr::CopyOut); };
-  ActualArgument &SetMayNeedCopyOut() {
-    attrs_ = attrs_ + Attr::CopyOut;
     return *this;
   }
 
@@ -284,8 +271,6 @@ public:
 
   bool operator==(const ProcedureRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
-
-  void DetermineCopyInOut();
 
 protected:
   ProcedureDesignator proc_;
