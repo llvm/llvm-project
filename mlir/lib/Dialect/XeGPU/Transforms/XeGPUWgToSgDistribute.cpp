@@ -182,16 +182,16 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
                                    layout.dropSgLayoutAndData());
 
     SmallVector<Value> newCreateNdOps;
-    SmallVector<OpFoldResult> wgOffsets = op.getMixedOffsets();
+    SmallVector<OpFoldResult> origOffsets = op.getMixedOffsets();
 
     for (auto tdescOffsets : *maybeTdescOffsets) {
       SmallVector<OpFoldResult> sgOffsets;
       size_t rank = tdescOffsets.size();
       for (size_t i = 0; i < rank; i++) {
-        size_t idx = wgOffsets.size() - rank + i;
+        size_t idx = origOffsets.size() - rank + i;
         Value add = rewriter.createOrFold<index::AddOp>(
             loc, tdescOffsets[i],
-            getValueOrCreateConstantIndexOp(rewriter, loc, wgOffsets[idx]));
+            getValueOrCreateConstantIndexOp(rewriter, loc, origOffsets[idx]));
         sgOffsets.push_back(add);
       }
 
@@ -291,6 +291,205 @@ struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
       xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, t, op.getL1HintAttr(),
                                op.getL2HintAttr(), op.getL3HintAttr());
 
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+// Utility function to compute global offsets for subgroup operations.
+// Returns a vector of new offsets for each subgroup, given the original op's
+// offsets and subgroup relative offsets.
+static SmallVector<SmallVector<OpFoldResult>>
+computeOffsets(Operation *op, ArrayRef<SmallVector<Value>> sgOffsetsList,
+               ArrayRef<OpFoldResult> origOffsets,
+               ConversionPatternRewriter &rewriter) {
+  SmallVector<SmallVector<OpFoldResult>> finalOffsets;
+  Location loc = op->getLoc();
+  for (const auto &sgOffsets : sgOffsetsList) {
+    SmallVector<OpFoldResult> newOffsets;
+    size_t rank = sgOffsets.size();
+    for (size_t i = 0; i < rank; i++) {
+      size_t idx = origOffsets.size() - rank + i;
+      Value add = rewriter.createOrFold<index::AddOp>(
+          loc, sgOffsets[i],
+          getValueOrCreateConstantIndexOp(rewriter, loc, origOffsets[idx]));
+      newOffsets.push_back(add);
+    }
+    finalOffsets.push_back(std::move(newOffsets));
+  }
+  return finalOffsets;
+}
+
+// Utility function to get sgShape, sgOffsetList for a given
+// op.
+template <typename OpTy, typename AdaptorTy>
+LogicalResult getSgOffsets(OpTy op, AdaptorTy adaptor,
+                           ConversionPatternRewriter &rewriter,
+                           SmallVector<int64_t> &sgShape,
+                           SmallVector<SmallVector<Value>> &sgOffsetList) {
+  int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+  if (offsetSize == 0 && (!op.getConstOffsetsAttr()))
+    return failure();
+
+  Location loc = op.getLoc();
+  Value tdesc = op.getTensorDesc();
+  auto tdescTy = dyn_cast<xegpu::TensorDescType>(tdesc.getType());
+  if (!tdescTy)
+    return failure();
+  auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
+  if (!layout)
+    return failure();
+
+  SmallVector<int64_t> sgLayout;
+  auto sgLayoutAttr = layout.getSgLayout();
+  if (!sgLayoutAttr)
+    return rewriter.notifyMatchFailure(
+        op, "sgLayout attribute is required in layout");
+  sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
+
+  ArrayRef<int64_t> wgShape = tdescTy.getShape();
+  int count;
+  std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
+
+  // Get the subgroup ID
+  Value linearSgId =
+      gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
+
+  int64_t startOfRange = -1, endOfRange = -1;
+  bool sgIdRangeSpecified = isSgIdRangeSpecified(op, startOfRange, endOfRange);
+
+  if (sgIdRangeSpecified) {
+    int64_t sgCount = endOfRange - startOfRange;
+    if (computeProduct(sgLayout) != sgCount)
+      return rewriter.notifyMatchFailure(
+          op, "sg_layout size must match the sg_id_range");
+    Value startOfRangeVal =
+        rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+    linearSgId =
+        rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
+  }
+
+  auto sgOffsets = layout.getOffsets(rewriter, loc, linearSgId, wgShape);
+  if (failed(sgOffsets))
+    return failure();
+
+  sgOffsetList = *sgOffsets;
+  return success();
+}
+
+template <typename OpTy>
+SmallVector<OpFoldResult> getOffsets(OpTy op,
+                                     ConversionPatternRewriter &rewriter) {
+  SmallVector<OpFoldResult> origOffsets;
+  if (auto constOffsets = op.getConstOffsetsAttr()) {
+    for (auto attr : constOffsets.asArrayRef())
+      origOffsets.push_back(rewriter.getIndexAttr(attr));
+  }
+  for (auto v : op.getOffsets())
+    origOffsets.push_back(v);
+  return origOffsets;
+}
+
+// This pattern transforms the LoadNdOp with explicit offsets to load
+// subgroup data.
+struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
+  using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::LoadNdOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    SmallVector<int64_t> sgShape;
+    SmallVector<SmallVector<Value>> sgOffsetList;
+
+    // Do the distribution from workgroup to subgroup and get subgroup offsets
+    if (failed(getSgOffsets(op, adaptor, rewriter, sgShape, sgOffsetList)))
+      return failure();
+
+    // Get the original workgroup offsets
+    SmallVector<OpFoldResult> origOffsets = getOffsets(op, rewriter);
+
+    // Calculate the final offsets for each subgroup
+    auto finalOffsets = computeOffsets(op, sgOffsetList, origOffsets, rewriter);
+
+    SmallVector<Value> newLoadOps;
+    for (auto [offsets, tdesc] :
+         llvm::zip(finalOffsets, adaptor.getTensorDesc())) {
+      VectorType newResTy = VectorType::get(
+          sgShape,
+          dyn_cast<xegpu::TensorDescType>(tdesc.getType()).getElementType());
+      auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
+          op.getLoc(), newResTy, tdesc, offsets,
+          /*packed=*/nullptr,
+          /*transpose=*/nullptr, op.getL1HintAttr(), op.getL2HintAttr(),
+          op.getL3HintAttr());
+      newLoadOps.push_back(newLoadOp);
+    }
+    rewriter.replaceOpWithMultiple(op, {newLoadOps});
+    return success();
+  }
+};
+
+// This pattern transforms the StoreNdOp with explicit offsets to store
+// subgroup data.
+struct WgToSgStoreNdOpWithOffset
+    : public OpConversionPattern<xegpu::StoreNdOp> {
+  using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::StoreNdOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    SmallVector<int64_t> sgShape;
+    SmallVector<SmallVector<Value>> sgOffsetList;
+
+    // Do the distribution from workgroup to subgroup and get subgroup offsets
+    if (failed(getSgOffsets(op, adaptor, rewriter, sgShape, sgOffsetList)))
+      return failure();
+
+    // Get the original workgroup offsets
+    SmallVector<OpFoldResult> origOffsets = getOffsets(op, rewriter);
+
+    // Calculate the final offsets for each subgroup
+    auto finalOffsets = computeOffsets(op, sgOffsetList, origOffsets, rewriter);
+
+    for (auto [offsets, tdesc, value] :
+         llvm::zip(finalOffsets, adaptor.getTensorDesc(), adaptor.getValue())) {
+      rewriter.create<xegpu::StoreNdOp>(op.getLoc(), value, tdesc, offsets,
+                                        op.getL1HintAttr(), op.getL2HintAttr(),
+                                        op.getL3HintAttr());
+    }
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+// This pattern transforms the PrefetchNdOp with explicit offsets to prefetch
+// subgroup data.
+struct WgToSgPrefetchNdOpWithOffset
+    : public OpConversionPattern<xegpu::PrefetchNdOp> {
+  using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    SmallVector<int64_t> sgShape;
+    SmallVector<SmallVector<Value>> sgOffsetList;
+
+    // Do the distribution from workgroup to subgroup and get subgroup offsets
+    if (failed(getSgOffsets(op, adaptor, rewriter, sgShape, sgOffsetList)))
+      return failure();
+
+    // Get the original workgroup offsets
+    SmallVector<OpFoldResult> origOffsets = getOffsets(op, rewriter);
+
+    // Calculate the final offsets for each subgroup
+    auto finalOffsets = computeOffsets(op, sgOffsetList, origOffsets, rewriter);
+
+    for (auto [offsets, tdesc] :
+         llvm::zip(finalOffsets, adaptor.getTensorDesc())) {
+      rewriter.create<xegpu::PrefetchNdOp>(
+          op.getLoc(), tdesc, offsets, op.getL1HintAttr(), op.getL2HintAttr(),
+          op.getL3HintAttr());
+    }
     rewriter.eraseOp(op);
     return success();
   }
@@ -690,12 +889,13 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
-  patterns.add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
-               WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
-               WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
-               WgToSgElementwiseOp, WgToSgVectorBroadcastOp,
-               WgToSgConvertLayoutOp, WgToSgArithConstantOp>(
-      patterns.getContext());
+  patterns
+      .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
+           WgToSgLoadNdOpWithOffset, WgToSgStoreNdOp, WgToSgStoreNdOpWithOffset,
+           WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+           WgToSgPrefetchNdOpWithOffset, UnrealizedConversionCastOpPattern,
+           WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
+           WgToSgArithConstantOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
