@@ -270,7 +270,7 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
       StaticDescriptor<maxRank, true, 10> statDesc;
       Descriptor &copy{statDesc.descriptor()};
       const Descriptor *argDescriptor{&descriptor};
-      if (descriptor.rank() > 0 && special->IsArgContiguous(0) &&
+      if (descriptor.rank() > 0 && special->specialCaseFlag() &&
           !descriptor.IsContiguous()) {
         // The FINAL subroutine demands a contiguous array argument, but
         // this INTENT(OUT) or intrinsic assignment LHS isn't contiguous.
@@ -360,6 +360,8 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
     } else if (component_->genre() == typeInfo::Component::Genre::Data &&
         component_->derivedType() &&
         !component_->derivedType()->noFinalizationNeeded()) {
+      // todo: calculate and use fixedStride_ here as in DestroyTicket to
+      // avoid subscripts and repeated descriptor establishment.
       SubscriptValue extents[maxRank];
       GetComponentExtents(extents, *component_, instance_);
       Descriptor &compDesc{componentDescriptor_.descriptor()};
@@ -452,6 +454,24 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
     } else if (component_->genre() == typeInfo::Component::Genre::Data) {
       if (!componentDerived || componentDerived->noDestructionNeeded()) {
         SkipToNextComponent();
+      } else if (fixedStride_) {
+        // faster path, no need for subscripts, can reuse descriptor
+        char *p{instance_.OffsetElement<char>(
+            elementAt_ * *fixedStride_ + component_->offset())};
+        Descriptor &compDesc{componentDescriptor_.descriptor()};
+        const typeInfo::DerivedType &compType{*componentDerived};
+        compDesc.UncheckedScalarEstablish(compType, p);
+        for (std::size_t j{elementAt_}; j < elements_;
+            ++j, p += *fixedStride_) {
+          compDesc.set_base_addr(p);
+          ++elementAt_;
+          if (int status{workQueue.BeginDestroy(
+                  compDesc, compType, /*finalize=*/false)};
+              status != StatOk) {
+            return status;
+          }
+        }
+        SkipToNextComponent();
       } else {
         SubscriptValue extents[maxRank];
         GetComponentExtents(extents, *component_, instance_);
@@ -461,8 +481,8 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
             instance_.ElementComponent<char>(subscripts_, component_->offset()),
             component_->rank(), extents);
         Advance();
-        if (int status{workQueue.BeginDestroy(
-                compDesc, *componentDerived, /*finalize=*/false)};
+        if (int status{
+                workQueue.BeginDestroy(compDesc, compType, /*finalize=*/false)};
             status != StatOk) {
           return status;
         }

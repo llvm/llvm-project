@@ -348,9 +348,9 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
 
 const Symbol &GetCrayPointer(const Symbol &crayPointee) {
   const Symbol *found{nullptr};
-  for (const auto &[pointee, pointer] :
-      crayPointee.GetUltimate().owner().crayPointers()) {
-    if (pointee == crayPointee.name()) {
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
       found = &pointer.get();
       break;
     }
@@ -1087,6 +1087,21 @@ bool IsDeviceAllocatable(const Symbol &symbol) {
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->cudaDataAttr() &&
           *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool HasCUDAComponent(const Symbol &symbol) {
+  if (const auto *details{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
         return true;
       }
     }

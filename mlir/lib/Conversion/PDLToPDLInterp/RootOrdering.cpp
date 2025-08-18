@@ -14,9 +14,7 @@
 #include "RootOrdering.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include <queue>
 #include <utility>
 
 using namespace mlir;

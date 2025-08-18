@@ -658,6 +658,18 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+// This test is not written in the op's assembly format, to reproduce a mismatch
+// between the rank of static_offsets and the number of Values sent as the
+// dynamic offsets.
+func.func @invalid_subview(%arg0 : memref<?x128xi8, 1>) {
+  %0 = memref.alloc() :memref<1xf32>
+  // expected-error@+1 {{expected the number of 'offsets' to match the number of dynamic entries in 'static_offsets' (0 vs 1)}}
+  "memref.subview"(%0) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>) -> memref<1xf32, strided<[1], offset: ?>>
+  return
+}
+
+// -----
+
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
   // expected-error@+1 {{expected mixed sizes rank to match mixed strides rank (3 vs 2) so the rank of the result type is well-formed}}
@@ -957,6 +969,24 @@ func.func @test_store_zero_results() {
 
 func.func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
   "memref.store"(%x,%p) : (i32, memref<i32>) -> i32  // expected-error {{'memref.store' op requires zero results}}
+  return
+}
+
+// -----
+
+func.func @invalid_load_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'memref.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = memref.load %memref[%c0] { alignment = -1 } : memref<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'memref.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  memref.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>
   return
 }
 

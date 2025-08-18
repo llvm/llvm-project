@@ -299,9 +299,9 @@ public:
 
   class ArgListEntry {
   public:
-    Value *Val = nullptr;
-    SDValue Node = SDValue();
-    Type *Ty = nullptr;
+    Value *Val;
+    SDValue Node;
+    Type *Ty;
     bool IsSExt : 1;
     bool IsZExt : 1;
     bool IsNoExt : 1;
@@ -320,12 +320,17 @@ public:
     MaybeAlign Alignment = std::nullopt;
     Type *IndirectType = nullptr;
 
-    ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
-          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
-          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
-          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
-          IsCFGuardTarget(false) {}
+    ArgListEntry(Value *Val, SDValue Node, Type *Ty)
+        : Val(Val), Node(Node), Ty(Ty), IsSExt(false), IsZExt(false),
+          IsNoExt(false), IsInReg(false), IsSRet(false), IsNest(false),
+          IsByVal(false), IsByRef(false), IsInAlloca(false),
+          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
+          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
+
+    explicit ArgListEntry(Value *Val, SDValue Node = SDValue())
+        : ArgListEntry(Val, Node, Val->getType()) {}
+
+    ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
@@ -518,10 +523,12 @@ public:
     return true;
   }
 
-  /// Return true if multiple condition registers are available.
-  bool hasMultipleConditionRegisters() const {
-    return HasMultipleConditionRegisters;
-  }
+  /// Does the target have multiple (allocatable) condition registers that
+  /// can be used to store the results of comparisons for use by selects
+  /// and conditional branches. With multiple condition registers, the code
+  /// generator will not aggressively sink comparisons into the blocks of their
+  /// users.
+  virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
@@ -545,10 +552,10 @@ public:
   // intermediate results in f32 precision and range.
   virtual bool softPromoteHalfType() const { return false; }
 
-  // Return true if, for soft-promoted half, the half type should be passed
-  // passed to and returned from functions as f32. The default behavior is to
-  // pass as i16. If soft-promoted half is not used, this function is ignored
-  // and values are always passed and returned as f32.
+  // Return true if, for soft-promoted half, the half type should be passed to
+  // and returned from functions as f32. The default behavior is to pass as
+  // i16. If soft-promoted half is not used, this function is ignored and
+  // values are always passed and returned as f32.
   virtual bool useFPRegsForHalfType() const { return false; }
 
   // There are two general methods for expanding a BUILD_VECTOR node:
@@ -2453,7 +2460,7 @@ public:
                                                EVT VT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
-    if (hasMultipleConditionRegisters())
+    if (hasMultipleConditionRegisters(VT))
       return false;
     // Only do the transform if the value won't be split into multiple
     // registers.
@@ -2558,15 +2565,6 @@ protected:
   /// llvm.savestack/llvm.restorestack should save and restore.
   void setStackPointerRegisterToSaveRestore(Register R) {
     StackPointerRegisterToSaveRestore = R;
-  }
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  void setHasMultipleConditionRegisters(bool hasManyRegs = true) {
-    HasMultipleConditionRegisters = hasManyRegs;
   }
 
   /// Tells the code generator that the target has BitExtract instructions.
@@ -3201,47 +3199,36 @@ public:
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p LI is the vector load instruction.
+  /// \p Load is the vector load instruction. Can be either a plain load
+  /// instruction or a vp.load intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedLoad(LoadInst *LI,
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
+  virtual bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
-                                    ArrayRef<unsigned> Indices,
-                                    unsigned Factor) const {
+                                    ArrayRef<unsigned> Indices, unsigned Factor,
+                                    const APInt &GapMask) const {
     return false;
   }
 
   /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p SI is the vector store instruction.
+  /// \p SI is the vector store instruction.  Can be either a plain store
+  /// or a vp.store.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                                     ShuffleVectorInst *SVI,
                                      unsigned Factor) const {
-    return false;
-  }
-
-  /// Lower an interleaved load to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Load is a vp.load instruction.
-  /// \p Mask is a mask value
-  /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
-    return false;
-  }
-
-  /// Lower an interleaved store to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Store is the vp.store instruction.
-  /// \p Mask is a mask value
-  /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 
@@ -3249,11 +3236,11 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave{2,3,5,7}
   ///
-  /// \p LI is the accompanying load instruction.
-  /// \p DeinterleaveValues contains the deinterleaved values.
-  virtual bool
-  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues) const {
+  /// \p Load is the accompanying load instruction.  Can be either a plain load
+  /// instruction or a vp.load intrinsic.
+  /// \p DI represents the deinterleaveN intrinsic.
+  virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                                IntrinsicInst *DI) const {
     return false;
   }
 
@@ -3261,10 +3248,14 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.interleave{2,3,5,7}
   ///
-  /// \p SI is the accompanying store instruction
+  /// \p Store is the accompanying store instruction.  Can be either a plain
+  /// store or a vp.store intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
-  lowerInterleaveIntrinsicToStore(StoreInst *SI,
+  lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
                                   ArrayRef<Value *> InterleaveValues) const {
     return false;
   }
@@ -3566,10 +3557,19 @@ public:
 
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return Libcalls.getLibcallName(Call);
+    // FIXME: Return StringRef
+    return Libcalls.getLibcallName(Call).data();
   }
 
-  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
+  /// Get the libcall routine name for the specified libcall implementation
+  static StringRef getLibcallImplName(RTLIB::LibcallImpl Call) {
+    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
+  }
+
+  const char *getMemcpyName() const {
+    // FIXME: Return StringRef
+    return Libcalls.getMemcpyName().data();
+  }
 
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
@@ -3612,13 +3612,6 @@ public:
 
 private:
   const TargetMachine &TM;
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  bool HasMultipleConditionRegisters;
 
   /// Tells the code generator that the target has BitExtract instructions.
   /// The code generator will aggressively sink "shift"s into the blocks of
@@ -4904,11 +4897,10 @@ public:
       return *this;
     }
 
-    MakeLibCallOptions &setTypeListBeforeSoften(ArrayRef<EVT> OpsVT, EVT RetVT,
-                                                bool Value = true) {
+    MakeLibCallOptions &setTypeListBeforeSoften(ArrayRef<EVT> OpsVT, EVT RetVT) {
       OpsVTBeforeSoften = OpsVT;
       RetVTBeforeSoften = RetVT;
-      IsSoften = Value;
+      IsSoften = true;
       return *this;
     }
 

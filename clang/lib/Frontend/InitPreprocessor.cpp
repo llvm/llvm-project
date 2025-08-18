@@ -639,16 +639,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     }
   }
 
-  if (LangOpts.OpenACC) {
-    // FIXME: When we have full support for OpenACC, we should set this to the
-    // version we support. Until then, set as '1' by default, but provide a
-    // temporary mechanism for users to override this so real-world examples can
-    // be tested against.
-    if (!LangOpts.OpenACCMacroOverride.empty())
-      Builder.defineMacro("_OPENACC", LangOpts.OpenACCMacroOverride);
-    else
-      Builder.defineMacro("_OPENACC", "1");
-  }
+  if (LangOpts.OpenACC)
+    Builder.defineMacro("_OPENACC", "202506");
 }
 
 /// Initialize the predefined C++ language feature test macros defined in
@@ -953,8 +945,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
-  if (TI.getTriple().isWindowsGNUEnvironment()) {
-    // Set ABI defining macros for libstdc++ for MinGW, where the
+  if (TI.getTriple().isOSCygMing()) {
+    // Set ABI defining macros for libstdc++ for MinGW and Cygwin, where the
     // default in libstdc++ differs from the defaults for this target.
     Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
   }
@@ -1032,14 +1024,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.RTTI)
     Builder.defineMacro("__GXX_RTTI");
 
-  if (LangOpts.hasSjLjExceptions())
+  if (CGOpts.hasSjLjExceptions())
     Builder.defineMacro("__USING_SJLJ_EXCEPTIONS__");
-  else if (LangOpts.hasSEHExceptions())
+  else if (CGOpts.hasSEHExceptions())
     Builder.defineMacro("__SEH__");
-  else if (LangOpts.hasDWARFExceptions() &&
+  else if (CGOpts.hasDWARFExceptions() &&
            (TI.getTriple().isThumb() || TI.getTriple().isARM()))
     Builder.defineMacro("__ARM_DWARF_EH__");
-  else if (LangOpts.hasWasmExceptions() && TI.getTriple().isWasm())
+  else if (CGOpts.hasWasmExceptions() && TI.getTriple().isWasm())
     Builder.defineMacro("__WASM_EXCEPTIONS__");
 
   if (LangOpts.Deprecated)
@@ -1526,6 +1518,13 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // ELF targets define __ELF__
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Address))
+    Builder.defineMacro("__SANITIZE_ADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress))
+    Builder.defineMacro("__SANITIZE_HWADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::Thread))
+    Builder.defineMacro("__SANITIZE_THREAD__");
 
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {

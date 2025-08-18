@@ -298,10 +298,6 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
     case NVPTX::Ordering::RelaxedMMIO:
       O << ".mmio.relaxed";
       return;
-    default:
-      report_fatal_error(formatv(
-          "NVPTX AtomicCode Printer does not support \"{}\" sem modifier. ",
-          OrderingToString(Ordering)));
     }
   } else if (Modifier == "scope") {
     auto S = NVPTX::Scope(Imm);
@@ -392,16 +388,6 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
       return; // don't print ',0' or '+0'
     O << "+";
     printOperand(MI, OpNum + 1, O);
-  }
-}
-
-void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
-                                         raw_ostream &O) {
-  auto &Op = MI->getOperand(OpNum);
-  assert(Op.isImm() && "Invalid operand");
-  if (Op.getImm() != 0) {
-    O << "+";
-    printOperand(MI, OpNum, O);
   }
 }
 

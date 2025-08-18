@@ -176,6 +176,9 @@ public:
     llvm_unreachable("invalid FramePointerKind");
   }
 
+  /// Possible exception handling behavior.
+  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
+
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
     Always, // Unconditionally emit Swift async extended frame info.
@@ -550,6 +553,22 @@ public:
 
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;
+  }
+
+  bool hasSjLjExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::SjLj;
+  }
+
+  bool hasSEHExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::WinEH;
+  }
+
+  bool hasDWARFExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::DwarfCFI;
+  }
+
+  bool hasWasmExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Wasm;
   }
 
   /// Check if Clang profile instrumenation is on.

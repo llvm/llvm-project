@@ -42,8 +42,9 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
 
     // Create new tensor.empty op.
     // TODO: Do not drop tensor type encoding.
-    Value emptyTensor = rewriter.create<EmptyOp>(
-        loc, resultShapes[0], reshapeOp.getResultType().getElementType());
+    Value emptyTensor =
+        EmptyOp::create(rewriter, loc, resultShapes[0],
+                        reshapeOp.getResultType().getElementType());
     if (emptyTensor.getType() != reshapeOp.getResultType()) {
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           reshapeOp, reshapeOp.getResultType(), emptyTensor);
