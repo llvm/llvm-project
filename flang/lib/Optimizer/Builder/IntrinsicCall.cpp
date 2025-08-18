@@ -3716,7 +3716,7 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
 
 // CO_BROADCAST
 void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value sourceImage = fir::getBase(args[1]);
   mlir::Value status =
@@ -3735,7 +3735,7 @@ void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_MAX
 void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
       fir::AbsentOp::create(builder, loc,
@@ -3755,7 +3755,7 @@ void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_MIN
 void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
       fir::AbsentOp::create(builder, loc,
@@ -3775,7 +3775,7 @@ void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_SUM
 void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value absentInt =
       fir::AbsentOp::create(builder, loc,
