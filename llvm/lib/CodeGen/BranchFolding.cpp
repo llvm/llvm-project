@@ -1787,10 +1787,18 @@ ReoptimizeBlock:
       // below were performed for EH "FallThrough" blocks.  Therefore, even if
       // that appears not to be happening anymore, we should assume that it is
       // possible and not remove the "!FallThrough()->isEHPad" condition below.
+      //
+      // Similarly, the analyzeBranch call does not consider callbr, which also
+      // introduces the possibility of infinite rotation, as there may be
+      // multiple successors of PrevBB. Thus we check such case by
+      // FallThrough->isInlineAsmBrIndirectTarget().
+      // NOTE: Checking if PrevBB contains callbr is more precise, but much
+      // more expensive.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
-      if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
+
+      if (FallThrough != MF.end() && !FallThrough->isEHPad() &&
+          !FallThrough->isInlineAsmBrIndirectTarget() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {
         MBB->moveAfter(&MF.back());

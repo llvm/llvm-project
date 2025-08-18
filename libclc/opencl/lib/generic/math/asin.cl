@@ -9,7 +9,7 @@
 #include <clc/math/clc_asin.h>
 #include <clc/opencl/math/asin.h>
 
-#define FUNCTION asin
+#define __CLC_FUNCTION asin
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

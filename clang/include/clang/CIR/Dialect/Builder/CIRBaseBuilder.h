@@ -212,6 +212,14 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
+  /// Get constant address of a global variable as an MLIR attribute.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp,
+                                        mlir::ArrayAttr indices = {}) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return cir::GlobalViewAttr::get(type, symbol, indices);
+  }
+
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
     assert(!cir::MissingFeatures::addressSpace());
     return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
@@ -496,8 +504,7 @@ public:
   static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          // TODO: Add LabelOp missing feature here
-          return mlir::isa<cir::AllocaOp>(&op);
+          return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);
         });
 
     if (last != block->rend())

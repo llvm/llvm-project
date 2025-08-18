@@ -277,6 +277,19 @@ define signext i32 @sexti1_i32_2(i1 %a) {
   ret i32 %1
 }
 
+; Make sure we don't use not+nds.bfos
+define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
+; CHECK-LABEL: sexti1_i32_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp sgt i32 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
+}
+
 define signext i32 @sexti8_i32(i32 signext %a) {
 ; CHECK-LABEL: sexti8_i32:
 ; CHECK:       # %bb.0:
@@ -332,6 +345,19 @@ define i64 @sexti1_i64_2(i1 %a) {
 ; CHECK-NEXT:    ret
   %1 = sext i1 %a to i64
   ret i64 %1
+}
+
+; Make sure we don't use not+nds.bfos
+define zeroext i8 @sexti1_i64_setcc(i64 %a) {
+; CHECK-LABEL: sexti1_i64_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp sgt i64 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
 }
 
 define i64 @sexti8_i64(i64 %a) {
