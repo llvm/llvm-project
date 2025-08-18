@@ -90,4 +90,17 @@ struct NonCommonView : std::ranges::view_base {
 static_assert( std::ranges::view<NonCommonView>);
 static_assert(!std::ranges::common_range<NonCommonView>);
 
+
+template<bool Simple>
+struct NonCommonBaseView: std::ranges::view_base {
+  int* begin_;
+  int* end_;
+  constexpr explicit NonCommonBaseView(int* b, int* e) : begin_(b), end_(e) { }
+  constexpr auto begin() const { return static_cast<const int*>(begin_); }
+  constexpr auto end() const { return sentinel_wrapper<const int*>(end_); }
+  constexpr int *begin() requires (!Simple) { return begin_; }
+  constexpr auto end() requires (!Simple) { return sentinel_wrapper<int*>(end_); }
+};
+using NonSimpleNonCommonView = NonCommonBaseView<false>;
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H

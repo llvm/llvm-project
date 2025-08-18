@@ -25,16 +25,30 @@ struct MutableView : std::ranges::view_base {
   sentinel_wrapper<int*> end();
 };
 
-template<class View>
-concept BeginEnabled = requires(View v) { v.begin(); };
+template <class T>
+concept HasConstBegin = requires(const T& ct) { ct.begin(); };
+
+template <class T>
+concept HasBegin = requires(T& t) { t.begin(); };
+
+template <class T>
+concept HasConstAndNonConstBegin = HasConstBegin<T> && requires(T& t, const T& ct) {
+  requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>;
+};
+
+template <class T>
+concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
+
+template <class T>
+concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
 constexpr bool test() {
   int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    static_assert( BeginEnabled<std::ranges::common_view<CopyableView> const&>);
-    static_assert( BeginEnabled<std::ranges::common_view<MutableView>&>);
-    static_assert(!BeginEnabled<std::ranges::common_view<MutableView> const&>);
+    static_assert( HasBegin<std::ranges::common_view<CopyableView> const&>);
+    static_assert( HasBegin<std::ranges::common_view<MutableView>&>);
+    static_assert(!HasBegin<std::ranges::common_view<MutableView> const&>);
   }
 
   {
@@ -49,6 +63,13 @@ constexpr bool test() {
     std::ranges::common_view<SizedRandomAccessView> const common(view);
     std::same_as<RandomAccessIter> auto begin = common.begin();
     assert(begin == std::ranges::begin(view));
+  }
+
+  {
+    NonSimpleNonCommonView view{buf, buf + 8};
+    std::ranges::common_view<NonSimpleNonCommonView> common(view);
+    static_assert(!std::ranges::__simple_view<NonSimpleNonCommonView>);
+    static_assert(!std::is_same_v<decltype(common.begin()), decltype(std::as_const(common).begin())>);
   }
 
   return true;
