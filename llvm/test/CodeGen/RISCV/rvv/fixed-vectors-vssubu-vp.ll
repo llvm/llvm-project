@@ -444,8 +444,6 @@ define <256 x i8> @vssubu_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
   ret <256 x i8> %v
 }
 
-; FIXME: The upper half is doing nothing.
-
 define <256 x i8> @vssubu_vi_v258i8_evl128(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK-LABEL: vssubu_vi_v258i8_evl128:
 ; CHECK:       # %bb.0:
