@@ -100,7 +100,6 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Target/LLVM/Target.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
 #include "mlir/Target/SPIRV/Target.h"
@@ -173,7 +172,6 @@ inline void registerAllDialects(DialectRegistry &registry) {
   gpu::registerBufferDeallocationOpInterfaceExternalModels(registry);
   gpu::registerValueBoundsOpInterfaceExternalModels(registry);
   LLVM::registerInlinerInterface(registry);
-  LLVM::registerLLVMTargetInterfaceExternalModels(registry);
   NVVM::registerInlinerInterface(registry);
   linalg::registerAllDialectInterfaceImplementations(registry);
   linalg::registerRuntimeVerifiableOpInterfaceExternalModels(registry);

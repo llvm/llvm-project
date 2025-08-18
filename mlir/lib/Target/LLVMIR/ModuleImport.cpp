@@ -20,11 +20,11 @@
 #include "LoopAnnotationImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"

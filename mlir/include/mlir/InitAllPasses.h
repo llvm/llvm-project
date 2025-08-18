@@ -46,6 +46,7 @@
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Target/LLVMIR/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
 #include <cstdlib>
@@ -79,6 +80,7 @@ inline void registerAllPasses() {
   registerNVGPUPasses();
   registerSparseTensorPasses();
   LLVM::registerLLVMPasses();
+  LLVM::registerTargetLLVMIRTransformsPasses();
   math::registerMathPasses();
   memref::registerMemRefPasses();
   mesh::registerMeshPasses();

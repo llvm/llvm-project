@@ -4075,7 +4075,6 @@ void LLVMDialect::initialize() {
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
-  declarePromisedInterface<LLVM::TargetAttrInterface, LLVM::TargetAttr>();
 }
 
 #define GET_OP_CLASSES

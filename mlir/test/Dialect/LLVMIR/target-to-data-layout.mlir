@@ -1,20 +1,23 @@
 // REQUIRES: target=x86{{.*}}
-// RUN: mlir-opt -llvm-data-layout-from-target -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -llvm-target-to-data-layout -split-input-file %s | FileCheck %s
 
 // CHECK: module attributes
-// CHECK-SAME: dlti.dl_spec = #llvm.data_layout
+// CHECK-SAME: dlti.dl_spec = #dlti.dl_spec
+// CHECK-SAME:   "dlti.endianness" = "little"
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = ""
 // CHECK-NOT:    features =
 
-module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux", chip = ""> } {
+module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
+                                               chip = ""> } {
 }
 
 // -----
 
 // CHECK: module attributes
-// CHECK-SAME: dlti.dl_spec = #llvm.data_layout
+// CHECK-SAME: dlti.dl_spec = #dlti.dl_spec
+// CHECK-SAME:   "dlti.endianness" = "little"
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = ""
@@ -28,7 +31,8 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // -----
 
 // CHECK: module attributes
-// CHECK-SAME: dlti.dl_spec = #llvm.data_layout
+// CHECK-SAME: dlti.dl_spec = #dlti.dl_spec
+// CHECK-SAME:   "dlti.endianness" = "little"
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = "skylake"
@@ -41,7 +45,8 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // -----
 
 // CHECK: module attributes
-// CHECK-SAME: dlti.dl_spec = #llvm.data_layout
+// CHECK-SAME: dlti.dl_spec = #dlti.dl_spec
+// CHECK-SAME:   "dlti.endianness" = "little"
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = "skylake"
@@ -55,7 +60,8 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // -----
 
 // CHECK: module attributes
-// CHECK-SAME: dlti.dl_spec = #dlti.dl_spec<"dlti.endianness" = "little"
+// CHECK-SAME: dlti.dl_spec = #dlti.dl_spec
+// CHECK-SAME:   "dlti.endianness" = "little"
 // CHECK-SAME:   index = 32
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"

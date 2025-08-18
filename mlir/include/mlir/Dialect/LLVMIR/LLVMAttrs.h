@@ -20,9 +20,6 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
 
-#include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetMachine.h"
-
 namespace mlir {
 namespace LLVM {
 

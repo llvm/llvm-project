@@ -657,7 +657,7 @@ void DLTIDialect::initialize() {
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   if (attr.getName() == DLTIDialect::kDataLayoutAttrName) {
-    if (!llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue())) {
+    if (!llvm::isa<DataLayoutSpecAttr>(attr.getValue())) {
       return op->emitError() << "'" << DLTIDialect::kDataLayoutAttrName
                              << "' is expected to be a #dlti.dl_spec attribute";
     }

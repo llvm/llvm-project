@@ -539,9 +539,7 @@ def LLVM_TargetAttrInterface
     Interface for attributes that describe LLVM targets.
 
     These attributes should be able to return the specified target `triple`,
-    `chip` and `features` and are expected to be able to produce the
-    corresponding `llvm::TargetMachine` and `llvm::DataLayout`. These methods
-    can fail in case the backend is not available.
+    `chip` and `features`.
 
     Implementing attributes should provide a `DLTIQueryInterface::query()`
     implementation which responds to keys `"triple"`, `"chip"` and `"features"`
@@ -565,18 +563,6 @@ def LLVM_TargetAttrInterface
       /*description=*/"Returns the target features as a string.",
       /*retTy=*/"StringAttr",
       /*methodName=*/"getFeaturesAttr",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the target machine.",
-      /*retTy=*/"FailureOr<std::unique_ptr<::llvm::TargetMachine>>",
-      /*methodName=*/"getTargetMachine",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the data layout associated to the target machine.",
-      /*retTy=*/"FailureOr<::llvm::DataLayout>",
-      /*methodName=*/"getDataLayout",
       /*args=*/(ins)
     >
   ];

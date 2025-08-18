@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -19,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace mlir;
@@ -422,3 +420,7 @@ FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
 
   return failure();
 }
+
+StringAttr TargetAttr::getTripleAttr() { return getTriple(); }
+StringAttr TargetAttr::getChipAttr() { return getChip(); }
+StringAttr TargetAttr::getFeaturesAttr() { return getFeatures(); }
