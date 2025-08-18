@@ -16661,7 +16661,7 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return DAG.getNode(RISCVISD::SLLW, DL, VT, Src.getOperand(0),
                        Src.getOperand(1));
 
-  // Fold (sext_inreg (setcc), i1) -> (sub 0, (setcc)
+  // Fold (sext_inreg (setcc), i1) -> (sub 0, (setcc))
   if (Opc == ISD::SETCC && DCI.isAfterLegalizeDAG())
     return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
 
