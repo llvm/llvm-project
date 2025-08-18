@@ -65,15 +65,14 @@ private:
 
   bool processReg(Register Reg);
   bool createListOfPackedInstr(MachineInstr &BeginMI,
-                               SetVector<MachineInstr *> &instrsToUnpack,
+                               SetVector<MachineInstr *> &InstrsToUnpack,
                                uint16_t NumMFMACycles);
   bool isUnpackingSupportedInstr(MachineInstr &MI) const;
-  void insertMI(MachineInstr &I);
+  void processF32Unpacking(MachineInstr &I);
   uint16_t mapToUnpackedOpcode(MachineInstr &I);
-  SmallVector<MachineInstr *, 2> copyToVregAndInsertMI(MachineInstr &I,
-                                                       unsigned SGPRSrcPos);
+  
   SmallVector<MachineInstr *, 2>
-  insertUnpackedMI(MachineInstr &I, MachineOperand &DstMO,
+  insertUnpackedF32MI(MachineInstr &I, MachineOperand &DstMO,
                    MachineOperand &LoSrcMO1, MachineOperand &LoSrcMO2,
                    MachineOperand &HiSrcMO1, MachineOperand &HiSrcMO2,
                    bool isVreg_64);
@@ -288,43 +287,8 @@ uint16_t GCNPreRAOptimizationsImpl::mapToUnpackedOpcode(MachineInstr &I) {
   }
 }
 
-SmallVector<MachineInstr *, 2>
-GCNPreRAOptimizationsImpl::copyToVregAndInsertMI(MachineInstr &I,
-                                                 unsigned SGPRSrcPos) {
-  SmallVector<MachineInstr *, 2> MIList;
-
-  MachineBasicBlock &MBB = *I.getParent();
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  MachineFunction &MF = *MBB.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
-
-  Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VReg_64_Align2RegClass);
-  MachineInstr *CopySGPR1 =
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY))
-          .addDef(TmpReg, RegState::Undef)
-          .addReg(I.getOperand(SGPRSrcPos).getReg(), 0, AMDGPU::sub0);
-  unsigned SubIdx = TRI->composeSubRegIndices(
-      AMDGPU::sub0, CopySGPR1->getOperand(0).getSubReg());
-  CopySGPR1->getOperand(0).setReg(CopySGPR1->getOperand(0).getReg());
-  CopySGPR1->getOperand(0).setSubReg(SubIdx);
-  LIS->InsertMachineInstrInMaps(*CopySGPR1);
-  MIList.push_back(CopySGPR1);
-
-  MachineInstr *CopySGPR2 =
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY))
-          .addDef(TmpReg)
-          .addReg(I.getOperand(SGPRSrcPos).getReg(), 0, AMDGPU::sub1);
-  SubIdx = TRI->composeSubRegIndices(AMDGPU::sub1,
-                                     CopySGPR2->getOperand(0).getSubReg());
-  CopySGPR2->getOperand(0).setReg(CopySGPR2->getOperand(0).getReg());
-  CopySGPR2->getOperand(0).setSubReg(SubIdx);
-  LIS->InsertMachineInstrInMaps(*CopySGPR2);
-  MIList.push_back(CopySGPR2);
-  return MIList;
-}
-
 bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
-    MachineInstr &BeginMI, SetVector<MachineInstr *> &instrsToUnpack,
+    MachineInstr &BeginMI, SetVector<MachineInstr *> &InstrsToUnpack,
     uint16_t NumMFMACycles) {
   auto *BB = BeginMI.getParent();
   auto *MF = BB->getParent();
@@ -336,10 +300,10 @@ bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
   auto SchedModel = TII->getSchedModel();
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
-    const MCSchedClassDesc *instrSchedClassDesc =
+    const MCSchedClassDesc *InstrSchedClassDesc =
         SchedModel.resolveSchedClass(&Instr);
     TotalCyclesBetweenCandidates +=
-        SchedModel.getWriteProcResBegin(instrSchedClassDesc)->ReleaseAtCycle;
+        SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
     if (Instr.isMetaInstruction())
       continue;
 
@@ -389,16 +353,16 @@ bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
         TotalCyclesBetweenCandidates += 1;
 
       if (!(TotalCyclesBetweenCandidates > NumMFMACycles))
-        instrsToUnpack.insert(&Instr);
+        InstrsToUnpack.insert(&Instr);
     }
   }
   return true;
 }
 
-SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
+SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedF32MI(
     MachineInstr &I, MachineOperand &DstMO, MachineOperand &LoSrcMO1,
     MachineOperand &LoSrcMO2, MachineOperand &HiSrcMO1,
-    MachineOperand &HiSrcMO2, bool isVreg_64) {
+    MachineOperand &HiSrcMO2, bool IsVreg_64) {
 
   SmallVector<MachineInstr *, 2> MIList;
   MachineBasicBlock &MBB = *I.getParent();
@@ -414,28 +378,27 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
   unsigned DestSubIdx =
       TRI->composeSubRegIndices(DstMO.getSubReg(), AMDGPU::sub0);
 
-  const MCInstrDesc instrDesc = I.getDesc();
+  const MCInstrDesc InstrDesc = I.getDesc();
 
-  int clampIdx =
+  int ClampIdx =
       AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::clamp);
-  int64_t clampVal = I.getOperand(clampIdx).getImm();
+  int64_t ClampVal = I.getOperand(ClampIdx).getImm();
 
-  int src0_modifiers_Idx =
+  int Src0_modifiers_Idx =
       AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src0_modifiers);
-  int src1_modifiers_Idx =
+  int Src1_modifiers_Idx =
       AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src1_modifiers);
-  unsigned src0_Mods = I.getOperand(src0_modifiers_Idx).getImm();
-  unsigned src1_Mods = I.getOperand(src1_modifiers_Idx).getImm();
+  unsigned Src0_Mods = I.getOperand(Src0_modifiers_Idx).getImm();
+  unsigned Src1_Mods = I.getOperand(Src1_modifiers_Idx).getImm();
 
-  // don't worry about abs values. Packed instructions (VOP3P) do not support
-  // them
+  // Packed instructions (VOP3P) do not support abs. It is okay to ignore them.
   unsigned Lo_src0_mods = 0;
   unsigned Lo_src1_mods = 0;
-  uint16_t unpackedOpcode = mapToUnpackedOpcode(I);
-  MachineInstrBuilder Op0L_Op1L = BuildMI(MBB, I, DL, TII->get(unpackedOpcode));
+  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
+  MachineInstrBuilder Op0L_Op1L = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
   Op0L_Op1L.addDef(DstReg, 0, DestSubIdx); // vdst
-  if (src0_Mods & SISrcMods::OP_SEL_0) {
-    if (src0_Mods & SISrcMods::NEG) {
+  if (Src0_Mods & SISrcMods::OP_SEL_0) {
+    if (Src0_Mods & SISrcMods::NEG) {
       Lo_src0_mods |= SISrcMods::NEG;
     }
     Op0L_Op1L.addImm(Lo_src0_mods); // src0_modifiers
@@ -450,8 +413,8 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
                      Src0SubIdx); // src0 //if op_sel == 0, select register 0 of
                                   // reg:sub0_sub1
   }
-  if (src1_Mods & SISrcMods::OP_SEL_0) {
-    if (src1_Mods & SISrcMods::NEG) {
+  if (Src1_Mods & SISrcMods::OP_SEL_0) {
+    if (Src1_Mods & SISrcMods::NEG) {
       Lo_src1_mods |= SISrcMods::NEG;
     }
     Op0L_Op1L.addImm(Lo_src1_mods); // src0_modifiers
@@ -466,12 +429,12 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
                      Src1SubIdx); // src0 //if op_sel_hi == 0, select register 0
                                   // of reg:sub0_sub1
   }
-  Op0L_Op1L.addImm(clampVal); // clamp
+  Op0L_Op1L.addImm(ClampVal); // clamp
   // packed instructions do not support output modifiers. safe to assign them 0
   // for this use case
   Op0L_Op1L.addImm(0); // omod
 
-  if (isVreg_64) {
+  if (IsVreg_64) {
     Op0L_Op1L->getOperand(0).setIsUndef();
   } else if (I.getOperand(0).isUndef()) {
     Op0L_Op1L->getOperand(0).setIsUndef();
@@ -483,15 +446,14 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
   SrcSubIdx2 = TRI->composeSubRegIndices(LoSrcMO2.getSubReg(), AMDGPU::sub1);
   DestSubIdx = TRI->composeSubRegIndices(DstMO.getSubReg(), AMDGPU::sub1);
 
-  // don't worry about abs values. Packed instructions (VOP3P) do not support
-  // them
+  // Packed instructions (VOP3P) do not support abs. It is okay to ignore them.
   unsigned Hi_src0_mods = 0;
   unsigned Hi_src1_mods = 0;
 
-  MachineInstrBuilder Op0H_Op1H = BuildMI(MBB, I, DL, TII->get(unpackedOpcode));
+  MachineInstrBuilder Op0H_Op1H = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
   Op0H_Op1H.addDef(DstReg, 0, DestSubIdx); // vdst
-  if (src0_Mods & SISrcMods::OP_SEL_1) {
-    if (src0_Mods & SISrcMods::NEG_HI) {
+  if (Src0_Mods & SISrcMods::OP_SEL_1) {
+    if (Src0_Mods & SISrcMods::NEG_HI) {
       Hi_src0_mods |= SISrcMods::NEG;
     }
     Op0H_Op1H.addImm(Hi_src0_mods); // src0_modifiers
@@ -507,8 +469,8 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
                                   // of reg:sub0_sub1
   }
 
-  if (src1_Mods & SISrcMods::OP_SEL_1) {
-    if (src1_Mods & SISrcMods::NEG_HI) {
+  if (Src1_Mods & SISrcMods::OP_SEL_1) {
+    if (Src1_Mods & SISrcMods::NEG_HI) {
       Hi_src1_mods |= SISrcMods::NEG;
     }
     Op0H_Op1H.addImm(Hi_src1_mods); // src0_modifiers
@@ -523,7 +485,7 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
                      Src1SubIdx); // src0 //if op_sel_hi == 0, select register 0
                                   // of reg:sub0_sub1
   }
-  Op0H_Op1H.addImm(clampVal); // clamp
+  Op0H_Op1H.addImm(ClampVal); // clamp
   // packed instructions do not support output modifiers. safe to assign them 0
   // for this use case
   Op0H_Op1H.addImm(0); // omod
@@ -542,7 +504,7 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
   return MIList;
 }
 
-void GCNPreRAOptimizationsImpl::insertMI(MachineInstr &I) {
+void GCNPreRAOptimizationsImpl::processF32Unpacking(MachineInstr &I) {
   MachineBasicBlock &MBB = *I.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineFunction &MF = *MBB.getParent();
@@ -563,40 +525,9 @@ void GCNPreRAOptimizationsImpl::insertMI(MachineInstr &I) {
       TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
   const TargetRegisterClass *SrcRC = TRI->getSubClassWithSubReg(Src0RC, 1);
 
-  if (Src1RC->getID() == AMDGPU::SGPR_64RegClassID) {
-    // try with sgpr32
-    SmallVector<MachineInstr *, 2> copyInstrs = copyToVregAndInsertMI(I, 4);
-    MachineInstr *CopySGPR1 = copyInstrs[0];
-    MachineInstr *CopySGPR2 = copyInstrs[1];
-
-    bool isVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
-    SmallVector<MachineInstr *, 2> unpackedInstrs =
-        insertUnpackedMI(I, DstMO, SrcMO1, CopySGPR1->getOperand(0), SrcMO1,
-                         CopySGPR2->getOperand(0), isVReg64);
-    unpackedInstrs[0]->addRegisterKilled(
-        unpackedInstrs[0]->getOperand(2).getReg(), TRI);
-    unpackedInstrs[1]->addRegisterKilled(
-        unpackedInstrs[1]->getOperand(2).getReg(), TRI);
-    return;
-  } else if (Src0RC->getID() == AMDGPU::SGPR_64RegClassID) {
-    SmallVector<MachineInstr *, 2> copyInstrs = copyToVregAndInsertMI(I, 2);
-    MachineInstr *CopySGPR1 = copyInstrs[0];
-    MachineInstr *CopySGPR2 = copyInstrs[1];
-
-    bool isVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
-    SmallVector<MachineInstr *, 2> unpackedInstrs =
-        insertUnpackedMI(I, DstMO, CopySGPR1->getOperand(0), SrcMO2,
-                         CopySGPR2->getOperand(0), SrcMO2, isVReg64);
-    unpackedInstrs[0]->addRegisterKilled(
-        unpackedInstrs[0]->getOperand(1).getReg(), TRI);
-    unpackedInstrs[1]->addRegisterKilled(
-        unpackedInstrs[1]->getOperand(1).getReg(), TRI);
-    return;
-  }
-
-  bool isVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
-  SmallVector<MachineInstr *, 2> unpackedInstrs =
-      insertUnpackedMI(I, DstMO, SrcMO1, SrcMO2, SrcMO1, SrcMO2, isVReg64);
+  bool IsVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
+  SmallVector<MachineInstr *, 2> UnpackedInstrs =
+      insertUnpackedF32MI(I, DstMO, SrcMO1, SrcMO2, SrcMO1, SrcMO2, IsVReg64);
   return;
 }
 
@@ -623,11 +554,11 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
 
   auto BuildImm = [&](uint32_t Val) -> std::pair<Register, uint16_t> {
     Register ImmReg = MRI.createVirtualRegister(RC);
-    auto newMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), ImmReg)
+    auto NewMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), ImmReg)
                      .addImm(Val);
-    LIS->InsertMachineInstrInMaps(*newMI);
+    LIS->InsertMachineInstrInMaps(*NewMI);
     const MCSchedClassDesc *SchedClassDesc =
-        SchedModel.resolveSchedClass(newMI);
+        SchedModel.resolveSchedClass(NewMI);
     uint16_t LatencyCycles =
         SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
     return {ImmReg, LatencyCycles};
@@ -636,10 +567,8 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
   if (!IsF16MaskSet) {
     std::pair<Register, uint16_t> RegAndLatency = BuildImm(0x0000FFFF);
     MaskLo = RegAndLatency.first; // mask for lower 16 bits
-    AddlCyclesConsumed += RegAndLatency.second;
     RegAndLatency = BuildImm(16);
     ShiftAmt = RegAndLatency.first; // mask for higher 16 bits
-    AddlCyclesConsumed += RegAndLatency.second;
     IsF16MaskSet = true;
   }
 
@@ -654,18 +583,18 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
   if (SrcMO0.getSubReg())
     SubRegID = SrcMO0.getSubReg();
 
-  int src0_modifiers_Idx =
+  int Src0_modifiers_Idx =
       AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src0_modifiers);
-  int src1_modifiers_Idx =
+  int Src1_modifiers_Idx =
       AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src1_modifiers);
-  unsigned src0_Mods = I.getOperand(src0_modifiers_Idx).getImm();
-  unsigned src1_Mods = I.getOperand(src1_modifiers_Idx).getImm();
-  int clampIdx =
+  unsigned Src0_Mods = I.getOperand(Src0_modifiers_Idx).getImm();
+  unsigned Src1_Mods = I.getOperand(Src1_modifiers_Idx).getImm();
+  int ClampIdx =
       AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::clamp);
-  int64_t clampVal = I.getOperand(clampIdx).getImm();
+  int64_t ClampVal = I.getOperand(ClampIdx).getImm();
 
   // handle op_sel for src0
-  if (src0_Mods & SISrcMods::OP_SEL_0) {
+  if (Src0_Mods & SISrcMods::OP_SEL_0) {
     // if op_sel is set, select higher 16 bits and copy into lower 16 bits of
     // new vgpr
     MachineInstrBuilder LoInput0_MI =
@@ -690,7 +619,7 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
   }
 
   // handle op_sel_hi for src0
-  if (src0_Mods & SISrcMods::OP_SEL_1) {
+  if (Src0_Mods & SISrcMods::OP_SEL_1) {
     // if op_sel_hi is set, select higher 16 bits and copy into lower 16 bits of
     // new vgpr
     MachineInstrBuilder HiInput0_MI =
@@ -718,7 +647,7 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
   if (SrcMO0.getSubReg())
     SubRegID = SrcMO1.getSubReg();
   // handle op_sel for src1
-  if (src1_Mods & SISrcMods::OP_SEL_0) {
+  if (Src1_Mods & SISrcMods::OP_SEL_0) {
     // if op_sel is set, select higher 16 bits and copy into lower 16 bits of
     // new vgpr
     MachineInstrBuilder LoInput1_MI =
@@ -743,7 +672,7 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
   }
 
   // handle op_sel_hi for src1
-  if (src1_Mods & SISrcMods::OP_SEL_1) {
+  if (Src1_Mods & SISrcMods::OP_SEL_1) {
     // if op_sel_hi is set, select higher 16 bits and copy into lower 16 bits of
     // new vgpr
     MachineInstrBuilder HiInput1_MI =
@@ -772,24 +701,24 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
 
   unsigned Lo_src0_mods = 0;
   unsigned Lo_src1_mods = 0;
-  uint16_t unpackedOpcode = mapToUnpackedOpcode(I);
+  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
 
   // Unpacked instructions
   MachineInstrBuilder LoMul_MI =
-      BuildMI(MBB, I, DL, TII->get(unpackedOpcode), LoMul);
+      BuildMI(MBB, I, DL, TII->get(UnpackedOpcode), LoMul);
 
-  if (src0_Mods & SISrcMods::NEG)
+  if (Src0_Mods & SISrcMods::NEG)
     Lo_src0_mods |= SISrcMods::NEG;
 
   LoMul_MI.addImm(Lo_src0_mods);            // src0_modifiers
   LoMul_MI.addReg(Src0_Lo, RegState::Kill); // src0
 
-  if (src1_Mods & SISrcMods::NEG)
+  if (Src1_Mods & SISrcMods::NEG)
     Lo_src1_mods |= SISrcMods::NEG;
 
   LoMul_MI.addImm(Lo_src1_mods);            // src1_modifiers
   LoMul_MI.addReg(Src1_Lo, RegState::Kill); // src1
-  LoMul_MI.addImm(clampVal);                // clamp
+  LoMul_MI.addImm(ClampVal);                // clamp
   // packed instructions do not support output modifiers. safe to assign them 0
   // for this use case
   LoMul_MI.addImm(0); // omod
@@ -799,22 +728,22 @@ void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
   unsigned Hi_src1_mods = 0;
 
   MachineInstrBuilder HiMul_MI =
-      BuildMI(MBB, I, DL, TII->get(unpackedOpcode), HiMul);
-  if (src0_Mods & SISrcMods::NEG_HI)
+      BuildMI(MBB, I, DL, TII->get(UnpackedOpcode), HiMul);
+  if (Src0_Mods & SISrcMods::NEG_HI)
     Hi_src0_mods |= SISrcMods::NEG_HI;
 
   HiMul_MI.addImm(Hi_src0_mods); // src0_modifiers
   HiMul_MI.addReg(Src0_Hi,
                   RegState::Kill); // select higher 16 bits if op_sel_hi is set
 
-  if (src1_Mods & SISrcMods::NEG_HI)
+  if (Src1_Mods & SISrcMods::NEG_HI)
     Hi_src1_mods |= SISrcMods::NEG_HI;
 
   HiMul_MI.addImm(Hi_src1_mods); // src0_modifiers
   HiMul_MI.addReg(
       Src1_Hi,
       RegState::Kill); // select higher 16 bits from src1 if op_sel_hi is set
-  HiMul_MI.addImm(clampVal); // clamp
+  HiMul_MI.addImm(ClampVal); // clamp
   // packed instructions do not support output modifiers. safe to assign them 0
   // for this use case
   HiMul_MI.addImm(0); // omod
@@ -897,7 +826,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   // Unpack packed instructions to overlap MFMAs. This allows the compiler to
   // co-issue unpacked instructions with MFMA
   for (MachineBasicBlock &MBB : MF) {
-    SetVector<MachineInstr *> instrsToUnpack;
+    SetVector<MachineInstr *> InstrsToUnpack;
     IsF16MaskSet = false;
     uint16_t NumMFMACycles = 0;
     auto SchedModel = TII->getSchedModel();
@@ -907,7 +836,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
             SchedModel.resolveSchedClass(&MI);
         NumMFMACycles =
             SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-        createListOfPackedInstr(MI, instrsToUnpack, NumMFMACycles);
+        createListOfPackedInstr(MI, InstrsToUnpack, NumMFMACycles);
       }
       if (ST.useRealTrue16Insts()) {
         if (MI.getOpcode() != AMDGPU::COPY)
@@ -937,13 +866,13 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       }
     }
 
-    if (!instrsToUnpack.empty()) {
-      for (MachineInstr *MI : instrsToUnpack) {
+    if (!InstrsToUnpack.empty()) {
+      for (MachineInstr *MI : InstrsToUnpack) {
         if ((MI->getOpcode() == AMDGPU::V_PK_MUL_F16) ||
             (MI->getOpcode() == AMDGPU::V_PK_ADD_F16)) {
           processF16Unpacking(*MI, NumMFMACycles);
         } else {
-          insertMI(*MI);
+          processF32Unpacking(*MI);
         }
       }
     }

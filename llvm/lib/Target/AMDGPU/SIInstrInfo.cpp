@@ -6174,9 +6174,11 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 
 bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
   bool IsGFX950Only = ST.hasGFX950Insts();
-  if (!IsGFX950Only)
+  bool IsGFX940Only = ST.hasGFX940Insts();
+  
+  if (!IsGFX950Only && !IsGFX940Only)
     return false;
-
+  
   if (!isVALU(MI))
     return false;
 
