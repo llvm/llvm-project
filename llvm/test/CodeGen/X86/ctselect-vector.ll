@@ -9,47 +9,53 @@
 define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: test_ctselect_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    movd %eax, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    movd %eax, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4i32:
@@ -68,47 +74,53 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; SSE2-LABEL: test_ctselect_v4f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    movd %eax, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    movd %eax, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4f32:
@@ -127,47 +139,53 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 ; SSE2-LABEL: test_ctselect_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    movd %eax, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    movd %eax, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v2i64:
@@ -186,47 +204,53 @@ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double> %b) {
 ; SSE2-LABEL: test_ctselect_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    movd %eax, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v2f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    movd %eax, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v2f64:
@@ -246,57 +270,65 @@ define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double>
 define <8 x i32> @test_ctselect_v8i32(i1 %cond, <8 x i32> %a, <8 x i32> %b) {
 ; SSE2-LABEL: test_ctselect_v8i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    movd %eax, %xmm5
+; SSE2-NEXT:    pshufd $0, %xmm5, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm5
+; SSE2-NEXT:    pandn %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm5, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v8i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm2
-; AVX-NEXT:    vshufps $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovaps %ymm2, %ymm2
-; AVX-NEXT:    vandps %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vandnps %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vorps %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, %ymm0
+; AVX-NEXT:    xorps %ymm3, %ymm3
+; AVX-NEXT:    vmovd %eax, %ymm3
+; AVX-NEXT:    vshufps $0, %ymm3, %ymm3, %ymm3
+; AVX-NEXT:    vmovaps %ymm3, %ymm2
+; AVX-NEXT:    andps %ymm0, %ymm3
+; AVX-NEXT:    andnps %ymm1, %ymm2
+; AVX-NEXT:    orps %ymm3, %ymm2
+; AVX-NEXT:    vmovaps %ymm2, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm2
-; AVX2-NEXT:    vpshufd $0, %ymm2, %ymm2
-; AVX2-NEXT:    vmovdqa %ymm2, %ymm2
-; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, %ymm0
+; AVX2-NEXT:    xorps %ymm3, %ymm3
+; AVX2-NEXT:    vmovd %eax, %ymm3
+; AVX2-NEXT:    vpshufd $0, %ymm3, %ymm3
+; AVX2-NEXT:    vmovdqa %ymm3, %ymm2
+; AVX2-NEXT:    pand %ymm0, %ymm3
+; AVX2-NEXT:    pandn %ymm1, %ymm2
+; AVX2-NEXT:    por %ymm3, %ymm2
+; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v8i32:
@@ -315,57 +347,65 @@ define <8 x i32> @test_ctselect_v8i32(i1 %cond, <8 x i32> %a, <8 x i32> %b) {
 define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b) {
 ; SSE2-LABEL: test_ctselect_v8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    movd %eax, %xmm5
+; SSE2-NEXT:    pshufd $0, %xmm5, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm5
+; SSE2-NEXT:    pandn %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm5, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v8f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm2
-; AVX-NEXT:    vshufps $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovaps %ymm2, %ymm2
-; AVX-NEXT:    vandps %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vandnps %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vorps %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, %ymm0
+; AVX-NEXT:    xorps %ymm3, %ymm3
+; AVX-NEXT:    vmovd %eax, %ymm3
+; AVX-NEXT:    vshufps $0, %ymm3, %ymm3, %ymm3
+; AVX-NEXT:    vmovaps %ymm3, %ymm2
+; AVX-NEXT:    andps %ymm0, %ymm3
+; AVX-NEXT:    andnps %ymm1, %ymm2
+; AVX-NEXT:    orps %ymm3, %ymm2
+; AVX-NEXT:    vmovaps %ymm2, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm2
-; AVX2-NEXT:    vpshufd $0, %ymm2, %ymm2
-; AVX2-NEXT:    vmovdqa %ymm2, %ymm2
-; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, %ymm0
+; AVX2-NEXT:    xorps %ymm3, %ymm3
+; AVX2-NEXT:    vmovd %eax, %ymm3
+; AVX2-NEXT:    vpshufd $0, %ymm3, %ymm3
+; AVX2-NEXT:    vmovdqa %ymm3, %ymm2
+; AVX2-NEXT:    pand %ymm0, %ymm3
+; AVX2-NEXT:    pandn %ymm1, %ymm2
+; AVX2-NEXT:    por %ymm3, %ymm2
+; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v8f32:
@@ -384,57 +424,65 @@ define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b
 define <4 x i64> @test_ctselect_v4i64(i1 %cond, <4 x i64> %a, <4 x i64> %b) {
 ; SSE2-LABEL: test_ctselect_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    movd %eax, %xmm5
+; SSE2-NEXT:    pshufd $0, %xmm5, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm5
+; SSE2-NEXT:    pandn %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm5, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v4i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm2
-; AVX-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovapd %ymm2, %ymm2
-; AVX-NEXT:    vandpd %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vandnpd %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vorpd %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovapd %ymm0, %ymm0
+; AVX-NEXT:    xorps %ymm3, %ymm3
+; AVX-NEXT:    vmovd %eax, %ymm3
+; AVX-NEXT:    vshufpd $0, %ymm3, %ymm3, %ymm3
+; AVX-NEXT:    vmovapd %ymm3, %ymm2
+; AVX-NEXT:    andpd %ymm0, %ymm3
+; AVX-NEXT:    andnpd %ymm1, %ymm2
+; AVX-NEXT:    orpd %ymm3, %ymm2
+; AVX-NEXT:    vmovapd %ymm2, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm2
-; AVX2-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vmovapd %ymm2, %ymm2
-; AVX2-NEXT:    vandpd %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vandnpd %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vorpd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovapd %ymm0, %ymm0
+; AVX2-NEXT:    xorps %ymm3, %ymm3
+; AVX2-NEXT:    vmovd %eax, %ymm3
+; AVX2-NEXT:    vshufpd $0, %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vmovapd %ymm3, %ymm2
+; AVX2-NEXT:    andpd %ymm0, %ymm3
+; AVX2-NEXT:    andnpd %ymm1, %ymm2
+; AVX2-NEXT:    orpd %ymm3, %ymm2
+; AVX2-NEXT:    vmovapd %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4i64:
@@ -453,57 +501,65 @@ define <4 x i64> @test_ctselect_v4i64(i1 %cond, <4 x i64> %a, <4 x i64> %b) {
 define <4 x double> @test_ctselect_v4f64(i1 %cond, <4 x double> %a, <4 x double> %b) {
 ; SSE2-LABEL: test_ctselect_v4f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    movd %eax, %xmm5
+; SSE2-NEXT:    pshufd $0, %xmm5, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm5
+; SSE2-NEXT:    pandn %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm5, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v4f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm2
-; AVX-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovapd %ymm2, %ymm2
-; AVX-NEXT:    vandpd %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vandnpd %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vorpd %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovapd %ymm0, %ymm0
+; AVX-NEXT:    xorps %ymm3, %ymm3
+; AVX-NEXT:    vmovd %eax, %ymm3
+; AVX-NEXT:    vshufpd $0, %ymm3, %ymm3, %ymm3
+; AVX-NEXT:    vmovapd %ymm3, %ymm2
+; AVX-NEXT:    andpd %ymm0, %ymm3
+; AVX-NEXT:    andnpd %ymm1, %ymm2
+; AVX-NEXT:    orpd %ymm3, %ymm2
+; AVX-NEXT:    vmovapd %ymm2, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm2
-; AVX2-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vmovapd %ymm2, %ymm2
-; AVX2-NEXT:    vandpd %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vandnpd %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vorpd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovapd %ymm0, %ymm0
+; AVX2-NEXT:    xorps %ymm3, %ymm3
+; AVX2-NEXT:    vmovd %eax, %ymm3
+; AVX2-NEXT:    vshufpd $0, %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vmovapd %ymm3, %ymm2
+; AVX2-NEXT:    andpd %ymm0, %ymm3
+; AVX2-NEXT:    andnpd %ymm1, %ymm2
+; AVX2-NEXT:    orpd %ymm3, %ymm2
+; AVX2-NEXT:    vmovapd %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4f64:
@@ -523,97 +579,113 @@ define <4 x double> @test_ctselect_v4f64(i1 %cond, <4 x double> %a, <4 x double>
 define <16 x i32> @test_ctselect_v16i32(i1 %cond, <16 x i32> %a, <16 x i32> %b) {
 ; SSE2-LABEL: test_ctselect_v16i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm8
-; SSE2-NEXT:    pshufd $0, %xmm8, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm8
-; SSE2-NEXT:    pand %xmm8, %xmm4
-; SSE2-NEXT:    pandn %xmm0, %xmm8
-; SSE2-NEXT:    por %xmm4, %xmm8
+; SSE2-NEXT:    xorps %xmm9, %xmm9
+; SSE2-NEXT:    movd %eax, %xmm9
+; SSE2-NEXT:    pshufd $0, %xmm9, %xmm9
+; SSE2-NEXT:    movdqa %xmm9, %xmm8
+; SSE2-NEXT:    pand %xmm0, %xmm9
+; SSE2-NEXT:    pandn %xmm4, %xmm8
+; SSE2-NEXT:    por %xmm9, %xmm8
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm5, %xmm4
+; SSE2-NEXT:    por %xmm0, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pandn %xmm6, %xmm5
+; SSE2-NEXT:    por %xmm0, %xmm5
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pandn %xmm7, %xmm6
+; SSE2-NEXT:    por %xmm0, %xmm6
 ; SSE2-NEXT:    movdqa %xmm8, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm5
-; SSE2-NEXT:    pandn %xmm1, %xmm4
-; SSE2-NEXT:    por %xmm5, %xmm4
 ; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
-; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm6
-; SSE2-NEXT:    pandn %xmm2, %xmm4
-; SSE2-NEXT:    por %xmm6, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm2
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm7
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    por %xmm7, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm6, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v16i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm4
-; AVX-NEXT:    vshufps $0, %ymm4, %ymm4, %ymm4
-; AVX-NEXT:    vmovaps %ymm4, %ymm4
-; AVX-NEXT:    vandps %ymm2, %ymm4, %ymm2
-; AVX-NEXT:    vandnps %ymm0, %ymm4, %ymm0
-; AVX-NEXT:    vorps %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, %ymm0
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    vmovd %ecx, %ymm2
-; AVX-NEXT:    vshufps $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovaps %ymm2, %ymm2
-; AVX-NEXT:    vandps %ymm3, %ymm2, %ymm3
-; AVX-NEXT:    vandnps %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX-NEXT:    vmovaps %ymm1, %ymm1
+; AVX-NEXT:    xorps %ymm5, %ymm5
+; AVX-NEXT:    vmovd %eax, %ymm5
+; AVX-NEXT:    vshufps $0, %ymm5, %ymm5, %ymm5
+; AVX-NEXT:    vmovaps %ymm5, %ymm4
+; AVX-NEXT:    andps %ymm0, %ymm5
+; AVX-NEXT:    andnps %ymm2, %ymm4
+; AVX-NEXT:    orps %ymm5, %ymm4
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorps %ymm0, %ymm0
+; AVX-NEXT:    vmovd %eax, %ymm0
+; AVX-NEXT:    vshufps $0, %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vmovaps %ymm0, %ymm2
+; AVX-NEXT:    andps %ymm1, %ymm0
+; AVX-NEXT:    andnps %ymm3, %ymm2
+; AVX-NEXT:    orps %ymm0, %ymm2
+; AVX-NEXT:    vmovaps %ymm4, %ymm0
+; AVX-NEXT:    vmovaps %ymm2, %ymm1
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v16i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm4
-; AVX2-NEXT:    vpshufd $0, %ymm4, %ymm4
-; AVX2-NEXT:    vmovdqa %ymm4, %ymm4
-; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpandn %ymm0, %ymm4, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, %ymm0
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    vmovd %ecx, %ymm2
-; AVX2-NEXT:    vpshufd $0, %ymm2, %ymm2
-; AVX2-NEXT:    vmovdqa %ymm2, %ymm2
-; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm3
-; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm1, %ymm1
+; AVX2-NEXT:    xorps %ymm5, %ymm5
+; AVX2-NEXT:    vmovd %eax, %ymm5
+; AVX2-NEXT:    vpshufd $0, %ymm5, %ymm5
+; AVX2-NEXT:    vmovdqa %ymm5, %ymm4
+; AVX2-NEXT:    pand %ymm0, %ymm5
+; AVX2-NEXT:    pandn %ymm2, %ymm4
+; AVX2-NEXT:    por %ymm5, %ymm4
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    pxor %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %eax, %ymm0
+; AVX2-NEXT:    vpshufd $0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm2
+; AVX2-NEXT:    pand %ymm1, %ymm0
+; AVX2-NEXT:    pandn %ymm3, %ymm2
+; AVX2-NEXT:    por %ymm0, %ymm2
+; AVX2-NEXT:    vmovdqa %ymm4, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm2, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v16i32:
@@ -632,97 +704,113 @@ define <16 x i32> @test_ctselect_v16i32(i1 %cond, <16 x i32> %a, <16 x i32> %b) 
 define <16 x float> @test_ctselect_v16f32(i1 %cond, <16 x float> %a, <16 x float> %b) {
 ; SSE2-LABEL: test_ctselect_v16f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm8
-; SSE2-NEXT:    pshufd $0, %xmm8, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm8
-; SSE2-NEXT:    pand %xmm8, %xmm4
-; SSE2-NEXT:    pandn %xmm0, %xmm8
-; SSE2-NEXT:    por %xmm4, %xmm8
+; SSE2-NEXT:    xorps %xmm9, %xmm9
+; SSE2-NEXT:    movd %eax, %xmm9
+; SSE2-NEXT:    pshufd $0, %xmm9, %xmm9
+; SSE2-NEXT:    movdqa %xmm9, %xmm8
+; SSE2-NEXT:    pand %xmm0, %xmm9
+; SSE2-NEXT:    pandn %xmm4, %xmm8
+; SSE2-NEXT:    por %xmm9, %xmm8
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm5, %xmm4
+; SSE2-NEXT:    por %xmm0, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pandn %xmm6, %xmm5
+; SSE2-NEXT:    por %xmm0, %xmm5
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pandn %xmm7, %xmm6
+; SSE2-NEXT:    por %xmm0, %xmm6
 ; SSE2-NEXT:    movdqa %xmm8, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm5
-; SSE2-NEXT:    pandn %xmm1, %xmm4
-; SSE2-NEXT:    por %xmm5, %xmm4
 ; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
-; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm6
-; SSE2-NEXT:    pandn %xmm2, %xmm4
-; SSE2-NEXT:    por %xmm6, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm2
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm7
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    por %xmm7, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm6, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v16f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm4
-; AVX-NEXT:    vshufps $0, %ymm4, %ymm4, %ymm4
-; AVX-NEXT:    vmovaps %ymm4, %ymm4
-; AVX-NEXT:    vandps %ymm2, %ymm4, %ymm2
-; AVX-NEXT:    vandnps %ymm0, %ymm4, %ymm0
-; AVX-NEXT:    vorps %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, %ymm0
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    vmovd %ecx, %ymm2
-; AVX-NEXT:    vshufps $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovaps %ymm2, %ymm2
-; AVX-NEXT:    vandps %ymm3, %ymm2, %ymm3
-; AVX-NEXT:    vandnps %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX-NEXT:    vmovaps %ymm1, %ymm1
+; AVX-NEXT:    xorps %ymm5, %ymm5
+; AVX-NEXT:    vmovd %eax, %ymm5
+; AVX-NEXT:    vshufps $0, %ymm5, %ymm5, %ymm5
+; AVX-NEXT:    vmovaps %ymm5, %ymm4
+; AVX-NEXT:    andps %ymm0, %ymm5
+; AVX-NEXT:    andnps %ymm2, %ymm4
+; AVX-NEXT:    orps %ymm5, %ymm4
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorps %ymm0, %ymm0
+; AVX-NEXT:    vmovd %eax, %ymm0
+; AVX-NEXT:    vshufps $0, %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vmovaps %ymm0, %ymm2
+; AVX-NEXT:    andps %ymm1, %ymm0
+; AVX-NEXT:    andnps %ymm3, %ymm2
+; AVX-NEXT:    orps %ymm0, %ymm2
+; AVX-NEXT:    vmovaps %ymm4, %ymm0
+; AVX-NEXT:    vmovaps %ymm2, %ymm1
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v16f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm4
-; AVX2-NEXT:    vpshufd $0, %ymm4, %ymm4
-; AVX2-NEXT:    vmovdqa %ymm4, %ymm4
-; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpandn %ymm0, %ymm4, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, %ymm0
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    vmovd %ecx, %ymm2
-; AVX2-NEXT:    vpshufd $0, %ymm2, %ymm2
-; AVX2-NEXT:    vmovdqa %ymm2, %ymm2
-; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm3
-; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm1, %ymm1
+; AVX2-NEXT:    xorps %ymm5, %ymm5
+; AVX2-NEXT:    vmovd %eax, %ymm5
+; AVX2-NEXT:    vpshufd $0, %ymm5, %ymm5                # ymm5 = ymm5[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vmovdqa %ymm5, %ymm4
+; AVX2-NEXT:    pand %ymm0, %ymm5
+; AVX2-NEXT:    pandn %ymm2, %ymm4
+; AVX2-NEXT:    por %ymm5, %ymm4
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    pxor %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %eax, %ymm0
+; AVX2-NEXT:    vpshufd $0, %ymm0, %ymm0                # ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm2
+; AVX2-NEXT:    pand %ymm1, %ymm0
+; AVX2-NEXT:    pandn %ymm3, %ymm2
+; AVX2-NEXT:    por %ymm0, %ymm2
+; AVX2-NEXT:    vmovdqa %ymm4, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm2, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v16f32:
@@ -741,97 +829,113 @@ define <16 x float> @test_ctselect_v16f32(i1 %cond, <16 x float> %a, <16 x float
 define <8 x i64> @test_ctselect_v8i64(i1 %cond, <8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test_ctselect_v8i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm8
-; SSE2-NEXT:    pshufd $0, %xmm8, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm8
-; SSE2-NEXT:    pand %xmm8, %xmm4
-; SSE2-NEXT:    pandn %xmm0, %xmm8
-; SSE2-NEXT:    por %xmm4, %xmm8
+; SSE2-NEXT:    xorps %xmm9, %xmm9
+; SSE2-NEXT:    movd %eax, %xmm9
+; SSE2-NEXT:    pshufd $0, %xmm9, %xmm9
+; SSE2-NEXT:    movdqa %xmm9, %xmm8
+; SSE2-NEXT:    pand %xmm0, %xmm9
+; SSE2-NEXT:    pandn %xmm4, %xmm8
+; SSE2-NEXT:    por %xmm9, %xmm8
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm5, %xmm4
+; SSE2-NEXT:    por %xmm0, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pandn %xmm6, %xmm5
+; SSE2-NEXT:    por %xmm0, %xmm5
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pandn %xmm7, %xmm6
+; SSE2-NEXT:    por %xmm0, %xmm6
 ; SSE2-NEXT:    movdqa %xmm8, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm5
-; SSE2-NEXT:    pandn %xmm1, %xmm4
-; SSE2-NEXT:    por %xmm5, %xmm4
 ; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
-; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm6
-; SSE2-NEXT:    pandn %xmm2, %xmm4
-; SSE2-NEXT:    por %xmm6, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm2
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm7
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    por %xmm7, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm6, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v8i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm4
-; AVX-NEXT:    vshufpd $0, %ymm4, %ymm4, %ymm4
-; AVX-NEXT:    vmovapd %ymm4, %ymm4
-; AVX-NEXT:    vandpd %ymm2, %ymm4, %ymm2
-; AVX-NEXT:    vandnpd %ymm0, %ymm4, %ymm0
-; AVX-NEXT:    vorpd %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vmovapd %ymm0, %ymm0
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    vmovd %ecx, %ymm2
-; AVX-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovapd %ymm2, %ymm2
-; AVX-NEXT:    vandpd %ymm3, %ymm2, %ymm3
-; AVX-NEXT:    vandnpd %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vorpd %ymm1, %ymm3, %ymm1
-; AVX-NEXT:    vmovapd %ymm1, %ymm1
+; AVX-NEXT:    xorps %ymm5, %ymm5
+; AVX-NEXT:    vmovd %eax, %ymm5
+; AVX-NEXT:    vshufpd $0, %ymm5, %ymm5, %ymm5
+; AVX-NEXT:    vmovapd %ymm5, %ymm4
+; AVX-NEXT:    andpd %ymm0, %ymm5
+; AVX-NEXT:    andnpd %ymm2, %ymm4
+; AVX-NEXT:    orpd %ymm5, %ymm4
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorpd %ymm0, %ymm0
+; AVX-NEXT:    vmovd %eax, %ymm0
+; AVX-NEXT:    vshufpd $0, %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vmovapd %ymm0, %ymm2
+; AVX-NEXT:    andpd %ymm1, %ymm0
+; AVX-NEXT:    andnpd %ymm3, %ymm2
+; AVX-NEXT:    orpd %ymm0, %ymm2
+; AVX-NEXT:    vmovapd %ymm4, %ymm0
+; AVX-NEXT:    vmovapd %ymm2, %ymm1
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v8i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm4
-; AVX2-NEXT:    vshufpd $0, %ymm4, %ymm4, %ymm4
-; AVX2-NEXT:    vmovapd %ymm4, %ymm4
-; AVX2-NEXT:    vandpd %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vandnpd %ymm0, %ymm4, %ymm0
-; AVX2-NEXT:    vorpd %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovapd %ymm0, %ymm0
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    vmovd %ecx, %ymm2
-; AVX2-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vmovapd %ymm2, %ymm2
-; AVX2-NEXT:    vandpd %ymm3, %ymm2, %ymm3
-; AVX2-NEXT:    vandnpd %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vorpd %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vmovapd %ymm1, %ymm1
+; AVX2-NEXT:    xorps %ymm5, %ymm5
+; AVX2-NEXT:    vmovd %eax, %ymm5
+; AVX2-NEXT:    vshufpd $0, %ymm5, %ymm5, %ymm5         # ymm5 = ymm5[0,0,2,2]
+; AVX2-NEXT:    vmovapd %ymm5, %ymm4
+; AVX2-NEXT:    andpd %ymm0, %ymm5
+; AVX2-NEXT:    andnpd %ymm2, %ymm4
+; AVX2-NEXT:    orpd %ymm5, %ymm4
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    xorpd %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %eax, %ymm0
+; AVX2-NEXT:    vshufpd $0, %ymm0, %ymm0, %ymm0         # ymm0 = ymm0[0,0,2,2]
+; AVX2-NEXT:    vmovapd %ymm0, %ymm2
+; AVX2-NEXT:    andpd %ymm1, %ymm0
+; AVX2-NEXT:    andnpd %ymm3, %ymm2
+; AVX2-NEXT:    orpd %ymm0, %ymm2
+; AVX2-NEXT:    vmovapd %ymm4, %ymm0
+; AVX2-NEXT:    vmovapd %ymm2, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v8i64:
@@ -850,97 +954,113 @@ define <8 x i64> @test_ctselect_v8i64(i1 %cond, <8 x i64> %a, <8 x i64> %b) {
 define <8 x double> @test_ctselect_v8f64(i1 %cond, <8 x double> %a, <8 x double> %b) {
 ; SSE2-LABEL: test_ctselect_v8f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb $1, %dil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm8
-; SSE2-NEXT:    pshufd $0, %xmm8, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm8
-; SSE2-NEXT:    pand %xmm8, %xmm4
-; SSE2-NEXT:    pandn %xmm0, %xmm8
-; SSE2-NEXT:    por %xmm4, %xmm8
+; SSE2-NEXT:    xorps %xmm9, %xmm9
+; SSE2-NEXT:    movd %eax, %xmm9
+; SSE2-NEXT:    pshufd $0, %xmm9, %xmm9
+; SSE2-NEXT:    movdqa %xmm9, %xmm8
+; SSE2-NEXT:    pand %xmm0, %xmm9
+; SSE2-NEXT:    pandn %xmm4, %xmm8
+; SSE2-NEXT:    por %xmm9, %xmm8
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm5, %xmm4
+; SSE2-NEXT:    por %xmm0, %xmm4
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pandn %xmm6, %xmm5
+; SSE2-NEXT:    por %xmm0, %xmm5
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pshufd $0, %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pandn %xmm7, %xmm6
+; SSE2-NEXT:    por %xmm0, %xmm6
 ; SSE2-NEXT:    movdqa %xmm8, %xmm0
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm5
-; SSE2-NEXT:    pandn %xmm1, %xmm4
-; SSE2-NEXT:    por %xmm5, %xmm4
 ; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
-; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm6
-; SSE2-NEXT:    pandn %xmm2, %xmm4
-; SSE2-NEXT:    por %xmm6, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm2
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm4
-; SSE2-NEXT:    pshufd $0, %xmm4, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm7
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    por %xmm7, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm6, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v8f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    vmovd %eax, %ymm4
-; AVX-NEXT:    vshufpd $0, %ymm4, %ymm4, %ymm4
-; AVX-NEXT:    vmovapd %ymm4, %ymm4
-; AVX-NEXT:    vandpd %ymm2, %ymm4, %ymm2
-; AVX-NEXT:    vandnpd %ymm0, %ymm4, %ymm0
-; AVX-NEXT:    vorpd %ymm0, %ymm2, %ymm0
-; AVX-NEXT:    vmovapd %ymm0, %ymm0
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    vmovd %ecx, %ymm2
-; AVX-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX-NEXT:    vmovapd %ymm2, %ymm2
-; AVX-NEXT:    vandpd %ymm3, %ymm2, %ymm3
-; AVX-NEXT:    vandnpd %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vorpd %ymm1, %ymm3, %ymm1
-; AVX-NEXT:    vmovapd %ymm1, %ymm1
+; AVX-NEXT:    xorps %ymm5, %ymm5
+; AVX-NEXT:    vmovd %eax, %ymm5
+; AVX-NEXT:    vshufpd $0, %ymm5, %ymm5, %ymm5
+; AVX-NEXT:    vmovapd %ymm5, %ymm4
+; AVX-NEXT:    andpd %ymm0, %ymm5
+; AVX-NEXT:    andnpd %ymm2, %ymm4
+; AVX-NEXT:    orpd %ymm5, %ymm4
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorpd %ymm0, %ymm0
+; AVX-NEXT:    vmovd %eax, %ymm0
+; AVX-NEXT:    vshufpd $0, %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vmovapd %ymm0, %ymm2
+; AVX-NEXT:    andpd %ymm1, %ymm0
+; AVX-NEXT:    andnpd %ymm3, %ymm2
+; AVX-NEXT:    orpd %ymm0, %ymm2
+; AVX-NEXT:    vmovapd %ymm4, %ymm0
+; AVX-NEXT:    vmovapd %ymm2, %ymm1
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v8f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %ymm4
-; AVX2-NEXT:    vshufpd $0, %ymm4, %ymm4, %ymm4
-; AVX2-NEXT:    vmovapd %ymm4, %ymm4
-; AVX2-NEXT:    vandpd %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vandnpd %ymm0, %ymm4, %ymm0
-; AVX2-NEXT:    vorpd %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovapd %ymm0, %ymm0
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    vmovd %ecx, %ymm2
-; AVX2-NEXT:    vshufpd $0, %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vmovapd %ymm2, %ymm2
-; AVX2-NEXT:    vandpd %ymm3, %ymm2, %ymm3
-; AVX2-NEXT:    vandnpd %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vorpd %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vmovapd %ymm1, %ymm1
+; AVX2-NEXT:    xorps %ymm5, %ymm5
+; AVX2-NEXT:    vmovd %eax, %ymm5
+; AVX2-NEXT:    vshufpd $0, %ymm5, %ymm5, %ymm5         # ymm5 = ymm5[0,0,2,2]
+; AVX2-NEXT:    vmovapd %ymm5, %ymm4
+; AVX2-NEXT:    andpd %ymm0, %ymm5
+; AVX2-NEXT:    andnpd %ymm2, %ymm4
+; AVX2-NEXT:    orpd %ymm5, %ymm4
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    xorpd %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %eax, %ymm0
+; AVX2-NEXT:    vshufpd $0, %ymm0, %ymm0, %ymm0         # ymm0 = ymm0[0,0,2,2]
+; AVX2-NEXT:    vmovapd %ymm0, %ymm2
+; AVX2-NEXT:    andpd %ymm1, %ymm0
+; AVX2-NEXT:    andnpd %ymm3, %ymm2
+; AVX2-NEXT:    orpd %ymm0, %ymm2
+; AVX2-NEXT:    vmovapd %ymm4, %ymm0
+; AVX2-NEXT:    vmovapd %ymm2, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v8f64:
@@ -961,49 +1081,55 @@ define <4 x i32> @test_ctselect_v4i32_const_true(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: test_ctselect_v4i32_const_true:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movb $1, %al
-; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v4i32_const_true:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movb $1, %al
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testb %al, %al
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    movd %ecx, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4i32_const_true:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movb $1, %al
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    movd %ecx, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3                # xmm3 = xmm3[0,0,0,0]
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4i32_const_true:
@@ -1017,49 +1143,55 @@ define <4 x i32> @test_ctselect_v4i32_const_false(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: test_ctselect_v4i32_const_false:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_ctselect_v4i32_const_false:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testb %al, %al
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    movd %ecx, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4i32_const_false:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    movd %ecx, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3                # xmm3 = xmm3[0,0,0,0]
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4i32_const_false:
@@ -1076,16 +1208,18 @@ define <4 x i32> @test_ctselect_v4i32_icmp(i32 %x, i32 %y, <4 x i32> %a, <4 x i3
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cmpl %esi, %edi
 ; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pshufd $0, %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    movl $0, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    pshufd $0, %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1093,34 +1227,38 @@ define <4 x i32> @test_ctselect_v4i32_icmp(i32 %x, i32 %y, <4 x i32> %a, <4 x i3
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    cmpl %esi, %edi
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testb %al, %al
-; AVX-NEXT:    sete %cl
-; AVX-NEXT:    negl %ecx
-; AVX-NEXT:    movd %ecx, %xmm2
-; AVX-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm2
-; AVX-NEXT:    pand %xmm2, %xmm1
-; AVX-NEXT:    pandn %xmm0, %xmm2
-; AVX-NEXT:    por %xmm1, %xmm2
-; AVX-NEXT:    movdqa %xmm2, %xmm0
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    xorps %xmm3, %xmm3
+; AVX-NEXT:    movd %eax, %xmm3
+; AVX-NEXT:    pshufd $0, %xmm3, %xmm3
+; AVX-NEXT:    movdqa %xmm3, %xmm2
+; AVX-NEXT:    pand %xmm0, %xmm3
+; AVX-NEXT:    pandn %xmm1, %xmm2
+; AVX-NEXT:    por %xmm3, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ctselect_v4i32_icmp:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    cmpl %esi, %edi
 ; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    movd %ecx, %xmm2
-; AVX2-NEXT:    pshufd $0, %xmm2, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm2
-; AVX2-NEXT:    pand %xmm2, %xmm1
-; AVX2-NEXT:    pandn %xmm0, %xmm2
-; AVX2-NEXT:    por %xmm1, %xmm2
-; AVX2-NEXT:    movdqa %xmm2, %xmm0
+; AVX2-NEXT:    movl $0, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    xorps %xmm3, %xmm3
+; AVX2-NEXT:    movd %eax, %xmm3
+; AVX2-NEXT:    pshufd $0, %xmm3, %xmm3                # xmm3 = xmm3[0,0,0,0]
+; AVX2-NEXT:    movdqa %xmm3, %xmm2
+; AVX2-NEXT:    pand %xmm0, %xmm3
+; AVX2-NEXT:    pandn %xmm1, %xmm2
+; AVX2-NEXT:    por %xmm3, %xmm2
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctselect_v4i32_icmp:

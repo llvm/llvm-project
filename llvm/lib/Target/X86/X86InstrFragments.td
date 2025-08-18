@@ -155,7 +155,7 @@ def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
 def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
-def X86ctselect: SDNode<"X86ISD::CTSELECT", SDTX86CtSelect>;
+def X86ctselect: SDNode<"X86ISD::CTSELECT", SDTX86CtSelect, [SDNPInGlue]>;
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
                         [SDNPHasChain]>;

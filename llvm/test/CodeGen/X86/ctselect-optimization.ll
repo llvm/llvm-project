@@ -248,9 +248,14 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 define float @test_ctselect_f32_zero_positive(float %x) {
 ; CHECK-LABEL: test_ctselect_f32_zero_positive:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    cmpltss %xmm0, %xmm1
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    seta %cl
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    cmovnel %eax, %edx
+; CHECK-NEXT:    movd %edx, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp ogt float %x, 0.0
   %result = call float @llvm.ct.select.f32(i1 %cmp, float %x, float 0.0)
@@ -260,9 +265,14 @@ define float @test_ctselect_f32_zero_positive(float %x) {
 define double @test_ctselect_f64_zero_positive(double %x) {
 ; CHECK-LABEL: test_ctselect_f64_zero_positive:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    cmpltsd %xmm0, %xmm1
-; CHECK-NEXT:    andpd %xmm1, %xmm0
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0
+; CHECK-NEXT:    seta %cl
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp ogt double %x, 0.0
   %result = call double @llvm.ct.select.f64(i1 %cmp, double %x, double 0.0)
