@@ -609,12 +609,7 @@ public:
 
   template <class _Alloc, class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __tree_node(_Alloc& __na, _Args&&... __args) {
-#ifndef _LIBCPP_CXX03_LANG
-    allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
-#else
-    allocator_traits<_Alloc>::construct(
-        __na, reinterpret_cast<__node_value_type*>(__buffer_), std::forward<_Args>(__args)...);
-#endif
+    allocator_traits<_Alloc>::construct(__na, std::addressof(__get_value()), std::forward<_Args>(__args)...);
   }
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
