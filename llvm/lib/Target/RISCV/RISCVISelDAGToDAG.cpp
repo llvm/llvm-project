@@ -1691,7 +1691,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue()) &&
+        !(C1 == 0xffff && Subtarget->hasStdExtZbb()) &&
+        !(C1 == 0xffffffff && Subtarget->hasStdExtZba())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
