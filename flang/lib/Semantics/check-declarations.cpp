@@ -3134,12 +3134,12 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
                        *dyType, &context_.languageFeatures())
                         .value_or(false)) {
           if (type->category() == DeclTypeSpec::Logical) {
-            msgs.AddWarning(common::UsageWarning::LogicalVsCBool,
+            context().Warn(msgs, common::UsageWarning::LogicalVsCBool,
                 component.name(),
                 "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
           } else if (type->category() == DeclTypeSpec::Character && dyType &&
               dyType->kind() == 1) {
-            msgs.AddWarning(common::UsageWarning::BindCCharLength,
+            context().Warn(msgs, common::UsageWarning::BindCCharLength,
                 component.name(),
                 "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
           } else {
@@ -3156,7 +3156,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
       }
     }
     if (derived->componentNames().empty()) { // F'2023 C1805
-      msgs.AddWarning(common::LanguageFeature::EmptyBindCDerivedType,
+      context().Warn(msgs, common::LanguageFeature::EmptyBindCDerivedType,
           symbol.name(),
           "A derived type with the BIND attribute should not be empty"_warn_en_US);
     }

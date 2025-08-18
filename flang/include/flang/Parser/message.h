@@ -335,24 +335,12 @@ public:
     return messages_.emplace_back(std::forward<A>(args)...);
   }
 
-  // AddWarning bypasses the language feature control, it is only exposed for
-  // legacy code that cannot be easily refactored to use Warn().
-  template <typename... A>
-  Message &AddWarning(common::UsageWarning warning, A &&...args) {
-    return messages_.emplace_back(warning, std::forward<A>(args)...);
-  }
-
-  template <typename... A>
-  Message &AddWarning(common::LanguageFeature feature, A &&...args) {
-    return messages_.emplace_back(feature, std::forward<A>(args)...);
-  }
-
   template <typename... A>
   Message *Warn(bool isInModuleFile,
       const common::LanguageFeatureControl &control,
       common::LanguageFeature feature, A &&...args) {
     if (!isInModuleFile && control.ShouldWarn(feature)) {
-      return &AddWarning(feature, std::forward<A>(args)...);
+      return &addWarning(feature, std::forward<A>(args)...);
     }
     return nullptr;
   }
@@ -362,7 +350,7 @@ public:
       const common::LanguageFeatureControl &control,
       common::UsageWarning warning, A &&...args) {
     if (!isInModuleFile && control.ShouldWarn(warning)) {
-      return &AddWarning(warning, std::forward<A>(args)...);
+      return &addWarning(warning, std::forward<A>(args)...);
     }
     return nullptr;
   }
@@ -383,6 +371,14 @@ public:
   bool AnyFatalError(bool warningsAreErrors = false) const;
 
 private:
+  template <typename... A>
+  Message &addWarning(common::UsageWarning warning, A &&...args) {
+    return messages_.emplace_back(warning, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  Message &addWarning(common::LanguageFeature feature, A &&...args) {
+    return messages_.emplace_back(feature, std::forward<A>(args)...);
+  }
   std::list<Message> messages_;
 };
 
