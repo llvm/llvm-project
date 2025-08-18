@@ -6,6 +6,7 @@ Tool to reproduce and resolve the issues reported by the automerger.
 import argparse
 import json
 import logging
+import os
 import shlex
 import subprocess
 import sys
@@ -353,6 +354,9 @@ def main():
             log.error(msg)
             return 1
         log.info(f'Successfully pushed `{merge_commit}`.')
+
+        # Clean up.
+        os.remove(record)
 
 
 if __name__ == '__main__':
