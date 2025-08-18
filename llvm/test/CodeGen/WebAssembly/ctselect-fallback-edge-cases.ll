@@ -370,6 +370,297 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
   ret i32 %sel4
 }
 
+; This test demonstrates the FStar cmovznz4 pattern using ct.select
+; Based on https://godbolt.org/z/6Kb71Ks7z
+; Shows that NoMerge flag prevents DAG optimization from introducing branches
+define void @cmovznz4_fstar_original(i64 %cin, ptr %x, ptr %y, ptr %r) {
+; W32-LABEL: cmovznz4_fstar_original:
+; W32:         .functype cmovznz4_fstar_original (i64, i32, i32, i32) -> ()
+; W32-NEXT:    .local i32, i64, i64
+; W32-NEXT:  # %bb.0: # %entry
+; W32-NEXT:    local.get 1
+; W32-NEXT:    local.get 2
+; W32-NEXT:    local.get 0
+; W32-NEXT:    i64.eqz
+; W32-NEXT:    local.tee 4
+; W32-NEXT:    i32.select
+; W32-NEXT:    i64.load 0
+; W32-NEXT:    local.set 0
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i32.const 8
+; W32-NEXT:    i32.add
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i32.const 8
+; W32-NEXT:    i32.add
+; W32-NEXT:    local.get 4
+; W32-NEXT:    i32.select
+; W32-NEXT:    i64.load 0
+; W32-NEXT:    local.set 5
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i32.const 16
+; W32-NEXT:    i32.add
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i32.const 16
+; W32-NEXT:    i32.add
+; W32-NEXT:    local.get 4
+; W32-NEXT:    i32.select
+; W32-NEXT:    i64.load 0
+; W32-NEXT:    local.set 6
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i32.const 24
+; W32-NEXT:    i32.add
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i32.const 24
+; W32-NEXT:    i32.add
+; W32-NEXT:    local.get 4
+; W32-NEXT:    i32.select
+; W32-NEXT:    i64.load 0
+; W32-NEXT:    i64.store 24
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 6
+; W32-NEXT:    i64.store 16
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 5
+; W32-NEXT:    i64.store 8
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 0
+; W32-NEXT:    i64.store 0
+; W32-NEXT:    # fallthrough-return
+;
+; W64-LABEL: cmovznz4_fstar_original:
+; W64:         .functype cmovznz4_fstar_original (i64, i64, i64, i64) -> ()
+; W64-NEXT:    .local i32, i64, i64
+; W64-NEXT:  # %bb.0: # %entry
+; W64-NEXT:    local.get 1
+; W64-NEXT:    local.get 2
+; W64-NEXT:    local.get 0
+; W64-NEXT:    i64.eqz
+; W64-NEXT:    local.tee 4
+; W64-NEXT:    i64.select
+; W64-NEXT:    i64.load 0
+; W64-NEXT:    local.set 0
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.const 8
+; W64-NEXT:    i64.add
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.const 8
+; W64-NEXT:    i64.add
+; W64-NEXT:    local.get 4
+; W64-NEXT:    i64.select
+; W64-NEXT:    i64.load 0
+; W64-NEXT:    local.set 5
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.const 16
+; W64-NEXT:    i64.add
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.const 16
+; W64-NEXT:    i64.add
+; W64-NEXT:    local.get 4
+; W64-NEXT:    i64.select
+; W64-NEXT:    i64.load 0
+; W64-NEXT:    local.set 6
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.const 24
+; W64-NEXT:    i64.add
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.const 24
+; W64-NEXT:    i64.add
+; W64-NEXT:    local.get 4
+; W64-NEXT:    i64.select
+; W64-NEXT:    i64.load 0
+; W64-NEXT:    i64.store 24
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 6
+; W64-NEXT:    i64.store 16
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 5
+; W64-NEXT:    i64.store 8
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 0
+; W64-NEXT:    i64.store 0
+; W64-NEXT:    # fallthrough-return
+entry:
+  %.not.i = icmp eq i64 %cin, 0
+  %0 = load i64, ptr %y, align 8
+  %1 = load i64, ptr %x, align 8
+  %or = select i1 %.not.i, i64 %1, i64 %0
+  %arrayidx4 = getelementptr inbounds nuw i8, ptr %y, i64 8
+  %2 = load i64, ptr %arrayidx4, align 8
+  %arrayidx6 = getelementptr inbounds nuw i8, ptr %x, i64 8
+  %3 = load i64, ptr %arrayidx6, align 8
+  %or9 = select i1 %.not.i, i64 %3, i64 %2
+  %arrayidx10 = getelementptr inbounds nuw i8, ptr %y, i64 16
+  %4 = load i64, ptr %arrayidx10, align 8
+  %arrayidx12 = getelementptr inbounds nuw i8, ptr %x, i64 16
+  %5 = load i64, ptr %arrayidx12, align 8
+  %or15 = select i1 %.not.i, i64 %5, i64 %4
+  %arrayidx16 = getelementptr inbounds nuw i8, ptr %y, i64 24
+  %6 = load i64, ptr %arrayidx16, align 8
+  %arrayidx18 = getelementptr inbounds nuw i8, ptr %x, i64 24
+  %7 = load i64, ptr %arrayidx18, align 8
+  %or21 = select i1 %.not.i, i64 %7, i64 %6
+  store i64 %or, ptr %r, align 8
+  %arrayidx23 = getelementptr inbounds nuw i8, ptr %r, i64 8
+  store i64 %or9, ptr %arrayidx23, align 8
+  %arrayidx24 = getelementptr inbounds nuw i8, ptr %r, i64 16
+  store i64 %or15, ptr %arrayidx24, align 8
+  %arrayidx25 = getelementptr inbounds nuw i8, ptr %r, i64 24
+  store i64 %or21, ptr %arrayidx25, align 8
+  ret void
+}
+
+define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
+; W32-LABEL: cmovznz4_builtin_ctselect:
+; W32:         .functype cmovznz4_builtin_ctselect (i64, i32, i32, i32) -> ()
+; W32-NEXT:    .local i64
+; W32-NEXT:  # %bb.0: # %entry
+; W32-NEXT:    local.get 3
+; W32-NEXT:    i64.const 0
+; W32-NEXT:    local.get 0
+; W32-NEXT:    i64.eqz
+; W32-NEXT:    i64.extend_i32_u
+; W32-NEXT:    i64.const 1
+; W32-NEXT:    i64.and
+; W32-NEXT:    i64.sub
+; W32-NEXT:    local.tee 0
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i64.load 0
+; W32-NEXT:    i64.and
+; W32-NEXT:    local.get 0
+; W32-NEXT:    i64.const -1
+; W32-NEXT:    i64.xor
+; W32-NEXT:    local.tee 4
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i64.load 0
+; W32-NEXT:    i64.and
+; W32-NEXT:    i64.or
+; W32-NEXT:    i64.store 0
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 0
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i64.load 8
+; W32-NEXT:    i64.and
+; W32-NEXT:    local.get 4
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i64.load 8
+; W32-NEXT:    i64.and
+; W32-NEXT:    i64.or
+; W32-NEXT:    i64.store 8
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 0
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i64.load 16
+; W32-NEXT:    i64.and
+; W32-NEXT:    local.get 4
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i64.load 16
+; W32-NEXT:    i64.and
+; W32-NEXT:    i64.or
+; W32-NEXT:    i64.store 16
+; W32-NEXT:    local.get 3
+; W32-NEXT:    local.get 0
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i64.load 24
+; W32-NEXT:    i64.and
+; W32-NEXT:    local.get 4
+; W32-NEXT:    local.get 2
+; W32-NEXT:    i64.load 24
+; W32-NEXT:    i64.and
+; W32-NEXT:    i64.or
+; W32-NEXT:    i64.store 24
+; W32-NEXT:    # fallthrough-return
+;
+; W64-LABEL: cmovznz4_builtin_ctselect:
+; W64:         .functype cmovznz4_builtin_ctselect (i64, i64, i64, i64) -> ()
+; W64-NEXT:    .local i64
+; W64-NEXT:  # %bb.0: # %entry
+; W64-NEXT:    local.get 3
+; W64-NEXT:    i64.const 0
+; W64-NEXT:    local.get 0
+; W64-NEXT:    i64.eqz
+; W64-NEXT:    i64.extend_i32_u
+; W64-NEXT:    i64.const 1
+; W64-NEXT:    i64.and
+; W64-NEXT:    i64.sub
+; W64-NEXT:    local.tee 0
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.load 0
+; W64-NEXT:    i64.and
+; W64-NEXT:    local.get 0
+; W64-NEXT:    i64.const -1
+; W64-NEXT:    i64.xor
+; W64-NEXT:    local.tee 4
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.load 0
+; W64-NEXT:    i64.and
+; W64-NEXT:    i64.or
+; W64-NEXT:    i64.store 0
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 0
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.load 8
+; W64-NEXT:    i64.and
+; W64-NEXT:    local.get 4
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.load 8
+; W64-NEXT:    i64.and
+; W64-NEXT:    i64.or
+; W64-NEXT:    i64.store 8
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 0
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.load 16
+; W64-NEXT:    i64.and
+; W64-NEXT:    local.get 4
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.load 16
+; W64-NEXT:    i64.and
+; W64-NEXT:    i64.or
+; W64-NEXT:    i64.store 16
+; W64-NEXT:    local.get 3
+; W64-NEXT:    local.get 0
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i64.load 24
+; W64-NEXT:    i64.and
+; W64-NEXT:    local.get 4
+; W64-NEXT:    local.get 2
+; W64-NEXT:    i64.load 24
+; W64-NEXT:    i64.and
+; W64-NEXT:    i64.or
+; W64-NEXT:    i64.store 24
+; W64-NEXT:    # fallthrough-return
+entry:
+  %cmp = icmp eq i64 %cin, 0
+  %0 = load i64, ptr %x, align 8
+  %1 = load i64, ptr %y, align 8
+  %2 = tail call i64 @llvm.ct.select.i64(i1 %cmp, i64 %0, i64 %1)
+  store i64 %2, ptr %r, align 8
+  %arrayidx4 = getelementptr inbounds nuw i8, ptr %x, i64 8
+  %3 = load i64, ptr %arrayidx4, align 8
+  %arrayidx5 = getelementptr inbounds nuw i8, ptr %y, i64 8
+  %4 = load i64, ptr %arrayidx5, align 8
+  %5 = tail call i64 @llvm.ct.select.i64(i1 %cmp, i64 %3, i64 %4)
+  %arrayidx6 = getelementptr inbounds nuw i8, ptr %r, i64 8
+  store i64 %5, ptr %arrayidx6, align 8
+  %arrayidx8 = getelementptr inbounds nuw i8, ptr %x, i64 16
+  %6 = load i64, ptr %arrayidx8, align 8
+  %arrayidx9 = getelementptr inbounds nuw i8, ptr %y, i64 16
+  %7 = load i64, ptr %arrayidx9, align 8
+  %8 = tail call i64 @llvm.ct.select.i64(i1 %cmp, i64 %6, i64 %7)
+  %arrayidx10 = getelementptr inbounds nuw i8, ptr %r, i64 16
+  store i64 %8, ptr %arrayidx10, align 8
+  %arrayidx12 = getelementptr inbounds nuw i8, ptr %x, i64 24
+  %9 = load i64, ptr %arrayidx12, align 8
+  %arrayidx13 = getelementptr inbounds nuw i8, ptr %y, i64 24
+  %10 = load i64, ptr %arrayidx13, align 8
+  %11 = tail call i64 @llvm.ct.select.i64(i1 %cmp, i64 %9, i64 %10)
+  %arrayidx14 = getelementptr inbounds nuw i8, ptr %r, i64 24
+  store i64 %11, ptr %arrayidx14, align 8
+  ret void
+}
+
 ; Declare the intrinsics
 declare i1 @llvm.ct.select.i1(i1, i1, i1)
 declare i32 @llvm.ct.select.i32(i1, i32, i32)
