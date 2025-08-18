@@ -20,12 +20,32 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "walk-rewriter"
 
 namespace mlir {
+
+// Find all reachable blocks in the region and add them to the visitedBlocks
+// set.
+static void findReachableBlocks(Region &region,
+                                DenseSet<Block *> &reachableBlocks) {
+  Block *entryBlock = &region.front();
+  reachableBlocks.insert(entryBlock);
+  // Traverse the CFG and add all reachable blocks to the blockList.
+  SmallVector<Block *> worklist({entryBlock});
+  while (!worklist.empty()) {
+    Block *block = worklist.pop_back_val();
+    Operation *terminator = &block->back();
+    for (Block *successor : terminator->getSuccessors()) {
+      if (reachableBlocks.contains(successor))
+        continue;
+      worklist.push_back(successor);
+      reachableBlocks.insert(successor);
+    }
+  }
+}
 
 namespace {
 struct WalkAndApplyPatternsAction final
@@ -98,6 +118,8 @@ void walkAndApplyPatterns(Operation *op,
       regionIt = region->begin();
       if (regionIt != region->end())
         blockIt = regionIt->begin();
+      if (!llvm::hasSingleElement(*region))
+        findReachableBlocks(*region, reachableBlocks);
     }
     // Advance the iterator to the next reachable operation.
     void advance() {
@@ -105,14 +127,21 @@ void walkAndApplyPatterns(Operation *op,
       hasVisitedRegions = false;
       if (blockIt == regionIt->end()) {
         ++regionIt;
+        while (regionIt != region->end() &&
+               !reachableBlocks.contains(&*regionIt))
+          ++regionIt;
         if (regionIt != region->end())
           blockIt = regionIt->begin();
         return;
       }
       ++blockIt;
       if (blockIt != regionIt->end()) {
-        LDBG() << "Incrementing block iterator, next op: "
-               << OpWithFlags(&*blockIt, OpPrintingFlags().skipRegions());
+        LLVM_DEBUG({
+          llvm::dbgs() << "Incrementing block iterator, next op: "
+                       << OpWithFlags(&*blockIt,
+                                      OpPrintingFlags().skipRegions())
+                       << "\n";
+        });
       }
     }
     // The region we're iterating over.
@@ -121,6 +150,8 @@ void walkAndApplyPatterns(Operation *op,
     Region::iterator regionIt;
     // The Operation currently being iterated over.
     Block::iterator blockIt;
+    // The set of blocks that are reachable in the current region.
+    DenseSet<Block *> reachableBlocks;
     // Whether we've visited the nested regions of the current op already.
     bool hasVisitedRegions = false;
   };
@@ -128,7 +159,8 @@ void walkAndApplyPatterns(Operation *op,
   // Worklist of regions to visit to drive the post-order traversal.
   SmallVector<RegionReachableOpIterator> worklist;
 
-  LDBG() << "Starting walk-based pattern rewrite driver";
+  LLVM_DEBUG(
+      { llvm::dbgs() << "Starting walk-based pattern rewrite driver\n"; });
   ctx->executeAction<WalkAndApplyPatternsAction>(
       [&] {
         // Perform a post-order traversal of the regions, visiting each
@@ -173,13 +205,16 @@ void walkAndApplyPatterns(Operation *op,
             // would be erased.
             it.advance();
 
-            LDBG() << "Visiting op: "
-                   << OpWithFlags(op, OpPrintingFlags().skipRegions());
+            LLVM_DEBUG({
+              llvm::dbgs() << "Visiting op: "
+                           << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                           << "\n";
+            });
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
             erasedListener.visitedOp = op;
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
             if (succeeded(applicator.matchAndRewrite(op, rewriter)))
-              LDBG() << "\tOp matched and rewritten";
+              LLVM_DEBUG({ llvm::dbgs() << "\tOp matched and rewritten\n"; });
           }
         }
       },
