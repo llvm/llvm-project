@@ -223,8 +223,7 @@ But this will put the `inline` keyword in the wrong place resulting in:
           return 0;
   }
 
-Apparently one cannot use `:program:`clang-change-namespace` to inline a
-namespace.
+One cannot use `:program:`clang-change-namespace` to inline a namespace.
 
 Symbol references not updated
 -----------------------------
