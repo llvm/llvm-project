@@ -382,8 +382,8 @@ define i32 @sexti1_i32_setcc_2(i32 %a, i32 %b) {
 ; CHECK-LABEL: sexti1_i32_setcc_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    nds.bfos a0, a0, 0, 0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    ret
   %icmp = icmp eq i32 %a, %b
   %sext = sext i1 %icmp to i32
@@ -394,8 +394,9 @@ define i32 @sexti1_i32_setcc_2(i32 %a, i32 %b) {
 define i32 @sexti1_i32_setcc_3(i32 %a, i32 %b) {
 ; CHECK-LABEL: sexti1_i32_setcc_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slt a0, a0, a1
-; CHECK-NEXT:    nds.bfos a0, a0, 0, 0
+; CHECK-NEXT:    slt a1, a0, a1
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    sub a0, a0, a1
 ; CHECK-NEXT:    ret
   %icmp = icmp slt i32 %a, %b
   %sext = sext i1 %icmp to i32

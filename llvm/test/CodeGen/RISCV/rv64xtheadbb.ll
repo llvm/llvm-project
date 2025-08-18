@@ -667,8 +667,8 @@ define signext i32 @sexti1_i32_setcc_2(i32 signext %a, i32 signext %b) {
 ; RV64XTHEADBB-LABEL: sexti1_i32_setcc_2:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    xor a0, a0, a1
-; RV64XTHEADBB-NEXT:    seqz a0, a0
-; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    snez a0, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NEXT:    ret
   %icmp = icmp eq i32 %a, %b
   %sext = sext i1 %icmp to i32
@@ -686,7 +686,7 @@ define signext i32 @sexti1_i32_setcc_3(i32 signext %a, i32 signext %b) {
 ; RV64XTHEADBB-LABEL: sexti1_i32_setcc_3:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    slt a0, a0, a1
-; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    neg a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %icmp = icmp slt i32 %a, %b
   %sext = sext i1 %icmp to i32
@@ -756,8 +756,8 @@ define i64 @sexti1_i64_setcc_2(i64 %a, i64 %b) {
 ; RV64XTHEADBB-LABEL: sexti1_i64_setcc_2:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    xor a0, a0, a1
-; RV64XTHEADBB-NEXT:    seqz a0, a0
-; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    snez a0, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NEXT:    ret
   %icmp = icmp eq i64 %a, %b
   %sext = sext i1 %icmp to i64
@@ -775,7 +775,7 @@ define i64 @sexti1_i64_setcc_3(i64 %a, i64 %b) {
 ; RV64XTHEADBB-LABEL: sexti1_i64_setcc_3:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    slt a0, a0, a1
-; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    neg a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %icmp = icmp slt i64 %a, %b
   %sext = sext i1 %icmp to i64

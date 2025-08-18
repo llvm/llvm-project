@@ -346,8 +346,8 @@ define i32 @sexti1_i32_setcc_2(i32 %a, i32 %b) {
 ; RV32XTHEADBB-LABEL: sexti1_i32_setcc_2:
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    xor a0, a0, a1
-; RV32XTHEADBB-NEXT:    seqz a0, a0
-; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    snez a0, a0
+; RV32XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV32XTHEADBB-NEXT:    ret
   %icmp = icmp eq i32 %a, %b
   %sext = sext i1 %icmp to i32
@@ -365,7 +365,7 @@ define i32 @sexti1_i32_setcc_3(i32 %a, i32 %b) {
 ; RV32XTHEADBB-LABEL: sexti1_i32_setcc_3:
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    slt a0, a0, a1
-; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    neg a0, a0
 ; RV32XTHEADBB-NEXT:    ret
   %icmp = icmp slt i32 %a, %b
   %sext = sext i1 %icmp to i32
