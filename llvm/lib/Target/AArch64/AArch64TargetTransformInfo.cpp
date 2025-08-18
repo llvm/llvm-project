@@ -666,6 +666,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd: {
+    // Given a fma or fmuladd, cost it the same as a fmul instruction which are
+    // usually the same for costs. TODO: Add fp16 and bf16 expansion costs.
+    Type *EltTy = RetTy->getScalarType();
+    if (EltTy->isFloatTy() || EltTy->isDoubleTy() ||
+        (EltTy->isHalfTy() && ST->hasFullFP16()))
+      return getArithmeticInstrCost(Instruction::FMul, RetTy, CostKind);
+    break;
+  }
   case Intrinsic::stepvector: {
     InstructionCost Cost = 1; // Cost of the `index' instruction
     auto LT = getTypeLegalizationCost(RetTy);
@@ -4337,7 +4347,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
 InstructionCost
 AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                          const SCEV *Ptr) const {
+                                          const SCEV *Ptr,
+                                          TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -4901,11 +4912,33 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // load/store dependencies, to expose more parallel memory access streams,
   // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();
-  if (Header == L->getLoopLatch()) {
+  BasicBlock *Latch = L->getLoopLatch();
+  if (Header == Latch) {
     // Estimate the size of the loop.
     unsigned Size;
     unsigned Width = 10;
     if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
+      return;
+
+    // Try to find an unroll count that maximizes the use of the instruction
+    // window, i.e. trying to fetch as many instructions per cycle as possible.
+    unsigned MaxInstsPerLine = 16;
+    unsigned UC = 1;
+    unsigned BestUC = 1;
+    unsigned SizeWithBestUC = BestUC * Size;
+    while (UC <= 8) {
+      unsigned SizeWithUC = UC * Size;
+      if (SizeWithUC > 48)
+        break;
+      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
+          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+        BestUC = UC;
+        SizeWithBestUC = BestUC * Size;
+      }
+      UC++;
+    }
+
+    if (BestUC == 1)
       return;
 
     SmallPtrSet<Value *, 8> LoadedValuesPlus;
@@ -4929,25 +4962,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       }
     }
 
-    // Try to find an unroll count that maximizes the use of the instruction
-    // window, i.e. trying to fetch as many instructions per cycle as possible.
-    unsigned MaxInstsPerLine = 16;
-    unsigned UC = 1;
-    unsigned BestUC = 1;
-    unsigned SizeWithBestUC = BestUC * Size;
-    while (UC <= 8) {
-      unsigned SizeWithUC = UC * Size;
-      if (SizeWithUC > 48)
-        break;
-      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
-          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
-        BestUC = UC;
-        SizeWithBestUC = BestUC * Size;
-      }
-      UC++;
-    }
-
-    if (BestUC == 1 || none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
+    if (none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
           return LoadedValuesPlus.contains(SI->getOperand(0));
         }))
       return;
@@ -4960,7 +4975,6 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // Try to runtime-unroll loops with early-continues depending on loop-varying
   // loads; this helps with branch-prediction for the early-continues.
   auto *Term = dyn_cast<BranchInst>(Header->getTerminator());
-  auto *Latch = L->getLoopLatch();
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || !Term->isConditional() || Preds.size() == 1 ||
       !llvm::is_contained(Preds, Header) ||

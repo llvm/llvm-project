@@ -427,7 +427,7 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     ABI = ISAInfo->computeDefaultABI().str();
 
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
 
   FastScalarUnalignedAccess =
       llvm::is_contained(Features, "+unaligned-scalar-mem");

@@ -1,7 +1,7 @@
 // RUN: clang-repl "int i = 10;" 'extern "C" int printf(const char*,...);' \
 // RUN:            'auto r1 = printf("i = %d\n", i);' | FileCheck --check-prefix=CHECK-DRIVER %s
 // The test is flaky with asan https://github.com/llvm/llvm-project/pull/148701.
-// UNSUPPORTED: system-aix, asan
+// UNSUPPORTED: asan
 // CHECK-DRIVER: i = 10
 // RUN: cat %s | clang-repl -Xcc -std=c++11 -Xcc -fno-delayed-template-parsing | FileCheck %s
 extern "C" int printf(const char*,...);
