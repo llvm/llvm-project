@@ -293,10 +293,10 @@ void DylibSubstitutor::configure(StringRef loaderPath) {
   }
 
 #ifdef __APPLE__
-  placeholders_["@loader_path"] = std::string(loaderDir);
-  placeholders_["@executable_path"] = std::string(execPath);
+  placeholders["@loader_path"] = std::string(loaderDir);
+  placeholders["@executable_path"] = std::string(execPath);
 #else
-  placeholders_["$origin"] = std::string(loaderDir);
+  placeholders["$origin"] = std::string(loaderDir);
 #endif
 }
 
