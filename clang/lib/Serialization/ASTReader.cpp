@@ -11003,7 +11003,8 @@ void ASTReader::diagnoseOdrViolations() {
 }
 
 void ASTReader::StartedDeserializing() {
-  if (++NumCurrentElementsDeserializing == 1 && ReadTimer.get())
+  if (Timer *T = ReadTimer.get();
+      ++NumCurrentElementsDeserializing == 1 && T && !T->isRunning())
     ReadTimer->startTimer();
 }
 
