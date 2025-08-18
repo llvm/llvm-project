@@ -917,7 +917,6 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   Encoding |= Op1Val << 11;
 
   bool NeedsReg;
-  bool OptionalReg = false;
   std::string Ins;
   std::string Name;
 
@@ -1021,10 +1020,10 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   StringRef Reg = getRegisterName(MI->getOperand(4).getReg());
   bool NotXZR = Reg != "xzr";
 
-  // If a mandatory or optional register is not specified in the TableGen
+  // If a mandatory is not specified in the TableGen
   // (i.e. no register operand should be present), and the register value
   // is not xzr/x31, then disassemble to a SYS alias instead.
-  if (NotXZR && !NeedsReg && !OptionalReg)
+  if (NotXZR && !NeedsReg)
     return false;
 
   std::string Str = Ins + Name;
@@ -1032,9 +1031,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
 
   O << '\t' << Str;
 
-  // For optional registers, don't print the value if it's xzr/x31
-  // since this defaults to xzr/x31 if register is not specified.
-  if (NeedsReg || (OptionalReg && NotXZR)) {
+  if (NeedsReg) {
     O << ", " << Reg;
   }
 
