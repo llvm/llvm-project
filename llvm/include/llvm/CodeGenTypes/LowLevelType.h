@@ -138,7 +138,7 @@ public:
     return scalarOrVector(EC, LLT::scalar(static_cast<unsigned>(ScalarSize)));
   }
 
-  explicit constexpr LLT(bool isPointer, bool isVector, bool isScalar,
+  explicit constexpr LLT(bool isPointer, bool isVector, bool isScalar, bool isBfloat,
                          ElementCount EC, uint64_t SizeInBits,
                          unsigned AddressSpace)
       : LLT() {
@@ -250,7 +250,10 @@ public:
     }
 
     assert(getScalarSizeInBits() % Factor == 0);
-    return scalar(getScalarSizeInBits() / Factor);
+    if(isBfloat()) {
+      return scalar(getScalarSizeInBits() / Factor, true);
+    }
+    return scalar(getScalarSizeInBits() / Factor, false);
   }
 
   /// Produce a vector type that is \p Factor times bigger, preserving the
@@ -311,8 +314,8 @@ private:
   /// isScalar : 1
   /// isPointer : 1
   /// isVector  : 1
-  /// isVector  : 1
-  /// with 61 bits remaining for Kind-specific data, packed in bitfields
+  /// isBfloat  : 1
+  /// with 60 bits remaining for Kind-specific data, packed in bitfields
   /// as described below. As there isn't a simple portable way to pack bits
   /// into bitfields, here the different fields in the packed structure is
   /// described in static const *Field variables. Each of these variables
@@ -355,12 +358,12 @@ private:
   ///   SizeInBits: 16;
   ///   AddressSpace: 24;
   static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
+  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 20};
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
   ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
+  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
   static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
@@ -392,7 +395,7 @@ private:
     return getMask(FieldInfo) & (RawData >> FieldInfo[1]);
   }
 
-  constexpr void init(bool IsPointer, bool IsVector, bool IsScalar,
+  constexpr void init(bool IsPointer, bool IsVector, bool IsScalar, bool IsBfloat,
                       ElementCount EC, uint64_t SizeInBits,
                       unsigned AddressSpace) {
     assert(SizeInBits <= std::numeric_limits<unsigned>::max() &&
@@ -400,7 +403,7 @@ private:
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     this->IsScalar = IsScalar;
-    this->IsScalar = IsBfloat;
+    this->IsBfloat = IsBfloat;
     if (IsPointer) {
       RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
                 maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
