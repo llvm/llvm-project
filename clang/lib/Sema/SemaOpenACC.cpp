@@ -1921,8 +1921,13 @@ void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
     return;
 
   // This cast should be safe, since a static-local can only happen in a
-  // function declaration.
-  auto *ContextDecl = cast<FunctionDecl>(getCurContext());
+  // function declaration. However, in error cases (or perhaps ObjC/C++?), this
+  // could possibly be something like a 'block' decl, so if this is NOT a
+  // function decl, just give up.
+  auto *ContextDecl = dyn_cast<FunctionDecl>(getCurContext());
+
+  if (!ContextDecl)
+      return;
 
   // OpenACC 3.3 2.15:
   // In C and C++, function static variables are not supported in functions to
