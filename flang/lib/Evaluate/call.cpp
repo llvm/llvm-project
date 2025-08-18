@@ -307,7 +307,9 @@ static void DetermineCopyInOutArgument(
   bool dummyIsAssumedRank{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedRank)};
   bool dummyIsArray{dummyIsAssumedRank || dummyObj->type.Rank() > 0};
-  if (!actualIsArray || !dummyIsArray) {
+  bool treatDummyScalarAsArray{dummyObj->type.Rank() == 0 &&
+      dummyObj->ignoreTKR.test(common::IgnoreTKR::Rank)};
+  if (!actualIsArray || !(dummyIsArray || treatDummyScalarAsArray)) {
     return;
   }
 
@@ -335,6 +337,7 @@ static void DetermineCopyInOutArgument(
   bool dummyIsAssumedSize{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+      treatDummyScalarAsArray ||
       dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
