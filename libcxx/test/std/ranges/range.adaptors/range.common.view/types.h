@@ -14,10 +14,10 @@
 #include "test_iterators.h"
 
 struct DefaultConstructibleView : std::ranges::view_base {
-  int* begin_ = nullptr;
-  int* end_ = nullptr;
+  int* begin_                         = nullptr;
+  int* end_                           = nullptr;
   explicit DefaultConstructibleView() = default;
-  constexpr int *begin() const { return begin_; }
+  constexpr int* begin() const { return begin_; }
   constexpr auto end() const { return sentinel_wrapper<int*>(end_); }
 };
 static_assert(std::ranges::view<DefaultConstructibleView>);
@@ -26,21 +26,21 @@ static_assert(std::default_initializable<DefaultConstructibleView>);
 struct MoveOnlyView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit MoveOnlyView(int* b, int* e) : begin_(b), end_(e) { }
-  constexpr MoveOnlyView(MoveOnlyView&&) = default;
+  constexpr explicit MoveOnlyView(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr MoveOnlyView(MoveOnlyView&&)            = default;
   constexpr MoveOnlyView& operator=(MoveOnlyView&&) = default;
-  constexpr int *begin() const { return begin_; }
+  constexpr int* begin() const { return begin_; }
   constexpr auto end() const { return sentinel_wrapper<int*>(end_); }
 };
-static_assert( std::ranges::view<MoveOnlyView>);
-static_assert( std::ranges::contiguous_range<MoveOnlyView>);
+static_assert(std::ranges::view<MoveOnlyView>);
+static_assert(std::ranges::contiguous_range<MoveOnlyView>);
 static_assert(!std::copyable<MoveOnlyView>);
 
 struct CopyableView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit CopyableView(int* b, int* e) : begin_(b), end_(e) { }
-  constexpr int *begin() const { return begin_; }
+  constexpr explicit CopyableView(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr int* begin() const { return begin_; }
   constexpr auto end() const { return sentinel_wrapper<int*>(end_); }
 };
 static_assert(std::ranges::view<CopyableView>);
@@ -50,7 +50,7 @@ using ForwardIter = forward_iterator<int*>;
 struct SizedForwardView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit SizedForwardView(int* b, int* e) : begin_(b), end_(e) { }
+  constexpr explicit SizedForwardView(int* b, int* e) : begin_(b), end_(e) {}
   constexpr auto begin() const { return forward_iterator<int*>(begin_); }
   constexpr auto end() const { return sized_sentinel<forward_iterator<int*>>(forward_iterator<int*>(end_)); }
 };
@@ -62,9 +62,11 @@ using RandomAccessIter = random_access_iterator<int*>;
 struct SizedRandomAccessView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit SizedRandomAccessView(int* b, int* e) : begin_(b), end_(e) { }
+  constexpr explicit SizedRandomAccessView(int* b, int* e) : begin_(b), end_(e) {}
   constexpr auto begin() const { return random_access_iterator<int*>(begin_); }
-  constexpr auto end() const { return sized_sentinel<random_access_iterator<int*>>(random_access_iterator<int*>(end_)); }
+  constexpr auto end() const {
+    return sized_sentinel<random_access_iterator<int*>>(random_access_iterator<int*>(end_));
+  }
 };
 static_assert(std::ranges::view<SizedRandomAccessView>);
 static_assert(std::ranges::random_access_range<SizedRandomAccessView>);
@@ -73,9 +75,9 @@ static_assert(std::ranges::sized_range<SizedRandomAccessView>);
 struct CommonView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit CommonView(int* b, int* e) : begin_(b), end_(e) { }
-  constexpr int *begin() const { return begin_; }
-  constexpr int *end() const { return end_; }
+  constexpr explicit CommonView(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr int* begin() const { return begin_; }
+  constexpr int* end() const { return end_; }
 };
 static_assert(std::ranges::view<CommonView>);
 static_assert(std::ranges::common_range<CommonView>);
@@ -83,11 +85,11 @@ static_assert(std::ranges::common_range<CommonView>);
 struct NonCommonView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit NonCommonView(int* b, int* e) : begin_(b), end_(e) { }
-  constexpr int *begin() const { return begin_; }
+  constexpr explicit NonCommonView(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr int* begin() const { return begin_; }
   constexpr auto end() const { return sentinel_wrapper<int*>(end_); }
 };
-static_assert( std::ranges::view<NonCommonView>);
+static_assert(std::ranges::view<NonCommonView>);
 static_assert(!std::ranges::common_range<NonCommonView>);
 
 template <class T>
@@ -107,22 +109,30 @@ concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 template <class T>
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
-template<bool Simple>
-struct NonCommonBaseView: std::ranges::view_base {
+template <bool Simple>
+struct NonCommonBaseView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit NonCommonBaseView(int* b, int* e) : begin_(b), end_(e) { }
+  constexpr explicit NonCommonBaseView(int* b, int* e) : begin_(b), end_(e) {}
   constexpr auto begin() const { return static_cast<const int*>(begin_); }
   constexpr auto end() const { return sentinel_wrapper<const int*>(end_); }
-  constexpr int *begin() requires (!Simple) { return begin_; }
-  constexpr auto end() requires (!Simple) { return sentinel_wrapper<int*>(end_); }
+  constexpr int* begin()
+    requires(!Simple)
+  {
+    return begin_;
+  }
+  constexpr auto end()
+    requires(!Simple)
+  {
+    return sentinel_wrapper<int*>(end_);
+  }
 };
 using NonSimpleNonCommonView = NonCommonBaseView<false>;
 
-static_assert(!HasOnlyNonConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
+static_assert(!HasOnlyNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
 static_assert(!HasOnlyConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
 static_assert(HasConstAndNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
-static_assert(HasConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
-static_assert(HasOnlyConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
+static_assert(HasConstBegin<std::ranges::common_view<NonSimpleNonCommonView> const>);
+static_assert(HasOnlyConstBegin<std::ranges::common_view<NonSimpleNonCommonView> const>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H
