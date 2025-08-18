@@ -10,6 +10,48 @@
 // implementing the lazy ZA state save schemes around calls.
 //
 //===----------------------------------------------------------------------===//
+//
+// This pass works by collecting instructions that require ZA to be in a
+// specific state (e.g., "ACTIVE" or "SAVED") and inserting the necessary state
+// transitions to ensure ZA is in the required state before instructions. State
+// transitions represent actions such as setting up or restoring a lazy save.
+// Certain points within a function may also have predefined states independent
+// of any instructions, for example, a "shared_za" function is always entered
+// and exited in the "ACTIVE" state.
+//
+// To handle ZA state across control flow, we make use of edge bundling. This
+// assigns each block an "incoming" and "outgoing" edge bundle (representing
+// incoming and outgoing edges). Initially, these are unique to each block;
+// then, in the process of forming bundles, the outgoing block of a block is
+// joined with the incoming bundle of all successors. The result is that each
+// bundle can be assigned a single ZA state, which ensures the state required by
+// all a blocks' successors is the same, and that each basic block will always
+// be entered with the same ZA state. This eliminates the need for splitting
+// edges to insert state transitions or "phi" nodes for ZA states.
+//
+// See below for a simple example of edge bundling.
+//
+// The following shows a conditionally executed basic block (BB1):
+//
+// if (cond)
+//   BB1
+// BB2
+//
+// Initial Bundles         Joined Bundles
+//
+//   ┌──0──┐                ┌──0──┐
+//   │ BB0 │                │ BB0 │
+//   └──1──┘                └──1──┘
+//      ├───────┐              ├───────┐
+//      ▼       │              ▼       │
+//   ┌──2──┐    │   ─────►  ┌──1──┐    │
+//   │ BB1 │    ▼           │ BB1 │    ▼
+//   └──3──┘ ┌──4──┐        └──1──┘ ┌──1──┐
+//      └───►4 BB2 │           └───►1 BB2 │
+//           └──5──┘                └──2──┘
+//
+// On the left are the initial per-block bundles, and on the right are the
+// joined bundles (which are the result of the EdgeBundles analysis).
 
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -210,7 +252,7 @@ private:
   } State;
 
   MachineFunction *MF = nullptr;
-  EdgeBundles *Bundles = nullptr;
+  EdgeBundles *EdgeBundles = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
@@ -274,8 +316,8 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 }
 
 void MachineSMEABI::assignBundleZAStates() {
-  State.BundleStates.resize(Bundles->getNumBundles());
-  for (unsigned I = 0, E = Bundles->getNumBundles(); I != E; ++I) {
+  State.BundleStates.resize(EdgeBundles->getNumBundles());
+  for (unsigned I = 0, E = EdgeBundles->getNumBundles(); I != E; ++I) {
     LLVM_DEBUG(dbgs() << "Assigning ZA state for edge bundle: " << I << '\n');
 
     // Attempt to assign a ZA state for this bundle that minimizes state
@@ -284,7 +326,7 @@ void MachineSMEABI::assignBundleZAStates() {
     // TODO: We should propagate desired incoming/outgoing states through blocks
     // that have the "ANY" state first to make better global decisions.
     int EdgeStateCounts[ZAState::NUM_ZA_STATE] = {0};
-    for (unsigned BlockID : Bundles->getBlocks(I)) {
+    for (unsigned BlockID : EdgeBundles->getBlocks(I)) {
       LLVM_DEBUG(dbgs() << "- bb." << BlockID);
 
       const BlockInfo &Block = State.Blocks[BlockID];
@@ -292,8 +334,8 @@ void MachineSMEABI::assignBundleZAStates() {
         LLVM_DEBUG(dbgs() << " (no state preference)\n");
         continue;
       }
-      bool InEdge = Bundles->getBundle(BlockID, /*Out=*/false) == I;
-      bool OutEdge = Bundles->getBundle(BlockID, /*Out=*/true) == I;
+      bool InEdge = EdgeBundles->getBundle(BlockID, /*Out=*/false) == I;
+      bool OutEdge = EdgeBundles->getBundle(BlockID, /*Out=*/true) == I;
 
       ZAState DesiredIncomingState = Block.Insts.front().NeededState;
       if (InEdge && isLegalEdgeBundleZAState(DesiredIncomingState)) {
@@ -333,8 +375,8 @@ void MachineSMEABI::assignBundleZAStates() {
 void MachineSMEABI::insertStateChanges() {
   for (MachineBasicBlock &MBB : *MF) {
     const BlockInfo &Block = State.Blocks[MBB.getNumber()];
-    ZAState InState =
-        State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/false)];
+    ZAState InState = State.BundleStates[EdgeBundles->getBundle(MBB.getNumber(),
+                                                                /*Out=*/false)];
 
     ZAState CurrentState = Block.FixedEntryState;
     if (CurrentState == ZAState::ANY)
@@ -350,8 +392,8 @@ void MachineSMEABI::insertStateChanges() {
     if (MBB.succ_empty())
       continue;
 
-    ZAState OutState =
-        State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/true)];
+    ZAState OutState = State.BundleStates[EdgeBundles->getBundle(
+        MBB.getNumber(), /*Out=*/true)];
     if (CurrentState != OutState)
       emitStateChange(MBB, MBB.getFirstTerminator(), CurrentState, OutState,
                       Block.PhysLiveRegsAtExit);
@@ -632,7 +674,7 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   // Reset pass state.
   State = PassState{};
   this->MF = &MF;
-  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  EdgeBundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
