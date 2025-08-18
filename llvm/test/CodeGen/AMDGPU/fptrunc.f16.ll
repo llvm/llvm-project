@@ -4372,13 +4372,14 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX11-GISEL-TRUE16-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, s2
 ; GFX11-GISEL-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
 ;
@@ -4606,13 +4607,14 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX11-GISEL-TRUE16-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e64 v0.l, |s2|
 ; GFX11-GISEL-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
 ;
