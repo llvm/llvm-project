@@ -161,7 +161,7 @@ public:
 
   /// Run the transport MainLoop and return any messages received.
   llvm::Error
-  Run(std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
+  Run(std::chrono::milliseconds timeout = std::chrono::milliseconds(200)) {
     loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
                      timeout);
     auto handle = m_transport_up->RegisterMessageHandler(loop, message_handler);

@@ -3653,7 +3653,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   FunctionDecl *Old = OldD->getAsFunction();
   if (!Old) {
     if (UsingShadowDecl *Shadow = dyn_cast<UsingShadowDecl>(OldD)) {
-      if (New->getFriendObjectKind()) {
+      // We don't need to check the using friend pattern from other module unit
+      // since we should have diagnosed such cases in its unit already.
+      if (New->getFriendObjectKind() && !OldD->isInAnotherModuleUnit()) {
         Diag(New->getLocation(), diag::err_using_decl_friend);
         Diag(Shadow->getTargetDecl()->getLocation(),
              diag::note_using_decl_target);
@@ -5501,48 +5503,54 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
     if ((isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D)) &&
         cast<NamedDecl>(D)->getDeclName()) {
       ValueDecl *VD = cast<ValueDecl>(D);
-      if (CheckAnonMemberRedeclaration(SemaRef, S, Owner, VD->getDeclName(),
-                                       VD->getLocation(), AnonRecord->isUnion(),
-                                       SC)) {
-        // C++ [class.union]p2:
-        //   The names of the members of an anonymous union shall be
-        //   distinct from the names of any other entity in the
-        //   scope in which the anonymous union is declared.
+      // C++ [class.union]p2:
+      //   The names of the members of an anonymous union shall be
+      //   distinct from the names of any other entity in the
+      //   scope in which the anonymous union is declared.
+
+      bool FieldInvalid = CheckAnonMemberRedeclaration(
+          SemaRef, S, Owner, VD->getDeclName(), VD->getLocation(),
+          AnonRecord->isUnion(), SC);
+      if (FieldInvalid)
         Invalid = true;
-      } else {
-        // C++ [class.union]p2:
-        //   For the purpose of name lookup, after the anonymous union
-        //   definition, the members of the anonymous union are
-        //   considered to have been defined in the scope in which the
-        //   anonymous union is declared.
-        unsigned OldChainingSize = Chaining.size();
-        if (IndirectFieldDecl *IF = dyn_cast<IndirectFieldDecl>(VD))
-          Chaining.append(IF->chain_begin(), IF->chain_end());
-        else
-          Chaining.push_back(VD);
 
-        assert(Chaining.size() >= 2);
-        NamedDecl **NamedChain =
-          new (SemaRef.Context)NamedDecl*[Chaining.size()];
-        for (unsigned i = 0; i < Chaining.size(); i++)
-          NamedChain[i] = Chaining[i];
+      // Inject the IndirectFieldDecl even if invalid, because later
+      // diagnostics may depend on it being present, see findDefaultInitializer.
 
-        IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
-            SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
-            VD->getType(), {NamedChain, Chaining.size()});
+      // C++ [class.union]p2:
+      //   For the purpose of name lookup, after the anonymous union
+      //   definition, the members of the anonymous union are
+      //   considered to have been defined in the scope in which the
+      //   anonymous union is declared.
+      unsigned OldChainingSize = Chaining.size();
+      if (IndirectFieldDecl *IF = dyn_cast<IndirectFieldDecl>(VD))
+        Chaining.append(IF->chain_begin(), IF->chain_end());
+      else
+        Chaining.push_back(VD);
 
-        for (const auto *Attr : VD->attrs())
-          IndirectField->addAttr(Attr->clone(SemaRef.Context));
+      assert(Chaining.size() >= 2);
+      NamedDecl **NamedChain =
+          new (SemaRef.Context) NamedDecl *[Chaining.size()];
+      for (unsigned i = 0; i < Chaining.size(); i++)
+        NamedChain[i] = Chaining[i];
 
+      IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
+          SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
+          VD->getType(), {NamedChain, Chaining.size()});
+
+      for (const auto *Attr : VD->attrs())
+        IndirectField->addAttr(Attr->clone(SemaRef.Context));
+
+      IndirectField->setAccess(AS);
+      IndirectField->setImplicit();
+      IndirectField->setInvalidDecl(FieldInvalid);
+      SemaRef.PushOnScopeChains(IndirectField, S);
+
+      // That includes picking up the appropriate access specifier.
+      if (AS != AS_none)
         IndirectField->setAccess(AS);
-        IndirectField->setImplicit();
-        SemaRef.PushOnScopeChains(IndirectField, S);
 
-        // That includes picking up the appropriate access specifier.
-        if (AS != AS_none) IndirectField->setAccess(AS);
-
-        Chaining.resize(OldChainingSize);
-      }
+      Chaining.resize(OldChainingSize);
     }
   }
 
@@ -14700,7 +14708,14 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       isa<InitListExpr>(var->getInit())) {
     const auto *ILE = cast<InitListExpr>(var->getInit());
     unsigned NumInits = ILE->getNumInits();
-    if (NumInits > 2)
+    if (NumInits > 2) {
+      auto concatenatedPartsAt = [&](unsigned Index) -> unsigned {
+        if (const Expr *E = ILE->getInit(Index))
+          if (const auto *S = dyn_cast<StringLiteral>(E->IgnoreImpCasts()))
+            return S->getNumConcatenated();
+        return 0;
+      };
+
       for (unsigned I = 0; I < NumInits; ++I) {
         const auto *Init = ILE->getInit(I);
         if (!Init)
@@ -14713,24 +14728,23 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
         // Diagnose missing comma in string array initialization.
         // Do not warn when all the elements in the initializer are concatenated
         // together. Do not warn for macros too.
-        if (NumConcat == 2 && !SL->getBeginLoc().isMacroID()) {
-          bool OnlyOneMissingComma = true;
-          for (unsigned J = I + 1; J < NumInits; ++J) {
-            const auto *Init = ILE->getInit(J);
-            if (!Init)
-              break;
-            const auto *SLJ = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
-            if (!SLJ || SLJ->getNumConcatenated() > 1) {
-              OnlyOneMissingComma = false;
-              break;
-            }
-          }
+        if (NumConcat == 2) {
+          if (SL->getBeginLoc().isMacroID())
+            continue;
 
-          if (OnlyOneMissingComma) {
+          unsigned L = I > 0 ? concatenatedPartsAt(I - 1) : 0;
+          unsigned R = I + 1 < NumInits ? concatenatedPartsAt(I + 1) : 0;
+
+          // Skip neighbors with multi-part concatenations.
+          if (R > 1)
+            continue;
+
+          // Diagnose when at least one neighbor is a single literal.
+          if (R == 1 || L == 1) {
             SmallVector<FixItHint, 1> Hints;
-            for (unsigned i = 0; i < NumConcat - 1; ++i)
-              Hints.push_back(FixItHint::CreateInsertion(
-                  PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
+            // Insert a comma between the two tokens of this element.
+            Hints.push_back(FixItHint::CreateInsertion(
+                PP.getLocForEndOfToken(SL->getStrTokenLoc(0)), ", "));
 
             Diag(SL->getStrTokenLoc(1),
                  diag::warn_concatenated_literal_array_init)
@@ -14738,10 +14752,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             Diag(SL->getBeginLoc(),
                  diag::note_concatenated_string_literal_silence);
           }
-          // In any case, stop now.
-          break;
         }
       }
+    }
   }
 
 
@@ -20262,9 +20275,10 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // different from T:
   // - every enumerator of every member of class T that is an unscoped
   // enumerated type
-  if (getLangOpts().CPlusPlus && !TheEnumDecl->isScoped())
-    DiagnoseClassNameShadow(TheEnumDecl->getDeclContext(),
-                            DeclarationNameInfo(Id, IdLoc));
+  if (getLangOpts().CPlusPlus && !TheEnumDecl->isScoped() &&
+      DiagnoseClassNameShadow(TheEnumDecl->getDeclContext(),
+                              DeclarationNameInfo(Id, IdLoc)))
+    return nullptr;
 
   EnumConstantDecl *New =
     CheckEnumConstant(TheEnumDecl, LastEnumConst, IdLoc, Id, Val);
