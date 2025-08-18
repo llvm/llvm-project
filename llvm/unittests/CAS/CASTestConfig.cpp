@@ -61,7 +61,7 @@ void setMaxOnDiskCASMappingSize() {}
 std::unique_ptr<unittest::cas::MockEnv> createGRPCEnv(StringRef Socket,
                                                       StringRef TempDir);
 
-static TestingAndDir createGRPCCAS(int I) {
+static CASTestingEnv createGRPCCAS(int I) {
   std::shared_ptr<ObjectStore> CAS;
   unittest::TempDir Temp("daemon", /*Unique=*/true);
   SmallString<100> DaemonPath(Temp.path());
@@ -71,7 +71,7 @@ static TestingAndDir createGRPCCAS(int I) {
   std::unique_ptr<ActionCache> Cache;
   EXPECT_THAT_ERROR(createGRPCActionCache(DaemonPath).moveInto(Cache),
                     Succeeded());
-  return TestingAndDir{std::move(CAS), std::move(Cache), std::move(Env),
+  return CASTestingEnv{std::move(CAS), std::move(Cache), std::move(Env),
                        std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(GRPCRelayCAS, CASTest,

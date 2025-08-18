@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/LazyAtomicPointer.h"
+#include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/CAS/CASID.h"
-#include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/ThreadSafeAllocator.h"
 #include "llvm/Config/config.h"
@@ -31,7 +31,7 @@ class InMemoryCASData;
 // The in memory HashMappedTrie to store CASData from Service.
 // This implementation assumes 80 byte hash max.
 using InMemoryIndexT =
-    ThreadSafeHashMappedTrie<LazyAtomicPointer<const InMemoryCASData>, 80>;
+    ThreadSafeTrieRawHashMap<LazyAtomicPointer<const InMemoryCASData>, 80>;
 using InMemoryIndexValueT = InMemoryIndexT::value_type;
 
 // InMemoryCASData.
@@ -399,7 +399,7 @@ GRPCRelayCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
   auto &I = indexHash(arrayRefFromStringRef(*Response));
   // TODO: we can avoid the copy by implementing InMemoryRef object like
   // InMemoryCAS.
-  return toReference(storeObjectImpl(I, std::nullopt, Data));
+  return toReference(storeObjectImpl(I, {}, Data));
 }
 
 GRPCActionCache::GRPCActionCache(StringRef Path, Error &Err)
