@@ -44,7 +44,7 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-LABEL: @iv32(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP10:%.*]] = shl nuw i32 [[TMP0]], 2
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP10]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:

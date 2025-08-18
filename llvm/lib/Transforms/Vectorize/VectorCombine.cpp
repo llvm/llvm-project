@@ -39,7 +39,6 @@
 #include <optional>
 #include <queue>
 #include <set>
-#include <tuple>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -78,7 +77,7 @@ public:
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), AC(AC), DL(DL), CostKind(CostKind),
+        DT(DT), AA(AA), AC(AC), DL(DL), CostKind(CostKind), SQ(*DL),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
@@ -92,6 +91,7 @@ private:
   AssumptionCache &AC;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
+  const SimplifyQuery SQ;
 
   /// If true, only perform beneficial early IR transforms. Do not introduce new
   /// vector operations.
@@ -1238,17 +1238,18 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   // Fold the vector constants in the original vectors into a new base vector to
   // get more accurate cost modelling.
   Value *NewVecC = nullptr;
-  TargetFolder Folder(*DL);
   if (CI)
-    NewVecC = Folder.FoldCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
+    NewVecC = simplifyCmpInst(CI->getPredicate(), VecCs[0], VecCs[1], SQ);
   else if (UO)
     NewVecC =
-        Folder.FoldUnOpFMF(UO->getOpcode(), VecCs[0], UO->getFastMathFlags());
+        simplifyUnOp(UO->getOpcode(), VecCs[0], UO->getFastMathFlags(), SQ);
   else if (BO)
-    NewVecC = Folder.FoldBinOp(BO->getOpcode(), VecCs[0], VecCs[1]);
-  else if (II->arg_size() == 2)
-    NewVecC = Folder.FoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
-                                         VecCs[1], II->getType(), &I);
+    NewVecC = simplifyBinOp(BO->getOpcode(), VecCs[0], VecCs[1], SQ);
+  else if (II)
+    NewVecC = simplifyCall(II, II->getCalledOperand(), VecCs, SQ);
+
+  if (!NewVecC)
+    return false;
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
@@ -1256,6 +1257,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   InstructionCost NewCost =
       ScalarOpCost + TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                             CostKind, *Index, NewVecC);
+
   for (auto [Idx, Op, VecC, Scalar] : enumerate(Ops, VecCs, ScalarOps)) {
     if (!Scalar || (II && isVectorIntrinsicWithScalarOpAtArg(
                               II->getIntrinsicID(), Idx, &TTI)))
@@ -1300,15 +1302,6 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
     ScalarInst->copyIRFlags(&I);
 
-  // Create a new base vector if the constant folding failed.
-  if (!NewVecC) {
-    if (CI)
-      NewVecC = Builder.CreateCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
-    else if (UO || BO)
-      NewVecC = Builder.CreateNAryOp(Opcode, VecCs);
-    else
-      NewVecC = Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), VecCs);
-  }
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
   return true;
@@ -1796,8 +1789,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     ScalarizedCost +=
         TTI.getMemoryOpCost(Instruction::Load, VecTy->getElementType(),
                             Align(1), LI->getPointerAddressSpace(), CostKind);
-    ScalarizedCost +=
-        TTI.getAddressComputationCost(LI->getPointerOperandType());
+    ScalarizedCost += TTI.getAddressComputationCost(LI->getPointerOperandType(),
+                                                    nullptr, nullptr, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << I
@@ -1863,15 +1856,15 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   unsigned ExtCnt = 0;
   bool ExtLane0 = false;
   for (User *U : Ext->users()) {
-    const APInt *Idx;
-    if (!match(U, m_ExtractElt(m_Value(), m_APInt(Idx))))
+    uint64_t Idx;
+    if (!match(U, m_ExtractElt(m_Value(), m_ConstantInt(Idx))))
       return false;
     if (cast<Instruction>(U)->use_empty())
       continue;
     ExtCnt += 1;
-    ExtLane0 |= Idx->isZero();
+    ExtLane0 |= !Idx;
     VectorCost += TTI.getVectorInstrCost(Instruction::ExtractElement, DstTy,
-                                         CostKind, Idx->getZExtValue(), U);
+                                         CostKind, Idx, U);
   }
 
   InstructionCost ScalarCost =
