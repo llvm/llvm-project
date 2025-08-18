@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -125,10 +126,58 @@ struct PrivateClauseOpConversion
     return mlir::success();
   }
 };
+
+// Convert FIR type to LLVM without turning fir.box<T> into memory
+// reference.
+static mlir::Type convertObjectType(const fir::LLVMTypeConverter &converter,
+                                    mlir::Type firType) {
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(firType))
+    return converter.convertBoxTypeAsStruct(boxTy);
+  return converter.convertType(firType);
+}
+
+// FIR Op specific conversion for TargetAllocMemOp
+struct TargetAllocMemOpConversion
+    : public OpenMPFIROpConversion<mlir::omp::TargetAllocMemOp> {
+  using OpenMPFIROpConversion::OpenMPFIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(mlir::omp::TargetAllocMemOp allocmemOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type heapTy = allocmemOp.getAllocatedType();
+    mlir::Location loc = allocmemOp.getLoc();
+    auto ity = lowerTy().indexType();
+    mlir::Type dataTy = fir::unwrapRefType(heapTy);
+    mlir::Type llvmObjectTy = convertObjectType(lowerTy(), dataTy);
+    if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
+      TODO(loc, "omp.target_allocmem codegen of derived type with length "
+                "parameters");
+    mlir::Value size = fir::computeElementDistance(
+        loc, llvmObjectTy, ity, rewriter, lowerTy().getDataLayout());
+    if (auto scaleSize = fir::genAllocationScaleSize(
+            loc, allocmemOp.getInType(), ity, rewriter))
+      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+    for (mlir::Value opnd : adaptor.getOperands().drop_front())
+      size = rewriter.create<mlir::LLVM::MulOp>(
+          loc, ity, size, integerCast(lowerTy(), loc, rewriter, ity, opnd));
+    auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
+    auto mallocTy =
+        mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
+    if (mallocTyWidth != ity.getIntOrFloatBitWidth())
+      size = integerCast(lowerTy(), loc, rewriter, mallocTy, size);
+    rewriter.modifyOpInPlace(allocmemOp, [&]() {
+      allocmemOp.setInType(rewriter.getI8Type());
+      allocmemOp.getTypeparamsMutable().clear();
+      allocmemOp.getTypeparamsMutable().append(size);
+    });
+    return mlir::success();
+  }
+};
 } // namespace
 
 void fir::populateOpenMPFIRToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
   patterns.add<MapInfoOpConversion>(converter);
   patterns.add<PrivateClauseOpConversion>(converter);
+  patterns.add<TargetAllocMemOpConversion>(converter);
 }
