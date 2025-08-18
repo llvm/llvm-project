@@ -16,6 +16,7 @@ Possible improvements:
     - Only update the parts that need updating (based on the diff output). Could help avoid noisy updates when e.g. whitespace changes are ignored.
 """
 
+
 def get_source_and_target(a, b):
     """
     Try to figure out which file is the test output and which is the reference.
