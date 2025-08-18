@@ -1028,7 +1028,7 @@ static inline bool isAddLike(const SDValue V) {
 }
 
 static SDValue stripAssertAlign(SDValue N) {
-  while (N.getOpcode() == ISD::AssertAlign)
+  if (N.getOpcode() == ISD::AssertAlign)
     N = N.getOperand(0);
   return N;
 }
@@ -1051,7 +1051,6 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
 }
 
 static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
-  Addr = stripAssertAlign(Addr);
   APInt AccumulatedOffset(64u, 0);
   while (isAddLike(Addr)) {
     const auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
@@ -1063,7 +1062,7 @@ static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
       break;
 
     AccumulatedOffset += CI;
-    Addr = Addr->getOperand(0);
+    Addr = stripAssertAlign(Addr->getOperand(0));
   }
   return DAG->getSignedTargetConstant(AccumulatedOffset.getSExtValue(), DL,
                                       MVT::i32);
