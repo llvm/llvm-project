@@ -5685,7 +5685,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   };
   Function->setDeclarationNameLoc(NameLocPointsToPattern());
 
-  EnterExpressionEvaluationContext EvalContext(
+  EnterExpressionEvaluationContextForFunction EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
   Qualifiers ThisTypeQuals;
