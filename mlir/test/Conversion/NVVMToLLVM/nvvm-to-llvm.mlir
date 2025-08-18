@@ -683,6 +683,18 @@ llvm.func @ex2(%input : f32, %pred : i1) {
   llvm.return
 }
 
+// CHECK-LABEL: @multi_return(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32)
+llvm.func @multi_return(%a : i32, %b : i32) -> i32 {
+  // CHECK: %[[S1:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A\09 .reg .pred p;\0A\09 setp.ge.s32 p, $2, $3;\0A\09 selp.s32 $0, $2, $3, p;\0A\09 selp.s32 $1, $2, $3, !p;\0A\09}\0A", "=r,=r,r,r" %[[arg0]], %[[arg1]] : (i32, i32) -> !llvm.struct<(i32, i32)>
+  // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S1]][0] : !llvm.struct<(i32, i32)> 
+  // CHECK: %[[S3:.+]] = llvm.extractvalue %[[S1]][1] : !llvm.struct<(i32, i32)> 
+  // CHECK: %[[S4:.+]] = llvm.add %[[S2]], %[[S3]] : i32
+  // CHECK: llvm.return %[[S4]] : i32
+   %r1, %r2 = nvvm.inline_ptx  "{\n\t .reg .pred p;\n\t setp.ge.s32 p, $2, $3;\n\t selp.s32 $0, $2, $3, p;\n\t selp.s32 $1, $2, $3, !p;\n\t}\n" (%a, %b) : i32,i32 -> i32,i32
+   %r3 = llvm.add %r1, %r2 : i32
+   llvm.return %r3 : i32
+}
 // -----
 
 // CHECK-LABEL: @nvvm_pmevent
