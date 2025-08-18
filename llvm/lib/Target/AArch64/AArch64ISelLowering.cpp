@@ -3518,6 +3518,13 @@ bool isLegalCmpImmed(APInt C) {
   return isLegalArithImmed(C.abs().getZExtValue());
 }
 
+unsigned numberOfInstrToLoadImm(APInt C) {
+  uint64_t Imm = C.getZExtValue();
+  SmallVector<AArch64_IMM::ImmInsnModel> Insn;
+  AArch64_IMM::expandMOVImm(Imm, 32, Insn);
+  return Insn.size();
+}
+
 static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
   // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
   if (Op->getFlags().hasNoSignedWrap())
@@ -3987,6 +3994,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       // CC has already been adjusted.
       RHS = DAG.getConstant(0, DL, VT);
     } else if (!isLegalCmpImmed(C)) {
+      unsigned NumImmForC = numberOfInstrToLoadImm(C);
       // Constant does not fit, try adjusting it by one?
       switch (CC) {
       default:
@@ -3995,42 +4003,47 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       case ISD::SETGE:
         if (!C.isMinSignedValue()) {
           APInt CMinusOne = C - 1;
-          if (isLegalCmpImmed(CMinusOne)) {
+          if (isLegalCmpImmed(CMinusOne) ||
+              (NumImmForC > numberOfInstrToLoadImm(CMinusOne))) {
             CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
             RHS = DAG.getConstant(CMinusOne, DL, VT);
           }
         }
         break;
       case ISD::SETULT:
-      case ISD::SETUGE:
-        if (!C.isZero()) {
-          APInt CMinusOne = C - 1;
-          if (isLegalCmpImmed(CMinusOne)) {
-            CC = (CC == ISD::SETULT) ? ISD::SETULE : ISD::SETUGT;
-            RHS = DAG.getConstant(CMinusOne, DL, VT);
-          }
+      case ISD::SETUGE: {
+        // C is not 0 because it is a legal immediate.
+        assert(!C.isZero() && "C should not be zero here");
+        APInt CMinusOne = C - 1;
+        if (isLegalCmpImmed(CMinusOne) ||
+            (NumImmForC > numberOfInstrToLoadImm(CMinusOne))) {
+          CC = (CC == ISD::SETULT) ? ISD::SETULE : ISD::SETUGT;
+          RHS = DAG.getConstant(CMinusOne, DL, VT);
         }
         break;
+      }
       case ISD::SETLE:
       case ISD::SETGT:
         if (!C.isMaxSignedValue()) {
           APInt CPlusOne = C + 1;
-          if (isLegalCmpImmed(CPlusOne)) {
+          if (isLegalCmpImmed(CPlusOne) ||
+              (NumImmForC > numberOfInstrToLoadImm(CPlusOne))) {
             CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
             RHS = DAG.getConstant(CPlusOne, DL, VT);
           }
         }
         break;
       case ISD::SETULE:
-      case ISD::SETUGT:
-        if (!C.isAllOnes()) {
-          APInt CPlusOne = C + 1;
-          if (isLegalCmpImmed(CPlusOne)) {
-            CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
-            RHS = DAG.getConstant(CPlusOne, DL, VT);
-          }
+      case ISD::SETUGT: {
+        assert(!C.isAllOnes() && "C should not be -1 here");
+        APInt CPlusOne = C + 1;
+        if (isLegalCmpImmed(CPlusOne) ||
+            (NumImmForC > numberOfInstrToLoadImm(CPlusOne))) {
+          CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
+          RHS = DAG.getConstant(CPlusOne, DL, VT);
         }
         break;
+      }
       }
     }
   }
