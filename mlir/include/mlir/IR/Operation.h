@@ -1125,6 +1125,26 @@ inline raw_ostream &operator<<(raw_ostream &os,
   return os;
 }
 
+/// A wrapper class that allows for printing an operation with a custom
+/// AsmState, useful to act as a "stream modifier" to customize printing an
+/// operation with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithState(op, OpPrintingFlags().skipRegions());
+class OpWithState {
+public:
+  OpWithState(Operation *op, AsmState &state) : op(op), theState(state) {}
+
+private:
+  Operation *op;
+  AsmState &theState;
+  friend raw_ostream &operator<<(raw_ostream &os, const OpWithState &op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const OpWithState &opWithState) {
+  opWithState.op->print(os, const_cast<OpWithState &>(opWithState).theState);
+  return os;
+}
+
 } // namespace mlir
 
 namespace llvm {

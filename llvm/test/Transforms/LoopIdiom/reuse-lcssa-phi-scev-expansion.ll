@@ -33,11 +33,10 @@ define void @scev_expand_ptrtoint(i8 %x, ptr %start) {
 ; CHECK:       [[LOOP_3_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i64 [ [[INDVAR]], %[[LOOP_2_HEADER]] ], [ [[INDVAR]], %[[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    [[PTR_IV_2_LCSSA:%.*]] = phi ptr [ [[PTR_IV_2]], %[[LOOP_2_HEADER]] ], [ [[PTR_IV_2]], %[[LOOP_2_HEADER]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[START1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1, [[START1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR_IV_1_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[CMP_EXT]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[CMP_EXT]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDVAR_LCSSA]], [[TMP4]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr [[SCEVGEP]])

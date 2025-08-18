@@ -860,3 +860,37 @@ static_assert(__builtin_elementwise_sub_sat(0U, 1U) == 0U);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4char){5, 4, 3, 2}, (vector4char){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304 : 0x04030201));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4uchar){5, 4, 3, 2}, (vector4uchar){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304U : 0x04030201U));
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_sub_sat((vector4short){(short)0x8000, (short)0x8001, (short)0x8002, (short)0x8003}, (vector4short){7, 8, 9, 10}) == (LITTLE_END ? 0x8000800080008000 : 0x8000800080008000)));
+
+static_assert(__builtin_elementwise_max(1, 2) == 2);
+static_assert(__builtin_elementwise_max(-1, 1) == 1);
+static_assert(__builtin_elementwise_max(1U, 2U) == 2U);
+static_assert(__builtin_elementwise_max(~0U, 0U) == ~0U);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_max((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFF03FE04 : 0x04FE03FF ));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_max((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x04030304U);
+static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_max((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFF0003FFFE0004 : 0x0004FFFE0003FFFF));
+
+static_assert(__builtin_elementwise_min(1, 2) == 1);
+static_assert(__builtin_elementwise_min(-1, 1) == -1);
+static_assert(__builtin_elementwise_min(1U, 2U) == 1U);
+static_assert(__builtin_elementwise_min(~0U, 0U) == 0U);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFC02FD01 : 0x01FD02FC));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x01020201U);
+static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_min((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFC0002FFFD0001 : 0x0001FFFD0002FFFC));
+
+static_assert(__builtin_elementwise_abs(10) == 10);
+static_assert(__builtin_elementwise_abs(-10) == 10);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_abs((vector4char){-1, -2, -3, 4})) == (LITTLE_END ? 0x04030201 : 0x01020304));
+static_assert(__builtin_elementwise_abs((int)(-2147483648)) == (int)(-2147483648)); // the absolute value of the most negative integer remains the most negative integer
+
+// check floating point for elementwise abs
+#define CHECK_FOUR_FLOAT_VEC(vec1, vec2) \
+    static_assert(__builtin_fabs(vec1[0] - vec2[0]) < 1e-6); \
+    static_assert(__builtin_fabs(vec1[1] - vec2[1]) < 1e-6); \
+    static_assert(__builtin_fabs(vec1[2] - vec2[2]) < 1e-6); \
+    static_assert(__builtin_fabs(vec1[3] - vec2[3]) < 1e-6);
+
+// checking floating point vector
+CHECK_FOUR_FLOAT_VEC(__builtin_elementwise_abs((vector4float){-1.123, 2.123, -3.123, 4.123}), ((vector4float){1.123, 2.123, 3.123, 4.123}))
+CHECK_FOUR_FLOAT_VEC(__builtin_elementwise_abs((vector4double){-1.123, 2.123, -3.123, 4.123}), ((vector4double){1.123, 2.123, 3.123, 4.123}))
+static_assert(__builtin_elementwise_abs((float)-1.123) - (float)1.123 < 1e-6); // making sure one element works
+#undef CHECK_FOUR_FLOAT_VEC

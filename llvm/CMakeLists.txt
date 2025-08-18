@@ -149,7 +149,7 @@ endforeach()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc;libsycl")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -187,28 +187,29 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
 endif ()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
+    "become a fatal error in a future release. Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
 endif()
 
 if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=compiler-rt is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=compiler-rt or see the instructions at "
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
 if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
 
 if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
@@ -221,7 +222,7 @@ endif ()
 
 if ("libclc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libclc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libclc or see the instructions at "
     "https://libclc.llvm.org/ for building the runtimes.")
 endif()
@@ -586,9 +587,6 @@ option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only 
 set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, COVERAGE, or COVERAGE_AND_ORIGIN.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE COVERAGE_AND_ORIGIN)
-
-option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
-  "Add additional fields to DILocations to support Key Instructions" ON)
 
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)

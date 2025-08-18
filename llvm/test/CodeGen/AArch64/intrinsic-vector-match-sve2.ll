@@ -36,7 +36,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[1]
@@ -241,7 +241,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z3.b, z1.b[1]
@@ -463,7 +463,7 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z2.s, z1.s[1]

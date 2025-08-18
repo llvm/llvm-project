@@ -19,7 +19,7 @@ coro.alloc:                                       ; preds = %entry
 coro.init:                                        ; preds = %coro.alloc, %entry
   %3 = phi ptr [ null, %entry ], [ %call, %coro.alloc ]
   %4 = call ptr @llvm.coro.begin(token %0, ptr %3) #10
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %__promise) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %__promise) #2
   %call2 = call ptr @_ZN4task12promise_type17get_return_objectEv(ptr nonnull dereferenceable(1) %__promise)
   call void @initial_suspend(ptr nonnull dereferenceable(1) %__promise)
   %5 = call token @llvm.coro.save(ptr null)
@@ -31,9 +31,9 @@ coro.init:                                        ; preds = %coro.alloc, %entry
   ]
 
 init.ready:                                       ; preds = %coro.init
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %a2) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %a2) #2
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a2, ptr align 8 %a1, i64 24, i1 false)
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %a2) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %a2) #2
   call void @_ZN4task12promise_type13final_suspendEv(ptr nonnull dereferenceable(1) %__promise) #2
   %7 = call token @llvm.coro.save(ptr null)
   call fastcc void @_ZNSt12experimental13coroutines_v116coroutine_handleIN4task12promise_typeEE12from_addressEPv(ptr %4) #2
@@ -42,7 +42,7 @@ init.ready:                                       ; preds = %coro.init
   br i1 %switch, label %cleanup33, label %coro.ret
 
 cleanup33:                                        ; preds = %init.ready, %coro.init
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %__promise) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %__promise) #2
   %9 = call ptr @llvm.coro.free(token %0, ptr %4)
   %.not = icmp eq ptr %9, null
   br i1 %.not, label %coro.ret, label %coro.free
@@ -75,7 +75,7 @@ declare i64 @llvm.coro.size.i64() #4
 declare ptr @llvm.coro.begin(token, ptr writeonly) #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #5
+declare void @llvm.lifetime.start.p0(ptr nocapture) #5
 
 ; Function Attrs: argmemonly nofree nounwind willreturn
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #6
@@ -93,7 +93,7 @@ declare token @llvm.coro.save(ptr) #2
 declare hidden fastcc void @_ZNSt12experimental13coroutines_v116coroutine_handleIN4task12promise_typeEE12from_addressEPv(ptr) unnamed_addr #7 align 2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #5
+declare void @llvm.lifetime.end.p0(ptr nocapture) #5
 
 ; Function Attrs: nounwind
 declare i8 @llvm.coro.suspend(token, i1) #2

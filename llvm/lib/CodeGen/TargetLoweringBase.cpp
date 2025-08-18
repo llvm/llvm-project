@@ -697,7 +697,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
   MaxGluedStoresPerMemcpy = 0;
   MaxStoresPerMemsetOptSize = MaxStoresPerMemcpyOptSize =
       MaxStoresPerMemmoveOptSize = MaxLoadsPerMemcmpOptSize = 4;
-  HasMultipleConditionRegisters = false;
   HasExtractBitsInsn = false;
   JumpIsExpensive = JumpIsExpensiveOverride;
   PredictableSelectIsExpensive = false;
@@ -905,6 +904,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
+
+    setOperationAction(ISD::MSTORE, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -1007,7 +1008,7 @@ unsigned TargetLoweringBase::getBitWidthForCttzElements(
     CR = CR.subtract(APInt(64, 1));
 
   unsigned EltWidth = RetTy->getScalarSizeInBits();
-  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::min(EltWidth, CR.getActiveBits());
   EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
 
   return EltWidth;
@@ -1737,13 +1738,13 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
                          AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DL, ReturnType, ValueVTs);
-  unsigned NumValues = ValueVTs.size();
+  SmallVector<Type *, 4> Types;
+  ComputeValueTypes(DL, ReturnType, Types);
+  unsigned NumValues = Types.size();
   if (NumValues == 0) return;
 
-  for (unsigned j = 0, f = NumValues; j != f; ++j) {
-    EVT VT = ValueVTs[j];
+  for (Type *Ty : Types) {
+    EVT VT = TLI.getValueType(DL, Ty);
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
     if (attr.hasRetAttr(Attribute::SExt))
@@ -1771,7 +1772,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setZExt();
 
     for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, Ty, 0, 0));
   }
 }
 
@@ -1892,6 +1893,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case SIToFP:         return ISD::SINT_TO_FP;
   case FPTrunc:        return ISD::FP_ROUND;
   case FPExt:          return ISD::FP_EXTEND;
+  case PtrToAddr:      return ISD::BITCAST;
   case PtrToInt:       return ISD::BITCAST;
   case IntToPtr:       return ISD::BITCAST;
   case BitCast:        return ISD::BITCAST;
@@ -1922,6 +1924,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::log:
+    return ISD::FLOG;
   default:
     return ISD::DELETED_NODE;
   }
@@ -2062,7 +2066,7 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 
     // FreeBSD has "__stack_chk_guard" defined externally on libc.so
     if (M.getDirectAccessExternalData() &&
-        !TM.getTargetTriple().isWindowsGNUEnvironment() &&
+        !TM.getTargetTriple().isOSCygMing() &&
         !(TM.getTargetTriple().isPPC64() &&
           TM.getTargetTriple().isOSFreeBSD()) &&
         (!TM.getTargetTriple().isOSDarwin() ||

@@ -121,6 +121,36 @@ void test_amdgcn_wmma_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f 
   *out = __builtin_amdgcn_wmma_f32_16x16x128_f8f6f4(1, a, 2, b, mod, c); // expected-error {{'__builtin_amdgcn_wmma_f32_16x16x128_f8f6f4' must be a constant integer}}
 }
 
+void test_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f c, int mod, int scale_src0, int scale_src1, bool reuse)
+{
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(mod, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, mod, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 0, 1); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, mod, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, mod, 0, scale_src0, 2, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, mod, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, reuse, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 0, reuse); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, mod, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, mod, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, mod, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, mod); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f c, int mod, long scale_src0, long scale_src1, bool reuse)
+{
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(mod, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, mod, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 0, 1); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, mod, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, mod, 0, scale_src0, 2, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, mod, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, reuse, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 0, reuse); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, mod, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, mod, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, mod, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, mod); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+}
+
 void test_amdgcn_wmma_f32_16x16x32_f16(global v8f* out, v16h a, v16h b, v8f c, int mod)
 {
   *out = __builtin_amdgcn_wmma_f32_16x16x32_f16(mod, a, 0, b, 0, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_f32_16x16x32_f16' must be a constant integer}}
@@ -198,6 +228,32 @@ void test_amdgcn_wmma_f32_16x16x128_bf8_bf8(global v8f* out, v16i a, v16i b, v8f
 void test_amdgcn_wmma_f32_wmma_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c, int mod)
 {
   *out = __builtin_amdgcn_wmma_f32_32x16x128_f4(a, b, mod, c); // expected-error {{'__builtin_amdgcn_wmma_f32_32x16x128_f4' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_scale_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c, int mod, int scale_src0, int scale_src1, bool reuse)
+{
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, mod, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, mod, 0, scale_src0, 2, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, mod, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, reuse, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 0, reuse); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, mod, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, mod, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, mod, 0); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, mod); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_32x16x128_f4' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_scale16_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c, int mod, long scale_src0, long scale_src1, bool reuse)
+{
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, mod, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, mod, 0, scale_src0, 2, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, mod, 0, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, reuse, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 0, reuse); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, mod, scale_src0, 2, 0, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, mod, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, mod, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 0, scale_src0, 2, 0, scale_src1, 1, mod); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_32x16x128_f4' must be a constant integer}}
 }
 
 void test_amdgcn_swmmac_f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf16 b, v8f c, int index, int mod)

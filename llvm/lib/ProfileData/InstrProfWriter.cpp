@@ -331,61 +331,34 @@ void InstrProfWriter::addDataAccessProfData(
   DataAccessProfileData = std::move(DataAccessProfDataIn);
 }
 
-void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
-  assert(Trace.FunctionNameRefs.size() <= MaxTemporalProfTraceLength);
-  assert(!Trace.FunctionNameRefs.empty());
-  if (TemporalProfTraceStreamSize < TemporalProfTraceReservoirSize) {
-    // Simply append the trace if we have not yet hit our reservoir size limit.
-    TemporalProfTraces.push_back(std::move(Trace));
-  } else {
-    // Otherwise, replace a random trace in the stream.
-    std::uniform_int_distribution<uint64_t> Distribution(
-        0, TemporalProfTraceStreamSize);
-    uint64_t RandomIndex = Distribution(RNG);
-    if (RandomIndex < TemporalProfTraces.size())
-      TemporalProfTraces[RandomIndex] = std::move(Trace);
-  }
-  ++TemporalProfTraceStreamSize;
-}
-
 void InstrProfWriter::addTemporalProfileTraces(
     SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
+  if (TemporalProfTraces.size() > TemporalProfTraceReservoirSize)
+    TemporalProfTraces.truncate(TemporalProfTraceReservoirSize);
   for (auto &Trace : SrcTraces)
     if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
       Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
   llvm::erase_if(SrcTraces, [](auto &T) { return T.FunctionNameRefs.empty(); });
-  // Assume that the source has the same reservoir size as the destination to
-  // avoid needing to record it in the indexed profile format.
-  bool IsDestSampled =
-      (TemporalProfTraceStreamSize > TemporalProfTraceReservoirSize);
-  bool IsSrcSampled = (SrcStreamSize > TemporalProfTraceReservoirSize);
-  if (!IsDestSampled && IsSrcSampled) {
-    // If one of the traces are sampled, ensure that it belongs to Dest.
-    std::swap(TemporalProfTraces, SrcTraces);
-    std::swap(TemporalProfTraceStreamSize, SrcStreamSize);
-    std::swap(IsDestSampled, IsSrcSampled);
-  }
-  if (!IsSrcSampled) {
-    // If the source stream is not sampled, we add each source trace normally.
-    for (auto &Trace : SrcTraces)
-      addTemporalProfileTrace(std::move(Trace));
+  // If there are no source traces, it is probably because
+  // --temporal-profile-max-trace-length=0 was set to deliberately remove all
+  // traces. In that case, we do not want to increase the stream size
+  if (SrcTraces.empty())
     return;
-  }
-  // Otherwise, we find the traces that would have been removed if we added
-  // the whole source stream.
-  SmallSetVector<uint64_t, 8> IndicesToReplace;
-  for (uint64_t I = 0; I < SrcStreamSize; I++) {
-    std::uniform_int_distribution<uint64_t> Distribution(
-        0, TemporalProfTraceStreamSize);
+  // Add traces until our reservoir is full or we run out of source traces
+  auto SrcTraceIt = SrcTraces.begin();
+  while (TemporalProfTraces.size() < TemporalProfTraceReservoirSize &&
+         SrcTraceIt < SrcTraces.end())
+    TemporalProfTraces.push_back(*SrcTraceIt++);
+  // Our reservoir is full, we need to sample the source stream
+  llvm::shuffle(SrcTraceIt, SrcTraces.end(), RNG);
+  for (uint64_t I = TemporalProfTraces.size();
+       I < SrcStreamSize && SrcTraceIt < SrcTraces.end(); I++) {
+    std::uniform_int_distribution<uint64_t> Distribution(0, I);
     uint64_t RandomIndex = Distribution(RNG);
     if (RandomIndex < TemporalProfTraces.size())
-      IndicesToReplace.insert(RandomIndex);
-    ++TemporalProfTraceStreamSize;
+      TemporalProfTraces[RandomIndex] = *SrcTraceIt++;
   }
-  // Then we insert a random sample of the source traces.
-  llvm::shuffle(SrcTraces.begin(), SrcTraces.end(), RNG);
-  for (const auto &[Index, Trace] : llvm::zip(IndicesToReplace, SrcTraces))
-    TemporalProfTraces[Index] = std::move(Trace);
+  TemporalProfTraceStreamSize += SrcStreamSize;
 }
 
 void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,

@@ -313,5 +313,6 @@ private:
 IntrusiveRefCntPtr<vfs::FileSystem>
 FileCollector::createCollectorVFS(IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
                                   std::shared_ptr<FileCollector> Collector) {
-  return new FileCollectorFileSystem(std::move(BaseFS), std::move(Collector));
+  return makeIntrusiveRefCnt<FileCollectorFileSystem>(std::move(BaseFS),
+                                                      std::move(Collector));
 }

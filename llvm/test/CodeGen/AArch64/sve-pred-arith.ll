@@ -53,7 +53,7 @@ define aarch64_sve_vector_pcs <vscale x 64 x i1> @add_nxv64i1(<vscale x 64 x i1>
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
@@ -137,7 +137,7 @@ define aarch64_sve_vector_pcs <vscale x 64 x i1> @sub_nxv64i1(<vscale x 64 x i1>
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill

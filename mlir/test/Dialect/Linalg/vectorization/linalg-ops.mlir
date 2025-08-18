@@ -880,22 +880,22 @@ func.func @mmt4d_scalable(%A: memref<16x16x8x1xf32>, %B: memref<16x16x?x1xf32>, 
 // CHECK-SAME:      %[[A:.*]]: memref<16x16x8x1xf32>,
 // CHECK-SAME:      %[[B:.*]]: memref<16x16x?x1xf32>,
 // CHECK-SAME:      %[[C_IN:.*]]: memref<16x16x8x?xf32>) {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 16 : index
-// CHECK:           %[[VAL_1:.*]] = arith.constant 16 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 16 : index
+// CHECK:           %[[C16_M:.*]] = arith.constant 16 : index
+// CHECK:           %[[C16_N:.*]] = arith.constant 16 : index
+// CHECK:           %[[C16_K:.*]] = arith.constant 16 : index
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[DIM_2:.*]] = memref.dim %[[B]], %[[C2]] : memref<16x16x?x1xf32>
-// CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<16x16x8x1xf32>, vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[MASK_1:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_2]], %[[DIM_2]], %[[VAL_6]] : vector<16x16x[4]x1xi1>
+// CHECK:           %[[MASK_1:.*]] = vector.create_mask %[[C16_N]], %[[C16_K]], %[[DIM_2]], %[[C1]] : vector<16x16x[4]x1xi1>
 // CHECK:           %[[VEC_B:.*]] = vector.mask %[[MASK_1]] { vector.transfer_read %[[B]]{{.*}} : memref<16x16x?x1xf32>, vector<16x16x16x8x[4]x1xf32> } : vector<16x16x[4]x1xi1> -> vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[MASK_2:.*]] = vector.create_mask %[[VAL_0]], %[[VAL_1]], %[[C8]], %[[DIM_2]] : vector<16x16x8x[4]xi1>
-// CHECK:           %[[VAL_15:.*]] = vector.mask %[[MASK_2]] { vector.transfer_read %[[C_IN]]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32> } : vector<16x16x8x[4]xi1> -> vector<16x16x8x[4]xf32>
-// CHECK:           %[[VAL_16:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[MASK_3:.*]] = vector.create_mask %[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[C8]], %[[DIM_2]], %[[VAL_6]] : vector<16x16x16x8x[4]x1xi1>
-// CHECK:           %[[VAL_18:.*]] = vector.mask %[[MASK_3]] { vector.multi_reduction <add>, %[[VAL_16]], %[[VAL_15]] [2, 5] : vector<16x16x16x8x[4]x1xf32> to vector<16x16x8x[4]xf32> } : vector<16x16x16x8x[4]x1xi1> -> vector<16x16x8x[4]xf32>
-// CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write %[[VAL_18]], %[[C_IN]]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32> } : vector<16x16x8x[4]xi1>
+// CHECK:           %[[MASK_2:.*]] = vector.create_mask %[[C16_M]], %[[C16_N]], %[[C8]], %[[DIM_2]] : vector<16x16x8x[4]xi1>
+// CHECK:           %[[VEC_C:.*]] = vector.mask %[[MASK_2]] { vector.transfer_read %[[C_IN]]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32> } : vector<16x16x8x[4]xi1> -> vector<16x16x8x[4]xf32>
+// CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<16x16x16x8x[4]x1xf32>
+// CHECK:           %[[MASK_3:.*]] = vector.create_mask %[[C16_M]], %[[C16_N]], %[[C16_K]], %[[C8]], %[[DIM_2]], %[[C1]] : vector<16x16x16x8x[4]x1xi1>
+// CHECK:           %[[RED:.*]] = vector.mask %[[MASK_3]] { vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [2, 5] : vector<16x16x16x8x[4]x1xf32> to vector<16x16x8x[4]xf32> } : vector<16x16x16x8x[4]x1xi1> -> vector<16x16x8x[4]xf32>
+// CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write %[[RED]], %[[C_IN]]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32> } : vector<16x16x8x[4]xi1>
 
 
 module attributes {transform.with_named_sequence} {
@@ -920,10 +920,10 @@ func.func @mmt4d_scalable_with_assume(%A: memref<16x16x8x1xf32>, %B: memref<16x1
 // CHECK-NOT:       mask
 // CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<16x16x8x1xf32>, vector<16x16x16x8x[4]x1xf32>
 // CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]{{.*}} : memref<16x16x?x1xf32>, vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[VAL_13:.*]] = vector.transfer_read %[[C_IN]]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32>
-// CHECK:           %[[VAL_14:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<16x16x16x8x[4]x1xf32>
-// CHECK:           %[[VAL_15:.*]] = vector.multi_reduction <add>, %[[VAL_14]], %[[VAL_13]] [2, 5] : vector<16x16x16x8x[4]x1xf32> to vector<16x16x8x[4]xf32>
-// CHECK:           vector.transfer_write %[[VAL_15]], %[[C_IN]]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32>
+// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32>
+// CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<16x16x16x8x[4]x1xf32>
+// CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [2, 5] : vector<16x16x16x8x[4]x1xf32> to vector<16x16x8x[4]xf32>
+// CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -936,35 +936,198 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 ///----------------------------------------------------------------------------------------
+/// Tests for linalg.batch_mmt4d
+///----------------------------------------------------------------------------------------
+
+func.func @batch_mmt4d(%A: memref<2x16x16x8x1xf32>, %B: memref<2x16x16x8x1xf32>, %C_in: memref<2x16x16x8x8xf32>) {
+  linalg.batch_mmt4d ins(%A, %B: memref<2x16x16x8x1xf32>, memref<2x16x16x8x1xf32>)
+               outs(%C_in: memref<2x16x16x8x8xf32>)
+  return
+}
+
+// CHECK-LABEL:   func.func @batch_mmt4d(
+// CHECK-SAME:      %[[A:.*]]: memref<2x16x16x8x1xf32>, %[[B:.*]]: memref<2x16x16x8x1xf32>, %[[C:.*]]: memref<2x16x16x8x8xf32>) {
+// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x8x1xf32>
+// CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]{{.*}} : memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x8x1xf32>
+// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C]]{{.*}} : memref<2x16x16x8x8xf32>, vector<2x16x16x8x8xf32>
+// CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<2x16x16x16x8x8x1xf32>
+// CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [3, 6] : vector<2x16x16x16x8x8x1xf32> to vector<2x16x16x8x8xf32>
+// CHECK:           vector.transfer_write %[[RED]], %[[C]]{{.*}} : vector<2x16x16x8x8xf32>, memref<2x16x16x8x8xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %batch_mmt4d = transform.structured.match ops{["linalg.batch_mmt4d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %batch_mmt4d : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @batch_mmt4d_scalable(%A: memref<2x16x16x8x1xf32>, %B: memref<2x16x16x?x1xf32>, %C_in: memref<2x16x16x8x?xf32>) {
+  linalg.batch_mmt4d ins(%A, %B: memref<2x16x16x8x1xf32>, memref<2x16x16x?x1xf32>)
+               outs(%C_in: memref<2x16x16x8x?xf32>)
+  return
+}
+// CHECK-LABEL:   func.func @batch_mmt4d_scalable(
+// CHECK-SAME:      %[[A:.*]]: memref<2x16x16x8x1xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x16x16x?x1xf32>,
+// CHECK-SAME:      %[[C_IN:.*]]: memref<2x16x16x8x?xf32>) {
+// CHECK:           %[[C2:.*]] = arith.constant 2 : index
+// CHECK:           %[[C16_M:.*]] = arith.constant 16 : index
+// CHECK:           %[[C16_N:.*]] = arith.constant 16 : index
+// CHECK:           %[[C16_K:.*]] = arith.constant 16 : index
+// CHECK:           %[[C8:.*]] = arith.constant 8 : index
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[DIM_N_IN:.*]] = memref.dim %[[B]], %[[C3]] : memref<2x16x16x?x1xf32>
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[MASK_1:.*]] = vector.create_mask %[[C2]], %[[C16_N]], %[[C16_K]], %[[DIM_N_IN]], %[[C1]] : vector<2x16x16x[4]x1xi1>
+// CHECK:           %[[VEC_B:.*]] = vector.mask %[[MASK_1]] { vector.transfer_read %[[B]]{{.*}} : memref<2x16x16x?x1xf32>, vector<2x16x16x16x8x[4]x1xf32> } : vector<2x16x16x[4]x1xi1> -> vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[MASK_2:.*]] = vector.create_mask %[[C2]], %[[C16_M]], %[[C16_N]], %[[C8]], %[[DIM_N_IN]] : vector<2x16x16x8x[4]xi1>
+// CHECK:           %[[VEC_C:.*]] = vector.mask %[[MASK_2]] { vector.transfer_read %[[C_IN]]{{.*}} : memref<2x16x16x8x?xf32>, vector<2x16x16x8x[4]xf32> } : vector<2x16x16x8x[4]xi1> -> vector<2x16x16x8x[4]xf32>
+// CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[MASK_3:.*]] = vector.create_mask %[[C2]], %[[C16_M]], %[[C16_N]], %[[C16_K]], %[[C8]], %[[DIM_N_IN]], %[[C1]] : vector<2x16x16x16x8x[4]x1xi1>
+// CHECK:           %[[RED:.*]] = vector.mask %[[MASK_3]] { vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [3, 6] : vector<2x16x16x16x8x[4]x1xf32> to vector<2x16x16x8x[4]xf32> } : vector<2x16x16x16x8x[4]x1xi1> -> vector<2x16x16x8x[4]xf32>
+// CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write %[[RED]], %[[C_IN]]{{.*}} : vector<2x16x16x8x[4]xf32>, memref<2x16x16x8x?xf32> } : vector<2x16x16x8x[4]xi1>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %batch_mmt4d = transform.structured.match ops{["linalg.batch_mmt4d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %batch_mmt4d vector_sizes [2, 16, 16, 16, 8, [4], 1] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @batch_mmt4d_scalable_with_assume(%A: memref<2x16x16x8x1xf32>, %B: memref<2x16x16x?x1xf32>, %C_in: memref<2x16x16x8x?xf32>) {
+  linalg.batch_mmt4d ins(%A, %B: memref<2x16x16x8x1xf32>, memref<2x16x16x?x1xf32>)
+               outs(%C_in: memref<2x16x16x8x?xf32>)
+  return
+}
+// CHECK-LABEL:   func.func @batch_mmt4d_scalable_with_assume(
+// CHECK-SAME:      %[[A:.*]]: memref<2x16x16x8x1xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x16x16x?x1xf32>,
+// CHECK-SAME:      %[[C_IN:.*]]: memref<2x16x16x8x?xf32>) {
+// CHECK-NOT:       mask
+// CHECK:           %[[VEC_A:.*]] = vector.transfer_read %[[A]]{{.*}} : memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]{{.*}} : memref<2x16x16x?x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]{{.*}} : memref<2x16x16x8x?xf32>, vector<2x16x16x8x[4]xf32>
+// CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<2x16x16x16x8x[4]x1xf32>
+// CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [3, 6] : vector<2x16x16x16x8x[4]x1xf32> to vector<2x16x16x8x[4]xf32>
+// CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]{{.*}} : vector<2x16x16x8x[4]xf32>, memref<2x16x16x8x?xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %batch_mmt4d = transform.structured.match ops{["linalg.batch_mmt4d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %batch_mmt4d vector_sizes [2, 16, 16, 16, 8, [4], 1] {assume_dynamic_dims_match_vec_sizes} : !transform.any_op
+    transform.yield
+  }
+}
+
+
+// -----
+
+///----------------------------------------------------------------------------------------
 /// Tests for linalg.unpack
 ///----------------------------------------------------------------------------------------
 
 // CHECK-LABEL: func @test_vectorize_dynamic_shapes_unpack
-// CHECK-SAME:      %[[ARG_0:.*]]: tensor<?x?xf32>,
-// CHECK-SAME:      %[[ARG_1:.*]]: tensor<?x?x16x2xf32>
-func.func @test_vectorize_dynamic_shapes_unpack(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
-// CHECK: %[[C0:.*]] = arith.constant 0
-// CHECK: %[[C01:.*]] = arith.constant 0
-// CHECK: %[[C02:.*]] = arith.constant 0
-// CHECK: %[[DIM_0:.*]] = tensor.dim %[[ARG_1]], %[[C02]] : tensor<?x?x16x2xf32>
-// CHECK: %[[C1:.*]] = arith.constant 1
-// CHECK: %[[DIM6:.*]] = tensor.dim %[[ARG_1]], %[[C1]] : tensor<?x?x16x2xf32>
-// CHECK: %[[CNST16:.*]] = arith.constant 16 : index
-// CHECK: %[[CNST2:.*]] = arith.constant 2 : index
-// CHECK: %[[readMsk0:.*]] = vector.create_mask %[[DIM_0]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x16x2xi1>
-// CHECK: %[[read0:.*]] = vector.mask %[[readMsk0]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x16x2xf32> } : vector<2x1x16x2xi1> -> vector<2x1x16x2xf32>
-// CHECK: %[[trans0:.*]] = vector.transpose %[[read0]], [0, 3, 1, 2] : vector<2x1x16x2xf32> to vector<2x2x1x16xf32>
-// CHECK: %[[sc0:.*]] = vector.shape_cast %[[trans0]] : vector<2x2x1x16xf32> to vector<4x16xf32>
-// CHECK: %[[writeMsk0:.*]] = vector.create_mask {{.*}} : vector<4x16xi1>
-// CHECK: %[[write0:.*]] = vector.mask %[[writeMsk0:.*]] {{.*}} vector.transfer_write %[[sc0]], %[[ARG_0]]
-// CHECK: return %[[write0]]
- %ret = linalg.unpack %arg1 inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %arg0 : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
- return %ret : tensor<?x?xf32>
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x16x2xf32>
+func.func @test_vectorize_dynamic_shapes_unpack(%dest: tensor<?x?xf32>, %src: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[C0_1:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM_0:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[C1:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[C1]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST16:.*]] = arith.constant 16 : index
+  // CHECK: %[[CNST2:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM_0]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x16x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x16x2xf32> } : vector<2x1x16x2xi1> -> vector<2x1x16x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x16x2xf32> to vector<2x2x1x16xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x16xf32> to vector<4x16xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x16xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
 }
 module attributes {transform.with_named_sequence} {
  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [4, 16] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, 16, 2] : !transform.any_op
+   transform.yield
+ }
+}
+
+// -----
+
+// CHECK-LABEL: func @test_vectorize_dynamic_shapes_unpack_scalable_vec
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x16x2xf32>
+func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec(%dest: tensor<?x?xf32>, %src: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00
+  // CHECK: %[[C01:.*]] = arith.constant 0
+  // CHECK: %[[C02:.*]] = arith.constant 0
+  // CHECK: %[[DIM4:.*]] = tensor.dim %[[SRC]], %[[C02]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST14:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[CNST14]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST16:.*]] = arith.constant 16 : index
+  // CHECK: %[[CNST2:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM4]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x[16]x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x[16]x2xf32> } : vector<2x1x[16]x2xi1> -> vector<2x1x[16]x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x[16]x2xf32> to vector<2x2x1x[16]xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x[16]xf32> to vector<4x[16]xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x[16]xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
+}
+module attributes {transform.with_named_sequence} {
+ transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+   %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2] : !transform.any_op
+   transform.yield
+ }
+}
+
+// -----
+
+// CHECK-LABEL: func @test_vectorize_dynamic_shapes_unpack_scalable_vec_and_tile_size
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x?x2xf32>
+func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec_and_tile_size(%dest: tensor<?x?xf32>, %src: tensor<?x?x?x2xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00
+  // CHECK: %[[C01:.*]] = arith.constant 0
+  // CHECK: %[[C02:.*]] = arith.constant 0
+  // CHECK: %[[DIM4:.*]] = tensor.dim %[[SRC]], %[[C02]] : tensor<?x?x?x2xf32>
+  // CHECK: %[[C1_2:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[C1_2]] : tensor<?x?x?x2xf32>
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: %[[DIM_2:.*]] = tensor.dim %[[SRC]], %[[C2]] : tensor<?x?x?x2xf32>
+  // CHECK: %[[C2_1:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM4]], %[[DIM6]], %[[DIM_2]], %[[C2_1]] : vector<2x1x[16]x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x?x2xf32>, vector<2x1x[16]x2xf32> } : vector<2x1x[16]x2xi1> -> vector<2x1x[16]x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x[16]x2xf32> to vector<2x2x1x[16]xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x[16]xf32> to vector<4x[16]xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x[16]xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+
+  %vs = vector.vscale
+  %c16 = arith.constant 16 : index
+  %tile_size = arith.muli %vs, %c16 : index
+
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [%tile_size, 2] into %dest : tensor<?x?x?x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
+}
+module attributes {transform.with_named_sequence} {
+ transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+   %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2] : !transform.any_op
    transform.yield
  }
 }
@@ -997,7 +1160,7 @@ func.func @test_vectorize_unpack(%source: tensor<8x8x32x16xf32>, %dest: tensor<2
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [512, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [16, 8, 32, 16] : !transform.any_op
     transform.yield
   }
 }
@@ -1022,7 +1185,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [256, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16] : !transform.any_op
     transform.yield
   }
  }
@@ -1047,7 +1210,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [256, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16] : !transform.any_op
     transform.yield
   }
 }
