@@ -2289,7 +2289,7 @@ CleanupAndExit:
 // the instructions in Insts are removed.
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
-  SmallSet<BasicBlock*,8> LoopBlocks;
+  SmallPtrSet<BasicBlock *, 8> LoopBlocks;
   LoopBlocks.insert_range(L->blocks());
 
   SetVector<Instruction *> Worklist(llvm::from_range, Insts);

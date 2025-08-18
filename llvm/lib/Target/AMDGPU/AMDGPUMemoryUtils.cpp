@@ -384,7 +384,7 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA) {
   MemorySSAWalker *Walker = MSSA->getWalker();
   SmallVector<MemoryAccess *> WorkList{Walker->getClobberingMemoryAccess(Load)};
-  SmallSet<MemoryAccess *, 8> Visited;
+  SmallPtrSet<MemoryAccess *, 8> Visited;
   MemoryLocation Loc(MemoryLocation::get(Load));
 
   LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *Load << '\n');

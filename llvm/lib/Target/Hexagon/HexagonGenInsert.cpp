@@ -1273,7 +1273,7 @@ void HexagonGenInsert::selectCandidates() {
 
   for (unsigned R = AllRMs.find_first(); R; R = AllRMs.find_next(R)) {
     using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
-    using InstrSet = SmallSet<const MachineInstr *, 16>;
+    using InstrSet = SmallPtrSet<const MachineInstr *, 16>;
 
     InstrSet UIs;
     // Count as the number of instructions in which R is used, not the
