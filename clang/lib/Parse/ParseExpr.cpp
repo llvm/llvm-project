@@ -3342,7 +3342,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
     Actions.ActOnBlockError(CaretLoc, getCurScope());
     return ExprError();
   }
- EnterExpressionEvaluationContextForFunction PotentiallyEvaluated(
+  EnterExpressionEvaluationContextForFunction PotentiallyEvaluated(
        Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
   StmtResult Stmt(ParseCompoundStatementBody());
   BlockScope.Exit();
