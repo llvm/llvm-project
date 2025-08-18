@@ -20,7 +20,7 @@ steps:
   # Set working directory to temp directory so 'dotnet' doesn't try to use global.json and use the repo's sdk.
   workingDirectory: $(Agent.TempDirectory)
 
-- script: $(Agent.TempDirectory)/.source-index/tools/BinLogToSln -i ${{parameters.BinlogPath}} -r $(Build.SourcesDirectory) -n $(Build.Repository.Name) -o .source-index/stage1output
+- script: $(Agent.TempDirectory)/.source-index/tools/BinLogToSln -i ${{parameters.BinlogPath}} -r $(System.DefaultWorkingDirectory) -n $(Build.Repository.Name) -o .source-index/stage1output
   displayName: "Source Index: Process Binlog into indexable sln"
 
 - ${{ if and(ne(parameters.runAsPublic, 'true'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:

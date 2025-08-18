@@ -10,8 +10,8 @@
 #    displayName: Setup Private Feeds Credentials
 #    condition: eq(variables['Agent.OS'], 'Windows_NT')
 #    inputs:
-#      filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.ps1
-#      arguments: -ConfigFile $(Build.SourcesDirectory)/NuGet.config -Password $Env:Token
+#      filePath: $(System.DefaultWorkingDirectory)/eng/common/SetupNugetSources.ps1
+#      arguments: -ConfigFile $(System.DefaultWorkingDirectory)/NuGet.config -Password $Env:Token
 #    env:
 #      Token: $(dn-bot-dnceng-artifact-feeds-rw)
 #

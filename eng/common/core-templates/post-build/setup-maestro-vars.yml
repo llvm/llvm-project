@@ -36,7 +36,7 @@ steps:
             $AzureDevOpsBuildId = $Env:Build_BuildId
           }
           else {
-            . $(Build.SourcesDirectory)\eng\common\tools.ps1
+            . $(System.DefaultWorkingDirectory)\eng\common\tools.ps1
             $darc = Get-Darc
             $buildInfo = & $darc get-build `
               --id ${{ parameters.BARBuildId }} `

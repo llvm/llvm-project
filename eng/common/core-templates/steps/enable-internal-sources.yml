@@ -17,8 +17,8 @@ steps:
     - task: PowerShell@2
       displayName: Setup Internal Feeds
       inputs:
-        filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.ps1
-        arguments: -ConfigFile $(Build.SourcesDirectory)/NuGet.config -Password $Env:Token
+        filePath: $(System.DefaultWorkingDirectory)/eng/common/SetupNugetSources.ps1
+        arguments: -ConfigFile $(System.DefaultWorkingDirectory)/NuGet.config -Password $Env:Token
       env:
         Token: ${{ parameters.legacyCredential }}
   # If running on dnceng (internal project), just use the default behavior for NuGetAuthenticate.
@@ -29,8 +29,8 @@ steps:
       - task: PowerShell@2
         displayName: Setup Internal Feeds
         inputs:
-          filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.ps1
-          arguments: -ConfigFile $(Build.SourcesDirectory)/NuGet.config
+          filePath: $(System.DefaultWorkingDirectory)/eng/common/SetupNugetSources.ps1
+          arguments: -ConfigFile $(System.DefaultWorkingDirectory)/NuGet.config
     - ${{ else }}:
       - template: /eng/common/templates/steps/get-federated-access-token.yml
         parameters:
@@ -39,8 +39,8 @@ steps:
       - task: PowerShell@2
         displayName: Setup Internal Feeds
         inputs:
-          filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.ps1
-          arguments: -ConfigFile $(Build.SourcesDirectory)/NuGet.config -Password $(dnceng-artifacts-feeds-read-access-token)
+          filePath: $(System.DefaultWorkingDirectory)/eng/common/SetupNugetSources.ps1
+          arguments: -ConfigFile $(System.DefaultWorkingDirectory)/NuGet.config -Password $(dnceng-artifacts-feeds-read-access-token)
   # This is required in certain scenarios to install the ADO credential provider.
   # It installed by default in some msbuild invocations (e.g. VS msbuild), but needs to be installed for others
   # (e.g. dotnet msbuild).

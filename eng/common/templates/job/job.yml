@@ -6,7 +6,7 @@ parameters:
   enableSbom: true
   runAsPublic: false
   PackageVersion: 9.0.0
-  BuildDropPath: '$(Build.SourcesDirectory)/artifacts'
+  BuildDropPath: '$(System.DefaultWorkingDirectory)/artifacts'
 
 jobs:
 - template: /eng/common/core-templates/job/job.yml
@@ -77,7 +77,7 @@ jobs:
         parameters:
           is1ESPipeline: false
           args:
-            targetPath: '$(Build.SourcesDirectory)\eng\common\BuildConfiguration'
+            targetPath: '$(System.DefaultWorkingDirectory)\eng\common\BuildConfiguration'
             artifactName: 'BuildConfiguration'
             displayName: 'Publish build retry configuration'
             continueOnError: true

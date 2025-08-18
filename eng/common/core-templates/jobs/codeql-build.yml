@@ -24,7 +24,7 @@ jobs:
       - name: DefaultGuardianVersion
         value: 0.109.0
       - name: GuardianPackagesConfigFile
-        value: $(Build.SourcesDirectory)\eng\common\sdl\packages.config
+        value: $(System.DefaultWorkingDirectory)\eng\common\sdl\packages.config
       - name: GuardianVersion
         value: ${{ coalesce(parameters.overrideGuardianVersion, '$(DefaultGuardianVersion)') }}
   

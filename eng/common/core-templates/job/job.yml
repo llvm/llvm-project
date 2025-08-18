@@ -163,7 +163,7 @@ jobs:
       inputs:
         testResultsFormat: 'xUnit'
         testResultsFiles: '*.xml'
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
+        searchFolder: '$(System.DefaultWorkingDirectory)/artifacts/TestResults/$(_BuildConfig)'
         testRunTitle: ${{ coalesce(parameters.testRunTitle, parameters.name, '$(System.JobName)') }}-xunit
         mergeTestResults: ${{ parameters.mergeTestResults }}
       continueOnError: true
@@ -174,7 +174,7 @@ jobs:
       inputs:
         testResultsFormat: 'VSTest'
         testResultsFiles: '*.trx'
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
+        searchFolder: '$(System.DefaultWorkingDirectory)/artifacts/TestResults/$(_BuildConfig)'
         testRunTitle: ${{ coalesce(parameters.testRunTitle, parameters.name, '$(System.JobName)') }}-trx
         mergeTestResults: ${{ parameters.mergeTestResults }}
       continueOnError: true
@@ -218,7 +218,7 @@ jobs:
     - task: CopyFiles@2
       displayName: Gather buildconfiguration for build retry
       inputs:
-        SourceFolder: '$(Build.SourcesDirectory)/eng/common/BuildConfiguration'
+        SourceFolder: '$(System.DefaultWorkingDirectory)/eng/common/BuildConfiguration'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)/eng/common/BuildConfiguration'
       continueOnError: true

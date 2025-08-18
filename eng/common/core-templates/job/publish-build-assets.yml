@@ -38,6 +38,8 @@ parameters:
   # Optional: A minimatch pattern for the asset manifests to publish to BAR
   assetManifestsPattern: '*/manifests/**/*.xml'
 
+  repositoryAlias: self
+
 jobs:
 - job: Asset_Registry_Publish
 
@@ -78,7 +80,7 @@ jobs:
     - 'Illegal entry point, is1ESPipeline is not defined. Repository yaml should not directly reference templates in core-templates folder.': error
 
   - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - checkout: self
+    - checkout: ${{ parameters.repositoryAlias }}
       fetchDepth: 3
       clean: true
 
@@ -117,7 +119,7 @@ jobs:
         azureSubscription: "Darc: Maestro Production"
         scriptType: ps
         scriptLocation: scriptPath
-        scriptPath: $(Build.SourcesDirectory)/eng/common/sdk-task.ps1
+        scriptPath: $(System.DefaultWorkingDirectory)/eng/common/sdk-task.ps1
         arguments: -task PublishBuildAssets -restore -msbuildEngine dotnet
           /p:ManifestsPath='$(Build.StagingDirectory)/AssetManifests'
           /p:IsAssetlessBuild=${{ parameters.isAssetlessBuild }}
@@ -137,7 +139,7 @@ jobs:
           Add-Content -Path $filePath -Value "$(DefaultChannels)"
           Add-Content -Path $filePath -Value $(IsStableBuild)
 
-          $symbolExclusionfile = "$(Build.SourcesDirectory)/eng/SymbolPublishingExclusionsFile.txt"
+          $symbolExclusionfile = "$(System.DefaultWorkingDirectory)/eng/SymbolPublishingExclusionsFile.txt"
           if (Test-Path -Path $symbolExclusionfile)
           {
             Write-Host "SymbolExclusionFile exists"
@@ -177,7 +179,7 @@ jobs:
           azureSubscription: "Darc: Maestro Production"
           scriptType: ps
           scriptLocation: scriptPath
-          scriptPath: $(Build.SourcesDirectory)/eng/common/post-build/publish-using-darc.ps1
+          scriptPath: $(System.DefaultWorkingDirectory)/eng/common/post-build/publish-using-darc.ps1
           arguments: >
             -BuildId $(BARBuildId)
             -PublishingInfraVersion 3

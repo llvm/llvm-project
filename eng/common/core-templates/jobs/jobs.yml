@@ -43,6 +43,7 @@ parameters:
 
   artifacts: {}
   is1ESPipeline: ''
+  repositoryAlias: self
 
 # Internal resources (telemetry, microbuild) can only be accessed from non-public projects,
 # and some (Microbuild) should only be applied to non-PR cases for internal builds.
@@ -114,3 +115,4 @@ jobs:
         enablePublishBuildArtifacts: ${{ parameters.enablePublishBuildArtifacts }}
         artifactsPublishingAdditionalParameters: ${{ parameters.artifactsPublishingAdditionalParameters }}
         signingValidationAdditionalParameters: ${{ parameters.signingValidationAdditionalParameters }}
+        repositoryAlias: ${{ parameters.repositoryAlias }}

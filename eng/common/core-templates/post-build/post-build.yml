@@ -154,7 +154,7 @@ stages:
         - task: PowerShell@2
           displayName: Validate
           inputs:
-            filePath: $(Build.SourcesDirectory)/eng/common/post-build/nuget-validation.ps1
+            filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/nuget-validation.ps1
             arguments: -PackagesPath $(Build.ArtifactStagingDirectory)/PackageArtifacts/
 
     - job:
@@ -208,7 +208,7 @@ stages:
             filePath: eng\common\sdk-task.ps1
             arguments: -task SigningValidation -restore -msbuildEngine vs
               /p:PackageBasePath='$(Build.ArtifactStagingDirectory)/PackageArtifacts'
-              /p:SignCheckExclusionsFile='$(Build.SourcesDirectory)/eng/SignCheckExclusionsFile.txt'
+              /p:SignCheckExclusionsFile='$(System.DefaultWorkingDirectory)/eng/SignCheckExclusionsFile.txt'
               ${{ parameters.signingValidationAdditionalParameters }}
 
         - template: /eng/common/core-templates/steps/publish-logs.yml
@@ -258,7 +258,7 @@ stages:
         - task: PowerShell@2
           displayName: Validate
           inputs:
-            filePath: $(Build.SourcesDirectory)/eng/common/post-build/sourcelink-validation.ps1
+            filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/sourcelink-validation.ps1
             arguments: -InputPath $(Build.ArtifactStagingDirectory)/BlobArtifacts/ 
               -ExtractPath $(Agent.BuildDirectory)/Extract/ 
               -GHRepoName $(Build.Repository.Name) 
@@ -313,7 +313,7 @@ stages:
             azureSubscription: "Darc: Maestro Production"
             scriptType: ps
             scriptLocation: scriptPath
-            scriptPath: $(Build.SourcesDirectory)/eng/common/post-build/publish-using-darc.ps1
+            scriptPath: $(System.DefaultWorkingDirectory)/eng/common/post-build/publish-using-darc.ps1
             arguments: >
               -BuildId $(BARBuildId)
               -PublishingInfraVersion ${{ parameters.publishingInfraVersion }}

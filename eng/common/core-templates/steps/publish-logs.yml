@@ -12,22 +12,22 @@ steps:
   inputs:
     targetType: inline
     script: |
-      New-Item -ItemType Directory $(Build.SourcesDirectory)/PostBuildLogs/${{parameters.StageLabel}}/${{parameters.JobLabel}}/
-      Move-Item -Path $(Build.SourcesDirectory)/artifacts/log/Debug/* $(Build.SourcesDirectory)/PostBuildLogs/${{parameters.StageLabel}}/${{parameters.JobLabel}}/
+      New-Item -ItemType Directory $(System.DefaultWorkingDirectory)/PostBuildLogs/${{parameters.StageLabel}}/${{parameters.JobLabel}}/
+      Move-Item -Path $(System.DefaultWorkingDirectory)/artifacts/log/Debug/* $(System.DefaultWorkingDirectory)/PostBuildLogs/${{parameters.StageLabel}}/${{parameters.JobLabel}}/
   continueOnError: true
   condition: always()
     
 - task: PowerShell@2
   displayName: Redact Logs
   inputs:
-    filePath: $(Build.SourcesDirectory)/eng/common/post-build/redact-logs.ps1
+    filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/redact-logs.ps1
     # For now this needs to have explicit list of all sensitive data. Taken from eng/publishing/v3/publish.yml
-    # Sensitive data can as well be added to $(Build.SourcesDirectory)/eng/BinlogSecretsRedactionFile.txt'
+    # Sensitive data can as well be added to $(System.DefaultWorkingDirectory)/eng/BinlogSecretsRedactionFile.txt'
     #  If the file exists - sensitive data for redaction will be sourced from it
     #  (single entry per line, lines starting with '# ' are considered comments and skipped)
-    arguments: -InputPath '$(Build.SourcesDirectory)/PostBuildLogs' 
+    arguments: -InputPath '$(System.DefaultWorkingDirectory)/PostBuildLogs' 
       -BinlogToolVersion ${{parameters.BinlogToolVersion}}
-      -TokensFilePath '$(Build.SourcesDirectory)/eng/BinlogSecretsRedactionFile.txt'
+      -TokensFilePath '$(System.DefaultWorkingDirectory)/eng/BinlogSecretsRedactionFile.txt'
       '$(publishing-dnceng-devdiv-code-r-build-re)'
       '$(MaestroAccessToken)'
       '$(dn-bot-all-orgs-artifact-feeds-rw)'
@@ -44,7 +44,7 @@ steps:
 - task: CopyFiles@2
   displayName: Gather post build logs
   inputs:
-    SourceFolder: '$(Build.SourcesDirectory)/PostBuildLogs'
+    SourceFolder: '$(System.DefaultWorkingDirectory)/PostBuildLogs'
     Contents: '**'
     TargetFolder: '$(Build.ArtifactStagingDirectory)/PostBuildLogs'
   condition: always()
