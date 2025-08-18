@@ -1589,9 +1589,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   Value *ReplacementLow, *ReplacementHigh;
   bool FoldSExtICmp;
   auto MatchSExtICmp = [](Value *PossibleSextIcmp, Value *&Cmp1) -> bool {
-    Value *ICmpOp0, *ICmpOp1;
-    return match(PossibleSextIcmp, m_SExt(m_Value(Cmp1))) &&
-           match(Cmp1, m_ICmp(m_Value(ICmpOp0), m_Value(ICmpOp1)));
+    return match(PossibleSextIcmp, m_SExt(m_Value(Cmp1, m_ICmp(m_Value(), m_Value()))));
   };
   if (!((FoldSExtICmp = MatchSExtICmp(Sel1, Cmp1)) ||
         match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
