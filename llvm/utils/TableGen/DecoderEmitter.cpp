@@ -2409,7 +2409,7 @@ static void collectHwModesReferencedForEncodings(
   // FIXME: Can't do `HwModeIDs.assign(BV.set_bits_begin(), BV.set_bits_end())`
   //   because const_set_bits_iterator_impl is not copy-assignable.
   //   This breaks some MacOS builds.
-  append_range(HwModeIDs, BV.set_bits());
+  llvm::copy(BV.set_bits(), std::back_inserter(HwModeIDs));
 }
 
 static void
