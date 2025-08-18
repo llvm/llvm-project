@@ -19,6 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/Compiler.h"
+#include <cstdint>
 
 namespace llvm {
 class LLVMContext;
@@ -28,9 +29,9 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-template <typename T>
+template <typename T, typename ET = T>
 class RootSignatureValidationError
-    : public ErrorInfo<RootSignatureValidationError<T>> {
+    : public ErrorInfo<RootSignatureValidationError<T, ET>> {
 public:
   static char ID;
   StringRef ParamName;
@@ -40,7 +41,7 @@ public:
       : ParamName(ParamName), Value(Value) {}
 
   void log(raw_ostream &OS) const override {
-    OS << "Invalid value for " << ParamName << ": " << Value;
+    OS << "Invalid value for " << ParamName << ": " << static_cast<ET>(Value);
   }
 
   std::error_code convertToErrorCode() const override {

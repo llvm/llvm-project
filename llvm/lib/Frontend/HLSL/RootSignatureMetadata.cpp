@@ -17,6 +17,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -27,7 +28,7 @@ namespace rootsig {
 char GenericRSMetadataError::ID;
 char InvalidRSMetadataFormat::ID;
 char InvalidRSMetadataValue::ID;
-template <typename T> char RootSignatureValidationError<T>::ID;
+template <typename T, typename ET> char RootSignatureValidationError<T, ET>::ID;
 
 static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
                                                  unsigned int OpId) {
@@ -331,7 +332,8 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
                         .Case("CBV", dxbc::DescriptorRangeType::CBV)
                         .Case("SRV", dxbc::DescriptorRangeType::SRV)
                         .Case("UAV", dxbc::DescriptorRangeType::UAV)
-                        .Case("Sampler", dxbc::DescriptorRangeType::Sampler);
+                        .Case("Sampler", dxbc::DescriptorRangeType::Sampler)
+                        .Default(static_cast<dxbc::DescriptorRangeType>(-1));
 
   if (!verifyRangeType(Range.RangeType))
     return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
@@ -532,7 +534,8 @@ Error MetadataParser::validateRootSignature(
     if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::ShaderVisibility>>(
+          make_error<
+              RootSignatureValidationError<dxbc::ShaderVisibility, uint32_t>>(
               "ShaderVisibility", Info.Header.ShaderVisibility));
 
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
@@ -610,25 +613,29 @@ Error MetadataParser::validateRootSignature(
     if (!hlsl::rootsig::verifySamplerFilter(Sampler.Filter))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::SamplerFilter>>(
+          make_error<
+              RootSignatureValidationError<dxbc::SamplerFilter, uint32_t>>(
               "Filter", Sampler.Filter));
 
     if (!hlsl::rootsig::verifyAddress(Sampler.AddressU))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::TextureAddressMode>>(
+          make_error<
+              RootSignatureValidationError<dxbc::TextureAddressMode, uint32_t>>(
               "AddressU", Sampler.AddressU));
 
     if (!hlsl::rootsig::verifyAddress(Sampler.AddressV))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::TextureAddressMode>>(
+          make_error<
+              RootSignatureValidationError<dxbc::TextureAddressMode, uint32_t>>(
               "AddressV", Sampler.AddressV));
 
     if (!hlsl::rootsig::verifyAddress(Sampler.AddressW))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::TextureAddressMode>>(
+          make_error<
+              RootSignatureValidationError<dxbc::TextureAddressMode, uint32_t>>(
               "AddressW", Sampler.AddressW));
 
     if (!hlsl::rootsig::verifyMipLODBias(Sampler.MipLODBias))
@@ -645,13 +652,15 @@ Error MetadataParser::validateRootSignature(
     if (!hlsl::rootsig::verifyComparisonFunc(Sampler.ComparisonFunc))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::ComparisonFunc>>(
+          make_error<
+              RootSignatureValidationError<dxbc::ComparisonFunc, uint32_t>>(
               "ComparisonFunc", Sampler.ComparisonFunc));
 
     if (!hlsl::rootsig::verifyBorderColor(Sampler.BorderColor))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::StaticBorderColor>>(
+          make_error<
+              RootSignatureValidationError<dxbc::StaticBorderColor, uint32_t>>(
               "BorderColor", Sampler.BorderColor));
 
     if (!hlsl::rootsig::verifyLOD(Sampler.MinLOD))
@@ -679,7 +688,8 @@ Error MetadataParser::validateRootSignature(
     if (!dxbc::isValidShaderVisibility(Sampler.ShaderVisibility))
       DeferredErrs = joinErrors(
           std::move(DeferredErrs),
-          make_error<RootSignatureValidationError<dxbc::ShaderVisibility>>(
+          make_error<
+              RootSignatureValidationError<dxbc::ShaderVisibility, uint32_t>>(
               "ShaderVisibility", Sampler.ShaderVisibility));
   }
 

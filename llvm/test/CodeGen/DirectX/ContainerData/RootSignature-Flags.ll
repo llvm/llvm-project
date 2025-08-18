@@ -18,13 +18,13 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !4 = !{ !"RootFlags", i32 1 } ; 1 = allow_input_assembler_input_layout
 
 
-; DXC:  - Name:            RTS0
-; DXC-NEXT:    Size:            24
-; DXC-NEXT:    RootSignature:
-; DXC-NEXT:      Version:         2
-; DXC-NEXT:      NumRootParameters: 0
-; DXC-NEXT:      RootParametersOffset: 24
-; DXC-NEXT:      NumStaticSamplers: 0
-; DXC-NEXT:      StaticSamplersOffset: 0
-; DXC-NEXT:      Parameters: []
-; DXC-NEXT:      AllowInputAssemblerInputLayout: true
+;DXC:  - Name:            RTS0
+;DXC-NEXT:    Size:            24
+;DXC-NEXT:    RootSignature:
+;DXC-NEXT:      Version:         V1_1
+;DXC-NEXT:      NumRootParameters: 0
+;DXC-NEXT:      RootParametersOffset: 24
+;DXC-NEXT:      NumStaticSamplers: 0
+;DXC-NEXT:      StaticSamplersOffset: 0
+;DXC-NEXT:      Parameters:      []
+;DXC-NEXT:      AllowInputAssemblerInputLayout: true

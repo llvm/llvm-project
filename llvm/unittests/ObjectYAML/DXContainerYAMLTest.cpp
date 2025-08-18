@@ -126,7 +126,7 @@ TEST(RootSignature, ParseRootFlags) {
     - Name:            RTS0
       Size:            24
       RootSignature:
-        Version:         2
+        Version: V1_1
         NumRootParameters: 0
         RootParametersOffset: 24
         NumStaticSamplers: 0
@@ -166,14 +166,14 @@ TEST(RootSignature, HeaderData) {
     - Name:            RTS0
       Size:            89
       RootSignature:
-        Version: 2
+        Version: V1_1
         NumRootParameters: 1
         RootParametersOffset: 255
         NumStaticSamplers: 0
         StaticSamplersOffset: 0
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -218,14 +218,14 @@ TEST(RootSignature, ParseRootConstants) {
     - Name:            RTS0
       Size:            89
       RootSignature:
-        Version: 2
+        Version: V1_1
         NumRootParameters: 1
         RootParametersOffset: 36
         NumStaticSamplers: 0
         StaticSamplersOffset: 0
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -270,14 +270,14 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
   - Name:            RTS0
     Size:            89
     RootSignature:
-      Version: 1
+      Version: V1_0
       NumRootParameters: 1
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV 
+        ShaderVisibility: Domain 
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -321,14 +321,14 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
   - Name:            RTS0
     Size:            89
     RootSignature:
-      Version: 2
+      Version: V1_1
       NumRootParameters: 1
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -373,18 +373,18 @@ TEST(RootSignature, ParseDescriptorTableV10) {
   - Name:            RTS0
     Size:            89
     RootSignature:
-      Version: 1
+      Version: V1_0
       NumRootParameters: 1
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
       Parameters:         
-      - ParameterType: 0 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: 41
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -429,18 +429,18 @@ TEST(RootSignature, ParseDescriptorTableV11) {
   - Name:            RTS0
     Size:            89
     RootSignature:
-      Version: 2
+      Version: V1_1
       NumRootParameters: 1
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
       Parameters:         
-      - ParameterType: 0 # Descriptor Table
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: -1
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -485,26 +485,26 @@ Parts:
   - Name:            RTS0
     Size:            76
     RootSignature:
-      Version: 2
+      Version: V1_1
       NumRootParameters: 0
       RootParametersOffset: 0
       NumStaticSamplers: 1
       StaticSamplersOffset: 24
       Parameters: []
       Samplers: 
-        - Filter: 10 
-          AddressU: 1
-          AddressV: 2
-          AddressW: 5
+        - Filter: MinLinearMagMipPoint 
+          AddressU: Wrap
+          AddressV: Mirror
+          AddressW: MirrorOnce
           MipLODBias: 1.23
           MaxAnisotropy: 20
-          ComparisonFunc: 4
-          BorderColor: 0
+          ComparisonFunc: LessEqual
+          BorderColor: TransparentBlack
           MinLOD: 4.56
           MaxLOD: 8.90
           ShaderRegister: 31 
           RegisterSpace: 32
-          ShaderVisibility:  7
+          ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
     )"));
@@ -517,7 +517,7 @@ Parts:
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-      0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+      0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00,
       0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0xa4, 0x70, 0x9d, 0x3f, 0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x85, 0xeb, 0x91, 0x40, 0x66, 0x66, 0x0e, 0x41,

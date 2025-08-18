@@ -13,7 +13,7 @@ Parts:
   - Name:            RTS0
     Size:            24
     RootSignature:
-      Version: 2
+      Version: V1_1
       NumRootParameters: 0
       RootParametersOffset: 24
       NumStaticSamplers: 0
@@ -25,7 +25,7 @@ Parts:
 # CHECK:  - Name:            RTS0
 # CHECK-NEXT:    Size:            24
 # CHECK-NEXT:    RootSignature:
-# CHECK-NEXT:      Version: 2
+# CHECK-NEXT:      Version: V1_1
 # CHECK-NEXT:      NumRootParameters: 0
 # CHECK-NEXT:      RootParametersOffset: 24
 # CHECK-NEXT:      NumStaticSamplers: 0

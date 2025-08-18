@@ -17,18 +17,18 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !3 = !{ !5 } ; list of root signature elements
 !5 = !{ !"RootConstants", i32 0, i32 1, i32 2, i32 3 }
 
-; DXC:  - Name:            RTS0
-; DXC-NEXT:    Size:            48
-; DXC-NEXT:    RootSignature:
-; DXC-NEXT:      Version:         2
-; DXC-NEXT:      NumRootParameters: 1 
-; DXC-NEXT:      RootParametersOffset: 24 
-; DXC-NEXT:      NumStaticSamplers: 0
-; DXC-NEXT:      StaticSamplersOffset: 0
-; DXC-NEXT:      Parameters:
-; DXC-NEXT:        - ParameterType:   1
-; DXC-NEXT:          ShaderVisibility: 0
-; DXC-NEXT:          Constants:
-; DXC-NEXT:            Num32BitValues:  3
-; DXC-NEXT:            RegisterSpace:   2
-; DXC-NEXT:            ShaderRegister:  1
+; DXC: - Name:            RTS0
+; DXC-NEXT:     Size:            48
+; DXC-NEXT:     RootSignature:
+; DXC-NEXT:       Version:         V1_1
+; DXC-NEXT:       NumRootParameters: 1
+; DXC-NEXT:       RootParametersOffset: 24
+; DXC-NEXT:       NumStaticSamplers: 0
+; DXC-NEXT:       StaticSamplersOffset: 0
+; DXC-NEXT:       Parameters:
+; DXC-NEXT:         - ParameterType:   Constants32Bit
+; DXC-NEXT:           ShaderVisibility: All
+; DXC-NEXT:           Constants:
+; DXC-NEXT:             Num32BitValues:  3
+; DXC-NEXT:             RegisterSpace:   2
+; DXC-NEXT:             ShaderRegister:  1
