@@ -215,7 +215,7 @@ public:
         Value = nullptr;
         kind = Kind::Regular;
       }
-      setUndefined();
+      Fragment = nullptr;
       IsRedefinable = false;
     }
   }
@@ -258,9 +258,6 @@ public:
     assert(!isVariable() && "Cannot set fragment of variable");
     Fragment = F;
   }
-
-  /// Mark the symbol as undefined.
-  void setUndefined() { Fragment = nullptr; }
 
   /// @}
   /// \name Variable Symbols

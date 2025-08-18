@@ -32,7 +32,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cbrt(__CLC_GENTYPE x) {
                     __CLC_AS_GENTYPE(indx | 0x3f000000);
 
   indx >>= 16;
-  __CLC_GENTYPE r = f * USE_TABLE(log_inv_tbl, __CLC_AS_INTN(indx));
+  __CLC_GENTYPE r = f * __CLC_USE_TABLE(log_inv_tbl, __CLC_AS_INTN(indx));
   __CLC_GENTYPE poly = __clc_mad(__clc_mad(r, 0x1.f9add4p-5f, -0x1.c71c72p-4f),
                                  r * r, r * 0x1.555556p-2f);
 
@@ -52,8 +52,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cbrt(__CLC_GENTYPE x) {
   remH = rem == 2 ? 0x1.964000p+0f : remH;
   remT = rem == 2 ? 0x1.fea53ep-12f : remT;
 
-  __CLC_GENTYPE cbrtH = USE_TABLE(cbrt_tbl_head, __CLC_AS_INTN(indx));
-  __CLC_GENTYPE cbrtT = USE_TABLE(cbrt_tbl_tail, __CLC_AS_INTN(indx));
+  __CLC_GENTYPE cbrtH = __CLC_USE_TABLE(cbrt_tbl_head, __CLC_AS_INTN(indx));
+  __CLC_GENTYPE cbrtT = __CLC_USE_TABLE(cbrt_tbl_tail, __CLC_AS_INTN(indx));
 
   __CLC_GENTYPE bH = cbrtH * remH;
   __CLC_GENTYPE bT =
@@ -97,7 +97,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cbrt(__CLC_GENTYPE x) {
   __CLC_GENTYPE F = __CLC_CONVERT_GENTYPE(index) * 0x1.0p-9;
 
   __CLC_GENTYPE f = Y - F;
-  __CLC_GENTYPE r = f * USE_TABLE(cbrt_inv_tbl, index - 256);
+  __CLC_GENTYPE r = f * __CLC_USE_TABLE(cbrt_inv_tbl, index - 256);
 
   __CLC_GENTYPE z =
       r * __clc_fma(
@@ -112,11 +112,11 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cbrt(__CLC_GENTYPE x) {
                         -0x1.c71c71c71c71cp-4),
               0x1.5555555555555p-2);
 
-  __CLC_GENTYPE Rem_h = USE_TABLE(cbrt_rem_tbl_head, rem + 2);
-  __CLC_GENTYPE Rem_t = USE_TABLE(cbrt_rem_tbl_tail, rem + 2);
+  __CLC_GENTYPE Rem_h = __CLC_USE_TABLE(cbrt_rem_tbl_head, rem + 2);
+  __CLC_GENTYPE Rem_t = __CLC_USE_TABLE(cbrt_rem_tbl_tail, rem + 2);
 
-  __CLC_GENTYPE F_h = USE_TABLE(cbrt_dbl_tbl_head, index - 256);
-  __CLC_GENTYPE F_t = USE_TABLE(cbrt_dbl_tbl_tail, index - 256);
+  __CLC_GENTYPE F_h = __CLC_USE_TABLE(cbrt_dbl_tbl_head, index - 256);
+  __CLC_GENTYPE F_t = __CLC_USE_TABLE(cbrt_dbl_tbl_tail, index - 256);
 
   __CLC_GENTYPE b_h = F_h * Rem_h;
   __CLC_GENTYPE b_t = __clc_fma(Rem_t, F_h, __clc_fma(F_t, Rem_h, F_t * Rem_t));

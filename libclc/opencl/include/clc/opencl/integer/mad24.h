@@ -11,11 +11,11 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION mad24
+#define __CLC_FUNCTION mad24
 #define __CLC_BODY <clc/shared/ternary_decl.inc>
 
 #include <clc/integer/gentype24.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_INTEGER_MAD24_H__

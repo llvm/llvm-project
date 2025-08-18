@@ -13,12 +13,12 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION ctz
+#define __CLC_FUNCTION ctz
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 

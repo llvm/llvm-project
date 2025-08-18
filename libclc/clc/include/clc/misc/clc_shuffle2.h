@@ -9,7 +9,7 @@
 #ifndef __CLC_MISC_CLC_SHUFFLE2_H__
 #define __CLC_MISC_CLC_SHUFFLE2_H__
 
-#define FUNCTION __clc_shuffle2
+#define __CLC_FUNCTION __clc_shuffle2
 
 // Integer-type decls
 #define __CLC_BODY <clc/misc/shuffle2_decl.inc>
@@ -19,6 +19,6 @@
 #define __CLC_BODY <clc/misc/shuffle2_decl.inc>
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_MISC_CLC_SHUFFLE2_H__

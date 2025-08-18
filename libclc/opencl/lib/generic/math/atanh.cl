@@ -9,7 +9,7 @@
 #include <clc/math/clc_atanh.h>
 #include <clc/opencl/math/atanh.h>
 
-#define FUNCTION atanh
+#define __CLC_FUNCTION atanh
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

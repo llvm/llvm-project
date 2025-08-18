@@ -11,11 +11,11 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION isnormal
+#define __CLC_FUNCTION isnormal
 #define __CLC_BODY <clc/relational/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_RELATIONAL_ISNORMAL_H__

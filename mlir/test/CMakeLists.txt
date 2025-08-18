@@ -141,6 +141,7 @@ if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
     llc
     mlir_async_runtime
     mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
     mlir_c_runner_utils
     mlir_runner_utils
     mlir_float16_utils

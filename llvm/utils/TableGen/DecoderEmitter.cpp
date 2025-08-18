@@ -708,18 +708,18 @@ void Filter::recurse() {
   }
 
   // Otherwise, create sub choosers.
-  for (const auto &Inst : FilteredIDs) {
+  for (const auto &[FilterVal, EncodingIDs] : FilteredIDs) {
     // Marks all the segment positions with either BIT_TRUE or BIT_FALSE.
     for (unsigned bitIndex = 0; bitIndex < NumBits; ++bitIndex)
-      BitValueArray[StartBit + bitIndex] = Inst.first & (1ULL << bitIndex)
+      BitValueArray[StartBit + bitIndex] = FilterVal & (1ULL << bitIndex)
                                                ? BitValue::BIT_TRUE
                                                : BitValue::BIT_FALSE;
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
     FilterChooserMap.try_emplace(
-        Inst.first,
-        std::make_unique<FilterChooser>(Owner.AllInstructions, Inst.second,
+        FilterVal,
+        std::make_unique<FilterChooser>(Owner.AllInstructions, EncodingIDs,
                                         Owner.Operands, BitValueArray, Owner));
   }
 }

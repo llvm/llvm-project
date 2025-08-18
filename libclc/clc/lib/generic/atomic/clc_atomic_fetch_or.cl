@@ -8,8 +8,8 @@
 
 #include <clc/atomic/clc_atomic_fetch_or.h>
 
-#define FUNCTION __clc_atomic_fetch_or
-#define __IMPL_FUNCTION __scoped_atomic_fetch_or
+#define __CLC_FUNCTION __clc_atomic_fetch_or
+#define __CLC_IMPL_FUNCTION __scoped_atomic_fetch_or
 
 #define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/integer/gentype.inc>

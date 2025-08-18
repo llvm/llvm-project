@@ -53,7 +53,7 @@ void MCSymbol::setVariableValue(const MCExpr *Value) {
          "Cannot equate a common symbol");
   this->Value = Value;
   kind = Kind::Equated;
-  setUndefined();
+  Fragment = nullptr;
 }
 
 void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
