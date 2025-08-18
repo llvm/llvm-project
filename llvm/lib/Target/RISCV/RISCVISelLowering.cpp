@@ -16059,6 +16059,52 @@ static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
   return DAG.getNode(ISD::XOR, DL, VT, NewOr, TrueV.getOperand(1));
 }
 
+// (xor X, (and(xor X, Y), C2))
+// ->(qc_insb X, (sra Y, ShAmt), Width, ShAmt)
+// where C2 is a shifted mask with width = Width and shift = ShAmt
+// qc_insb might become qc.insb or qc.insbi depending on the operands.
+static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue Base, Inserted;
+  APInt CMask;
+  if (!sd_match(N, m_Xor(m_Value(Base),
+                         m_OneUse(m_And(m_OneUse(m_Xor(m_Deferred(Base),
+                                                       m_Value(Inserted))),
+                                        m_ConstInt(CMask))))))
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32 || Base.getValueType() != MVT::i32 ||
+      Inserted.getValueType() != MVT::i32)
+    return SDValue();
+
+  unsigned Width, ShAmt;
+  if (!CMask.isShiftedMask(ShAmt, Width))
+    return SDValue();
+
+  // Width must be in 1..32 (inclusive).
+  if (Width > 32 || Width == 0)
+    return SDValue();
+
+  if (!isUInt<5>(ShAmt))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // `Inserted` needs to be right - shifted before it is put into the
+  // instruction.
+  Inserted = DAG.getNode(ISD::SRA, DL, MVT::i32, Inserted,
+                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
+
+  SDValue Ops[] = {Base, Inserted, DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16130,6 +16176,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                             DAG.getConstant(Imm + 1, DL, VT), CC);
     }
   }
+
+  if (SDValue V = combineXorToBitfieldInsert(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
