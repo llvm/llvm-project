@@ -593,7 +593,7 @@ static Value *buildNameForResource(llvm::StringRef BaseName,
                                    CodeGenModule &CGM) {
   std::string Str(BaseName);
   std::string GlobalName(Str + ".str");
-  return CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+  return CGM.GetAddrOfConstantCString(Str, GlobalName).getPointer();
 }
 
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
@@ -632,7 +632,7 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 
   std::string Str(BufDecl->getName());
   std::string GlobalName(Str + ".str");
-  Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+  Name = CGM.GetAddrOfConstantCString(Str, GlobalName).getPointer();
 
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
