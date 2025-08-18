@@ -426,11 +426,11 @@ struct DAP final : private DAPTransport::MessageHandler {
       const std::optional<std::vector<protocol::SourceBreakpoint>>
           &breakpoints);
 
-  void OnEvent(const protocol::Event &) override;
-  void OnRequest(const protocol::Request &) override;
-  void OnResponse(const protocol::Response &) override;
-  void OnError(lldb_private::MainLoopBase &loop, llvm::Error error) override;
-  void OnEOF() override;
+  void Received(const protocol::Event &) override;
+  void Received(const protocol::Request &) override;
+  void Received(const protocol::Response &) override;
+  void OnError(llvm::Error) override;
+  void OnClosed() override;
 
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(

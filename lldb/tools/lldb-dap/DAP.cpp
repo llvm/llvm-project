@@ -267,20 +267,16 @@ void DAP::SendJSON(const llvm::json::Value &json) {
 
 void DAP::Send(const Message &message) {
   if (const protocol::Event *event = std::get_if<protocol::Event>(&message)) {
-    if (llvm::Error err = transport.Event(*event)) {
+    if (llvm::Error err = transport.Send(*event))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending event failed",
                     m_client_name);
-      return;
-    }
     return;
   }
 
   if (const Request *req = std::get_if<Request>(&message)) {
-    if (llvm::Error err = transport.Request(*req)) {
+    if (llvm::Error err = transport.Send(*req))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending request failed",
                     m_client_name);
-      return;
-    }
     return;
   }
 
@@ -291,12 +287,12 @@ void DAP::Send(const Message &message) {
     // 'cancelled' response because we might have a partial result.
     llvm::Error err =
         (debugger.InterruptRequested())
-            ? transport.Response({/*request_seq=*/resp->request_seq,
-                                  /*command=*/resp->command,
-                                  /*success=*/false,
-                                  /*message=*/eResponseMessageCancelled,
-                                  /*body=*/std::nullopt})
-            : transport.Response(*resp);
+            ? transport.Send({/*request_seq=*/resp->request_seq,
+                              /*command=*/resp->command,
+                              /*success=*/false,
+                              /*message=*/eResponseMessageCancelled,
+                              /*body=*/std::nullopt})
+            : transport.Send(*resp);
     if (err) {
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending response failed",
                     m_client_name);
@@ -964,11 +960,11 @@ static std::optional<T> getArgumentsIfRequest(const Request &req,
   return args;
 }
 
-void DAP::OnEvent(const protocol::Event &event) {
+void DAP::Received(const protocol::Event &event) {
   // no-op, no supported events from the client to the server as of DAP v1.68.
 }
 
-void DAP::OnRequest(const protocol::Request &request) {
+void DAP::Received(const protocol::Request &request) {
   if (request.command == "disconnect")
     m_disconnecting = true;
 
@@ -998,7 +994,7 @@ void DAP::OnRequest(const protocol::Request &request) {
   m_queue_cv.notify_one();
 }
 
-void DAP::OnResponse(const protocol::Response &response) {
+void DAP::Received(const protocol::Response &response) {
   std::lock_guard<std::mutex> guard(m_queue_mutex);
   DAP_LOG(log, "({0}) queued (command={1} seq={2})", m_client_name,
           response.command, response.request_seq);
@@ -1006,13 +1002,13 @@ void DAP::OnResponse(const protocol::Response &response) {
   m_queue_cv.notify_one();
 }
 
-void DAP::OnError(MainLoopBase &loop, llvm::Error error) {
+void DAP::OnError(llvm::Error error) {
   DAP_LOG_ERROR(log, std::move(error), "({1}) received error: {0}",
                 m_client_name);
   TerminateLoop(/*failed=*/true);
 }
 
-void DAP::OnEOF() {
+void DAP::OnClosed() {
   DAP_LOG(log, "({0}) received EOF", m_client_name);
   TerminateLoop();
 }

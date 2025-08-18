@@ -8,6 +8,7 @@
 
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "Plugins/Protocol/MCP/ProtocolServerMCP.h"
+#include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/ProtocolServer.h"
@@ -33,6 +34,7 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_protocol::mcp;
+using testing::_;
 
 namespace {
 class TestProtocolServerMCP : public lldb_private::mcp::ProtocolServerMCP {
@@ -143,6 +145,7 @@ public:
   std::unique_ptr<TestJSONTransport> m_transport_up;
   std::unique_ptr<TestProtocolServerMCP> m_server_up;
   MainLoop loop;
+  MockMessageHandler<Request, Response, Notification> message_handler;
 
   static constexpr llvm::StringLiteral k_localhost = "localhost";
 
@@ -156,35 +159,16 @@ public:
     EXPECT_THAT_ERROR(m_io_sp->Close().takeError(), Succeeded());
   }
 
-  class MessageCollector final
-      : public Transport<Request, Response, Notification>::MessageHandler {
-  public:
-    std::vector<Message> messages;
-    void OnEvent(const Notification &V) override { messages.emplace_back(V); }
-    void OnRequest(const Request &V) override { messages.emplace_back(V); }
-    void OnResponse(const Response &V) override { messages.emplace_back(V); }
-    void OnError(MainLoopBase &loop, llvm::Error error) override {
-      loop.RequestTermination();
-      FAIL() << "Error while reading from transport: "
-             << llvm::toString(std::move(error));
-    }
-    void OnEOF() override { /* no-op */ }
-  };
-
   /// Run the transport MainLoop and return any messages received.
-  Expected<std::vector<Message>>
+  llvm::Error
   Run(std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
-    MessageCollector collector;
     loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
                      timeout);
-    auto handle = m_transport_up->RegisterMessageHandler(loop, collector);
+    auto handle = m_transport_up->RegisterMessageHandler(loop, message_handler);
     if (!handle)
       return handle.takeError();
 
-    if (Status status = loop.Run(); status.Fail())
-      return status.takeError();
-
-    return std::move(collector.messages);
+    return loop.Run().takeError();
   }
 
   void SetUp() override {
@@ -229,19 +213,20 @@ public:
 
 TEST_F(ProtocolServerMCPTest, Initialization) {
   llvm::StringLiteral request =
-      R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":0})json";
+      R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":1})json";
   llvm::StringLiteral response =
-      R"json( {"id":0,"jsonrpc":"2.0","result":{"capabilities":{"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":true}},"protocolVersion":"2024-11-05","serverInfo":{"name":"lldb-mcp","version":"0.1.0"}}})json";
+      R"json({"id":1,"jsonrpc":"2.0","result":{"capabilities":{"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":true}},"protocolVersion":"2024-11-05","serverInfo":{"name":"lldb-mcp","version":"0.1.0"}}})json";
 
   ASSERT_THAT_ERROR(Write(request), Succeeded());
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(*expected_json)));
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsList) {
   llvm::StringLiteral request =
-      R"json({"method":"tools/list","params":{},"jsonrpc":"2.0","id":1})json";
+      R"json({"method":"tools/list","params":{},"jsonrpc":"2.0","id":"one"})json";
 
   ToolDefinition test_tool;
   test_tool.name = "test";
@@ -258,14 +243,15 @@ TEST_F(ProtocolServerMCPTest, ToolsList) {
                     {"debugger_id", json::Object{{"type", "number"}}}}},
       {"required", json::Array{"debugger_id"}}};
   Response response;
-  response.id = 1;
+  response.id = "one";
   response.result = json::Object{
       {"tools",
        json::Array{std::move(test_tool), std::move(lldb_command_tool)}},
   };
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(response)));
+  EXPECT_CALL(message_handler, Received(response));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ResourcesList) {
@@ -275,9 +261,10 @@ TEST_F(ProtocolServerMCPTest, ResourcesList) {
       R"json({"id":2,"jsonrpc":"2.0","result":{"resources":[{"description":"description","mimeType":"application/json","name":"name","uri":"lldb://foo/bar"}]}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(*expected_json)));
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCall) {
@@ -287,9 +274,10 @@ TEST_F(ProtocolServerMCPTest, ToolsCall) {
       R"json({"id":11,"jsonrpc":"2.0","result":{"content":[{"text":"foo","type":"text"}],"isError":false}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(*expected_json)));
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallError) {
@@ -301,9 +289,10 @@ TEST_F(ProtocolServerMCPTest, ToolsCallError) {
       R"json({"error":{"code":-32603,"message":"error"},"id":11,"jsonrpc":"2.0"})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(*expected_json)));
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
@@ -315,9 +304,10 @@ TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
       R"json({"id":11,"jsonrpc":"2.0","result":{"content":[{"text":"failed","type":"text"}],"isError":true}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(*expected_json)));
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, NotificationInitialized) {

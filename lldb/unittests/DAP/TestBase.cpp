@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestBase.h"
+#include "DAPLog.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
@@ -18,6 +19,7 @@
 #include "gtest/gtest.h"
 #include <cstdio>
 #include <memory>
+#include <system_error>
 
 using namespace llvm;
 using namespace lldb;
@@ -47,8 +49,10 @@ TestTransport::RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) {
 
 void DAPTestBase::SetUp() {
   TransportBase::SetUp();
+  std::error_code EC;
+  log = std::make_unique<Log>("-", EC);
   dap = std::make_unique<DAP>(
-      /*log=*/nullptr,
+      /*log=*/log.get(),
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
       /*client_name=*/"test_client",

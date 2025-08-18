@@ -10,6 +10,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "TestBase.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -18,6 +19,7 @@ using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
+using namespace testing;
 
 class DAPTest : public TransportBase {};
 
@@ -33,8 +35,6 @@ TEST_F(DAPTest, SendProtocolMessages) {
   dap.Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
   loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_CALL(client, Received(IsEvent("my-event", std::nullopt)));
   ASSERT_THAT_ERROR(dap.Loop(), llvm::Succeeded());
-  ASSERT_THAT(from_dap,
-              ElementsAre(testing::VariantWith<Event>(testing::FieldsAre(
-                  /*event=*/"my-event", /*body=*/std::nullopt))));
 }

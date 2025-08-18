@@ -63,31 +63,31 @@ public:
   virtual ~Transport() = default;
 
   /// Sends an event, a message that does not require a response.
-  virtual llvm::Error Event(const Evt &) = 0;
+  virtual llvm::Error Send(const Evt &) = 0;
   /// Sends a request, a message that expects a response.
-  virtual llvm::Error Request(const Req &) = 0;
+  virtual llvm::Error Send(const Req &) = 0;
   /// Sends a response to a specific request.
-  virtual llvm::Error Response(const Resp &) = 0;
+  virtual llvm::Error Send(const Resp &) = 0;
 
   /// Implemented to handle incoming messages. (See Run() below).
   class MessageHandler {
   public:
     virtual ~MessageHandler() = default;
     /// Called when an event is received.
-    virtual void OnEvent(const Evt &) = 0;
+    virtual void Received(const Evt &) = 0;
     /// Called when a request is received.
-    virtual void OnRequest(const Req &) = 0;
+    virtual void Received(const Req &) = 0;
     /// Called when a response is received.
-    virtual void OnResponse(const Resp &) = 0;
+    virtual void Received(const Resp &) = 0;
 
     /// Called when an error occurs while reading from the transport.
     ///
     /// NOTE: This does *NOT* indicate that a specific request failed, but that
     /// there was an error in the underlying transport.
-    virtual void OnError(MainLoopBase &, llvm::Error) = 0;
+    virtual void OnError(llvm::Error) = 0;
 
-    /// Called on EOF or disconnect.
-    virtual void OnEOF() = 0;
+    /// Called on EOF or client disconnect.
+    virtual void OnClosed() = 0;
   };
 
   using MessageHandlerSP = std::shared_ptr<MessageHandler>;
@@ -117,9 +117,9 @@ public:
   JSONTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
       : m_in(in), m_out(out) {}
 
-  llvm::Error Event(const Evt &evt) override { return Write(evt); }
-  llvm::Error Request(const Req &req) override { return Write(req); }
-  llvm::Error Response(const Resp &resp) override { return Write(resp); }
+  llvm::Error Send(const Evt &evt) override { return Write(evt); }
+  llvm::Error Send(const Req &req) override { return Write(req); }
+  llvm::Error Send(const Resp &resp) override { return Write(resp); }
 
   llvm::Expected<MainLoop::ReadHandleUP>
   RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
@@ -156,7 +156,7 @@ private:
     char buf[kReadBufferSize];
     size_t num_bytes = sizeof(buf);
     if (Status status = m_in->Read(buf, num_bytes); status.Fail()) {
-      handler.OnError(loop, status.takeError());
+      handler.OnError(status.takeError());
       return;
     }
 
@@ -167,7 +167,7 @@ private:
     if (!m_buffer.empty()) {
       llvm::Expected<std::vector<std::string>> raw_messages = Parse();
       if (llvm::Error error = raw_messages.takeError()) {
-        handler.OnError(loop, std::move(error));
+        handler.OnError(std::move(error));
         return;
       }
 
@@ -176,26 +176,11 @@ private:
             llvm::json::parse<typename Transport<Req, Resp, Evt>::Message>(
                 raw_message);
         if (!message) {
-          handler.OnError(loop, message.takeError());
-          continue;
+          handler.OnError(message.takeError());
+          return;
         }
 
-        if (Evt *evt = std::get_if<Evt>(&*message)) {
-          handler.OnEvent(*evt);
-          continue;
-        }
-
-        if (Req *req = std::get_if<Req>(&*message)) {
-          handler.OnRequest(*req);
-          continue;
-        }
-
-        if (Resp *resp = std::get_if<Resp>(&*message)) {
-          handler.OnResponse(*resp);
-          continue;
-        }
-
-        llvm_unreachable("unknown message type");
+        std::visit([&handler](auto &&msg) { handler.Received(msg); }, *message);
       }
     }
 
@@ -203,9 +188,9 @@ private:
     if (num_bytes == 0) {
       // EOF reached, but there may still be unhandled contents in the buffer.
       if (!m_buffer.empty())
-        handler.OnError(loop, llvm::make_error<TransportUnhandledContentsError>(
-                                  std::string(m_buffer.str())));
-      handler.OnEOF();
+        handler.OnError(llvm::make_error<TransportUnhandledContentsError>(
+            std::string(m_buffer.str())));
+      handler.OnClosed();
     }
   }
 
@@ -249,10 +234,13 @@ protected:
           continue;
 
         value = value.trim();
-        if (!llvm::to_integer(value, content_length, 10))
+        if (!llvm::to_integer(value, content_length, 10)) {
+          // Clear the buffer to avoid re-parsing this malformed message.
+          this->m_buffer.clear();
           return llvm::createStringError(std::errc::invalid_argument,
                                          "invalid content length: %s",
                                          value.str().c_str());
+        }
       }
 
       // Check if we have enough data.
