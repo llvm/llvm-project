@@ -5664,8 +5664,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::ABDS:
   case ISD::SMIN:
   case ISD::SMAX:
+  case ISD::SCMP:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::UCMP:
   case ISD::AND:
   case ISD::XOR:
   case ISD::ROTL:
@@ -5709,8 +5711,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::UMULO:
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
-  case ISD::SCMP:
-  case ISD::UCMP:
     // No poison on result or overflow flags.
     return false;
 
