@@ -38,7 +38,7 @@ Limitations
 
 The check does run only on `C` code.
 
-C-style casts are discouraged in `C++` and should be converted to more type-safe
+C-style casts are discouraged in C++ and should be converted to more type-safe
 casts. The ``reinterpreted_cast`` is used for the most unsafe cases and
 indicates by itself a potentially dangerous operation. Additionally, inheritance
 and dynamic types would make such a check less useful.
@@ -52,7 +52,7 @@ Options
    types to ignore. The list should contain pairs of type names in a way that
    the first type is the "from" type, the second is the "to" type in a cast
    expression. The types in a pair and the pairs itself are separated by
-   ``;`` characters. For example ``char;Type1;char;Type2`` specifies that the
+   `;` characters. For example `char;Type1;char;Type2` specifies that the
    check does not produce warning for casts from ``char *`` to ``Type1 *`` and
    casts from ``char *`` to ``Type2 *``. The list entries can be regular
    expressions. The type name in the cast expression is matched without
