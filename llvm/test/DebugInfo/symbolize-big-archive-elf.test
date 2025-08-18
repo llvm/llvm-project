@@ -9,12 +9,10 @@
 // RUN: llvm-ar crv %t.a %t-1.o %t-2.o
 
 // Test symbolization by member name (using just base names)
-// RUN: MEMBER1=$(basename %t-1.o)
-// RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a($MEMBER1)" 0x0 | FileCheck %s --check-prefix=CHECK-1
-// RUN: llvm-symbolizer --obj="%t.a($MEMBER1):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
-// RUN: MEMBER2=$(basename %t-2.o)
-// RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a($MEMBER2)" 0x0 | FileCheck %s --check-prefix=CHECK-2
-// RUN: llvm-symbolizer --obj="%t.a($MEMBER2):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
+// RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
+// RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
+// RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
+// RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-2.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
 // CHECK-1: foo1
 // CHECK-2: foo2
 

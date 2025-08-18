@@ -17,11 +17,10 @@
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 
 // Test successful symbolization
-// RUN: MEMBER=$(basename %t.o)
-// RUN: llvm-symbolizer --default-arch=ppc --obj="%t.a($MEMBER)" 0x0 | FileCheck %s --check-prefix=CHECK-32
-// RUN: llvm-symbolizer --default-arch=ppc64 --obj="%t.a($MEMBER)" 0x0 | FileCheck %s --check-prefix=CHECK-64
-// RUN: llvm-symbolizer --obj="%t.a($MEMBER):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
-// RUN: llvm-symbolizer --obj="%t.a($MEMBER):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
+// RUN: llvm-symbolizer --default-arch=ppc --obj="%t.a(%{t:stem}.tmp.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
+// RUN: llvm-symbolizer --default-arch=ppc64 --obj="%t.a(%{t:stem}.tmp.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
+// RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
+// RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
 // CHECK-32: foo
 // CHECK-64: foo
 
