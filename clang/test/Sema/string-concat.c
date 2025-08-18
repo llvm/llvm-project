@@ -168,3 +168,31 @@ const char *extra_parens_to_suppress_warning[] = {
     "promise"),
     "shared_future"
 };
+
+const char *multiple_missing_commas1[] = {
+    "1",
+    "2"  // expected-note {{place parentheses around the string literal to silence warning}}
+    "3", // expected-warning {{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    "4",
+    "5",
+    "6"  // expected-note {{place parentheses around the string literal to silence warning}}
+    "7", // expected-warning {{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    "8",
+    "9",
+    "10",
+    "11",
+};
+
+const char *multiple_missing_commas2[] = {
+    "1",
+    "2"
+    "3"
+    "4"
+    "5",
+    "6"  // expected-note {{place parentheses around the string literal to silence warning}}
+    "7", // expected-warning {{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    "8",
+    "9",
+    "10",
+    "11",
+};
