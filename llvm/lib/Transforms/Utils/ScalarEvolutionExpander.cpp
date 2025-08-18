@@ -337,16 +337,17 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   }
 
   // If we haven't found this binop, insert it.
-  // TODO: Use the Builder, which will make CreateBinOp below fold with
-  // InstSimplifyFolder.
-  Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
-  BO->setDebugLoc(Loc);
-  if (any(Flags & SCEV::FlagNUW))
-    BO->setHasNoUnsignedWrap();
-  if (any(Flags & SCEV::FlagNSW))
-    BO->setHasNoSignedWrap();
+  Value *Op = Builder.CreateBinOp(Opcode, LHS, RHS);
+  if (auto *BO = dyn_cast<Instruction>(Op)) {
+    assert(BO->getOperand(0) == LHS && BO->getOperand(1) == RHS);
+    BO->setDebugLoc(Loc);
+    if (any(Flags & SCEV::FlagNUW))
+      BO->setHasNoUnsignedWrap();
+    if (any(Flags & SCEV::FlagNSW))
+      BO->setHasNoSignedWrap();
+  }
 
-  return BO;
+  return Op;
 }
 
 /// expandAddToGEP - Expand an addition expression with a pointer type into
