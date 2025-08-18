@@ -253,7 +253,8 @@ define <8 x i16> @gep01_load_i16_insert_v8i16(ptr align 16 dereferenceable(18) %
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 2
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[R]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <8 x i16> [[R1]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
   %s = load i16, ptr %gep, align 2
@@ -341,7 +342,8 @@ define <8 x i16> @gep10_load_i16_insert_v8i16(ptr align 16 dereferenceable(32) %
 ; CHECK-LABEL: @gep10_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 1, i64 0
 ; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 16
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[R]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <8 x i16> [[R1]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 1, i64 0
   %s = load i16, ptr %gep, align 16
