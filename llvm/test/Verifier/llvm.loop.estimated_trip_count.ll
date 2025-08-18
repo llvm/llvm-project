@@ -15,16 +15,19 @@ exit:
 
 ; GOOD-NOT: {{.}}
 
-;      BAD-VALUE: Expected optional second operand to be an integer constant of type i32 or smaller
+;      BAD-VALUE: Expected second operand to be an integer constant of type i32 or smaller
 ; BAD-VALUE-NEXT: !1 = !{!"llvm.loop.estimated_trip_count",
 
-;      TOO-MANY: Expected one or two operands
+;      TOO-FEW: Expected two operands
+; TOO-FEW-NEXT: !1 = !{!"llvm.loop.estimated_trip_count"}
+
+;      TOO-MANY: Expected two operands
 ; TOO-MANY-NEXT: !1 = !{!"llvm.loop.estimated_trip_count", i32 5, i32 5}
 
 ; No value.
 ; RUN: cp %s %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count"}' >> %t
-; RUN: %{RUN} GOOD
+; RUN: not %{RUN} TOO-FEW
 
 ; i16 value.
 ; RUN: cp %s %t

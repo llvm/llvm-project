@@ -1077,16 +1077,13 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
   // Check llvm.loop.estimated_trip_count.
   if (MD.getNumOperands() > 0 &&
       MD.getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
-    Check(MD.getNumOperands() == 1 || MD.getNumOperands() == 2,
-          "Expected one or two operands", &MD);
-    if (MD.getNumOperands() == 2) {
-      auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
-      Check(Count && Count->getType()->isIntegerTy() &&
-                cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
-            "Expected optional second operand to be an integer constant of "
-            "type i32 or smaller",
-            &MD);
-    }
+    Check(MD.getNumOperands() == 2, "Expected two operands", &MD);
+    auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
+    Check(Count && Count->getType()->isIntegerTy() &&
+              cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
+          "Expected second operand to be an integer constant of type i32 or "
+          "smaller",
+          &MD);
   }
 
   // Check these last, so we diagnose problems in operands first.
