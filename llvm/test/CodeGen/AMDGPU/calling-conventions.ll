@@ -2745,15 +2745,6 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ;
 ; GFX11-TRUE16-LABEL: amdgpu_cs_v32i1:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_and_b16 v26.l, v26.l, 1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v25.l, 1, v25.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v24.l, v24.l, 1
-; GFX11-TRUE16-NEXT:    v_and_b16 v20.h, v22.l, 1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v21.l, 1, v21.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v20.l, v20.l, 1
-; GFX11-TRUE16-NEXT:    v_and_b16 v17.h, v18.l, 1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v17.l, 1, v17.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v16.l, v16.l, 1
 ; GFX11-TRUE16-NEXT:    v_and_b16 v10.l, v10.l, 1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v9.l, 1, v9.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v8.l, v8.l, 1
@@ -2763,18 +2754,6 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v2.l, 1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 1, v1.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 1
-; GFX11-TRUE16-NEXT:    v_and_b16 v30.l, v30.l, 1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v29.l, 1, v29.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v28.l, v28.l, 1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v25.h, 3, v27.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v26.l, 2, v26.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v22.h, v24.l, v25.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v22.l, 3, v23.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v20.h, 2, v20.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v16.h, v20.l, v21.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v18.h, 3, v19.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v17.h, 2, v17.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v16.l, v16.l, v17.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v14.l, v14.l, 1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v13.l, 1, v13.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v12.l, v12.l, 1
@@ -2787,15 +2766,15 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v2.h, 3, v3.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.h, 2, v1.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v28.h, 3, v31.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v29.h, 2, v30.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v28.l, v28.l, v29.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v25.h, v25.h, v26.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v21.h, v22.h, 3
-; GFX11-TRUE16-NEXT:    v_or_b16 v18.l, v22.l, v20.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v16.h, v16.h, 3
-; GFX11-TRUE16-NEXT:    v_or_b16 v17.h, v18.h, v17.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v16.l, v16.l, 3
+; GFX11-TRUE16-NEXT:    v_and_b16 v25.h, v26.l, 1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v25.l, 1, v25.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v24.l, v24.l, 1
+; GFX11-TRUE16-NEXT:    v_and_b16 v22.l, v22.l, 1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v21.l, 1, v21.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v20.l, v20.l, 1
+; GFX11-TRUE16-NEXT:    v_and_b16 v18.l, v18.l, 1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v17.l, 1, v17.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v16.l, v16.l, 1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v12.h, 3, v15.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v10.h, 2, v14.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v8.h, v12.l, v13.l
@@ -2805,42 +2784,65 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v0.h, 3
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v2.h, v1.h
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 3
-; GFX11-TRUE16-NEXT:    v_or_b16 v26.h, v28.h, v29.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v24.h, v28.l, 3
-; GFX11-TRUE16-NEXT:    v_or_b16 v19.l, v21.h, v25.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v16.h, v16.h, v18.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v15.h, v16.l, v17.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v30.l, v30.l, 1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v29.l, 1, v29.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v28.l, v28.l, 1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v22.h, 3, v27.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v25.h, 2, v25.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v24.l, v24.l, v25.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v23.l, 3, v23.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v22.l, 2, v22.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v16.h, v20.l, v21.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v17.h, 3, v19.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v18.l, 2, v18.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v15.h, v16.l, v17.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v2.h, v12.h, v10.h
 ; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, v8.h, 3
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, v6.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, v2.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v24.h, v24.h, v26.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v14.h, v19.l, 15
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v16.h, 4, v16.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v15.h, 15
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v30.h, 3, v31.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v28.h, 2, v30.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v24.h, v28.l, v29.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v22.h, v22.h, v25.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v24.l, v24.l, 3
+; GFX11-TRUE16-NEXT:    v_or_b16 v18.h, v23.l, v22.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v14.h, v16.h, 3
+; GFX11-TRUE16-NEXT:    v_or_b16 v16.h, v17.h, v18.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v15.h, 3
 ; GFX11-TRUE16-NEXT:    v_or_b16 v2.l, v3.l, v2.h
 ; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, v1.l, 15
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 4, v0.h
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 15
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v17.l, 12, v24.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v2.h, 8, v14.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v28.h, v30.h, v28.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v24.h, v24.h, 3
+; GFX11-TRUE16-NEXT:    v_or_b16 v20.h, v24.l, v22.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v2.h, v14.h, v18.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v1.h, v16.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 12, v2.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v1.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v17.l, v2.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, 0xff, v1.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    v_or_b16 v23.h, v24.h, v28.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v20.h, 15
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v2.h, 4, v2.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v1.h, 15
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v2.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 12, v23.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v1.h, v2.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v2.h, v1.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v2.l, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v1.l, v0.h
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-TRUE16-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;

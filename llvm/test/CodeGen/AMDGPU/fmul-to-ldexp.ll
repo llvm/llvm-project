@@ -4238,7 +4238,7 @@ define amdgpu_ps i32 @s_mul_32_f16(half inreg %x, half inreg %y) {
 ; GFX11-GISEL-TRUE16-LABEL: s_mul_32_f16:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_f16_e64 v0.l, 0x5000, s0
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;

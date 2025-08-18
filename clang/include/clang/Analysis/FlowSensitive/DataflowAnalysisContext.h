@@ -42,6 +42,18 @@ struct ContextSensitiveOptions {
   unsigned Depth = 2;
 };
 
+/// A simple representation of essential elements of the logical context used in
+/// environments. Designed for import/export for applications requiring
+/// serialization support.
+struct SimpleLogicalContext {
+  // Global invariant that applies for all definitions in the context.
+  const Formula *Invariant;
+  // Flow-condition tokens in the context.
+  llvm::DenseMap<Atom, const Formula *> TokenDefs;
+  // Dependencies between flow-condition definitions.
+  llvm::DenseMap<Atom, llvm::DenseSet<Atom>> TokenDeps;
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
@@ -140,6 +152,15 @@ public:
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
 
+  /// Adds `Deps` to the dependencies of the flow condition identified by
+  /// `Token`. Intended for use in deserializing contexts. The formula alone
+  /// doesn't have enough information to indicate its deps.
+  void addFlowConditionDeps(Atom Token, const llvm::DenseSet<Atom> &Deps) {
+    // Avoid creating an entry for `Token` with an empty set.
+    if (!Deps.empty())
+      FlowConditionDeps[Token].insert(Deps.begin(), Deps.end());
+  }
+
   /// Creates a new flow condition with the same constraints as the flow
   /// condition identified by `Token` and returns its token.
   Atom forkFlowCondition(Atom Token);
@@ -207,6 +228,14 @@ public:
     return {};
   }
 
+  /// Export the logical-context portions of `AC`, limited to the given target
+  /// flow-condition tokens.
+  SimpleLogicalContext
+  exportLogicalContext(llvm::DenseSet<dataflow::Atom> TargetTokens) const;
+
+  /// Initializes this context's "logical" components with `LC`.
+  void initLogicalContext(SimpleLogicalContext LC);
+
 private:
   friend class Environment;
 
@@ -227,6 +256,11 @@ private:
   ///    `DataflowAnalysisContext will take ownership of `OwnedSolver`).
   DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> &&OwnedSolver,
                           Options Opts);
+
+  /// Computes the transitive closure of dependencies of (flow-condition)
+  /// `Tokens`. That is, the set of flow-condition tokens reachable from
+  /// `Tokens` in the dependency graph.
+  llvm::DenseSet<Atom> collectDependencies(llvm::DenseSet<Atom> Tokens) const;
 
   // Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);

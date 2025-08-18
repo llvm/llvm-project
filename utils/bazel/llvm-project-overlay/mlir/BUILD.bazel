@@ -4920,6 +4920,7 @@ cc_library(
         ":MemRefDialect",
         ":Support",
         ":TensorDialect",
+        ":UBDialect",
         ":VectorDialect",
         "//llvm:Support",
     ],

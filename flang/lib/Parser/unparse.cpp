@@ -2250,6 +2250,11 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpDynGroupprivateClause &x) {
+    using Modifier = OmpDynGroupprivateClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<ScalarIntExpr>(x.t));
+  }
   void Unparse(const OmpEnterClause &x) {
     using Modifier = OmpEnterClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2941,6 +2946,7 @@ public:
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
   WALK_NESTED_ENUM(OmpSeverityClause, Severity) // OMP severity
+  WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
   WALK_NESTED_ENUM(
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type

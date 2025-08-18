@@ -1528,9 +1528,10 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(ptr addrspace(1) %out
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v0.l, 64
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
 ;
@@ -1559,9 +1560,10 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(ptr addrspace(1) %out
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0xffc0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
 ;

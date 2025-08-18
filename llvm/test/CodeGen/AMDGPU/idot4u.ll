@@ -1693,11 +1693,12 @@ define amdgpu_kernel void @notdot4_mixedtypes(ptr addrspace(1) %src1,
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v7.l
 ; GFX11-DL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v1.l, v0.l
-; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-DL-TRUE16-NEXT:    v_perm_b32 v1, v5, v5, 0xc0c0302
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v2.l, v3.l, v0.l
 ; GFX11-DL-TRUE16-NEXT:    v_perm_b32 v2, v4, v4, 0xc0c0302
+; GFX11-DL-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DL-TRUE16-NEXT:    v_dot4_u32_u8 v0, v2, v1, v0
 ; GFX11-DL-TRUE16-NEXT:    global_store_b16 v6, v0, s[4:5]
 ; GFX11-DL-TRUE16-NEXT:    s_endpgm
@@ -2723,32 +2724,32 @@ define amdgpu_kernel void @udot4_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX11-DL-TRUE16-NEXT:    global_load_b32 v4, v0, s[2:3]
 ; GFX11-DL-TRUE16-NEXT:    global_load_d16_u8 v0, v5, s[4:5]
 ; GFX11-DL-TRUE16-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 24, v3
-; GFX11-DL-TRUE16-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 24, v4
 ; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b16 v0.h, 8, v3.l
-; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v3.h, v4.h
-; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b16 v1.h, 8, v4.l
+; GFX11-DL-TRUE16-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b16 v1.l, 8, v4.l
+; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 24, v3
+; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 24, v4
 ; GFX11-DL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v3.l, v4.l, v0.l
-; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.l, v6.l
+; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v0.h, v1.l
+; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v3.h, v4.h
+; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v2.l, v6.l
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v6.l, 0
-; GFX11-DL-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.l
-; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v0.h, v1.h
 ; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 8, v2.l
-; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v6.l
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v7.l, 8, v0.h
-; GFX11-DL-TRUE16-NEXT:    v_or_b16 v6.h, v1.l, v2.l
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-DL-TRUE16-NEXT:    v_or_b32_e32 v1, v7, v6
+; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 8, v0.h
+; GFX11-DL-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v1.l
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v1.h
+; GFX11-DL-TRUE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-DL-TRUE16-NEXT:    v_or_b16 v6.h, v0.h, v1.l
 ; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-DL-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
-; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX11-DL-TRUE16-NEXT:    v_or_b32_e32 v2, v2, v6
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
+; GFX11-DL-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v2.l
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v3.h, v4.h, v0.l
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DL-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
 ; GFX11-DL-TRUE16-NEXT:    global_store_b8 v5, v0, s[4:5]
 ; GFX11-DL-TRUE16-NEXT:    s_endpgm
