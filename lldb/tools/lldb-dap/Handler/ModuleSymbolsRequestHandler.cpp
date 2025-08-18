@@ -1,4 +1,4 @@
-//===-- DAPGetModuleSymbolsRequestHandler.cpp -----------------------------===//
+//===-- ModuleSymbolsRequestHandler.cpp -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -61,7 +61,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
       continue;
 
     Symbol dap_symbol;
-    dap_symbol.userId = symbol.GetID();
+    dap_symbol.id = symbol.GetID();
     dap_symbol.type = symbol.GetType();
     dap_symbol.isDebug = symbol.IsDebug();
     dap_symbol.isSynthetic = symbol.IsSynthetic();

@@ -49,8 +49,8 @@ bool fromJSON(const llvm::json::Value &, SourceLLDBData &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceLLDBData &);
 
 struct Symbol {
-  /// The symbol uid.
-  uint32_t userId;
+  /// The symbol id, usually the original symbol table index.
+  uint32_t id;
 
   /// True if this symbol is debug information in a symbol.
   bool isDebug;

@@ -35,7 +35,7 @@ TEST(DAPTypesTest, SourceLLDBData) {
 
 TEST(DAPTypesTest, DAPSymbol) {
   Symbol symbol;
-  symbol.userId = 42;
+  symbol.id = 42;
   symbol.isDebug = true;
   symbol.isExternal = false;
   symbol.isSynthetic = true;
@@ -48,7 +48,7 @@ TEST(DAPTypesTest, DAPSymbol) {
   llvm::Expected<Symbol> deserialized_symbol = roundtripJSON(symbol);
   ASSERT_THAT_EXPECTED(deserialized_symbol, llvm::Succeeded());
 
-  EXPECT_EQ(symbol.userId, deserialized_symbol->userId);
+  EXPECT_EQ(symbol.id, deserialized_symbol->id);
   EXPECT_EQ(symbol.isDebug, deserialized_symbol->isDebug);
   EXPECT_EQ(symbol.isExternal, deserialized_symbol->isExternal);
   EXPECT_EQ(symbol.isSynthetic, deserialized_symbol->isSynthetic);

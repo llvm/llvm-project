@@ -4,7 +4,8 @@ import { DebugProtocol } from "@vscode/debugprotocol";
 import { DebugSessionTracker } from "../debug-session-tracker";
 import { DisposableContext } from "../disposable-context";
 
-import { DAPSymbolType } from "..";
+import { SymbolType } from "..";
+import { getSymbolsTableHTMLContent } from "./symbols-webview-html";
 import { getDefaultConfigKey } from "../debug-configuration-provider";
 
 export class SymbolsProvider extends DisposableContext {
@@ -95,12 +96,12 @@ export class SymbolsProvider extends DisposableContext {
     }
   }
 
-  private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbolType[]> {
-    const symbols_response: { symbols: Array<DAPSymbolType> } = await session.customRequest("moduleSymbols", { moduleId, moduleName: '' });
+  private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<SymbolType[]> {
+    const symbols_response: { symbols: Array<SymbolType> } = await session.customRequest("moduleSymbols", { moduleId, moduleName: '' });
     return symbols_response?.symbols || [];
   }
 
-  private async showSymbolsInNewTab(moduleName: string, symbols: DAPSymbolType[]) {
+  private async showSymbolsInNewTab(moduleName: string, symbols: SymbolType[]) {
     const panel = vscode.window.createWebviewPanel(
       "lldb-dap.symbols",
       `Symbols for ${moduleName}`,
@@ -121,58 +122,8 @@ export class SymbolsProvider extends DisposableContext {
     const tabulatorJsPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"));
     const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
 
-    panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath);
+    panel.webview.html = getSymbolsTableHTMLContent(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath);
     panel.webview.postMessage({ command: "updateSymbols", symbols: symbols });
-  }
-
-  private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbolsTableScriptPath: vscode.Uri): string {
-    return `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <link href="${tabulatorCssPath}" rel="stylesheet">
-    <style>
-      .tabulator {
-        background-color: var(--vscode-editor-background);
-        color: var(--vscode-editor-foreground);
-      }
-
-      .tabulator .tabulator-header .tabulator-col {
-        background-color: var(--vscode-editor-background);
-        color: var(--vscode-editor-foreground);
-      }
-
-      .tabulator-row {
-        background-color: var(--vscode-editor-background);
-        color: var(--vscode-editor-foreground);
-      }
-
-      .tabulator-row.tabulator-row-even {
-        background-color: var(--vscode-editor-background);
-        color: var(--vscode-editor-foreground);
-      }
-
-      .tabulator-row.tabulator-selected {
-        background-color: var(--vscode-editor-background);
-        color: var(--vscode-editor-foreground);
-      }
-
-      .tabulator-cell {
-        text-overflow: clip !important;
-      }
-
-      #symbols-table {
-        width: 100%;
-        height: 100vh;
-      }
-    </style>
-</head>
-<body>
-    <div id="symbols-table"></div>
-    <script src="${tabulatorJsPath}"></script>
-    <script src="${symbolsTableScriptPath}"></script>
-</body>
-</html>`;
   }
 
   private getExtensionResourcePath(): vscode.Uri {

@@ -85,6 +85,10 @@ public:
 
   SymbolType GetType();
 
+  /// Get the ID of this symbol, usually the original symbol table index. .
+  ///
+  /// \returns
+  ///   Returns the ID of this symbol.
   uint32_t GetID();
 
   bool operator==(const lldb::SBSymbol &rhs) const;

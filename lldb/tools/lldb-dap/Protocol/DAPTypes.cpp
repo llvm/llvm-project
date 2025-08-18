@@ -137,7 +137,7 @@ llvm::json::Value toJSON(const SourceLLDBData &SLD) {
 bool fromJSON(const llvm::json::Value &Params, Symbol &DS, llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
   std::string type_str;
-  if (!(O && O.map("userId", DS.userId) && O.map("isDebug", DS.isDebug) &&
+  if (!(O && O.map("id", DS.id) && O.map("isDebug", DS.isDebug) &&
         O.map("isSynthetic", DS.isSynthetic) &&
         O.map("isExternal", DS.isExternal) && O.map("type", type_str) &&
         O.map("fileAddress", DS.fileAddress) &&
@@ -151,7 +151,7 @@ bool fromJSON(const llvm::json::Value &Params, Symbol &DS, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const Symbol &DS) {
   json::Object result{
-      {"userId", DS.userId},
+      {"id", DS.id},
       {"isDebug", DS.isDebug},
       {"isSynthetic", DS.isSynthetic},
       {"isExternal", DS.isExternal},

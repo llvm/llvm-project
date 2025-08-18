@@ -1,7 +1,7 @@
 import type { CellComponent, ColumnDefinition } from "tabulator-tables";
-import type { DAPSymbolType } from ".."
+import type { SymbolType } from ".."
 
-function get_tabulator_hexa_formatter(padding: number): (cell: CellComponent) => string {
+function getTabulatorHexaFormatter(padding: number): (cell: CellComponent) => string {
   return (cell: CellComponent) => {
     const val = cell.getValue();
     if (val === undefined || val === null) {
@@ -13,7 +13,7 @@ function get_tabulator_hexa_formatter(padding: number): (cell: CellComponent) =>
 }
 
 const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
-  { title: "User ID", field: "userId", headerTooltip: true, sorter: "number", widthGrow: 0.8 },
+  { title: "ID", field: "id", headerTooltip: true, sorter: "number", widthGrow: 0.6 },
   {
     title: "Name",
     field: "name",
@@ -69,7 +69,7 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     headerTooltip: true,
     sorter: "number",
     widthGrow : 1.25,
-    formatter: get_tabulator_hexa_formatter(16),
+    formatter: getTabulatorHexaFormatter(16),
   },
   {
     title: "Load Address",
@@ -77,9 +77,9 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     headerTooltip: true,
     sorter: "number",
     widthGrow : 1.25,
-    formatter: get_tabulator_hexa_formatter(16),
+    formatter: getTabulatorHexaFormatter(16),
   },
-  { title: "Size", field: "size", headerTooltip: true, sorter: "number", formatter: get_tabulator_hexa_formatter(8) },
+  { title: "Size", field: "size", headerTooltip: true, sorter: "number", formatter: getTabulatorHexaFormatter(8) },
 ];
 
 const vscode = acquireVsCodeApi();
@@ -93,7 +93,7 @@ const SYMBOLS_TABLE = new Tabulator("#symbols-table", {
   data: previousState?.symbols || [],
 });
 
-function updateSymbolsTable(symbols: DAPSymbolType[]) {
+function updateSymbolsTable(symbols: SymbolType[]) {
   SYMBOLS_TABLE.setData(symbols);
 }
 

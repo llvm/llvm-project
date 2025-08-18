@@ -1,8 +1,8 @@
 export {};
 
 /// The symbol type we get from the lldb-dap server
-export declare interface DAPSymbolType {
-  userId: number;
+export declare interface SymbolType {
+  id: number;
   isDebug: boolean;
   isSynthetic: boolean;
   isExternal: boolean;
