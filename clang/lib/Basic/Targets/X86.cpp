@@ -348,7 +348,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BF16 = true;
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
