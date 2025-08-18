@@ -157,6 +157,7 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svinval"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svnapot"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svpbmt"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.

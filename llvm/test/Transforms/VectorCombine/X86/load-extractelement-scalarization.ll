@@ -27,6 +27,8 @@ define void @multiple_extract(ptr %p) {
 ; infinite loop if we fold an extract that is waiting to be erased
 define void @unused_extract(ptr %p) {
 ; CHECK-LABEL: @unused_extract(
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[LOAD]], i64 1
 ; CHECK-NEXT:    ret void
 ;
   %load = load <4 x float>, ptr %p, align 8
