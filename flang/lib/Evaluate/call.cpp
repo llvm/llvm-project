@@ -336,8 +336,12 @@ static void DetermineCopyInOutArgument(
   bool dummyIsExplicitShape{dummyObj->type.IsExplicitShape()};
   bool dummyIsAssumedSize{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
+  bool dummyIsPolymorphic{dummyObj->type.type().IsPolymorphic()};
+  // Explicit shape and assumed size arrays must be contiguous
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
-      treatDummyScalarAsArray ||
+      // Polymorphic dummy is descriptor based, so should be able to handle
+      // discontigunity.
+      (treatDummyScalarAsArray && !dummyIsPolymorphic) ||
       dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
@@ -364,7 +368,6 @@ static void DetermineCopyInOutArgument(
     auto actualType{characteristics::TypeAndShape::Characterize(
         actual, sc.foldingContext())};
     bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
-    bool dummyIsPolymorphic{dummyObj->type.type().IsPolymorphic()};
     if (actualIsPolymorphic && !dummyIsPolymorphic) {
       setCopyIn();
       setCopyOut();
