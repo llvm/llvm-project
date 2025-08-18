@@ -3056,6 +3056,8 @@ def : GCNPat<
 }
 }  // AddedComplexity = 1
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat<
   (i32 (DivergentUnaryFrag<zext> i16:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)), $src)
@@ -3071,6 +3073,26 @@ def : GCNPat<
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (COPY VSrc_b16:$src)>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<zext> i16:$src)),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<zext> i16:$src)),
+  (REG_SEQUENCE VReg_64,
+    (REG_SEQUENCE VGPR_32, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16), sub0,
+    (S_MOV_B32 (i32 0)), sub1)
+>;
+
+def : GCNPat<
+  (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+>;
+}
 
 def : GCNPat <
   (i32 (trunc i64:$a)),
