@@ -107,7 +107,7 @@ let Predicates = [HasVendorXSMTVDot], ElementsDependOn = EltDepsVL in {
 def VMADOT   : RVInstSMTVDot<SMT_VDot_SS, "smt.vmadot",   "$vd, $vs1, $vs2">;
 def VMADOTU  : RVInstSMTVDot<SMT_VDot_UU, "smt.vmadotu",  "$vd, $vs1, $vs2">;
 def VMADOTSU : RVInstSMTVDot<SMT_VDot_SU, "smt.vmadotsu", "$vd, $vs1, $vs2">;
-def VMADOTUU : RVInstSMTVDot<SMT_VDot_US, "smt.vmadotus", "$vd, $vs1, $vs2">;
+def VMADOTUS : RVInstSMTVDot<SMT_VDot_US, "smt.vmadotus", "$vd, $vs1, $vs2">;
 
 //===----------------------------------------------------------------------===//
 // Sliding-window Vector Dot Product Instructions
@@ -126,14 +126,14 @@ def VMADOTUU : RVInstSMTVDot<SMT_VDot_US, "smt.vmadotus", "$vd, $vs1, $vs2">;
 def VMADOT1   : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_SS, "smt.vmadot1",   "$vd, $vs1, $vs2">;
 def VMADOT1U  : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_UU, "smt.vmadot1u",  "$vd, $vs1, $vs2">;
 def VMADOT1SU : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_SU, "smt.vmadot1su", "$vd, $vs1, $vs2">;
-def VMADOT1UU : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_US, "smt.vmadot1us", "$vd, $vs1, $vs2">;
+def VMADOT1US : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_US, "smt.vmadot1us", "$vd, $vs1, $vs2">;
 def VMADOT2   : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_SS, "smt.vmadot2",   "$vd, $vs1, $vs2">;
 def VMADOT2U  : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_UU, "smt.vmadot2u",  "$vd, $vs1, $vs2">;
 def VMADOT2SU : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_SU, "smt.vmadot2su", "$vd, $vs1, $vs2">;
-def VMADOT2UU : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_US, "smt.vmadot2us", "$vd, $vs1, $vs2">;
+def VMADOT2US : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_US, "smt.vmadot2us", "$vd, $vs1, $vs2">;
 def VMADOT3   : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_SS, "smt.vmadot3",   "$vd, $vs1, $vs2">;
 def VMADOT3U  : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_UU, "smt.vmadot3u",  "$vd, $vs1, $vs2">;
 def VMADOT3SU : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_SU, "smt.vmadot3su", "$vd, $vs1, $vs2">;
-def VMADOT3UU : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_US, "smt.vmadot3us", "$vd, $vs1, $vs2">;
+def VMADOT3US : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_US, "smt.vmadot3us", "$vd, $vs1, $vs2">;
 }
 }
