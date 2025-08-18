@@ -6,8 +6,8 @@
 
 target triple = "x86_64"
 
-define void @test(ptr %p, i1 %c, i64 %x) {
-; CHECK-LABEL: define void @test(
+define void @pr154045(ptr %p, i1 %c, i64 %x) {
+; CHECK-LABEL: define void @pr154045(
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -62,7 +62,7 @@ else:
   br label %latch
 
 latch:
-  %phi = phi i64 [ %rem, %else], [ 0, %loop ]
+  %phi = phi i64 [ %rem, %else ], [ 0, %loop ]
   %phi.trunc = trunc i64 %phi to i32
   %shl = shl i32 %phi.trunc, 0
   store i32 %shl, ptr %p
