@@ -6795,8 +6795,8 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           // maxnum(X, -inf) -> X if nnan
           // minimum(X, +inf) -> X (ignoring quieting of sNaNs)
           // maximum(X, -inf) -> X (ignoring quieting of sNaNs)
-          // maximumnum(X, -inf) -> X if nnan
           // minimumnum(X, +inf) -> X if nnan
+          // maximumnum(X, -inf) -> X if nnan
           if (CAPF.isNegative() != IsMin &&
               (PropagateNaN || (Call && Call->hasNoNaNs())))
             return UseNonConstVal();
