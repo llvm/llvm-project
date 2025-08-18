@@ -195,7 +195,7 @@ But one has to be aware of that.
 
 .. option:: --new_namespace=<string>    
  
-  New namespace.
+  New namespace. Use `""` when you target the global namespace.
 
 .. option:: --old_namespace=<string>    
  
