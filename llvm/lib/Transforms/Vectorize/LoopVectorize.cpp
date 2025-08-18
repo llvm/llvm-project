@@ -8812,6 +8812,29 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
 
+  // Optimize iv step users in exit blocks by replacing extracts with scalar end
+  // values.
+  for (const auto &[Phi, ID] : Legal->getInductionVars()) {
+    auto *IVInc = cast<Instruction>(
+        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+    if (isa<PHINode>(IVInc))
+      continue;
+    VPValue *VPIVInc = RecipeBuilder.getRecipe(IVInc)->getVPSingleValue();
+    for (auto *U : VPIVInc->users()) {
+      using namespace llvm::VPlanPatternMatch;
+      VPValue *Mask;
+      // Replace ExtractLastElement with precomputed IV end value.
+      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                       m_Specific(VPIVInc)))) {
+        VPWidenInductionRecipe *WideIV =
+            cast<VPWidenInductionRecipe>(RecipeBuilder.getRecipe(Phi));
+        cast<VPInstruction>(U)->replaceAllUsesWith(IVEndValues[WideIV]);
+      }
+      // TODO: Replace extract-lane with first-active-lane using scalar
+      // computation.
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.

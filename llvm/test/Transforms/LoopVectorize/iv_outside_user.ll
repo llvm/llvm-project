@@ -1090,13 +1090,10 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC:       [[VECTOR_PH]]:
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
-; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; VEC-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
+; VEC-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
 ; VEC-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP1]], align 2
-; VEC-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP6]]
-; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; VEC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
 ; VEC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
@@ -1112,7 +1109,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[IV_NEXT]], 8
 ; VEC-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[E_EXIT]]:
-; VEC-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ 8, %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i32 [[RES]]
 ;
 ; INTERLEAVE-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification(
@@ -1130,7 +1127,6 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP3]], align 2
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
 ; INTERLEAVE-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -1147,7 +1143,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[IV_NEXT]], 8
 ; INTERLEAVE-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[E_EXIT]]:
-; INTERLEAVE-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ 8, %[[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -1176,12 +1172,9 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    [[STEP_2:%.*]] = add nsw i32 [[STEP_1]], 1
 ; VEC-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP_2]], i64 0
-; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 2
@@ -1189,14 +1182,10 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; VEC-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; VEC-NEXT:    store i16 0, ptr [[TMP3]], align 2
-; VEC-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 1)
-; VEC-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[TMP4]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 4)
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
-; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
 ; VEC-NEXT:    br label %[[E_EXIT:.*]]
 ; VEC:       [[SCALAR_PH]]:
 ; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
@@ -1210,7 +1199,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[IV_NEXT]], 8
 ; VEC-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[E_EXIT]]:
-; VEC-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ 8, %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i32 [[RES]]
 ;
 ; INTERLEAVE-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(
@@ -1229,8 +1218,6 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP3]], align 2
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 1
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; INTERLEAVE-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -1248,7 +1235,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[IV_NEXT]], 8
 ; INTERLEAVE-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[E_EXIT]]:
-; INTERLEAVE-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ 8, %[[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -1372,8 +1359,6 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 0
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i32 -1
 ; VEC-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP2]], align 2
-; VEC-NEXT:    [[TMP5:%.*]] = add i64 1, -1
-; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; VEC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VEC:       [[MIDDLE_BLOCK]]:
 ; VEC-NEXT:    br label %[[EXIT:.*]]
@@ -1391,7 +1376,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    [[IV_1_NEXT]] = add i64 [[IV_2_NEXT]], 1
 ; VEC-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[EXIT]]:
-; VEC-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ 1, %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i64 [[IV_1_NEXT_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: define i64 @test_iv_increment_incremented(
@@ -1405,8 +1390,6 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[DST]], i64 2
 ; INTERLEAVE-NEXT:    store i16 1, ptr [[TMP0]], align 2
 ; INTERLEAVE-NEXT:    store i16 1, ptr [[TMP1]], align 2
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add i64 1, -1
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 1
 ; INTERLEAVE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
@@ -1424,7 +1407,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[IV_1_NEXT]] = add i64 [[IV_2_NEXT]], 1
 ; INTERLEAVE-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[EXIT]]:
-; INTERLEAVE-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ 1, %[[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i64 [[IV_1_NEXT_LCSSA]]
 ;
 entry:
