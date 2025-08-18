@@ -470,6 +470,10 @@ public:
     /// escaping block.
     bool IsEscapingByRef = false;
 
+    /// True if the variable was emitted as an offload recipe, and thus doesn't
+    /// have the same sort of alloca initialization.
+    bool EmittedAsOffload = false;
+
     mlir::Value NRVOFlag{};
 
     struct Invalid {};
@@ -481,6 +485,8 @@ public:
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
+
+    bool wasEmittedAsOffloadClause() const { return EmittedAsOffload; }
 
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
@@ -978,8 +984,7 @@ public:
   /// emission is not directly an alloca), the allocatedSeparately parameter can
   /// be used to suppress the assertions.  However, this should only be used in
   /// extreme cases, as it doesn't properly reflect the language/AST.
-  void emitAutoVarInit(const AutoVarEmission &emission,
-                       bool allocatedSeparately = false);
+  void emitAutoVarInit(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               clang::QualType::DestructionKind dtorKind);
 

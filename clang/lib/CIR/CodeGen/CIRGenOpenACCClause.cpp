@@ -407,12 +407,13 @@ class OpenACCClauseCIREmitter final
     // that instead of the variable in the other block.
     tempDeclEmission.setAllocatedAddress(
         Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
+    tempDeclEmission.EmittedAsOffload = true;
 
     cgf.setAddrOfLocalVar(
         temporary,
         Address{fromArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
 
-    cgf.emitAutoVarInit(tempDeclEmission, /*allocatedSeparately=*/true);
+    cgf.emitAutoVarInit(tempDeclEmission);
     mlir::acc::YieldOp::create(builder, locEnd);
   }
 
