@@ -2674,7 +2674,10 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
           // DeclRefExpr).
 
           auto *Idx = IntegerLiteral::Create(
-              getASTContext(), llvm::APInt(sizeof(std::size_t) * 8, I),
+              getASTContext(),
+              llvm::APInt(
+                  getASTContext().getTypeSize(getASTContext().getSizeType()),
+                  I),
               getASTContext().getSizeType(), VarExpr->getBeginLoc());
 
           Expr *Subscript = new (getASTContext()) ArraySubscriptExpr(
