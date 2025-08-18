@@ -48,11 +48,12 @@ class DataLayoutImporter {
 public:
   DataLayoutImporter(MLIRContext *context, StringRef dataLayoutStr)
       : dataLayoutStr(dataLayoutStr), context(context) {
-    // Append the default data layout string specified in the language reference
-    // (https://llvm.org/docs/LangRef.html#data-layout) to the supplied data
-    // layout string. The translation then parses the string and ignores the
-    // default value if a specific kind occurs in both strings. Additionally,
-    // the following default values exist:
+    // Translate the `dataLayoutStr`. First, append the default data layout
+    // string specified in the language reference
+    // (https://llvm.org/docs/LangRef.html#data-layout) to the supplied string.
+    // The translation then parses the string and ignores the default value if a
+    // specific kind occurs in both strings. Additionally, the following default
+    // values exist:
     // - non-default address space pointer specifications default to the default
     //   address space pointer specification
     // - the alloca address space defaults to the default address space.
@@ -72,7 +73,7 @@ public:
   ArrayRef<StringRef> getUnhandledTokens() const { return unhandledTokens; }
 
 private:
-  /// Translates the LLVM `dataLayout` to an MLIR data layout specification.
+  /// Translate the LLVM data layout string to an MLIR data layout specification.
   DataLayoutSpecInterface dataLayoutSpecFromDataLayoutStr();
 
   /// Tries to parse the letter only prefix that identifies the specification

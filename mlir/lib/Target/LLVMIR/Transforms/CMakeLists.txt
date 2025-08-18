@@ -17,6 +17,5 @@ add_mlir_dialect_library(MLIRTargetLLVMIRTransforms
   MLIRDLTIDialect
   MLIRLLVMDialect
   MLIRPass
-  MLIRTargetLLVM
   MLIRTargetLLVMIRImport
   )
