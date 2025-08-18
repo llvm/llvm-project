@@ -5486,14 +5486,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Multiply and Add Packed Words
     //   < 4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>)
     //   < 8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16>, <32 x i16>)
     //
     // Multiply and Add Packed Signed and Unsigned Bytes
     //   < 8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>)
     //   <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
+    //   <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
+    //
+    // These intrinsics are auto-upgraded into non-masked forms:
+    //   < 4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128
+    //                  (<8 x i16>, <8 x i16>, <4 x i32>, i8)
+    //   < 8 x i32> @llvm.x86.avx512.mask.pmaddw.d.256
+    //                  (<16 x i16>, <16 x i16>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.pmaddw.d.512
+    //                  (<32 x i16>, <32 x i16>, <16 x i32>, i16)
+    //   < 8 x i16> @llvm.x86.avx512.mask.pmaddubs.w.128
+    //                  (<16 x i8>, <16 x i8>, <8 x i16>, i8)
+    //   <16 x i16> @llvm.x86.avx512.mask.pmaddubs.w.256
+    //                  (<32 x i8>, <32 x i8>, <16 x i16>, i16)
+    //   <32 x i16> @llvm.x86.avx512.mask.pmaddubs.w.512
+    //                  (<64 x i8>, <64 x i8>, <32 x i16>, i32)
     case Intrinsic::x86_sse2_pmadd_wd:
     case Intrinsic::x86_avx2_pmadd_wd:
+    case Intrinsic::x86_avx512_pmaddw_d_512:
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddubs_w_512:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
       break;
 
