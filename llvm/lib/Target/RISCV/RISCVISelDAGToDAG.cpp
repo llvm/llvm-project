@@ -743,10 +743,6 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
   // point if we want to use this value.
   APInt NotKnownZero = ~Known.Zero;
 
-  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
-  if (!Known.Zero.isShiftedMask())
-    return false;
-
   // The bits being inserted must only set those bits that are known to be zero.
   if ((OrImm & NotKnownZero) != 0) {
     // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
@@ -754,13 +750,14 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
     return false;
   }
 
-  // QC_INSB(I) dst, src, #width, #shamt.
-  MVT VT = Node->getSimpleValueType(0);
-  unsigned BitWidth = VT.getSizeInBits();
-  const unsigned ShAmt = llvm::countr_one(NotKnownZero.getZExtValue());
-  const unsigned Width = BitWidth - NotKnownZero.popcount();
+  unsigned ShAmt, Width;
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!Known.Zero.isShiftedMask(ShAmt, Width))
+    return false;
 
+  // QC_INSB(I) dst, src, #width, #shamt.
   SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
   SDValue ImmNode;
   auto Opc = RISCV::QC_INSB;
 
