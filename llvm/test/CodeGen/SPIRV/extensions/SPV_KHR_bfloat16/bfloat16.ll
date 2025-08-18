@@ -12,5 +12,6 @@
 
 define spir_kernel void @test() {
 entry:
+  %addr1 = alloca bfloat
   ret void
 }

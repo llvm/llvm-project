@@ -27,7 +27,7 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
   }
 
   if (auto PTy = dyn_cast<PointerType>(&Ty)) {
-    unsigned AddrSpace = PTy->isTokenTy();
+    unsigned AddrSpace = PTy->getAddressSpace();
     return LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
   }
 

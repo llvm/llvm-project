@@ -27,7 +27,7 @@ LLT::LLT(MVT VT) {
     // concerned.
     MVT ElemVT = VT.getVectorElementType();
     bool isElemBfloat = (ElemVT == MVT::bf16);
-    init(/*IsPointer=*/false, /*IsVector=*/false, /*IsScalar=*/true, /*isBfloat=*/isElemBfloat,
+    init(/*IsPointer=*/false, /*IsVector=*/false, /*IsScalar=*/true, /*isBfloat=*/false,
          ElementCount::getFixed(0), VT.getSizeInBits(), /*AddressSpace=*/0);
   } else {
     IsScalar = false;

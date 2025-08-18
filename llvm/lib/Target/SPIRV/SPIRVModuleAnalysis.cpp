@@ -1262,16 +1262,16 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypeFloat: {
-    // const MachineBasicBlock *MBB = MI.getParent();
-    // const MachineFunction *MF = MBB->getParent();
-    // const MachineRegisterInfo &MRI = MF->getRegInfo();
-    // const MachineOperand &MO = MI.getOperand(1);
-    // if (MO.isReg()) {
-    //   LLT Ty = MRI.getType(MO.getReg());
-    //   if(!Ty.isScalar()) {
-    //     assert(1 && "hola, ur wrong");
-    //   }
-    // }
+    const MachineBasicBlock *MBB = MI.getParent();
+    const MachineFunction *MF = MBB->getParent();
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    const MachineOperand &MO = MI.getOperand(1);
+    if (MO.isReg()) {
+      LLT Ty = MRI.getType(MO.getReg());
+      if(Ty.isBfloat()) {
+        assert(1 && "hola, ur wrong");
+      }
+    }
 
     unsigned BitWidth = MI.getOperand(1).getImm();
     if (BitWidth == 64)
