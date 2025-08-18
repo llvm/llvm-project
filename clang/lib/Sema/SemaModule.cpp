@@ -265,10 +265,11 @@ Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
                       ModuleIdPath Partition, ModuleImportState &ImportState,
-                      bool IntroducerIsFirstPPToken) {
+                      bool SeenNoTrivialPPDirective) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
+  bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
   bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
   // If any of the steps here fail, we count that as invalidating C++20
   // module state;
@@ -336,7 +337,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   // In C++20, A module directive may only appear as the first preprocessing
   // tokens in a file (excluding the global module fragment.).
-  if (getLangOpts().CPlusPlusModules && !IntroducerIsFirstPPToken && !SeenGMF) {
+  if (getLangOpts().CPlusPlusModules &&
+      (!IsFirstDecl || SeenNoTrivialPPDirective) && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
     SourceLocation BeginLoc = PP.getMainFileFirstPPTokenLoc();
     Diag(BeginLoc, diag::note_global_module_introducer_missing)
