@@ -1706,6 +1706,28 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
   setDependence(computeDependence(this));
 }
 
+std::optional<unsigned> BuiltInLikeCall::TranslateIndex(unsigned Index) const {
+  // If we refer to a diagnose_as_builtin attribute, we need to change the
+  // argument index to refer to the arguments of the called function. Unless
+  // the index is out of bounds, which presumably means it's a variadic
+  // function.
+  if (!getDABAttr())
+    return Index;
+  unsigned DABIndices = getDABAttr()->argIndices_size();
+  unsigned NewIndex = Index < DABIndices
+                          ? getDABAttr()->argIndices_begin()[Index]
+                          : Index - DABIndices + getFDecl()->getNumParams();
+  if (NewIndex >= TheCall->getNumArgs())
+    return std::nullopt;
+  return NewIndex;
+}
+
+const Expr *BuiltInLikeCall::getNonVariadicArg(unsigned Index) const {
+  auto NewIndex = TranslateIndex(Index);
+  assert(NewIndex && "Translated arg access is out of range!");
+  return TheCall->getArg(NewIndex.value());
+}
+
 MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
                        NestedNameSpecifierLoc QualifierLoc,
                        SourceLocation TemplateKWLoc, ValueDecl *MemberDecl,

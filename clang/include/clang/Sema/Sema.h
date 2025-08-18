@@ -3039,21 +3039,22 @@ private:
   /// function calls.
   ///
   /// \param Call The call expression to diagnose.
-  void CheckMemaccessArguments(const CallExpr *Call, unsigned BId,
+  void CheckMemaccessArguments(const BuiltInLikeCall &BILC, unsigned BId,
                                IdentifierInfo *FnName);
 
   // Warn if the user has made the 'size' argument to strlcpy or strlcat
   // be the size of the source, instead of the destination.
-  void CheckStrlcpycatArguments(const CallExpr *Call, IdentifierInfo *FnName);
+  void CheckStrlcpycatArguments(const BuiltInLikeCall &BILC,
+                                IdentifierInfo *FnName);
 
   // Warn on anti-patterns as the 'size' argument to strncat.
   // The correct size argument should look like following:
   //   strncat(dst, src, sizeof(dst) - strlen(dest) - 1);
-  void CheckStrncatArguments(const CallExpr *Call,
+  void CheckStrncatArguments(const BuiltInLikeCall &BILC,
                              const IdentifierInfo *FnName);
 
   /// Alerts the user that they are attempting to free a non-malloc'd object.
-  void CheckFreeArguments(const CallExpr *E);
+  void CheckFreeArguments(const BuiltInLikeCall &BILC);
 
   void CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
                           SourceLocation ReturnLoc, bool isObjCMethod = false,

@@ -61,3 +61,12 @@ void macros(void) {
   __builtin_memset(array, 1, 0); // expected-warning{{'size' argument to memset}} // expected-note{{parenthesize}}
   __builtin_bzero(array, 0); // expected-warning{{'size' argument to bzero}} // expected-note{{parenthesize}}
 }
+
+// Custom memset with diagnose_as_builtin attribute
+__attribute((diagnose_as_builtin(__builtin_memset, 2, 3, 1)))
+void custom_memset(unsigned long num, void *ptr, int value);
+
+void dab(void) {
+  char cs[4];
+  custom_memset(0, cs, 8); // expected-warning{{'size' argument to memset is '0'; did you mean to transpose the last two arguments}} expected-note{{parenthesize the third argument to silence}}
+}

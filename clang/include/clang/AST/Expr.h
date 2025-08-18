@@ -3285,6 +3285,32 @@ public:
   }
 };
 
+class BuiltInLikeCall {
+  /// If the CallExpr is to a function that has a DiagnoseAsBuiltinAttr
+  /// attribute, then FDecl will be the function declaration in that attribute.
+  /// Otherwise, FDecl will be the function declaration for the CallExpr.
+  const FunctionDecl *FDecl;
+  const CallExpr *TheCall;
+  const DiagnoseAsBuiltinAttr *DABAttr;
+
+public:
+  BuiltInLikeCall(const FunctionDecl *FD, const CallExpr *TheCall)
+      : TheCall(TheCall) {
+    DABAttr = FD->getAttr<DiagnoseAsBuiltinAttr>();
+    if (DABAttr) {
+      FDecl = DABAttr->getFunction();
+      assert(FDecl && "Missing FunctionDecl in DiagnoseAsBuiltin attribute!");
+    } else {
+      FDecl = FD;
+    }
+  }
+  const FunctionDecl *getFDecl() const { return FDecl; }
+  const CallExpr *getCall() const { return TheCall; }
+  const DiagnoseAsBuiltinAttr *getDABAttr() const { return DABAttr; }
+  std::optional<unsigned> TranslateIndex(unsigned Index) const;
+  const Expr *getNonVariadicArg(unsigned Arg) const;
+};
+
 /// MemberExpr - [C99 6.5.2.3] Structure and Union Members.  X->F and X.F.
 ///
 class MemberExpr final

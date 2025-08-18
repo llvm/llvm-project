@@ -1142,17 +1142,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       isConstantEvaluatedContext())
     return;
 
-  bool UseDABAttr = false;
-  const FunctionDecl *UseDecl = FD;
+  const BuiltInLikeCall BILC(FD, TheCall);
 
-  const auto *DABAttr = FD->getAttr<DiagnoseAsBuiltinAttr>();
-  if (DABAttr) {
-    UseDecl = DABAttr->getFunction();
-    assert(UseDecl && "Missing FunctionDecl in DiagnoseAsBuiltin attribute!");
-    UseDABAttr = true;
-  }
-
-  unsigned BuiltinID = UseDecl->getBuiltinID(/*ConsiderWrappers=*/true);
+  unsigned BuiltinID = BILC.getFDecl()->getBuiltinID(/*ConsiderWrappers=*/true);
 
   if (!BuiltinID)
     return;
@@ -1160,25 +1152,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   const TargetInfo &TI = getASTContext().getTargetInfo();
   unsigned SizeTypeWidth = TI.getTypeWidth(TI.getSizeType());
 
-  auto TranslateIndex = [&](unsigned Index) -> std::optional<unsigned> {
-    // If we refer to a diagnose_as_builtin attribute, we need to change the
-    // argument index to refer to the arguments of the called function. Unless
-    // the index is out of bounds, which presumably means it's a variadic
-    // function.
-    if (!UseDABAttr)
-      return Index;
-    unsigned DABIndices = DABAttr->argIndices_size();
-    unsigned NewIndex = Index < DABIndices
-                            ? DABAttr->argIndices_begin()[Index]
-                            : Index - DABIndices + FD->getNumParams();
-    if (NewIndex >= TheCall->getNumArgs())
-      return std::nullopt;
-    return NewIndex;
-  };
-
   auto ComputeExplicitObjectSizeArgument =
       [&](unsigned Index) -> std::optional<llvm::APSInt> {
-    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
+    std::optional<unsigned> IndexOptional = BILC.TranslateIndex(Index);
     if (!IndexOptional)
       return std::nullopt;
     unsigned NewIndex = *IndexOptional;
@@ -1204,7 +1180,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         BOSType = POS->getType();
     }
 
-    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
+    std::optional<unsigned> IndexOptional = BILC.TranslateIndex(Index);
     if (!IndexOptional)
       return std::nullopt;
     unsigned NewIndex = *IndexOptional;
@@ -1223,7 +1199,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
   auto ComputeStrLenArgument =
       [&](unsigned Index) -> std::optional<llvm::APSInt> {
-    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
+    std::optional<unsigned> IndexOptional = BILC.TranslateIndex(Index);
     if (!IndexOptional)
       return std::nullopt;
     unsigned NewIndex = *IndexOptional;
@@ -3799,24 +3775,25 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
 
-  unsigned CMId = FDecl->getMemoryFunctionKind();
-
   // Handle memory setting and copying functions.
+  BuiltInLikeCall BILC(FDecl, TheCall);
+  unsigned CMId = BILC.getFDecl()->getMemoryFunctionKind();
+
   switch (CMId) {
   case 0:
     return false;
   case Builtin::BIstrlcpy: // fallthrough
   case Builtin::BIstrlcat:
-    CheckStrlcpycatArguments(TheCall, FnInfo);
+    CheckStrlcpycatArguments(BILC, FnInfo);
     break;
   case Builtin::BIstrncat:
-    CheckStrncatArguments(TheCall, FnInfo);
+    CheckStrncatArguments(BILC, FnInfo);
     break;
   case Builtin::BIfree:
-    CheckFreeArguments(TheCall);
+    CheckFreeArguments(BILC);
     break;
   default:
-    CheckMemaccessArguments(TheCall, CMId, FnInfo);
+    CheckMemaccessArguments(BILC, CMId, FnInfo);
   }
 
   return false;
@@ -9727,12 +9704,13 @@ static bool isArgumentExpandedFromMacro(SourceManager &SM,
 
 /// Diagnose cases like 'memset(buf, sizeof(buf), 0)', which should have the
 /// last two arguments transposed.
-static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
+static void CheckMemaccessSize(Sema &S, unsigned BId,
+                               const BuiltInLikeCall &BILC) {
   if (BId != Builtin::BImemset && BId != Builtin::BIbzero)
     return;
 
-  const Expr *SizeArg =
-    Call->getArg(BId == Builtin::BImemset ? 2 : 1)->IgnoreImpCasts();
+  const Expr *SizeArg = BILC.getNonVariadicArg(BId == Builtin::BImemset ? 2 : 1)
+                            ->IgnoreImpCasts();
 
   auto isLiteralZero = [](const Expr *E) {
     return (isa<IntegerLiteral>(E) &&
@@ -9742,7 +9720,7 @@ static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
   };
 
   // If we're memsetting or bzeroing 0 bytes, then this is likely an error.
-  SourceLocation CallLoc = Call->getRParenLoc();
+  SourceLocation CallLoc = BILC.getCall()->getRParenLoc();
   SourceManager &SM = S.getSourceManager();
   if (isLiteralZero(SizeArg) &&
       !isArgumentExpandedFromMacro(SM, CallLoc, SizeArg->getExprLoc())) {
@@ -9756,7 +9734,7 @@ static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
                                     CallLoc, SM, S.getLangOpts()) == "bzero")) {
       S.Diag(DiagLoc, diag::warn_suspicious_bzero_size);
       S.Diag(DiagLoc, diag::note_suspicious_bzero_size_silence);
-    } else if (!isLiteralZero(Call->getArg(1)->IgnoreImpCasts())) {
+    } else if (!isLiteralZero(BILC.getNonVariadicArg(1)->IgnoreImpCasts())) {
       S.Diag(DiagLoc, diag::warn_suspicious_sizeof_memset) << 0;
       S.Diag(DiagLoc, diag::note_suspicious_sizeof_memset_silence) << 0;
     }
@@ -9767,17 +9745,16 @@ static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
   // isn't, this is also likely an error. This should catch
   // 'memset(buf, sizeof(buf), 0xff)'.
   if (BId == Builtin::BImemset &&
-      doesExprLikelyComputeSize(Call->getArg(1)) &&
-      !doesExprLikelyComputeSize(Call->getArg(2))) {
-    SourceLocation DiagLoc = Call->getArg(1)->getExprLoc();
+      doesExprLikelyComputeSize(BILC.getNonVariadicArg(1)) &&
+      !doesExprLikelyComputeSize(BILC.getNonVariadicArg(2))) {
+    SourceLocation DiagLoc = BILC.getNonVariadicArg(1)->getExprLoc();
     S.Diag(DiagLoc, diag::warn_suspicious_sizeof_memset) << 1;
     S.Diag(DiagLoc, diag::note_suspicious_sizeof_memset_silence) << 1;
     return;
   }
 }
 
-void Sema::CheckMemaccessArguments(const CallExpr *Call,
-                                   unsigned BId,
+void Sema::CheckMemaccessArguments(const BuiltInLikeCall &BILC, unsigned BId,
                                    IdentifierInfo *FnName) {
   assert(BId != 0);
 
@@ -9785,21 +9762,22 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   // we have enough arguments, and if not, abort further checking.
   unsigned ExpectedNumArgs =
       (BId == Builtin::BIstrndup || BId == Builtin::BIbzero ? 2 : 3);
-  if (Call->getNumArgs() < ExpectedNumArgs)
+  if (BILC.getCall()->getNumArgs() < ExpectedNumArgs)
     return;
 
   unsigned LastArg = (BId == Builtin::BImemset || BId == Builtin::BIbzero ||
                       BId == Builtin::BIstrndup ? 1 : 2);
   unsigned LenArg =
       (BId == Builtin::BIbzero || BId == Builtin::BIstrndup ? 1 : 2);
-  const Expr *LenExpr = Call->getArg(LenArg)->IgnoreParenImpCasts();
+  const Expr *LenExpr = BILC.getNonVariadicArg(LenArg)->IgnoreParenImpCasts();
 
   if (CheckMemorySizeofForComparison(*this, LenExpr, FnName,
-                                     Call->getBeginLoc(), Call->getRParenLoc()))
+                                     BILC.getCall()->getBeginLoc(),
+                                     BILC.getCall()->getRParenLoc()))
     return;
 
   // Catch cases like 'memset(buf, sizeof(buf), 0)'.
-  CheckMemaccessSize(*this, BId, Call);
+  CheckMemaccessSize(*this, BId, BILC);
 
   // We have special checking when the length is a sizeof expression.
   QualType SizeOfArgTy = getSizeOfArgType(LenExpr);
@@ -9809,13 +9787,15 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   // Although widely used, 'bzero' is not a standard function. Be more strict
   // with the argument types before allowing diagnostics and only allow the
   // form bzero(ptr, sizeof(...)).
-  QualType FirstArgTy = Call->getArg(0)->IgnoreParenImpCasts()->getType();
+  QualType FirstArgTy =
+      BILC.getNonVariadicArg(0)->IgnoreParenImpCasts()->getType();
   if (BId == Builtin::BIbzero && !FirstArgTy->getAs<PointerType>())
     return;
 
   for (unsigned ArgIdx = 0; ArgIdx != LastArg; ++ArgIdx) {
-    const Expr *Dest = Call->getArg(ArgIdx)->IgnoreParenImpCasts();
-    SourceRange ArgRange = Call->getArg(ArgIdx)->getSourceRange();
+    const Expr *ArgAtIdx = BILC.getNonVariadicArg(ArgIdx);
+    const Expr *Dest = ArgAtIdx->IgnoreParenImpCasts();
+    SourceRange ArgRange = ArgAtIdx->getSourceRange();
 
     QualType DestTy = Dest->getType();
     QualType PointeeTy;
@@ -9929,14 +9909,13 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                           PDiag(diag::warn_dyn_class_memaccess)
                               << (IsCmp ? ArgIdx + 2 : ArgIdx) << FnName
                               << IsContained << ContainedRD << OperationType
-                              << Call->getCallee()->getSourceRange());
+                              << BILC.getCall()->getCallee()->getSourceRange());
     } else if (PointeeTy.hasNonTrivialObjCLifetime() &&
              BId != Builtin::BImemset)
-      DiagRuntimeBehavior(
-        Dest->getExprLoc(), Dest,
-        PDiag(diag::warn_arc_object_memaccess)
-          << ArgIdx << FnName << PointeeTy
-          << Call->getCallee()->getSourceRange());
+      DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                          PDiag(diag::warn_arc_object_memaccess)
+                              << ArgIdx << FnName << PointeeTy
+                              << BILC.getCall()->getCallee()->getSourceRange());
     else if (const auto *RT = PointeeTy->getAs<RecordType>()) {
 
       // FIXME: Do not consider incomplete types even though they may be
@@ -10025,20 +10004,23 @@ static bool isConstantSizeArrayWithMoreThanOneElement(QualType Ty,
   return true;
 }
 
-void Sema::CheckStrlcpycatArguments(const CallExpr *Call,
+void Sema::CheckStrlcpycatArguments(const BuiltInLikeCall &BILC,
                                     IdentifierInfo *FnName) {
 
   // Don't crash if the user has the wrong number of arguments
-  unsigned NumArgs = Call->getNumArgs();
+  unsigned NumArgs = BILC.getCall()->getNumArgs();
   if ((NumArgs != 3) && (NumArgs != 4))
     return;
 
-  const Expr *SrcArg = ignoreLiteralAdditions(Call->getArg(1), Context);
-  const Expr *SizeArg = ignoreLiteralAdditions(Call->getArg(2), Context);
+  const Expr *SrcArg =
+      ignoreLiteralAdditions(BILC.getNonVariadicArg(1), Context);
+  const Expr *SizeArg =
+      ignoreLiteralAdditions(BILC.getNonVariadicArg(2), Context);
   const Expr *CompareWithSrc = nullptr;
 
   if (CheckMemorySizeofForComparison(*this, SizeArg, FnName,
-                                     Call->getBeginLoc(), Call->getRParenLoc()))
+                                     BILC.getCall()->getBeginLoc(),
+                                     BILC.getCall()->getRParenLoc()))
     return;
 
   // Look for 'strlcpy(dst, x, sizeof(x))'
@@ -10069,7 +10051,7 @@ void Sema::CheckStrlcpycatArguments(const CallExpr *Call,
       SrcArgDRE->getDecl() != CompareWithSrcDRE->getDecl())
     return;
 
-  const Expr *OriginalSizeArg = Call->getArg(2);
+  const Expr *OriginalSizeArg = BILC.getNonVariadicArg(2);
   Diag(CompareWithSrcDRE->getBeginLoc(), diag::warn_strlcpycat_wrong_size)
       << OriginalSizeArg->getSourceRange() << FnName;
 
@@ -10077,7 +10059,7 @@ void Sema::CheckStrlcpycatArguments(const CallExpr *Call,
   // pointer to an array).  This could be enhanced to handle some
   // pointers if we know the actual size, like if DstArg is 'array+2'
   // we could say 'sizeof(array)-2'.
-  const Expr *DstArg = Call->getArg(0)->IgnoreParenImpCasts();
+  const Expr *DstArg = BILC.getNonVariadicArg(0)->IgnoreParenImpCasts();
   if (!isConstantSizeArrayWithMoreThanOneElement(DstArg->getType(), Context))
     return;
 
@@ -10110,17 +10092,18 @@ static const Expr *getStrlenExprArg(const Expr *E) {
   return nullptr;
 }
 
-void Sema::CheckStrncatArguments(const CallExpr *CE,
+void Sema::CheckStrncatArguments(const BuiltInLikeCall &BILC,
                                  const IdentifierInfo *FnName) {
   // Don't crash if the user has the wrong number of arguments.
-  if (CE->getNumArgs() < 3)
+  if (BILC.getCall()->getNumArgs() < 3)
     return;
-  const Expr *DstArg = CE->getArg(0)->IgnoreParenCasts();
-  const Expr *SrcArg = CE->getArg(1)->IgnoreParenCasts();
-  const Expr *LenArg = CE->getArg(2)->IgnoreParenCasts();
+  const Expr *DstArg = BILC.getNonVariadicArg(0)->IgnoreParenCasts();
+  const Expr *SrcArg = BILC.getNonVariadicArg(1)->IgnoreParenCasts();
+  const Expr *LenArg = BILC.getNonVariadicArg(2)->IgnoreParenCasts();
 
-  if (CheckMemorySizeofForComparison(*this, LenArg, FnName, CE->getBeginLoc(),
-                                     CE->getRParenLoc()))
+  if (CheckMemorySizeofForComparison(*this, LenArg, FnName,
+                                     BILC.getCall()->getBeginLoc(),
+                                     BILC.getCall()->getRParenLoc()))
     return;
 
   // Identify common expressions, which are wrongly used as the size argument
@@ -10269,12 +10252,13 @@ void CheckFreeArgumentsCast(Sema &S, const std::string &CalleeName,
 }
 } // namespace
 
-void Sema::CheckFreeArguments(const CallExpr *E) {
+void Sema::CheckFreeArguments(const BuiltInLikeCall &BILC) {
   const std::string CalleeName =
-      cast<FunctionDecl>(E->getCalleeDecl())->getQualifiedNameAsString();
+      cast<FunctionDecl>(BILC.getCall()->getCalleeDecl())
+          ->getQualifiedNameAsString();
 
   { // Prefer something that doesn't involve a cast to make things simpler.
-    const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
+    const Expr *Arg = BILC.getNonVariadicArg(0)->IgnoreParenCasts();
     if (const auto *UnaryExpr = dyn_cast<UnaryOperator>(Arg))
       switch (UnaryExpr->getOpcode()) {
       case UnaryOperator::Opcode::UO_AddrOf:
@@ -10302,7 +10286,7 @@ void Sema::CheckFreeArguments(const CallExpr *E) {
     }
   }
   // Maybe the cast was important, check after the other cases.
-  if (const auto *Cast = dyn_cast<CastExpr>(E->getArg(0)))
+  if (const auto *Cast = dyn_cast<CastExpr>(BILC.getNonVariadicArg(0)))
     return CheckFreeArgumentsCast(*this, CalleeName, Cast);
 }
 
