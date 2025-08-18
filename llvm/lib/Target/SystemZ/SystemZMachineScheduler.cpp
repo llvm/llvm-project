@@ -23,8 +23,9 @@ static cl::opt<unsigned> TinyRegionLim(
              "smaller. Mainly for testing."));
 
 // EXPERIMENTAL
-static cl::opt<bool> WITHPDIFFS("with-pdiffs", cl::init(false),
-    cl::desc("Use SU PDiff instead of checking liveness of regs"));
+static cl::opt<bool>
+    WITHPDIFFS("with-pdiffs", cl::init(false),
+               cl::desc("Use SU PDiff instead of checking liveness of regs"));
 
 static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
@@ -92,8 +93,7 @@ void SystemZPreRASchedStrategy::initializePressureSets(
   if (!WITHPDIFFS)
     return;
 
-  auto addPSets = [&TRI](std::set<unsigned> &S,
-                         const TargetRegisterClass *RC,
+  auto addPSets = [&TRI](std::set<unsigned> &S, const TargetRegisterClass *RC,
                          std::set<unsigned> *Intersect = nullptr) {
     for (const int *PS = TRI->getRegClassPressureSets(RC); *PS != -1; ++PS)
       if (!Intersect || Intersect->count(*PS))
@@ -217,7 +217,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   const MachineOperand &DefMO = MI->getOperand(0);
   assert(!isPhysRegDef(DefMO) && "Did not expect physreg def!");
   bool IsLoad =
-    isRegDef(DefMO) && !DefMO.isDead() && !IsRedefining[SU->NodeNum];
+      isRegDef(DefMO) && !DefMO.isDead() && !IsRedefining[SU->NodeNum];
   bool IsStore = (!isRegDef(DefMO) || DefMO.isDead());
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
@@ -235,7 +235,6 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
     // Find uses of registers that are not already live (kills).
     bool PrioKill = false;
     bool GPRKill = false;
-    bool AddrKill = false;
     bool HasPrioUse = false;
     for (unsigned I = 0; I < MI->getDesc().getNumOperands(); ++I) {
       const MachineOperand &MO = MI->getOperand(I);
@@ -246,18 +245,15 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
         continue;
       if (isPrioVirtReg(MO.getReg(), &DAG->MRI))
         PrioKill = true;
-      else if (MI->getDesc().operands()[I].OperandType != MCOI::OPERAND_MEMORY)
-        GPRKill = true;
       else
-        AddrKill = true;
+        GPRKill = true;
     }
 
     // Find the interesting properties.
     // Prioritize FP: Ignore GPR/Addr kills with an FP def.
-    UsesLivePrio =
-      IsLoad && !PrioKill &&
-      (isPrioVirtReg(DefMO.getReg(), &DAG->MRI) || (!GPRKill && !AddrKill));
-    UsesLiveAll = !PrioKill && !GPRKill && !AddrKill;
+    UsesLivePrio = IsLoad && !PrioKill &&
+                   (isPrioVirtReg(DefMO.getReg(), &DAG->MRI) || !GPRKill);
+    UsesLiveAll = !PrioKill && !GPRKill;
     StoreKill = (PrioKill || (!HasPrioUse && GPRKill));
   } else {
     int PrioPressureChange = 0;
@@ -276,18 +272,17 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
       int DefWeight = -int(TRI->getRegClassWeight(RC).RegWeight);
       bool PrioDefNoKill = PrioPressureChange == DefWeight;
       bool GPRDefNoKill = GPRPressureChange == DefWeight;
-      UsesLivePrio = (PrioDefNoKill ||
-                      (PrioPressureChange == 0 && GPRDefNoKill));
+      UsesLivePrio =
+          (PrioDefNoKill || (PrioPressureChange == 0 && GPRDefNoKill));
       UsesLiveAll = (PrioDefNoKill && GPRPressureChange == 0) ||
                     (PrioPressureChange == 0 && GPRDefNoKill);
     }
-    if (IsStore && FirstStoreInGroupScheduled &&
-        StoresGroup.count(SU)) {
+    if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
       Register SrcReg = MI->getOperand(0).getReg();
       bool SrcKill = !DAG->getBotRPTracker().isRegLive(SrcReg);
-      StoreKill = SrcKill &&
-        (PrioPressureChange > 0 ||
-         (PrioPressureChange == 0 && GPRPressureChange > 0));
+      StoreKill =
+          SrcKill && (PrioPressureChange > 0 ||
+                      (PrioPressureChange == 0 && GPRPressureChange > 0));
     }
   }
 
@@ -296,7 +291,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   // will be relatively many SUs scheduled above this one and all uses are
   // already live it should not be a problem to increase the scheduled
   // latency given the OOO execution.
-  // TODO: Try schedulling small (DFSResult) subtrees as a unit.
+  // TODO: Try scheduling small (DFSResult) subtrees as a unit.
   bool SchedLow = IsLoad && ((PreservesSchedLat && UsesLivePrio) ||
                              (HasDistToTop && UsesLiveAll));
 
