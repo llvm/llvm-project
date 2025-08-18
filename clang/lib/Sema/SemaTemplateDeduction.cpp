@@ -2911,11 +2911,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     case TemplateArgument::TemplateExpansion: {
       NestedNameSpecifierLocBuilder Builder;
       TemplateName Template = Arg.getAsTemplateOrTemplatePattern();
-      if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
-        Builder.MakeTrivial(Context, DTN->getQualifier(), Loc);
-      else if (QualifiedTemplateName *QTN =
-                   Template.getAsQualifiedTemplateName())
-        Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
+      Builder.MakeTrivial(Context, Template.getQualifier(), Loc);
       return TemplateArgumentLoc(
           Context, Arg, Loc, Builder.getWithLocInContext(Context), Loc,
           /*EllipsisLoc=*/Arg.getKind() == TemplateArgument::TemplateExpansion

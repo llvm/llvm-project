@@ -556,10 +556,9 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IV_0:%.*]] = add nuw nsw i64 [[IV]], 0
 ; CHECK-NEXT:    [[IV_1:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IN0:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[IV_0]]
@@ -676,10 +675,9 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW:       middle.block:
 ; MAX-BW-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; MAX-BW:       scalar.ph:
-; MAX-BW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; MAX-BW-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-BW:       for.body:
-; MAX-BW-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MAX-BW-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; MAX-BW-NEXT:    [[IV_0:%.*]] = add nuw nsw i64 [[IV]], 0
 ; MAX-BW-NEXT:    [[IV_1:%.*]] = add nuw nsw i64 [[IV]], 1
 ; MAX-BW-NEXT:    [[IN0:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[IV_0]]
