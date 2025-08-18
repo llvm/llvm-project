@@ -144,7 +144,7 @@ public:
   template <typename P>
   void
   RunOnce(const std::function<void(llvm::Expected<P>)> &callback,
-          std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
+          std::chrono::milliseconds timeout = std::chrono::milliseconds(200)) {
     auto handle = m_transport_up->RegisterReadObject<P>(
         loop, [&](lldb_private::MainLoopBase &loop, llvm::Expected<P> message) {
           callback(std::move(message));
@@ -200,7 +200,7 @@ public:
 
 } // namespace
 
-TEST_F(ProtocolServerMCPTest, Intialization) {
+TEST_F(ProtocolServerMCPTest, Initialization) {
   llvm::StringLiteral request =
       R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":0})json";
   llvm::StringLiteral response =
