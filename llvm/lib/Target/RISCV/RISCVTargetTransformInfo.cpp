@@ -1245,12 +1245,17 @@ InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) const {
   auto *RetTy = ICA.getReturnType();
+  auto *STy = dyn_cast<StructType>(RetTy);
+  Type *LegalizeTy = STy ? STy->getContainedType(0) : RetTy;
+  auto LT = getTypeLegalizationCost(LegalizeTy);
+  if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
   switch (ICA.getID()) {
   case Intrinsic::lrint:
   case Intrinsic::llrint:
   case Intrinsic::lround:
   case Intrinsic::llround: {
-    auto LT = getTypeLegalizationCost(RetTy);
     Type *SrcTy = ICA.getArgTypes().front();
     auto SrcLT = getTypeLegalizationCost(SrcTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
@@ -1258,16 +1263,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       unsigned SrcEltSz = DL.getTypeSizeInBits(SrcTy->getScalarType());
       unsigned DstEltSz = DL.getTypeSizeInBits(RetTy->getScalarType());
       if (LT.second.getVectorElementType() == MVT::bf16) {
-        if (!ST->hasVInstructionsBF16Minimal())
-          return InstructionCost::getInvalid();
         if (DstEltSz == 32)
           Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
         else
           Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
       } else if (LT.second.getVectorElementType() == MVT::f16 &&
                  !ST->hasVInstructionsF16()) {
-        if (!ST->hasVInstructionsF16Minimal())
-          return InstructionCost::getInvalid();
         if (DstEltSz == 32)
           Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
         else
@@ -1297,7 +1298,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::round:
   case Intrinsic::roundeven: {
     // These all use the same code.
-    auto LT = getTypeLegalizationCost(RetTy);
     if (!LT.second.isVector() && TLI->isOperationCustom(ISD::FCEIL, LT.second))
       return LT.first * 8;
     break;
@@ -1306,7 +1306,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::umax:
   case Intrinsic::smin:
   case Intrinsic::smax: {
-    auto LT = getTypeLegalizationCost(RetTy);
     if (LT.second.isScalarInteger() && ST->hasStdExtZbb())
       return LT.first;
 
@@ -1334,7 +1333,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat: {
-    auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
       unsigned Op;
       switch (ICA.getID()) {
@@ -1358,14 +1356,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::fma:
   case Intrinsic::fmuladd: {
     // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
-    auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector())
       return LT.first *
              getRISCVInstructionCost(RISCV::VFMADD_VV, LT.second, CostKind);
     break;
   }
   case Intrinsic::fabs: {
-    auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
       // lui a0, 8
       // addi a0, a0, -1
@@ -1385,7 +1381,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::sqrt: {
-    auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
       SmallVector<unsigned, 4> ConvOp;
       SmallVector<unsigned, 2> FsqrtOp;
@@ -1430,7 +1425,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
-    auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
       unsigned Op;
       switch (ICA.getID()) {
@@ -1449,7 +1443,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::abs: {
-    auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
@@ -1476,7 +1469,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   // TODO: add more intrinsic
   case Intrinsic::stepvector: {
-    auto LT = getTypeLegalizationCost(RetTy);
     // Legalisation of illegal types involves an `index' instruction plus
     // (LT.first - 1) vector adds.
     if (ST->hasVInstructions())
@@ -1506,7 +1498,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return Cost;
   }
   case Intrinsic::experimental_vp_splat: {
-    auto LT = getTypeLegalizationCost(RetTy);
     // TODO: Lower i1 experimental_vp_splat
     if (!ST->hasVInstructions() || LT.second.getScalarType() == MVT::i1)
       return InstructionCost::getInvalid();
@@ -1530,11 +1521,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     Type *SrcTy = ICA.getArgTypes()[0];
 
     auto SrcLT = getTypeLegalizationCost(SrcTy);
-    auto DstLT = getTypeLegalizationCost(RetTy);
     if (!SrcTy->isVectorTy())
       break;
 
-    if (!SrcLT.first.isValid() || !DstLT.first.isValid())
+    if (!SrcLT.first.isValid())
       return InstructionCost::getInvalid();
 
     Cost +=
@@ -1553,14 +1543,11 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   }
 
-  if (ST->hasVInstructions() && RetTy->isVectorTy()) {
-    if (auto LT = getTypeLegalizationCost(RetTy);
-        LT.second.isVector()) {
-      MVT EltTy = LT.second.getVectorElementType();
-      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
-                                              ICA.getID(), EltTy))
-        return LT.first * Entry->Cost;
-    }
+  if (ST->hasVInstructions() && LT.second.isVector()) {
+    MVT EltTy = LT.second.getVectorElementType();
+    if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
+                                            ICA.getID(), EltTy))
+      return LT.first * Entry->Cost;
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
