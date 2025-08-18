@@ -140,6 +140,48 @@ class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
   let Inst{22-20} = shamt;
 }
 
+class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType>
+    : RVInst<(outs GPRPairRV32:$rd), (ins GPR:$rs1, ImmType:$shamt), opcodestr,
+                  "$rd, $rs1, $shamt"> {
+  bits<5> rd;
+
+  let Inst{31}    = 0b0;
+  let Inst{30-28} = f;
+  let Inst{27}    = 0b0;
+  let Inst{14-12} = 0b010;
+  let Inst{11-8}  = rd{4-1};
+  let Inst{7}     = 0b0;
+  let Inst{6-0}   = OPC_OP_IMM_32.Value;
+
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+class RVPPairShiftW_ri<bits<3> f, string opcodestr>
+    : RVPPairShift_ri<f, opcodestr, uimm6> {
+  bits<6> shamt;
+
+  let Inst{26} = 0b1;
+  let Inst{25-20} = shamt;
+}
+
+class RVPPairShiftH_ri<bits<3> f, string opcodestr>
+    : RVPPairShift_ri<f, opcodestr, uimm5> {
+  bits<5> shamt;
+
+  let Inst{26-25} = 0b01;
+  let Inst{24-20} = shamt;
+}
+
+class RVPPairShiftB_ri<bits<3> f, string opcodestr>
+    : RVPPairShift_ri<f, opcodestr, uimm4> {
+  bits<4> shamt;
+
+  let Inst{26-24} = 0b001;
+  let Inst{23-20} = shamt;
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
@@ -889,3 +931,13 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{23-15} = imm10{9-1};
   }
 }
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def PWSLLI_B : RVPPairShiftB_ri<0b000, "pwslli.b">;
+  def PWSLLI_H : RVPPairShiftH_ri<0b000, "pwslli.h">;
+  def WSLLI    : RVPPairShiftW_ri<0b000, "wslli">;
+
+  def PWSLAI_B : RVPPairShiftB_ri<0b100, "pwslai.b">;
+  def PWSLAI_H : RVPPairShiftH_ri<0b100, "pwslai.h">;
+  def WSLAI    : RVPPairShiftW_ri<0b100, "wslai">;
+} // Predicates = [HasStdExtP, IsRV32]
