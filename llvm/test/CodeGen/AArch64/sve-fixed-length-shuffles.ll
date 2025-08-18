@@ -12,8 +12,8 @@ define void @hang_when_merging_stores_after_legalisation(ptr %a, <2 x i32> %b) v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #16
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <2 x i32> %b, <2 x i32> poison, <8 x i32> zeroinitializer
@@ -33,6 +33,9 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    umov w8, v0.b[8]
 ; CHECK-NEXT:    mov v1.b[1], v0.b[1]
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #16
+; CHECK-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
 ; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    mov v1.b[2], v0.b[2]
 ; CHECK-NEXT:    mov v2.b[1], v0.b[9]
@@ -48,32 +51,30 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    mov v2.b[6], v0.b[14]
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    mov v2.b[7], v0.b[15]
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
+; CHECK-NEXT:    uunpklo z0.h, z3.b
+; CHECK-NEXT:    uunpklo z3.h, z4.b
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.h, z2.b
-; CHECK-NEXT:    lsl z1.s, z1.s, #31
-; CHECK-NEXT:    uunpklo z3.h, z3.b
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    asr z1.s, z1.s, #31
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    lsl z1.s, z1.s, #31
+; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
-; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    lsl z3.s, z3.s, #31
-; CHECK-NEXT:    asr z2.s, z2.s, #31
-; CHECK-NEXT:    st1w { z1.s }, p1, [x0]
-; CHECK-NEXT:    cmpne p2.s, p0/z, z0.s, #0
+; CHECK-NEXT:    asr z1.s, z1.s, #31
+; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    asr z3.s, z3.s, #31
-; CHECK-NEXT:    cmpne p3.s, p0/z, z3.s, #0
+; CHECK-NEXT:    lsl z2.s, z2.s, #31
+; CHECK-NEXT:    cmpne p3.s, p0/z, z1.s, #0
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, #0
+; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    st1w { z1.s }, p2, [x0, #2, mul vl]
-; CHECK-NEXT:    st1w { z1.s }, p3, [x0, #3, mul vl]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0, #2, mul vl]
+; CHECK-NEXT:    st1w { z0.s }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    st1w { z0.s }, p3, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:  .LBB1_2: // %exit
 ; CHECK-NEXT:    ret
   %broadcast.splat = shufflevector <32 x i1> zeroinitializer, <32 x i1> zeroinitializer, <32 x i32> zeroinitializer

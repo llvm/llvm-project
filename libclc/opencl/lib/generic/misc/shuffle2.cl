@@ -9,7 +9,7 @@
 #include <clc/misc/clc_shuffle2.h>
 #include <clc/opencl/misc/shuffle2.h>
 
-#define FUNCTION shuffle2
+#define __CLC_FUNCTION shuffle2
 
 #define __CLC_BODY <clc/misc/shuffle2_def.inc>
 #include <clc/integer/gentype.inc>
