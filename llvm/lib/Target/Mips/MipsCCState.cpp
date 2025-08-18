@@ -12,31 +12,9 @@
 
 using namespace llvm;
 
-bool MipsCCState::isF128SoftLibCall(const char *CallSym) {
-  const char *const LibCalls[] = {
-      "__addtf3",      "__divtf3",     "__eqtf2",       "__extenddftf2",
-      "__extendsftf2", "__fixtfdi",    "__fixtfsi",     "__fixtfti",
-      "__fixunstfdi",  "__fixunstfsi", "__fixunstfti",  "__floatditf",
-      "__floatsitf",   "__floattitf",  "__floatunditf", "__floatunsitf",
-      "__floatuntitf", "__getf2",      "__gttf2",       "__letf2",
-      "__lttf2",       "__multf3",     "__netf2",       "__powitf2",
-      "__subtf3",      "__trunctfdf2", "__trunctfsf2",  "__unordtf2",
-      "ceill",         "copysignl",    "cosl",          "exp2l",
-      "expl",          "floorl",       "fmal",          "fmaxl",
-      "fmodl",         "frexpl",       "log10l",        "log2l",
-      "logl",          "nearbyintl",   "powl",          "rintl",
-      "roundl",        "sincosl",      "sinl",          "sqrtl",
-      "truncl"};
-
-  // Check that LibCalls is sorted alphabetically.
-  auto Comp = [](const char *S1, const char *S2) { return strcmp(S1, S2) < 0; };
-  assert(llvm::is_sorted(LibCalls, Comp));
-  return llvm::binary_search(LibCalls, CallSym, Comp);
-}
-
 /// This function returns true if Ty is fp128, {f128} or i128 which was
 /// originally a fp128.
-bool MipsCCState::originalTypeIsF128(const Type *Ty, const char *Func) {
+bool MipsCCState::originalTypeIsF128(const Type *Ty) {
   if (Ty->isFP128Ty())
     return true;
 
@@ -44,10 +22,7 @@ bool MipsCCState::originalTypeIsF128(const Type *Ty, const char *Func) {
       Ty->getStructElementType(0)->isFP128Ty())
     return true;
 
-  // If the Ty is i128 and the function being called is a long double emulation
-  // routine, then the original type is f128.
-  // FIXME: This is unsound because these functions could be indirectly called
-  return (Func && Ty->isIntegerTy(128) && isF128SoftLibCall(Func));
+  return false;
 }
 
 /// Return true if the original type was vXfXX.
@@ -84,11 +59,9 @@ MipsCCState::getSpecialCallingConvForCallee(const SDNode *Callee,
 }
 
 void MipsCCState::PreAnalyzeCallResultForF128(
-    const SmallVectorImpl<ISD::InputArg> &Ins,
-    const Type *RetTy, const char *Call) {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const Type *RetTy) {
   for (unsigned i = 0; i < Ins.size(); ++i) {
-    OriginalArgWasF128.push_back(
-        originalTypeIsF128(RetTy, Call));
+    OriginalArgWasF128.push_back(originalTypeIsF128(RetTy));
     OriginalArgWasFloat.push_back(RetTy->isFloatingPointTy());
   }
 }
@@ -98,8 +71,7 @@ void MipsCCState::PreAnalyzeCallResultForF128(
 void MipsCCState::PreAnalyzeCallReturnForF128(
     const SmallVectorImpl<ISD::OutputArg> &Outs, const Type *RetTy) {
   for (unsigned i = 0; i < Outs.size(); ++i) {
-    OriginalArgWasF128.push_back(
-        originalTypeIsF128(RetTy, nullptr));
+    OriginalArgWasF128.push_back(originalTypeIsF128(RetTy));
     OriginalArgWasFloat.push_back(
         RetTy->isFloatingPointTy());
   }
@@ -129,8 +101,8 @@ void MipsCCState::PreAnalyzeReturnValue(EVT ArgVT) {
   OriginalRetWasFloatVector.push_back(originalEVTTypeIsVectorFloat(ArgVT));
 }
 
-void MipsCCState::PreAnalyzeCallOperand(const Type *ArgTy, const char *Func) {
-  OriginalArgWasF128.push_back(originalTypeIsF128(ArgTy, Func));
+void MipsCCState::PreAnalyzeCallOperand(const Type *ArgTy) {
+  OriginalArgWasF128.push_back(originalTypeIsF128(ArgTy));
   OriginalArgWasFloat.push_back(ArgTy->isFloatingPointTy());
   OriginalArgWasFloatVector.push_back(ArgTy->isVectorTy());
 }
@@ -139,14 +111,13 @@ void MipsCCState::PreAnalyzeCallOperand(const Type *ArgTy, const char *Func) {
 /// arguments and record this.
 void MipsCCState::PreAnalyzeCallOperands(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    std::vector<TargetLowering::ArgListEntry> &FuncArgs,
-    const char *Func) {
+    std::vector<TargetLowering::ArgListEntry> &FuncArgs) {
   for (unsigned i = 0; i < Outs.size(); ++i) {
     TargetLowering::ArgListEntry FuncArg = FuncArgs[Outs[i].OrigArgIndex];
 
-    OriginalArgWasF128.push_back(originalTypeIsF128(FuncArg.Ty, Func));
-    OriginalArgWasFloat.push_back(FuncArg.Ty->isFloatingPointTy());
-    OriginalArgWasFloatVector.push_back(FuncArg.Ty->isVectorTy());
+    OriginalArgWasF128.push_back(originalTypeIsF128(FuncArg.OrigTy));
+    OriginalArgWasFloat.push_back(FuncArg.OrigTy->isFloatingPointTy());
+    OriginalArgWasFloatVector.push_back(FuncArg.OrigTy->isVectorTy());
   }
 }
 
@@ -162,7 +133,7 @@ void MipsCCState::PreAnalyzeFormalArgument(const Type *ArgTy,
     return;
   }
 
-  OriginalArgWasF128.push_back(originalTypeIsF128(ArgTy, nullptr));
+  OriginalArgWasF128.push_back(originalTypeIsF128(ArgTy));
   OriginalArgWasFloat.push_back(ArgTy->isFloatingPointTy());
 
   // The MIPS vector ABI exhibits a corner case of sorts or quirk; if the
@@ -192,8 +163,7 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
     assert(Ins[i].getOrigArgIndex() < MF.getFunction().arg_size());
     std::advance(FuncArg, Ins[i].getOrigArgIndex());
 
-    OriginalArgWasF128.push_back(
-        originalTypeIsF128(FuncArg->getType(), nullptr));
+    OriginalArgWasF128.push_back(originalTypeIsF128(FuncArg->getType()));
     OriginalArgWasFloat.push_back(FuncArg->getType()->isFloatingPointTy());
 
     // The MIPS vector ABI exhibits a corner case of sorts or quirk; if the

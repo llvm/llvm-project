@@ -11711,6 +11711,43 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case clang::X86::BI__builtin_ia32_pmuldq128:
+  case clang::X86::BI__builtin_ia32_pmuldq256:
+  case clang::X86::BI__builtin_ia32_pmuldq512:
+  case clang::X86::BI__builtin_ia32_pmuludq128:
+  case clang::X86::BI__builtin_ia32_pmuludq256:
+  case clang::X86::BI__builtin_ia32_pmuludq512: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+
+      switch (E->getBuiltinCallee()) {
+      case clang::X86::BI__builtin_ia32_pmuludq128:
+      case clang::X86::BI__builtin_ia32_pmuludq256:
+      case clang::X86::BI__builtin_ia32_pmuludq512:
+        ResultElements.push_back(
+            APValue(APSInt(llvm::APIntOps::muluExtended(LHS, RHS), true)));
+        break;
+      case clang::X86::BI__builtin_ia32_pmuldq128:
+      case clang::X86::BI__builtin_ia32_pmuldq256:
+      case clang::X86::BI__builtin_ia32_pmuldq512:
+        ResultElements.push_back(
+            APValue(APSInt(llvm::APIntOps::mulsExtended(LHS, RHS), false)));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min: {
     APValue SourceLHS, SourceRHS;
