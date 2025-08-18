@@ -976,14 +976,9 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
                           RFlags.getGEPNoWrapFlags());
   }
   case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
     return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
                           Ops[1],
                           cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
-  case Instruction::InsertElement:
-    return Folder.FoldInsertElement(Ops[0], Ops[1], Ops[2]);
-  case Instruction::ExtractElement:
-    return Folder.FoldExtractElement(Ops[0], Ops[1]);
   }
   return nullptr;
 }
