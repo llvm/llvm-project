@@ -2960,15 +2960,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  case Builtin::BI__builtin_stack_address: {
-    if (CheckBuiltinTargetInSupported(
-            *this, TheCall,
-            /*SupportedArchs=*/{llvm::Triple::x86_64, llvm::Triple::x86})) {
-      return ExprError();
-    }
-    break;
-  }
-
   case Builtin::BI__builtin_nondeterministic_value: {
     if (BuiltinNonDeterministicValue(TheCall))
       return ExprError();
