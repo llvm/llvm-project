@@ -1195,7 +1195,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     auto reportFutureVersion = [&](llvm::StringRef value) {
       const unsigned diagID = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
-          "The specification for OpenMP %0 is still under development; "
+          "The specification for OpenMP version %0 is still under development; "
           "the behavior of new features is subject to change");
       std::string buffer;
       llvm::raw_string_ostream versions(buffer);
