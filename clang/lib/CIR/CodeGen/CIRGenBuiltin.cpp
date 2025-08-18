@@ -128,14 +128,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   // C stdarg builtins.
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
-  case Builtin::BI__va_start:
-  case Builtin::BI__builtin_va_end: {
-    emitVAStartEnd(builtinID == Builtin::BI__va_start
-                       ? emitScalarExpr(e->getArg(0))
-                       : emitVAListRef(e->getArg(0)).getPointer(),
-                   builtinID != Builtin::BI__builtin_va_end);
+  case Builtin::BI__va_start: {
+    emitVAStart(builtinID == Builtin::BI__va_start
+                    ? emitScalarExpr(e->getArg(0))
+                    : emitVAListRef(e->getArg(0)).getPointer(),
+                emitScalarExpr(e->getArg(1)));
     return {};
   }
+
+  case Builtin::BI__builtin_va_end:
+    emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
+    return {};
 
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
@@ -374,11 +377,12 @@ mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
   return {};
 }
 
-void CIRGenFunction::emitVAStartEnd(mlir::Value argValue, bool isStart) {
+void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
   // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
   // early, defer to LLVM lowering.
-  if (isStart)
-    cir::VAStartOp::create(builder, argValue.getLoc(), argValue);
-  else
-    cir::VAEndOp::create(builder, argValue.getLoc(), argValue);
+  cir::VAStartOp::create(builder, vaList.getLoc(), vaList, count);
+}
+
+void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
+  cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
 }

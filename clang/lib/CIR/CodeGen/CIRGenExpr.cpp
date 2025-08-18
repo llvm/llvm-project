@@ -91,7 +91,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
     case CK_ArrayToPointerDecay:
-      return emitArrayToPointerDecay(ce->getSubExpr());
+      return emitArrayToPointerDecay(ce->getSubExpr(), baseInfo);
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
@@ -1623,7 +1623,9 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   emitLValue(e);
 }
 
-Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
+Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
+                                                LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::opTBAA());
   assert(e->getType()->isArrayType() &&
          "Array to pointer decay must have array source type!");
 

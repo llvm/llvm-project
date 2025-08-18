@@ -3419,25 +3419,26 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
 // Variadic Operations
 //===----------------------------------------------------------------------===//
 
-def CIR_VAStartOp : CIR_Op<"va.start"> {
+def CIR_VAStartOp : CIR_Op<"va_start"> {
   let summary = "Starts a variable argument list";
   let description = [{
-    The cir.va.start operation models the C/C++ va_start macro by
+    The cir.va_start operation models the C/C++ va_start macro by
     initializing a variable argument list at the given va_list storage
     location.
 
-    The operand must be a pointer to the target's `va_list` representation.
-    This operation has no results and produces its effect by mutating the
-    storage referenced by the pointer operand.
+    The first operand must be a pointer to the target's `va_list`
+    representation. This operation has no results and produces its effect by
+    mutating the storage referenced by the pointer operand. The second operand
+    must be an integer value that contains the expected number of arguments in
+    that list.
 
-    Each `cir.va.start` must be paired with a corresponding `cir.va.end`
+    Each `cir.va_start` must be paired with a corresponding `cir.va_end`
     on the same logical `va_list` object along all control-flow paths. After
-    `cir.va.end`, the `va_list` must not be accessed unless reinitialized
-    with another `cir.va.start`.
+    `cir.va_end`, the `va_list` must not be accessed unless reinitialized
+    with another `cir.va_start`.
 
-    Lowering typically maps this to the LLVM intrinsic `llvm.va_start`,
-    passing the appropriately decayed pointer to the underlying `va_list`
-    storage.
+    Lowering maps this to the LLVM intrinsic `llvm.va_start`, passing the
+    appropriately decayed pointer to the underlying `va_list` storage.
 
     Example:
 
@@ -3446,29 +3447,33 @@ def CIR_VAStartOp : CIR_Op<"va.start"> {
     %p = cir.cast(array_to_ptrdecay, %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
         !cir.ptr<!rec___va_list_tag>
-    cir.va.start %p : !cir.ptr<!rec___va_list_tag>
+    %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
     ```
   }];
-  let arguments = (ins CIR_PointerType:$arg_list);
+  let arguments = (ins
+    CIR_PointerType:$arg_list,
+    CIR_AnyFundamentalIntType:$count
+  );
 
   let assemblyFormat = [{
-    $arg_list attr-dict `:` type(operands)
+    $arg_list $count attr-dict `:` type(operands)
   }];
 }
 
-def CIR_VAEndOp : CIR_Op<"va.end"> {
+def CIR_VAEndOp : CIR_Op<"va_end"> {
   let summary = "Ends a variable argument list";
   let description = [{
-    The `cir.va.end` operation models the C/C++ va_end macro by finalizing
+    The `cir.va_end` operation models the C/C++ va_end macro by finalizing
     and cleaning up a variable argument list previously initialized with
-    `cir.va.start`.
+    `cir.va_start`.
 
     The operand must be a pointer to the target's `va_list` representation.
     This operation has no results and produces its effect by mutating the
     storage referenced by the pointer operand.
 
-    `cir.va.end` must only be called after a matching `cir.va.start` on the
-    same `va_list` along all control-flow paths. After `cir.va.end`, the
+    `cir.va_end` must only be called after a matching `cir.va_start` on the
+    same `va_list` along all control-flow paths. After `cir.va_end`, the
     `va_list` is invalid and must not be accessed unless reinitialized.
 
     Lowering typically maps this to the LLVM intrinsic `llvm.va_end`,
@@ -3481,7 +3486,7 @@ def CIR_VAEndOp : CIR_Op<"va.end"> {
     %p = cir.cast(array_to_ptrdecay, %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
         !cir.ptr<!rec___va_list_tag>
-    cir.va.end %p : !cir.ptr<!rec___va_list_tag>
+    cir.va_end %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
 
