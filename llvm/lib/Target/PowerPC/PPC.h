@@ -64,7 +64,7 @@ class ModulePass;
   void initializePPCLoopInstrFormPrepPass(PassRegistry&);
   void initializePPCTOCRegDepsPass(PassRegistry&);
   void initializePPCEarlyReturnPass(PassRegistry&);
-  void initializePPCVSXWACCCopyPass(PassRegistry&);
+  void initializePPCVSXWACCCopyPass(PassRegistry &);
   void initializePPCVSXFMAMutatePass(PassRegistry&);
   void initializePPCVSXSwapRemovalPass(PassRegistry&);
   void initializePPCReduceCRLogicalsPass(PassRegistry&);
