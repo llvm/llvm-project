@@ -41,8 +41,8 @@ void foo(float *&lr, T *&tr) {
   float *l;
   T *t;
 
-  // &g[0], &g[/*lb=*/0], 10 * sizeof(g[0]), TO | FROM | RETURN_PARAM
-  // &g, &g[/*lb=*/0], sizeof(g), ATTACH
+  // &g[0], &g[0], 10 * sizeof(g[0]), TO | FROM | RETURN_PARAM
+  // &g,    &g[0], sizeof(void*),     ATTACH
   //
   // CK1:     [[T:%.+]] = load ptr, ptr [[DECL:@g]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
@@ -62,8 +62,8 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds nuw double, ptr [[TTT]], i32 1
   ++g;
 
-  // &l[0], &l[/*lb=*/0], 10 * sizeof(l[0]), TO | FROM | RETURN_PARAM
-  // &l, &l[/*lb=*/0], sizeof(l), ATTACH
+  // &l[0], &l[0], 10 * sizeof(l[0]), TO | FROM | RETURN_PARAM
+  // &l,    &l[0], sizeof(void*),     ATTACH
   //
   // CK1:     [[T1:%.+]] = load ptr, ptr [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
@@ -151,8 +151,8 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds nuw float, ptr [[TTT]], i32 1
   ++l;
 
-  // &(ref_ptee(lr)[0]), &(ref_ptee(lr)[/*lb=*/0]), 10 * sizeof(lr[0]), TO | FROM | RETURN_PARAM
-  // &(ref_ptee(lr)), &(ref_ptee(lr)[/*lb=*/0]), sizeof(ref_ptee(lr)), ATTACH
+  // &(ptee(lr)[0]), &(ptee(lr)[0]), 10 * sizeof(lr[0]), TO | FROM | RETURN_PARAM
+  // &(ptee(lr)),    &(ptee(lr)[0]), sizeof(void*),      ATTACH
   //
   // CK1:     [[T2:%.+]] = load ptr, ptr [[DECL:%.+]],
   // CK1:     [[T1:%.+]] = load ptr, ptr [[T2]],
@@ -176,8 +176,8 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds nuw float, ptr [[TTTT]], i32 1
   ++lr;
 
-  // &t[0], &t[/*lb=*/0], 10 * sizeof(t[0]), TO | FROM | RETURN_PARAM
-  // &t, &t[/*lb=*/0], sizeof(t), ATTACH
+  // &t[0], &t[0], 10 * sizeof(t[0]), TO | FROM | RETURN_PARAM
+  // &t,    &t[1], sizeof(void*),     ATTACH
   //
   // CK1:     [[T1:%.+]] = load ptr, ptr [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
@@ -197,8 +197,8 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds nuw i32, ptr [[TTT]], i32 1
   ++t;
 
-  // &(ref_ptee(tr)[0]), &(ref_ptee(tr)[/*lb=*/0]), 10 * sizeof(tr[0]), TO | FROM | RETURN_PARAM
-  // &(ref_ptee(tr)), &(ref_ptee(tr)[/*lb=*/0]), sizeof(ref_ptee(tr)), ATTACH
+  // &(ptee(tr)[0]), &(ptee(tr)[0]), 10 * sizeof(tr[0]), TO | FROM | RETURN_PARAM
+  // &(ptee(tr)),    &(ptee(tr)[0]), sizeof(void*),      ATTACH
   //
   // CK1:     [[T2:%.+]] = load ptr, ptr [[DECL:%.+]],
   // CK1:     [[T1:%.+]] = load ptr, ptr [[T2]],
@@ -222,11 +222,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds nuw i32, ptr [[TTTT]], i32 1
   ++tr;
 
-  // &l[0], &l[/*lb=*/0], 10 * sizeof(l[0]), TO | FROM [| RETURN_PARAM]
-  // &l, &l[/*lb=*/0], sizeof(l), ATTACH
-  // &t[0], &t[/*lb=*/0], 10 * sizeof(t[0]), TO | FROM [| RETURN_PARAM]
-  // &t, &t[/*lb=*/0], sizeof(t), ATTACH
-
+  // &l[0], &l[0], 10 * sizeof(l[0]), TO | FROM [| RETURN_PARAM]
+  // &l,    &l[0], sizeof(void*),     ATTACH
+  // &t[0], &t[0], 10 * sizeof(t[0]), TO | FROM [| RETURN_PARAM]
+  // &t,    &t[0], sizeof(void*),     ATTACH
+  //
   // CK1:     [[T1:%.+]] = load ptr, ptr [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [4 x ptr], ptr %{{.+}}, i32 0, i32 0
   // CK1:     store ptr [[T1]], ptr [[BP]],
@@ -286,9 +286,10 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds nuw i32, ptr [[TTT]], i32 1
   ++l; ++t;
 
-  // &l[0], &l[/*lb=*/0], 10 * sizeof(l[0]), TO | FROM [| RETURN_PARAM]
-  // &l, &l[/*lb=*/0], sizeof(l), ATTACH
-  // &t[0], &t[/*lb=*/0], 0, RETURN_PARAM
+  // &l[0], &l[0], 10 * sizeof(l[0]), TO | FROM [| RETURN_PARAM]
+  // &l,    &l[0], sizeof(void*),     ATTACH
+  // &t[0], &t[0], 0,                 RETURN_PARAM
+  //
   // CK1:     [[T1:%.+]] = load ptr, ptr [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [3 x ptr], ptr %{{.+}}, i32 0, i32 2
   // CK1:     store ptr [[T1]], ptr [[BP]],
@@ -354,10 +355,10 @@ void bar(float *&a, int *&b) {
 #ifdef CK2
 
 // CK2: [[ST:%.+]] = type { ptr, ptr }
-// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 0, i64 281474976710739]
-// CK2: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 0, i64 281474976710739]
-// CK2: [[MTYPE02:@.+]] = {{.*}}constant [4 x i64] [i64 3, i64 16384, i64 0, i64 844424930132048]
-// CK2: [[MTYPE03:@.+]] = {{.*}}constant [3 x i64] [i64 0, i64 281474976710739, i64 281474976710736]
+// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 [[#0x43]], i64 [[#0x4000]]]
+// CK2: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 [[#0x43]], i64 [[#0x4000]]]
+// CK2: [[MTYPE02:@.+]] = {{.*}}constant [4 x i64] [i64 3, i64 [[#0x4000]], i64 0, i64 [[#0x3000000000050]]]
+// CK2: [[MTYPE03:@.+]] = {{.*}}constant [4 x i64] [i64 0, i64 [[#0x43]], i64 [[#0x4000]], i64 [[#0x1000000000050]]]
 
 template <typename T>
 struct ST {
@@ -369,7 +370,10 @@ struct ST {
   void foo(double *&arg) {
     int *la = 0;
 
-    // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 1
+    // &a[0], &a[0], 10 * sizeof(a[0]), TO | FROM | RETURN_PARAM
+    // &a,    &a[0], sizeof(void*),     ATTACH
+    //
+    // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
     // CK2:     store ptr [[RVAL:%.+]], ptr [[BP]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
     // CK2:     [[VAL:%.+]] = load ptr, ptr [[BP]],
@@ -388,7 +392,10 @@ struct ST {
     // CK2:     getelementptr inbounds nuw double, ptr [[TTT]], i32 1
     a++;
 
-    // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 1
+    // &ptee(b)[0], &ptee(b)[0], 10 * sizeof(ptee(b)[0]), TO | FROM | RETURN_PARAM
+    // &ptee(b),    &ptee(b)[0], sizeof(void*),           ATTACH
+    //
+    // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
     // CK2:     store ptr [[RVAL:%.+]], ptr [[BP]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE01]]
     // CK2:     [[VAL:%.+]] = load ptr, ptr [[BP]],
@@ -408,6 +415,11 @@ struct ST {
     // CK2:     getelementptr inbounds nuw double, ptr [[TTTT]], i32 1
     b++;
 
+    // &la[0],   &la[0],        10 * sizeof(la[0]), TO | FROM
+    // &la,      &la[0],        sizeof(void*),      ATTACH
+    // &this[0], &this[0].a,    sizeof(this[0].a),  ALLOC
+    // &this[0], &this[0].a[0], 0,                  MEMBER_OF_3 | RETURN_PARAM
+    //
     // CK2:     [[BP:%.+]] = getelementptr inbounds [4 x ptr], ptr %{{.+}}, i32 0, i32 3
     // CK2:     store ptr [[RVAL:%.+]], ptr [[BP]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE02]]
@@ -429,9 +441,14 @@ struct ST {
     a++;
     la++;
 
-    // CK2:     [[BP1:%.+]] = getelementptr inbounds [3 x ptr], ptr %{{.+}}, i32 0, i32 1
+    // &this[0],    &this[0].a,    sizeof(this[0].a),       ALLOC
+    // &ptee(b)[0], &ptee(b)[0],   10 * sizeof(ptee(b)[0]), TO | FROM | RETURN_PARAM
+    // &ptee(b),    &ptee(b)[0],   sizeof(void*),           ATTACH
+    // &this[0],    &this[0].a[0], 0,                       MEMBER_OF_1 | RETURN_PARAM
+    //
+    // CK2:     [[BP1:%.+]] = getelementptr inbounds [4 x ptr], ptr %{{.+}}, i32 0, i32 1
     // CK2:     store ptr [[RVAL1:%.+]], ptr [[BP1]],
-    // CK2:     [[BP2:%.+]] = getelementptr inbounds [3 x ptr], ptr %{{.+}}, i32 0, i32 2
+    // CK2:     [[BP2:%.+]] = getelementptr inbounds [4 x ptr], ptr %{{.+}}, i32 0, i32 3
     // CK2:     store ptr [[RVAL2:%.+]], ptr [[BP2]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE03]]
     // CK2:     [[VAL1:%.+]] = load ptr, ptr [[BP1]],

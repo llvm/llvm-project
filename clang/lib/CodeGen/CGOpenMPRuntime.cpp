@@ -9039,6 +9039,8 @@ private:
 
       // Process each group in order of their attach-pointers increasing
       // complexity.
+      std::optional<size_t> MemberOfValueForFirstCombinedEntry = std::nullopt;
+      bool IsFirstGroup = true;
       for (const auto &Entry : AttachPtrGroups) {
         const SmallVector<MapInfo, 8> &GroupLists = Entry.second;
         if (GroupLists.empty())
@@ -9110,11 +9112,16 @@ private:
         MapCombinedInfoTy AttachCombinedInfo;
         if (PartialStruct.Base.isValid()) {
           CurInfo.append(PartialStruct.PreliminaryMapData);
-          emitCombinedEntry(
+          std::optional<size_t> CombinedEntryIndex = emitCombinedEntry(
               CurInfo, AttachCombinedInfo, GroupCurInfo.Types, PartialStruct,
               /*IsMapThis*/ !VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
               /*NotTargetParam=*/true);
+          // Track the first group's combined entry's final-index for deferred
+          // entries to reference.
+          if (IsFirstGroup && CombinedEntryIndex.has_value())
+            MemberOfValueForFirstCombinedEntry =
+                CombinedInfo.BasePointers.size() + *CombinedEntryIndex;
         }
 
         // Append this group's results to the overall CurInfo in the correct
@@ -9123,12 +9130,15 @@ private:
         CurInfo.append(GroupStructBaseCurInfo);
         CurInfo.append(GroupCurInfo);
         CurInfo.append(AttachCombinedInfo);
+
+        IsFirstGroup = false;
       }
 
       // Append any pending zero-length pointers which are struct members and
       // used with use_device_ptr or use_device_addr.
       auto CI = DeferredInfo.find(Data.first);
       if (CI != DeferredInfo.end()) {
+        size_t DeferredStartIdx = CurInfo.Types.size();
         for (const DeferredDevicePtrEntryTy &L : CI->second) {
           llvm::Value *BasePtr;
           llvm::Value *Ptr;
@@ -9165,6 +9175,21 @@ private:
           CurInfo.Sizes.push_back(
               llvm::Constant::getNullValue(this->CGF.Int64Ty));
           CurInfo.Mappers.push_back(nullptr);
+        }
+
+        // Correct the MEMBER_OF flags for the deferred entries we just added.
+        if (MemberOfValueForFirstCombinedEntry.has_value() &&
+            DeferredStartIdx < CurInfo.Types.size()) {
+          // Use the tracked combined entry index from the first group
+          // Note that this assumes that the entries for use_device_ptr/addr
+          // should belong to the CombinedEntry emitted when handling the first
+          // "group". e.g. Even if we have `map(this->sp->a, this->sp->b)`, the
+          // CombinedEntry created for those, with `this->sp` as the attach-ptr,
+          // would not be the first attach-entry.
+          OpenMPOffloadMappingFlags MemberOfFlag =
+              OMPBuilder.getMemberOfFlag(*MemberOfValueForFirstCombinedEntry);
+          for (size_t I = DeferredStartIdx; I < CurInfo.Types.size(); ++I)
+            OMPBuilder.setCorrectMemberOfFlag(CurInfo.Types[I], MemberOfFlag);
         }
       }
 
@@ -9259,13 +9284,13 @@ public:
   /// individual struct members.
   /// AttachCombinedInfo will be populated with ATTACH entries if
   /// \p PartialStruct contains attach base-pointer information.
-  void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
-                         MapCombinedInfoTy &AttachCombinedInfo,
-                         MapFlagsArrayTy &CurTypes,
-                         const StructRangeInfoTy &PartialStruct, bool IsMapThis,
-                         llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD,
-                         unsigned OffsetForMemberOfFlag,
-                         bool NotTargetParams) const {
+  /// \returns The index of the combined entry if one was added, std::nullopt
+  /// otherwise.
+  std::optional<size_t> emitCombinedEntry(
+      MapCombinedInfoTy &CombinedInfo, MapCombinedInfoTy &AttachCombinedInfo,
+      MapFlagsArrayTy &CurTypes, const StructRangeInfoTy &PartialStruct,
+      bool IsMapThis, llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD,
+      unsigned OffsetForMemberOfFlag, bool NotTargetParams) const {
     if (CurTypes.size() == 1 &&
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
          OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) &&
@@ -9278,7 +9303,7 @@ public:
                        PartialStruct.AttachPteeAddr,
                        PartialStruct.AttachPtrDecl,
                        PartialStruct.AttachMapExpr);
-      return;
+      return std::nullopt;
     }
     Address LBAddr = PartialStruct.LowestElem.second;
     Address HBAddr = PartialStruct.HighestElem.second;
@@ -9286,6 +9311,8 @@ public:
       LBAddr = PartialStruct.LB;
       HBAddr = PartialStruct.LB;
     }
+    // Capture the index where the combined entry will be inserted
+    size_t CombinedEntryIndex = CombinedInfo.BasePointers.size();
     CombinedInfo.Exprs.push_back(VD);
     // Base is the base of the struct
     CombinedInfo.BasePointers.push_back(PartialStruct.Base.emitRawPointer(CGF));
@@ -9379,6 +9406,8 @@ public:
       addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachPtrAddr,
                      LBAddr, PartialStruct.AttachPtrDecl,
                      PartialStruct.AttachMapExpr);
+
+    return CombinedEntryIndex;
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -9636,7 +9665,7 @@ public:
           MapCombinedInfoTy AttachCombinedInfo;
           if (PartialStruct.Base.isValid()) {
             CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
-            emitCombinedEntry(
+            (void)emitCombinedEntry(
                 CurCaptureVarInfo, AttachCombinedInfo,
                 CurInfoForComponentLists.Types, PartialStruct,
                 Cap->capturesThis(), OMPBuilder, nullptr, OffsetForMemberOfFlag,
