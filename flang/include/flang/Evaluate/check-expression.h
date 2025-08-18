@@ -163,5 +163,27 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
 
+// Returns a pair of Booleans. The first boolean specifies whether given actual
+// argument may need copy-in operation and the second Boolean specifies whether
+// copy-out may be necessary. This function works with implicit interface
+// procedures.
+std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &,
+    FoldingContext &);
+
+// Returns a pair of Booleans. The first boolean specifies whether given actual
+// and dummy argument pair may need copy-in operation for the actual argument,
+// and the second Boolean specifies whether copy-out may be necessary.
+// This function works with explicit interface procedures.
+std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &,
+    const characteristics::DummyArgument &, FoldingContext &);
+
+inline std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
+    const characteristics::DummyArgument *dummy, FoldingContext &fc) {
+  if (dummy)
+    return MayNeedCopyInOut(actual, *dummy, fc);
+  else
+    return MayNeedCopyInOut(actual, fc);
+}
+
 } // namespace Fortran::evaluate
 #endif

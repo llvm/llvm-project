@@ -1243,8 +1243,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
-  bool mustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
-  bool mustDoCopyOut = mustDoCopyIn && arg.entity->GetMayNeedCopyOut();
+  Fortran::evaluate::FoldingContext &foldingContext{
+      callContext.converter.getFoldingContext()};
+  auto [suggestCopyIn, suggestCopyOut] = Fortran::evaluate::MayNeedCopyInOut(
+      *arg.entity, arg.characteristics, foldingContext);
+  bool mustDoCopyIn = actual.isArray() && suggestCopyIn;
+  bool mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
