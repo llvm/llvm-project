@@ -3426,9 +3426,36 @@ static void AddQualifierToCompletionString(CodeCompletionBuilder &Result,
     Result.AddTextChunk(Result.getAllocator().CopyString(PrintedNNS));
 }
 
+// Sets the function qualifiers completion string by inspecting the explicit
+// object
+static void AddCXXExplicitObjectFunctionTypeQualsToCompletionString(
+    CodeCompletionBuilder &Result, const CXXMethodDecl *Function) {
+  const auto Quals = Function->getFunctionObjectParameterType();
+
+  if (!Quals.hasQualifiers())
+    return;
+
+  std::string QualsStr;
+  if (Quals.getQualifiers().hasConst())
+    QualsStr += " const";
+  if (Quals.getQualifiers().hasVolatile())
+    QualsStr += " volatile";
+  if (Quals.getQualifiers().hasRestrict())
+    QualsStr += " restrict";
+  Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
+}
+
 static void
 AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
                                        const FunctionDecl *Function) {
+  if (auto *CxxMethodDecl = llvm::dyn_cast_if_present<CXXMethodDecl>(Function);
+      CxxMethodDecl && CxxMethodDecl->hasCXXExplicitFunctionObjectParameter()) {
+    // if explicit object method, infer quals from the object parameter
+    AddCXXExplicitObjectFunctionTypeQualsToCompletionString(Result,
+                                                            CxxMethodDecl);
+    return;
+  }
+
   const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
   if (!Proto || !Proto->getMethodQuals())
     return;
