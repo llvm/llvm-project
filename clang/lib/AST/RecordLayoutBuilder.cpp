@@ -187,6 +187,8 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
   // Check the bases.
   for (const CXXBaseSpecifier &Base : Class->bases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    // Assert to prevent infinite recursion.
+    assert(BaseDecl != Class && "Class cannot inherit from itself.");
 
     CharUnits EmptySize;
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(BaseDecl);
