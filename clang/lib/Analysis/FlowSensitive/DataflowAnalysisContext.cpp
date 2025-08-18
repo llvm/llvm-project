@@ -209,24 +209,21 @@ bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
 }
 
 llvm::DenseSet<Atom> DataflowAnalysisContext::collectDependencies(
-    const llvm::DenseSet<Atom> &Tokens) const {
-  llvm::DenseSet<Atom> VisitedTokens;
-  // Use a worklist algorithm, with `Remaining` holding the worklist.
+    llvm::DenseSet<Atom> Tokens) const {
+  // Use a worklist algorithm, with `Remaining` holding the worklist and
+  // `Tokens` tracking which atoms have already been added to the worklist.
   std::vector<Atom> Remaining(Tokens.begin(), Tokens.end());
-
-  // For each token in `Remaining`, add its dependencies to the worklist.
   while (!Remaining.empty()) {
-    auto Token = Remaining.back();
+    Atom CurrentToken = Remaining.back();
     Remaining.pop_back();
-    if (!VisitedTokens.insert(Token).second)
-      continue;
-    if (auto DepsIt = FlowConditionDeps.find(Token);
+    if (auto DepsIt = FlowConditionDeps.find(CurrentToken);
         DepsIt != FlowConditionDeps.end())
       for (Atom A : DepsIt->second)
-        Remaining.push_back(A);
+        if (Tokens.insert(A).second)
+          Remaining.push_back(A);
   }
 
-  return VisitedTokens;
+  return Tokens;
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
@@ -294,7 +291,7 @@ SimpleLogicalContext DataflowAnalysisContext::exportLogicalContext(
   }
 
   llvm::DenseSet<dataflow::Atom> Dependencies =
-      collectDependencies(TargetTokens);
+      collectDependencies(std::move(TargetTokens));
 
   for (dataflow::Atom Token : Dependencies) {
     // Only process the token if it is constrained. Unconstrained tokens don't

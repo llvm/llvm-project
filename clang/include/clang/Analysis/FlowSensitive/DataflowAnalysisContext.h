@@ -260,8 +260,7 @@ private:
   /// Computes the transitive closure of dependencies of (flow-condition)
   /// `Tokens`. That is, the set of flow-condition tokens reachable from
   /// `Tokens` in the dependency graph.
-  llvm::DenseSet<Atom>
-  collectDependencies(const llvm::DenseSet<Atom> &Tokens) const;
+  llvm::DenseSet<Atom> collectDependencies(llvm::DenseSet<Atom> Tokens) const;
 
   // Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);
