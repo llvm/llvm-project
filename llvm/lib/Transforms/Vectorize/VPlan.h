@@ -2546,8 +2546,8 @@ public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask,
                      bool NeedsMaskForGaps, const VPIRMetadata &MD, DebugLoc DL)
-      : VPInterleaveBase(VPDef::VPInterleaveSC, IG, ArrayRef<VPValue *>({Addr}),
-                         StoredValues, Mask, NeedsMaskForGaps, MD, DL) {}
+      : VPInterleaveBase(VPDef::VPInterleaveSC, IG, Addr, StoredValues, Mask,
+                         NeedsMaskForGaps, MD, DL) {}
 
   ~VPInterleaveRecipe() override = default;
 
