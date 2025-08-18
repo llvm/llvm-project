@@ -235,7 +235,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
                   MF, Mode,
                   "The epilog is popping more registers than the prolog "
                   "pushed");
-            if (PushedRegs[PushedRegs.size() - PoppedRegCount] != Reg)
+            if (PushedRegs[PushedRegs.size() - PoppedRegCount] != Reg.id())
               return rejectCurrentFunctionInternalError(
                   MF, Mode,
                   "The epilog is popping a registers in "
