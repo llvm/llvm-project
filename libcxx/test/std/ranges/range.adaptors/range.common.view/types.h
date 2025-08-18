@@ -90,6 +90,22 @@ struct NonCommonView : std::ranges::view_base {
 static_assert( std::ranges::view<NonCommonView>);
 static_assert(!std::ranges::common_range<NonCommonView>);
 
+template <class T>
+concept HasConstBegin = requires(const T& ct) { ct.begin(); };
+
+template <class T>
+concept HasBegin = requires(T& t) { t.begin(); };
+
+template <class T>
+concept HasConstAndNonConstBegin = HasConstBegin<T> && requires(T& t, const T& ct) {
+  requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>;
+};
+
+template <class T>
+concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
+
+template <class T>
+concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
 template<bool Simple>
 struct NonCommonBaseView: std::ranges::view_base {
@@ -102,5 +118,11 @@ struct NonCommonBaseView: std::ranges::view_base {
   constexpr auto end() requires (!Simple) { return sentinel_wrapper<int*>(end_); }
 };
 using NonSimpleNonCommonView = NonCommonBaseView<false>;
+
+static_assert(!HasOnlyNonConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
+static_assert(!HasOnlyConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
+static_assert(HasConstAndNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
+static_assert(HasConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
+static_assert(HasOnlyConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H
