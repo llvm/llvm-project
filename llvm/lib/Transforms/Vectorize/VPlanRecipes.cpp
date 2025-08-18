@@ -942,15 +942,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
 std::optional<InstructionCost>
 VPRecipeWithIRFlags::getCommonCost(unsigned Opcode, ElementCount VF,
-                                   VPCostContext &Ctx, bool IsVector) const {
+                                   VPCostContext &Ctx) const {
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
-  Type *ResultTy = IsVector ? toVectorTy(ScalarTy, VF) : ScalarTy;
+  Type *ResultTy = VF.isVector() ? toVectorTy(ScalarTy, VF) : ScalarTy;
   switch (Opcode) {
   case Instruction::FNeg:
-    return Ctx.TTI.getArithmeticInstrCost(
-        Opcode, ResultTy, Ctx.CostKind,
-        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None});
+    return Ctx.TTI.getArithmeticInstrCost(Opcode, ResultTy, Ctx.CostKind);
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
@@ -969,16 +966,21 @@ VPRecipeWithIRFlags::getCommonCost(unsigned Opcode, ElementCount VF,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    VPValue *RHS = getOperand(1);
-    // Certain instructions can be cheaper to vectorize if they have a constant
-    // second vector operand. One example of this are shifts on x86.
-    TargetTransformInfo::OperandValueInfo RHSInfo = Ctx.getOperandInfo(RHS);
+    TargetTransformInfo::OperandValueInfo RHSInfo = {
+        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
 
-    if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-        getOperand(1)->isDefinedOutsideLoopRegions())
-      RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
+    if (VF.isVector()) {
+      // Certain instructions can be cheaper to vectorize if they have a
+      // constant second vector operand. One example of this are shifts on x86.
+      VPValue *RHS = getOperand(1);
+      RHSInfo = Ctx.getOperandInfo(RHS);
+
+      if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
+          getOperand(1)->isDefinedOutsideLoopRegions())
+        RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
+    }
+
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
-
     SmallVector<const Value *, 4> Operands;
     if (CtxI)
       Operands.append(CtxI->value_op_begin(), CtxI->value_op_end());
@@ -997,7 +999,7 @@ VPRecipeWithIRFlags::getCommonCost(unsigned Opcode, ElementCount VF,
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ScalarOpTy = Ctx.Types.inferScalarType(getOperand(0));
-    Type *OpTy = IsVector ? toVectorTy(ScalarOpTy, VF) : ScalarOpTy;
+    Type *OpTy = VF.isVector() ? toVectorTy(ScalarOpTy, VF) : ScalarOpTy;
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
     return Ctx.TTI.getCmpSelInstrCost(
         Opcode, OpTy, CmpInst::makeCmpResultType(OpTy), getPredicate(),
@@ -1020,8 +1022,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
-    return *getCommonCost(getOpcode(), VF, Ctx,
-                          /*IsVector=*/!vputils::onlyFirstLaneUsed(this));
+    return *getCommonCost(
+        getOpcode(),
+        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   }
 
   switch (getOpcode()) {
@@ -2110,7 +2113,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::ExtractValue:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return *getCommonCost(getOpcode(), VF, Ctx, /*IsVector=*/true);
+    return *getCommonCost(getOpcode(), VF, Ctx);
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -3005,7 +3008,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    return *getCommonCost(getOpcode(), VF, Ctx, /*IsVector=*/false) *
+    return *getCommonCost(getOpcode(), ElementCount::getFixed(1), Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   }

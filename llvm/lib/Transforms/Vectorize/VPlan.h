@@ -899,12 +899,9 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 
   void execute(VPTransformState &State) override = 0;
 
-  /// Compute the cost for this recipe using \p Opcode. If \p IsVector is true,
-  /// compute the vector cost, otherwise compute the scalar cost for a single
-  /// instance.
+  /// Compute the cost for this recipe for \p VF, using \p Opcode and \p Ctx.
   std::optional<InstructionCost> getCommonCost(unsigned Opcode, ElementCount VF,
-                                               VPCostContext &Ctx,
-                                               bool IsVector) const;
+                                               VPCostContext &Ctx) const;
 };
 
 /// Helper to access the operand that contains the unroll part for this recipe
