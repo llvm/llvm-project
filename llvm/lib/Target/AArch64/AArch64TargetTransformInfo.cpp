@@ -3986,6 +3986,23 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
   return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I);
 }
 
+InstructionCost
+AArch64TTIImpl::getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                          TTI::TargetCostKind CostKind,
+                                          unsigned Index) const {
+  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Val))
+    return BaseT::getVectorInstrCostFromEnd(Opcode, Val, CostKind, Index);
+
+  // This typically requires both while and lastb instructions in order
+  // to extract the last element. If this is in a loop the while
+  // instruction can at least be hoisted out, although it will consume a
+  // predicate register. The cost should be more expensive than the base
+  // extract cost, which is 2 for most CPUs.
+  return CostKind == TTI::TCK_CodeSize
+             ? 2
+             : ST->getVectorInsertExtractBaseCost() + 1;
+}
+
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc,
