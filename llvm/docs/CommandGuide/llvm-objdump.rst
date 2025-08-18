@@ -140,23 +140,29 @@ OPTIONS
   debug information for stripped binaries. Multiple instances of this argument
   are searched in the order given.
 
+.. option:: --debug-indent=<width>
+
+  Distance to indent the source-level variable or inlined function display,
+  relative to the start of the disassembly. Defaults to 52 characters.
+
+.. option:: --debug-inlined-funcs[=<format>]
+
+  Print the locations of inlined functions alongside disassembly.
+  ``format`` may be ``ascii``, ``limits-only``, or ``unicode``, defaulting to
+  ``unicode`` if omitted.
+
+.. option:: --debug-vars[=<format>]
+
+  Print the locations (in registers or memory) of source-level variables
+  alongside disassembly. ``format`` may be ``ascii`` or ``unicode``, defaulting
+  to ``unicode`` if omitted.
+
 .. option:: --debuginfod, --no-debuginfod
 
   Whether or not to try debuginfod lookups for debug binaries. Unless specified,
   debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
   and at least one server URL was provided by the environment variable
   ``DEBUGINFOD_URLS``.
-
-.. option:: --debug-vars=<format>
-
-  Print the locations (in registers or memory) of source-level variables
-  alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
-  to ``unicode`` if omitted.
-
-.. option:: --debug-vars-indent=<width>
-
-  Distance to indent the source-level variable display, relative to the start
-  of the disassembly. Defaults to 52 characters.
 
 .. option:: -j, --section=<section1[,section2,...]>
 
@@ -217,7 +223,7 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading section.
+  Display the content of the LLVM offloading sections and HIP offload bundles.
 
 .. option:: --prefix=<prefix>
 
@@ -278,7 +284,7 @@ OPTIONS
   any analysis with a special representation (i.e. BlockFrequency,
   BranchProbability, etc) are printed as raw hex values.
 
-  Only works with PowerPC objects or X86 linked images.
+  Only supported for AArch64, BPF, PowerPC, and X86.
 
   Example:
     A non-symbolized branch instruction with a local target and pc-relative memory access like

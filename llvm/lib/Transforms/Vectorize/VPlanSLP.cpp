@@ -58,7 +58,9 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
     for (VPRecipeBase &VPI : *VPBB) {
       if (isa<VPWidenPHIRecipe>(&VPI))
         continue;
-      auto *VPInst = cast<VPInstruction>(&VPI);
+      auto *VPInst = dyn_cast<VPInstruction>(&VPI);
+      if (!VPInst)
+        continue;
       auto *Inst = dyn_cast_or_null<Instruction>(VPInst->getUnderlyingValue());
       if (!Inst)
         continue;
@@ -516,8 +518,8 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
   auto *Inst = cast<VPInstruction>(Values[0])->getUnderlyingInstr();
   auto *VPI = new VPInstruction(Opcode, CombinedOperands, Inst->getDebugLoc());
 
-  LLVM_DEBUG(dbgs() << "Create VPInstruction " << *VPI << " "
-                    << *cast<VPInstruction>(Values[0]) << "\n");
+  LLVM_DEBUG(dbgs() << "Create VPInstruction " << *VPI << " " << Values[0]
+                    << "\n");
   addCombined(Values, VPI);
   return VPI;
 }

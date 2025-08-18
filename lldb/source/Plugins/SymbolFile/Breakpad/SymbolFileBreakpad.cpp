@@ -656,9 +656,9 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
   plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
   plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
-  plan_sp->SetPlanValidAddressRange(
-      AddressRange(base + init_record->Address, *init_record->Size,
-                   m_objfile_sp->GetModule()->GetSectionList()));
+  plan_sp->SetPlanValidAddressRanges(
+      {AddressRange(base + init_record->Address, *init_record->Size,
+                    m_objfile_sp->GetModule()->GetSectionList())});
 
   UnwindPlan::Row row;
   if (!ParseCFIUnwindRow(init_record->UnwindRules, resolver, row))
@@ -696,9 +696,9 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
   plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
   plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
-  plan_sp->SetPlanValidAddressRange(
-      AddressRange(base + record->RVA, record->CodeSize,
-                   m_objfile_sp->GetModule()->GetSectionList()));
+  plan_sp->SetPlanValidAddressRanges(
+      {AddressRange(base + record->RVA, record->CodeSize,
+                    m_objfile_sp->GetModule()->GetSectionList())});
 
   UnwindPlan::Row row;
 

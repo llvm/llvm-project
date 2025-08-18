@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-string-compare %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-suspicious-string-compare %t -- \
 // RUN: -config='{CheckOptions: \
 // RUN:  {bugprone-suspicious-string-compare.WarnOnImplicitComparison: true, \
 // RUN:   bugprone-suspicious-string-compare.WarnOnLogicalNotComparison: true}}' \

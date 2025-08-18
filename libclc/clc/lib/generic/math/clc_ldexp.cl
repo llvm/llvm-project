@@ -86,8 +86,6 @@ _CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   return val_f;
 }
 
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF_ldexp, float, __clc_ldexp, float, int);
-
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -121,8 +119,6 @@ _CLC_DEF_ldexp _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
   return mr;
 }
 
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF_ldexp, double, __clc_ldexp, double, int);
-
 #endif
 
 #ifdef cl_khr_fp16
@@ -133,6 +129,10 @@ _CLC_OVERLOAD _CLC_DEF_ldexp half __clc_ldexp(half x, int n) {
   return (half)__clc_ldexp((float)x, n);
 }
 
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF_ldexp, half, __clc_ldexp, half, int);
-
 #endif
+
+#define __CLC_FUNCTION __clc_ldexp
+#define __CLC_DEF_SPEC _CLC_DEF_ldexp
+#define __CLC_ARG2_TYPE int
+#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#include <clc/math/gentype.inc>

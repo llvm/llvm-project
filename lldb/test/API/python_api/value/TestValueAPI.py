@@ -269,7 +269,14 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable("another_fixed_int_ptr").GetValue(),
             "0xaa",
         )
+        a_null_int_ptr = frame0.FindVariable("a_null_int_ptr")
+        self.assertEqual(a_null_int_ptr.GetValue(), "0x0")
+
+        # Check that dereferencing a null pointer produces reasonable results
+        # (does not crash).
         self.assertEqual(
-            frame0.FindVariable("a_null_int_ptr").GetValue(),
-            "0x0",
+            a_null_int_ptr.Dereference().GetError().GetCString(), "parent is NULL"
+        )
+        self.assertEqual(
+            a_null_int_ptr.Dereference().GetLoadAddress(), lldb.LLDB_INVALID_ADDRESS
         )

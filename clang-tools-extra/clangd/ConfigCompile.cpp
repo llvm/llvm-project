@@ -198,6 +198,7 @@ struct FragmentCompiler {
     compile(std::move(F.InlayHints));
     compile(std::move(F.SemanticTokens));
     compile(std::move(F.Style));
+    compile(std::move(F.Documentation));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -439,8 +440,7 @@ struct FragmentCompiler {
           [Normalized(std::move(Normalized))](const Params &, Config &C) {
             if (C.Diagnostics.SuppressAll)
               return;
-            for (llvm::StringRef N : Normalized)
-              C.Diagnostics.Suppress.insert(N);
+            C.Diagnostics.Suppress.insert_range(Normalized);
           });
 
     if (F.UnusedIncludes) {
@@ -536,7 +536,7 @@ struct FragmentCompiler {
     }
     if (Filters->empty())
       return std::nullopt;
-    auto Filter = [Filters](llvm::StringRef Path) {
+    auto Filter = [Filters = std::move(Filters)](llvm::StringRef Path) {
       for (auto &Regex : *Filters)
         if (Regex.match(Path))
           return true;
@@ -708,6 +708,17 @@ struct FragmentCompiler {
           C.Completion.HeaderInsertion = *Val;
         });
     }
+
+    if (F.CodePatterns) {
+      if (auto Val = compileEnum<Config::CodePatternsPolicy>("CodePatterns",
+                                                             *F.CodePatterns)
+                         .map("All", Config::CodePatternsPolicy::All)
+                         .map("None", Config::CodePatternsPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.CodePatterns = *Val;
+        });
+    }
   }
 
   void compile(Fragment::HoverBlock &&F) {
@@ -780,6 +791,21 @@ struct FragmentCompiler {
             C.SemanticTokens.DisabledModifiers.push_back(std::move(Kind));
         }
       });
+    }
+  }
+
+  void compile(Fragment::DocumentationBlock &&F) {
+    if (F.CommentFormat) {
+      if (auto Val =
+              compileEnum<Config::CommentFormatPolicy>("CommentFormat",
+                                                       *F.CommentFormat)
+                  .map("Plaintext", Config::CommentFormatPolicy::PlainText)
+                  .map("Markdown", Config::CommentFormatPolicy::Markdown)
+                  .map("Doxygen", Config::CommentFormatPolicy::Doxygen)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Documentation.CommentFormat = *Val;
+        });
     }
   }
 

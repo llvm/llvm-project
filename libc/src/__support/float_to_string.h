@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -491,7 +490,7 @@ public:
 
   LIBC_INLINE constexpr BlockInt get_negative_block(int block_index) {
     if (exponent < 0) {
-      const int32_t idx = -exponent / IDX_SIZE;
+      const int32_t idx = -exponent / static_cast<int32_t>(IDX_SIZE);
 
       UInt<MID_INT_SIZE> val;
 
@@ -579,7 +578,7 @@ public:
 
     return num_requested_digits > -exponent;
 #else
-    const int32_t idx = -exponent / IDX_SIZE;
+    const int32_t idx = -exponent / static_cast<int32_t>(IDX_SIZE);
     const size_t p =
         POW10_OFFSET_2[idx] + negative_block_index - MIN_BLOCK_2[idx];
     // If the remaining digits are all 0, then this is the lowest block.
@@ -601,7 +600,7 @@ public:
     }
     return 0;
 #else
-    return MIN_BLOCK_2[-exponent / IDX_SIZE];
+    return MIN_BLOCK_2[-exponent / static_cast<int32_t>(IDX_SIZE)];
 #endif
   }
 };

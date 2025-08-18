@@ -20,12 +20,15 @@
 #include "flang/Common/optional.h"
 #include "flang/Common/reference-wrapper.h"
 #include "flang/Common/visit.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/io-api.h"
 #include <flang/Common/variant.h>
 #include <functional>
 #include <type_traits>
 
 namespace Fortran::runtime::io {
+
+RT_OFFLOAD_API_GROUP_BEGIN
 
 class ExternalFileUnit;
 class ChildIo;
@@ -81,6 +84,9 @@ public:
   // This design avoids virtual member functions and function pointers,
   // which may not have good support in some runtime environments.
 
+  RT_API_ATTRS const NonTbpDefinedIoTable *nonTbpDefinedIoTable() const;
+  RT_API_ATTRS void set_nonTbpDefinedIoTable(const NonTbpDefinedIoTable *);
+
   // CompleteOperation() is the last opportunity to raise an I/O error.
   // It is called by EndIoStatement(), but it can be invoked earlier to
   // catch errors for (e.g.) GetIoMsg() and GetNewUnit().  If called
@@ -130,8 +136,81 @@ public:
   }
 
   // Vacant after the end of the current record
-  RT_API_ATTRS Fortran::common::optional<char32_t> GetCurrentChar(
+  RT_API_ATTRS Fortran::common::optional<char32_t> GetCurrentCharSlow(
       std::size_t &byteCount);
+
+  // For faster formatted input editing, this structure can be built by
+  // GetUpcomingFastAsciiField() and used to save significant time in
+  // GetCurrentChar, NextInField() and other input utilities when the input
+  // is buffered, does not require UTF-8 conversion, and comprises only
+  // single byte characters.
+  class FastAsciiField {
+  public:
+    RT_API_ATTRS FastAsciiField(ConnectionState &connection)
+        : connection_{connection} {}
+    RT_API_ATTRS FastAsciiField(
+        ConnectionState &connection, const char *start, std::size_t bytes)
+        : connection_{connection}, at_{start}, limit_{start + bytes} {
+      CheckForAsterisk();
+    }
+    RT_API_ATTRS ConnectionState &connection() { return connection_; }
+    RT_API_ATTRS std::size_t got() const { return got_; }
+
+    RT_API_ATTRS bool MustUseSlowPath() const { return at_ == nullptr; }
+
+    RT_API_ATTRS Fortran::common::optional<char32_t> Next() const {
+      if (at_ && at_ < limit_) {
+        return *at_;
+      } else {
+        return Fortran::common::nullopt;
+      }
+    }
+    RT_API_ATTRS void NextRecord(IoStatementState &io) {
+      if (at_) {
+        if (std::size_t bytes{io.GetNextInputBytes(at_)}) {
+          limit_ = at_ + bytes;
+          CheckForAsterisk();
+        } else {
+          at_ = limit_ = nullptr;
+        }
+      }
+    }
+    RT_API_ATTRS void Advance(int gotten, std::size_t bytes) {
+      if (at_ && at_ < limit_) {
+        ++at_;
+        got_ += gotten;
+      }
+      connection_.HandleRelativePosition(bytes);
+    }
+    RT_API_ATTRS bool MightHaveAsterisk() const { return !at_ || hasAsterisk_; }
+
+  private:
+    RT_API_ATTRS void CheckForAsterisk() {
+      hasAsterisk_ = at_ && at_ < limit_ &&
+          runtime::memchr(at_, '*', limit_ - at_) != nullptr;
+    }
+
+    ConnectionState &connection_;
+    const char *at_{nullptr};
+    const char *limit_{nullptr};
+    std::size_t got_{0}; // for READ(..., SIZE=)
+    bool hasAsterisk_{false};
+  };
+
+  RT_API_ATTRS FastAsciiField GetUpcomingFastAsciiField();
+
+  RT_API_ATTRS Fortran::common::optional<char32_t> GetCurrentChar(
+      std::size_t &byteCount, FastAsciiField *field = nullptr) {
+    if (field) {
+      if (auto ch{field->Next()}) {
+        byteCount = ch ? 1 : 0;
+        return ch;
+      } else if (!field->MustUseSlowPath()) {
+        return Fortran::common::nullopt;
+      }
+    }
+    return GetCurrentCharSlow(byteCount);
+  }
 
   // The result of CueUpInput() and the "remaining" arguments to SkipSpaces()
   // and NextInField() are always in units of bytes, not characters; the
@@ -139,11 +218,12 @@ public:
 
   // For fixed-width fields, return the number of remaining bytes.
   // Skip over leading blanks.
-  RT_API_ATTRS Fortran::common::optional<int> CueUpInput(const DataEdit &edit) {
+  RT_API_ATTRS Fortran::common::optional<int> CueUpInput(
+      const DataEdit &edit, FastAsciiField *fastField = nullptr) {
     Fortran::common::optional<int> remaining;
     if (edit.IsListDirected()) {
       std::size_t byteCount{0};
-      GetNextNonBlank(byteCount);
+      GetNextNonBlank(byteCount, fastField);
     } else {
       if (edit.width.value_or(0) > 0) {
         remaining = *edit.width;
@@ -152,16 +232,17 @@ public:
           *remaining *= bytesPerChar;
         }
       }
-      SkipSpaces(remaining);
+      SkipSpaces(remaining, fastField);
     }
     return remaining;
   }
 
   RT_API_ATTRS Fortran::common::optional<char32_t> SkipSpaces(
-      Fortran::common::optional<int> &remaining) {
+      Fortran::common::optional<int> &remaining,
+      FastAsciiField *fastField = nullptr) {
     while (!remaining || *remaining > 0) {
       std::size_t byteCount{0};
-      if (auto ch{GetCurrentChar(byteCount)}) {
+      if (auto ch{GetCurrentChar(byteCount, fastField)}) {
         if (*ch != ' ' && *ch != '\t') {
           return ch;
         }
@@ -172,7 +253,11 @@ public:
           GotChar(byteCount);
           *remaining -= byteCount;
         }
-        HandleRelativePosition(byteCount);
+        if (fastField) {
+          fastField->Advance(0, byteCount);
+        } else {
+          HandleRelativePosition(byteCount);
+        }
       } else {
         break;
       }
@@ -183,25 +268,35 @@ public:
   // Acquires the next input character, respecting any applicable field width
   // or separator character.
   RT_API_ATTRS Fortran::common::optional<char32_t> NextInField(
-      Fortran::common::optional<int> &remaining, const DataEdit &);
+      Fortran::common::optional<int> &remaining, const DataEdit &,
+      FastAsciiField *field = nullptr);
 
   // Detect and signal any end-of-record condition after input.
   // Returns true if at EOR and remaining input should be padded with blanks.
-  RT_API_ATTRS bool CheckForEndOfRecord(std::size_t afterReading);
+  RT_API_ATTRS bool CheckForEndOfRecord(
+      std::size_t afterReading, const ConnectionState &);
 
   // Skips spaces, advances records, and ignores NAMELIST comments
   RT_API_ATTRS Fortran::common::optional<char32_t> GetNextNonBlank(
-      std::size_t &byteCount) {
-    auto ch{GetCurrentChar(byteCount)};
+      std::size_t &byteCount, FastAsciiField *fastField = nullptr) {
+    auto ch{GetCurrentChar(byteCount, fastField)};
     bool inNamelist{mutableModes().inNamelist};
     while (!ch || *ch == ' ' || *ch == '\t' || *ch == '\n' ||
         (inNamelist && *ch == '!')) {
       if (ch && (*ch == ' ' || *ch == '\t' || *ch == '\n')) {
-        HandleRelativePosition(byteCount);
-      } else if (!AdvanceRecord()) {
+        if (fastField) {
+          fastField->Advance(0, byteCount);
+        } else {
+          HandleRelativePosition(byteCount);
+        }
+      } else if (AdvanceRecord()) {
+        if (fastField) {
+          fastField->NextRecord(*this);
+        }
+      } else {
         return Fortran::common::nullopt;
       }
-      ch = GetCurrentChar(byteCount);
+      ch = GetCurrentChar(byteCount, fastField);
     }
     return ch;
   }
@@ -271,6 +366,13 @@ public:
   using IoErrorHandler::IoErrorHandler;
 
   RT_API_ATTRS bool completedOperation() const { return completedOperation_; }
+  RT_API_ATTRS const NonTbpDefinedIoTable *nonTbpDefinedIoTable() const {
+    return nonTbpDefinedIoTable_;
+  }
+  RT_API_ATTRS void set_nonTbpDefinedIoTable(
+      const NonTbpDefinedIoTable *table) {
+    nonTbpDefinedIoTable_ = table;
+  }
 
   RT_API_ATTRS void CompleteOperation() { completedOperation_ = true; }
   RT_API_ATTRS int EndIoStatement() { return GetIoStat(); }
@@ -305,6 +407,11 @@ public:
 
 protected:
   bool completedOperation_{false};
+
+private:
+  // Original NonTbpDefinedIoTable argument to Input/OutputDerivedType,
+  // saved here so that it can also be used in child I/O statements.
+  const NonTbpDefinedIoTable *nonTbpDefinedIoTable_{nullptr};
 };
 
 // Common state for list-directed & NAMELIST I/O, both internal & external
@@ -331,7 +438,9 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  RT_API_ATTRS bool inNamelistSequence() const { return inNamelistSequence_; }
+  RT_API_ATTRS const NamelistGroup *namelistGroup() const {
+    return namelistGroup_;
+  }
   RT_API_ATTRS int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
@@ -344,15 +453,19 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  RT_API_ATTRS void ResetForNextNamelistItem(bool inNamelistSequence) {
+  RT_API_ATTRS void ResetForNextNamelistItem(
+      const NamelistGroup *namelistGroup) {
     remaining_ = 0;
     if (repeatPosition_) {
       repeatPosition_->Cancel();
     }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    inNamelistSequence_ = inNamelistSequence;
+    namelistGroup_ = namelistGroup;
   }
+
+protected:
+  const NamelistGroup *namelistGroup_{nullptr};
 
 private:
   int remaining_{0}; // for "r*" repetition
@@ -361,7 +474,6 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
-  bool inNamelistSequence_{false};
 };
 
 template <Direction DIR>
@@ -538,8 +650,10 @@ class ChildIoStatementState : public IoStatementBase,
 public:
   RT_API_ATTRS ChildIoStatementState(
       ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
+  RT_API_ATTRS const NonTbpDefinedIoTable *nonTbpDefinedIoTable() const;
+  RT_API_ATTRS void set_nonTbpDefinedIoTable(const NonTbpDefinedIoTable *);
   RT_API_ATTRS ChildIo &child() { return child_; }
-  RT_API_ATTRS MutableModes &mutableModes();
+  RT_API_ATTRS MutableModes &mutableModes() { return mutableModes_; }
   RT_API_ATTRS ConnectionState &GetConnectionState();
   RT_API_ATTRS ExternalFileUnit *GetExternalFileUnit() const;
   RT_API_ATTRS int EndIoStatement();
@@ -552,6 +666,7 @@ public:
 
 private:
   ChildIo &child_;
+  MutableModes mutableModes_;
 };
 
 template <Direction DIR, typename CHAR>
@@ -562,7 +677,6 @@ public:
   RT_API_ATTRS ChildFormattedIoStatementState(ChildIo &, const CharType *format,
       std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
       const char *sourceFile = nullptr, int sourceLine = 0);
-  RT_API_ATTRS MutableModes &mutableModes() { return mutableModes_; }
   RT_API_ATTRS void CompleteOperation();
   RT_API_ATTRS int EndIoStatement();
   RT_API_ATTRS bool AdvanceRecord(int = 1);
@@ -572,7 +686,6 @@ public:
   }
 
 private:
-  MutableModes mutableModes_;
   FormatControl<ChildFormattedIoStatementState> format_;
 };
 
@@ -580,7 +693,8 @@ template <Direction DIR>
 class ChildListIoStatementState : public ChildIoStatementState<DIR>,
                                   public ListDirectedStatementState<DIR> {
 public:
-  using ChildIoStatementState<DIR>::ChildIoStatementState;
+  RT_API_ATTRS ChildListIoStatementState(
+      ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
   RT_API_ATTRS int EndIoStatement();
 };
@@ -789,6 +903,8 @@ private:
   ConnectionState connection_;
   ExternalFileUnit *unit_{nullptr};
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_IO_STMT_H_

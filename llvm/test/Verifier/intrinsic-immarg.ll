@@ -163,30 +163,12 @@ define void @test_scatter_8i32(<8 x i32> %a1, <8 x ptr> %ptr, <8 x i1> %mask, i3
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-define void @test_lifetime_start(i64 %arg0, ptr %ptr) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i64 %arg0
-  ; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 %arg0, ptr %ptr)
-  call void @llvm.lifetime.start.p0(i64 %arg0, ptr %ptr)
-  ret void
-}
-
-declare void @llvm.lifetime.end.p0(i64, ptr)
-define void @test_lifetime_end(i64 %arg0, ptr %ptr) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i64 %arg0
-  ; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 %arg0, ptr %ptr)
-  call void @llvm.lifetime.end.p0(i64 %arg0, ptr %ptr)
-  ret void
-}
-
-declare void @llvm.invariant.start.p0(i64, ptr)
+declare ptr @llvm.invariant.start.p0(i64, ptr)
 define void @test_invariant_start(i64 %arg0, ptr %ptr) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i64 %arg0
-  ; CHECK-NEXT: call void @llvm.invariant.start.p0(i64 %arg0, ptr %ptr)
-  call void @llvm.invariant.start.p0(i64 %arg0, ptr %ptr)
+  ; CHECK-NEXT: call ptr @llvm.invariant.start.p0(i64 %arg0, ptr %ptr)
+  call ptr @llvm.invariant.start.p0(i64 %arg0, ptr %ptr)
   ret void
 }
 
@@ -211,12 +193,12 @@ define void @test_prefetch(ptr %ptr, i32 %arg0, i32 %arg1) {
   ret void
 }
 
-declare void @llvm.localrecover(ptr, ptr, i32)
+declare ptr @llvm.localrecover(ptr, ptr, i32)
 define void @test_localrecover(ptr %func, ptr %fp, i32 %idx) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %idx
-  ; CHECK-NEXT: call void @llvm.localrecover(ptr %func, ptr %fp, i32 %idx)
-  call void @llvm.localrecover(ptr %func, ptr %fp, i32 %idx)
+  ; CHECK-NEXT: call ptr @llvm.localrecover(ptr %func, ptr %fp, i32 %idx)
+  call ptr @llvm.localrecover(ptr %func, ptr %fp, i32 %idx)
   ret void
 }
 

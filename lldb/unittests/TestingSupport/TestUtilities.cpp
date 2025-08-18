@@ -47,3 +47,12 @@ llvm::Expected<TestFile> TestFile::fromYamlFile(const llvm::Twine &Name) {
     return llvm::errorCodeToError(BufferOrError.getError());
   return fromYaml(BufferOrError.get()->getBuffer());
 }
+
+llvm::Expected<llvm::sys::fs::TempFile> TestFile::writeToTemporaryFile() {
+  llvm::Expected<llvm::sys::fs::TempFile> Temp =
+      llvm::sys::fs::TempFile::create("temp%%%%%%%%%%%%%%%%");
+  if (!Temp)
+    return Temp.takeError();
+  llvm::raw_fd_ostream(Temp->FD, /*shouldClose=*/false) << Buffer;
+  return std::move(*Temp);
+}

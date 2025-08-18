@@ -6,6 +6,8 @@
 define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg5, ptr %arg6, ptr %arg7, ptr %arg8, ptr %arg9) {
 ; CHECK-LABEL: eggs:
 ; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0

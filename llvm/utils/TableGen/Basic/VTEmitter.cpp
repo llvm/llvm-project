@@ -79,8 +79,9 @@ static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
       OS << "Type::getInt" << OutputVTSize << "Ty(Context)";
     else
       OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
-  } else
+  } else {
     llvm_unreachable("Unhandled case");
+  }
 
   if (IsVector)
     OS << ", " << VT->getValueAsInt("nElem") << ")";

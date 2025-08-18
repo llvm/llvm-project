@@ -55,7 +55,6 @@ public:
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
-  bool expandPostRAPseudo(MachineInstr &MI) const override;
 };
 
 namespace SPIRV {

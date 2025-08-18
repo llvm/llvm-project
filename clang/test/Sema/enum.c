@@ -108,7 +108,7 @@ void PR8694(int* e) // expected-note {{passing argument to parameter 'e' here}}
 {
 }
 
-void crash(enum E* e) // expected-warning {{declaration of 'enum E' will not be visible outside of this function}} \
+void crash(enum E *e) // expected-warning {{declaration of 'enum E' will not be visible outside of this function}} \
                       // expected-warning {{ISO C forbids forward references to 'enum' types}}
 {
         PR8694(e); // expected-warning {{incompatible pointer types passing 'enum E *' to parameter of type 'int *'}}

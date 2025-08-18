@@ -30,52 +30,52 @@
 ---
 name:            test
 registers:
-  - { id: 0, class: float32regs }
-  - { id: 1, class: float64regs }
-  - { id: 2, class: int32regs }
-  - { id: 3, class: float64regs }
-  - { id: 4, class: float32regs }
-  - { id: 5, class: float32regs }
-  - { id: 6, class: float32regs }
-  - { id: 7, class: float32regs }
+  - { id: 0, class: b32 }
+  - { id: 1, class: b64 }
+  - { id: 2, class: b32 }
+  - { id: 3, class: b64 }
+  - { id: 4, class: b32 }
+  - { id: 5, class: b32 }
+  - { id: 6, class: b32 }
+  - { id: 7, class: b32 }
 body: |
   bb.0.entry:
-    %0 = LD_f32 0, 0, 4, 1, 2, 32, &test_param_0, 0
+    %0 = LD_i32 0, 0, 4, 2, 32, &test_param_0, 0
     %1 = CVT_f64_f32 %0, 0
-    %2 = LD_i32 0, 0, 4, 1, 0, 32, &test_param_1, 0
-  ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 3.250000e+00
+    %2 = LD_i32 0, 0, 4, 0, 32, &test_param_1, 0
+  ; CHECK: %3:b64 = FADD_rnf64ri %1, double 3.250000e+00
     %3 = FADD_rnf64ri %1, double 3.250000e+00
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
-  ; CHECK: %6:float32regs = FADD_rnf32ri %5, float 6.250000e+00
-    %6 = FADD_rnf32ri %5, float 6.250000e+00
-    %7 = FMUL_rnf32rr %6, %4
-    StoreRetvalF32 %7, 0
+  ; CHECK: %6:b32 = FADD_rnf32ri %5, float 6.250000e+00
+    %6 = FADD_rnf32ri %5, float 6.250000e+00, 0
+    %7 = FMUL_rnf32rr %6, %4, 0
+    ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
     Return
 ...
 ---
 name:            test2
 registers:
-  - { id: 0, class: float32regs }
-  - { id: 1, class: float64regs }
-  - { id: 2, class: int32regs }
-  - { id: 3, class: float64regs }
-  - { id: 4, class: float32regs }
-  - { id: 5, class: float32regs }
-  - { id: 6, class: float32regs }
-  - { id: 7, class: float32regs }
+  - { id: 0, class: b32 }
+  - { id: 1, class: b64 }
+  - { id: 2, class: b32 }
+  - { id: 3, class: b64 }
+  - { id: 4, class: b32 }
+  - { id: 5, class: b32 }
+  - { id: 6, class: b32 }
+  - { id: 7, class: b32 }
 body: |
   bb.0.entry:
-    %0 = LD_f32 0, 0, 4, 1, 2, 32, &test2_param_0, 0
+    %0 = LD_i32 0, 0, 4, 2, 32, &test2_param_0, 0
     %1 = CVT_f64_f32 %0, 0
-    %2 = LD_i32 0, 0, 4, 1, 0, 32, &test2_param_1, 0
-  ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 0x7FF8000000000000
+    %2 = LD_i32 0, 0, 4, 0, 32, &test2_param_1, 0
+  ; CHECK: %3:b64 = FADD_rnf64ri %1, double 0x7FF8000000000000
     %3 = FADD_rnf64ri %1, double 0x7FF8000000000000
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
-  ; CHECK: %6:float32regs = FADD_rnf32ri %5, float 0x7FF8000000000000
-    %6 = FADD_rnf32ri %5, float 0x7FF8000000000000
-    %7 = FMUL_rnf32rr %6, %4
-    StoreRetvalF32 %7, 0
+  ; CHECK: %6:b32 = FADD_rnf32ri %5, float 0x7FF8000000000000
+    %6 = FADD_rnf32ri %5, float 0x7FF8000000000000, 0
+    %7 = FMUL_rnf32rr %6, %4, 0
+    ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
     Return
 ...

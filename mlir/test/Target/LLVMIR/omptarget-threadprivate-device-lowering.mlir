@@ -4,7 +4,7 @@
 // omp.threadprivate does not crash on lowering during the OpenMP target device
 // pass when used in conjunction with target code in the same module.
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true } {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true } {
   llvm.func @func() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %0 = llvm.mlir.addressof @_QFEpointer2 : !llvm.ptr
     %1 = omp.threadprivate %0 : !llvm.ptr -> !llvm.ptr
@@ -24,7 +24,8 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 }
 
 // CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) #{{[0-9]+}} {
-// CHECK:  %[[ALLOCA:.*]] = alloca ptr, align 8
-// CHECK:  store ptr %[[ARG1]], ptr %[[ALLOCA]], align 8
-// CHECK:  %[[LOAD_ALLOCA:.*]] = load ptr, ptr %[[ALLOCA]], align 8
+// CHECK:  %[[ALLOCA:.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK:  %[[ALLOCA_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA]] to ptr
+// CHECK:  store ptr %[[ARG1]], ptr %[[ALLOCA_ASCAST]], align 8
+// CHECK:  %[[LOAD_ALLOCA:.*]] = load ptr, ptr %[[ALLOCA_ASCAST]], align 8
 // CHECK:  store i32 1, ptr %[[LOAD_ALLOCA]], align 4

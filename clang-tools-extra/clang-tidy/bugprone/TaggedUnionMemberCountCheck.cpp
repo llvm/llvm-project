@@ -52,9 +52,8 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
     if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
       if (FirstMatch) {
         return false;
-      } else {
-        FirstMatch = Field;
       }
+      FirstMatch = Field;
     }
   }
 
@@ -106,17 +105,21 @@ void TaggedUnionMemberCountCheck::storeOptions(
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
 
-  auto UnionField = fieldDecl(hasType(qualType(
-      hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
+  auto NotFromSystemHeaderOrStdNamespace =
+      unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
-  auto EnumField = fieldDecl(hasType(
-      qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
+  auto UnionField =
+      fieldDecl(hasType(qualType(hasCanonicalType(recordType(hasDeclaration(
+          recordDecl(isUnion(), NotFromSystemHeaderOrStdNamespace)))))));
 
-  auto hasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
-  auto hasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
+  auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
+      enumType(hasDeclaration(enumDecl(NotFromSystemHeaderOrStdNamespace)))))));
 
-  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), hasOneUnionField,
-                                hasOneEnumField, unless(isImplicit()))
+  auto HasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
+  auto HasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
+
+  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), HasOneUnionField,
+                                HasOneEnumField, unless(isImplicit()))
                          .bind(RootMatchBindName),
                      this);
 }
@@ -145,7 +148,8 @@ TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
 
   if (EnableCountingEnumHeuristic && LastEnumConstant &&
       isCountingEnumLikeName(LastEnumConstant->getName()) &&
-      (LastEnumConstant->getInitVal() == (EnumValues.size() - 1))) {
+      llvm::APSInt::isSameValue(LastEnumConstant->getInitVal(),
+                                llvm::APSInt::get(EnumValues.size() - 1))) {
     return {EnumValues.size() - 1, LastEnumConstant};
   }
 

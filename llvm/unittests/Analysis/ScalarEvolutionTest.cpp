@@ -39,7 +39,8 @@ protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
 
-  ScalarEvolutionsTest() : M("", Context), TLII(), TLI(TLII) {}
+  ScalarEvolutionsTest()
+      : M("", Context), TLII(M.getTargetTriple()), TLI(TLII) {}
 
   ScalarEvolution buildSE(Function &F) {
     AC.reset(new AssumptionCache(F));
@@ -1704,6 +1705,67 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
     // crash if the comparator has the specific caching bug.
     SE.getSCEV(F.getEntryBlock().getTerminator()->getOperand(0));
   });
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
+  // Regression test for a case where caching of equivalent values caused the
+  // comparator to get inconsistent.
+
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Type *PtrTy = PointerType::get(Context, 0);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
+                                        {PtrTy, PtrTy, PtrTy, Int64Ty}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  ReturnInst::Create(Context, nullptr, BB);
+
+  ScalarEvolution SE = buildSE(*F);
+
+  const SCEV *S0 = SE.getSCEV(F->getArg(0));
+  const SCEV *S1 = SE.getSCEV(F->getArg(1));
+  const SCEV *S2 = SE.getSCEV(F->getArg(2));
+
+  const SCEV *P0 = SE.getPtrToIntExpr(S0, Int64Ty);
+  const SCEV *P1 = SE.getPtrToIntExpr(S1, Int64Ty);
+  const SCEV *P2 = SE.getPtrToIntExpr(S2, Int64Ty);
+
+  const SCEV *M0 = SE.getNegativeSCEV(P0);
+  const SCEV *M2 = SE.getNegativeSCEV(P2);
+
+  SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+  // crash if the comparator has the specific caching bug.
+  SE.getAddExpr(Ops);
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering3) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Constant *Init = Constant::getNullValue(Int64Ty);
+  Type *PtrTy = PointerType::get(Context, 0);
+  Constant *Null = Constant::getNullValue(PtrTy);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
+
+  Value *V0 = new GlobalVariable(M, Int64Ty, false,
+                                 GlobalValue::ExternalLinkage, Init, "V0");
+  Value *V1 = new GlobalVariable(M, Int64Ty, false,
+                                 GlobalValue::ExternalLinkage, Init, "V1");
+  Value *V2 = new GlobalVariable(M, Int64Ty, false,
+                                 GlobalValue::InternalLinkage, Init, "V2");
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  Value *C0 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V0, Null,
+                               "c0", BB);
+  Value *C1 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V1, Null,
+                               "c1", BB);
+  Value *C2 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V2, Null,
+                               "c2", BB);
+  Value *Or0 = BinaryOperator::CreateOr(C0, C1, "or0", BB);
+  Value *Or1 = BinaryOperator::CreateOr(Or0, C2, "or1", BB);
+  ReturnInst::Create(Context, nullptr, BB);
+  ScalarEvolution SE = buildSE(*F);
+  // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+  // crash if the comparator is inconsistent about global variable linkage.
+  SE.getSCEV(Or1);
 }
 
 }  // end namespace llvm

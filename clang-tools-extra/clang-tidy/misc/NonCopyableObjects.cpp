@@ -9,7 +9,6 @@
 #include "NonCopyableObjects.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 

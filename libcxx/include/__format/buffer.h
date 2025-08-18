@@ -179,7 +179,7 @@ private:
 /// The latter option allows formatted_size to use the output buffer without
 /// ever writing anything to the buffer.
 template <__fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __output_buffer {
+class __output_buffer {
 public:
   using value_type _LIBCPP_NODEBUG           = _CharT;
   using __prepare_write_type _LIBCPP_NODEBUG = void (*)(__output_buffer<_CharT>&, size_t);
@@ -339,18 +339,18 @@ concept __insertable =
 
 /// Extract the container type of a \ref back_insert_iterator.
 template <class _It>
-struct _LIBCPP_TEMPLATE_VIS __back_insert_iterator_container {
+struct __back_insert_iterator_container {
   using type _LIBCPP_NODEBUG = void;
 };
 
 template <__insertable _Container>
-struct _LIBCPP_TEMPLATE_VIS __back_insert_iterator_container<back_insert_iterator<_Container>> {
+struct __back_insert_iterator_container<back_insert_iterator<_Container>> {
   using type _LIBCPP_NODEBUG = _Container;
 };
 
 // A dynamically growing buffer.
 template <__fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __allocating_buffer : public __output_buffer<_CharT> {
+class __allocating_buffer : public __output_buffer<_CharT> {
 public:
   __allocating_buffer(const __allocating_buffer&)            = delete;
   __allocating_buffer& operator=(const __allocating_buffer&) = delete;
@@ -407,7 +407,7 @@ private:
 
 // A buffer that directly writes to the underlying buffer.
 template <class _OutIt, __fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __direct_iterator_buffer : public __output_buffer<_CharT> {
+class __direct_iterator_buffer : public __output_buffer<_CharT> {
 public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __direct_iterator_buffer(_OutIt __out_it)
       : __direct_iterator_buffer{__out_it, nullptr} {}
@@ -436,7 +436,7 @@ private:
 
 // A buffer that writes its output to the end of a container.
 template <class _OutIt, __fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __container_inserter_buffer : public __output_buffer<_CharT> {
+class __container_inserter_buffer : public __output_buffer<_CharT> {
 public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __container_inserter_buffer(_OutIt __out_it)
       : __container_inserter_buffer{__out_it, nullptr} {}
@@ -477,7 +477,7 @@ private:
 // Unlike the __container_inserter_buffer this class' performance does benefit
 // from allocating and then inserting.
 template <class _OutIt, __fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __iterator_buffer : public __allocating_buffer<_CharT> {
+class __iterator_buffer : public __allocating_buffer<_CharT> {
 public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __iterator_buffer(_OutIt __out_it)
       : __allocating_buffer<_CharT>{}, __out_it_{std::move(__out_it)} {}
@@ -495,7 +495,7 @@ private:
 
 // Selects the type of the buffer used for the output iterator.
 template <class _OutIt, __fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __buffer_selector {
+class __buffer_selector {
   using _Container _LIBCPP_NODEBUG = __back_insert_iterator_container<_OutIt>::type;
 
 public:
@@ -509,7 +509,7 @@ public:
 
 // A buffer that counts and limits the number of insertions.
 template <class _OutIt, __fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __format_to_n_buffer : private __buffer_selector<_OutIt, _CharT>::type {
+class __format_to_n_buffer : private __buffer_selector<_OutIt, _CharT>::type {
 public:
   using _Base _LIBCPP_NODEBUG = __buffer_selector<_OutIt, _CharT>::type;
 
@@ -533,7 +533,7 @@ private:
 // Since formatted_size only needs to know the size, the output itself is
 // discarded.
 template <__fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __formatted_size_buffer : private __output_buffer<_CharT> {
+class __formatted_size_buffer : private __output_buffer<_CharT> {
 public:
   using _Base _LIBCPP_NODEBUG = __output_buffer<_CharT>;
 
@@ -576,7 +576,7 @@ private:
 // This class uses its own buffer management, since using vector
 // would lead to a circular include with formatter for vector<bool>.
 template <__fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __retarget_buffer {
+class __retarget_buffer {
   using _Alloc _LIBCPP_NODEBUG = allocator<_CharT>;
 
 public:

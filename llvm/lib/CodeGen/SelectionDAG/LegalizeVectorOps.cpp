@@ -189,6 +189,12 @@ class VectorLegalizer {
 
   void PromoteSTRICT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  /// Calculate the reduction using a type of higher precision and round the
+  /// result to match the original type. Setting NonArithmetic signifies the
+  /// rounding of the result does not affect its value.
+  void PromoteFloatVECREDUCE(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                             bool NonArithmetic);
+
 public:
   VectorLegalizer(SelectionDAG& dag) :
       DAG(dag), TLI(dag.getTargetLoweringInfo()) {}
@@ -469,8 +475,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
-  case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -502,20 +506,14 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
   case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMINIMUM:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
-    break;
-  case ISD::VECREDUCE_FMAX:
-  case ISD::VECREDUCE_FMIN:
-  case ISD::VECREDUCE_FMAXIMUM:
-  case ISD::VECREDUCE_FMINIMUM:
-    Action = TLI.getOperationAction(Node->getOpcode(),
-                                    Node->getOperand(0).getValueType());
-    // Defer non-vector results to LegalizeDAG.
-    if (Action == TargetLowering::Promote)
-      Action = TargetLowering::Legal;
     break;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
@@ -530,6 +528,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
     break;
   }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    Action =
+        TLI.getPartialReduceMLAAction(Op.getOpcode(), Node->getValueType(0),
+                                      Node->getOperand(1).getValueType());
+    break;
 
 #define BEGIN_REGISTER_VP_SDNODE(VPID, LEGALPOS, ...)                          \
   case ISD::VPID: {                                                            \
@@ -683,6 +688,24 @@ void VectorLegalizer::PromoteSTRICT(SDNode *Node,
   Results.push_back(Round.getValue(1));
 }
 
+void VectorLegalizer::PromoteFloatVECREDUCE(SDNode *Node,
+                                            SmallVectorImpl<SDValue> &Results,
+                                            bool NonArithmetic) {
+  MVT OpVT = Node->getOperand(0).getSimpleValueType();
+  assert(OpVT.isFloatingPoint() && "Expected floating point reduction!");
+  MVT NewOpVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OpVT);
+
+  SDLoc DL(Node);
+  SDValue NewOp = DAG.getNode(ISD::FP_EXTEND, DL, NewOpVT, Node->getOperand(0));
+  SDValue Rdx =
+      DAG.getNode(Node->getOpcode(), DL, NewOpVT.getVectorElementType(), NewOp,
+                  Node->getFlags());
+  SDValue Res =
+      DAG.getNode(ISD::FP_ROUND, DL, Node->getValueType(0), Rdx,
+                  DAG.getIntPtrConstant(NonArithmetic, DL, /*isTarget=*/true));
+  Results.push_back(Res);
+}
+
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
@@ -713,6 +736,15 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
     PromoteSTRICT(Node, Results);
+    return;
+  case ISD::VECREDUCE_FADD:
+    PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/false);
+    return;
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMINIMUM:
+    PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/true);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
@@ -1207,6 +1239,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     return;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     Results.push_back(TLI.expandPartialReduceMLA(Node, DAG));
     return;
   case ISD::VECREDUCE_SEQ_FADD:
@@ -1382,8 +1415,7 @@ SDValue VectorLegalizer::ExpandANY_EXTEND_VECTOR_INREG(SDNode *Node) {
     NumSrcElements = VT.getSizeInBits() / SrcVT.getScalarSizeInBits();
     SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
                              NumSrcElements);
-    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SrcVT, DAG.getUNDEF(SrcVT),
-                      Src, DAG.getVectorIdxConstant(0, DL));
+    Src = DAG.getInsertSubvector(DL, DAG.getUNDEF(SrcVT), Src, 0);
   }
 
   // Build a base mask of undef shuffles.
@@ -1441,8 +1473,7 @@ SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDNode *Node) {
     NumSrcElements = VT.getSizeInBits() / SrcVT.getScalarSizeInBits();
     SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
                              NumSrcElements);
-    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SrcVT, DAG.getUNDEF(SrcVT),
-                      Src, DAG.getVectorIdxConstant(0, DL));
+    Src = DAG.getInsertSubvector(DL, DAG.getUNDEF(SrcVT), Src, 0);
   }
 
   // Build up a zero vector to blend into this one.
@@ -2056,11 +2087,10 @@ void VectorLegalizer::ExpandSETCC(SDNode *Node,
     // Otherwise, SETCC for the given comparison type must be completely
     // illegal; expand it into a SELECT_CC.
     EVT VT = Node->getValueType(0);
-    LHS =
-        DAG.getNode(ISD::SELECT_CC, dl, VT, LHS, RHS,
-                    DAG.getBoolConstant(true, dl, VT, LHS.getValueType()),
-                    DAG.getBoolConstant(false, dl, VT, LHS.getValueType()), CC);
-    LHS->setFlags(Node->getFlags());
+    LHS = DAG.getNode(ISD::SELECT_CC, dl, VT, LHS, RHS,
+                      DAG.getBoolConstant(true, dl, VT, LHS.getValueType()),
+                      DAG.getBoolConstant(false, dl, VT, LHS.getValueType()),
+                      CC, Node->getFlags());
   }
 
   Results.push_back(LHS);
@@ -2193,17 +2223,13 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
 
   SDLoc DL(Node);
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
 
   unsigned OpNum = 0;
   for (auto &VFParam : OptVFInfo->Shape.Parameters) {
     if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
       EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), *Ctx, VT);
-      Entry.Node = DAG.getBoolConstant(true, DL, MaskVT, VT);
-      Entry.Ty = MaskVT.getTypeForEVT(*Ctx);
-      Args.push_back(Entry);
+      Args.emplace_back(DAG.getBoolConstant(true, DL, MaskVT, VT),
+                        MaskVT.getTypeForEVT(*Ctx));
       continue;
     }
 
@@ -2211,9 +2237,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
     if (VFParam.ParamKind != VFParamKind::Vector)
       return false;
 
-    Entry.Node = Node->getOperand(OpNum++);
-    Entry.Ty = Ty;
-    Args.push_back(Entry);
+    Args.emplace_back(Node->getOperand(OpNum++), Ty);
   }
 
   // Emit a call to the vector function.

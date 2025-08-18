@@ -289,9 +289,6 @@ public:
     /// An Expression (optional) that performs the writeback with any required
     /// casting.
     const Expr *WritebackExpr;
-
-    // Size for optional lifetime end on the temporary.
-    llvm::Value *LifetimeSz;
   };
 
   struct CallArgCleanup {
@@ -312,21 +309,17 @@ public:
   /// this, the old CallArgList retains its list of arguments, but must not
   /// be used to emit a call.
   void addFrom(const CallArgList &other) {
-    insert(end(), other.begin(), other.end());
-    Writebacks.insert(Writebacks.end(), other.Writebacks.begin(),
-                      other.Writebacks.end());
-    CleanupsToDeactivate.insert(CleanupsToDeactivate.end(),
-                                other.CleanupsToDeactivate.begin(),
-                                other.CleanupsToDeactivate.end());
+    llvm::append_range(*this, other);
+    llvm::append_range(Writebacks, other.Writebacks);
+    llvm::append_range(CleanupsToDeactivate, other.CleanupsToDeactivate);
     assert(!(StackBase && other.StackBase) && "can't merge stackbases");
     if (!StackBase)
       StackBase = other.StackBase;
   }
 
   void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse,
-                    const Expr *writebackExpr = nullptr,
-                    llvm::Value *lifetimeSz = nullptr) {
-    Writeback writeback = {srcLV, temporary, toUse, writebackExpr, lifetimeSz};
+                    const Expr *writebackExpr = nullptr) {
+    Writeback writeback = {srcLV, temporary, toUse, writebackExpr};
     Writebacks.push_back(writeback);
   }
 

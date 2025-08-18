@@ -74,9 +74,6 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() != RISCV::PseudoVSETVLI &&
           MI.getOpcode() != RISCV::PseudoVSETIVLI)
         continue;
-      // For PseudoVSETVLIX0, Rd = X0 has special meaning.
-      if (MI.getOpcode() == RISCV::PseudoVSETVLIX0)
-        continue;
       for (int I = 0, E = Desc.getNumDefs(); I != E; ++I) {
         MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg() || !MO.isDef() || MO.isEarlyClobber())
@@ -99,6 +96,8 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           X0Reg = RISCV::X0_W;
         } else if (RC && RC->contains(RISCV::X0_H)) {
           X0Reg = RISCV::X0_H;
+        } else if (RC && RC->contains(RISCV::X0_Pair)) {
+          X0Reg = RISCV::X0_Pair;
         } else {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;

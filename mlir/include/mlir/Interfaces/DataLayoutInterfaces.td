@@ -171,6 +171,18 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*methodName=*/"getStackAlignmentIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
+    InterfaceMethod<
+      /*description=*/"Returns the function pointer alignment identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getFunctionPointerAlignmentIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the legal int widths identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getLegalIntWidthsIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
     // Implementations may override this if they have an efficient lookup
     // mechanism.
     InterfaceMethod<
@@ -232,9 +244,9 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
     /// identifier they are associated with. Users are not expected to call this
     /// method directly.
     void bucketEntriesByType(
-        ::llvm::DenseMap<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
-        ::llvm::DenseMap<::mlir::StringAttr,
-                         ::mlir::DataLayoutEntryInterface> &ids);
+        ::llvm::MapVector<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
+        ::llvm::MapVector<::mlir::StringAttr,
+                          ::mlir::DataLayoutEntryInterface> &ids);
   }];
 }
 
@@ -554,6 +566,30 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
+      /*description=*/"Returns the function pointer alignment in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"Attribute",
+      /*methodName=*/"getFunctionPointerAlignment",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultFunctionPointerAlignment(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the legal int widths, each width in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"Attribute",
+      /*methodName=*/"getLegalIntWidths",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultLegalIntWidths(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
       /*description=*/"Returns the value of the property, if the property is "
                       "defined. Otherwise, it returns std::nullopt.",
       /*retTy=*/"std::optional<Attribute>",
@@ -565,7 +601,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >
   ];
-
+  let dependentTraits = [IsolatedFromAbove];
   let verify = [{ return ::mlir::detail::verifyDataLayoutOp($_op); }];
 }
 

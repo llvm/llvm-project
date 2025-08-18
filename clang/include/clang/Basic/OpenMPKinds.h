@@ -223,6 +223,12 @@ enum OpenMPNumTasksClauseModifier {
   OMPC_NUMTASKS_unknown
 };
 
+enum OpenMPNumThreadsClauseModifier {
+#define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTHREADS_unknown
+};
+
 /// OpenMP dependence types for 'doacross' clause.
 enum OpenMPDoacrossClauseModifier {
 #define OPENMP_DOACROSS_MODIFIER(Name) OMPC_DOACROSS_##Name,
@@ -411,9 +417,11 @@ bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 /// directive that can be nested within region corresponding to construct
 /// on which order clause was specified with concurrent as ordering argument.
 /// \param DKind Specified directive.
+/// \param LangOpts Used for getting the OpenMP version.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind);
+bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
+                                              const LangOptions &LangOpts);
 }
 
 template <>

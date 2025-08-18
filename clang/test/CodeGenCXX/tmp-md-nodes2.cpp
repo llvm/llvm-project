@@ -1,8 +1,6 @@
 // REQUIRES: asserts
 // RUN: %clang_cc1 -O0 -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm %s -o - | \
 // RUN: FileCheck %s
-// RUN: %clang_cc1 -O0 -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm -mllvm --experimental-debuginfo-iterators=true %s -o - | \
-// RUN: FileCheck %s
 
 // This test simply checks that the varargs thunk is created. The failing test
 // case asserts.

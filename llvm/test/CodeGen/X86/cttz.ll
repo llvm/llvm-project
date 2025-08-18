@@ -352,26 +352,31 @@ define i32 @cttz_i32_zero_test(i32 %n) {
 }
 
 ; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
-define i64 @cttz_i64_zero_test(i64 %n) {
+define i64 @cttz_i64_zero_test(i64 %n) nounwind {
 ; X86-NOCMOV-LABEL: cttz_i64_zero_test:
 ; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    pushl %esi
+; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOCMOV-NOT:     rep
-; X86-NOCMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %edx
-; X86-NOCMOV-NEXT:    movl $32, %eax
-; X86-NOCMOV-NEXT:    je .LBB7_2
-; X86-NOCMOV-NEXT:  # %bb.1:
-; X86-NOCMOV-NEXT:    movl %edx, %eax
-; X86-NOCMOV-NEXT:  .LBB7_2:
+; X86-NOCMOV-NEXT:    xorl %edx, %edx
+; X86-NOCMOV-NEXT:    movl %ecx, %esi
+; X86-NOCMOV-NEXT:    orl %eax, %esi
+; X86-NOCMOV-NEXT:    je .LBB7_1
+; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
 ; X86-NOCMOV-NEXT:    testl %ecx, %ecx
 ; X86-NOCMOV-NEXT:    jne .LBB7_3
-; X86-NOCMOV-NEXT:  # %bb.4:
+; X86-NOCMOV-NEXT:  # %bb.4: # %cond.false
+; X86-NOCMOV-NEXT:    rep bsfl %eax, %eax
 ; X86-NOCMOV-NEXT:    addl $32, %eax
-; X86-NOCMOV-NEXT:    xorl %edx, %edx
+; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    retl
+; X86-NOCMOV-NEXT:  .LBB7_1:
+; X86-NOCMOV-NEXT:    movl $64, %eax
+; X86-NOCMOV-NEXT:    popl %esi
 ; X86-NOCMOV-NEXT:    retl
 ; X86-NOCMOV-NEXT:  .LBB7_3:
 ; X86-NOCMOV-NEXT:    rep bsfl %ecx, %eax
-; X86-NOCMOV-NEXT:    xorl %edx, %edx
+; X86-NOCMOV-NEXT:    popl %esi
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: cttz_i64_zero_test:

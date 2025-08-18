@@ -14,7 +14,7 @@ define void @br_fcmp_oeq_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB0_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_oeq_bcnez_float:
 ; LA64:       # %bb.0:
@@ -46,7 +46,7 @@ define void @br_fcmp_oeq_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB1_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_oeq_bceqz_float:
 ; LA64:       # %bb.0:
@@ -78,7 +78,7 @@ define void @br_fcmp_ogt_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB2_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ogt_bcnez_float:
 ; LA64:       # %bb.0:
@@ -110,7 +110,7 @@ define void @br_fcmp_ogt_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB3_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ogt_bceqz_float:
 ; LA64:       # %bb.0:
@@ -142,7 +142,7 @@ define void @br_fcmp_oge_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB4_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_oge_bcnez_float:
 ; LA64:       # %bb.0:
@@ -174,7 +174,7 @@ define void @br_fcmp_oge_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB5_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_oge_bceqz_float:
 ; LA64:       # %bb.0:
@@ -206,7 +206,7 @@ define void @br_fcmp_olt_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB6_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_olt_bcnez_float:
 ; LA64:       # %bb.0:
@@ -238,7 +238,7 @@ define void @br_fcmp_olt_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB7_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_olt_bceqz_float:
 ; LA64:       # %bb.0:
@@ -270,7 +270,7 @@ define void @br_fcmp_ole_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB8_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ole_bcnez_float:
 ; LA64:       # %bb.0:
@@ -302,7 +302,7 @@ define void @br_fcmp_ole_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB9_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ole_bceqz_float:
 ; LA64:       # %bb.0:
@@ -334,7 +334,7 @@ define void @br_fcmp_one_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB10_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_one_bcnez_float:
 ; LA64:       # %bb.0:
@@ -366,7 +366,7 @@ define void @br_fcmp_one_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB11_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_one_bceqz_float:
 ; LA64:       # %bb.0:
@@ -398,7 +398,7 @@ define void @br_fcmp_ord_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB12_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ord_bcnez_float:
 ; LA64:       # %bb.0:
@@ -430,7 +430,7 @@ define void @br_fcmp_ord_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB13_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ord_bceqz_float:
 ; LA64:       # %bb.0:
@@ -462,7 +462,7 @@ define void @br_fcmp_ueq_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB14_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ueq_bcnez_float:
 ; LA64:       # %bb.0:
@@ -494,7 +494,7 @@ define void @br_fcmp_ueq_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB15_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ueq_bceqz_float:
 ; LA64:       # %bb.0:
@@ -526,7 +526,7 @@ define void @br_fcmp_ugt_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB16_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ugt_bcnez_float:
 ; LA64:       # %bb.0:
@@ -558,7 +558,7 @@ define void @br_fcmp_ugt_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB17_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ugt_bceqz_float:
 ; LA64:       # %bb.0:
@@ -590,7 +590,7 @@ define void @br_fcmp_uge_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB18_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_uge_bcnez_float:
 ; LA64:       # %bb.0:
@@ -622,7 +622,7 @@ define void @br_fcmp_uge_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB19_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_uge_bceqz_float:
 ; LA64:       # %bb.0:
@@ -654,7 +654,7 @@ define void @br_fcmp_ult_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB20_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ult_bcnez_float:
 ; LA64:       # %bb.0:
@@ -686,7 +686,7 @@ define void @br_fcmp_ult_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB21_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ult_bceqz_float:
 ; LA64:       # %bb.0:
@@ -718,7 +718,7 @@ define void @br_fcmp_ule_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB22_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ule_bcnez_float:
 ; LA64:       # %bb.0:
@@ -750,7 +750,7 @@ define void @br_fcmp_ule_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB23_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_ule_bceqz_float:
 ; LA64:       # %bb.0:
@@ -782,7 +782,7 @@ define void @br_fcmp_une_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB24_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_une_bcnez_float:
 ; LA64:       # %bb.0:
@@ -814,7 +814,7 @@ define void @br_fcmp_une_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB25_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_une_bceqz_float:
 ; LA64:       # %bb.0:
@@ -846,7 +846,7 @@ define void @br_fcmp_uno_bcnez_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB26_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_uno_bcnez_float:
 ; LA64:       # %bb.0:
@@ -878,7 +878,7 @@ define void @br_fcmp_uno_bceqz_float(float %a, float %b) nounwind {
 ; LA32-NEXT:  .LBB27_2: # %if.then
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(abort)
+; LA32-NEXT:    bl abort
 ;
 ; LA64-LABEL: br_fcmp_uno_bceqz_float:
 ; LA64:       # %bb.0:

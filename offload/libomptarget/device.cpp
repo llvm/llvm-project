@@ -79,9 +79,9 @@ DeviceTy::~DeviceTy() {
 llvm::Error DeviceTy::init() {
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to initialize device %d\n",
-                                   DeviceID);
+    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                     "failed to initialize device %d\n",
+                                     DeviceID);
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -103,8 +103,8 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   __tgt_device_binary Binary;
 
   if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to load binary %p", Img);
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to load binary %p", Img);
   return Binary;
 }
 
@@ -189,6 +189,10 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   }
   return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
                                   DstPtr, Size, AsyncInfo);
+}
+
+int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
+  return RTL->data_fence(RTLDeviceID, AsyncInfo);
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {

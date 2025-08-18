@@ -18,3 +18,14 @@ namespace PR40329 {
   int k1 = B::e ->* B();
   int k2 = B() ->* B::e;
 }
+
+namespace ForwardDecl {
+  struct A {
+    friend class B;
+  };
+  struct B {
+    enum E { X };
+    friend E operator|(E, E);
+    void g() { operator|(X, X); }
+  };
+}

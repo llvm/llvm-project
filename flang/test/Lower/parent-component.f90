@@ -132,7 +132,7 @@ contains
 
   ! CHECK-LABEL: func.func private @_QFPinit_existing_field
   ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}"_QFFinit_existing_fieldEy"
-  ! CHECK:           %[[VAL_5:.*]] = hlfir.designate %[[VAL_4]]#0{"c"}   shape %[[VAL_3]] : (!fir.ref<!fir.array<2x!fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>
+  ! CHECK:           %[[VAL_5:.*]] = hlfir.designate %[[VAL_4]]#0{"c"}   shape %[[VAL_3:.*]] : (!fir.ref<!fir.array<2x!fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>
   ! CHECK:           %[[VAL_6:.*]] = hlfir.designate %[[VAL_5]]{"p"}   shape %[[VAL_3]] : (!fir.box<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
 
   subroutine parent_comp_lhs()

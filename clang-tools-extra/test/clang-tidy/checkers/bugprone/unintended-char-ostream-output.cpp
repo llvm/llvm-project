@@ -27,41 +27,56 @@ using ostream = basic_ostream<char>;
 
 class A : public std::ostream {};
 
+using uint8_t = unsigned char;
+using int8_t = signed char;
+
 void origin_ostream(std::ostream &os) {
-  unsigned char unsigned_value = 9;
+  uint8_t unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'uint8_t' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<unsigned int>(unsigned_value);
 
-  signed char signed_value = 9;
+  int8_t signed_value = 9;
   os << signed_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'signed char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'int8_t' (aka 'signed char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<int>(signed_value);
 
   char char_value = 9;
   os << char_value;
+  unsigned char unsigned_char_value = 9;
+  os << unsigned_char_value;
+  signed char signed_char_value = 9;
+  os << signed_char_value;
+}
+
+void explicit_cast_to_char_type(std::ostream &os) {
+  enum V : uint8_t {};
+  V e{};
+  os << static_cast<unsigned char>(e);
+  os << (unsigned char)(e);
+  os << (static_cast<unsigned char>(e));
 }
 
 void based_on_ostream(A &os) {
-  unsigned char unsigned_value = 9;
+  uint8_t unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'uint8_t' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<unsigned int>(unsigned_value);
 
-  signed char signed_value = 9;
+  int8_t signed_value = 9;
   os << signed_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'signed char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'int8_t' (aka 'signed char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<int>(signed_value);
 
   char char_value = 9;
   os << char_value;
 }
 
-void based_on_ostream(std::basic_ostream<unsigned char> &os) {
-  unsigned char unsigned_value = 9;
+void other_ostream_template_parameters(std::basic_ostream<uint8_t> &os) {
+  uint8_t unsigned_value = 9;
   os << unsigned_value;
 
-  signed char signed_value = 9;
+  int8_t signed_value = 9;
   os << signed_value;
 
   char char_value = 9;
@@ -70,23 +85,22 @@ void based_on_ostream(std::basic_ostream<unsigned char> &os) {
 
 template <class T> class B : public std::ostream {};
 void template_based_on_ostream(B<int> &os) {
-  unsigned char unsigned_value = 9;
+  uint8_t unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'uint8_t' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<unsigned int>(unsigned_value);
 }
 
 template<class T> void template_fn_1(T &os) {
-  unsigned char unsigned_value = 9;
+  uint8_t unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'uint8_t' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<unsigned int>(unsigned_value);
 }
 template<class T> void template_fn_2(std::ostream &os) {
   T unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
-  // CHECK-FIXES: os << static_cast<unsigned int>(unsigned_value);
+  // It should be detected as well. But we cannot get the sugared type name for SubstTemplateTypeParmType.
 }
 template<class T> void template_fn_3(std::ostream &os) {
   T unsigned_value = 9;
@@ -95,24 +109,8 @@ template<class T> void template_fn_3(std::ostream &os) {
 void call_template_fn() {
   A a{};
   template_fn_1(a);
-  template_fn_2<unsigned char>(a);
+  template_fn_2<uint8_t>(a);
   template_fn_3<char>(a);
-}
-
-using U8 = unsigned char;
-void alias_unsigned_char(std::ostream &os) {
-  U8 v = 9;
-  os << v;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'U8' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
-  // CHECK-FIXES: os << static_cast<unsigned int>(v);
-}
-
-using I8 = signed char;
-void alias_signed_char(std::ostream &os) {
-  I8 v = 9;
-  os << v;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'I8' (aka 'signed char') passed to 'operator<<' outputs as character instead of integer
-  // CHECK-FIXES: os << static_cast<int>(v);
 }
 
 using C8 = char;
@@ -124,8 +122,8 @@ void alias_char(std::ostream &os) {
 
 #define MACRO_VARIANT_NAME a
 void macro_variant_name(std::ostream &os) {
-  unsigned char MACRO_VARIANT_NAME = 9;
+  uint8_t MACRO_VARIANT_NAME = 9;
   os << MACRO_VARIANT_NAME;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'uint8_t' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
   // CHECK-FIXES: os << static_cast<unsigned int>(MACRO_VARIANT_NAME);
 }

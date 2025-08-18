@@ -224,12 +224,12 @@ ARM_ARCH_EXT_NAME("dotprod", ARM::AEK_DOTPROD, "+dotprod", "-dotprod")
 ARM_ARCH_EXT_NAME("dsp", ARM::AEK_DSP, "+dsp", "-dsp")
 ARM_ARCH_EXT_NAME("fp", ARM::AEK_FP, {}, {})
 ARM_ARCH_EXT_NAME("fp.dp", ARM::AEK_FP_DP, {}, {})
-ARM_ARCH_EXT_NAME("mve", (ARM::AEK_DSP | ARM::AEK_SIMD), "+mve", "-mve")
-ARM_ARCH_EXT_NAME("mve.fp", (ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP),
+ARM_ARCH_EXT_NAME("mve", (ARM::AEK_DSP | ARM::AEK_MVE), "+mve", "-mve")
+ARM_ARCH_EXT_NAME("mve.fp", (ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP),
                   "+mve.fp", "-mve.fp")
 ARM_ARCH_EXT_NAME("idiv", (ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB), {}, {})
 ARM_ARCH_EXT_NAME("mp", ARM::AEK_MP, {}, {})
-ARM_ARCH_EXT_NAME("simd", ARM::AEK_SIMD, {}, {})
+ARM_ARCH_EXT_NAME("simd", ARM::AEK_SIMD, "+neon", "-neon")
 ARM_ARCH_EXT_NAME("sec", ARM::AEK_SEC, {}, {})
 ARM_ARCH_EXT_NAME("virt", ARM::AEK_VIRT, {}, {})
 ARM_ARCH_EXT_NAME("fp16", ARM::AEK_FP16, "+fullfp16", "-fullfp16")
@@ -345,12 +345,12 @@ ARM_CPU_NAME("cortex-m33", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
 ARM_CPU_NAME("star-mc1", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
 ARM_CPU_NAME("cortex-m35p", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
 ARM_CPU_NAME("cortex-m55", ARMV8_1MMainline, FK_FP_ARMV8_FULLFP16_D16, false,
-             (ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP | ARM::AEK_FP16))
+             (ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP | ARM::AEK_FP16))
 ARM_CPU_NAME("cortex-m85", ARMV8_1MMainline, FK_FP_ARMV8_FULLFP16_D16, false,
-             (ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP | ARM::AEK_FP16 |
+             (ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP | ARM::AEK_FP16 |
               ARM::AEK_RAS | ARM::AEK_PACBTI))
 ARM_CPU_NAME("cortex-m52", ARMV8_1MMainline, FK_FP_ARMV8_FULLFP16_D16, false,
-             (ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP | ARM::AEK_FP16 |
+             (ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP | ARM::AEK_FP16 |
               ARM::AEK_RAS | ARM::AEK_PACBTI))
 ARM_CPU_NAME("cortex-a32", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("cortex-a35", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)

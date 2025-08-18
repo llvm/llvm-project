@@ -75,7 +75,7 @@ define i81 @smax_undef(i81 %x) {
 
 define i81 @smax_poison(i81 %x) {
 ; CHECK-LABEL: @smax_poison(
-; CHECK-NEXT:    ret i81 1208925819614629174706175
+; CHECK-NEXT:    ret i81 poison
 ;
   %r = call i81 @llvm.smax.i81(i81 poison, i81 %x)
   ret i81 %r
@@ -91,7 +91,7 @@ define i3 @smin_undef(i3 %x) {
 
 define i3 @smin_poison(i3 %x) {
 ; CHECK-LABEL: @smin_poison(
-; CHECK-NEXT:    ret i3 -4
+; CHECK-NEXT:    ret i3 poison
 ;
   %r = call i3 @llvm.smin.i3(i3 %x, i3 poison)
   ret i3 %r
@@ -107,7 +107,7 @@ define <2 x i8> @umax_undef(<2 x i8> %x) {
 
 define <2 x i8> @umax_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @umax_poison(
-; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> poison, <2 x i8> %x)
   ret <2 x i8> %r
@@ -123,7 +123,7 @@ define <2 x i8> @umin_undef(<2 x i8> %x) {
 
 define <2 x i8> @umin_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @umin_poison(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> poison)
   ret <2 x i8> %r

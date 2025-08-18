@@ -291,7 +291,7 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGPU-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// AMDGPU-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+// AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // AMDGPU-NEXT:    ret i32 [[TMP0]]
 //
 //
@@ -300,7 +300,7 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGPU-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// AMDGPU-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
+// AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 // AMDGPU-NEXT:    ret i32 [[TMP0]]
 //
 //
@@ -309,7 +309,7 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
 // AMDGPU-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGPU-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// AMDGPU-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
+// AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
 // AMDGPU-NEXT:    ret i32 [[TMP0]]
 //
 //
@@ -887,7 +887,7 @@ __gpu_kernel void foo() {
 // NVPTX-LABEL: define internal void @__gpu_sync_threads(
 // NVPTX-SAME: ) #[[ATTR0]] {
 // NVPTX-NEXT:  [[ENTRY:.*:]]
-// NVPTX-NEXT:    call void @llvm.nvvm.barrier0()
+// NVPTX-NEXT:    call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
 // NVPTX-NEXT:    ret void
 //
 //

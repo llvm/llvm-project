@@ -65,11 +65,9 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
 
   // Create CompilerInvocation - use a dedicated instance of DiagnosticsEngine
   // for parsing the arguments
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
-      new clang::DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
-      new clang::DiagnosticOptions();
-  clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
+  clang::DiagnosticOptions diagOpts;
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                 diagsBuffer);
   bool success = CompilerInvocation::createFromArgs(flang->getInvocation(),
                                                     argv, diags, argv0);
 

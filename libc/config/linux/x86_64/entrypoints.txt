@@ -36,6 +36,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.poll.poll
 
     # sched.h entrypoints
+    libc.src.sched.getcpu
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_getaffinity
@@ -193,6 +194,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -245,6 +247,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
@@ -286,6 +291,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/statvfs.h
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
+
+    # sys/utimes.h entrypoints
+    libc.src.sys.time.utimes
 
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
@@ -359,11 +367,47 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
+    libc.src.wchar.wcsnlen
     libc.src.wchar.wctob
+    libc.src.wchar.wmemmove
+    libc.src.wchar.wmemset
+    libc.src.wchar.wcschr
+    libc.src.wchar.wcsncmp
+    libc.src.wchar.wcscmp
+    libc.src.wchar.wcspbrk
+    libc.src.wchar.wcsrchr
+    libc.src.wchar.wcsspn
+    libc.src.wchar.wcscspn
+    libc.src.wchar.wcsdup
+    libc.src.wchar.wmemcmp
+    libc.src.wchar.wmempcpy
+    libc.src.wchar.wmemcpy
+    libc.src.wchar.wcsncpy
+    libc.src.wchar.wcscat
+    libc.src.wchar.wcsstr
+    libc.src.wchar.wcsncat
+    libc.src.wchar.wcslcat
+    libc.src.wchar.wcscpy
+    libc.src.wchar.wcslcpy
+    libc.src.wchar.wmemchr
+    libc.src.wchar.wcpcpy
+    libc.src.wchar.wcpncpy
+    libc.src.wchar.wcstok
+    libc.src.wchar.wcstol
+    libc.src.wchar.wcstoll
+    libc.src.wchar.wcstoul
+    libc.src.wchar.wcstoull
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -407,12 +451,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -621,6 +668,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl
@@ -651,8 +699,14 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
-    libc.src.math.asinf16
     libc.src.math.acosf16
+    libc.src.math.acoshf16
+    libc.src.math.acospif16
+    libc.src.math.asinf16
+    libc.src.math.asinhf16
+    libc.src.math.asinpif16
+    libc.src.math.atanf16
+    libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -686,6 +740,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
+    libc.src.math.fmaf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
     libc.src.math.fmaximum_magf16
@@ -701,6 +756,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
+    libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
     libc.src.math.issignalingf16
@@ -770,6 +826,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
@@ -834,6 +891,52 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
+  )
+endif()
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.bf16add
+  libc.src.math.bf16addf
+  libc.src.math.bf16addl
+  libc.src.math.bf16div
+  libc.src.math.bf16divf
+  libc.src.math.bf16divl
+  libc.src.math.bf16fma
+  libc.src.math.bf16fmaf
+  libc.src.math.bf16fmal
+  libc.src.math.bf16mul
+  libc.src.math.bf16mulf
+  libc.src.math.bf16mull
+  libc.src.math.bf16sub
+  libc.src.math.bf16subf
+  libc.src.math.bf16subl
+  libc.src.math.ceilbf16
+  libc.src.math.fabsbf16
+  libc.src.math.floorbf16
+  libc.src.math.fmaxbf16
+  libc.src.math.fmaximumbf16
+  libc.src.math.fmaximum_magbf16
+  libc.src.math.fmaximum_mag_numbf16
+  libc.src.math.fmaximum_numbf16
+  libc.src.math.fminbf16
+  libc.src.math.fminimumbf16
+  libc.src.math.fminimum_magbf16
+  libc.src.math.fminimum_mag_numbf16
+  libc.src.math.fminimum_numbf16
+  libc.src.math.roundbf16
+  libc.src.math.roundevenbf16
+  libc.src.math.truncbf16
+)
+
+if(LIBC_TYPES_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C++23 mixed bfloat16 and _Float128 entrypoints
+    libc.src.math.bf16addf128
+    libc.src.math.bf16divf128
+    libc.src.math.bf16fmaf128
+    libc.src.math.bf16mulf128
+    libc.src.math.bf16subf128
   )
 endif()
 
@@ -904,6 +1007,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.countlsuhk
     libc.src.stdfix.countlsuk
     libc.src.stdfix.countlsulk
+    libc.src.stdfix.idivr
+    libc.src.stdfix.idivlr
+    libc.src.stdfix.idivk
+    libc.src.stdfix.idivlk
+    libc.src.stdfix.idivur
+    libc.src.stdfix.idivulr
+    libc.src.stdfix.idivuk
+    libc.src.stdfix.idivulk
   )
 endif()
 
@@ -987,6 +1098,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete
+    libc.src.pthread.pthread_barrier_init
+    libc.src.pthread.pthread_barrier_wait
+    libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
@@ -1035,6 +1149,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr
@@ -1068,6 +1184,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.perror
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -1194,6 +1311,21 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recv
     libc.src.sys.socket.recvfrom
     libc.src.sys.socket.recvmsg
+
+    # wchar.h entrypoints
+    libc.src.wchar.mblen
+    libc.src.wchar.mbrlen
+    libc.src.wchar.mbsinit
+    libc.src.wchar.mbrtowc
+    libc.src.wchar.mbtowc
+    libc.src.wchar.mbstowcs
+    libc.src.wchar.mbsrtowcs
+    libc.src.wchar.mbsnrtowcs
+    libc.src.wchar.wcrtomb
+    libc.src.wchar.wctomb
+    libc.src.wchar.wcstombs
+    libc.src.wchar.wcsrtombs
+    libc.src.wchar.wcsnrtombs
   )
 endif()
 

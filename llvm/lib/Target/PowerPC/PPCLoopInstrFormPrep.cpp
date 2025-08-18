@@ -95,7 +95,6 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -221,13 +220,7 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopInstrFormPrep() : FunctionPass(ID) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
-
-    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<DominatorTreeWrapperPass>();

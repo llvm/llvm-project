@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -25,8 +26,8 @@ struct MemorySanitizerOptions {
   MemorySanitizerOptions() : MemorySanitizerOptions(0, false, false, false){};
   MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
       : MemorySanitizerOptions(TrackOrigins, Recover, Kernel, false) {}
-  MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
-                         bool EagerChecks);
+  LLVM_ABI MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
+                                  bool EagerChecks);
   bool Kernel;
   int TrackOrigins;
   bool Recover;
@@ -42,9 +43,10 @@ struct MemorySanitizerOptions {
 struct MemorySanitizerPass : public PassInfoMixin<MemorySanitizerPass> {
   MemorySanitizerPass(MemorySanitizerOptions Options) : Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
   static bool isRequired() { return true; }
 
 private:

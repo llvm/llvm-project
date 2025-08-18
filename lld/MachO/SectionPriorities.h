@@ -16,6 +16,7 @@
 namespace lld::macho {
 
 using SectionPair = std::pair<const InputSection *, const InputSection *>;
+using StringPiecePair = std::pair<CStringInputSection *, size_t>;
 
 class PriorityBuilder {
 public:
@@ -28,16 +29,27 @@ public:
   //
   // An order file has one entry per line, in the following format:
   //
-  //   <cpu>:<object file>:<symbol name>
+  //   <cpu>:<object file>:[<symbol name> | CStringEntryPrefix <cstring hash>]
   //
-  // <cpu> and <object file> are optional. If not specified, then that entry
-  // matches any symbol of that name. Parsing this format is not quite
-  // straightforward because the symbol name itself can contain colons, so when
-  // encountering a colon, we consider the preceding characters to decide if it
-  // can be a valid CPU type or file path.
+  // <cpu> and <object file> are optional.
+  // If not specified, then that entry tries to match either,
   //
+  // 1) any symbol of the <symbol name>;
+  // Parsing this format is not quite straightforward because the symbol name
+  // itself can contain colons, so when encountering a colon, we consider the
+  // preceding characters to decide if it can be a valid CPU type or file path.
   // If a symbol is matched by multiple entries, then it takes the
   // lowest-ordered entry (the one nearest to the front of the list.)
+  //
+  // or 2) any cstring literal with the given hash, if the entry has the
+  // CStringEntryPrefix prefix defined below in the file. <cstring hash> is the
+  // hash of cstring literal content.
+  //
+  // Cstring literals are not symbolized, we can't identify them by name
+  // However, cstrings are deduplicated, hence unique, so we use the hash of
+  // the content of cstring literals to identify them and assign priority to it.
+  // We use the same hash as used in StringPiece, i.e. 31 bit:
+  // xxh3_64bits(string) & 0x7fffffff
   //
   // The file can also have line comments that start with '#'.
   void parseOrderFile(StringRef path);
@@ -54,6 +66,8 @@ public:
   // Each section gets assigned the priority of the highest-priority symbol it
   // contains.
   llvm::DenseMap<const InputSection *, int> buildInputSectionPriorities();
+  std::vector<StringPiecePair>
+      buildCStringPriorities(ArrayRef<CStringInputSection *>);
 
 private:
   // The symbol with the smallest priority should be ordered first in the output
@@ -65,8 +79,11 @@ private:
     // The priority given to a matching symbol from a particular object file.
     llvm::DenseMap<llvm::StringRef, int> objectFiles;
   };
+  const llvm::StringRef CStringEntryPrefix = "CSTR;";
 
   std::optional<int> getSymbolPriority(const Defined *sym);
+  std::optional<int> getSymbolOrCStringPriority(const StringRef key,
+                                                InputFile *f);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };

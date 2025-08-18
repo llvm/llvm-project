@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.FixedAddressDereference -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
 
 extern char *something();
 

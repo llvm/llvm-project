@@ -868,7 +868,7 @@ namespace cwg54 { // cwg54: 2.8
   // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'cwg54::B'}}
   //   expected-note@#cwg54-B {{declared private here}}
   int B::*smba = static_cast<int B::*>(&A::a);
-  // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'B'}}
+  // expected-error@-1 {{cannot cast private base class 'A' to 'B'}}
   //   expected-note@#cwg54-B {{declared private here}}
 
   V &svb = static_cast<V&>(b);
@@ -880,7 +880,7 @@ namespace cwg54 { // cwg54: 2.8
   B *spbv = static_cast<B*>(&v);
   // expected-error@-1 {{cannot cast 'cwg54::V *' to 'B *' via virtual base 'cwg54::V'}}
   int B::*smbv = static_cast<int B::*>(&V::v);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
 
   A &cab = (A&)(b);
   A *cpab = (A*)(&b);
@@ -898,7 +898,7 @@ namespace cwg54 { // cwg54: 2.8
   B *cpbv = (B*)(&v);
   // expected-error@-1 {{cannot cast 'cwg54::V *' to 'B *' via virtual base 'cwg54::V'}}
   int B::*cmbv = (int B::*)(&V::v);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
 } // namespace cwg54
 
 namespace cwg55 { // cwg55: 2.7

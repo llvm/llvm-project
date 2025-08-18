@@ -17,9 +17,8 @@ f_crossbb1:
         .size f_crossbb1, .-f_crossbb1
 // CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_crossbb1, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:       ret
-// CHECK-NEXT:  The 2 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT:  2.     {{[0-9a-f]+}}:      autiasp
 
 // A test that checks that the dataflow state tracking across when merging BBs
 // seems to work:

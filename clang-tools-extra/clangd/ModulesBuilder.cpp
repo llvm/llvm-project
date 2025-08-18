@@ -160,6 +160,16 @@ public:
           RequiredModule->getModuleFilePath().str());
   }
 
+  std::string getAsString() const {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    for (const auto &ModuleFile : RequiredModules) {
+      OS << "-fmodule-file=" << ModuleFile->getModuleName() << "="
+         << ModuleFile->getModuleFilePath() << " ";
+    }
+    return Result;
+  }
+
   bool canReuse(const CompilerInvocation &CI,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override;
 
@@ -181,15 +191,15 @@ private:
 bool IsModuleFileUpToDate(PathRef ModuleFilePath,
                           const PrerequisiteModules &RequisiteModules,
                           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
-  RequisiteModules.adjustHeaderSearchOptions(*HSOpts);
-  HSOpts->ForceCheckCXX20ModulesInputFiles = true;
-  HSOpts->ValidateASTInputFilesContent = true;
+  HeaderSearchOptions HSOpts;
+  RequisiteModules.adjustHeaderSearchOptions(HSOpts);
+  HSOpts.ForceCheckCXX20ModulesInputFiles = true;
+  HSOpts.ValidateASTInputFilesContent = true;
 
   clang::clangd::IgnoreDiagnostics IgnoreDiags;
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
-                                          &IgnoreDiags,
+      CompilerInstance::createDiagnostics(*VFS, DiagOpts, &IgnoreDiags,
                                           /*ShouldOwnClient=*/false);
 
   LangOptions LangOpts;
@@ -199,17 +209,19 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   SourceManager SourceMgr(*Diags, FileMgr);
 
-  HeaderSearch HeaderInfo(std::move(HSOpts), SourceMgr, *Diags, LangOpts,
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, *Diags, LangOpts,
                           /*Target=*/nullptr);
 
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModuleLoader;
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), *Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModuleLoader);
+  Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
+                  ModuleLoader);
 
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
+  CodeGenOptions CodeGenOpts;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
-                   PCHOperations.getRawReader(), {});
+                   PCHOperations.getRawReader(), CodeGenOpts, {});
 
   // We don't need any listener here. By default it will use a validator
   // listener.
@@ -295,8 +307,27 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
   GenerateReducedModuleInterfaceAction Action;
   Clang->ExecuteAction(Action);
 
-  if (Clang->getDiagnostics().hasErrorOccurred())
-    return llvm::createStringError("Compilation failed");
+  if (Clang->getDiagnostics().hasErrorOccurred()) {
+    std::string Cmds;
+    for (const auto &Arg : Inputs.CompileCommand.CommandLine) {
+      if (!Cmds.empty())
+        Cmds += " ";
+      Cmds += Arg;
+    }
+
+    clangd::vlog("Failed to compile {0} with command: {1}.", ModuleUnitFileName,
+                 Cmds);
+
+    std::string BuiltModuleFilesStr = BuiltModuleFiles.getAsString();
+    if (!BuiltModuleFilesStr.empty())
+      clangd::vlog("The actual used module files built by clangd is {0}",
+                   BuiltModuleFilesStr);
+
+    return llvm::createStringError(
+        llvm::formatv("Failed to compile {0}. Use '--log=verbose' to view "
+                      "detailed failure reasons.",
+                      ModuleUnitFileName));
+  }
 
   return ModuleFile{ModuleName, Inputs.CompileCommand.Output};
 }
@@ -429,10 +460,10 @@ private:
 /// Collect the directly and indirectly required module names for \param
 /// ModuleName in topological order. The \param ModuleName is guaranteed to
 /// be the last element in \param ModuleNames.
-llvm::SmallVector<StringRef> getAllRequiredModules(PathRef RequiredSource,
-                                                   CachingProjectModules &MDB,
-                                                   StringRef ModuleName) {
-  llvm::SmallVector<llvm::StringRef> ModuleNames;
+llvm::SmallVector<std::string> getAllRequiredModules(PathRef RequiredSource,
+                                                     CachingProjectModules &MDB,
+                                                     StringRef ModuleName) {
+  llvm::SmallVector<std::string> ModuleNames;
   llvm::StringSet<> ModuleNamesSet;
 
   auto VisitDeps = [&](StringRef ModuleName, auto Visitor) -> void {
@@ -443,7 +474,7 @@ llvm::SmallVector<StringRef> getAllRequiredModules(PathRef RequiredSource,
       if (ModuleNamesSet.insert(RequiredModuleName).second)
         Visitor(RequiredModuleName, Visitor);
 
-    ModuleNames.push_back(ModuleName);
+    ModuleNames.push_back(ModuleName.str());
   };
   VisitDeps(ModuleName, VisitDeps);
 
@@ -493,13 +524,13 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
   // Get Required modules in topological order.
   auto ReqModuleNames = getAllRequiredModules(RequiredSource, MDB, ModuleName);
   for (llvm::StringRef ReqModuleName : ReqModuleNames) {
-    if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
+    if (BuiltModuleFiles.isModuleUnitBuilt(ReqModuleName))
       continue;
 
     if (auto Cached = Cache.getModule(ReqModuleName)) {
       if (IsModuleFileUpToDate(Cached->getModuleFilePath(), BuiltModuleFiles,
                                TFS.view(std::nullopt))) {
-        log("Reusing module {0} from {1}", ModuleName,
+        log("Reusing module {0} from {1}", ReqModuleName,
             Cached->getModuleFilePath());
         BuiltModuleFiles.addModuleFile(std::move(Cached));
         continue;
@@ -507,14 +538,16 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
       Cache.remove(ReqModuleName);
     }
 
+    std::string ReqFileName =
+        MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
     llvm::Expected<ModuleFile> MF = buildModuleFile(
-        ModuleName, ModuleUnitFileName, getCDB(), TFS, BuiltModuleFiles);
+        ReqModuleName, ReqFileName, getCDB(), TFS, BuiltModuleFiles);
     if (llvm::Error Err = MF.takeError())
       return Err;
 
-    log("Built module {0} to {1}", ModuleName, MF->getModuleFilePath());
+    log("Built module {0} to {1}", ReqModuleName, MF->getModuleFilePath());
     auto BuiltModuleFile = std::make_shared<const ModuleFile>(std::move(*MF));
-    Cache.add(ModuleName, BuiltModuleFile);
+    Cache.add(ReqModuleName, BuiltModuleFile);
     BuiltModuleFiles.addModuleFile(std::move(BuiltModuleFile));
   }
 

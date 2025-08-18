@@ -12,13 +12,11 @@
 
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -31,6 +29,29 @@ namespace mlir {
 
 using namespace mlir;
 using namespace mlir::scf;
+
+namespace {
+
+/// Implement the interface to convert SCF to EmitC.
+struct SCFToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateEmitCSizeTTypeConversions(typeConverter);
+    populateSCFToEmitCConversionPatterns(patterns, typeConverter);
+  }
+};
+} // namespace
+
+void mlir::registerConvertSCFToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
+    dialect->addInterfaces<SCFToEmitCDialectInterface>();
+  });
+}
 
 namespace {
 
@@ -70,7 +91,7 @@ createVariablesForResults(T op, const TypeConverter *typeConverter,
     Type varType = emitc::LValueType::get(resultType);
     emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
     emitc::VariableOp var =
-        rewriter.create<emitc::VariableOp>(loc, varType, noInit);
+        emitc::VariableOp::create(rewriter, loc, varType, noInit);
     resultVariables.push_back(var);
   }
 
@@ -82,14 +103,14 @@ createVariablesForResults(T op, const TypeConverter *typeConverter,
 static void assignValues(ValueRange values, ValueRange variables,
                          ConversionPatternRewriter &rewriter, Location loc) {
   for (auto [value, var] : llvm::zip(values, variables))
-    rewriter.create<emitc::AssignOp>(loc, var, value);
+    emitc::AssignOp::create(rewriter, loc, var, value);
 }
 
 SmallVector<Value> loadValues(const SmallVector<Value> &variables,
                               PatternRewriter &rewriter, Location loc) {
   return llvm::map_to_vector<>(variables, [&](Value var) {
     Type type = cast<emitc::LValueType>(var.getType()).getValueType();
-    return rewriter.create<emitc::LoadOp>(loc, type, var).getResult();
+    return emitc::LoadOp::create(rewriter, loc, type, var).getResult();
   });
 }
 
@@ -108,7 +129,7 @@ static LogicalResult lowerYield(Operation *op, ValueRange resultVariables,
 
   assignValues(yieldOperands, resultVariables, rewriter, loc);
 
-  rewriter.create<emitc::YieldOp>(loc);
+  emitc::YieldOp::create(rewriter, loc);
   rewriter.eraseOp(yield);
 
   return success();
@@ -133,6 +154,10 @@ ForLowering::matchAndRewrite(ForOp forOp, OpAdaptor adaptor,
                              ConversionPatternRewriter &rewriter) const {
   Location loc = forOp.getLoc();
 
+  if (forOp.getUnsignedCmp())
+    return rewriter.notifyMatchFailure(forOp,
+                                       "unsigned loops are not supported");
+
   // Create an emitc::variable op for each result. These variables will be
   // assigned to by emitc::assign ops within the loop body.
   SmallVector<Value> resultVariables;
@@ -143,8 +168,9 @@ ForLowering::matchAndRewrite(ForOp forOp, OpAdaptor adaptor,
 
   assignValues(adaptor.getInitArgs(), resultVariables, rewriter, loc);
 
-  emitc::ForOp loweredFor = rewriter.create<emitc::ForOp>(
-      loc, adaptor.getLowerBound(), adaptor.getUpperBound(), adaptor.getStep());
+  emitc::ForOp loweredFor =
+      emitc::ForOp::create(rewriter, loc, adaptor.getLowerBound(),
+                           adaptor.getUpperBound(), adaptor.getStep());
 
   Block *loweredBody = loweredFor.getBody();
 
@@ -236,7 +262,7 @@ IfLowering::matchAndRewrite(IfOp ifOp, OpAdaptor adaptor,
   bool hasElseBlock = !elseRegion.empty();
 
   auto loweredIf =
-      rewriter.create<emitc::IfOp>(loc, adaptor.getCondition(), false, false);
+      emitc::IfOp::create(rewriter, loc, adaptor.getCondition(), false, false);
 
   Region &loweredThenRegion = loweredIf.getThenRegion();
   auto result = lowerRegion(thenRegion, loweredThenRegion);
@@ -283,8 +309,9 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
                                        "create variables for results failed");
   }
 
-  auto loweredSwitch = rewriter.create<emitc::SwitchOp>(
-      loc, adaptor.getArg(), adaptor.getCases(), indexSwitchOp.getNumCases());
+  auto loweredSwitch =
+      emitc::SwitchOp::create(rewriter, loc, adaptor.getArg(),
+                              adaptor.getCases(), indexSwitchOp.getNumCases());
 
   // Lowering all case regions.
   for (auto pair :

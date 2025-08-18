@@ -572,4 +572,27 @@ class FunctionalCastInit {
   // CHECK-FIXES: double c{double('C')};
 };
 
+#define ARITHMETIC_MACRO (44 - 2)
+
+class DefaultMemberInitWithArithmetic {
+  DefaultMemberInitWithArithmetic() : a{1 + 1},  b{1 + 11 + 123 + 1234},  c{2 + (4 / 2) + 3 + (7 / 11)},  d{ARITHMETIC_MACRO * 2}, e{1.2 + 3.4} {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: member initializer for 'a' is redundant [modernize-use-default-member-init]
+  // CHECK-FIXES: DefaultMemberInitWithArithmetic()  {}
+
+  int a{1 + 1};
+  int b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'b' [modernize-use-default-member-init]
+  // CHECK-FIXES:  int b{1 + 11 + 123 + 1234};
+  int c;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'c' [modernize-use-default-member-init]
+  // CHECK-FIXES: int c{2 + (4 / 2) + 3 + (7 / 11)};
+  int d;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'd' [modernize-use-default-member-init]
+  // CHECK-FIXES: int d{ARITHMETIC_MACRO * 2};
+  double e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'e' [modernize-use-default-member-init]
+  // CHECK-FIXES: double e{1.2 + 3.4};
+
+};
+
 } //namespace PR122480

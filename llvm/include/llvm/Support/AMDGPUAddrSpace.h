@@ -31,8 +31,8 @@ enum : unsigned {
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
   REGION_ADDRESS = 2, ///< Address space for region memory. (GDS)
 
-  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
   LOCAL_ADDRESS = 3,    ///< Address space for local memory.
+  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
   PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
 
   CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.

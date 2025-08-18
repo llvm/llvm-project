@@ -25,6 +25,8 @@ class Obj;
 
 Obj* provide_obj_ptr();
 void receive_obj_ptr(Obj* p = nullptr);
+sqlite3* open_db();
+void close_db(sqlite3*);
 
 Obj* ptr(Obj* arg) {
   receive_obj_ptr(provide_obj_ptr());
@@ -34,6 +36,8 @@ Obj* ptr(Obj* arg) {
   receive_obj_ptr(arg);
   receive_obj_ptr(nullptr);
   receive_obj_ptr();
+  auto* db = open_db();
+  close_db(db);
   return obj;
 }
 
@@ -134,3 +138,20 @@ JSStringRef opaque_ptr() {
 }
 
 @end
+
+namespace template_forward_declare {
+
+template<typename> class HashSet;
+
+template<typename T>
+using SingleThreadHashSet = HashSet<T>;
+
+template<typename> class HashSet { };
+
+struct Font { };
+
+struct ComplexTextController {
+    SingleThreadHashSet<const Font>* fallbackFonts { nullptr };
+};
+
+}

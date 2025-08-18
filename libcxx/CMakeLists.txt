@@ -225,14 +225,6 @@ set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
-# C Library options -----------------------------------------------------------
-
-set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
-set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
-if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
-endif()
-
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
   set(LIBCXX_DEFAULT_ABI_LIBRARY "vcruntime")
@@ -419,6 +411,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBCXX_TARGET_SUBDIR)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
   set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
@@ -522,13 +515,7 @@ function(cxx_add_basic_build_flags target)
   # the dylib when get ODR used by another function.
   target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility-inlines-hidden)
 
-  # Our visibility annotations are not quite right for non-Clang compilers,
-  # so we end up not exporting all the symbols we should. In the future, we
-  # can improve the situation by providing an explicit list of exported
-  # symbols on all compilers.
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
-  endif()
+  target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
 
   # Build with -fsized-deallocation, which is default in recent versions of Clang.
   # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.

@@ -41,3 +41,8 @@
 // EXTERNAL_ENV: "-internal-isystem" "/dir1"
 // EXTERNAL_ENV: "-internal-isystem" "/dir2"
 // EXTERNAL_ENV: "-internal-isystem" "/dir3"
+
+// /winsdkversion suppresses %INCLUDE% and %EXTERNAL_INCLUDE%
+// RUN:env INCLUDE=/my/system/inc env EXTERNAL_INCLUDE=/my/system/inc2 %clang_cl /winsdkversion 99.99.9999.9 -### -- %s 2>&1 | FileCheck %s --check-prefix=SDKVERSION
+// SDKVERSION-NOT: "-internal-isystem" "/my/system/inc"
+// SDKVERSION-NOT: "-internal-isystem" "/my/system/inc2"

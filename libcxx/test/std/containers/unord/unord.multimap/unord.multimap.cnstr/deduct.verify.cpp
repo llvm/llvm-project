@@ -56,7 +56,9 @@
 //               Allocator)
 //   -> unordered_multimap<Key, T, Hash, equal_to<Key>, Allocator>;
 
+#include <array>
 #include <functional>
+#include <tuple>
 #include <unordered_map>
 
 int main(int, char**) {
@@ -99,6 +101,18 @@ int main(int, char**) {
   {
     // cannot deduce Key from just (Size, Hash, Allocator)
     std::unordered_multimap m(42, std::hash<int>(), std::allocator<P>());
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
+  }
+  {
+    // cannot deduce from tuple-like objects without proper iterator
+    std::tuple<int, double> t{1, 2.0};
+    std::unordered_multimap m(t);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
+  }
+  {
+    // cannot deduce from array-like objects without proper iterator
+    std::array<int, 2> arr{1, 2};
+    std::unordered_multimap m(arr);
     // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
   }
 

@@ -210,8 +210,8 @@ struct ParenState {
         IsChainedConditional(false), IsWrappedConditional(false),
         UnindentOperator(false) {}
 
-  /// \brief The token opening this parenthesis level, or nullptr if this level
-  /// is opened by fake parenthesis.
+  /// The token opening this parenthesis level, or nullptr if this level is
+  /// opened by fake parenthesis.
   ///
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
@@ -344,16 +344,15 @@ struct ParenState {
 
   bool IsCSharpGenericTypeConstraint : 1;
 
-  /// \brief true if the current \c ParenState represents the false branch of
-  /// a chained conditional expression (e.g. else-if)
+  /// true if the current \c ParenState represents the false branch of a chained
+  /// conditional expression (e.g. else-if)
   bool IsChainedConditional : 1;
 
-  /// \brief true if there conditionnal was wrapped on the first operator (the
-  /// question mark)
+  /// true if there conditionnal was wrapped on the first operator (the question
+  /// mark)
   bool IsWrappedConditional : 1;
 
-  /// \brief Indicates the indent should be reduced by the length of the
-  /// operator.
+  /// Indicates the indent should be reduced by the length of the operator.
   bool UnindentOperator : 1;
 
   bool operator<(const ParenState &Other) const {

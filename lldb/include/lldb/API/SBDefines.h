@@ -89,6 +89,7 @@ class LLDB_API SBMemoryRegionInfoList;
 class LLDB_API SBModule;
 class LLDB_API SBModuleSpec;
 class LLDB_API SBModuleSpecList;
+class LLDB_API SBMutex;
 class LLDB_API SBPlatform;
 class LLDB_API SBPlatformConnectOptions;
 class LLDB_API SBPlatformShellCommand;

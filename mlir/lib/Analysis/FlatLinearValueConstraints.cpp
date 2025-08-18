@@ -8,7 +8,6 @@
 
 #include "mlir/Analysis//FlatLinearValueConstraints.h"
 
-#include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
@@ -17,9 +16,9 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -1106,9 +1105,9 @@ IntegerSet FlatLinearConstraints::getAsIntegerSet(MLIRContext *context) const {
     }
     if (!noLocalRepVars.empty()) {
       LLVM_DEBUG({
-        llvm::dbgs() << "local variables at position(s) ";
-        llvm::interleaveComma(noLocalRepVars, llvm::dbgs());
-        llvm::dbgs() << " do not have an explicit representation in:\n";
+        llvm::dbgs() << "local variables at position(s) "
+                     << llvm::interleaved(noLocalRepVars)
+                     << " do not have an explicit representation in:\n";
         this->dump();
       });
       return IntegerSet();

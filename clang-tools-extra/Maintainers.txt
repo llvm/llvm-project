@@ -15,7 +15,7 @@ assistance.
 Lead Maintainer
 ---------------
 | Aaron Ballman
-| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 clang-tidy
@@ -33,7 +33,7 @@ clang-tidy
 clang-query
 -----------
 | Aaron Ballman
-| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 clang-doc

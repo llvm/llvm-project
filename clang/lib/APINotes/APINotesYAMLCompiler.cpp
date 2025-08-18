@@ -251,6 +251,7 @@ struct Class {
   std::optional<StringRef> NSErrorDomain;
   std::optional<bool> SwiftImportAsNonGeneric;
   std::optional<bool> SwiftObjCMembers;
+  std::optional<std::string> SwiftConformance;
   MethodsSeq Methods;
   PropertiesSeq Properties;
 };
@@ -275,6 +276,7 @@ template <> struct MappingTraits<Class> {
     IO.mapOptional("NSErrorDomain", C.NSErrorDomain);
     IO.mapOptional("SwiftImportAsNonGeneric", C.SwiftImportAsNonGeneric);
     IO.mapOptional("SwiftObjCMembers", C.SwiftObjCMembers);
+    IO.mapOptional("SwiftConformsTo", C.SwiftConformance);
     IO.mapOptional("Methods", C.Methods);
     IO.mapOptional("Properties", C.Properties);
   }
@@ -460,6 +462,8 @@ struct Tag {
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+  std::optional<std::string> SwiftDestroyOp;
+  std::optional<std::string> SwiftDefaultOwnership;
   std::optional<std::string> SwiftConformance;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
@@ -500,6 +504,8 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
     IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
     IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
+    IO.mapOptional("SwiftDestroyOp", T.SwiftDestroyOp);
+    IO.mapOptional("SwiftDefaultOwnership", T.SwiftDefaultOwnership);
     IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
@@ -523,6 +529,7 @@ struct Typedef {
   std::optional<StringRef> SwiftBridge;
   std::optional<StringRef> NSErrorDomain;
   std::optional<SwiftNewTypeKind> SwiftType;
+  std::optional<std::string> SwiftConformance;
 };
 
 typedef std::vector<Typedef> TypedefsSeq;
@@ -551,6 +558,7 @@ template <> struct MappingTraits<Typedef> {
     IO.mapOptional("SwiftBridge", T.SwiftBridge);
     IO.mapOptional("NSErrorDomain", T.NSErrorDomain);
     IO.mapOptional("SwiftWrapper", T.SwiftType);
+    IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
   }
 };
 } // namespace yaml
@@ -800,6 +808,8 @@ public:
     if (Common.SwiftBridge)
       Info.setSwiftBridge(std::string(*Common.SwiftBridge));
     Info.setNSErrorDomain(Common.NSErrorDomain);
+    if (auto conformance = Common.SwiftConformance)
+      Info.setSwiftConformance(conformance);
   }
 
   // Translate from Method into ObjCMethodInfo and write it out.
@@ -988,8 +998,10 @@ public:
       TI.SwiftRetainOp = T.SwiftRetainOp;
     if (T.SwiftReleaseOp)
       TI.SwiftReleaseOp = T.SwiftReleaseOp;
-    if (T.SwiftConformance)
-      TI.SwiftConformance = T.SwiftConformance;
+    if (T.SwiftDestroyOp)
+      TI.SwiftDestroyOp = T.SwiftDestroyOp;
+    if (T.SwiftDefaultOwnership)
+      TI.SwiftDefaultOwnership = T.SwiftDefaultOwnership;
 
     if (T.SwiftCopyable)
       TI.setSwiftCopyable(T.SwiftCopyable);

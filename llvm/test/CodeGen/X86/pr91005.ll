@@ -4,11 +4,11 @@
 define void @PR91005(ptr %0) minsize {
 ; CHECK-LABEL: PR91005:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [31744,31744,31744,31744]
+; CHECK-NEXT:    movl $31744, %eax # imm = 0x7C00
+; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vpcmpeqw %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0

@@ -141,7 +141,7 @@
 # FP move instructions
 #------------------------------------------------------------------------------
 # CHECK: bc1f    $BB_1                 # encoding: [A,A,0x00,0x45]
-# CHECK: #   fixup A - offset: 0, value: ($BB_1)-4, kind: fixup_Mips_PC16
+# CHECK: #   fixup A - offset: 0, value: $BB_1-4, kind: fixup_Mips_PC16
 
 # CHECK:  cfc1    $6, $0               # encoding: [0x00,0x00,0x46,0x44]
 # CHECK:  ctc1    $10, $31             # encoding: [0x00,0xf8,0xca,0x44]

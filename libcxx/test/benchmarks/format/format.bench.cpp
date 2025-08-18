@@ -35,4 +35,15 @@ BENCHMARK(BM_format_string<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
 BENCHMARK(BM_format_string<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
 #endif
 
+template <class CharT>
+static void BM_string_without_formatting(benchmark::State& state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(std::format(CSTR("Hello, World!")));
+  }
+}
+BENCHMARK(BM_string_without_formatting<char>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+BENCHMARK(BM_string_without_formatting<wchar_t>);
+#endif
+
 BENCHMARK_MAIN();

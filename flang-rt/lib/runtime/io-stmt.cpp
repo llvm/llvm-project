@@ -79,6 +79,23 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
   return false;
 }
 
+RT_API_ATTRS static const char *InquiryKeywordHashDecode(
+    char *buffer, std::size_t n, InquiryKeywordHash hash) {
+  if (n < 1) {
+    return nullptr;
+  }
+  char *p{buffer + n};
+  *--p = '\0';
+  while (hash > 1) {
+    if (p < buffer) {
+      return nullptr;
+    }
+    *--p = 'A' + (hash % 26);
+    hash /= 26;
+  }
+  return hash == 1 ? p : nullptr;
+}
+
 void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
   char buffer[16];
   const char *decode{InquiryKeywordHashDecode(buffer, sizeof buffer, inquiry)};
@@ -509,6 +526,17 @@ Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
 
+const NonTbpDefinedIoTable *IoStatementState::nonTbpDefinedIoTable() const {
+  return common::visit(
+      [&](auto &x) { return x.get().nonTbpDefinedIoTable(); }, u_);
+}
+
+void IoStatementState::set_nonTbpDefinedIoTable(
+    const NonTbpDefinedIoTable *table) {
+  common::visit(
+      [&](auto &x) { return x.get().set_nonTbpDefinedIoTable(table); }, u_);
+}
+
 bool IoStatementState::Emit(
     const char *data, std::size_t bytes, std::size_t elementBytes) {
   return common::visit(
@@ -579,7 +607,7 @@ ExternalFileUnit *IoStatementState::GetExternalFileUnit() const {
       [](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
 }
 
-Fortran::common::optional<char32_t> IoStatementState::GetCurrentChar(
+Fortran::common::optional<char32_t> IoStatementState::GetCurrentCharSlow(
     std::size_t &byteCount) {
   const char *p{nullptr};
   std::size_t bytes{GetNextInputBytes(p)};
@@ -611,13 +639,26 @@ Fortran::common::optional<char32_t> IoStatementState::GetCurrentChar(
   }
 }
 
+IoStatementState::FastAsciiField IoStatementState::GetUpcomingFastAsciiField() {
+  ConnectionState &connection{GetConnectionState()};
+  if (!connection.isUTF8 && connection.internalIoCharKind <= 1) {
+    const char *p{nullptr};
+    if (std::size_t bytes{GetNextInputBytes(p)}) {
+      return FastAsciiField{connection, p, bytes};
+    }
+  }
+  return FastAsciiField{connection};
+}
+
 Fortran::common::optional<char32_t> IoStatementState::NextInField(
-    Fortran::common::optional<int> &remaining, const DataEdit &edit) {
+    Fortran::common::optional<int> &remaining, const DataEdit &edit,
+    FastAsciiField *field) {
   std::size_t byteCount{0};
-  if (!remaining) { // Stream, list-directed, or NAMELIST
-    if (auto next{GetCurrentChar(byteCount)}) {
-      if (edit.IsListDirected()) {
-        // list-directed or NAMELIST: check for separators
+  if (!remaining) { // Stream, list-directed, NAMELIST, &c.
+    if (auto next{GetCurrentChar(byteCount, field)}) {
+      if ((*next < '0' || *next == ';') && edit.width.value_or(0) == 0) {
+        // list-directed, NAMELIST, I0 &c., or width-free I/G:
+        // check for separator character
         switch (*next) {
         case ' ':
         case '\t':
@@ -649,21 +690,30 @@ Fortran::common::optional<char32_t> IoStatementState::NextInField(
           break;
         }
       }
-      HandleRelativePosition(byteCount);
-      GotChar(byteCount);
+      if (field) {
+        field->Advance(1, byteCount);
+      } else {
+        HandleRelativePosition(byteCount);
+        GotChar(byteCount);
+      }
       return next;
     }
   } else if (*remaining > 0) {
-    if (auto next{GetCurrentChar(byteCount)}) {
+    if (auto next{GetCurrentChar(byteCount, field)}) {
       if (byteCount > static_cast<std::size_t>(*remaining)) {
         return Fortran::common::nullopt;
       }
       *remaining -= byteCount;
-      HandleRelativePosition(byteCount);
-      GotChar(byteCount);
+      if (field) {
+        field->Advance(1, byteCount);
+      } else {
+        HandleRelativePosition(byteCount);
+        GotChar(byteCount);
+      }
       return next;
     }
-    if (CheckForEndOfRecord(0)) { // do padding
+    if (CheckForEndOfRecord(0,
+            field ? field->connection() : GetConnectionState())) { // do padding
       --*remaining;
       return Fortran::common::optional<char32_t>{' '};
     }
@@ -671,8 +721,8 @@ Fortran::common::optional<char32_t> IoStatementState::NextInField(
   return Fortran::common::nullopt;
 }
 
-bool IoStatementState::CheckForEndOfRecord(std::size_t afterReading) {
-  const ConnectionState &connection{GetConnectionState()};
+bool IoStatementState::CheckForEndOfRecord(
+    std::size_t afterReading, const ConnectionState &connection) {
   if (!connection.IsAtEOF()) {
     if (auto length{connection.EffectiveRecordLength()}) {
       if (connection.positionInRecord +
@@ -781,7 +831,6 @@ Fortran::common::optional<DataEdit>
 ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   // N.B. list-directed transfers cannot be nonadvancing (C1221)
-  ConnectionState &connection{io.GetConnectionState()};
   DataEdit edit;
   edit.descriptor = DataEdit::ListDirected;
   edit.repeat = 1; // may be overridden below
@@ -790,10 +839,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
-  char32_t comma{','};
-  if (edit.modes.editingFlags & decimalComma) {
-    comma = ';';
-  }
+  const char32_t comma{edit.modes.GetSeparatorChar()};
   std::size_t byteCount{0};
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     RUNTIME_CHECK(io.GetIoErrorHandler(), repeatPosition_.has_value());
@@ -822,14 +868,15 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     imaginaryPart_ = true;
     edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
-  auto ch{io.GetNextNonBlank(byteCount)};
+  auto fastField{io.GetUpcomingFastAsciiField()};
+  auto ch{io.GetNextNonBlank(byteCount, &fastField)};
   if (ch && *ch == comma && eatComma_) {
     // Consume comma & whitespace after previous item.
     // This includes the comma between real and imaginary components
     // in list-directed/NAMELIST complex input.
     // (When DECIMAL='COMMA', the comma is actually a semicolon.)
-    io.HandleRelativePosition(byteCount);
-    ch = io.GetNextNonBlank(byteCount);
+    fastField.Advance(0, byteCount);
+    ch = io.GetNextNonBlank(byteCount, &fastField);
   }
   eatComma_ = true;
   if (!ch) {
@@ -847,8 +894,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   if (imaginaryPart_) { // can't repeat components
     return edit;
   }
-  if (*ch >= '0' && *ch <= '9') { // look for "r*" repetition count
-    auto start{connection.positionInRecord};
+  if (*ch >= '0' && *ch <= '9' && fastField.MightHaveAsterisk()) {
+    // look for "r*" repetition count
+    auto start{fastField.connection().positionInRecord};
     int r{0};
     do {
       static auto constexpr clamp{(std::numeric_limits<int>::max() - '9') / 10};
@@ -857,12 +905,12 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
         break;
       }
       r = 10 * r + (*ch - '0');
-      io.HandleRelativePosition(byteCount);
-      ch = io.GetCurrentChar(byteCount);
+      fastField.Advance(0, byteCount);
+      ch = io.GetCurrentChar(byteCount, &fastField);
     } while (ch && *ch >= '0' && *ch <= '9');
     if (r > 0 && ch && *ch == '*') { // subtle: r must be nonzero
-      io.HandleRelativePosition(byteCount);
-      ch = io.GetCurrentChar(byteCount);
+      fastField.Advance(0, byteCount);
+      ch = io.GetCurrentChar(byteCount, &fastField);
       if (ch && *ch == '/') { // r*/
         hitSlash_ = true;
         edit.descriptor = DataEdit::ListDirectedNullValue;
@@ -877,12 +925,15 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
         repeatPosition_.emplace(io);
       }
     } else { // not a repetition count, just an integer value; rewind
-      connection.positionInRecord = start;
+      fastField.connection().positionInRecord = start;
     }
   }
-  if (!imaginaryPart_ && ch && *ch == '(') {
-    realPart_ = true;
-    io.HandleRelativePosition(byteCount);
+  if (!imaginaryPart_ && edit.descriptor == DataEdit::ListDirected && ch &&
+      *ch == '(') {
+    if (maxRepeat > 0) { // not being peeked at fram DefinedFormattedIo()
+      realPart_ = true;
+      fastField.connection().HandleRelativePosition(byteCount);
+    }
     edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
@@ -912,12 +963,24 @@ bool ExternalUnformattedIoStatementState<DIR>::Receive(
 template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
-    : IoStatementBase{sourceFile, sourceLine}, child_{child} {}
+    : IoStatementBase{sourceFile, sourceLine}, child_{child},
+      mutableModes_{child.parent().mutableModes()} {}
 
 template <Direction DIR>
-MutableModes &ChildIoStatementState<DIR>::mutableModes() {
+const NonTbpDefinedIoTable *
+ChildIoStatementState<DIR>::nonTbpDefinedIoTable() const {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return child_.parent().mutableModes();
+  return child_.parent().nonTbpDefinedIoTable();
+#else
+  ReportUnsupportedChildIo();
+#endif
+}
+
+template <Direction DIR>
+void ChildIoStatementState<DIR>::set_nonTbpDefinedIoTable(
+    const NonTbpDefinedIoTable *table) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  child_.parent().set_nonTbpDefinedIoTable(table);
 #else
   ReportUnsupportedChildIo();
 #endif
@@ -990,9 +1053,7 @@ ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
     ChildIo &child, const CHAR *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
-      mutableModes_{child.parent().mutableModes()}, format_{*this, format,
-                                                        formatLength,
-                                                        formatDescriptor} {}
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -1012,6 +1073,22 @@ template <Direction DIR, typename CHAR>
 bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
   return this->child().parent().AdvanceRecord(n);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
+}
+
+template <Direction DIR>
+ChildListIoStatementState<DIR>::ChildListIoStatementState(
+    ChildIo &child, const char *sourceFile, int sourceLine)
+    : ChildIoStatementState<DIR>{child, sourceFile, sourceLine} {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{child.parent()
+                .get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      this->namelistGroup_ = listInput->namelistGroup();
+    }
+  }
 #else
   this->ReportUnsupportedChildIo();
 #endif

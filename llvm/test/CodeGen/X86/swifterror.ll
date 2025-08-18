@@ -931,7 +931,6 @@ define void @swifterror_isel(ptr) {
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    .cfi_offset %r12, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset %r13, -16
-; CHECK-APPLE-NEXT:    xorl %eax, %eax
 ; CHECK-APPLE-NEXT:    testb %al, %al
 ; CHECK-APPLE-NEXT:    jne LBB8_3
 ; CHECK-APPLE-NEXT:  ## %bb.1: ## %.preheader
@@ -993,7 +992,6 @@ define void @swifterror_isel(ptr) {
 ; CHECK-i386-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-i386-NEXT:    .cfi_offset %esi, -12
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -8
-; CHECK-i386-NEXT:    xorl %eax, %eax
 ; CHECK-i386-NEXT:    testb %al, %al
 ; CHECK-i386-NEXT:    jne LBB8_3
 ; CHECK-i386-NEXT:  ## %bb.1: ## %.preheader

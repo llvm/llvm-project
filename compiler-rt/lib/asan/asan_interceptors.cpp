@@ -826,7 +826,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(__isoc23_strtoll);
 #  endif
 
-  // Intecept jump-related functions.
+  // Intercept jump-related functions.
   ASAN_INTERCEPT_FUNC(longjmp);
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT

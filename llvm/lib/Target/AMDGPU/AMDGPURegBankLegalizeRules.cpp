@@ -26,6 +26,10 @@
 using namespace llvm;
 using namespace AMDGPU;
 
+bool AMDGPU::isAnyPtr(LLT Ty, unsigned Width) {
+  return Ty.isPointer() && Ty.getSizeInBits() == Width;
+}
+
 RegBankLLTMapping::RegBankLLTMapping(
     std::initializer_list<RegBankLLTMappingApplyID> DstOpMappingList,
     std::initializer_list<RegBankLLTMappingApplyID> SrcOpMappingList,
@@ -50,6 +54,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32);
   case S64:
     return MRI.getType(Reg) == LLT::scalar(64);
+  case S128:
+    return MRI.getType(Reg) == LLT::scalar(128);
   case P0:
     return MRI.getType(Reg) == LLT::pointer(0, 64);
   case P1:
@@ -60,6 +66,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64);
   case P5:
     return MRI.getType(Reg) == LLT::pointer(5, 32);
+  case Ptr32:
+    return isAnyPtr(MRI.getType(Reg), 32);
+  case Ptr64:
+    return isAnyPtr(MRI.getType(Reg), 64);
+  case Ptr128:
+    return isAnyPtr(MRI.getType(Reg), 128);
+  case V2S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 32);
   case V4S32:
     return MRI.getType(Reg) == LLT::fixed_vector(4, 32);
   case B32:
@@ -82,6 +96,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isUniform(Reg);
   case UniS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isUniform(Reg);
+  case UniS128:
+    return MRI.getType(Reg) == LLT::scalar(128) && MUI.isUniform(Reg);
   case UniP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isUniform(Reg);
   case UniP1:
@@ -92,6 +108,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniform(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniform(Reg);
+  case UniPtr32:
+    return isAnyPtr(MRI.getType(Reg), 32) && MUI.isUniform(Reg);
+  case UniPtr64:
+    return isAnyPtr(MRI.getType(Reg), 64) && MUI.isUniform(Reg);
+  case UniPtr128:
+    return isAnyPtr(MRI.getType(Reg), 128) && MUI.isUniform(Reg);
+  case UniV2S16:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
   case UniB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isUniform(Reg);
   case UniB64:
@@ -106,10 +130,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniform(Reg);
   case DivS1:
     return MRI.getType(Reg) == LLT::scalar(1) && MUI.isDivergent(Reg);
+  case DivS16:
+    return MRI.getType(Reg) == LLT::scalar(16) && MUI.isDivergent(Reg);
   case DivS32:
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isDivergent(Reg);
   case DivS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isDivergent(Reg);
+  case DivS128:
+    return MRI.getType(Reg) == LLT::scalar(128) && MUI.isDivergent(Reg);
   case DivP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isDivergent(Reg);
   case DivP1:
@@ -120,6 +148,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isDivergent(Reg);
   case DivP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isDivergent(Reg);
+  case DivPtr32:
+    return isAnyPtr(MRI.getType(Reg), 32) && MUI.isDivergent(Reg);
+  case DivPtr64:
+    return isAnyPtr(MRI.getType(Reg), 64) && MUI.isDivergent(Reg);
+  case DivPtr128:
+    return isAnyPtr(MRI.getType(Reg), 128) && MUI.isDivergent(Reg);
+  case DivV2S16:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isDivergent(Reg);
   case DivB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isDivergent(Reg);
   case DivB64:
@@ -191,16 +227,14 @@ UniformityLLTOpPredicateID LLTToId(LLT Ty) {
 
 UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
   if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
-      Ty == LLT::pointer(3, 32) || Ty == LLT::pointer(5, 32) ||
-      Ty == LLT::pointer(6, 32))
+      isAnyPtr(Ty, 32))
     return B32;
   if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
-      Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64))
+      Ty == LLT::fixed_vector(4, 16) || isAnyPtr(Ty, 64))
     return B64;
   if (Ty == LLT::fixed_vector(3, 32))
     return B96;
-  if (Ty == LLT::fixed_vector(4, 32))
+  if (Ty == LLT::fixed_vector(4, 32) || isAnyPtr(Ty, 128))
     return B128;
   return _;
 }
@@ -432,7 +466,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                                            MachineRegisterInfo &_MRI)
     : ST(&_ST), MRI(&_MRI) {
 
-  addRulesForGOpcs({G_ADD}, Standard)
+  addRulesForGOpcs({G_ADD, G_SUB}, Standard)
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
@@ -441,14 +475,50 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
       .Any({{DivS1}, {{Vcc}, {Vcc, Vcc}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16, Sgpr16}}})
+      .Any({{DivS16}, {{Vgpr16}, {Vgpr16, Vgpr16}}})
+      .Uni(B32, {{SgprB32}, {SgprB32, SgprB32}})
       .Div(B32, {{VgprB32}, {VgprB32, VgprB32}})
       .Uni(B64, {{SgprB64}, {SgprB64, SgprB64}})
       .Div(B64, {{VgprB64}, {VgprB64, VgprB64}, SplitTo32});
 
   addRulesForGOpcs({G_SHL}, Standard)
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32ZExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackBitShift})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
+
+  addRulesForGOpcs({G_LSHR}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32ZExt, Sgpr32ZExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackBitShift})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
+
+  addRulesForGOpcs({G_ASHR}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt, Sgpr32ZExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackBitShift})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
+
+  addRulesForGOpcs({G_FRAME_INDEX}).Any({{UniP5, _}, {{SgprP5}, {None}}});
+
+  addRulesForGOpcs({G_UBFX, G_SBFX}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}, S_BFE})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32, Sgpr32}, S_BFE})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32, Vgpr32}, V_BFE});
 
   // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT, G_FCONSTANT
   // and G_FREEZE here, rest is trivially regbankselected earlier
@@ -459,7 +529,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_ICMP})
       .Any({{UniS1, _, S32}, {{Sgpr32Trunc}, {None, Sgpr32, Sgpr32}}})
-      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}});
+      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {None, Vgpr64, Vgpr64}}});
 
   addRulesForGOpcs({G_FCMP})
       .Any({{UniS1, _, S32}, {{UniInVcc}, {None, Vgpr32, Vgpr32}}})
@@ -472,23 +543,77 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_BR}).Any({{_}, {{}, {None}}});
 
   addRulesForGOpcs({G_SELECT}, StandardB)
+      .Any({{DivS16}, {{Vgpr16}, {Vcc, Vgpr16, Vgpr16}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr32AExtBoolInReg, Sgpr16, Sgpr16}}})
       .Div(B32, {{VgprB32}, {Vcc, VgprB32, VgprB32}})
-      .Uni(B32, {{SgprB32}, {Sgpr32AExtBoolInReg, SgprB32, SgprB32}});
+      .Uni(B32, {{SgprB32}, {Sgpr32AExtBoolInReg, SgprB32, SgprB32}})
+      .Div(B64, {{VgprB64}, {Vcc, VgprB64, VgprB64}, SplitTo32Select})
+      .Uni(B64, {{SgprB64}, {Sgpr32AExtBoolInReg, SgprB64, SgprB64}});
 
-  addRulesForGOpcs({G_ANYEXT}).Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}});
+  addRulesForGOpcs({G_ANYEXT})
+      .Any({{UniS16, S1}, {{None}, {None}}}) // should be combined away
+      .Any({{UniS32, S1}, {{None}, {None}}}) // should be combined away
+      .Any({{UniS64, S1}, {{None}, {None}}}) // should be combined away
+      .Any({{DivS16, S1}, {{Vgpr16}, {Vcc}, VccExtToSel}})
+      .Any({{DivS32, S1}, {{Vgpr32}, {Vcc}, VccExtToSel}})
+      .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
+      .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
 
   // In global-isel G_TRUNC in-reg is treated as no-op, inst selected into COPY.
   // It is up to user to deal with truncated bits.
   addRulesForGOpcs({G_TRUNC})
+      .Any({{UniS1, UniS16}, {{None}, {None}}}) // should be combined away
+      .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
+      .Any({{UniS1, UniS64}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
+      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
+      .Any({{UniV2S16, V2S32}, {{SgprV2S16}, {SgprV2S32}}})
+      .Any({{DivV2S16, V2S32}, {{VgprV2S16}, {VgprV2S32}}})
       // This is non-trivial. VgprToVccCopy is done using compare instruction.
-      .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}});
+      .Any({{DivS1, DivS16}, {{Vcc}, {Vgpr16}, VgprToVccCopy}})
+      .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}})
+      .Any({{DivS1, DivS64}, {{Vcc}, {Vgpr64}, VgprToVccCopy}});
 
-  addRulesForGOpcs({G_ZEXT, G_SEXT})
+  addRulesForGOpcs({G_ZEXT})
+      .Any({{UniS16, S1}, {{Sgpr32Trunc}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
       .Any({{UniS32, S1}, {{Sgpr32}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{UniS64, S1}, {{Sgpr64}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{DivS16, S1}, {{Vgpr16}, {Vcc}, VccExtToSel}})
       .Any({{DivS32, S1}, {{Vgpr32}, {Vcc}, VccExtToSel}})
+      .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
       .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
-      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}});
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      // not extending S16 to S32 is questionable.
+      .Any({{UniS64, S16}, {{Sgpr64}, {Sgpr32ZExt}, Ext32To64}})
+      .Any({{DivS64, S16}, {{Vgpr64}, {Vgpr32ZExt}, Ext32To64}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
+
+  addRulesForGOpcs({G_SEXT})
+      .Any({{UniS16, S1}, {{Sgpr32Trunc}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{UniS32, S1}, {{Sgpr32}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{UniS64, S1}, {{Sgpr64}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{DivS16, S1}, {{Vgpr16}, {Vcc}, VccExtToSel}})
+      .Any({{DivS32, S1}, {{Vgpr32}, {Vcc}, VccExtToSel}})
+      .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
+      .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      // not extending S16 to S32 is questionable.
+      .Any({{UniS64, S16}, {{Sgpr64}, {Sgpr32SExt}, Ext32To64}})
+      .Any({{DivS64, S16}, {{Vgpr64}, {Vgpr32SExt}, Ext32To64}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
+
+  addRulesForGOpcs({G_SEXT_INREG})
+      .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}})
+      .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
+      .Any({{UniS64, S64}, {{Sgpr64}, {Sgpr64}}})
+      .Any({{DivS64, S64}, {{Vgpr64}, {Vgpr64}, SplitTo32SExtInReg}});
 
   bool hasUnalignedLoads = ST->getGeneration() >= AMDGPUSubtarget::GFX12;
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
@@ -506,7 +631,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   });
 
   Predicate isUniMMO([](const MachineInstr &MI) -> bool {
-    return AMDGPUInstrInfo::isUniformMMO(*MI.memoperands_begin());
+    return AMDGPU::isUniformMMO(*MI.memoperands_begin());
   });
 
   Predicate isConst([](const MachineInstr &MI) -> bool {
@@ -542,11 +667,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   // clang-format off
   addRulesForGOpcs({G_LOAD})
       .Any({{DivB32, DivP0}, {{VgprB32}, {VgprP0}}})
+      .Any({{DivB32, UniP0}, {{VgprB32}, {VgprP0}}})
 
       .Any({{DivB32, DivP1}, {{VgprB32}, {VgprP1}}})
       .Any({{{UniB256, UniP1}, isAlign4 && isUL}, {{SgprB256}, {SgprP1}}})
       .Any({{{UniB512, UniP1}, isAlign4 && isUL}, {{SgprB512}, {SgprP1}}})
       .Any({{{UniB32, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB32}, {SgprP1}}})
+      .Any({{{UniB64, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB64}, {SgprP1}}})
+      .Any({{{UniB96, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB96}, {SgprP1}}})
+      .Any({{{UniB128, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB128}, {SgprP1}}})
       .Any({{{UniB256, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB256}, {VgprP1}, SplitLoad}})
       .Any({{{UniB512, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB512}, {VgprP1}, SplitLoad}})
 
@@ -560,6 +689,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniB96, UniP4}, isAlign16 && isUL}, {{SgprB96}, {SgprP4}, WidenLoad}}, !hasUnalignedLoads)
       .Any({{{UniB96, UniP4}, isAlign4 && !isAlign16 && isUL}, {{SgprB96}, {SgprP4}, SplitLoad}}, !hasUnalignedLoads)
       .Any({{{UniB96, UniP4}, isAlign4 && isUL}, {{SgprB96}, {SgprP4}}}, hasUnalignedLoads)
+      .Any({{{UniB128, UniP4}, isAlign4 && isUL}, {{SgprB128}, {SgprP4}}})
       .Any({{{UniB256, UniP4}, isAlign4 && isUL}, {{SgprB256}, {SgprP4}}})
       .Any({{{UniB512, UniP4}, isAlign4 && isUL}, {{SgprB512}, {SgprP4}}})
       .Any({{{UniB32, UniP4}, !isNaturalAlignedSmall || !isUL}, {{UniInVgprB32}, {VgprP4}}}, hasSMRDSmall) // i8 and i16 load
@@ -574,11 +704,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniB32, UniP4}, !isAlign4 || !isUL}, {{UniInVgprB32}, {VgprP4}}});
   // clang-format on
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, Vector)
-      .Div(S32, {{Vgpr32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}})
-      .Uni(S32, {{UniInVgprS32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}})
-      .Div(V4S32, {{VgprV4S32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}})
-      .Uni(V4S32, {{UniInVgprV4S32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}});
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, StandardB)
+      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B96, {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B96, {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
   addRulesForGOpcs({G_STORE})
       .Any({{S32, P0}, {{}, {Vgpr32, VgprP0}}})
@@ -590,11 +724,26 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S32}, {{}, {Vgpr32, SgprV4S32, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForGOpcs({G_PTR_ADD})
-      .Any({{UniP1}, {{SgprP1}, {SgprP1, Sgpr64}}})
-      .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
-      .Any({{DivP0}, {{VgprP0}, {VgprP0, Vgpr64}}});
+      .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32, Vgpr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {SgprPtr64, Sgpr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {VgprPtr64, Vgpr64}}});
 
-  addRulesForGOpcs({G_INTTOPTR}).Any({{UniP4}, {{SgprP4}, {Sgpr64}}});
+  addRulesForGOpcs({G_INTTOPTR})
+      .Any({{UniPtr32}, {{SgprPtr32}, {Sgpr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {Vgpr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {Sgpr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {Vgpr64}}})
+      .Any({{UniPtr128}, {{SgprPtr128}, {Sgpr128}}})
+      .Any({{DivPtr128}, {{VgprPtr128}, {Vgpr128}}});
+
+  addRulesForGOpcs({G_PTRTOINT})
+      .Any({{UniS32}, {{Sgpr32}, {SgprPtr32}}})
+      .Any({{DivS32}, {{Vgpr32}, {VgprPtr32}}})
+      .Any({{UniS64}, {{Sgpr64}, {SgprPtr64}}})
+      .Any({{DivS64}, {{Vgpr64}, {VgprPtr64}}})
+      .Any({{UniS128}, {{Sgpr128}, {SgprPtr128}}})
+      .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 
@@ -628,6 +777,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{}, {Vgpr32, None, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_readfirstlane})
-      .Any({{UniS32, _, DivS32}, {{}, {Sgpr32, None, Vgpr32}}});
+      .Any({{UniS32, _, DivS32}, {{}, {Sgpr32, None, Vgpr32}}})
+      // this should not exist in the first place, it is from call lowering
+      // readfirstlaning just in case register is not in sgpr.
+      .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
 
 } // end initialize rules

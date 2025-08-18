@@ -32,7 +32,7 @@ program test_error_stop
   error stop char_array
 
   !ERROR: Must be a scalar value, but is a rank-1 array
-  error stop array_coarray[1]
+  error stop array_coarray(:)[1]
 
   !ERROR: Must have LOGICAL type, but is CHARACTER(KIND=1,LEN=128_8)
   error stop int_code, quiet=non_logical

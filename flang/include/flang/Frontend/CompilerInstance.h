@@ -147,6 +147,12 @@ public:
   /// @name Semantic analysis
   /// {
 
+  Fortran::semantics::SemanticsContext &createNewSemanticsContext() {
+    semaContext =
+        getInvocation().getSemanticsCtx(*allCookedSources, getTargetMachine());
+    return *semaContext;
+  }
+
   Fortran::semantics::SemanticsContext &getSemanticsContext() {
     return *semaContext;
   }
@@ -341,7 +347,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-  createDiagnostics(clang::DiagnosticOptions *opts,
+  createDiagnostics(clang::DiagnosticOptions &opts,
                     clang::DiagnosticConsumer *client = nullptr,
                     bool shouldOwnClient = true);
   void createDiagnostics(clang::DiagnosticConsumer *client = nullptr,

@@ -75,8 +75,9 @@ protected:
 
   /// The variable that this value object is based upon.
   lldb::VariableSP m_variable_sp;
-  ///< The value that DWARFExpression resolves this variable to before we patch
-  ///< it up.
+
+  /// The value that DWARFExpression resolves this variable to before we patch
+  /// it up.
   Value m_resolved_value;
 
 private:

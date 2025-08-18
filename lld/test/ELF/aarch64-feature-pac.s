@@ -8,10 +8,15 @@
 ## We do not add PAC support when the inputs don't have the .note.gnu.property
 ## field.
 
-# RUN: ld.lld %tno.o %t3.o --shared -o %tno.so
-# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOPAC %s
-# RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
-# RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
+# RUN: ld.lld %tno.o %t3.o --shared -o %tno1.so
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno1.so | FileCheck --check-prefix=NOPAC %s
+# RUN: llvm-readelf -x .got.plt %tno1.so | FileCheck --check-prefix SOGOTPLT %s
+# RUN: llvm-readelf --dynamic-table %tno1.so | FileCheck --check-prefix NOPACDYN %s
+
+# RUN: ld.lld %tno.o %t3.o --shared -o %tno2.so -z pac-plt -znopac-plt
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno2.so | FileCheck --check-prefix=NOPAC %s
+# RUN: llvm-readelf -x .got.plt %tno2.so | FileCheck --check-prefix SOGOTPLT %s
+# RUN: llvm-readelf --dynamic-table %tno2.so | FileCheck --check-prefix NOPACDYN %s
 
 # NOPAC: 00000000000102b8 <func2>:
 # NOPAC-NEXT:    102b8: bl      0x102f0 <func3@plt>

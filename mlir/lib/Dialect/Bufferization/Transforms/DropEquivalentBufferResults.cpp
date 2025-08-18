@@ -31,8 +31,6 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
@@ -113,14 +111,15 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     }
 
     // Update function.
-    funcOp.eraseResults(erasedResultIndices);
+    if (failed(funcOp.eraseResults(erasedResultIndices)))
+      return failure();
     returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.
     for (func::CallOp callOp : callerMap[funcOp]) {
       rewriter.setInsertionPoint(callOp);
-      auto newCallOp = rewriter.create<func::CallOp>(callOp.getLoc(), funcOp,
-                                                     callOp.getOperands());
+      auto newCallOp = func::CallOp::create(rewriter, callOp.getLoc(), funcOp,
+                                            callOp.getOperands());
       SmallVector<Value> newResults;
       int64_t nextResult = 0;
       for (int64_t i = 0; i < callOp.getNumResults(); ++i) {
@@ -135,8 +134,8 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
         Type expectedType = callOp.getResult(i).getType();
         if (replacement.getType() != expectedType) {
           // A cast must be inserted at the call site.
-          replacement = rewriter.create<memref::CastOp>(
-              callOp.getLoc(), expectedType, replacement);
+          replacement = memref::CastOp::create(rewriter, callOp.getLoc(),
+                                               expectedType, replacement);
         }
         newResults.push_back(replacement);
       }

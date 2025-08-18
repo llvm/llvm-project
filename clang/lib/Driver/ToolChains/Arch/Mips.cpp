@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
@@ -253,6 +252,12 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   if (ABICallsArg && !UseAbiCalls && IsPIC) {
     D.Diag(diag::err_drv_unsupported_noabicalls_pic);
+  }
+
+  if (CPUName == "i6500" || CPUName == "i6400") {
+    // MIPS cpu i6400 and i6500 support MSA (Mips SIMD Architecture)
+    // by default.
+    Features.push_back("+msa");
   }
 
   if (!UseAbiCalls)

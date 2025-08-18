@@ -32,8 +32,18 @@ Possible fixes:
     object types.
   - passing ``this`` pointer as parameter 
 
+Options
+-------
+
 .. option:: FunctionWrapperTypes
 
   A semicolon-separated list of names of types. Used to specify function
   wrapper that can hold lambda expressions.
   Default is `::std::function;::std::move_only_function;::boost::function`.
+
+.. option:: BindFunctions
+
+  A semicolon-separated list of fully qualified names of functions that can
+  capture ``this`` pointer.
+  Default is `::std::bind;::boost::bind;::std::bind_front;::std::bind_back;
+  ::boost::compat::bind_front;::boost::compat::bind_back`.

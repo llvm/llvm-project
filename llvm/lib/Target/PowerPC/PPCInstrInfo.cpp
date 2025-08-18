@@ -1108,7 +1108,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::CRSET:
   case PPC::CRUNSET:
   case PPC::XXSETACCZ:
-  case PPC::XXSETACCZW:
+  case PPC::DMXXSETACCZ:
     return true;
   }
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
@@ -1758,6 +1758,23 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(PPC::EFDCFS), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
+  } else if ((PPC::G8RCRegClass.contains(DestReg) ||
+              PPC::GPRCRegClass.contains(DestReg)) &&
+             SrcReg == PPC::CARRY) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(DestReg);
+    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MFSPR8 : PPC::MFSPR), DestReg)
+        .addImm(1)
+        .addReg(PPC::CARRY, RegState::Implicit);
+    return;
+  } else if ((PPC::G8RCRegClass.contains(SrcReg) ||
+              PPC::GPRCRegClass.contains(SrcReg)) &&
+             DestReg == PPC::CARRY) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
+    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MTSPR8 : PPC::MTSPR))
+        .addImm(1)
+        .addReg(SrcReg)
+        .addReg(PPC::CARRY, RegState::ImplicitDefine);
+    return;
   }
 
   unsigned Opc;
@@ -1904,6 +1921,14 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     OpcodeIndex = SOK_PairedVecSpill;
   } else if (PPC::G8pRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_PairedG8Spill;
+  } else if (PPC::DMRROWRCRegClass.hasSubClassEq(RC)) {
+    llvm_unreachable("TODO: Implement spill DMRROW regclass!");
+  } else if (PPC::DMRROWpRCRegClass.hasSubClassEq(RC)) {
+    llvm_unreachable("TODO: Implement spill DMRROWp regclass!");
+  } else if (PPC::DMRpRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_DMRpSpill;
+  } else if (PPC::DMRRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_DMRSpill;
   } else {
     llvm_unreachable("Unknown regclass!");
   }
@@ -2926,7 +2951,8 @@ bool PPCInstrInfo::shouldClusterMemOps(
     return false;
 
   int64_t Offset1 = 0, Offset2 = 0;
-  LocationSize Width1 = 0, Width2 = 0;
+  LocationSize Width1 = LocationSize::precise(0),
+               Width2 = LocationSize::precise(0);
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
   if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
       !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
@@ -5781,7 +5807,8 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  LocationSize WidthA = 0, WidthB = 0;
+  LocationSize WidthA = LocationSize::precise(0),
+               WidthB = LocationSize::precise(0);
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {

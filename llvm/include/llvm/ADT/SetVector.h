@@ -24,6 +24,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -81,6 +82,10 @@ public:
   SetVector(It Start, It End) {
     insert(Start, End);
   }
+
+  template <typename Range>
+  SetVector(llvm::from_range_t, Range &&R)
+      : SetVector(adl_begin(R), adl_end(R)) {}
 
   ArrayRef<value_type> getArrayRef() const { return vector_; }
 
@@ -308,9 +313,8 @@ public:
   bool set_union(const STy &S) {
     bool Changed = false;
 
-    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
-         ++SI)
-      if (insert(*SI))
+    for (const auto &Elem : S)
+      if (insert(Elem))
         Changed = true;
 
     return Changed;
@@ -321,9 +325,8 @@ public:
   ///       SetVector interface is inconsistent with DenseSet.
   template <class STy>
   void set_subtract(const STy &S) {
-    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
-         ++SI)
-      remove(*SI);
+    for (const auto &Elem : S)
+      remove(Elem);
   }
 
   void swap(SetVector<T, Vector, Set, N> &RHS) {
@@ -381,6 +384,10 @@ public:
   SmallSetVector(It Start, It End) {
     this->insert(Start, End);
   }
+
+  template <typename Range>
+  SmallSetVector(llvm::from_range_t, Range &&R)
+      : SmallSetVector(adl_begin(R), adl_end(R)) {}
 };
 
 } // end namespace llvm

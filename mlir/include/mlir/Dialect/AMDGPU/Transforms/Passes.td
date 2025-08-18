@@ -51,4 +51,35 @@ def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
   ];
 }
 
+def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
+  let summary = "Lower the operations from the vector maskedload to vector load";
+  let description = [{
+    This pass creates a transfer read op lowering optimization. The lowering
+    will produce a conditional check at runtime. If within bounds, a vector
+    trasfer read op will be lowered to a combination of vector.load, arith.select
+    and vector.broadcast. If not, it will fallback to the default lowering
+    of the transfer_read op.
+
+    This pattern will make it possible for masked transfer_read to be lowered
+    towards buffer load with bounds check, allowing a more optimized global
+    load accessing pattern compared with existing implementation of
+    llvm.intr.masked.load on vectors.
+  }];
+  let dependentDialects = [
+    "scf::SCFDialect",
+    "memref::MemRefDialect"
+  ];
+}
+
+def AmdgpuFoldMemRefOpsPass : Pass<"amdgpu-fold-memrefs-ops"> {
+  let summary = "Fold memref operations into their parent operations";
+  let description = [{
+    This pass identifies memref operations (subview, expand_shape, collapse_shape)
+    that are sources of `GatherToLDSOp` and attempts to fold the source ops,
+    potentially simplifying the overall operation and improving performance.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect"
+  ];
+}
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_

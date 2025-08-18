@@ -26,7 +26,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
@@ -35,7 +34,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -182,7 +180,18 @@ void LinkerScript::expandMemoryRegions(uint64_t size) {
 
 void LinkerScript::expandOutputSection(uint64_t size) {
   state->outSec->size += size;
-  expandMemoryRegions(size);
+  size_t regionSize = size;
+  if (state->outSec->inOverlay) {
+    // Expand the overlay if necessary, and expand the region by the
+    // corresponding amount.
+    if (state->outSec->size > state->overlaySize) {
+      regionSize = state->outSec->size - state->overlaySize;
+      state->overlaySize = state->outSec->size;
+    } else {
+      regionSize = 0;
+    }
+  }
+  expandMemoryRegions(regionSize);
 }
 
 void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
@@ -797,7 +806,7 @@ void LinkerScript::processSectionCommands() {
   if (!potentialSpillLists.empty()) {
     DenseSet<StringRef> insertNames;
     for (InsertCommand &ic : insertCommands)
-      insertNames.insert(ic.names.begin(), ic.names.end());
+      insertNames.insert_range(ic.names);
     for (SectionCommand *&base : sectionCommands) {
       auto *osd = dyn_cast<OutputDesc>(base);
       if (!osd)
@@ -1218,7 +1227,12 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // We can call this method multiple times during the creation of
   // thunks and want to start over calculation each time.
   sec->size = 0;
+  if (sec->firstInOverlay)
+    state->overlaySize = 0;
 
+  bool synthesizeAlign = ctx.arg.relocatable && ctx.arg.relax &&
+                         (sec->flags & SHF_EXECINSTR) &&
+                         ctx.arg.emachine == EM_RISCV;
   // We visited SectionsCommands from processSectionCommands to
   // layout sections. Now, we visit SectionsCommands again to fix
   // section offsets.
@@ -1249,7 +1263,10 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
       if (isa<PotentialSpillSection>(isec))
         continue;
       const uint64_t pos = dot;
-      dot = alignToPowerOf2(dot, isec->addralign);
+      // If synthesized ALIGN may be needed, call maybeSynthesizeAlign and
+      // disable the default handling if the return value is true.
+      if (!(synthesizeAlign && ctx.target->synthesizeAlign(dot, isec)))
+        dot = alignToPowerOf2(dot, isec->addralign);
       isec->outSecOff = dot - sec->addr;
       dot += isec->getSize();
 
@@ -1264,6 +1281,12 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // boundary to protect the last page.
   if (ctx.in.relroPadding && sec == ctx.in.relroPadding->getParent())
     expandOutputSection(alignToPowerOf2(dot, ctx.arg.commonPageSize) - dot);
+
+  if (synthesizeAlign) {
+    const uint64_t pos = dot;
+    ctx.target->synthesizeAlign(dot, nullptr);
+    expandOutputSection(dot - pos);
+  }
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
   // as they are not part of the process image.

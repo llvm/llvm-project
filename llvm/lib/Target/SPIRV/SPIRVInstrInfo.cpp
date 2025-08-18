@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "SPIRVGenInstrInfo.inc"
@@ -285,16 +284,4 @@ void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
          "Register operands are expected in COPY");
   auto &MRI = I->getMF()->getRegInfo();
   MRI.replaceRegWith(DstOp.getReg(), SrcOp.getReg());
-}
-
-bool SPIRVInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() == SPIRV::GET_ID || MI.getOpcode() == SPIRV::GET_fID ||
-      MI.getOpcode() == SPIRV::GET_pID || MI.getOpcode() == SPIRV::GET_vfID ||
-      MI.getOpcode() == SPIRV::GET_vID || MI.getOpcode() == SPIRV::GET_vpID) {
-    auto &MRI = MI.getMF()->getRegInfo();
-    MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
-    MI.eraseFromParent();
-    return true;
-  }
-  return false;
 }

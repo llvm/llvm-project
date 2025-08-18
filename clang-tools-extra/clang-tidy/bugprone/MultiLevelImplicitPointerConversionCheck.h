@@ -21,11 +21,17 @@ namespace clang::tidy::bugprone {
 class MultiLevelImplicitPointerConversionCheck : public ClangTidyCheck {
 public:
   MultiLevelImplicitPointerConversionCheck(StringRef Name,
-                                           ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+                                           ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return EnableInC ? true : LangOpts.CPlusPlus;
+  }
+
+private:
+  bool const EnableInC;
 };
 
 } // namespace clang::tidy::bugprone

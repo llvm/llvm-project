@@ -57,7 +57,7 @@ RUN: llvm-readobj --coff-load-config test3.dll | FileCheck -check-prefix=PATCH-C
 
 
 RUN: not lld-link -out:test4.dll -machine:arm64ec test-sec.obj loadconfig-arm64ec.obj -dll -noentry 2>&1 | FileCheck --check-prefix=ERR %s
-ERR: error: undefined symbol: EXP+#patchable_func
+ERR: error: undefined symbol: EXP+#patchable_func (EC symbol)
 
 
 RUN: lld-link -out:testx.dll -machine:arm64x arm64ec-patchable.obj test-sec.obj \

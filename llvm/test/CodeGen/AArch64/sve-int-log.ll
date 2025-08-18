@@ -40,7 +40,7 @@ define <vscale x 16 x i8> @and_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 define <vscale x 16 x i8> @and_b_zero(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: and_b_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %res = and <vscale x 16 x i8> %a, zeroinitializer
   ret <vscale x 16 x i8> %res

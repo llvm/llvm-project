@@ -605,9 +605,9 @@ void test_s_getreg(volatile global uint *out)
 }
 
 // CHECK-LABEL: @test_get_local_id(
-// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.x()
-// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.y()
-// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.z()
+// CHECK: tail call{{.*}} i32 @llvm.amdgcn.workitem.id.x()
+// CHECK: tail call{{.*}} i32 @llvm.amdgcn.workitem.id.y()
+// CHECK: tail call{{.*}} i32 @llvm.amdgcn.workitem.id.z()
 void test_get_local_id(int d, global int *out)
 {
 	switch (d) {
@@ -617,6 +617,10 @@ void test_get_local_id(int d, global int *out)
 	default: *out = 0;
 	}
 }
+
+// CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+// CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
+// CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
 
 // CHECK-LABEL: @test_get_workgroup_size(
 // CHECK: {{.*}}call align 8 dereferenceable(256){{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()

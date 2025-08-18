@@ -23,9 +23,9 @@
 ; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[PtrChar:.*]] = OpTypePointer Generic %[[Char]]
 ; CHECK-DAG: %[[Bool:.*]] = OpTypeBool
-; CHECK-DAG: %[[Const1:.*]] = OpConstant %[[Int]] 1
-; CHECK-DAG: %[[Zero:.*]] = OpConstant %[[Int]] 0
-; CHECK-DAG: %[[Const42:.*]] = OpConstant %[[Char]] 42
+; CHECK-DAG: %[[Const1:.*]] = OpConstant %[[Int]] 1{{$}}
+; CHECK-DAG: %[[Zero:.*]] = OpConstantNull %[[Int]]
+; CHECK-DAG: %[[Const42:.*]] = OpConstant %[[Char]] 42{{$}}
 
 ; CHECK: OpFunction
 ; CHECK: %[[A:.*]] = OpFunctionParameter %[[Int]]

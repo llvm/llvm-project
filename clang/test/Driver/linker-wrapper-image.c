@@ -220,7 +220,7 @@
 // HIP-NEXT:   %constant = lshr i32 %11, 4
 // HIP-NEXT:   %12 = and i32 %flags, 32
 // HIP-NEXT:   %normalized = lshr i32 %12, 5
-// HIP-NEXT:   %13 = icmp eq i16 %kind, 3
+// HIP-NEXT:   %13 = icmp eq i16 %kind, 4
 // HIP-NEXT:   br i1 %13, label %if.kind, label %if.end
 //
 //      HIP: if.kind:

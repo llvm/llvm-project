@@ -772,7 +772,7 @@ MDNode *MDNodeMapper::visitOperands(UniquedGraph &G, MDNode::op_iterator &I,
     MDNode &OpN = *cast<MDNode>(Op);
     assert(OpN.isUniqued() &&
            "Only uniqued operands cannot be mapped immediately");
-    if (G.Info.insert(std::make_pair(&OpN, Data())).second)
+    if (G.Info.try_emplace(&OpN).second)
       return &OpN; // This is a new one.  Return it.
   }
   return nullptr;
@@ -987,6 +987,13 @@ void Mapper::remapInstruction(Instruction *I) {
              "Referenced value not in value map!");
   }
 
+  // Drop callee_type metadata from calls that were remapped
+  // into a direct call from an indirect one.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
+      CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
+  }
+
   // Remap phi nodes' incoming blocks.
   if (PHINode *PN = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
@@ -1009,6 +1016,10 @@ void Mapper::remapInstruction(Instruction *I) {
     if (New != Old)
       I->setMetadata(MI.first, New);
   }
+
+  // Remap source location atom instance.
+  if (!(Flags & RF_DoNotRemapAtoms))
+    RemapSourceAtom(I, getVM());
 
   if (!TypeMapper)
     return;
@@ -1291,4 +1302,25 @@ void ValueMapper::scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
 
 void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
   getAsMapper(pImpl)->scheduleRemapFunction(F, MCID);
+}
+
+void llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM) {
+  const DebugLoc &DL = I->getDebugLoc();
+  if (!DL)
+    return;
+
+  auto AtomGroup = DL->getAtomGroup();
+  if (!AtomGroup)
+    return;
+
+  auto R = VM.AtomMap.find({DL->getInlinedAt(), AtomGroup});
+  if (R == VM.AtomMap.end())
+    return;
+  AtomGroup = R->second;
+
+  // Remap the atom group and copy all other fields.
+  DILocation *New = DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), AtomGroup, DL->getAtomRank());
+  I->setDebugLoc(New);
 }

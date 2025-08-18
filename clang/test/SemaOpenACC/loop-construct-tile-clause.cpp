@@ -145,7 +145,7 @@ void only_for_loops() {
 
 void only_one_on_loop() {
   // expected-error@+2{{OpenACC 'tile' clause cannot appear more than once on a 'loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'tile' clause is here}}
 #pragma acc loop tile(1) tile(1)
   for(int i = 0; i < 5; ++i);
 }
@@ -384,6 +384,20 @@ void intervening() {
   }
 }
 
+void use_largest_tile() {
+// expected-error@+2{{'tile' clause specifies a loop count greater than the number of available loops}}
+// expected-note@+1{{active 'tile' clause defined here}}
+#pragma acc loop tile(1,2) device_type(*) tile (3,4,5)
+  for(int i = 0; i < 5; ++i)
+    for (int j = 0; j < 5; ++j);
+
+// expected-error@+2{{'tile' clause specifies a loop count greater than the number of available loops}}
+// expected-note@+1{{active 'tile' clause defined here}}
+#pragma acc loop tile (3,4,5) device_type(*) tile(1,2)
+  for(int i = 0; i < 5; ++i)
+    for (int j = 0; j < 5; ++j);
+}
+
 void collapse_tile_depth() {
   // expected-error@+4{{'collapse' clause specifies a loop count greater than the number of available loops}}
   // expected-note@+3{{active 'collapse' clause defined here}}
@@ -393,4 +407,32 @@ void collapse_tile_depth() {
   for(int i = 0; i < 5;++i) {
     for(int j = 0; j < 5; ++j);
   }
+}
+void no_dupes_since_last_device_type() {
+  // expected-error@+3{{OpenACC 'tile' clause cannot appear more than once in a 'device_type' region on a 'loop' directive}}
+  // expected-note@+2{{previous 'tile' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
+#pragma acc loop tile(1) device_type(*) tile(1) tile(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
+#pragma acc loop tile(1) device_type(*) tile(1) device_type(nvidia) tile(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
+  // expected-error@+4{{OpenACC 'tile' clause applies to 'device_type' 'nvidiA', which conflicts with previous 'tile' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'tile' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc loop device_type(nvidia, radeon) tile(1) device_type(nvidiA) tile(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
+  // expected-error@+4{{OpenACC 'tile' clause applies to 'device_type' 'radeon', which conflicts with previous 'tile' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'tile' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc loop device_type(radeon) tile(1) device_type(nvidia, radeon) tile(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
 }

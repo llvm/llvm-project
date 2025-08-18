@@ -2,7 +2,18 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+
+; Check register extension.
+define double @f0(half %val) #0 {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: br %r14
+  %res = call double @llvm.experimental.constrained.fpext.f64.f16(half %val,
+                                               metadata !"fpexcept.strict") #0
+  ret double %res
+}
 
 ; Check register extension.
 define double @f1(float %val) #0 {

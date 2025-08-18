@@ -99,7 +99,7 @@ public:
     // PR47938 tracks this issue, but it seems hard to fix. Instead, we need
     // to clone the op.
     //
-    // 2. We need to resue the original region instead of cloning it, otherwise
+    // 2. We need to reuse the original region instead of cloning it, otherwise
     // the dialect conversion framework thinks that we just inserted all the
     // cloned child ops. But what we want is to "take" the child regions and let
     // the dialect conversion framework continue recursively into ops inside
@@ -112,11 +112,12 @@ public:
 
     // We can not do clone as the number of result types after conversion
     // might be different.
-    ForOp newOp = rewriter.create<ForOp>(
-        op.getLoc(), llvm::getSingleElement(adaptor.getLowerBound()),
-        llvm::getSingleElement(adaptor.getUpperBound()),
-        llvm::getSingleElement(adaptor.getStep()),
-        flattenValues(adaptor.getInitArgs()));
+    ForOp newOp = ForOp::create(rewriter, op.getLoc(),
+                                llvm::getSingleElement(adaptor.getLowerBound()),
+                                llvm::getSingleElement(adaptor.getUpperBound()),
+                                llvm::getSingleElement(adaptor.getStep()),
+                                flattenValues(adaptor.getInitArgs()),
+                                /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
     newOp->setAttrs(op->getAttrs());
@@ -142,9 +143,9 @@ public:
                                       ConversionPatternRewriter &rewriter,
                                       TypeRange dstTypes) const {
 
-    IfOp newOp = rewriter.create<IfOp>(
-        op.getLoc(), dstTypes, llvm::getSingleElement(adaptor.getCondition()),
-        true);
+    IfOp newOp =
+        IfOp::create(rewriter, op.getLoc(), dstTypes,
+                     llvm::getSingleElement(adaptor.getCondition()), true);
     newOp->setAttrs(op->getAttrs());
 
     // We do not need the empty blocks created by rewriter.
@@ -171,8 +172,8 @@ public:
   std::optional<WhileOp> convertSourceOp(WhileOp op, OneToNOpAdaptor adaptor,
                                          ConversionPatternRewriter &rewriter,
                                          TypeRange dstTypes) const {
-    auto newOp = rewriter.create<WhileOp>(op.getLoc(), dstTypes,
-                                          flattenValues(adaptor.getOperands()));
+    auto newOp = WhileOp::create(rewriter, op.getLoc(), dstTypes,
+                                 flattenValues(adaptor.getOperands()));
 
     for (auto i : {0u, 1u}) {
       if (failed(rewriter.convertRegionTypes(&op.getRegion(i), *typeConverter)))

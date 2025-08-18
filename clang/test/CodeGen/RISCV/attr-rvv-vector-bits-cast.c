@@ -97,13 +97,7 @@ vbool4_t to_vbool4_t(fixed_bool4_t type) {
 
 // CHECK-LABEL: @from_vbool32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-NEXT:    store <vscale x 2 x i1> [[TYPE:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA4:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA8:![0-9]+]]
-// CHECK-NEXT:    store <1 x i8> [[TMP0]], ptr [[RETVAL_COERCE]], align 1
-// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i1>, ptr [[RETVAL_COERCE]], align 1
-// CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+// CHECK-NEXT:    ret <vscale x 2 x i1> [[TYPE:%.*]]
 //
 fixed_bool32_t from_vbool32_t(vbool32_t type) {
   return type;
@@ -111,7 +105,7 @@ fixed_bool32_t from_vbool32_t(vbool32_t type) {
 
 // CHECK-LABEL: @to_vbool32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <vscale x 2 x i1> [[TYPE_COERCE:%.*]]
+// CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP0:%.*]]
 //
 vbool32_t to_vbool32_t(fixed_bool32_t type) {
   return type;
@@ -119,7 +113,7 @@ vbool32_t to_vbool32_t(fixed_bool32_t type) {
 
 // CHECK-LABEL: @to_vint32m1_t__from_gnu_int32m1_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0:%.*]], align 32, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0:%.*]], align 32, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
@@ -130,7 +124,7 @@ vint32m1_t to_vint32m1_t__from_gnu_int32m1_t(gnu_int32m1_t type) {
 // CHECK-LABEL: @from_vint32m1_t__to_gnu_int32m1_t(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[TYPE:%.*]], i64 0)
-// CHECK-NEXT:    store <8 x i32> [[CAST_FIXED]], ptr [[AGG_RESULT:%.*]], align 32, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <8 x i32> [[CAST_FIXED]], ptr [[AGG_RESULT:%.*]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 //
 gnu_int32m1_t from_vint32m1_t__to_gnu_int32m1_t(vint32m1_t type) {
@@ -139,7 +133,7 @@ gnu_int32m1_t from_vint32m1_t__to_gnu_int32m1_t(vint32m1_t type) {
 
 // CHECK-LABEL: @to_fixed_int32m1_t__from_gnu_int32m1_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0:%.*]], align 32, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0:%.*]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
@@ -150,7 +144,7 @@ fixed_int32m1_t to_fixed_int32m1_t__from_gnu_int32m1_t(gnu_int32m1_t type) {
 // CHECK-LABEL: @from_fixed_int32m1_t__to_gnu_int32m1_t(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TYPE:%.*]] = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[TYPE_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    store <8 x i32> [[TYPE]], ptr [[AGG_RESULT:%.*]], align 32, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <8 x i32> [[TYPE]], ptr [[AGG_RESULT:%.*]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 //
 gnu_int32m1_t from_fixed_int32m1_t__to_gnu_int32m1_t(fixed_int32m1_t type) {

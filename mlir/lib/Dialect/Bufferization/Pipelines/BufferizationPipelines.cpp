@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Bufferization/Pipelines/Passes.h"
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -20,7 +19,9 @@
 
 void mlir::bufferization::buildBufferDeallocationPipeline(
     OpPassManager &pm, const BufferDeallocationPipelineOptions &options) {
-  pm.addPass(memref::createExpandReallocPass(/*emitDeallocs=*/false));
+  memref::ExpandReallocPassOptions expandAllocPassOptions{
+      /*emitDeallocs=*/false};
+  pm.addPass(memref::createExpandReallocPass(expandAllocPassOptions));
   pm.addPass(createCanonicalizerPass());
 
   OwnershipBasedBufferDeallocationPassOptions deallocationOptions{

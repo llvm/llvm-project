@@ -47,8 +47,8 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    assert(!cir::MissingFeatures::labelOp());
-
+    if (isa<cir::LabelOp>(dest->front()))
+      return failure();
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
         dest->getSinglePredecessor() == block) {
@@ -61,25 +61,39 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
   }
 };
 
-struct RemoveEmptyScope
-    : public OpRewritePattern<ScopeOp>::SplitMatchAndRewrite {
-  using SplitMatchAndRewrite::SplitMatchAndRewrite;
+struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
+  using OpRewritePattern<ScopeOp>::OpRewritePattern;
 
-  LogicalResult match(ScopeOp op) const final {
+  LogicalResult matchAndRewrite(ScopeOp op,
+                                PatternRewriter &rewriter) const final {
     // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
     // trivially dead operations
-    if (op.isEmpty())
+    if (op.isEmpty()) {
+      rewriter.eraseOp(op);
       return success();
+    }
 
     Region &region = op.getScopeRegion();
-    if (region.getBlocks().front().getOperations().size() == 1)
-      return success(isa<YieldOp>(region.getBlocks().front().front()));
+    if (region.getBlocks().front().getOperations().size() == 1 &&
+        isa<YieldOp>(region.getBlocks().front().front())) {
+      rewriter.eraseOp(op);
+      return success();
+    }
 
     return failure();
   }
+};
 
-  void rewrite(ScopeOp op, PatternRewriter &rewriter) const final {
+struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
+  using OpRewritePattern<SwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SwitchOp op,
+                                PatternRewriter &rewriter) const final {
+    if (!(op.getBody().empty() || isa<YieldOp>(op.getBody().front().front())))
+      return failure();
+
     rewriter.eraseOp(op);
+    return success();
   }
 };
 
@@ -118,17 +132,19 @@ void CIRCanonicalizePass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    assert(!cir::MissingFeatures::brCondOp());
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::selectOp());
-    assert(!cir::MissingFeatures::complexCreateOp());
     assert(!cir::MissingFeatures::complexRealOp());
     assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
-    // CastOp and UnaryOp are here to perform a manual `fold` in
+
+    // Many operations are here to perform a manual `fold` in
     // applyOpPatternsGreedily.
-    if (isa<BrOp, ScopeOp, CastOp, UnaryOp>(op))
+    if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp,
+            ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
+            VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
+            VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
+            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp>(op))
       ops.push_back(op);
   });
 

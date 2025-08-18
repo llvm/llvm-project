@@ -14,11 +14,9 @@
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
 #include "FixedPoint.h"
-#include "FunctionPointer.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
-#include <memory>
 #include <vector>
 
 namespace clang {
@@ -183,8 +181,6 @@ private:
       return PT_Uint64;
     else if constexpr (std::is_same_v<T, Floating>)
       return PT_Float;
-    else if constexpr (std::is_same_v<T, FunctionPointer>)
-      return PT_FnPtr;
     else if constexpr (std::is_same_v<T, IntegralAP<true>>)
       return PT_IntAP;
     else if constexpr (std::is_same_v<T, IntegralAP<false>>)

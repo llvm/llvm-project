@@ -64,16 +64,23 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
 
 constexpr const char *DefaultFunctionWrapperTypes =
     "::std::function;::std::move_only_function;::boost::function";
+constexpr const char *DefaultBindFunctions =
+    "::std::bind;::boost::bind;::std::bind_front;::std::bind_back;"
+    "::boost::compat::bind_front;::boost::compat::bind_back";
 
 CapturingThisInMemberVariableCheck::CapturingThisInMemberVariableCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       FunctionWrapperTypes(utils::options::parseStringList(
-          Options.get("FunctionWrapperTypes", DefaultFunctionWrapperTypes))) {}
+          Options.get("FunctionWrapperTypes", DefaultFunctionWrapperTypes))),
+      BindFunctions(utils::options::parseStringList(
+          Options.get("BindFunctions", DefaultBindFunctions))) {}
 void CapturingThisInMemberVariableCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FunctionWrapperTypes",
                 utils::options::serializeStringList(FunctionWrapperTypes));
+  Options.store(Opts, "BindFunctions",
+                utils::options::serializeStringList(BindFunctions));
 }
 
 void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
@@ -87,33 +94,52 @@ void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
       // [self = this]
       capturesVar(varDecl(hasInitializer(cxxThisExpr())))));
   auto IsLambdaCapturingThis =
-      lambdaExpr(hasAnyCapture(CaptureThis.bind("capture"))).bind("lambda");
-  auto IsInitWithLambda =
-      anyOf(IsLambdaCapturingThis,
-            cxxConstructExpr(hasArgument(0, IsLambdaCapturingThis)));
+      lambdaExpr(hasAnyCapture(CaptureThis)).bind("lambda");
+
+  auto IsBindCapturingThis =
+      callExpr(
+          callee(functionDecl(matchers::matchesAnyListedName(BindFunctions))
+                     .bind("callee")),
+          hasAnyArgument(cxxThisExpr()))
+          .bind("bind");
+
+  auto IsInitWithLambdaOrBind =
+      anyOf(IsLambdaCapturingThis, IsBindCapturingThis,
+            cxxConstructExpr(hasArgument(
+                0, anyOf(IsLambdaCapturingThis, IsBindCapturingThis))));
+
   Finder->addMatcher(
       cxxRecordDecl(
           anyOf(has(cxxConstructorDecl(
                     unless(isCopyConstructor()), unless(isMoveConstructor()),
                     hasAnyConstructorInitializer(cxxCtorInitializer(
                         isMemberInitializer(), forField(IsStdFunctionField),
-                        withInitializer(IsInitWithLambda))))),
+                        withInitializer(IsInitWithLambdaOrBind))))),
                 has(fieldDecl(IsStdFunctionField,
-                              hasInClassInitializer(IsInitWithLambda)))),
+                              hasInClassInitializer(IsInitWithLambdaOrBind)))),
           unless(correctHandleCaptureThisLambda())),
       this);
 }
-
 void CapturingThisInMemberVariableCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Capture = Result.Nodes.getNodeAs<LambdaCapture>("capture");
-  const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
+  if (const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda")) {
+    diag(Lambda->getBeginLoc(),
+         "'this' captured by a lambda and stored in a class member variable; "
+         "disable implicit class copying/moving to prevent potential "
+         "use-after-free");
+  } else if (const auto *Bind = Result.Nodes.getNodeAs<CallExpr>("bind")) {
+    const auto *Callee = Result.Nodes.getNodeAs<FunctionDecl>("callee");
+    assert(Callee);
+    diag(Bind->getBeginLoc(),
+         "'this' captured by a '%0' call and stored in a class member "
+         "variable; disable implicit class copying/moving to prevent potential "
+         "use-after-free")
+        << Callee->getQualifiedNameAsString();
+  }
+
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field");
-  diag(Lambda->getBeginLoc(),
-       "'this' captured by a lambda and stored in a class member variable; "
-       "disable implicit class copying/moving to prevent potential "
-       "use-after-free")
-      << Capture->getLocation();
+  assert(Field);
+
   diag(Field->getLocation(),
        "class member of type '%0' that stores captured 'this'",
        DiagnosticIDs::Note)

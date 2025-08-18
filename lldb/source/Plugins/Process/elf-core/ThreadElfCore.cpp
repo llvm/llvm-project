@@ -38,6 +38,7 @@
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
+#include "RegisterContextPOSIXCore_riscv32.h"
 #include "RegisterContextPOSIXCore_riscv64.h"
 #include "RegisterContextPOSIXCore_s390x.h"
 #include "RegisterContextPOSIXCore_x86_64.h"
@@ -52,7 +53,7 @@ using namespace lldb_private;
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
       m_gpregset_data(td.gpregset), m_notes(td.notes),
-      m_siginfo(std::move(td.siginfo)) {}
+      m_siginfo_bytes(std::move(td.siginfo_bytes)), m_signo(td.signo) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -95,6 +96,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         reg_interface = new RegisterContextFreeBSD_powerpc32(arch);
         break;
       case llvm::Triple::ppc64:
+      case llvm::Triple::ppc64le:
         reg_interface = new RegisterContextFreeBSD_powerpc64(arch);
         break;
       case llvm::Triple::mips64:
@@ -174,7 +176,8 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
         arch.GetMachine() != llvm::Triple::arm &&
         arch.GetMachine() != llvm::Triple::loongarch64 &&
-        arch.GetMachine() != llvm::Triple::riscv64) {
+        arch.GetMachine() != llvm::Triple::riscv64 &&
+        arch.GetMachine() != llvm::Triple::riscv32) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
       assert(false && "Architecture or OS not supported");
@@ -192,6 +195,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       break;
     case llvm::Triple::loongarch64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_loongarch64::Create(
+          *this, arch, m_gpregset_data, m_notes);
+      break;
+    case llvm::Triple::riscv32:
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv32::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::riscv64:
@@ -242,26 +249,34 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
   return reg_ctx_sp;
 }
 
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+ThreadElfCore::GetSiginfo(size_t max_size) const {
+  if (m_siginfo_bytes.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no siginfo note");
+
+  return llvm::MemoryBuffer::getMemBufferCopy(m_siginfo_bytes,
+                                              "siginfo note bytes");
+}
+
 bool ThreadElfCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (!process_sp)
     return false;
 
-  lldb::UnixSignalsSP unix_signals_sp(process_sp->GetUnixSignals());
-  if (!unix_signals_sp)
-    return false;
+  PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
+  if (platform_sp) {
+    lldb::StopInfoSP stopinfo_sp = platform_sp->GetStopInfoFromSiginfo(*this);
+    // The platform SP can optionally handle creating the stop info from the
+    // siginfo value however it's not guaraunteed to be implemented on every
+    // platform, so if we fall through this case, we create from just the signo.
+    if (stopinfo_sp) {
+      SetStopInfo(std::move(stopinfo_sp));
+      return true;
+    }
+  }
 
-  const char *sig_description;
-  std::string description = m_siginfo.GetDescription(*unix_signals_sp);
-  if (description.empty())
-    sig_description = nullptr;
-  else
-    sig_description = description.c_str();
-
-  SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, m_siginfo.si_signo, sig_description, m_siginfo.si_code));
-
-  SetStopInfo(m_stop_info_sp);
+  SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   return true;
 }
 
@@ -277,9 +292,9 @@ size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
   if (arch.IsMIPS()) {
     std::string abi = arch.GetTargetABI();
     assert(!abi.empty() && "ABI is not set");
-    if (!abi.compare("n64"))
+    if (abi == "n64")
       return sizeof(ELFLinuxPrStatus);
-    else if (!abi.compare("o32"))
+    else if (abi == "o32")
       return mips_linux_pr_status_size_o32;
     // N32 ABI
     return mips_linux_pr_status_size_n32;
@@ -541,84 +556,4 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
   }
   *(psargs - 1) = '\0';
   return prpsinfo;
-}
-
-// Parse SIGINFO from NOTE entry
-ELFLinuxSigInfo::ELFLinuxSigInfo() { memset(this, 0, sizeof(ELFLinuxSigInfo)); }
-
-size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
-  if (arch.IsMIPS())
-    return sizeof(ELFLinuxSigInfo);
-  switch (arch.GetCore()) {
-  case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-    return sizeof(ELFLinuxSigInfo);
-  case lldb_private::ArchSpec::eCore_s390x_generic:
-  case lldb_private::ArchSpec::eCore_x86_32_i386:
-  case lldb_private::ArchSpec::eCore_x86_32_i486:
-    return 12;
-  default:
-    return 0;
-  }
-}
-
-Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
-                              const lldb_private::UnixSignals &unix_signals) {
-  Status error;
-  uint64_t size = GetSize(arch);
-  if (size > data.GetByteSize()) {
-    error = Status::FromErrorStringWithFormat(
-        "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
-        GetSize(arch), data.GetByteSize());
-    return error;
-  }
-
-  // Set that we've parsed the siginfo from a SIGINFO note.
-  note_type = eNT_SIGINFO;
-  // Parsing from a 32 bit ELF core file, and populating/reusing the structure
-  // properly, because the struct is for the 64 bit version
-  offset_t offset = 0;
-  si_signo = data.GetU32(&offset);
-  si_errno = data.GetU32(&offset);
-  si_code = data.GetU32(&offset);
-  // 64b ELF have a 4 byte pad.
-  if (data.GetAddressByteSize() == 8)
-    offset += 4;
-  // Not every stop signal has a valid address, but that will get resolved in
-  // the unix_signals.GetSignalDescription() call below.
-  if (unix_signals.GetShouldStop(si_signo)) {
-    // Instead of memcpy we call all these individually as the extractor will
-    // handle endianness for us.
-    sigfault.si_addr = data.GetAddress(&offset);
-    sigfault.si_addr_lsb = data.GetU16(&offset);
-    if (data.GetByteSize() - offset >= sizeof(sigfault.bounds)) {
-      sigfault.bounds._addr_bnd._lower = data.GetAddress(&offset);
-      sigfault.bounds._addr_bnd._upper = data.GetAddress(&offset);
-      sigfault.bounds._pkey = data.GetU32(&offset);
-    } else {
-      // Set these to 0 so we don't use bogus data for the description.
-      sigfault.bounds._addr_bnd._lower = 0;
-      sigfault.bounds._addr_bnd._upper = 0;
-      sigfault.bounds._pkey = 0;
-    }
-  }
-
-  return error;
-}
-
-std::string ELFLinuxSigInfo::GetDescription(
-    const lldb_private::UnixSignals &unix_signals) const {
-  if (unix_signals.GetShouldStop(si_signo) && note_type == eNT_SIGINFO) {
-    if (sigfault.bounds._addr_bnd._upper != 0)
-      return unix_signals.GetSignalDescription(
-          si_signo, si_code, sigfault.si_addr, sigfault.bounds._addr_bnd._lower,
-          sigfault.bounds._addr_bnd._upper);
-    else
-      return unix_signals.GetSignalDescription(si_signo, si_code,
-                                               sigfault.si_addr);
-  }
-
-  // This looks weird, but there is an existing pattern where we don't pass a
-  // description to keep up with that, we return empty here, and then the above
-  // function will set the description whether or not this is empty.
-  return std::string();
 }

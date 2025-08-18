@@ -148,4 +148,23 @@ func.func @scast_per_axis_unranked(%arg0: tensor<*xi8>) {
   return
 }
 
+// -----
 
+!qalias = !quant.uniform<u8:f32:{0:1,1:2},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @sub_channel_quantization(%arg0: tensor<2x4xi8>) -> tensor<2x4xi8> {
+  %0 = quant.scast %arg0 : tensor<2x4xi8> to tensor<2x4x!qalias>
+  %1 = quant.dcast %0 : tensor<2x4x!qalias> to tensor<2x4xf32>
+  %2 = quant.qcast %1 : tensor<2x4xf32> to tensor<2x4x!qalias>
+  %3 = quant.scast %2 : tensor<2x4x!qalias> to tensor<2x4xi8>
+  return %3 : tensor<2x4xi8>
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{0:1,1:2},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @sub_channel_quantization_with_unknown_dims(%arg0: tensor<2x?xf32>) {
+  %0 = quant.qcast %arg0 : tensor<2x?xf32> to tensor<2x?x!qalias>
+  return
+}

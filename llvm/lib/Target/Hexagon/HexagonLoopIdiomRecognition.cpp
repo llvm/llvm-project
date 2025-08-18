@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonLoopIdiomRecognition.h"
+#include "Hexagon.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -37,7 +38,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/Module.h"
@@ -108,14 +108,6 @@ static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
 static const char *HexagonVolatileMemcpyName
   = "hexagon_memcpy_forward_vp4cp4n2";
 
-
-namespace llvm {
-
-void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
-Pass *createHexagonLoopIdiomPass();
-
-} // end namespace llvm
-
 namespace {
 
 class HexagonLoopIdiomRecognize {
@@ -151,10 +143,7 @@ class HexagonLoopIdiomRecognizeLegacyPass : public LoopPass {
 public:
   static char ID;
 
-  explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {
-    initializeHexagonLoopIdiomRecognizeLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {}
 
   StringRef getPassName() const override {
     return "Recognize Hexagon-specific loop idioms";
@@ -1089,9 +1078,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       return false;
 
   // Perform the promotion.
-  std::vector<Instruction*> LoopIns;
-  std::transform(LoopB->begin(), LoopB->end(), std::back_inserter(LoopIns),
-                 [](Instruction &In) { return &In; });
+  SmallVector<Instruction *> LoopIns(llvm::make_pointer_range(*LoopB));
   for (Instruction *In : LoopIns)
     if (!In->isTerminator())
       promoteTo(In, DestTy, LoopB);
@@ -1331,7 +1318,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
   // Find the set of all values affected by the shift cycles, i.e. all
   // cycled values, and (recursively) all their users.
-  ValueSeq Users(Cycled.begin(), Cycled.end());
+  ValueSeq Users(llvm::from_range, Cycled);
   for (unsigned i = 0; i < Users.size(); ++i) {
     Value *V = Users[i];
     if (!isa<IntegerType>(V->getType()))
@@ -1359,7 +1346,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     return false;
 
   // Verify that high bits remain zero.
-  ValueSeq Internal(Users.begin(), Users.end());
+  ValueSeq Internal(llvm::from_range, Users);
   ValueSeq Inputs;
   for (unsigned i = 0; i < Internal.size(); ++i) {
     auto *R = dyn_cast<Instruction>(Internal[i]);
@@ -2303,10 +2290,9 @@ CleanupAndExit:
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
   SmallSet<BasicBlock*,8> LoopBlocks;
-  for (auto *B : L->blocks())
-    LoopBlocks.insert(B);
+  LoopBlocks.insert_range(L->blocks());
 
-  SetVector<Instruction*> Worklist(Insts.begin(), Insts.end());
+  SetVector<Instruction *> Worklist(llvm::from_range, Insts);
 
   // Collect all instructions from the loop that the instructions in Insts
   // depend on (plus their dependencies, etc.).  These instructions will
@@ -2331,7 +2317,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
   // instructions in it that are not involved in the original set Insts.
   for (auto *B : L->blocks()) {
     for (auto &In : *B) {
-      if (isa<BranchInst>(In) || isa<DbgInfoIntrinsic>(In))
+      if (isa<BranchInst>(In))
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;

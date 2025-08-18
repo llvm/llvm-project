@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // NetBSD does not support LC_NUMERIC at the moment
 // XFAIL: netbsd
 

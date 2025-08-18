@@ -510,10 +510,11 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
   bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const override;
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
@@ -522,7 +523,7 @@ public:
                             bool MathUsed) const override {
     // Form add and sub with overflow intrinsics regardless of any extra
     // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64;
+    return VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128;
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
@@ -627,6 +628,9 @@ public:
                    bool IsSigned, SDLoc DL, bool DoesNotReturn,
                    bool IsReturnValueUsed) const;
 
+  SDValue useLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, MVT VT, SDValue Arg,
+                     SDLoc DL, SDValue Chain, bool IsStrict) const;
+
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -668,6 +672,7 @@ public:
   }
 
   unsigned getStackProbeSize(const MachineFunction &MF) const;
+  bool hasAndNot(SDValue Y) const override;
 
 private:
   const SystemZSubtarget &Subtarget;
@@ -720,6 +725,8 @@ private:
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
                               unsigned Opcode) const;
@@ -743,6 +750,12 @@ private:
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
   SDValue lowerFSHL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFSHR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerLoadF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerStoreF16(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
@@ -766,6 +779,7 @@ private:
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineFCOPYSIGN(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -830,13 +844,17 @@ private:
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
-  bool isFullyInternal(const Function *Fn) const;
+private:
+  bool isInternal(const Function *Fn) const;
+  mutable std::map<const Function *, bool> IsInternalCache;
   void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const Function *F, SDValue Callee) const;
   void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const Function *F) const;
-  bool verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               bool IsInternal) const;
+  bool
+  verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+
+public:
 };
 
 struct SystemZVectorConstantInfo {

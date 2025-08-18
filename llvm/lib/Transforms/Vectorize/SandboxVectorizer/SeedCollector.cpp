@@ -12,6 +12,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -20,12 +21,7 @@ namespace llvm::sandboxir {
 static cl::opt<unsigned> SeedBundleSizeLimit(
     "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
     cl::desc("Limit the size of the seed bundle to cap compilation time."));
-#define LoadSeedsDef "loads"
-#define StoreSeedsDef "stores"
-static cl::opt<std::string> CollectSeeds(
-    "sbvec-collect-seeds", cl::init(LoadSeedsDef "," StoreSeedsDef), cl::Hidden,
-    cl::desc("Collect these seeds. Use empty for none or a comma-separated "
-             "list of '" LoadSeedsDef "' and '" StoreSeedsDef "'."));
+
 static cl::opt<unsigned> SeedGroupsLimit(
     "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
     cl::desc("Limit the number of collected seeds groups in a BB to "
@@ -46,7 +42,7 @@ ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
   uint32_t BitCountPowerOfTwo = 0;
   // Can't start a slice with a used instruction.
   assert(!isUsed(StartIdx) && "Expected unused at StartIdx");
-  for (auto S : make_range(Seeds.begin() + StartIdx, Seeds.end())) {
+  for (Instruction *S : drop_begin(Seeds, StartIdx)) {
     // Stop if this instruction is used. This needs to be done before
     // getNumBits() because a "used" instruction may have been erased.
     if (isUsed(StartIdx + NumElements))
@@ -119,8 +115,9 @@ template <typename LoadOrStoreT> void SeedContainer::insert(LoadOrStoreT *LSI) {
 }
 
 // Explicit instantiations
-template void SeedContainer::insert<LoadInst>(LoadInst *);
-template void SeedContainer::insert<StoreInst>(StoreInst *);
+template LLVM_EXPORT_TEMPLATE void SeedContainer::insert<LoadInst>(LoadInst *);
+template LLVM_EXPORT_TEMPLATE void
+SeedContainer::insert<StoreInst>(StoreInst *);
 
 #ifndef NDEBUG
 void SeedContainer::print(raw_ostream &OS) const {
@@ -160,11 +157,10 @@ template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
 template bool isValidMemSeed<LoadInst>(LoadInst *LSI);
 template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
-SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
+SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
+                             bool CollectStores, bool CollectLoads)
     : StoreSeeds(SE), LoadSeeds(SE), Ctx(BB->getContext()) {
 
-  bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
-  bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
   if (!CollectStores && !CollectLoads)
     return;
 

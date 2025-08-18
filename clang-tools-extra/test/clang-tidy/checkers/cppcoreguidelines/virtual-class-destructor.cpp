@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-virtual-class-destructor %t -- --fix-notes
+// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-virtual-class-destructor %t -- --fix-notes
 
 // CHECK-MESSAGES: :[[@LINE+4]]:8: warning: destructor of 'PrivateVirtualBaseStruct' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
 // CHECK-MESSAGES: :[[@LINE+3]]:8: note: make it public and virtual

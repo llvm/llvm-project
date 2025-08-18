@@ -109,6 +109,10 @@ public:
 
   void SetFunctionCode(const char *data);
 
+  uint32_t GetPtrMatchDepth();
+
+  void SetPtrMatchDepth(uint32_t ptr_match_depth);
+
   uint32_t GetOptions();
 
   void SetOptions(uint32_t);

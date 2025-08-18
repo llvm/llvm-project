@@ -13,6 +13,23 @@ include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 
 //===----------------------------------------------------------------------===//
+// ToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertToEmitC : Pass<"convert-to-emitc"> {
+  let summary = "Convert to EmitC dialect via dialect interfaces";
+  let description = [{
+    This is a generic pass to convert to the EmitC dialect, it uses the
+    `ConvertToEmitCPatternInterface` dialect interface to delegate to dialects
+    the injection of conversion patterns.
+  }];
+  let options = [
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "Test conversion patterns of only the specified dialects">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -35,6 +52,8 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
                "Test conversion patterns of only the specified dialects">,
     Option<"useDynamic", "dynamic", "bool", "false",
            "Use op conversion attributes to configure the conversion">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
   ];
 }
 
@@ -179,6 +198,10 @@ def ConvertArithToSPIRVPass : Pass<"convert-arith-to-spirv"> {
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by "
            "the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -296,6 +319,18 @@ def ConvertComplexToLibm : Pass<"convert-complex-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexToROCDLLibraryCalls
+//===----------------------------------------------------------------------===//
+
+def ConvertComplexToROCDLLibraryCalls : Pass<"convert-complex-to-rocdl-library-calls", "ModuleOp"> {
+  let summary = "Convert Complex dialect to ROCDL library calls";
+  let description = [{
+    This pass converts supported Complex ops to calls to the AMD device library.
+  }];
+  let dependentDialects = ["func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexToSPIRV
 //===----------------------------------------------------------------------===//
 
@@ -387,7 +422,11 @@ def ConvertControlFlowToSPIRVPass : Pass<"convert-cf-to-spirv"> {
     Option<"emulateLT32BitScalarTypes", "emulate-lt-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by"
-           " the target">
+           " the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -471,7 +510,11 @@ def ConvertFuncToSPIRVPass : Pass<"convert-func-to-spirv"> {
     Option<"emulateLT32BitScalarTypes", "emulate-lt-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by"
-           " the target">
+           " the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -584,6 +627,7 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
   let dependentDialects = [
     "ROCDL::ROCDLDialect",
+    "amdgpu::AMDGPUDialect",
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
   ];
@@ -811,9 +855,13 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 // MemRefToEmitC
 //===----------------------------------------------------------------------===//
 
-def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc"> {
+def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc", "ModuleOp"> {
   let summary = "Convert MemRef dialect to EmitC dialect";
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [Option<
+      "lowerToCpp", "lower-to-cpp", "bool",
+      /*default=*/"false",
+      /*description=*/"Target C++ (true) instead of C (false)">];
 }
 
 //===----------------------------------------------------------------------===//
@@ -873,13 +921,13 @@ def ConvertMemRefToSPIRVPass : Pass<"convert-memref-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
-// MeshToMPI
+// ShardToMPI
 //===----------------------------------------------------------------------===//
 
-def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
-  let summary = "Convert Mesh dialect to MPI dialect.";
+def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
+  let summary = "Convert Shard dialect to MPI dialect.";
   let description = [{
-    This pass converts communication operations from the Mesh dialect to the
+    This pass converts communication operations from the Shard dialect to the
     MPI dialect.
     If it finds the DLTI attribute "MPI:comm_world-rank" on the module it will
     use that integer value instead of calling MPI_Comm_rank. This allows
@@ -887,6 +935,8 @@ def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
     shard/partition sizes depend on the rank.
   }];
   let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
     "memref::MemRefDialect",
     "mpi::MPIDialect",
     "scf::SCFDialect",
@@ -1131,7 +1181,11 @@ def ConvertTensorToSPIRVPass : Pass<"convert-tensor-to-spirv"> {
     Option<"emulateLT32BitScalarTypes", "emulate-lt-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by"
-           " the target">
+           " the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -1394,6 +1448,13 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"true",
            "Allows compiler to assume vector indices fit in 32-bit if that "
      "yields faster code">,
+    Option<"useVectorAlignment", "use-vector-alignment",
+           "bool", /*default=*/"false",
+           "Use the preferred alignment of a vector type in load/store "
+           "operations instead of the alignment of the element type of the "
+           "memref. This flag is intended for use with hardware which requires"
+           "vector alignment, or in application contexts where it is known all "
+           "vector access are naturally aligned. ">,
     Option<"amx", "enable-amx",
            "bool", /*default=*/"false",
            "Enables the use of AMX dialect while lowering the vector "
@@ -1406,6 +1467,14 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
+    Option<"armI8MM", "enable-arm-i8mm",
+           "bool", /*default=*/"false",
+           "Enables the use of Arm FEAT_I8MM instructions while lowering "
+           "the vector dialect.">,
+    Option<"armBF16", "enable-arm-bf16",
+           "bool", /*default=*/"false",
+           "Enables the use of Arm FEAT_BF16 instructions while lowering "
+           "the vector dialect.">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
@@ -1462,6 +1531,28 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
     "memref::MemRefDialect", "arith::ArithDialect",
     "vector::VectorDialect", "xegpu::XeGPUDialect"
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// VectorToAMX
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
+  let summary = "Lower the operations from the vector dialect into the AMX "
+                "dialect";
+  let dependentDialects = [
+    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// XeVMToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertXeVMToLLVMPass : Pass<"convert-xevm-to-llvm"> {
+  let summary = "Convert XeVM to LLVM dialect";
+  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 #endif // MLIR_CONVERSION_PASSES

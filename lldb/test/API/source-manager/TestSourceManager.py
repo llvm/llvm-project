@@ -35,7 +35,7 @@ class SourceManagerTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.file = self.getBuildArtifact("main-copy.c")
+        self.file = os.path.realpath(self.getBuildArtifact("main-copy.c"))
         self.line = line_number("main.c", "// Set break point at this line.")
 
     def modify_content(self):

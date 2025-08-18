@@ -48,9 +48,9 @@ define i8 @test_srem_i8(i8 %arg1, i8 %arg2) nounwind {
 ;
 ; GISEL-X86-LABEL: test_srem_i8:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    cbtw
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    idivb %cl
 ; GISEL-X86-NEXT:    movb %ah, %al
 ; GISEL-X86-NEXT:    retl
@@ -78,8 +78,8 @@ define i16 @test_srem_i16(i16 %arg1, i16 %arg2) nounwind {
 ;
 ; GISEL-X86-LABEL: test_srem_i16:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GISEL-X86-NEXT:    cwtd
 ; GISEL-X86-NEXT:    idivw %cx

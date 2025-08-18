@@ -11,8 +11,8 @@ define i8 @test_mul_i8(i8 %arg1, i8 %arg2) nounwind {
 ;
 ; X86-LABEL: test_mul_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cbtw
 ; X86-NEXT:    imulb %cl
 ; X86-NEXT:    retl
@@ -30,8 +30,8 @@ define i16 @test_mul_i16(i16 %arg1, i16 %arg2) nounwind {
 ;
 ; X86-LABEL: test_mul_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imulw %cx, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -69,11 +69,11 @@ define i64 @test_mul_i64(i64 %arg1, i64 %arg2) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    imull %eax, %esi
-; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    imull %edx, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    imull %edx, %edi
+; X86-NEXT:    imull {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    addl %edi, %esi
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    addl %esi, %edx

@@ -31,18 +31,18 @@ Expected<SymbolNameSet> getDylibInterfaceFromDylib(ExecutionSession &ES,
   if (!Buf)
     return createFileError(Path, Buf.getError());
 
-  auto SymFile =
-      object::SymbolicFile::createSymbolicFile((*Buf)->getMemBufferRef());
-  if (!SymFile)
-    return SymFile.takeError();
+  auto BinFile = object::createBinary((*Buf)->getMemBufferRef());
+  if (!BinFile)
+    return BinFile.takeError();
 
   std::unique_ptr<object::MachOObjectFile> MachOFile;
-  if (isa<object::MachOObjectFile>(**SymFile))
-    MachOFile.reset(dyn_cast<object::MachOObjectFile>(SymFile->release()));
+  if (isa<object::MachOObjectFile>(**BinFile))
+    MachOFile.reset(dyn_cast<object::MachOObjectFile>(BinFile->release()));
   else if (auto *MachOUni =
-               dyn_cast<object::MachOUniversalBinary>(SymFile->get())) {
+               dyn_cast<object::MachOUniversalBinary>(BinFile->get())) {
     for (auto &O : MachOUni->objects()) {
-      if (O.getCPUType() == *CPUType && O.getCPUSubType() == *CPUSubType) {
+      if (O.getCPUType() == *CPUType &&
+          (O.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) == *CPUSubType) {
         if (auto Obj = O.getAsObjectFile())
           MachOFile = std::move(*Obj);
         else
@@ -112,8 +112,8 @@ Expected<SymbolNameSet> getDylibInterface(ExecutionSession &ES, Twine Path) {
   if (auto EC = identify_magic(Path, Magic))
     return createFileError(Path, EC);
 
-  SymbolNameSet Symbols;
   switch (Magic) {
+  case file_magic::macho_universal_binary:
   case file_magic::macho_dynamically_linked_shared_lib:
     return getDylibInterfaceFromDylib(ES, Path);
   case file_magic::tapi_file:

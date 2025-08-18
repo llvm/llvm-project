@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-apple-darwin9
+// RUN: %clang_cc1 -fsyntax-only -Wno-default-const-init-unsafe -verify %s -triple x86_64-apple-darwin9
 
 void f1(void) {
   const __builtin_va_list args2;

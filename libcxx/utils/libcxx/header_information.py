@@ -15,7 +15,7 @@ assert libcxx_root.exists()
 def _is_header_file(file):
     """Returns whether the given file is a header file, i.e. not a directory or the modulemap file."""
     return not file.is_dir() and not file.name in [
-        "module.modulemap",
+        "module.modulemap.in",
         "CMakeLists.txt",
         "libcxx.imp",
         "__config_site.in",
@@ -164,7 +164,6 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = list(map(Header, [
     "debugging",
-    "flat_set",
     "generator",
     "hazard_pointer",
     "inplace_vector",
@@ -180,29 +179,10 @@ header_restrictions = {
     # headers with #error directives
     "atomic": "_LIBCPP_HAS_ATOMIC_HEADER",
     "stdatomic.h": "_LIBCPP_HAS_ATOMIC_HEADER",
-
-    # headers with #error directives
-    "ios": "_LIBCPP_HAS_LOCALIZATION",
-    # transitive includers of the above headers
-    "clocale": "_LIBCPP_HAS_LOCALIZATION",
-    "codecvt": "_LIBCPP_HAS_LOCALIZATION",
-    "fstream": "_LIBCPP_HAS_LOCALIZATION",
-    "iomanip": "_LIBCPP_HAS_LOCALIZATION",
-    "iostream": "_LIBCPP_HAS_LOCALIZATION",
-    "istream": "_LIBCPP_HAS_LOCALIZATION",
-    "locale": "_LIBCPP_HAS_LOCALIZATION",
-    "ostream": "_LIBCPP_HAS_LOCALIZATION",
-    "regex": "_LIBCPP_HAS_LOCALIZATION",
-    "sstream": "_LIBCPP_HAS_LOCALIZATION",
-    "streambuf": "_LIBCPP_HAS_LOCALIZATION",
-    "strstream": "_LIBCPP_HAS_LOCALIZATION",
-    "syncstream": "_LIBCPP_HAS_LOCALIZATION",
 }
 
 lit_header_restrictions = {
     "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "clocale": "// UNSUPPORTED: no-localization",
-    "codecvt": "// UNSUPPORTED: no-localization",
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
     "cwchar": "// UNSUPPORTED: no-wide-characters",
     "cwctype": "// UNSUPPORTED: no-wide-characters",
@@ -212,26 +192,14 @@ lit_header_restrictions = {
     "experimental/type_traits": "// UNSUPPORTED: c++03",
     "experimental/utility": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
-    "fstream": "// UNSUPPORTED: no-localization, no-filesystem",
     "future": "// UNSUPPORTED: no-threads, c++03",
-    "iomanip": "// UNSUPPORTED: no-localization",
-    "ios": "// UNSUPPORTED: no-localization",
-    "iostream": "// UNSUPPORTED: no-localization",
-    "istream": "// UNSUPPORTED: no-localization",
     "latch": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "locale": "// UNSUPPORTED: no-localization",
     "mutex": "// UNSUPPORTED: no-threads, c++03",
-    "ostream": "// UNSUPPORTED: no-localization",
     "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate
-    "regex": "// UNSUPPORTED: no-localization",
     "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
-    "sstream": "// UNSUPPORTED: no-localization",
     "stdatomic.h": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20",
     "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "streambuf": "// UNSUPPORTED: no-localization",
-    "strstream": "// UNSUPPORTED: no-localization",
-    "syncstream": "// UNSUPPORTED: no-localization",
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
@@ -261,6 +229,7 @@ mandatory_inclusions = {
     "deque": ["compare", "initializer_list"],
     "filesystem": ["compare"],
     "flat_map": ["compare", "initializer_list"],
+    "flat_set": ["compare", "initializer_list"],
     "forward_list": ["compare", "initializer_list"],
     "ios": ["iosfwd"],
     "iostream": ["ios", "istream", "ostream", "streambuf"],

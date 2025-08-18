@@ -1,20 +1,20 @@
 // RUN: %clang_cc1 %s -verify=expected,fp80,noi128 -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=i686-linux-gnu -std=c11
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=i686-linux-gnu -std=c11
 // RUN: %clang_cc1 %s -verify=expected,noi128 -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=i686-linux-android -std=c11
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=i686-linux-android -std=c11
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr7
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr8 -DPPC64_PWR8
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
 // RUN:   -target-cpu pwr8
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
-// RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
+// RUN:   -Wno-default-const-init-unsafe -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
 // RUN:   -mabi=quadword-atomics -target-cpu pwr8 -DPPC64_PWR8
 
 // Basic parsing/Sema tests for __c11_atomic_*

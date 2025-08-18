@@ -36,19 +36,19 @@ define void @f3(i32 %x) !type !8 {
 !8 = !{i64 0, !"typeid3"}
 
 
-; CHECK-DAG: @__typeid_typeid1_global_addr = hidden alias i8, ptr [[JT1:.*]]
-; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 3 to ptr)
+; CHECK-DAG: @__typeid_typeid1_global_addr = hidden alias i8, getelementptr (i8, ptr [[JT1:.*]], i64 32)
+; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i64 3 to ptr)
 ; CHECK-DAG: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 4 to ptr)
 
-; CHECK-DAG: @h                    = alias void (i8), ptr [[JT1]]
-; CHECK-DAG: @f                    = alias void (i32), {{.*}}getelementptr {{.*}}ptr [[JT1]]
-; CHECK-DAG: @f2                   = alias void (i32), {{.*}}getelementptr {{.*}}ptr [[JT1]]
-; CHECK-DAG: @external.cfi_jt      = hidden alias void (), {{.*}}getelementptr {{.*}}ptr [[JT1]]
-; CHECK-DAG: @external_weak.cfi_jt = hidden alias void (), {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @h                    = alias [8 x i8], ptr [[JT1]]
+; CHECK-DAG: @f                    = alias [8 x i8], {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @f2                   = alias [8 x i8], {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @external.cfi_jt      = hidden alias [8 x i8], {{.*}}getelementptr {{.*}}ptr [[JT1]]
+; CHECK-DAG: @external_weak.cfi_jt = hidden alias [8 x i8], {{.*}}getelementptr {{.*}}ptr [[JT1]]
 
 ; CHECK-DAG: @__typeid_typeid2_global_addr = hidden alias i8, ptr [[JT2:.*]]
 
-; CHECK-DAG: @g                    = alias void (), ptr [[JT2]]
+; CHECK-DAG: @g                    = alias [8 x i8], ptr [[JT2]]
 
 ; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}}
 ; CHECK-DAG: declare !type !{{.*}} void @external()

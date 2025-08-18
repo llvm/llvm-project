@@ -206,12 +206,10 @@ void StableFunctionMap::finalize(bool SkipTrim) {
     auto &[StableHash, SFS] = *It;
 
     // Group stable functions by ModuleIdentifier.
-    std::stable_sort(SFS.begin(), SFS.end(),
-                     [&](const std::unique_ptr<StableFunctionEntry> &L,
-                         const std::unique_ptr<StableFunctionEntry> &R) {
-                       return *getNameForId(L->ModuleNameId) <
-                              *getNameForId(R->ModuleNameId);
-                     });
+    llvm::stable_sort(SFS, [&](const std::unique_ptr<StableFunctionEntry> &L,
+                               const std::unique_ptr<StableFunctionEntry> &R) {
+      return *getNameForId(L->ModuleNameId) < *getNameForId(R->ModuleNameId);
+    });
 
     // Consider the first function as the root function.
     auto &RSF = SFS[0];

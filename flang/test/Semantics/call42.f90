@@ -22,17 +22,17 @@ module m
     type(hasAlloc), intent(out) :: b(..)
     type(hasInit), intent(out) :: c(..)
     type(hasFinal), intent(out) :: d(..)
-    !PORTABILITY: Assumed-rank actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument
+    !PORTABILITY: Assumed-rank actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument [-Wportability]
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     call typeOutAssumedRank(a, b, c, d)
-    !PORTABILITY: Assumed-rank actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument
+    !PORTABILITY: Assumed-rank actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument [-Wportability]
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     call classOutAssumedRank(a, b, c, d)
-    !PORTABILITY: Assumed-rank actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument
+    !PORTABILITY: Assumed-rank actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument [-Wportability]
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-rank actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
@@ -95,17 +95,17 @@ module m
     type(hasAlloc) b(*)
     type(hasInit) c(*)
     type(hasFinal) d(*)
-    !PORTABILITY: Assumed-size actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument
+    !PORTABILITY: Assumed-size actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument [-Wportability]
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     call typeOutAssumedRank(a,b,c,d)
-    !PORTABILITY: Assumed-size actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument
+    !PORTABILITY: Assumed-size actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument [-Wportability]
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     call classOutAssumedRank(a,b,c,d)
-    !PORTABILITY: Assumed-size actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument
+    !PORTABILITY: Assumed-size actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument [-Wportability]
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization
     !ERROR: Assumed-size actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization

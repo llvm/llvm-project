@@ -838,7 +838,7 @@ TEST_F(TargetDeclTest, OverloadExpr) {
   )cpp";
   // Sized deallocation is enabled by default in C++14 onwards.
   EXPECT_DECLS("CXXDeleteExpr",
-               "void operator delete(void *, unsigned long) noexcept");
+               "void operator delete(void *, __size_t) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
@@ -992,7 +992,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
       )cpp";
   EXPECT_DECLS("DependentNameTypeLoc", "struct B");
 
-  // Heuristic resolution of dependent type name which doesn't get a TypeLoc
+  // Heuristic resolution of dependent type name within a NestedNameSpecifierLoc
   Code = R"cpp(
         template <typename>
         struct A { struct B { struct C {}; }; };
@@ -1000,7 +1000,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
         template <typename T>
         void foo(typename A<T>::[[B]]::C);
       )cpp";
-  EXPECT_DECLS("NestedNameSpecifierLoc", "struct B");
+  EXPECT_DECLS("DependentNameTypeLoc", "struct B");
 
   // Heuristic resolution of dependent type name whose qualifier is also
   // dependent
@@ -1489,7 +1489,7 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
         "4: targets = {a}\n"
         "5: targets = {a::b}, qualifier = 'a::'\n"
         "6: targets = {a::b::S}\n"
-        "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
+        "7: targets = {a::b::S::type}, qualifier = 'S::'\n"
         "8: targets = {y}, decl\n"},
        {R"cpp(
          void foo() {

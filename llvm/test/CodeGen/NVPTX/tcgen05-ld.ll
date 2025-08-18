@@ -11,7 +11,7 @@ define void @nvvm_tcgen05_ld_16x64b(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x64b_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x64b_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x64b.x1.b32 {%r2}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x64b.x2.b32 {%r3, %r4}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x64b.x4.b32 {%r5, %r6, %r7, %r8}, [%r1];
@@ -46,7 +46,7 @@ define void @nvvm_tcgen05_ld_16x64b_pack(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x64b_pack_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x64b_pack_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x64b.x1.pack::16b.b32 {%r2}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x64b.x2.pack::16b.b32 {%r3, %r4}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x64b.x4.pack::16b.b32 {%r5, %r6, %r7, %r8}, [%r1];
@@ -81,7 +81,7 @@ define void @nvvm_tcgen05_ld_16x128b(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<256>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x128b_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x128b_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x128b.x1.b32 {%r2, %r3}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x128b.x2.b32 {%r4, %r5, %r6, %r7}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x128b.x4.b32 {%r8, %r9, %r10, %r11, %r12, %r13, %r14, %r15}, [%r1];
@@ -113,7 +113,7 @@ define void @nvvm_tcgen05_ld_16x128b_pack(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<256>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x128b_pack_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x128b_pack_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x128b.x1.pack::16b.b32 {%r2, %r3}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x128b.x2.pack::16b.b32 {%r4, %r5, %r6, %r7}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x128b.x4.pack::16b.b32 {%r8, %r9, %r10, %r11, %r12, %r13, %r14, %r15}, [%r1];
@@ -145,7 +145,7 @@ define void @nvvm_tcgen05_ld_16x256b(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<254>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x256b_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x256b_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x256b.x1.b32 {%r2, %r3, %r4, %r5}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x256b.x2.b32 {%r6, %r7, %r8, %r9, %r10, %r11, %r12, %r13}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x256b.x4.b32 {%r14, %r15, %r16, %r17, %r18, %r19, %r20, %r21, %r22, %r23, %r24, %r25, %r26, %r27, %r28, %r29}, [%r1];
@@ -174,7 +174,7 @@ define void @nvvm_tcgen05_ld_16x256b_pack(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<254>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x256b_pack_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x256b_pack_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x256b.x1.pack::16b.b32 {%r2, %r3, %r4, %r5}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x256b.x2.pack::16b.b32 {%r6, %r7, %r8, %r9, %r10, %r11, %r12, %r13}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x256b.x4.pack::16b.b32 {%r14, %r15, %r16, %r17, %r18, %r19, %r20, %r21, %r22, %r23, %r24, %r25, %r26, %r27, %r28, %r29}, [%r1];
@@ -203,7 +203,7 @@ define void @nvvm_tcgen05_ld_32x32b(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_32x32b_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_32x32b_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.32x32b.x1.b32 {%r2}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.32x32b.x2.b32 {%r3, %r4}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.32x32b.x4.b32 {%r5, %r6, %r7, %r8}, [%r1];
@@ -237,7 +237,7 @@ define void @nvvm_tcgen05_ld_32x32b_pack(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_32x32b_pack_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_32x32b_pack_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.32x32b.x1.pack::16b.b32 {%r2}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.32x32b.x2.pack::16b.b32 {%r3, %r4}, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.32x32b.x4.pack::16b.b32 {%r5, %r6, %r7, %r8}, [%r1];
@@ -272,7 +272,7 @@ define void @nvvm_tcgen05_ld_16x32bx2(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x32bx2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x32bx2.x1.b32 {%r2}, [%r1], 2;
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x32bx2.x2.b32 {%r3, %r4}, [%r1], 2;
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x32bx2.x4.b32 {%r5, %r6, %r7, %r8}, [%r1], 2;
@@ -306,7 +306,7 @@ define void @nvvm_tcgen05_ld_16x32bx2_pack(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [nvvm_tcgen05_ld_16x32bx2_pack_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_pack_param_0];
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x32bx2.x1.pack::16b.b32 {%r2}, [%r1], 2;
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x32bx2.x2.pack::16b.b32 {%r3, %r4}, [%r1], 2;
 ; CHECK-NEXT:    tcgen05.ld.sync.aligned.16x32bx2.x4.pack::16b.b32 {%r5, %r6, %r7, %r8}, [%r1], 2;

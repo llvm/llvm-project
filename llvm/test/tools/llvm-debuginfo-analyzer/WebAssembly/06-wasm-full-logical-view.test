@@ -31,6 +31,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x000000000b][001]              {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [0x000000000b][002]                {Producer} 'clang version 19{{.*}}'
+; ONE-NEXT: [0x000000000b][002]                {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT:                                    {Directory} '{{.*}}/general'
 ; ONE-NEXT:                                    {File} 'test.cpp'
 ; ONE-NEXT:                                    {Public} 'foo' [0x0000000002:0x000000007f]

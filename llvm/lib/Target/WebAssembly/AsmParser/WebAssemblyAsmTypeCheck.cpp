@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -54,7 +55,7 @@ void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
 
 void WebAssemblyAsmTypeCheck::localDecl(
     const SmallVectorImpl<wasm::ValType> &Locals) {
-  LocalTypes.insert(LocalTypes.end(), Locals.begin(), Locals.end());
+  llvm::append_range(LocalTypes, Locals);
 }
 
 void WebAssemblyAsmTypeCheck::dumpTypeStack(Twine Msg) {
@@ -125,8 +126,8 @@ SmallVector<WebAssemblyAsmTypeCheck::StackType, 4>
 WebAssemblyAsmTypeCheck::valTypesToStackTypes(
     ArrayRef<wasm::ValType> ValTypes) {
   SmallVector<StackType, 4> Types(ValTypes.size());
-  std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
-                 [](wasm::ValType Val) -> StackType { return Val; });
+  llvm::transform(ValTypes, Types.begin(),
+                  [](wasm::ValType Val) -> StackType { return Val; });
   return Types;
 }
 
@@ -257,16 +258,16 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, GlobalOp, SymRef))
     return true;
-  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  auto *WasmSym = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
   switch (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA)) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     Type = static_cast<wasm::ValType>(WasmSym->getGlobalType().Type);
     break;
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    switch (SymRef->getKind()) {
-    case MCSymbolRefExpr::VK_GOT:
-    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
+    switch (SymRef->getSpecifier()) {
+    case WebAssembly::S_GOT:
+    case WebAssembly::S_GOT_TLS:
       Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
@@ -285,7 +286,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, TableOp, SymRef))
     return true;
-  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  auto *WasmSym = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
   if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
@@ -301,7 +302,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
   const MCSymbolRefExpr *SymRef = nullptr;
   if (getSymRef(ErrorLoc, SigOp, SymRef))
     return true;
-  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  auto *WasmSym = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
   Sig = WasmSym->getSignature();
 
   if (!Sig || WasmSym->getType() != Type) {
@@ -356,8 +357,7 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
         Opcode == wasm::WASM_OPCODE_CATCH_REF) {
       if (!getSignature(ErrorLoc, Inst.getOperand(OpIdx++),
                         wasm::WASM_SYMBOL_TYPE_TAG, Sig))
-        SentTypes.insert(SentTypes.end(), Sig->Params.begin(),
-                         Sig->Params.end());
+        llvm::append_range(SentTypes, Sig->Params);
       else
         Error = true;
     }
