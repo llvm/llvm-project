@@ -182,6 +182,41 @@ void potential_loop_with_break(bool cond) {
   (void)*p;     // expected-note {{later used here}}
 }
 
+void potential_multiple_expiry_of_same_loan(bool cond) {
+  // Choose the last expiry location for the loan.
+  MyObj safe;
+  MyObj* p = &safe;
+  for (int i = 0; i < 10; ++i) {
+    MyObj unsafe;
+    if (cond) {
+      p = &unsafe; // expected-warning {{may not live long enough}}
+      break;
+    }
+  }               // expected-note {{destroyed here}} 
+  (void)*p;       // expected-note {{later used here}}
+
+  p = &safe;
+  for (int i = 0; i < 10; ++i) {
+    MyObj unsafe;
+    if (cond) {
+      p = &unsafe;    // expected-warning {{may not live long enough}}
+      if (cond)
+        break;
+    }
+  }                   // expected-note {{destroyed here}}
+  (void)*p;           // expected-note {{later used here}}
+
+  p = &safe;
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      MyObj unsafe2;
+      p = &unsafe2;   // expected-warning {{may not live long enough}}
+      break;          // expected-note {{destroyed here}}
+    }
+  }
+  (void)*p;           // expected-note {{later used here}}
+}
+
 void potential_switch(int mode) {
   MyObj safe;
   MyObj* p = &safe;
@@ -236,18 +271,3 @@ void no_error_if_dangle_then_rescue() {
   p = &safe;    // p is "rescued" before use.
   (void)*p;     // This is safe.
 }
-
-// MyObj some_name(bool condition, MyObj x) {
-//   MyObj* p = &x;
-//   MyObj* q = &x;
-//   if (condition)
-//   {
-//     MyObj y{20};
-//     MyObj * abcd = &y;
-//     p = abcd;
-//     q = abcd;
-//   }
-//   MyObj a = *p;
-//   MyObj b = *q;
-//   return a + b;
-// }

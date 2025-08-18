@@ -901,8 +901,8 @@ struct ExpiredLattice {
     OS << "ExpiredLattice State:\n";
     if (Expired.isEmpty())
       OS << "  <empty>\n";
-    for (const auto &ID_ : Expired)
-      OS << "  Loan " << ID_.first << " is expired\n";
+    for (const auto &[ID, _] : Expired)
+      OS << "  Loan " << ID << " is expired\n";
   }
 };
 
@@ -928,8 +928,10 @@ public:
   Lattice join(Lattice L1, Lattice L2) {
     return Lattice(
         utils::join(L1.Expired, L2.Expired, Factory,
-                    // Take any ExpireFact to join the values.
-                    [](const ExpireFact *F, const ExpireFact *) { return F; }));
+                    // Take the last expiry fact to make this hermetic.
+                    [](const ExpireFact *F1, const ExpireFact *F2) {
+                      return F1->getExpiryLoc() > F2->getExpiryLoc() ? F1 : F2;
+                    }));
   }
 
   Lattice transfer(Lattice In, const ExpireFact &F) {
@@ -975,10 +977,9 @@ public:
 
 /// Struct to store the complete context for a potential lifetime violation.
 struct PendingWarning {
-  const Expr *IssueExpr;    // Where the loan was originally issued.
   SourceLocation ExpiryLoc; // Where the loan expired.
   const Expr *UseExpr;      // Where the origin holding this loan was used.
-  Confidence Level;
+  Confidence ConfidenceLevel;
 };
 
 class LifetimeChecker {
@@ -1052,28 +1053,26 @@ public:
       // If we already have a warning for this loan with a higher or equal
       // confidence, skip this one.
       if (FinalWarningsMap.count(DefaultedLoan) &&
-          CurrentConfidence <= FinalWarningsMap[DefaultedLoan].Level)
+          CurrentConfidence <= FinalWarningsMap[DefaultedLoan].ConfidenceLevel)
         continue;
 
-      const Loan &L = FactMgr.getLoanMgr().getLoan(DefaultedLoan);
       auto *EF = AllExpiredLoans.lookup(DefaultedLoan);
       assert(EF && "Could not find ExpireFact for an expired loan.");
 
-      const Expr *IssueExpr = L.IssueExpr;
-      SourceLocation ExpiryLoc = dyn_cast<ExpireFact>(*EF)->getExpiryLoc();
-
-      FinalWarningsMap[DefaultedLoan] = {IssueExpr, ExpiryLoc, UF->getUseExpr(),
-                                         CurrentConfidence};
+      FinalWarningsMap[DefaultedLoan] = {/*ExpiryLoc=*/(*EF)->getExpiryLoc(),
+                                         /*UseExpr=*/UF->getUseExpr(),
+                                         /*ConfidenceLevel=*/CurrentConfidence};
     }
   }
 
   void issuePendingWarnings() {
     if (!Reporter)
       return;
-    for (const auto &pair : FinalWarningsMap) {
-      const PendingWarning &PW = pair.second;
-      Reporter->reportUseAfterFree(PW.IssueExpr, PW.UseExpr, PW.ExpiryLoc,
-                                   PW.Level);
+    for (const auto &[LID, Warning] : FinalWarningsMap) {
+      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
+      const Expr *IssueExpr = L.IssueExpr;
+      Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr,
+                                   Warning.ExpiryLoc, Warning.ConfidenceLevel);
     }
   }
 };
