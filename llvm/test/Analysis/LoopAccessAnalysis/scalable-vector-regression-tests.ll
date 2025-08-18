@@ -69,10 +69,10 @@ define void @regression_test_is_no_wrap_access_scalable_typesize(ptr %ptr_a, i64
 entry:
   br label %loop
 loop:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
-  %2 = shl i64 %indvars.iv, 1
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %2 = shl i64 %iv, 1
   %3 = add i64 %2, %n
-  %4 = trunc i64 %indvars.iv to i32
+  %4 = trunc i64 %iv to i32
   %5 = insertelement <vscale x 4 x i32> zeroinitializer, i32 %4, i64 0
   %6 = getelementptr i32, ptr %ptr_a, i64 %3
   store <vscale x 4 x i32> %5, ptr %6, align 4
@@ -81,8 +81,8 @@ loop:
   %8 = shufflevector <vscale x 4 x i32> %7, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer
   %9 = getelementptr i32, ptr %ptr_b, i64 %3
   store <vscale x 4 x i32> %8, ptr %9, align 4
-  %indvars.iv.next = add i64 %indvars.iv, 1
-  %.not = icmp eq i64 %indvars.iv, 16
+  %iv.next = add i64 %iv, 1
+  %.not = icmp eq i64 %iv, 16
   br i1 %.not, label %end, label %loop
 end:
   ret void
