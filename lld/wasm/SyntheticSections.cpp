@@ -440,9 +440,9 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
                                  : WASM_OPCODE_I32_ADD;
 
   for (const Symbol *sym : internalGotSymbols) {
-    if (TLS != sym->isTLS())
-      continue;
     if (sym->flags & WASM_SYMBOL_ABSOLUTE)
+      continue;
+    if (TLS != sym->isTLS())
       continue;
 
     if (auto *d = dyn_cast<DefinedData>(sym)) {
