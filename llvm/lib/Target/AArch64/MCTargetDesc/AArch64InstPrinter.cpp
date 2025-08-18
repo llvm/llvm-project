@@ -1031,9 +1031,8 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
 
   O << '\t' << Str;
 
-  if (NeedsReg) {
+  if (NeedsReg)
     O << ", " << Reg;
-  }
 
   return true;
 }
