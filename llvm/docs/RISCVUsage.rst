@@ -533,7 +533,7 @@ The current vendor extensions supported are:
 
 ``XSMTVDot``
   SpacemiT defines `Intrinsic Matrix Extension (IME) specification <https://github.com/space-mit/riscv-ime-extension-spec/releases/tag/v0429>`__.
-  LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`__, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
+  LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
 
 Experimental C Intrinsics
 =========================
