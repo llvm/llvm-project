@@ -117,6 +117,7 @@ public:
                          MCELFStreamer::AttributeSubSection &AttSubSection);
 
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
+  bool hasSubsection(StringRef SubSectionName);
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
