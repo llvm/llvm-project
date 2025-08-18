@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-unsigned __fnan2(unsigned a, unsigned b) {
+unsigned __compiler_rt_fnan2(unsigned a, unsigned b) {
   // Make shifted-left copies of a and b to discard the sign bit. Then add 1 at
   // the bit position where the quiet vs signalling bit ended up. This squashes
   // all the signalling NaNs to the top of the range of 32-bit values, from

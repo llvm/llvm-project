@@ -254,7 +254,7 @@ LOCAL_LABEL(fadd_check_rte):
 
 LOCAL_LABEL(fadd_naninf):
   // We come here if at least one input is a NaN or infinity. If either or both
-  // inputs are NaN then we hand off to __fnan2 which will propagate a NaN from
+  // inputs are NaN then we hand off to fnan2 which will propagate a NaN from
   // the input.
   //
   // On entry, we know r5 = 0x80000000 from the initial uncommon check. Also,
@@ -296,7 +296,7 @@ LOCAL_LABEL(fadd_infinf):
   POP     {r4,r5,r6,pc}
 
 LOCAL_LABEL(fadd_nan):
-  BL      SYMBOL_NAME(__fnan2)
+  BL      SYMBOL_NAME(__compiler_rt_fnan2)
   POP     {r4,r5,r6,pc}
 
 LOCAL_LABEL(fadd_zerodenorm_x):
@@ -724,7 +724,7 @@ LOCAL_LABEL(fsub_underflow_2):
 
 LOCAL_LABEL(fsub_naninf):
   // We come here if at least one input is a NaN or infinity. If either or both
-  // inputs are NaN then we hand off to __fnan2 which will propagate a NaN from
+  // inputs are NaN then we hand off to fnan2 which will propagate a NaN from
   // the input.
   // We come here if at least one of x,y is a NaN or infinity.
   // Their exponents are reliably always in r2 and r3
@@ -767,7 +767,7 @@ LOCAL_LABEL(fsub_infinf):
   POP     {r4,r5,r6,pc}
 
 LOCAL_LABEL(fsub_nan):
-  BL      SYMBOL_NAME(__fnan2)
+  BL      SYMBOL_NAME(__compiler_rt_fnan2)
   POP     {r4,r5,r6,pc}
 
 LOCAL_LABEL(fsub_zerodenorm_x):
