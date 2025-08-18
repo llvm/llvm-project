@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run 2>&1 | sort | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #include <string.h>
 #include <stdio.h>
@@ -21,6 +23,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // CHECK: {{^}}0: Message length=[[LENGTH:[0-9]+]]
 // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
@@ -33,3 +36,4 @@ int main() {
 
 // Message from runtime
 // CHECK: {{^}}OMP: Warning{{.*}}User message goes here
+// clang-format on
