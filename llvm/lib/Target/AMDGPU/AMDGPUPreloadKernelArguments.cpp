@@ -37,6 +37,11 @@ static cl::opt<unsigned> KernargPreloadCount(
     "amdgpu-kernarg-preload-count",
     cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
 
+static cl::opt<bool>
+    EnableKernargPreload("amdgpu-kernarg-preload",
+                         cl::desc("Enable preload kernel arguments to SGPRs"),
+                         cl::init(true));
+
 namespace {
 
 class AMDGPUPreloadKernelArgumentsLegacy : public ModulePass {
@@ -275,6 +280,9 @@ AMDGPUPreloadKernelArgumentsLegacy::AMDGPUPreloadKernelArgumentsLegacy(
     : ModulePass(ID), TM(TM) {}
 
 static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
+  if (!EnableKernargPreload)
+    return false;
+
   SmallVector<Function *, 4> FunctionsToErase;
   bool Changed = false;
   for (auto &F : M) {

@@ -1345,6 +1345,10 @@ public:
 
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
+  bool setRegModeNeedsVNOPs() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
 
@@ -1814,6 +1818,18 @@ public:
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
     // to the same register.
     return false;
+  }
+
+  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
+  // and surronded by S_WAIT_ALU(0xFFE3).
+  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
+    return getGeneration() == GFX12;
+  }
+
+  // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
+  // read.
+  bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
   }
 };
 
