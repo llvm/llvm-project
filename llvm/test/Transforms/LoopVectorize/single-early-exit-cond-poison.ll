@@ -4,7 +4,7 @@
 
 ; Test case from https://github.com/llvm/llvm-project/issues/153946.
 ; %shr and thus %early.cond will be poison from %iv == 4 onwards.
-; TODO: Make sure the mask being poison does not propagate across lanes in the
+; Make sure the mask being poison does not propagate across lanes in the
 ; OR reduction when computing the early exit condition in the vector loop.
 define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-LABEL: define noundef i32 @f(
@@ -26,7 +26,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP2]], zeroinitializer
 ; VF4IC2-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
 ; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP4]], [[TMP5]]
+; VF4IC2-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP4]]
+; VF4IC2-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP5]]
+; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP17]], [[TMP18]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; VF4IC2-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
 ; VF4IC2-NEXT:    br i1 true, label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -76,12 +78,13 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
 ; VF8IC1-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
 ; VF8IC1-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; VF8IC1-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
+; VF8IC1-NEXT:    [[TMP3:%.*]] = freeze <8 x i1> [[TMP2]]
+; VF8IC1-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
 ; VF8IC1-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
 ; VF8IC1-NEXT:    br i1 true, label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF8IC1:       [[MIDDLE_SPLIT]]:
 ; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; VF8IC1-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
+; VF8IC1-NEXT:    br i1 [[TMP8]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8IC1:       [[MIDDLE_BLOCK]]:
 ; VF8IC1-NEXT:    br label %[[RETURN:.*]]
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
