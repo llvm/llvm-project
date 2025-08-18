@@ -593,7 +593,7 @@ public:
   }
 
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const {
+  UnsignedOrNone getDeclID() const {
     if (isBlockPointer()) {
       assert(asBlockPointer().Pointee);
       return asBlockPointer().Pointee->getDeclID();
