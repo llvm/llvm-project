@@ -656,6 +656,35 @@ def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
   }];
 }
 
+def AMDGPU_PermlanePerm : I32EnumAttr<"PermlanePerm",
+    "The possible permutations for a permlane operation",
+    [
+      I32EnumAttrCase<"swap_16",  0>,
+      I32EnumAttrCase<"swap_32",  1>,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_PermlanePermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_PermlanePerm,
+  "permlane_perm">;
+
+def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]>,
+Arguments<(ins AnyIntegerOrFloatOr1DVector:$src, 
+                AMDGPU_PermlanePermAttr:$kind)> {
+  let summary = "AMDGPU permlane op";
+  let description = [{
+    High-level wrapper on `rocdl.permlane` variants.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32 and
+    one or more `rocdl.permlane` ops during lowering.
+  }];
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src $kind attr-dict `:` type($result)
+  }];
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
