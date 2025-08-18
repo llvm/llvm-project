@@ -2406,7 +2406,10 @@ static void collectHwModesReferencedForEncodings(
       }
     }
   }
-  HwModeIDs.assign(BV.set_bits_begin(), BV.set_bits_end());
+  // FIXME: Can't do `HwModeIDs.assign(BV.set_bits_begin(), BV.set_bits_end())`
+  //   because const_set_bits_iterator_impl is not copy-assignable.
+  //   This breaks some MacOS builds.
+  append_range(HwModeIDs, BV.set_bits());
 }
 
 static void
