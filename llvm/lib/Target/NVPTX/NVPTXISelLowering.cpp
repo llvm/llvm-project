@@ -5242,102 +5242,6 @@ static SDValue PerformFADDCombine(SDNode *N,
   return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
-// Helper function to check if an AND operation on a load can be eliminated.
-// Returns a replacement value if the load can be eliminated, else nullopt.
-static std::optional<SDValue>
-canEliminateLoadAND(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                    SDValue Val, SDValue Mask, SDValue AExt) {
-  if (Val->getOpcode() != NVPTXISD::LoadV2 &&
-      Val->getOpcode() != NVPTXISD::LoadV4) {
-    return std::nullopt;
-  }
-
-  ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
-  if (!MaskCnst) {
-    // Not an AND with a constant
-    return std::nullopt;
-  }
-
-  uint64_t MaskVal = MaskCnst->getZExtValue();
-  if (MaskVal != 0xff) {
-    // Not an AND that chops off top 8 bits
-    return std::nullopt;
-  }
-
-  MemSDNode *Mem = dyn_cast<MemSDNode>(Val);
-  if (!Mem) {
-    // Not a MemSDNode
-    return std::nullopt;
-  }
-
-  EVT MemVT = Mem->getMemoryVT();
-  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8) {
-    // We only handle the i8 case
-    return std::nullopt;
-  }
-
-  unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
-  if (ExtType == ISD::SEXTLOAD) {
-    // If the load is a sextload, the AND is needed to zero out the high 8 bits
-    return std::nullopt;
-  }
-
-  SDValue Result = Val;
-
-  if (AExt) {
-    // Re-insert the ext as a zext.
-    Result =
-        DCI.DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), AExt.getValueType(), Val);
-  }
-
-  // If we get here, the AND is unnecessary. Replace it with the load.
-  return Result;
-}
-
-static SDValue PerformANDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
-  // The type legalizer turns a vector load of i8 values into a zextload to i16
-  // registers, optionally ANY_EXTENDs it (if target type is integer),
-  // and ANDs off the high 8 bits. Since we turn this load into a
-  // target-specific DAG node, the DAG combiner fails to eliminate these AND
-  // nodes. Do that here.
-  SDValue Val = N->getOperand(0);
-  SDValue Mask = N->getOperand(1);
-
-  if (isa<ConstantSDNode>(Val))
-    std::swap(Val, Mask);
-
-  SDValue AExt;
-
-  // Generally, we will see zextload -> IMOV16rr -> ANY_EXTEND -> and
-  if (Val.getOpcode() == ISD::ANY_EXTEND) {
-    AExt = Val;
-    Val = Val->getOperand(0);
-  }
-
-  if (Val.getOpcode() == ISD::BUILD_VECTOR &&
-      Mask.getOpcode() == ISD::BUILD_VECTOR) {
-    assert(Val->getNumOperands() == Mask->getNumOperands() && !AExt);
-    for (unsigned I = 0; I < Val->getNumOperands(); ++I) {
-      // We know that the AExt is null and therefore the result of this call
-      // will be the BUILD_VECTOR operand or nullopt. Rather than create a new
-      // BUILD_VECTOR with the collection of operands, we can just use the
-      // original and ignore the result.
-      if (!canEliminateLoadAND(N, DCI, Val->getOperand(I), Mask->getOperand(I),
-                               AExt)
-               .has_value())
-        return SDValue();
-    }
-    DCI.CombineTo(N, Val, false);
-  } else {
-    auto Result = canEliminateLoadAND(N, DCI, Val, Mask, AExt);
-    if (Result.has_value())
-      DCI.CombineTo(N, Result.value(), AExt.getNode() != nullptr);
-  }
-
-  return SDValue();
-}
-
 static SDValue PerformREMCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
@@ -6009,8 +5913,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformADDCombine(N, DCI, OptLevel);
   case ISD::ADDRSPACECAST:
     return combineADDRSPACECAST(N, DCI);
-  case ISD::AND:
-    return PerformANDCombine(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return combineMulWide(N, DCI, OptLevel);
@@ -6635,6 +6537,27 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
   }
 }
 
+static void computeKnownBitsFori8VLoad(const SDValue Op, KnownBits &Known) {
+  MemSDNode *Mem = dyn_cast<MemSDNode>(Op);
+  if (!Mem) {
+    return;
+  }
+
+  EVT MemVT = Mem->getMemoryVT();
+  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8) {
+    return;
+  }
+
+  unsigned ExtType = Mem->getConstantOperandVal(Mem->getNumOperands() - 1);
+  if (ExtType == ISD::SEXTLOAD) {
+    Known = Known.sext(Known.getBitWidth());
+    return;
+  }
+  KnownBits HighZeros(Known.getBitWidth() - 8);
+  HighZeros.setAllZero();
+  Known.insertBits(HighZeros, 8);
+}
+
 void NVPTXTargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
     const SelectionDAG &DAG, unsigned Depth) const {
@@ -6643,6 +6566,10 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
   switch (Op.getOpcode()) {
   case NVPTXISD::PRMT:
     computeKnownBitsForPRMT(Op, Known, DAG, Depth);
+    break;
+  case NVPTXISD::LoadV2:
+  case NVPTXISD::LoadV4:
+    computeKnownBitsFori8VLoad(Op, Known);
     break;
   default:
     break;
