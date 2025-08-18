@@ -15,6 +15,8 @@ namespace dxbc {
 using namespace object;
 
 size_t DXContainerWriter::finalize() {
+  assert(Offsets.empty() &&
+         "Attempted to finalize writer with already computed offsets");
   Offsets.reserve(Obj.Parts.size());
   size_t Offset = Obj.headerSize();
   for (const Part &P : Obj.Parts) {
