@@ -144,7 +144,7 @@ public:
   template <typename P>
   void
   RunOnce(const std::function<void(llvm::Expected<P>)> &callback,
-          std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
+          std::chrono::milliseconds timeout = std::chrono::milliseconds(200)) {
     auto handle = m_transport_up->RegisterReadObject<P>(
         loop, [&](lldb_private::MainLoopBase &loop, llvm::Expected<P> message) {
           callback(std::move(message));
