@@ -905,10 +905,15 @@ define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64XTHEADBB-LABEL: zexth_i32:
-; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
-; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NOB-LABEL: zexth_i32:
+; RV64XTHEADBB-NOB:       # %bb.0:
+; RV64XTHEADBB-NOB-NEXT:    th.extu a0, a0, 15, 0
+; RV64XTHEADBB-NOB-NEXT:    ret
+;
+; RV64XTHEADBB-B-LABEL: zexth_i32:
+; RV64XTHEADBB-B:       # %bb.0:
+; RV64XTHEADBB-B-NEXT:    zext.h a0, a0
+; RV64XTHEADBB-B-NEXT:    ret
   %and = and i32 %a, 65535
   ret i32 %and
 }
@@ -920,10 +925,15 @@ define i64 @zexth_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64XTHEADBB-LABEL: zexth_i64:
-; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
-; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NOB-LABEL: zexth_i64:
+; RV64XTHEADBB-NOB:       # %bb.0:
+; RV64XTHEADBB-NOB-NEXT:    th.extu a0, a0, 15, 0
+; RV64XTHEADBB-NOB-NEXT:    ret
+;
+; RV64XTHEADBB-B-LABEL: zexth_i64:
+; RV64XTHEADBB-B:       # %bb.0:
+; RV64XTHEADBB-B-NEXT:    zext.h a0, a0
+; RV64XTHEADBB-B-NEXT:    ret
   %and = and i64 %a, 65535
   ret i64 %and
 }
@@ -935,10 +945,15 @@ define i64 @zextw_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64XTHEADBB-LABEL: zextw_i64:
-; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    th.extu a0, a0, 31, 0
-; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NOB-LABEL: zextw_i64:
+; RV64XTHEADBB-NOB:       # %bb.0:
+; RV64XTHEADBB-NOB-NEXT:    th.extu a0, a0, 31, 0
+; RV64XTHEADBB-NOB-NEXT:    ret
+;
+; RV64XTHEADBB-B-LABEL: zextw_i64:
+; RV64XTHEADBB-B:       # %bb.0:
+; RV64XTHEADBB-B-NEXT:    zext.w a0, a0
+; RV64XTHEADBB-B-NEXT:    ret
   %and = and i64 %a, 4294967295
   ret i64 %and
 }

@@ -537,10 +537,15 @@ define i32 @zexth_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32XTHEADBB-LABEL: zexth_i32:
-; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
-; RV32XTHEADBB-NEXT:    ret
+; RV32XTHEADBB-NOB-LABEL: zexth_i32:
+; RV32XTHEADBB-NOB:       # %bb.0:
+; RV32XTHEADBB-NOB-NEXT:    th.extu a0, a0, 15, 0
+; RV32XTHEADBB-NOB-NEXT:    ret
+;
+; RV32XTHEADBB-B-LABEL: zexth_i32:
+; RV32XTHEADBB-B:       # %bb.0:
+; RV32XTHEADBB-B-NEXT:    zext.h a0, a0
+; RV32XTHEADBB-B-NEXT:    ret
   %and = and i32 %a, 65535
   ret i32 %and
 }
@@ -553,11 +558,17 @@ define i64 @zexth_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
-; RV32XTHEADBB-LABEL: zexth_i64:
-; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
-; RV32XTHEADBB-NEXT:    li a1, 0
-; RV32XTHEADBB-NEXT:    ret
+; RV32XTHEADBB-NOB-LABEL: zexth_i64:
+; RV32XTHEADBB-NOB:       # %bb.0:
+; RV32XTHEADBB-NOB-NEXT:    th.extu a0, a0, 15, 0
+; RV32XTHEADBB-NOB-NEXT:    li a1, 0
+; RV32XTHEADBB-NOB-NEXT:    ret
+;
+; RV32XTHEADBB-B-LABEL: zexth_i64:
+; RV32XTHEADBB-B:       # %bb.0:
+; RV32XTHEADBB-B-NEXT:    zext.h a0, a0
+; RV32XTHEADBB-B-NEXT:    li a1, 0
+; RV32XTHEADBB-B-NEXT:    ret
   %and = and i64 %a, 65535
   ret i64 %and
 }
