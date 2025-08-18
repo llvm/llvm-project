@@ -276,7 +276,8 @@ There are three levels of the pointer authentication language feature:
   and for all branches to code in program text to authenticate those
   signatures. In addition to the code pointers themselves, we also use pointer
   authentication to protect data values that directly or indirectly influence
-  control flow or program integrity.
+  control flow or program integrity, or can provide attackers with some other
+  powerful program compromise.
 
 - The language also provides extensions to override the default rules used by
   the language implementation.  For example, the ``__ptrauth`` type qualifier
