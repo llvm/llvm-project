@@ -1170,6 +1170,10 @@ let TargetPrefix = "nvvm" in {
   //
   // Convert
   //
+  // TODO: All these intrinsics are defined as PureIntrinsic, this attaches the
+  //       IntrSpeculatable property to them. Consider if some of these should
+  //       have this attribute removed as they may be too expensive.
+  //
   def int_nvvm_lohi_i2d : NVVMBuiltin,
       PureIntrinsic<[llvm_double_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
@@ -1367,7 +1371,9 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_barrier_cluster_wait_aligned : Intrinsic<[]>;
   }
 
+  //
   // Membar
+  //
   let IntrProperties = [IntrNoCallback] in {
     def int_nvvm_membar_cta : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_gl : NVVMBuiltin, Intrinsic<[]>;
@@ -1375,22 +1381,26 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_fence_sc_cluster : Intrinsic<[]>;
   }
 
-// Proxy fence (uni-directional)
-foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+  //
+  // Proxy fence (uni-directional)
+  //
+  foreach scope = ["cta", "cluster", "gpu", "sys"] in {
 
-  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope :
-        Intrinsic<[], [], [IntrNoCallback],
-        "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
+    def int_nvvm_fence_proxy_tensormap_generic_release_ # scope :
+          Intrinsic<[], [], [IntrNoCallback],
+          "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
 
-  // The imm-arg 'size' can only be 128.
-  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
-        Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
-                   Range<ArgIndex<1>, 128, 129>],
-                  "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
-}
+    // The imm-arg 'size' can only be 128.
+    def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
+          Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+                    [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
+                    Range<ArgIndex<1>, 128, 129>],
+                    "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+  }
 
+//
 // Async Copy
+//
 let IntrProperties = [IntrConvergent, IntrNoCallback] in {
   def int_nvvm_cp_async_mbarrier_arrive : NVVMBuiltin,
       Intrinsic<[], [llvm_ptr_ty]>;
@@ -1801,13 +1811,13 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] i
 //
 // VOTE
 //
-
 let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
   def int_nvvm_vote_all : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
   def int_nvvm_vote_any : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
   def int_nvvm_vote_uni : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
   def int_nvvm_vote_ballot : NVVMBuiltin, Intrinsic<[llvm_i32_ty], [llvm_i1_ty]>;
 }
+
 //
 // VOTE.SYNC
 //
