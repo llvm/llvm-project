@@ -1106,10 +1106,14 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
 }
 
 template <Direction DIR>
-bool ChildUnformattedIoStatementState<DIR>::Receive(
-    char *data, std::size_t bytes, std::size_t elementBytes) {
+bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return this->child().parent().Receive(data, bytes, elementBytes);
+  // Allow child NAMELIST input to advance
+  if (DIR == Direction::Input && this->mutableModes().inNamelist) {
+    return this->child().parent().AdvanceRecord(n);
+  } else {
+    return false;
+  }
 #else
   this->ReportUnsupportedChildIo();
 #endif
@@ -1123,6 +1127,16 @@ template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
     }
   }
   return ChildIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR>
+bool ChildUnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  return this->child().parent().Receive(data, bytes, elementBytes);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
 }
 
 template class InternalIoStatementState<Direction::Output>;
