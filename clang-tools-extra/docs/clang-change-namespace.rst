@@ -262,6 +262,8 @@ be updated:
 `g_foo` is still of the no longer existing type `old::foo` while instead it
 should use `modern::foo`.
 
+Only symbol references in the moved namespace are updated, not outside of it.
+
 
 :program:`clang-change-namespace` Command Line Options
 ======================================================
