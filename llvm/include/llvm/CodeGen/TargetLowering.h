@@ -3574,6 +3574,12 @@ public:
     return Libcalls.getMemcpyName().data();
   }
 
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
+    return Libcalls.getSupportedLibcallImpl(FuncName);
+  }
+
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
   /// floating-point compare libcalls.
