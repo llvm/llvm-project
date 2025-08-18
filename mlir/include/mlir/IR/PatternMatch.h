@@ -633,13 +633,13 @@ public:
 
   /// Find uses of `from` and replace them with `to`. Also notify the listener
   /// about every in-place op modification (for every use that was replaced).
-  void replaceAllUsesWith(Value from, Value to) {
+  virtual void replaceAllUsesWith(Value from, Value to) {
     for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
       Operation *op = operand.getOwner();
       modifyOpInPlace(op, [&]() { operand.set(to); });
     }
   }
-  void replaceAllUsesWith(Block *from, Block *to) {
+  virtual void replaceAllUsesWith(Block *from, Block *to) {
     for (BlockOperand &operand : llvm::make_early_inc_range(from->getUses())) {
       Operation *op = operand.getOwner();
       modifyOpInPlace(op, [&]() { operand.set(to); });
@@ -665,9 +665,9 @@ public:
   /// true. Also notify the listener about every in-place op modification (for
   /// every use that was replaced). The optional `allUsesReplaced` flag is set
   /// to "true" if all uses were replaced.
-  void replaceUsesWithIf(Value from, Value to,
-                         function_ref<bool(OpOperand &)> functor,
-                         bool *allUsesReplaced = nullptr);
+  virtual void replaceUsesWithIf(Value from, Value to,
+                                 function_ref<bool(OpOperand &)> functor,
+                                 bool *allUsesReplaced = nullptr);
   void replaceUsesWithIf(ValueRange from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);

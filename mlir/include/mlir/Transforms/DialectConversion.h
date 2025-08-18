@@ -784,6 +784,27 @@ public:
   /// function supports both 1:1 and 1:N replacements.
   void replaceUsesOfBlockArgument(BlockArgument from, ValueRange to);
 
+  /// Replace all the uses of the value `from` with `to`.
+  /// TODO: Currently not supported in a dialect conversion.
+  void replaceAllUsesWith(Value from, Value to) override {
+    llvm::report_fatal_error("replaceAllUsesWith is not supported yet");
+  }
+
+  /// Replace all the uses of the block `from` with `to`.
+  /// TODO: Currently not supported in a dialect conversion.
+  void replaceAllUsesWith(Block *from, Block *to) override {
+    llvm::report_fatal_error("replaceAllUsesWith is not supported yet");
+  }
+
+  /// Replace all the uses of the value `from` with `to` if the `functor`
+  /// returns "true".
+  /// TODO: Currently not supported in a dialect conversion.
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr) override {
+    llvm::report_fatal_error("replaceUsesWithIf is not supported yet");
+  }
+
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
   /// of failure, the remapped value otherwise.
