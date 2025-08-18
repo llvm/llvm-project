@@ -2155,6 +2155,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       return Addr;
     assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF() &&
            "VPVectorEndPointerRecipe with non-VF VF operand?");
+    assert(
+        all_of(EndPtr->users(),
+               [](VPUser *U) {
+                 return cast<VPWidenMemoryRecipe>(U)->isReverse();
+               }) &&
+        "VPVectorEndPointRecipe not used by reversed widened memory recipe?");
     VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
     EVLAddr->insertBefore(&CurRecipe);
     EVLAddr->setOperand(1, &EVL);
