@@ -304,7 +304,7 @@ def DynGroupprivateFallback : I32EnumAttrCase<"fallback", 2>;
 
 def DynGroupprivateModifier : OpenMP_I32EnumAttr<
     "DynGroupprivateModifier",
-    "reduction modifier", [
+    "dyn_groupprivate modifier", [
       DynGroupprivateCGroup,
       DynGroupprivateStrict,
       DynGroupprivateFallback
