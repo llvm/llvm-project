@@ -5558,8 +5558,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((CGF.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
-      condExpr->getType()->isExtVectorType()) {
+  if (CGF.getLangOpts().OpenCL && (condExpr->getType()->isVectorType() ||
+                                   condExpr->getType()->isExtVectorType())) {
     CGF.incrementProfileCounter(E);
 
     llvm::Value *CondV = CGF.EmitScalarExpr(condExpr);
@@ -5608,8 +5608,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     llvm::Type *CondType = ConvertType(condExpr->getType());
     auto *VecTy = cast<llvm::VectorType>(CondType);
-    llvm::Value *ZeroVec = llvm::Constant::getNullValue(VecTy);
 
+    if (VecTy->getElementType()->isIntegerTy(1))
+      return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
+
+    llvm::Value *ZeroVec = llvm::Constant::getNullValue(VecTy);
     CondV = Builder.CreateICmpNE(CondV, ZeroVec, "vector_cond");
     return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
   }
