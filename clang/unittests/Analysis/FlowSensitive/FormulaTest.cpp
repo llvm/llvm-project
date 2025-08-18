@@ -138,8 +138,7 @@ TEST_F(ParseFormulaTest, And) {
 }
 
 TEST_F(ParseFormulaTest, OutOfNumericOrder) {
-  EXPECT_THAT_EXPECTED(parseFormula("&V1V0", A, AtomMap),
-                       HasValue(&A.makeAnd(A2, A1)));
+  EXPECT_THAT_EXPECTED(testParseFormula("&V1V0"), HasValue(&A.makeAnd(A2, A1)));
 }
 
 TEST_F(ParseFormulaTest, Implies) {

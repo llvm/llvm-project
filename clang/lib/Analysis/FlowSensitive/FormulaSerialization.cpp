@@ -72,25 +72,6 @@ void serializeFormula(const Formula &F, llvm::raw_ostream &OS) {
 
 static llvm::Expected<const Formula *>
 parsePrefix(llvm::StringRef &Str, Arena &A,
-            llvm::DenseMap<unsigned, Atom> &AtomMap);
-
-static llvm::Expected<const Formula *>
-parseBinaryOp(llvm::StringRef &Str, Arena &A,
-              llvm::DenseMap<unsigned, Atom> &AtomMap,
-              llvm::function_ref<const Formula *(Arena &A, const Formula &L,
-                                                 const Formula &R)>
-                  Op) {
-  auto LeftOrErr = parsePrefix(Str, A, AtomMap);
-  if (!LeftOrErr)
-    return LeftOrErr.takeError();
-  auto RightOrErr = parsePrefix(Str, A, AtomMap);
-  if (!RightOrErr)
-    return RightOrErr.takeError();
-  return Op(A, **LeftOrErr, **RightOrErr);
-}
-
-static llvm::Expected<const Formula *>
-parsePrefix(llvm::StringRef &Str, Arena &A,
             llvm::DenseMap<unsigned, Atom> &AtomMap) {
   if (Str.empty())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -121,25 +102,33 @@ parsePrefix(llvm::StringRef &Str, Arena &A,
     return &A.makeNot(**OperandOrErr);
   }
   case '&':
-    return parseBinaryOp(Str, A, AtomMap,
-                         [](Arena &A, const Formula &L, const Formula &R) {
-                           return &A.makeAnd(L, R);
-                         });
   case '|':
-    return parseBinaryOp(Str, A, AtomMap,
-                         [](Arena &A, const Formula &L, const Formula &R) {
-                           return &A.makeOr(L, R);
-                         });
   case '>':
-    return parseBinaryOp(Str, A, AtomMap,
-                         [](Arena &A, const Formula &L, const Formula &R) {
-                           return &A.makeImplies(L, R);
-                         });
-  case '=':
-    return parseBinaryOp(Str, A, AtomMap,
-                         [](Arena &A, const Formula &L, const Formula &R) {
-                           return &A.makeEquals(L, R);
-                         });
+  case '=': {
+    auto LeftOrErr = parsePrefix(Str, A, AtomMap);
+    if (!LeftOrErr)
+      return LeftOrErr.takeError();
+
+    auto RightOrErr = parsePrefix(Str, A, AtomMap);
+    if (!RightOrErr)
+      return RightOrErr.takeError();
+
+    const Formula &LHS = **LeftOrErr;
+    const Formula &RHS = **RightOrErr;
+
+    switch (Prefix) {
+    case '&':
+      return &A.makeAnd(LHS, RHS);
+    case '|':
+      return &A.makeOr(LHS, RHS);
+    case '>':
+      return &A.makeImplies(LHS, RHS);
+    case '=':
+      return &A.makeEquals(LHS, RHS);
+    default:
+      llvm_unreachable("unexpected binary op");
+    }
+  }
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected prefix character: %c", Prefix);
