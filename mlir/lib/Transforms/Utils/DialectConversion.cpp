@@ -1138,8 +1138,8 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   SmallPtrSet<Operation *, 1> pendingRootUpdates;
 
   /// A raw output stream used to prefix the debug log.
-  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + "] ").str(),
-                                  llvm::dbgs(), /*HasPendingNewline=*/false};
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + ":1] ").str(),
+                                  llvm::dbgs()};
 
   /// A logger used to emit diagnostics during the conversion process.
   llvm::ScopedPrinter logger{os};
