@@ -8111,7 +8111,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // extends are intended to be lowered along with the reduction itself.
 
   // Build up a set of partial reduction ops for efficient use checking.
-  SmallSet<User *, 4> PartialReductionOps;
+  SmallPtrSet<User *, 4> PartialReductionOps;
   for (const auto &[PartialRdx, _] : PartialReductionChains)
     PartialReductionOps.insert(PartialRdx.ExtendUser);
 

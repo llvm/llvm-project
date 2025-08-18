@@ -9,13 +9,13 @@
 #ifndef __CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H__
 #define __CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H__
 
-#define __FLOAT_ONLY
+#define __CLC_FLOAT_ONLY
 #define __CLC_GEOMETRIC_RET_GENTYPE
-#define FUNCTION __clc_fast_normalize
+#define __CLC_FUNCTION __clc_fast_normalize
 #define __CLC_BODY <clc/geometric/unary_decl.inc>
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 #undef __CLC_GEOMETRIC_RET_GENTYPE
 
 #endif // __CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H__
