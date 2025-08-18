@@ -20738,12 +20738,22 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         isNullConstant(Src.getOperand(1)) &&
         Src.getOperand(0).getValueType().isScalableVector()) {
       EVT VT = N->getValueType(0);
-      EVT SrcVT = Src.getOperand(0).getValueType();
+      SDValue EVSrc = Src.getOperand(0);
+      EVT SrcVT = EVSrc.getValueType();
       assert(SrcVT.getVectorElementType() == VT.getVectorElementType());
       // Widths match, just return the original vector.
       if (SrcVT == VT)
-        return Src.getOperand(0);
-      // TODO: Use insert_subvector/extract_subvector to change widen/narrow?
+        return EVSrc;
+      SDLoc DL(N);
+      // Width is narrower, using insert_subvector.
+      if (SrcVT.getVectorMinNumElements() < VT.getVectorMinNumElements()) {
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                           EVSrc,
+                           DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+      }
+      // Width is wider, using extract_subvector.
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, EVSrc,
+                         DAG.getConstant(0, DL, Subtarget.getXLenVT()));
     }
     [[fallthrough]];
   }
