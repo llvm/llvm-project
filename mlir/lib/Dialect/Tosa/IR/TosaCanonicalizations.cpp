@@ -1120,13 +1120,14 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   }
 
   if (rhsTy == resultTy) {
-    if (isSplatZero(resultETy, lhsAttr))
+    if (isSplatZero(resultETy, lhsAttr) && resultTy.hasStaticShape())
+      // constant values can only be resized if resulting type is static
       return lhsAttr.resizeSplat(resultTy);
     if (isSplatOne(resultETy, lhsAttr, shift))
       return rhs;
   }
   if (lhsTy == resultTy) {
-    if (isSplatZero(resultETy, rhsAttr))
+    if (isSplatZero(resultETy, rhsAttr) && resultTy.hasStaticShape())
       return rhsAttr.resizeSplat(resultTy);
     if (isSplatOne(resultETy, rhsAttr, shift))
       return lhs;

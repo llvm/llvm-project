@@ -122,7 +122,7 @@ struct VPlanTransforms {
   static void clearReductionWrapFlags(VPlan &Plan);
 
   /// Explicitly unroll \p Plan by \p UF.
-  static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+  static void unrollByUF(VPlan &Plan, unsigned UF);
 
   /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
   /// with \p VF single-scalar recipes.
@@ -229,9 +229,8 @@ struct VPlanTransforms {
   ///    EVLIVInc, TripCount).
   static void canonicalizeEVLLoops(VPlan &Plan);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
-  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void convertToConcreteRecipes(VPlan &Plan);
 
   /// This function converts initial recipes to the abstract recipes and clamps
   /// \p Range based on cost model for following optimizations and cost
@@ -240,9 +239,8 @@ struct VPlanTransforms {
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
 
-  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
-  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  /// Perform instcombine-like simplifications on recipes in \p Plan.
+  static void simplifyRecipes(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors.
@@ -279,6 +277,10 @@ struct VPlanTransforms {
   /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
   /// values into single vectors.
   static void materializeBuildVectors(VPlan &Plan);
+
+  /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
+  static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
+                                    ElementCount VF);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF

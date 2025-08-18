@@ -11,7 +11,7 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(ptr noalias %dst, ptr noalias %src.1) {
 ; CHECK-LABEL: define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC_1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -67,10 +67,9 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[MUL_IV:%.*]] = mul nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[MUL_IV]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[GEP_SRC_1]], align 1

@@ -452,6 +452,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
 
   switch (Opcode) {
   case VPInstruction::StepVector:
+  case VPInstruction::VScale:
     return 0;
   case Instruction::Alloca:
   case Instruction::ExtractValue:
@@ -519,6 +520,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
+  case VPInstruction::Not:
     return true;
   default:
     return false;
@@ -571,7 +573,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
-    Value *A = State.get(getOperand(0));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ExtractElement: {
@@ -812,10 +815,18 @@ Value *VPInstruction::generate(VPTransformState &State) {
         Value *RdxPart = RdxParts[Part];
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
-        else
-          ReducedPartRdx = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, ReducedPartRdx, "bin.rdx");
+        else {
+          Instruction::BinaryOps Opcode;
+          // For sub-recurrences, each UF's reduction variable is already
+          // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
+          if (RK == RecurKind::Sub)
+            Opcode = Instruction::Add;
+          else
+            Opcode =
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
+          ReducedPartRdx =
+              Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");
+        }
       }
     }
 
@@ -1032,6 +1043,7 @@ bool VPInstruction::isSingleScalar() const {
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::VScale:
     return true;
   default:
     return isScalarCast();
@@ -1099,6 +1111,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::VScale:
     return false;
   default:
     return true;
@@ -1122,6 +1135,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case Instruction::Select:
   case Instruction::Or:
   case Instruction::Freeze:
+  case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
@@ -1290,6 +1304,12 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     State.set(this, StepVector);
     break;
   }
+  case VPInstruction::VScale: {
+    Value *VScale = State.Builder.CreateVScale(ResultTy);
+    State.set(this, VScale, true);
+    break;
+  }
+
   default:
     llvm_unreachable("opcode not implemented yet");
   }
@@ -1309,6 +1329,9 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::StepVector:
     O << "step-vector " << *ResultTy;
+    break;
+  case VPInstruction::VScale:
+    O << "vscale " << *ResultTy;
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
@@ -1443,12 +1466,12 @@ void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
 
   if (getNumOperands() != 0) {
     O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";
-    interleaveComma(
-        enumerate(operands()), O, [this, &O, &SlotTracker](auto Op) {
-          Op.value()->printAsOperand(O, SlotTracker);
-          O << " from ";
-          getParent()->getPredecessors()[Op.index()]->printAsOperand(O);
-        });
+    interleaveComma(incoming_values_and_blocks(), O,
+                    [&O, &SlotTracker](auto Op) {
+                      std::get<0>(Op)->printAsOperand(O, SlotTracker);
+                      O << " from ";
+                      std::get<1>(Op)->printAsOperand(O);
+                    });
     O << ")";
   }
 }
@@ -2943,7 +2966,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
 
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   Type *ResultTy = Ctx.Types.inferScalarType(this);
   switch (UI->getOpcode()) {
   case Instruction::GetElementPtr:
@@ -2969,7 +2991,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     auto Op2Info = Ctx.getOperandInfo(getOperand(1));
     SmallVector<const Value *, 4> Operands(UI->operand_values());
     return Ctx.TTI.getArithmeticInstrCost(
-               UI->getOpcode(), ResultTy, CostKind,
+               UI->getOpcode(), ResultTy, Ctx.CostKind,
                {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
                Op2Info, Operands, UI, &Ctx.TLI) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
@@ -3106,9 +3128,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    Type *PtrTy = toVectorTy(Ptr->getType(), VF);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
-    return Ctx.TTI.getAddressComputationCost(Ty) +
+    return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
+                                             Ctx.CostKind) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
                                           Ctx.CostKind, &Ingredient);
   }
