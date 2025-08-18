@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o -  2>&1 | FileCheck --check-prefixes=CIR-BEFORE-LPP %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
@@ -14,35 +13,13 @@ void foo() {
     S s[42];
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z3foov()
-// CIR-BEFORE-LPP:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
-// CIR-BEFORE-LPP:   cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> {
-// CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
-// CIR-BEFORE-LPP:      cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>) -> ()
-// CIR-BEFORE-LPP:      cir.yield
-// CIR-BEFORE-LPP:    }
-// CIR-BEFORE-LPP:   cir.return
-// CIR-BEFORE-LPP: }
-
 // CIR: cir.func dso_local @_Z3foov()
 // CIR:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
-// CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !u64i
-// CIR:   %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>>), !cir.ptr<!rec_S>
-// CIR:   %[[END_PTR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_S>, %[[CONST42]] : !u64i), !cir.ptr<!rec_S>
-// CIR:   %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
-// CIR:   cir.store %[[DECAY]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
-// CIR:   cir.do {
-// CIR:     %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>) -> ()
-// CIR:     %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
-// CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CURRENT]] : !cir.ptr<!rec_S>, %[[CONST1]] : !u64i), !cir.ptr<!rec_S>
-// CIR:     cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
-// CIR:     cir.yield
-// CIR:   } while {
-// CIR:     %[[CURRENT2:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CURRENT2]], %[[END_PTR]]) : !cir.ptr<!rec_S>, !cir.bool
-// CIR:     cir.condition(%[[CMP]])
-// CIR:   }
+// CIR:   cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> {
+// CIR:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S> {{.*}}):
+// CIR:      cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR:      cir.yield
+// CIR:    }
 // CIR:   cir.return
 // CIR: }
 
@@ -84,15 +61,9 @@ void zero_sized() {
     S s[0];
 }
 
-// CIR-BEFORE-LPP:     cir.func dso_local @_Z10zero_sizedv()
-// CIR-BEFORE-LPP:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
-// CIR-BEFORE-LPP-NOT:   cir.array.ctor
-// CIR-BEFORE-LPP:       cir.return
-
 // CIR:     cir.func dso_local @_Z10zero_sizedv()
 // CIR:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
-// CIR-NOT:   cir.do
-// CIR-NOT:   cir.call @_ZN1SC1Ev
+// CIR-NOT:   cir.array.ctor
 // CIR:       cir.return
 
 // LLVM:     define dso_local void @_Z10zero_sizedv()
@@ -104,3 +75,4 @@ void zero_sized() {
 // OGCG:       alloca [0 x %struct.S]
 // OGCG-NOT:   call void @_ZN1SC1Ev
 // OGCG:       ret void
+

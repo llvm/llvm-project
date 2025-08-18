@@ -1,34 +1,32 @@
 // complex-range basic
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=basic -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-BASIC %s
+
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=basic -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED,CIR-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-BASIC,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=basic -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=basic -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED,OGCG-COMBINED
 
 // complex-range improved
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=improved -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-IMPROVED %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=improved -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED,CIR-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-IMPROVED,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=improved -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=improved -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED,OGCG-COMBINED
 
 // complex-range promoted
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=promoted -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-PROMOTED %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=promoted -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED,CIR-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-PROMOTED,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=promoted -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=promoted -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED,OGCG-COMBINED
 
 // complex-range full
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=full -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-FULL %s
+
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=full -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-FULL,CIR-AFTER-INT,CIR-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-FULL,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=full -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-FULL,LLVM-INT,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=full -Wno-unused-value -emit-llvm %s -o %t.ll
@@ -40,29 +38,11 @@ void foo() {
   float _Complex c = a * b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
+// CIR-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
+// CIR-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
-
-// CIR-AFTER-MUL-COMBINED: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER-MUL-COMBINED: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b"]
-// CIR-AFTER-MUL-COMBINED: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
-// CIR-AFTER-MUL-COMBINED: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR-AFTER-MUL-COMBINED: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR-AFTER-MUL-COMBINED: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !cir.float
-// CIR-AFTER-MUL-COMBINED: %[[RESULT:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// CIR-AFTER-MUL-COMBINED: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
 
 // LLVM-MUL-COMBINED: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM-MUL-COMBINED: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
@@ -105,35 +85,7 @@ void foo() {
 // OGCG-MUL-COMBINED: store float %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-MUL-COMBINED: store float %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
-
-// CIR-AFTER-FULL: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER-FULL: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b"]
-// CIR-AFTER-FULL: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
-// CIR-AFTER-FULL: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR-AFTER-FULL: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR-AFTER-FULL: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-FULL: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-FULL: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-FULL: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-FULL: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !cir.float
-// CIR-AFTER-FULL: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !cir.float
-// CIR-AFTER-FULL: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !cir.float
-// CIR-AFTER-FULL: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !cir.float
-// CIR-AFTER-FULL: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !cir.float
-// CIR-AFTER-FULL: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !cir.float
-// CIR-AFTER-FULL: %[[COMPLEX:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.cmp(ne, %[[C_REAL]], %[[C_REAL]]) : !cir.float, !cir.bool
-// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.cmp(ne, %[[C_IMAG]], %[[C_IMAG]]) : !cir.float, !cir.bool
-// CIR-AFTER-FULL: %[[CONST_FALSE:.*]] = cir.const #false
-// CIR-AFTER-FULL: %[[SELECT_CONDITION:.*]] = cir.select if %[[IS_C_REAL_NAN]] then %[[IS_C_IMAG_NAN]] else %[[CONST_FALSE]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
-// CIR-AFTER-FULL: %[[RESULT:.*]] = cir.ternary(%[[SELECT_CONDITION]], true {
-// CIR-AFTER-FULL:   %[[LIBC_COMPLEX:.*]] = cir.call @__mulsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.complex<!cir.float>
-// CIR-AFTER-FULL:   cir.yield %[[LIBC_COMPLEX]] : !cir.complex<!cir.float>
-// CIR-AFTER-FULL: }, false {
-// CIR-AFTER-FULL:   cir.yield %[[COMPLEX]] : !cir.complex<!cir.float>
-// CIR-AFTER-FULL: }) : (!cir.bool) -> !cir.complex<!cir.float>
-// CIR-AFTER-FULL: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
 
 // LLVM-FULL: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM-FULL: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
@@ -212,31 +164,13 @@ void foo1() {
   int _Complex c = a * b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!s32i>
+// CIR-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!s32i>
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!s32i>
+// CIR-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!s32i>
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!s32i>
+// CIR-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!s32i>
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!s32i>
-
-// CIR-AFTER-INT: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR-AFTER-INT: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b"]
-// CIR-AFTER-INT: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
-// CIR-AFTER-INT: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR-AFTER-INT: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR-AFTER-INT: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!s32i> -> !s32i
-// CIR-AFTER-INT: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!s32i> -> !s32i
-// CIR-AFTER-INT: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!s32i> -> !s32i
-// CIR-AFTER-INT: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!s32i> -> !s32i
-// CIR-AFTER-INT: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_REAL]]) : !s32i
-// CIR-AFTER-INT: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_IMAG]]) : !s32i
-// CIR-AFTER-INT: %[[MUL_AR_BI:.*]] = cir.binop(mul, %[[A_REAL]], %[[B_IMAG]]) : !s32i
-// CIR-AFTER-INT: %[[MUL_AI_BR:.*]] = cir.binop(mul, %[[A_IMAG]], %[[B_REAL]]) : !s32i
-// CIR-AFTER-INT: %[[C_REAL:.*]] = cir.binop(sub, %[[MUL_AR_BR]], %[[MUL_AI_BI]]) : !s32i
-// CIR-AFTER-INT: %[[C_IMAG:.*]] = cir.binop(add, %[[MUL_AR_BI]], %[[MUL_AI_BR]]) : !s32i
-// CIR-AFTER-INT: %[[RESULT:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !s32i -> !cir.complex<!s32i>
-// CIR-AFTER-INT: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CIR-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!s32i>
 
 // LLVM-INT: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
 // LLVM-INT: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
@@ -324,3 +258,4 @@ void foo2() {
 // OGCG-COMBINED: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 1
 // OGCG-COMBINED: store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-COMBINED: store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
+

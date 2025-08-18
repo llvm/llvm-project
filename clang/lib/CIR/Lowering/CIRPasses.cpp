@@ -10,18 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #include "clang/AST/ASTContext.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
 
 namespace cir {
-mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
-                                      mlir::MLIRContext &mlirContext,
-                                      clang::ASTContext &astContext,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify) {
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
+                  clang::ASTContext &astContext, bool enableVerifier,
+                  bool enableCIRSimplify, bool enableLoweringPrepare) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -31,7 +29,8 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+  if (enableLoweringPrepare)
+    pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);
