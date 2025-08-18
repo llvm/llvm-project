@@ -1249,7 +1249,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     // offset, if the offset is simpler.
     const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
     const SCEV *Op = Diff;
-    match(Diff, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
+    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
     match(Op, m_scev_PtrToInt(m_SCEV(Op)));
     if (!isa<SCEVConstant, SCEVUnknown>(Op))
       continue;
@@ -1257,7 +1258,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     assert(Diff->getType()->isIntegerTy() &&
            "difference must be of integer type");
     Value *DiffV = expand(Diff);
-    Value *BaseV = &PN;
+    Value *BaseV = fixupLCSSAFormFor(&PN);
     if (PhiTy->isPointerTy()) {
       if (STy->isPointerTy())
         return Builder.CreatePtrAdd(BaseV, DiffV);

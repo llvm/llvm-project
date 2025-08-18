@@ -40,14 +40,10 @@ private:
 class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   const NVPTXTargetMachine &TM;
 
-  // If true, generate mul.wide from sext and mul
-  bool doMulWide;
-
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
-  bool allowUnsafeFPMath() const;
   bool doRsqrtOpt() const;
 
   NVPTXScopes Scopes{};
@@ -78,8 +74,6 @@ private:
   bool tryLDG(MemSDNode *N);
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
-  bool tryLoadParam(SDNode *N);
-  bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
   bool tryBFE(SDNode *N);
@@ -106,8 +100,6 @@ private:
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
-
-  bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory
