@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -20,7 +19,7 @@
 
 __attribute__((noinline)) void baz() {
   // The previous value of VG is 2
-  asm volatile(".cfi_escape 0x16, 0x2e, 0x01, 0x32");
+  asm(".cfi_escape 0x16, 0x2e, 0x01, 0x32");
 
   unw_context_t context;
   unw_cursor_t cursor;
@@ -44,9 +43,9 @@ __attribute__((noinline)) void qux() { baz(); }
 
 __attribute__((noinline)) void bar() {
   // The previous value of VG is 8
-  asm volatile(".cfi_escape 0x16, 0x2e, 0x01, 0x38");
+  asm(".cfi_escape 0x16, 0x2e, 0x01, 0x38");
   // The previous value of W21 is VG (used to force an evaluation of VG).
-  asm volatile(".cfi_escape 0x16, 0x15, 0x03, 0x92, 0x2e, 0x00");
+  asm(".cfi_escape 0x16, 0x15, 0x03, 0x92, 0x2e, 0x00");
 
   // smstop sm
   qux();
@@ -54,9 +53,9 @@ __attribute__((noinline)) void bar() {
 }
 __attribute__((noinline)) void foo() {
   // The previous value of VG is 2
-  asm volatile(".cfi_escape 0x16, 0x2e, 0x01, 0x32");
+  asm(".cfi_escape 0x16, 0x2e, 0x01, 0x32");
   // The previous value of W21 is VG (used to force an evaluation of VG).
-  asm volatile(".cfi_escape 0x16, 0x15, 0x03, 0x92, 0x2e, 0x00");
+  asm(".cfi_escape 0x16, 0x15, 0x03, 0x92, 0x2e, 0x00");
 
   // smstart sm
   bar();
