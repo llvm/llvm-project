@@ -193,7 +193,7 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
   bool EarlyClobber = MI->getOperand(0).isEarlyClobber();
   if (ReplaceIndexMI)
     return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI)
-        .getRegSlot(EearlyClobber);
+        .getRegSlot(EarlyClobber);
   return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot(
       EarlyClobber);
 }
