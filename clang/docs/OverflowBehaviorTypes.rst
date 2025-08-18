@@ -92,10 +92,9 @@ variety of scenarios is detailed below.
   .. code-block:: c++
 
     typedef char __attribute__((overflow_behavior(no_wrap))) no_wrap_char;
-    // The result of this expression is no_wrap_char.
     no_wrap_char c;
     unsigned long ul;
-    auto result = c + ul;
+    auto result = c + ul; // result is no_wrap_char
 
 * **Two OBTs of the Same Kind**: When an operation involves two OBTs of the
   same kind (e.g., both ``wrap``), the result will have the larger of the two
@@ -106,16 +105,18 @@ variety of scenarios is detailed below.
 
     typedef unsigned char __attribute__((overflow_behavior(wrap))) u8_wrap;
     typedef unsigned short __attribute__((overflow_behavior(wrap))) u16_wrap;
-    // The result of this expression is u16_wrap.
     u8_wrap a;
     u16_wrap b;
-    auto result = a + b;
+    auto result = a + b; // result is u16_wrap
 
 * **Two OBTs of Different Kinds**: In an operation between a ``wrap`` and a
-  ``no_wrap`` type, a ``no_wrap`` is produced. It is recommended to avoid such
-  operations, as Clang may emit a warning for such cases in the future.
-  Regardless, the resulting type matches the bit-width, sign and behavior of
-  the ``no_wrap`` type.
+  ``no_wrap`` type, a ``no_wrap`` type is always produced. Clang will bias the
+  ``no_wrap`` type as converting from ``wrap`` to ``no_wrap`` is not as
+  troubling as converting from ``no_wrap`` to ``wrap``, in most cases.
+  Therefore, the resulting type matches the bit-width, sign and behavior of the
+  ``no_wrap`` type. It is recommended to avoid such operations, as Clang may
+  emit a warning for these cases in the future.
+
 
 .. list-table:: Promotion Rules Summary
    :widths: 30 70
@@ -129,6 +130,26 @@ variety of scenarios is detailed below.
      - Larger bit-width; unsigned favored if same width
    * - Different Kind OBTs (``wrap`` + ``no_wrap``)
      - ``no_wrap`` type (matches ``no_wrap`` operand's characteristics)
+
+Following traditional C promotion rules for integer types often results in
+modified bit boundaries for types. Since overflow behavior types aim to make
+guarantees about the overflow behavior of a type, it is important to maintain
+consistent bit-widths across arithmetic expressions containing overflow
+behavior types. Therefore, we have the above promotion rules as they preserve
+bit-widths and overflow resolution behaviors during promotions.
+
+Practical example of the promotion rules and how they differ from traditional C
+promotion rules:
+
+.. code-block:: c++
+
+  unsigned short __attribute__((overflow_behavior(no_wrap))) a = 0; // u16 __no_wrap
+
+  // Normally, arithmetic that is less-than-int is promoted to at least int.
+  // Following traditional C promotion rules: u16 + s32 results in s32
+  // However, since `a` is an OBT, our special promotion rules apply: u16 __no_wrap + s32 results in u16 __no_wrap
+
+  a + 1; // result is short __attribute__((overflow_behavior(no_wrap)))
 
 Conversion Semantics
 ====================
