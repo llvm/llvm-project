@@ -3056,6 +3056,8 @@ def : GCNPat<
 }
 }  // AddedComplexity = 1
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat<
   (i32 (DivergentUnaryFrag<zext> i16:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)), $src)
@@ -3071,6 +3073,26 @@ def : GCNPat<
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (COPY VSrc_b16:$src)>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<zext> i16:$src)),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<zext> i16:$src)),
+  (REG_SEQUENCE VReg_64,
+    (REG_SEQUENCE VGPR_32, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16), sub0,
+    (S_MOV_B32 (i32 0)), sub1)
+>;
+
+def : GCNPat<
+  (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+>;
+}
 
 def : GCNPat <
   (i32 (trunc i64:$a)),
@@ -3543,14 +3565,21 @@ def : GCNPat <
   (vecTy (UniformBinFrag<build_vector> (Ty undef), (Ty SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
-}
 
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
   (vecTy (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
+} // End True16Predicate = ...
 } // End foreach Ty = ...
-}
+} // End AddedComplexity = 1
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (v2i16 (DivergentBinFrag<build_vector> (i16 undef), (i16 (trunc i32:$src1)))),
+  (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16,
+                         (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)), hi16)
+>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
@@ -3599,7 +3628,11 @@ def : GCNPat <
 >;
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
-  (REG_SEQUENCE VGPR_32, $src0, lo16, (IMPLICIT_DEF), hi16)
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (Ty (IMPLICIT_DEF)), hi16)
+>;
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_16:$src1))),
+  (REG_SEQUENCE VGPR_32, (Ty (IMPLICIT_DEF)), lo16, (Ty VGPR_16:$src1), hi16)
 >;
 }
 

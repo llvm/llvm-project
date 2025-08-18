@@ -103,27 +103,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_2d_block_io},
         {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
         {"SPV_KHR_float_controls2",
-         SPIRV::Extension::Extension::SPV_KHR_float_controls2}};
-
-/*
-
-TODO: std::set_union is not constexpr in c++17. I would still like a way to make
-sure the environment lists are added.
-
-// Check that every extension is in at least one of the two lists.
-constexpr bool AreAllExtensionsInAnEnvList() noexcept {
-      SPIRV::Extension::Extension ExtensionsInEnvList[100] = {};
-      constexpr auto* end = std::set_union(ValidVulkanExtensions.begin(),
-ValidVulkanExtensions.end(), ValidOpenCLExtensions.begin(),
-ValidOpenCLExtensions.end(), ExtensionsInEnvList); return
-(end-ExtensionsInEnvList) == SPIRVExtensionMap.size();
-}
-
-static_assert(
-    AreAllExtensionsInAnEnvList(),
-    "Not all extensions are in ValidVulkanExtensions or "
-    "ValidOpenCLExtensions");
-*/
+         SPIRV::Extension::Extension::SPV_KHR_float_controls2},
+        {"SPV_INTEL_tensor_float32_conversion",
+         SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

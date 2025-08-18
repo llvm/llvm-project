@@ -1440,8 +1440,8 @@ func.func @propagate_into_execute_region() {
 
 // -----
 
-// CHECK-LABEL: func @execute_region_elim
-func.func @execute_region_elim() {
+// CHECK-LABEL: func @execute_region_inline
+func.func @execute_region_inline() {
   affine.for %i = 0 to 100 {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
@@ -1461,8 +1461,30 @@ func.func @execute_region_elim() {
 
 // -----
 
-// CHECK-LABEL: func @func_execute_region_elim
-func.func @func_execute_region_elim() {
+// CHECK-LABEL: func @execute_region_no_inline
+func.func @execute_region_no_inline() {
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 no_inline {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  }
+  return
+}
+
+// CHECK-NEXT:     affine.for %arg0 = 0 to 100 {
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+// CHECK-NEXT:     }
+
+// -----
+
+// CHECK-LABEL: func @func_execute_region_inline
+func.func @func_execute_region_inline() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1
@@ -1496,8 +1518,8 @@ func.func @func_execute_region_elim() {
 
 // -----
 
-// CHECK-LABEL: func @func_execute_region_elim_multi_yield
-func.func @func_execute_region_elim_multi_yield() {
+// CHECK-LABEL: func @func_execute_region_inline_multi_yield
+func.func @func_execute_region_inline_multi_yield() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1
@@ -1890,3 +1912,16 @@ func.func @index_switch_fold_no_res() {
 
 // CHECK-LABEL: func.func @index_switch_fold_no_res()
 //  CHECK-NEXT: "test.op"() : () -> ()
+
+// -----
+
+// CHECK-LABEL: func @scf_for_all_step_size_0()
+//       CHECK:   scf.forall (%{{.*}}) = (0) to (1) step (0)
+func.func @scf_for_all_step_size_0()  {
+  %x = arith.constant 0 : index
+  scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
+    vector.print %x : index
+    scf.forall.in_parallel {}
+  }
+  return
+}

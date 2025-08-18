@@ -156,6 +156,7 @@ private:
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
+  bool selectSBarrierLeave(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,
@@ -198,13 +199,6 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsDOT(MachineOperand &Root) const;
-
-  InstructionSelector::ComplexRendererFns
-  selectVOP3PModsNeg(MachineOperand &Root) const;
-  InstructionSelector::ComplexRendererFns
-  selectVOP3PModsNegs(MachineOperand &Root) const;
-  InstructionSelector::ComplexRendererFns
-  selectVOP3PModsNegAbs(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
@@ -302,7 +296,7 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
-  std::pair<Register, int64_t>
+  std::tuple<Register, int64_t, bool>
   getPtrBaseWithConstantOffset(Register Root,
                                const MachineRegisterInfo &MRI) const;
 
@@ -418,6 +412,13 @@ private:
 
   void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+
+  void renderVOP3PModsNeg(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
+  void renderVOP3PModsNegs(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                           int OpIdx) const;
+  void renderVOP3PModsNegAbs(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                             int OpIdx) const;
 
   void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;

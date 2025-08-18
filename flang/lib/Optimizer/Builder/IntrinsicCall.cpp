@@ -2402,7 +2402,7 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     for (mlir::BlockArgument bArg : function.front().getArguments()) {
       auto refType = mlir::dyn_cast<fir::ReferenceType>(bArg.getType());
       if (loadRefArguments && refType) {
-        auto loaded = localBuilder->create<fir::LoadOp>(localLoc, bArg);
+        auto loaded = fir::LoadOp::create(*localBuilder, localLoc, bArg);
         localArguments.push_back(loaded);
       } else {
         localArguments.push_back(bArg);
@@ -2413,14 +2413,14 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
 
     if constexpr (std::is_same_v<GeneratorType, SubroutineGenerator>) {
       localLib.invokeGenerator(generator, localArguments);
-      localBuilder->create<mlir::func::ReturnOp>(localLoc);
+      mlir::func::ReturnOp::create(*localBuilder, localLoc);
     } else {
       assert(funcType.getNumResults() == 1 &&
              "expect one result for intrinsic function wrapper type");
       mlir::Type resultType = funcType.getResult(0);
       auto result =
           localLib.invokeGenerator(generator, resultType, localArguments);
-      localBuilder->create<mlir::func::ReturnOp>(localLoc, result);
+      mlir::func::ReturnOp::create(*localBuilder, localLoc, result);
     }
   } else {
     // Wrapper was already built, ensure it has the sought type
@@ -2672,10 +2672,11 @@ mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   mlir::Value result =
       getRuntimeCallGenerator("acos", ftype)(builder, loc, {args[0]});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  const llvm::fltSemantics &fltSem =
+      llvm::cast<mlir::FloatType>(resultType).getFloatSemantics();
+  llvm::APFloat pi = llvm::APFloat(fltSem, llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(
+      loc, resultType, llvm::APFloat(fltSem, "180.0") / pi);
   return mlir::arith::MulFOp::create(builder, loc, result, factor);
 }
 
@@ -2687,10 +2688,10 @@ mlir::Value IntrinsicLibrary::genAcospi(mlir::Type resultType,
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   mlir::Value acos = getRuntimeCallGenerator("acos", ftype)(builder, loc, args);
-  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
-  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  llvm::APFloat inv_pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::inv_pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, inv_pi);
   return mlir::arith::MulFOp::create(builder, loc, acos, factor);
 }
 
@@ -2855,10 +2856,10 @@ mlir::Value IntrinsicLibrary::genAsinpi(mlir::Type resultType,
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   mlir::Value asin = getRuntimeCallGenerator("asin", ftype)(builder, loc, args);
-  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
-  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  llvm::APFloat inv_pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::inv_pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, inv_pi);
   return mlir::arith::MulFOp::create(builder, loc, asin, factor);
 }
 
@@ -2905,10 +2906,10 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
         mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
     atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
   }
-  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
-  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  llvm::APFloat inv_pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::inv_pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, inv_pi);
   return mlir::arith::MulFOp::create(builder, loc, atan, factor);
 }
 
@@ -3480,9 +3481,9 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
             fir::unwrapSequenceType(fir::unwrapPassByRefType(lower.getType()));
         for (int i = 0; i < arrayRank; ++i) {
           mlir::Value index = builder.createIntegerConstant(loc, idxType, i);
-          mlir::Value var = builder.create<fir::CoordinateOp>(
-              loc, builder.getRefType(lowerElementType), lower, index);
-          mlir::Value load = builder.create<fir::LoadOp>(loc, var);
+          mlir::Value var = fir::CoordinateOp::create(
+              builder, loc, builder.getRefType(lowerElementType), lower, index);
+          mlir::Value load = fir::LoadOp::create(builder, loc, var);
           lbounds.push_back(builder.createConvert(loc, idxType, load));
         }
       }
@@ -3684,10 +3685,10 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
 }
@@ -6662,9 +6663,8 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   mlir::Type retTy =
       mlir::LLVM::LLVMStructType::getLiteral(context, {resultType, i1Ty});
   auto match =
-      builder
-          .create<mlir::NVVM::MatchSyncOp>(loc, retTy, args[0], arg1,
-                                           mlir::NVVM::MatchSyncKind::all)
+      mlir::NVVM::MatchSyncOp::create(builder, loc, retTy, args[0], arg1,
+                                      mlir::NVVM::MatchSyncKind::all)
           .getResult();
   auto value = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 0);
   auto pred = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 1);
@@ -6701,9 +6701,8 @@ IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
     arg1 = fir::ConvertOp::create(
         builder, loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  return builder
-      .create<mlir::NVVM::MatchSyncOp>(loc, resultType, args[0], arg1,
-                                       mlir::NVVM::MatchSyncKind::any)
+  return mlir::NVVM::MatchSyncOp::create(builder, loc, resultType, args[0],
+                                         arg1, mlir::NVVM::MatchSyncKind::any)
       .getResult();
 }
 
@@ -8138,11 +8137,11 @@ mlir::Value IntrinsicLibrary::genSinpi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
+  mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
 }
 
@@ -8235,11 +8234,11 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
+  mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
 }
 

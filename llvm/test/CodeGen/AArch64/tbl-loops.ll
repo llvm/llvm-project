@@ -64,7 +64,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcsel s2, s0, s3, mi
 ; CHECK-NEXT:    subs w10, w10, #1
 ; CHECK-NEXT:    fcvtzs s2, s2
-; CHECK-NEXT:    st1 { v2.b }[0], [x9], #1
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    strb w11, [x9], #1
 ; CHECK-NEXT:    b.ne .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
