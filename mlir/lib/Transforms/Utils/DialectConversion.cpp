@@ -1637,6 +1637,11 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
   builder.setInsertionPoint(ip.getBlock(), ip.getPoint());
   UnrealizedConversionCastOp convertOp =
       UnrealizedConversionCastOp::create(builder, loc, outputTypes, inputs);
+  if (config.attachDebugMaterializationKind) {
+    StringRef kindStr =
+        kind == MaterializationKind::Source ? "source" : "target";
+    convertOp->setAttr("__kind__", builder.getStringAttr(kindStr));
+  }
   if (isPureTypeConversion)
     convertOp->setAttr(kPureTypeConversionMarker, builder.getUnitAttr());
 
