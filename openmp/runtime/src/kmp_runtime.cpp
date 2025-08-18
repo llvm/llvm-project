@@ -6953,9 +6953,9 @@ void __kmp_unregister_library(void) {
   value = __kmp_env_get(name);
 #endif
 
-  KMP_DEBUG_ASSERT(__kmp_registration_flag != 0);
-  KMP_DEBUG_ASSERT(__kmp_registration_str != NULL);
-  if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
+  // if omp is not initialized and we exit, then we don't need to free anything
+  if (__kmp_registration_flag != 0 && __kmp_registration_str != NULL) {
+    if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
     if (__kmp_shm_available) {
@@ -6968,7 +6968,7 @@ void __kmp_unregister_library(void) {
 #else
     __kmp_env_unset(name);
 #endif
-  }
+    }
 
 #if defined(KMP_USE_SHM)
   if (shm_name)
@@ -6976,8 +6976,9 @@ void __kmp_unregister_library(void) {
   if (temp_reg_status_file_name)
     KMP_INTERNAL_FREE(temp_reg_status_file_name);
 #endif
-
   KMP_INTERNAL_FREE(__kmp_registration_str);
+  }
+
   KMP_INTERNAL_FREE(value);
   KMP_INTERNAL_FREE(name);
 
