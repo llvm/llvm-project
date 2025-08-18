@@ -1655,6 +1655,47 @@ def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   }];
 }
 
+def ConvertFP4E2M1 : I32EnumCase<"E2M1", 0, "e2m1">;
+
+def ConvertFP4Type : I32Enum<"ConvertFP4Type", "NVVM ConvertFP4Type kind",
+                             [ConvertFP4E2M1]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+def ConvertFP4TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP4Type, 
+                                  "convert_fp4_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
+  let summary = "Convert a pair of float inputs to f4x2";
+  let description = [{
+    This Op converts each of the given float inputs to the specified fp4 type.
+    The result `dst` is returned as an i8 type where the converted values are 
+    packed such that the value converted from `a` is stored in the upper 4 bits 
+    of `dst` and the value converted from `b` is stored in the lower 4 bits of 
+    `dst`.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs I8:$dst);
+  let arguments = (ins ConvertFP4TypeAttr:$type, F32:$a, F32:$b,
+                       DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat = "$type $a `,` $b attr-dict";
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP4Type, bool hasRelu);
+  }];
+
+  string llvmBuilder = [{
+    auto intId = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicID($type, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
+  }];
+}
+
 def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let summary = "Convert a pair of float inputs to f6x2";
   let description = [{
