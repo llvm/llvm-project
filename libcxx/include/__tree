@@ -582,11 +582,10 @@ class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
-  private:
+private:
   __node_value_type __value_;
 
-  public:
-
+public:
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
 
   ~__tree_node()                             = delete;
@@ -654,7 +653,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI __tree_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
   _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__get_np()->__get_value()); }
+  _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    return pointer_traits<pointer>::pointer_to(__get_np()->__get_value());
+  }
 
   _LIBCPP_HIDE_FROM_ABI __tree_iterator& operator++() {
     __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
@@ -716,7 +717,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator(__non_const_iterator __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
 
   _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__get_np()->__get_value()); }
+  _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    return pointer_traits<pointer>::pointer_to(__get_np()->__get_value());
+  }
 
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator& operator++() {
     __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
