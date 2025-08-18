@@ -1,11 +1,11 @@
-//===- MappedFileRegionBumpPtr.cpp ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-/// \file
+/// \file Implements MappedFileRegionBumpPtr.
 ///
 /// A bump pointer allocator, backed by a memory-mapped file.
 ///
@@ -35,7 +35,7 @@
 /// which typically loses sparseness. These mitigations only work while the file
 /// is not in use.
 ///
-/// FIXME: we assume that all concurrent users of the file will use the same
+/// TODO: we assume that all concurrent users of the file will use the same
 /// value for Capacity. Otherwise a process with a larger capacity can write
 /// data that is "out of bounds" for processes with smaller capacity. Currently
 /// this is true in the CAS.
@@ -152,7 +152,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     // Retrieve the current size now that we have exclusive access.
     FileSize = FileSizeInfo::get(File);
     if (!FileSize)
-        return createFileError(Result.Path, FileSize.getError());
+      return createFileError(Result.Path, FileSize.getError());
   }
 
   // At this point either the file is still under-sized, or we have the size for
@@ -282,7 +282,8 @@ Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
     int64_t NewSize;
     // The minimum increment is a page, but allocate more to amortize the cost.
     constexpr int64_t Increment = 1 * 1024 * 1024; // 1 MB
-    if (Error E = preallocateFileTail(*FD, DiskSize, DiskSize + Increment).moveInto(NewSize))
+    if (Error E = preallocateFileTail(*FD, DiskSize, DiskSize + Increment)
+                      .moveInto(NewSize))
       return std::move(E);
     assert(NewSize >= DiskSize + Increment);
     // FIXME: on Darwin this can under-count the size if there is a race to

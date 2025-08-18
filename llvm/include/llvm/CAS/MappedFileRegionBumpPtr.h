@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file declares interface for MappedFileRegionBumpPtr, a bump pointer
+/// allocator, backed by a memory-mapped file.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CAS_MAPPEDFILEREGIONBUMPPTR_H
 #define LLVM_CAS_MAPPEDFILEREGIONBUMPPTR_H

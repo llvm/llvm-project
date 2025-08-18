@@ -37,7 +37,8 @@ std::error_code tryLockFileThreadSafe(
 /// \c std::errc::no_space_on_device are detected before we write data.
 ///
 /// \returns the new size of the file, or an \c Error.
-Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize, size_t NewSize);
+Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize,
+                                     size_t NewSize);
 
 } // namespace llvm::cas::ondisk
 

@@ -104,6 +104,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- :program:`clang-tidy` no longer attemps to analyze code from system headers
+  by default, greatly improving performance. This behavior is disabled if the
+  `SystemHeaders` option is enabled.
+
 - The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
@@ -129,6 +133,12 @@ New checks
 
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
+
+- New :doc:`misc-override-with-different-visibility
+  <clang-tidy/checks/misc/override-with-different-visibility>` check.
+
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -162,6 +172,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
+  avoid false positives on inherited members in class templates.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.

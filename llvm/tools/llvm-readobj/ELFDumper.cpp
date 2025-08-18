@@ -6512,12 +6512,13 @@ void ELFDumper<ELFT>::printSFrameFDEs(
 
     {
       DictScope InfoScope(W, "Info");
-      W.printEnum("FRE Type", It->getFREType(), sframe::getFRETypes());
-      W.printEnum("FDE Type", It->getFDEType(), sframe::getFDETypes());
+      W.printEnum("FRE Type", It->Info.getFREType(), sframe::getFRETypes());
+      W.printEnum("FDE Type", It->Info.getFDEType(), sframe::getFDETypes());
       switch (Parser.getHeader().ABIArch) {
       case sframe::ABI::AArch64EndianBig:
       case sframe::ABI::AArch64EndianLittle:
-        W.printEnum("PAuth Key", sframe::AArch64PAuthKey(It->getPAuthKey()),
+        W.printEnum("PAuth Key",
+                    sframe::AArch64PAuthKey(It->Info.getPAuthKey()),
                     sframe::getAArch64PAuthKeys());
         break;
       case sframe::ABI::AMD64EndianLittle:
@@ -6525,12 +6526,13 @@ void ELFDumper<ELFT>::printSFrameFDEs(
         break;
       }
 
-      W.printHex("Raw", It->Info);
+      W.printHex("Raw", It->Info.Info);
     }
 
     W.printHex(
         ("Repetitive block size" +
-         Twine(It->getFDEType() == sframe::FDEType::PCMask ? "" : " (unused)"))
+         Twine(It->Info.getFDEType() == sframe::FDEType::PCMask ? ""
+                                                                : " (unused)"))
             .str(),
         It->RepSize);
 
@@ -6541,10 +6543,11 @@ void ELFDumper<ELFT>::printSFrameFDEs(
     for (const typename SFrameParser<ELFT::Endianness>::FrameRowEntry &FRE :
          Parser.fres(*It, Err)) {
       DictScope FREScope(W, "Frame Row Entry");
-      W.printHex(
-          "Start Address",
-          (It->getFDEType() == sframe::FDEType::PCInc ? FDEStartAddress : 0) +
-              FRE.StartAddress);
+      W.printHex("Start Address",
+                 (It->Info.getFDEType() == sframe::FDEType::PCInc
+                      ? FDEStartAddress
+                      : 0) +
+                     FRE.StartAddress);
       W.printBoolean("Return Address Signed", FRE.Info.isReturnAddressSigned());
       W.printEnum("Offset Size", FRE.Info.getOffsetSize(),
                   sframe::getFREOffsets());
