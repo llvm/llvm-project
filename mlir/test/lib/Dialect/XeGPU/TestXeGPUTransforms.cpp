@@ -228,7 +228,7 @@ struct TestXeGPULayoutInterface
     auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
                                mlir::ValueRange inputs,
                                mlir::Location loc) -> mlir::Value {
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     };
     typeConverter.addSourceMaterialization(materializeCast);
