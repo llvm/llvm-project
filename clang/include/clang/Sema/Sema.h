@@ -4179,8 +4179,9 @@ public:
   /// return statement in the scope of a variable has the same NRVO candidate,
   /// that candidate is an NRVO variable.
   void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
-  Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
-  Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
+  Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body,
+                                bool IsInstantiation = false,
+                                bool RetainFunctionScopeInfo = false);
   Decl *ActOnSkippedFunctionBody(Decl *Decl);
   void ActOnFinishInlineFunctionDef(FunctionDecl *D);
 
@@ -6873,23 +6874,23 @@ public:
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
-  };
+  }
 
   ExpressionEvaluationContextRecord &currentEvaluationContext() {
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
-  };
+  }
 
   ExpressionEvaluationContextRecord &parentEvaluationContext() {
     assert(ExprEvalContexts.size() >= 2 &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts[ExprEvalContexts.size() - 2];
-  };
+  }
 
   const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
     return const_cast<Sema *>(this)->parentEvaluationContext();
-  };
+  }
 
   bool isAttrContext() const {
     return ExprEvalContexts.back().ExprContext ==

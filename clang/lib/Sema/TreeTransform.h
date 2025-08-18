@@ -15791,12 +15791,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     return ExprError();
   }
 
-  // Copy the LSI before ActOnFinishFunctionBody removes it.
-  // FIXME: This is dumb. Store the lambda information somewhere that outlives
-  // the call operator.
-  auto LSICopy = *LSI;
   getSema().ActOnFinishFunctionBody(NewCallOperator, Body.get(),
-                                    /*IsInstantiation*/ true);
+                                    /*IsInstantiation=*/true,
+                                    /*RetainFunctionScopeInfo=*/true);
   SavedContext.pop();
 
   // Recompute the dependency of the lambda so that we can defer the lambda call
@@ -15832,7 +15829,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // *after* the substitution in case we can't decide the dependency
   // so early, e.g. because we want to see if any of the *substituted*
   // parameters are dependent.
-  DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
+  DependencyKind = getDerived().ComputeLambdaDependency(LSI);
   Class->setLambdaDependencyKind(DependencyKind);
   // Clean up the type cache created previously. Then, we re-create a type for
   // such Decl with the new DependencyKind.
@@ -15840,7 +15837,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   getSema().Context.getTypeDeclType(Class);
 
   return getDerived().RebuildLambdaExpr(E->getBeginLoc(),
-                                        Body.get()->getEndLoc(), &LSICopy);
+                                        Body.get()->getEndLoc(), LSI);
 }
 
 template<typename Derived>
