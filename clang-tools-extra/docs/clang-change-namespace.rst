@@ -227,6 +227,42 @@ But this will put the `inline` keyword in the wrong place resulting in:
 Apparently one cannot use `:program:`clang-change-namespace` to inline a
 namespace.
 
+Symbol references not updated
+-----------------------------
+
+Consider this `test.cc` file:
+
+.. code-block:: c++
+
+  namespace old {
+  struct foo {};
+  }  // namespace old
+
+  namespace b {
+  old::foo g_foo;
+  }  // namespace b
+
+Notice that namespace `b` defines a global variable of type `old::foo`. If we
+now change the name of the `old` namespace to `modern`, the reference will not
+be updated:
+
+.. code-block:: console
+
+  clang-change-namespace --old_namespace 'old' --new_namespace 'modern' --file_pattern test.cc test.cc
+
+.. code-block:: c++
+
+  namespace modern {
+  struct foo {};
+  } // namespace modern
+
+  namespace b {
+  old::foo g_foo;
+  }  // namespace b
+
+`g_foo` is still of the no longer existing type `old::foo` while instead it
+should use `modern::foo`.
+
 
 :program:`clang-change-namespace` Command Line Options
 ======================================================
