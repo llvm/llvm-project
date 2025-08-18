@@ -2209,6 +2209,18 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     }
   }
 
+  // When storing a pointer, perform address space cast if needed.
+  if (auto *ValueTy = dyn_cast<llvm::PointerType>(Value->getType())) {
+    if (auto *MemTy = dyn_cast<llvm::PointerType>(Addr.getElementType())) {
+      LangAS ValueAS = getLangASFromTargetAS(ValueTy->getAddressSpace());
+      LangAS MemAS = getLangASFromTargetAS(MemTy->getAddressSpace());
+      if (ValueAS != MemAS) {
+        Value =
+            getTargetHooks().performAddrSpaceCast(*this, Value, ValueAS, MemTy);
+      }
+    }
+  }
+
   Value = EmitToMemory(Value, Ty);
 
   LValue AtomicLValue =
