@@ -640,6 +640,18 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
   if (ThreadLimitClause[0] > 0 && isGenericMode())
     ThreadLimitClause[0] += GenericDevice.getWarpSize();
 
+  // Honor OMP_TEAMS_THREAD_LIMIT environment variable and
+  // num_threads/thread_limit clause for NoLoop kernel types.
+  int32_t TeamsThreadLimitEnvVar = GenericDevice.getOMPTeamsThreadLimit();
+  uint16_t ConstWGSize = GenericDevice.getDefaultNumThreads();
+  if (isNoLoopMode()) {
+    if (TeamsThreadLimitEnvVar > 0)
+      return std::min(static_cast<int32_t>(ConstWGSize),
+                      TeamsThreadLimitEnvVar);
+    if ((ThreadLimitClause[0] > 0) && (ThreadLimitClause[0] != (uint32_t)-1))
+      return std::min(static_cast<uint32_t>(ConstWGSize), ThreadLimitClause[0]);
+    return ConstWGSize;
+  }
   return std::min(MaxNumThreads, (ThreadLimitClause[0] > 0)
                                      ? ThreadLimitClause[0]
                                      : PreferredNumThreads);
@@ -660,6 +672,16 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
     // block limit. For this we might need to start multiple kernels or let the
     // blocks start again until the requested number has been started.
     return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
+  }
+
+  const auto getNumGroupsFromThreadsAndTripCount =
+      [](const uint64_t TripCount, const uint32_t NumThreads) {
+        return ((TripCount - 1) / NumThreads) + 1;
+      };
+  if (isNoLoopMode()) {
+    return LoopTripCount > 0
+               ? getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads)
+               : 1;
   }
 
   uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
