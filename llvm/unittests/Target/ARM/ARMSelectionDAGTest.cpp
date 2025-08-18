@@ -88,47 +88,45 @@ protected:
 
 TEST_F(ARMSelectionDAGTest, computeKnownBits_VORRIMM) {
   SDLoc DL;
-  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 32), 2);
+  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 8), 2);
+  SDValue LHS = DAG->getRegister(0, VT);
 
-  SDValue LHS = DAG->getConstant(0, DL, VT);
-
-  unsigned Encoded = 0xF0;
-  SDValue EncSD = DAG->getTargetConstant(Encoded, DL, MVT::i32);
+  unsigned Encoded = 0xAA;
+  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0xe, Encoded),
+                                         DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VORRIMM, DL, VT, LHS, EncSD);
 
+  // LHS     = ????????
+  // Encoded = 10101010
+  //  =>
+  // Known.One  = 10101010 (0xAA)
+  // Known.Zero = 00000000 (0x0)
   APInt DemandedElts = APInt::getAllOnes(2);
-
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
-
-  unsigned ElemBits = 32;
-  uint64_t Decoded = ARM_AM::decodeVMOVModImm(Encoded, ElemBits);
-  APInt Imm(32, Decoded);
-
-  EXPECT_EQ(Known.One, Imm);
-  EXPECT_EQ(Known.Zero, ~Imm);
+  EXPECT_EQ(Known.One, APInt(8, 0xAA));
+  EXPECT_EQ(Known.Zero, APInt(8, 0x0));
 }
 
 TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM) {
   SDLoc DL;
-  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 32), 2);
+  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 8), 2);
 
-  APInt AllOnes = APInt::getAllOnes(32);
-  SDValue LHS = DAG->getConstant(AllOnes, DL, VT);
+  SDValue LHS = DAG->getConstant(APInt(8, 0xCC), DL, VT);
 
-  unsigned Encoded = 0xF0;
-  SDValue EncSD = DAG->getTargetConstant(Encoded, DL, MVT::i32);
+  unsigned Encoded = 0xAA;
+  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0xe, Encoded),
+                                         DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VBICIMM, DL, VT, LHS, EncSD);
 
+  // LHS     = 11001100
+  // Encoded = 10101010
+  //  =>
+  // Known.One  = 01000100 (0x44)
+  // Known.Zero = 10111011 (0xBB)
   APInt DemandedElts = APInt::getAllOnes(2);
-
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
-
-  unsigned ElemBits = 32;
-  uint64_t Decoded = ARM_AM::decodeVMOVModImm(Encoded, ElemBits);
-  APInt Imm(32, Decoded);
-
-  EXPECT_EQ(Known.One, ~Imm);
-  EXPECT_EQ(Known.Zero, Imm);
+  EXPECT_EQ(Known.One, APInt(8, 0x44));
+  EXPECT_EQ(Known.Zero, APInt(8, 0xBB));
 }
 
 } // end namespace llvm
