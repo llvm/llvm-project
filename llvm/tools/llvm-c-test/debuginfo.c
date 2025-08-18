@@ -432,7 +432,7 @@ int llvm_add_globaldebuginfo(void) {
 
   LLVMMetadataRef GVE = LLVMDIBuilderCreateGlobalVariableExpression(
       Builder, File, "global", 6, "", 0, File, 1, Int64TypeDef, true,
-      GlobalVarValueExpr, NULL, 0);
+      GlobalVarValueExpr, NULL, 0, 0);
 
   LLVMTypeRef RecType =
       LLVMStructCreateNamed(LLVMGetModuleContext(M), "struct");
