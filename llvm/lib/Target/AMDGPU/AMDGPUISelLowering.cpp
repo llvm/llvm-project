@@ -1831,7 +1831,7 @@ AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
 
   SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HiVT, N,
                            DAG.getVectorIdxConstant(LoNumElts, DL));
-  return std::pair(Lo, Hi);
+  return {Lo, Hi};
 }
 
 SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
