@@ -378,16 +378,232 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
   ret { <2 x double>, <2 x double> } %result
 }
 
-; ; FIXME: Asserts
-; define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
-;   %result = call { fp128, fp128 } @llvm.sincos.f128(fp128 %a)
-;   ret { fp128, fp128 } %result
-; }
+define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
+; WASM32-LABEL: test_sincos_f128:
+; WASM32:         .functype test_sincos_f128 (i32, i64, i64) -> ()
+; WASM32-NEXT:    .local i32
+; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    global.get __stack_pointer
+; WASM32-NEXT:    i32.const 32
+; WASM32-NEXT:    i32.sub
+; WASM32-NEXT:    local.tee 3
+; WASM32-NEXT:    global.set __stack_pointer
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    call cosl
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i32.const 16
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    call sinl
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i64.load 8
+; WASM32-NEXT:    i64.store 24
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i64.load 0
+; WASM32-NEXT:    i64.store 16
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i64.load 24
+; WASM32-NEXT:    i64.store 8
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i64.load 16
+; WASM32-NEXT:    i64.store 0
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i32.const 32
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    global.set __stack_pointer
+; WASM32-NEXT:    # fallthrough-return
+;
+; WASM64-LABEL: test_sincos_f128:
+; WASM64:         .functype test_sincos_f128 (i64, i64, i64) -> ()
+; WASM64-NEXT:    .local i64
+; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    global.get __stack_pointer
+; WASM64-NEXT:    i64.const 32
+; WASM64-NEXT:    i64.sub
+; WASM64-NEXT:    local.tee 3
+; WASM64-NEXT:    global.set __stack_pointer
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    call cosl
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i64.const 16
+; WASM64-NEXT:    i64.add
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    call sinl
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i64.load 8
+; WASM64-NEXT:    i64.store 24
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i64.load 0
+; WASM64-NEXT:    i64.store 16
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i64.load 24
+; WASM64-NEXT:    i64.store 8
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i64.load 16
+; WASM64-NEXT:    i64.store 0
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i64.const 32
+; WASM64-NEXT:    i64.add
+; WASM64-NEXT:    global.set __stack_pointer
+; WASM64-NEXT:    # fallthrough-return
+  %result = call { fp128, fp128 } @llvm.sincos.f128(fp128 %a)
+  ret { fp128, fp128 } %result
+}
 
-; ; FIXME: Asserts
-; define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
-;   %result = call { <2 x fp128>, <2 x fp128> } @llvm.sincos.v2f128(<2 x fp128> %a)
-;   ret { <2 x fp128>, <2 x fp128> } %result
-; }
+define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
+; WASM32-LABEL: test_sincos_v2f128:
+; WASM32:         .functype test_sincos_v2f128 (i32, i64, i64, i64, i64) -> ()
+; WASM32-NEXT:    .local i32
+; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    global.get __stack_pointer
+; WASM32-NEXT:    i32.const 64
+; WASM32-NEXT:    i32.sub
+; WASM32-NEXT:    local.tee 5
+; WASM32-NEXT:    global.set __stack_pointer
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i32.const 32
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    local.get 4
+; WASM32-NEXT:    call cosl
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    call cosl
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i32.const 48
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    local.get 4
+; WASM32-NEXT:    call sinl
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i32.const 16
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    call sinl
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 40
+; WASM32-NEXT:    i64.store 56
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 32
+; WASM32-NEXT:    i64.store 48
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 8
+; WASM32-NEXT:    i64.store 40
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 0
+; WASM32-NEXT:    i64.store 32
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 56
+; WASM32-NEXT:    i64.store 24
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 48
+; WASM32-NEXT:    i64.store 16
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 24
+; WASM32-NEXT:    i64.store 8
+; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i64.load 16
+; WASM32-NEXT:    i64.store 0
+; WASM32-NEXT:    local.get 5
+; WASM32-NEXT:    i32.const 64
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    global.set __stack_pointer
+; WASM32-NEXT:    # fallthrough-return
+;
+; WASM64-LABEL: test_sincos_v2f128:
+; WASM64:         .functype test_sincos_v2f128 (i64, i64, i64, i64, i64) -> ()
+; WASM64-NEXT:    .local i64
+; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    global.get __stack_pointer
+; WASM64-NEXT:    i64.const 64
+; WASM64-NEXT:    i64.sub
+; WASM64-NEXT:    local.tee 5
+; WASM64-NEXT:    global.set __stack_pointer
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.const 32
+; WASM64-NEXT:    i64.add
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    local.get 4
+; WASM64-NEXT:    call cosl
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    call cosl
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.const 48
+; WASM64-NEXT:    i64.add
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    local.get 4
+; WASM64-NEXT:    call sinl
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.const 16
+; WASM64-NEXT:    i64.add
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    call sinl
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 40
+; WASM64-NEXT:    i64.store 56
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 32
+; WASM64-NEXT:    i64.store 48
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 8
+; WASM64-NEXT:    i64.store 40
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 0
+; WASM64-NEXT:    i64.store 32
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 56
+; WASM64-NEXT:    i64.store 24
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 48
+; WASM64-NEXT:    i64.store 16
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 24
+; WASM64-NEXT:    i64.store 8
+; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.load 16
+; WASM64-NEXT:    i64.store 0
+; WASM64-NEXT:    local.get 5
+; WASM64-NEXT:    i64.const 64
+; WASM64-NEXT:    i64.add
+; WASM64-NEXT:    global.set __stack_pointer
+; WASM64-NEXT:    # fallthrough-return
+  %result = call { <2 x fp128>, <2 x fp128> } @llvm.sincos.v2f128(<2 x fp128> %a)
+  ret { <2 x fp128>, <2 x fp128> } %result
+}
 
 attributes #0 = { nounwind }

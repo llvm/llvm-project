@@ -20,10 +20,10 @@ define void @test(ptr %mdct_forward_x) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <4 x i32> <i32 2, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <3 x float> [[TMP5]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> <float poison, float poison, float 0.000000e+00, float poison>, <4 x float> [[TMP22]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 6>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP11]], <2 x float> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> [[TMP10]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP13:%.*]] = fsub <4 x float> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <4 x float> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>

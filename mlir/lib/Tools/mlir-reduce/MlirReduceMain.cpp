@@ -14,12 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/mlir-reduce/MlirReduceMain.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Reducer/Passes.h"
-#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/InitLLVM.h"

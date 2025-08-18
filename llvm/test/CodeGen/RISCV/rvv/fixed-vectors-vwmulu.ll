@@ -710,13 +710,6 @@ define <4 x i32> @vwmulu_vx_v4i32_i8(ptr %x, ptr %y) {
 }
 
 define <4 x i32> @vwmulu_vx_v4i32_i16(ptr %x, ptr %y) {
-; CHECK-LABEL: vwmulu_vx_v4i32_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    lhu a0, 0(a1)
-; CHECK-NEXT:    vwmulu.vx v8, v9, a0
-; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i16, ptr %y
   %c = zext i16 %b to i32

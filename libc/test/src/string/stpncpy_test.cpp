@@ -73,11 +73,11 @@ TEST_F(LlvmLibcStpncpyTest, CopyTwoWithNull) {
   check_stpncpy(dst, src, 2, expected, 1);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST_F(LlvmLibcStpncpyTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::stpncpy(nullptr, nullptr, 1); },
                WITH_SIGNAL(-1));
 }
 
-#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#endif // defined(LIBC_ADD_NULL_CHECKS)

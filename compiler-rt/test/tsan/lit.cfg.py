@@ -23,7 +23,7 @@ config.test_source_root = os.path.dirname(__file__)
 # Setup environment variables for running ThreadSanitizer.
 default_tsan_opts = "atexit_sleep_ms=0"
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run
     # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
     default_tsan_opts += ":abort_on_error=0"
@@ -61,7 +61,7 @@ clang_tsan_cxxflags = (
 )
 # Add additional flags if we're using instrumented libc++.
 # Instrumented libcxx currently not supported on Darwin.
-if config.has_libcxx and config.host_os != "Darwin":
+if config.has_libcxx and config.target_os != "Darwin":
     # FIXME: Dehardcode this path somehow.
     libcxx_path = os.path.join(
         config.compiler_rt_obj_root,
@@ -86,7 +86,7 @@ config.substitutions.append(("%clang_tsan ", build_invocation(clang_tsan_cflags)
 config.substitutions.append(("%clangxx_tsan ", build_invocation(clang_tsan_cxxflags)))
 
 # Define CHECK-%os to check for OS-dependent output.
-config.substitutions.append(("CHECK-%os", ("CHECK-" + config.host_os)))
+config.substitutions.append(("CHECK-%os", ("CHECK-" + config.target_os)))
 
 config.substitutions.append(
     (
@@ -101,7 +101,7 @@ config.substitutions.append(
 # Default test suffixes.
 config.suffixes = [".c", ".cpp", ".m", ".mm"]
 
-if config.host_os not in ["FreeBSD", "Linux", "Darwin", "NetBSD"]:
+if config.target_os not in ["FreeBSD", "Linux", "Darwin", "NetBSD"]:
     config.unsupported = True
 
 if config.android:
@@ -110,5 +110,5 @@ if config.android:
 if not config.parallelism_group:
     config.parallelism_group = "shadow-memory"
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))

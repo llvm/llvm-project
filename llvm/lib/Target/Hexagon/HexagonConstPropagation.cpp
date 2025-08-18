@@ -1005,7 +1005,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
       SmallVector<MachineBasicBlock*,2> ToRemove;
       for (MachineBasicBlock *SB : B->successors()) {
         if (!Targets.count(SB))
-          ToRemove.push_back(const_cast<MachineBasicBlock*>(SB));
+          ToRemove.push_back(SB);
         Targets.remove(SB);
       }
       for (MachineBasicBlock *MBB : ToRemove)

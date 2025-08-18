@@ -1750,7 +1750,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // struct objc_method_list *methods
     // FIXME: Almost identical code is copied and pasted below for the
     // class, but refactoring it cleanly requires C++14 generic lambdas.
-    if (OID->classmeth_begin() == OID->classmeth_end())
+    if (OID->class_methods().empty())
       metaclassFields.addNullPointer(PtrTy);
     else {
       SmallVector<ObjCMethodDecl*, 16> ClassMethods;
@@ -1942,8 +1942,9 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // struct objc_class *sibling_class
     classFields.addNullPointer(PtrTy);
     // struct objc_protocol_list *protocols;
-    auto RuntimeProtocols = GetRuntimeProtocolList(classDecl->protocol_begin(),
-                                                   classDecl->protocol_end());
+    auto RuntimeProtocols =
+        GetRuntimeProtocolList(classDecl->all_referenced_protocol_begin(),
+                               classDecl->all_referenced_protocol_end());
     SmallVector<llvm::Constant *, 16> Protocols;
     for (const auto *I : RuntimeProtocols)
       Protocols.push_back(GenerateProtocolRef(I));

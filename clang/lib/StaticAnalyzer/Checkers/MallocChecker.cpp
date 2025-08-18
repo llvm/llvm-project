@@ -346,10 +346,6 @@ namespace {
   };
 
 BUGTYPE_PROVIDER(DoubleFree, "Double free")
-// TODO: Remove DoubleDelete as a separate bug type and when it would be
-// emitted, emit DoubleFree reports instead. (Note that DoubleFree is already
-// used for all allocation families, not just malloc/free.)
-BUGTYPE_PROVIDER(DoubleDelete, "Double delete")
 
 struct Leak : virtual public CheckerFrontend {
   // Leaks should not be reported if they are post-dominated by a sink:
@@ -410,8 +406,7 @@ public:
   DynMemFrontend<DoubleFree, Leak, UseFree, BadFree, FreeAlloca, OffsetFree,
                  UseZeroAllocated>
       MallocChecker;
-  DynMemFrontend<DoubleFree, DoubleDelete, UseFree, BadFree, OffsetFree,
-                 UseZeroAllocated>
+  DynMemFrontend<DoubleFree, UseFree, BadFree, OffsetFree, UseZeroAllocated>
       NewDeleteChecker;
   DynMemFrontend<Leak> NewDeleteLeaksChecker;
   DynMemFrontend<FreeAlloca, MismatchedDealloc> MismatchedDeallocatorChecker;
@@ -784,9 +779,6 @@ private:
   void checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
                              const Stmt *S) const;
 
-  /// If in \p S \p Sym is being freed, check whether \p Sym was already freed.
-  bool checkDoubleDelete(SymbolRef Sym, CheckerContext &C) const;
-
   /// Check if the function is known to free memory, or if it is
   /// "interesting" and should be modeled explicitly.
   ///
@@ -847,8 +839,6 @@ private:
 
   void HandleDoubleFree(CheckerContext &C, SourceRange Range, bool Released,
                         SymbolRef Sym, SymbolRef PrevSym) const;
-
-  void HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const;
 
   void HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
                           SymbolRef Sym) const;
@@ -1291,7 +1281,7 @@ SVal MallocChecker::evalMulForBufferSize(CheckerContext &C, const Expr *Blocks,
   SVal BlockBytesVal = C.getSVal(BlockBytes);
   ProgramStateRef State = C.getState();
   SVal TotalSize = SB.evalBinOp(State, BO_Mul, BlocksVal, BlockBytesVal,
-                                SB.getContext().getSizeType());
+                                SB.getContext().getCanonicalSizeType());
   return TotalSize;
 }
 
@@ -1321,11 +1311,9 @@ static bool isStandardRealloc(const CallEvent &Call) {
   const FunctionDecl *FD = dyn_cast<FunctionDecl>(Call.getDecl());
   assert(FD);
   ASTContext &AC = FD->getASTContext();
-
-  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
-             AC.getSizeType();
+  return AC.hasSameType(FD->getDeclaredReturnType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(0)->getType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(1)->getType(), AC.getSizeType());
 }
 
 static bool isGRealloc(const CallEvent &Call) {
@@ -1333,10 +1321,9 @@ static bool isGRealloc(const CallEvent &Call) {
   assert(FD);
   ASTContext &AC = FD->getASTContext();
 
-  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
-             AC.UnsignedLongTy;
+  return AC.hasSameType(FD->getDeclaredReturnType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(0)->getType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(1)->getType(), AC.UnsignedLongTy);
 }
 
 void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
@@ -2706,7 +2693,7 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
         Frontend->UseFreeBug,
         AF.Kind == AF_InnerBuffer
             ? "Inner pointer of container used after re/deallocation"
-            : "Use of memory after it is freed",
+            : "Use of memory after it is released",
         N);
 
     R->markInteresting(Sym);
@@ -2734,33 +2721,14 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
   if (ExplodedNode *N = C.generateErrorNode()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         Frontend->DoubleFreeBug,
-        (Released ? "Attempt to free released memory"
-                  : "Attempt to free non-owned memory"),
+        (Released ? "Attempt to release already released memory"
+                  : "Attempt to release non-owned memory"),
         N);
-    R->addRange(Range);
+    if (Range.isValid())
+      R->addRange(Range);
     R->markInteresting(Sym);
     if (PrevSym)
       R->markInteresting(PrevSym);
-    R->addVisitor<MallocBugVisitor>(Sym);
-    C.emitReport(std::move(R));
-  }
-}
-
-void MallocChecker::HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const {
-  const DoubleDelete *Frontend = getRelevantFrontendAs<DoubleDelete>(C, Sym);
-  if (!Frontend)
-    return;
-  if (!Frontend->isEnabled()) {
-    C.addSink();
-    return;
-  }
-
-  if (ExplodedNode *N = C.generateErrorNode()) {
-
-    auto R = std::make_unique<PathSensitiveBugReport>(
-        Frontend->DoubleDeleteBug, "Attempt to delete released memory", N);
-
-    R->markInteresting(Sym);
     R->addVisitor<MallocBugVisitor>(Sym);
     C.emitReport(std::move(R));
   }
@@ -2859,10 +2827,10 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
     return nullptr;
 
   // Compare the size argument to 0.
-  DefinedOrUnknownSVal SizeZero =
-      svalBuilder.evalEQ(State, TotalSize.castAs<DefinedOrUnknownSVal>(),
-                         svalBuilder.makeIntValWithWidth(
-                             svalBuilder.getContext().getSizeType(), 0));
+  DefinedOrUnknownSVal SizeZero = svalBuilder.evalEQ(
+      State, TotalSize.castAs<DefinedOrUnknownSVal>(),
+      svalBuilder.makeIntValWithWidth(
+          svalBuilder.getContext().getCanonicalSizeType(), 0));
 
   ProgramStateRef StatePtrIsNull, StatePtrNotNull;
   std::tie(StatePtrIsNull, StatePtrNotNull) = State->assume(PtrEQ);
@@ -3136,10 +3104,22 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     return;
   }
 
+  // If we see a `CXXDestructorCall` (that is, an _implicit_ destructor call)
+  // to a region that's symbolic and known to be already freed, then it must be
+  // implicitly triggered by a `delete` expression. In this situation we should
+  // emit a `DoubleFree` report _now_ (before entering the call to the
+  // destructor) because otherwise the destructor call can trigger a
+  // use-after-free bug (by accessing any member variable) and that would be
+  // (technically valid, but) less user-friendly report than the `DoubleFree`.
   if (const auto *DC = dyn_cast<CXXDestructorCall>(&Call)) {
     SymbolRef Sym = DC->getCXXThisVal().getAsSymbol();
-    if (!Sym || checkDoubleDelete(Sym, C))
+    if (!Sym)
       return;
+    if (isReleased(Sym, C)) {
+      HandleDoubleFree(C, SourceRange(), /*Released=*/true, Sym,
+                       /*PrevSym=*/nullptr);
+      return;
+    }
   }
 
   // We need to handle getline pre-conditions here before the pointed region
@@ -3176,7 +3156,7 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     SVal ArgSVal = Call.getArgSVal(I);
     if (isa<Loc>(ArgSVal)) {
-      SymbolRef Sym = ArgSVal.getAsSymbol();
+      SymbolRef Sym = ArgSVal.getAsSymbol(/*IncludeBaseRegions=*/true);
       if (!Sym)
         continue;
       if (checkUseAfterFree(Sym, C, Call.getArgExpr(I)))
@@ -3319,15 +3299,6 @@ void MallocChecker::checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
   else if (C.getState()->contains<ReallocSizeZeroSymbols>(Sym)) {
     HandleUseZeroAlloc(C, S->getSourceRange(), Sym);
   }
-}
-
-bool MallocChecker::checkDoubleDelete(SymbolRef Sym, CheckerContext &C) const {
-
-  if (isReleased(Sym, C)) {
-    HandleDoubleDelete(C, Sym);
-    return true;
-  }
-  return false;
 }
 
 // Check if the location is a freed symbolic region.
@@ -3759,13 +3730,15 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
           return nullptr;
         }
 
-        // Save the first destructor/function as release point.
-        assert(!ReleaseFunctionLC && "There should be only one release point");
+        // Record the stack frame that is _responsible_ for this memory release
+        // event. This will be used by the false positive suppression heuristics
+        // that recognize the release points of reference-counted objects.
+        //
+        // Usually (e.g. in C) we say that the _responsible_ stack frame is the
+        // current innermost stack frame:
         ReleaseFunctionLC = CurrentLC->getStackFrame();
-
-        // See if we're releasing memory while inlining a destructor that
-        // decrement reference counters (or one of its callees).
-        // This turns on various common false positive suppressions.
+        // ...but if the stack contains a destructor call, then we say that the
+        // outermost destructor stack frame is the _responsible_ one:
         for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
           if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {

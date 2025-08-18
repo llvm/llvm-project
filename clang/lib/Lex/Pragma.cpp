@@ -591,7 +591,8 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   }
 
   // Remember the macro string.
-  std::string StrVal = getSpelling(Tok);
+  Token StrTok = Tok;
+  std::string StrVal = getSpelling(StrTok);
 
   // Read the ')'.
   Lex(Tok);
@@ -603,6 +604,15 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
 
   assert(StrVal[0] == '"' && StrVal[StrVal.size()-1] == '"' &&
          "Invalid string token!");
+
+  if (StrVal.size() <= 2) {
+    Diag(StrTok.getLocation(), diag::warn_pargma_push_pop_macro_empty_string)
+        << SourceRange(
+               StrTok.getLocation(),
+               StrTok.getLocation().getLocWithOffset(StrTok.getLength()))
+        << PragmaTok.getIdentifierInfo()->isStr("pop_macro");
+    return nullptr;
+  }
 
   // Create a Token from the string.
   Token MacroTok;

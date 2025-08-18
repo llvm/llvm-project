@@ -43,17 +43,6 @@ public:
   DecoderUInt128() = default;
   DecoderUInt128(uint64_t Lo, uint64_t Hi = 0) : Lo(Lo), Hi(Hi) {}
   operator bool() const { return Lo || Hi; }
-  void insertBits(uint64_t SubBits, unsigned BitPosition, unsigned NumBits) {
-    assert(NumBits && NumBits <= 64);
-    assert(SubBits >> 1 >> (NumBits - 1) == 0);
-    assert(BitPosition < 128);
-    if (BitPosition < 64) {
-      Lo |= SubBits << BitPosition;
-      Hi |= SubBits >> 1 >> (63 - BitPosition);
-    } else {
-      Hi |= SubBits << (BitPosition - 64);
-    }
-  }
   uint64_t extractBitsAsZExtValue(unsigned NumBits,
                                   unsigned BitPosition) const {
     assert(NumBits && NumBits <= 64);
@@ -78,12 +67,7 @@ public:
   bool operator!=(const DecoderUInt128 &RHS) {
     return Lo != RHS.Lo || Hi != RHS.Hi;
   }
-  bool operator!=(const int &RHS) {
-    return *this != DecoderUInt128(RHS);
-  }
-  friend raw_ostream &operator<<(raw_ostream &OS, const DecoderUInt128 &RHS) {
-    return OS << APInt(128, {RHS.Lo, RHS.Hi});
-  }
+  bool operator!=(const int &RHS) { return *this != DecoderUInt128(RHS); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -177,6 +161,7 @@ public:
   void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
+  void convertWMMAInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;
@@ -194,7 +179,9 @@ public:
   static MCOperand decodeIntImmed(unsigned Imm);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
+  MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
+  MCOperand decodeLiteral64Constant() const;
 
   MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
 

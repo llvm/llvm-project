@@ -1,6 +1,5 @@
 // RUN: %libomptarget-compile-generic
-// RUN:   env OMP_TARGET_OFFLOAD=disabled %libomptarget-run-generic 2>&1 |
-// %fcheck-generic
+// RUN:   env OMP_TARGET_OFFLOAD=disabled %libomptarget-run-generic 2>&1 | %fcheck-generic
 
 #include <omp.h>
 #include <stdio.h>
