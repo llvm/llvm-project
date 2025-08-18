@@ -167,20 +167,20 @@ But one has to be aware of that.
 :program:`clang-change-namespace` Command Line Options
 ======================================================
 
-.. option:: --allowed_file=<string>     
+.. option:: --allowed_file=<string>
 
   A file containing regexes of symbol names that are not expected to be updated
   when changing namespaces around them.
 
-.. option:: --dump_result               
+.. option:: --dump_result
 
   Dump new file contents in YAML, if specified.
 
-.. option:: --extra-arg=<string>        
+.. option:: --extra-arg=<string>
 
   Additional argument to append to the compiler command line
 
-.. option:: --extra-arg-before=<string> 
+.. option:: --extra-arg-before=<string>
 
   Additional argument to prepend to the compiler command line
 
@@ -189,22 +189,22 @@ But one has to be aware of that.
   Only rename namespaces in files that match the given regular expression
   pattern.
 
-.. option:: -i     
- 
+.. option:: -i
+
   Inplace edit <file>s, if specified.
 
-.. option:: --new_namespace=<string>    
- 
+.. option:: --new_namespace=<string>
+
   New namespace. Use `""` when you target the global namespace.
 
-.. option:: --old_namespace=<string>    
- 
+.. option:: --old_namespace=<string>
+
   Old namespace.
 
-.. option:: -p <string>                 
- 
+.. option:: -p <string>
+
   Build path
 
-.. option:: --style=<string>            
- 
+.. option:: --style=<string>
+
   The style name used for reformatting.
