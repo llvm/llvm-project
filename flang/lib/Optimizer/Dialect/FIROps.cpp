@@ -107,6 +107,7 @@ static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
 }
 
 /// Parser shared by Alloca and Allocmem
+///
 /// operation ::= %res = (`fir.alloca` | `fir.allocmem`) $in_type
 ///                      ( `(` $typeparams `)` )? ( `,` $shape )?
 ///                      attr-dict-without-keyword
