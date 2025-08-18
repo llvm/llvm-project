@@ -360,9 +360,6 @@ fieldFromInsn(const insn_t &Insn, unsigned StartBit, unsigned NumBits) {
 
 namespace {
 
-static constexpr uint64_t NO_FIXED_SEGMENTS_SENTINEL =
-    std::numeric_limits<uint64_t>::max();
-
 class FilterChooser;
 
 /// Filter - Filter works with FilterChooser to produce the decoding tree for
@@ -416,6 +413,9 @@ protected:
   // Map of well-known segment value to its delegate.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  // A filter chooser for encodings that contain some '?' in the filtered range.
+  std::unique_ptr<const FilterChooser> VariableFC;
+
   // Number of instructions which fall under FilteredInstructions category.
   unsigned NumFiltered;
 
@@ -435,8 +435,8 @@ public:
   // Return the filter chooser for the group of instructions without constant
   // segment values.
   const FilterChooser &getVariableFC() const {
-    assert(NumFiltered == 1 && FilterChooserMap.size() == 1);
-    return *(FilterChooserMap.find(NO_FIXED_SEGMENTS_SENTINEL)->second);
+    assert(NumFiltered == 1 && FilterChooserMap.empty());
+    return *VariableFC;
   }
 
   // Divides the decoding task into sub tasks and delegates them to the
@@ -647,7 +647,7 @@ Filter::Filter(Filter &&f)
       FilteredIDs(std::move(f.FilteredIDs)),
       VariableIDs(std::move(f.VariableIDs)),
       FilterChooserMap(std::move(f.FilterChooserMap)),
-      NumFiltered(f.NumFiltered) {}
+      VariableFC(std::move(f.VariableFC)), NumFiltered(f.NumFiltered) {}
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
@@ -694,16 +694,15 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    FilterChooserMap.try_emplace(
-        NO_FIXED_SEGMENTS_SENTINEL,
+    VariableFC =
         std::make_unique<FilterChooser>(Owner.AllInstructions, VariableIDs,
-                                        Owner.Operands, BitValueArray, Owner));
+                                        Owner.Operands, BitValueArray, Owner);
   }
 
   // No need to recurse for a singleton filtered instruction.
   // See also Filter::emit*().
   if (getNumFiltered() == 1) {
-    assert(FilterChooserMap.size() == 1);
+    assert(VariableFC && "Shouldn't have created a filter for one encoding!");
     return;
   }
 
@@ -733,46 +732,30 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
   TableInfo.Table.insertULEB128(StartBit);
   TableInfo.Table.push_back(NumBits);
 
-  // If the NO_FIXED_SEGMENTS_SENTINEL is present, we need to add a new scope
-  // for this filter. Otherwise, we can skip adding a new scope and any
-  // patching added will automatically be added to the enclosing scope.
-
-  // If NO_FIXED_SEGMENTS_SENTINEL is present, it will be last entry in
-  // FilterChooserMap.
-
+  // If VariableFC is present, we need to add a new scope for this filter.
+  // Otherwise, we can skip adding a new scope and any patching added will
+  // automatically be added to the enclosing scope.
   const uint64_t LastFilter = FilterChooserMap.rbegin()->first;
-  bool HasFallthrough = LastFilter == NO_FIXED_SEGMENTS_SENTINEL;
-  if (HasFallthrough)
-    TableInfo.pushScope();
+  if (VariableFC)
+    TableInfo.FixupStack.emplace_back();
 
   DecoderTable &Table = TableInfo.Table;
 
   size_t PrevFilter = 0;
   for (const auto &[FilterVal, Delegate] : FilterChooserMap) {
-    // Field value NO_FIXED_SEGMENTS_SENTINEL implies a non-empty set of
-    // variable instructions. See also recurse().
-    if (FilterVal == NO_FIXED_SEGMENTS_SENTINEL) {
-      // Each scope should always have at least one filter value to check
-      // for.
-      assert(PrevFilter != 0 && "empty filter set!");
-      TableInfo.popScope();
-      PrevFilter = 0; // Don't re-process the filter's fallthrough.
+    // The last filtervalue emitted can be OPC_FilterValue if we are at
+    // outermost scope.
+    const uint8_t DecoderOp =
+        FilterVal == LastFilter && TableInfo.isOutermostScope()
+            ? MCD::OPC_FilterValueOrFail
+            : MCD::OPC_FilterValue;
+    Table.push_back(DecoderOp);
+    Table.insertULEB128(FilterVal);
+    if (DecoderOp == MCD::OPC_FilterValue) {
+      // Reserve space for the NumToSkip entry. We'll backpatch the value later.
+      PrevFilter = Table.insertNumToSkip();
     } else {
-      // The last filtervalue emitted can be OPC_FilterValue if we are at
-      // outermost scope.
-      const uint8_t DecoderOp =
-          FilterVal == LastFilter && TableInfo.isOutermostScope()
-              ? MCD::OPC_FilterValueOrFail
-              : MCD::OPC_FilterValue;
-      Table.push_back(DecoderOp);
-      Table.insertULEB128(FilterVal);
-      if (DecoderOp == MCD::OPC_FilterValue) {
-        // Reserve space for the NumToSkip entry. We'll backpatch the value
-        // later.
-        PrevFilter = Table.insertNumToSkip();
-      } else {
-        PrevFilter = 0;
-      }
+      PrevFilter = 0;
     }
 
     // We arrive at a category of instructions with the same segment value.
@@ -785,6 +768,16 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
     // of the filter itself to be able to skip forward when false.
     if (PrevFilter)
       Table.patchNumToSkip(PrevFilter, Table.size());
+  }
+
+  if (VariableFC) {
+    // Each scope should always have at least one filter value to check for.
+    assert(PrevFilter != 0 && "empty filter set!");
+    TableInfo.popScope();
+    PrevFilter = 0; // Don't re-process the filter's fallthrough.
+
+    // Delegate to the sub filter chooser for further decoding.
+    VariableFC->emitTableEntries(TableInfo);
   }
 
   // If there is no fallthrough and the final filter was not in the outermost
