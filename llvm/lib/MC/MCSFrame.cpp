@@ -8,8 +8,8 @@
 
 #include "llvm/MC/MCSFrame.h"
 #include "llvm/BinaryFormat/SFrame.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
@@ -32,7 +32,7 @@ struct SFrameFDE {
   SFrameFDE(const MCDwarfFrameInfo &DF, MCSymbol *FRES)
       : DFrame(DF), FREStart(FRES) {}
 
-  void emit(MCObjectStreamer &S, const MCSymbol* FRESubSectionStart) {
+  void emit(MCObjectStreamer &S, const MCSymbol *FRESubSectionStart) {
     MCContext &C = S.getContext();
 
     // sfde_func_start_address
@@ -45,9 +45,9 @@ struct SFrameFDE {
 
     // sfde_func_start_fre_off
     auto *F = S.getCurrentFragment();
-    const MCExpr *Diff =
-        MCBinaryExpr::createSub(MCSymbolRefExpr::create(FREStart, C),
-                                MCSymbolRefExpr::create(FRESubSectionStart, C), C);
+    const MCExpr *Diff = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(FREStart, C),
+        MCSymbolRefExpr::create(FRESubSectionStart, C), C);
 
     F->addFixup(MCFixup::create(F->getContents().size(), Diff,
                                 MCFixup::getDataKindForSize(4)));
@@ -57,7 +57,7 @@ struct SFrameFDE {
     S.emitInt32(0);
 
     // sfde_func_info word
-    FDEInfo I;
+    FDEInfo<endianness::native> I;
     I.setFuncInfo(0 /* No pauth key */, FDEType::PCInc, FREType::Addr1);
     S.emitInt8(I.Info);
 
@@ -76,7 +76,6 @@ class SFrameEmitterImpl {
   MCObjectStreamer &Streamer;
   SmallVector<SFrameFDE> FDEs;
   ABI SFrameABI;
-
   MCSymbol *FDESubSectionStart;
   MCSymbol *FRESubSectionStart;
   MCSymbol *FRESubSectionEnd;
@@ -89,7 +88,6 @@ public:
                .has_value());
     FDEs.reserve(Streamer.getDwarfFrameInfos().size());
     SFrameABI = *Streamer.getContext().getObjectFileInfo()->getSFrameABIArch();
-
     FDESubSectionStart = Streamer.getContext().createTempSymbol();
     FRESubSectionStart = Streamer.getContext().createTempSymbol();
     FRESubSectionEnd = Streamer.getContext().createTempSymbol();
@@ -117,10 +115,8 @@ public:
     Streamer.emitInt8(0);
     // shf_num_fdes
     Streamer.emitInt32(FDEs.size());
-
     // shf_num_fres
     Streamer.emitInt32(0);
-
     // shf_fre_len
     Streamer.emitAbsoluteSymbolDiff(FRESubSectionEnd, FRESubSectionStart,
                                     sizeof(int32_t));
@@ -153,7 +149,10 @@ void MCSFrameEmitter::emit(MCObjectStreamer &Streamer) {
   // If this target doesn't support sframes, return now. Gas doesn't warn in
   // this case, but if we want to, it should be done at option-parsing time,
   // rather than here.
-  if (!Streamer.getContext().getObjectFileInfo()->getSFrameABIArch().has_value())
+  if (!Streamer.getContext()
+           .getObjectFileInfo()
+           ->getSFrameABIArch()
+           .has_value())
     return;
 
   SFrameEmitterImpl Emitter(Streamer);
@@ -161,7 +160,7 @@ void MCSFrameEmitter::emit(MCObjectStreamer &Streamer) {
 
   // Both the header itself and the FDEs include various offsets and counts.
   // Therefore, all of this must be precomputed.
-  for (const auto& DFrame : FrameArray)
+  for (const auto &DFrame : FrameArray)
     Emitter.BuildSFDE(DFrame);
 
   MCSection *Section = Context.getObjectFileInfo()->getSFrameSection();
