@@ -1160,7 +1160,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
     std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
-  if (!canSplitCriticalEdge(Succ))
+  if (!canSplitCriticalEdge(Succ, Analyses))
     return nullptr;
 
   MachineFunction *MF = getParent();
@@ -1389,7 +1389,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 }
 
 bool MachineBasicBlock::canSplitCriticalEdge(
-    const MachineBasicBlock *Succ) const {
+    const MachineBasicBlock *Succ,
+    const SplitCriticalEdgeAnalyses &Analyses) const {
   // Splitting the critical edge to a landing pad block is non-trivial. Don't do
   // it in this generic function.
   if (Succ->isEHPad())
@@ -1403,7 +1404,15 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   const MachineFunction *MF = getParent();
   // Performance might be harmed on HW that implements branching using exec mask
   // where both sides of the branches are always executed.
-  if (MF->getTarget().requiresStructuredCFG())
+  // However, if `Succ` is a loop header, splitting the critical edge will not
+  // break structured CFG.
+  auto SuccIsLoopHeader = [&]() {
+    if (MachineLoopInfo *MLI = Analyses.MLI)
+      if (MachineLoop *L = MLI->getLoopFor(Succ); L && L->getHeader() == Succ)
+        return true;
+    return false;
+  };
+  if (MF->getTarget().requiresStructuredCFG() && !SuccIsLoopHeader())
     return false;
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?
