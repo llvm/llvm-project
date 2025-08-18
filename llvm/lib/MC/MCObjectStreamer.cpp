@@ -408,6 +408,13 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
       Inst, IF->getContentsForAppending(), Fixups, STI);
   IF->doneAppending();
   IF->appendFixups(Fixups);
+
+  for (auto &Fixup : Fixups) {
+    if (Fixup.isLinkerRelaxable()) {
+      IF->setLinkerRelaxable();
+      getCurrentSectionOnly()->setLinkerRelaxable();
+    }
+  }
 }
 
 #ifndef NDEBUG
