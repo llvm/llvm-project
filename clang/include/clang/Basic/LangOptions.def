@@ -98,8 +98,6 @@ LANGOPT(Exceptions        , 1, 0, NotCompatible, "exception handling")
 LANGOPT(ObjCExceptions    , 1, 0, NotCompatible, "Objective-C exceptions")
 LANGOPT(CXXExceptions     , 1, 0, NotCompatible, "C++ exceptions")
 LANGOPT(EHAsynch          , 1, 0, NotCompatible, "C/C++ EH Asynch exceptions")
-ENUM_LANGOPT(ExceptionHandling, ExceptionHandlingKind, 3,
-             ExceptionHandlingKind::None,  NotCompatible, "exception handling")
 LANGOPT(IgnoreExceptions  , 1, 0, NotCompatible, "ignore exceptions")
 LANGOPT(ExternCNoUnwind   , 1, 0, NotCompatible, "Assume extern C functions don't unwind")
 LANGOPT(AssumeNothrowExceptionDtor , 1, 0, NotCompatible, "Assume exception object's destructor is nothrow")
@@ -137,6 +135,8 @@ LANGOPT(PointerAuthObjcIsa, 1, 0, NotCompatible, "authentication of isa and supe
 LANGOPT(PointerAuthObjcInterfaceSel, 1, 0, NotCompatible, "authentication of SEL fields of ObjC interfaces")
 LANGOPT(PointerAuthObjcInterfaceSelKey, 16, 0, NotCompatible, "authentication key for SEL fields of ObjC interfaces")
 LANGOPT(PointerAuthObjcClassROPointers, 1, 0, Benign, "class_ro_t pointer authentication")
+
+LANGOPT(PointerAuthBlockDescriptorPointers, 1, 0, NotCompatible, "enable signed block descriptors")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, NotCompatible, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, NotCompatible, "experimental late parsing of attributes")
@@ -492,6 +492,8 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
         "be used in a constant expression.")
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
+
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 

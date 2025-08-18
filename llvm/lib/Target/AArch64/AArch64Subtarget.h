@@ -343,7 +343,8 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,
                              const TargetSchedModel *SchedModel) const override;
@@ -448,12 +449,6 @@ public:
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
     return "__chkstk";
-  }
-
-  const char* getSecurityCheckCookieName() const {
-    if (isWindowsArm64EC())
-      return "#__security_check_cookie_arm64ec";
-    return "__security_check_cookie";
   }
 
   /// Choose a method of checking LR before performing a tail call.

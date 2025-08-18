@@ -267,12 +267,10 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
         MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
-    auto replaceOpForAssignmentMarkers = [FillC, FillVal](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
       if (llvm::is_contained(DbgAssign->location_ops(), FillC))
         DbgAssign->replaceVariableLocationOp(FillC, FillVal);
-    };
-    for_each(at::getAssignmentMarkers(S), replaceOpForAssignmentMarkers);
-    for_each(at::getDVRAssignmentMarkers(S), replaceOpForAssignmentMarkers);
+    }
 
     S->setAlignment(Alignment);
     if (MI->isAtomic())
@@ -1532,6 +1530,51 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
+/// Helper to match idempotent binary intrinsics, namely, intrinsics where
+/// `f(f(x, y), y) == f(x, y)` holds.
+static bool isIdempotentBinaryIntrinsic(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+  case Intrinsic::maximum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minnum:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Attempt to simplify value-accumulating recurrences of kind:
+///   %umax.acc = phi i8 [ %umax, %backedge ], [ %a, %entry ]
+///   %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+/// And let the idempotent binary intrinsic be hoisted, when the operands are
+/// known to be loop-invariant.
+static Value *foldIdempotentBinaryIntrinsicRecurrence(InstCombinerImpl &IC,
+                                                      IntrinsicInst *II) {
+  PHINode *PN;
+  Value *Init, *OtherOp;
+
+  // A binary intrinsic recurrence with loop-invariant operands is equivalent to
+  // `call @llvm.binary.intrinsic(Init, OtherOp)`.
+  auto IID = II->getIntrinsicID();
+  if (!isIdempotentBinaryIntrinsic(IID) ||
+      !matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp) ||
+      !IC.getDominatorTree().dominates(OtherOp, PN))
+    return nullptr;
+
+  auto *InvariantBinaryInst =
+      IC.Builder.CreateBinaryIntrinsic(IID, Init, OtherOp);
+  if (isa<FPMathOperator>(InvariantBinaryInst))
+    cast<Instruction>(InvariantBinaryInst)->copyFastMathFlags(II);
+  return InvariantBinaryInst;
+}
+
 static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
   if (!CanReorderLanes)
     return nullptr;
@@ -1830,10 +1873,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     bool IntMinIsPoison = cast<Constant>(II->getArgOperand(1))->isOneValue();
 
     // abs(-x) -> abs(x)
-    // TODO: Copy nsw if it was present on the neg?
     Value *X;
-    if (match(IIOperand, m_Neg(m_Value(X))))
+    if (match(IIOperand, m_Neg(m_Value(X)))) {
+      if (cast<Instruction>(IIOperand)->hasNoSignedWrap() || IntMinIsPoison)
+        replaceOperand(*II, 1, Builder.getTrue());
       return replaceOperand(*II, 0, X);
+    }
     if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
@@ -3889,22 +3934,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   }
 
-  // Try to fold intrinsic into select operands. This is legal if:
+  // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
   if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
       isNotCrossLaneOperation(II))
-    for (Value *Op : II->args())
+    for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
+      if (auto *Phi = dyn_cast<PHINode>(Op))
+        if (Instruction *R = foldOpIntoPhi(*II, Phi))
+          return R;
+    }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
 
   if (Value *Reverse = foldReversedIntrinsicOperands(II))
     return replaceInstUsesWith(*II, Reverse);
+
+  if (Value *Res = foldIdempotentBinaryIntrinsicRecurrence(*this, II))
+    return replaceInstUsesWith(*II, Res);
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.
@@ -3933,7 +3985,7 @@ Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
   if (NFI && isIdenticalOrStrongerFence(NFI, &FI))
     return eraseInstFromFunction(FI);
 
-  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNonDebugInstruction()))
+  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNode()))
     if (isIdenticalOrStrongerFence(PFI, &FI))
       return eraseInstFromFunction(FI);
   return nullptr;
@@ -4048,6 +4100,83 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   if (IntrinsicInst *IT = findInitTrampolineFromBB(AdjustTramp, TrampMem))
     return IT;
   return nullptr;
+}
+
+Instruction *InstCombinerImpl::foldPtrAuthIntrinsicCallee(CallBase &Call) {
+  const Value *Callee = Call.getCalledOperand();
+  const auto *IPC = dyn_cast<IntToPtrInst>(Callee);
+  if (!IPC || !IPC->isNoopCast(DL))
+    return nullptr;
+
+  const auto *II = dyn_cast<IntrinsicInst>(IPC->getOperand(0));
+  if (!II)
+    return nullptr;
+
+  Intrinsic::ID IIID = II->getIntrinsicID();
+  if (IIID != Intrinsic::ptrauth_resign && IIID != Intrinsic::ptrauth_sign)
+    return nullptr;
+
+  // Isolate the ptrauth bundle from the others.
+  std::optional<OperandBundleUse> PtrAuthBundleOrNone;
+  SmallVector<OperandBundleDef, 2> NewBundles;
+  for (unsigned BI = 0, BE = Call.getNumOperandBundles(); BI != BE; ++BI) {
+    OperandBundleUse Bundle = Call.getOperandBundleAt(BI);
+    if (Bundle.getTagID() == LLVMContext::OB_ptrauth)
+      PtrAuthBundleOrNone = Bundle;
+    else
+      NewBundles.emplace_back(Bundle);
+  }
+
+  if (!PtrAuthBundleOrNone)
+    return nullptr;
+
+  Value *NewCallee = nullptr;
+  switch (IIID) {
+  // call(ptrauth.resign(p)), ["ptrauth"()] ->  call p, ["ptrauth"()]
+  // assuming the call bundle and the sign operands match.
+  case Intrinsic::ptrauth_resign: {
+    // Resign result key should match bundle.
+    if (II->getOperand(3) != PtrAuthBundleOrNone->Inputs[0])
+      return nullptr;
+    // Resign result discriminator should match bundle.
+    if (II->getOperand(4) != PtrAuthBundleOrNone->Inputs[1])
+      return nullptr;
+
+    // Resign input (auth) key should also match: we can't change the key on
+    // the new call we're generating, because we don't know what keys are valid.
+    if (II->getOperand(1) != PtrAuthBundleOrNone->Inputs[0])
+      return nullptr;
+
+    Value *NewBundleOps[] = {II->getOperand(1), II->getOperand(2)};
+    NewBundles.emplace_back("ptrauth", NewBundleOps);
+    NewCallee = II->getOperand(0);
+    break;
+  }
+
+  // call(ptrauth.sign(p)), ["ptrauth"()] ->  call p
+  // assuming the call bundle and the sign operands match.
+  // Non-ptrauth indirect calls are undesirable, but so is ptrauth.sign.
+  case Intrinsic::ptrauth_sign: {
+    // Sign key should match bundle.
+    if (II->getOperand(1) != PtrAuthBundleOrNone->Inputs[0])
+      return nullptr;
+    // Sign discriminator should match bundle.
+    if (II->getOperand(2) != PtrAuthBundleOrNone->Inputs[1])
+      return nullptr;
+    NewCallee = II->getOperand(0);
+    break;
+  }
+  default:
+    llvm_unreachable("unexpected intrinsic ID");
+  }
+
+  if (!NewCallee)
+    return nullptr;
+
+  NewCallee = Builder.CreateBitOrPointerCast(NewCallee, Callee->getType());
+  CallBase *NewCall = CallBase::Create(&Call, NewBundles);
+  NewCall->setCalledOperand(NewCallee);
+  return NewCall;
 }
 
 Instruction *InstCombinerImpl::foldPtrAuthConstantCallee(CallBase &Call) {
@@ -4238,6 +4367,10 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
 
+  // Combine calls involving pointer authentication intrinsics.
+  if (Instruction *NewCall = foldPtrAuthIntrinsicCallee(Call))
+    return NewCall;
+
   // Combine calls to ptrauth constants.
   if (Instruction *NewCall = foldPtrAuthConstantCallee(Call))
     return NewCall;
@@ -4270,6 +4403,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         return replaceInstUsesWith(
             Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
     }
+
+  // Drop unnecessary callee_type metadata from calls that were converted
+  // into direct calls.
+  if (Call.getMetadata(LLVMContext::MD_callee_type) && !Call.isIndirectCall()) {
+    Call.setMetadata(LLVMContext::MD_callee_type, nullptr);
+    Changed = true;
+  }
 
   // Drop unnecessary kcfi operand bundles from calls that were converted
   // into direct calls.

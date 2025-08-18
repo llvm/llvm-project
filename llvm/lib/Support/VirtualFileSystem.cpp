@@ -397,7 +397,8 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
-  static IntrusiveRefCntPtr<FileSystem> FS(new RealFileSystem(true));
+  static IntrusiveRefCntPtr<FileSystem> FS =
+      makeIntrusiveRefCnt<RealFileSystem>(true);
   return FS;
 }
 
@@ -2217,9 +2218,9 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
 
 std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-    bool UseExternalNames, FileSystem &ExternalFS) {
+    bool UseExternalNames, llvm::IntrusiveRefCntPtr<FileSystem> ExternalFS) {
   std::unique_ptr<RedirectingFileSystem> FS(
-      new RedirectingFileSystem(&ExternalFS));
+      new RedirectingFileSystem(ExternalFS));
   FS->UseExternalNames = UseExternalNames;
 
   StringMap<RedirectingFileSystem::Entry *> Entries;
@@ -2228,7 +2229,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     SmallString<128> From = StringRef(Mapping.first);
     SmallString<128> To = StringRef(Mapping.second);
     {
-      auto EC = ExternalFS.makeAbsolute(From);
+      auto EC = ExternalFS->makeAbsolute(From);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2250,7 +2251,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     }
     assert(Parent && "File without a directory?");
     {
-      auto EC = ExternalFS.makeAbsolute(To);
+      auto EC = ExternalFS->makeAbsolute(To);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }

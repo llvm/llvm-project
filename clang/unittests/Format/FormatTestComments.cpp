@@ -1120,11 +1120,11 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "  }\n"
                    "}"));
 
-  const StringRef Code("void func() {\n"
-                       "  // clang-format off\n"
-                       "  #define KV(value) #value, value\n"
-                       "  // clang-format on\n"
-                       "}");
+  constexpr StringRef Code("void func() {\n"
+                           "  // clang-format off\n"
+                           "  #define KV(value) #value, value\n"
+                           "  // clang-format on\n"
+                           "}");
   verifyNoChange(Code);
 
   auto Style = getLLVMStyle();

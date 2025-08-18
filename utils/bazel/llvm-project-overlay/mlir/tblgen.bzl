@@ -4,6 +4,7 @@
 """BUILD extensions for MLIR table generation."""
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 TdInfo = provider(
     "Holds TableGen files and the dependencies and include paths necessary to" +
@@ -424,7 +425,7 @@ def gentbl_cc_library(
         skip_opts = ["-gen-op-doc"],
         **kwargs
     )
-    native.cc_library(
+    cc_library(
         name = name,
         # strip_include_prefix does not apply to textual_hdrs.
         # https://github.com/bazelbuild/bazel/issues/12424

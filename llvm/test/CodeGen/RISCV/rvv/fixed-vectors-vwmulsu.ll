@@ -853,7 +853,7 @@ define <2 x i64> @vwmulsu_vx_v2i64_i32(ptr %x, ptr %y) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lwu a0, 0(a1)
+; RV64-NEXT:    lw a0, 0(a1)
 ; RV64-NEXT:    vwmulsu.vx v8, v9, a0
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x

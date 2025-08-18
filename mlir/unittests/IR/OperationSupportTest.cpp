@@ -24,7 +24,7 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
   context->allowUnregisteredDialects();
   return Operation::create(UnknownLoc::get(context),
                            OperationName("foo.bar", context), resultTypes,
-                           operands, std::nullopt, nullptr, {}, numRegions);
+                           operands, NamedAttrList(), nullptr, {}, numRegions);
 }
 
 namespace {
@@ -236,7 +236,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
       OperationName("t.op", &context), builder.getIntegerType(16), {},
-      std::nullopt, nullptr, {}, 0);
+      NamedAttrList(), nullptr, {}, 0);
 
   std::string str;
   OpPrintingFlags flags;
@@ -302,8 +302,8 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
   auto req1 = b.getI32IntegerAttr(10);
   auto req2 = b.getI32IntegerAttr(60);
   // Verify default attributes populated post op creation.
-  Operation *op = b.create<test::OpAttrMatch1>(b.getUnknownLoc(), req1, nullptr,
-                                               nullptr, req2);
+  Operation *op = test::OpAttrMatch1::create(b, b.getUnknownLoc(), req1,
+                                             nullptr, nullptr, req2);
   auto opt = op->getInherentAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
 
@@ -343,11 +343,11 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
 
   // Check ignore properties.
   auto req1 = b.getI32IntegerAttr(10);
-  Operation *opWithProperty1 = b.create<test::OpAttrMatch1>(
-      b.getUnknownLoc(), req1, nullptr, nullptr, req1);
+  Operation *opWithProperty1 = test::OpAttrMatch1::create(
+      b, b.getUnknownLoc(), req1, nullptr, nullptr, req1);
   auto req2 = b.getI32IntegerAttr(60);
-  Operation *opWithProperty2 = b.create<test::OpAttrMatch1>(
-      b.getUnknownLoc(), req2, nullptr, nullptr, req2);
+  Operation *opWithProperty2 = test::OpAttrMatch1::create(
+      b, b.getUnknownLoc(), req2, nullptr, nullptr, req2);
   EXPECT_EQ(getHash(opWithProperty1, OperationEquivalence::IgnoreProperties),
             getHash(opWithProperty2, OperationEquivalence::IgnoreProperties));
   EXPECT_NE(getHash(opWithProperty1, OperationEquivalence::None),
