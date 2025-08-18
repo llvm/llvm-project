@@ -253,7 +253,7 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     // If LastPartialDef is NULL, it must be using a livein register.
     if (LastPartialDef) {
       LastPartialDef->addOperand(
-          MachineOperand::CreateReg(Reg, true /*IsDef*/, true /*IsImp*/));
+          MachineOperand::CreateReg(Reg, /*IsDef=*/true, /*IsImp=*/true));
     }
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
