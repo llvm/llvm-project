@@ -50,7 +50,6 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
 static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
@@ -1713,7 +1712,6 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
   if (Pred == CmpInst::ICMP_ULT && match(X, m_Add(m_Value(), m_Constant())))
     return nullptr;
 
-
   Value *SelVal0, *SelVal1; // We do not care which one is from where.
   match(&Sel, m_Select(m_Value(), m_Value(SelVal0), m_Value(SelVal1)));
   // At least one of these values we are selecting between must be a constant
@@ -2021,7 +2019,7 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
   auto *TrueVal = SI.getTrueValue();
   auto *FalseVal = SI.getFalseValue();
 
-  if (Pred != ICmpInst::ICMP_EQ)
+  if (Pred != ICmpInst::ICMP_EQ && Pred != llvm::ICmpInst::ICMP_NE)
     return nullptr;
 
   // Match: icmp eq (or (usub.sat A, IntConst1), (usub.sat B, IntConst2)), 0
@@ -2032,8 +2030,10 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
                              m_Value(A), m_ConstantInt(IntConst1)),
                          m_Intrinsic<Intrinsic::usub_sat>(
                              m_Value(B), m_ConstantInt(IntConst2)))) &&
-      match(TrueVal, m_Zero()) &&
-      match(FalseVal, m_ConstantInt(PossibleMSBInt))) {
+      (match(TrueVal, m_Zero()) &&
+           match(FalseVal, m_ConstantInt(PossibleMSBInt)) ||
+       match(TrueVal, m_ConstantInt(PossibleMSBInt)) &&
+           match(FalseVal, m_Zero()))) {
     auto *Ty = A->getType();
     unsigned BW = Ty->getIntegerBitWidth();
     APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
@@ -2062,7 +2062,8 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
                                                           m_Constant(Const1)),
                          m_Intrinsic<Intrinsic::usub_sat>(
                              m_Value(B), m_Constant(Const2)))) &&
-      match(TrueVal, m_Zero()) && match(FalseVal, m_Constant(PossibleMSB))) {
+      (match(TrueVal, m_Zero()) && match(FalseVal, m_Constant(PossibleMSB))
+    || match(TrueVal, m_Constant(PossibleMSB) ) && match(FalseVal, m_Zero()))) {
     auto *VecTy1 = dyn_cast<FixedVectorType>(Const1->getType());
     auto *VecTy2 = dyn_cast<FixedVectorType>(Const2->getType());
     auto *VecTyMSB = dyn_cast<FixedVectorType>(PossibleMSB->getType());
