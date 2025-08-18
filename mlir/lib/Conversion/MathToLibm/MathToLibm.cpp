@@ -29,32 +29,35 @@ namespace {
 // Pattern to convert vector operations to scalar operations. This is needed as
 // libm calls require scalars.
 template <typename Op>
-struct VecOpToScalarOp : public OpRewritePattern<Op> {
+struct VecOpToScalarOp : public OpConversionPattern<Op> {
 public:
-  using OpRewritePattern<Op>::OpRewritePattern;
+  using OpConversionPattern<Op>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
+  LogicalResult
+  matchAndRewrite(Op op, typename OpConversionPattern<Op>::OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const final;
 };
 // Pattern to promote an op of a smaller floating point type to F32.
 template <typename Op>
-struct PromoteOpToF32 : public OpRewritePattern<Op> {
+struct PromoteOpToF32 : public OpConversionPattern<Op> {
 public:
-  using OpRewritePattern<Op>::OpRewritePattern;
+  using OpConversionPattern<Op>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
+  LogicalResult
+  matchAndRewrite(Op op, typename OpConversionPattern<Op>::OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const final;
 };
 // Pattern to convert scalar math operations to calls to libm functions.
 // Additionally the libm function signatures are declared.
 template <typename Op>
-struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
+struct ScalarOpToLibmCall : public OpConversionPattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
   ScalarOpToLibmCall(MLIRContext *context, PatternBenefit benefit,
                      StringRef floatFunc, StringRef doubleFunc)
-      : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
+      : OpConversionPattern<Op>(context, benefit), floatFunc(floatFunc),
         doubleFunc(doubleFunc) {};
 
-  LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
+  LogicalResult
+  matchAndRewrite(Op op, typename OpConversionPattern<Op>::OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const final;
 
 private:
   std::string floatFunc, doubleFunc;
