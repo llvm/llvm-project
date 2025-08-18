@@ -258,16 +258,22 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
-  LDBG("Processing simple op: " << *op);
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
-    LDBG("Simple op is not memory effect free or has live results, skipping: "
-         << *op);
+    LLVM_DEBUG({
+      llvm::dbgs()
+          << "Simple op is not memory effect free or has live results, "
+             "preserving it: "
+          << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "\n";
+    });
     return;
   }
 
-  LDBG("Simple op has all dead results and is memory effect free, scheduling "
-       "for removal: "
-       << *op);
+  LLVM_DEBUG({
+    llvm::dbgs() << "Simple op has all dead results and is memory effect free, "
+                    "scheduling "
+                    "for removal: "
+                 << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "\n";
+  });
   cl.operations.push_back(op);
   collectNonLiveValues(nonLiveSet, op->getResults(),
                        BitVector(op->getNumResults(), true));
@@ -727,19 +733,53 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 /// Removes dead values collected in RDVFinalCleanupList.
 /// To be run once when all dead values have been collected.
 static void cleanUpDeadVals(RDVFinalCleanupList &list) {
+  LLVM_DEBUG({ llvm::dbgs() << "Starting cleanup of dead values...\n"; });
+
   // 1. Operations
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.operations.size() << " operations"
+                 << "\n";
+  });
   for (auto &op : list.operations) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "Erasing operation: "
+                   << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "\n";
+    });
     op->dropAllUses();
     op->erase();
   }
 
   // 2. Values
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.values.size() << " values"
+                 << "\n";
+  });
   for (auto &v : list.values) {
+    LLVM_DEBUG(
+        { llvm::dbgs() << "Dropping all uses of value: " << v << "\n"; });
     v.dropAllUses();
   }
 
   // 3. Functions
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.functions.size() << " functions"
+                 << "\n";
+  });
   for (auto &f : list.functions) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "Cleaning up function: "
+                   << f.funcOp.getOperation()->getName() << "\n";
+    });
+    LLVM_DEBUG({
+      llvm::dbgs() << "  Erasing " << f.nonLiveArgs.count()
+                   << " non-live arguments"
+                   << "\n";
+    });
+    LLVM_DEBUG({
+      llvm::dbgs() << "  Erasing " << f.nonLiveRets.count()
+                   << " non-live return values"
+                   << "\n";
+    });
     // Some functions may not allow erasing arguments or results. These calls
     // return failure in such cases without modifying the function, so it's okay
     // to proceed.
@@ -748,44 +788,99 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   }
 
   // 4. Operands
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.operands.size() << " operand lists"
+                 << "\n";
+  });
   for (OperationToCleanup &o : list.operands) {
-    if (o.op->getNumOperands() > 0)
+    if (o.op->getNumOperands() > 0) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "Erasing " << o.nonLive.count()
+                     << " non-live operands from operation: "
+                     << OpWithFlags(o.op, OpPrintingFlags().skipRegions())
+                     << "\n";
+      });
       o.op->eraseOperands(o.nonLive);
+    }
   }
 
   // 5. Results
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.results.size() << " result lists"
+                 << "\n";
+  });
   for (auto &r : list.results) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "Erasing " << r.nonLive.count()
+                   << " non-live results from operation: "
+                   << OpWithFlags(r.op, OpPrintingFlags().skipRegions())
+                   << "\n";
+    });
     dropUsesAndEraseResults(r.op, r.nonLive);
   }
 
   // 6. Blocks
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.blocks.size()
+                 << " block argument lists"
+                 << "\n";
+  });
   for (auto &b : list.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
       continue;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Erasing " << b.nonLiveArgs.count()
+                   << " non-live arguments from block: " << b.b << "\n";
+    });
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
       if (!b.nonLiveArgs[i])
         continue;
+      LLVM_DEBUG({
+        llvm::dbgs() << "  Erasing block argument " << i << ": "
+                     << b.b->getArgument(i) << "\n";
+      });
       b.b->getArgument(i).dropAllUses();
       b.b->eraseArgument(i);
     }
   }
 
   // 7. Successor Operands
+  LLVM_DEBUG({
+    llvm::dbgs() << "Cleaning up " << list.successorOperands.size()
+                 << " successor operand lists"
+                 << "\n";
+  });
   for (auto &op : list.successorOperands) {
     SuccessorOperands successorOperands =
         op.branch.getSuccessorOperands(op.successorIndex);
     // blocks that are accessed via multiple codepaths processed once
     if (successorOperands.size() != op.nonLiveOperands.size())
       continue;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Erasing " << op.nonLiveOperands.count()
+                   << " non-live successor operands from successor "
+                   << op.successorIndex << " of branch: "
+                   << OpWithFlags(op.branch, OpPrintingFlags().skipRegions())
+                   << "\n";
+    });
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = successorOperands.size() - 1; i >= 0; --i) {
       if (!op.nonLiveOperands[i])
         continue;
+      LLVM_DEBUG({
+        llvm::dbgs() << "  Erasing successor operand " << i << ": "
+                     << successorOperands[i] << "\n";
+      });
       successorOperands.erase(i);
     }
   }
+
+  LLVM_DEBUG({
+    llvm::dbgs() << "Finished cleanup of dead values"
+                 << "\n";
+  });
 }
 
 struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
