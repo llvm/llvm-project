@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern "C" void free_sized(void *p, size_t size);
+
 int main() {
   // Allocate memory that will create a histogram
   char *buffer = (char *)malloc(1024);
@@ -28,7 +30,7 @@ int main() {
   }
 
   // Free the memory to trigger MIB creation with histogram
-  free(buffer);
+  free_sized(buffer, 1024);
 
   printf("Test completed successfully\n");
   return 0;
