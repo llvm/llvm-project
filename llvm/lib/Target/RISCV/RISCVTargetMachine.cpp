@@ -164,15 +164,12 @@ static std::string computeDataLayout(const Triple &TT,
 
   // Stack alignment based on ABI.
   StringRef ABI = Opts.MCOptions.getABIName();
-  if (ABI == "ilp32e") {
-    assert(TT.isArch32Bit() && "ilp32e is only for RV32");
+  if (ABI == "ilp32e")
     Ret += "-S32";
-  } else if (ABI == "lp64e") {
-    assert(TT.isArch64Bit() && "lp64e is only for RV64");
+  else if (ABI == "lp64e")
     Ret += "-S64";
-  } else {
+  else
     Ret += "-S128";
-  }
 
   return Ret;
 }
