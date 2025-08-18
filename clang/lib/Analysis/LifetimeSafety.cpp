@@ -45,10 +45,11 @@ struct Loan {
   /// is represented as empty LoanSet
   LoanID ID;
   AccessPath Path;
-  SourceLocation IssueLoc;
+  /// The expression that creates the loan, e.g., &x.
+  const Expr *IssueExpr;
 
-  Loan(LoanID id, AccessPath path, SourceLocation loc)
-      : ID(id), Path(path), IssueLoc(loc) {}
+  Loan(LoanID id, AccessPath path, const Expr *IssueExpr)
+      : ID(id), Path(path), IssueExpr(IssueExpr) {}
 };
 
 /// An Origin is a symbolic identifier that represents the set of possible
@@ -82,8 +83,8 @@ class LoanManager {
 public:
   LoanManager() = default;
 
-  Loan &addLoan(AccessPath Path, SourceLocation Loc) {
-    AllLoans.emplace_back(getNextLoanID(), Path, Loc);
+  Loan &addLoan(AccessPath Path, const Expr *IssueExpr) {
+    AllLoans.emplace_back(getNextLoanID(), Path, IssueExpr);
     return AllLoans.back();
   }
 
@@ -199,6 +200,8 @@ public:
     AssignOrigin,
     /// An origin escapes the function by flowing into the return value.
     ReturnOfOrigin,
+    /// An origin is used (eg. dereferencing a pointer).
+    Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
   };
@@ -242,12 +245,17 @@ public:
 
 class ExpireFact : public Fact {
   LoanID LID;
+  SourceLocation ExpiryLoc;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID) : Fact(Kind::Expire), LID(LID) {}
+  ExpireFact(LoanID LID, SourceLocation ExpiryLoc)
+      : Fact(Kind::Expire), LID(LID), ExpiryLoc(ExpiryLoc) {}
+
   LoanID getLoanID() const { return LID; }
+  SourceLocation getExpiryLoc() const { return ExpiryLoc; }
+
   void dump(llvm::raw_ostream &OS) const override {
     OS << "Expire (LoanID: " << getLoanID() << ")\n";
   }
@@ -284,6 +292,24 @@ public:
   OriginID getReturnedOriginID() const { return OID; }
   void dump(llvm::raw_ostream &OS) const override {
     OS << "ReturnOfOrigin (OriginID: " << getReturnedOriginID() << ")\n";
+  }
+};
+
+class UseFact : public Fact {
+  OriginID UsedOrigin;
+  const Expr *UseExpr;
+
+public:
+  static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
+
+  UseFact(OriginID UsedOrigin, const Expr *UseExpr)
+      : Fact(Kind::Use), UsedOrigin(UsedOrigin), UseExpr(UseExpr) {}
+
+  OriginID getUsedOrigin() const { return UsedOrigin; }
+  const Expr *getUseExpr() const { return UseExpr; }
+
+  void dump(llvm::raw_ostream &OS) const override {
+    OS << "Use (OriginID: " << UsedOrigin << ")\n";
   }
 };
 
@@ -417,13 +443,17 @@ public:
           if (VD->hasLocalStorage()) {
             OriginID OID = FactMgr.getOriginMgr().getOrCreate(*UO);
             AccessPath AddrOfLocalVarPath(VD);
-            const Loan &L = FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath,
-                                                         UO->getOperatorLoc());
+            const Loan &L =
+                FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath, UO);
             CurrentBlockFacts.push_back(
                 FactMgr.createFact<IssueFact>(L.ID, OID));
           }
         }
       }
+    } else if (UO->getOpcode() == UO_Deref) {
+      // This is a pointer use, like '*p'.
+      OriginID OID = FactMgr.getOriginMgr().get(*UO->getSubExpr());
+      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(OID, UO));
     }
   }
 
@@ -492,7 +522,8 @@ private:
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
       if (LoanPath.D == DestructedVD)
-        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(L.ID));
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
     }
   }
 
@@ -618,6 +649,7 @@ public:
     }
   }
 
+protected:
   Lattice getState(ProgramPoint P) const { return PerPointStates.lookup(P); }
 
   Lattice getInState(const CFGBlock *B) const { return InStates.lookup(B); }
@@ -665,6 +697,8 @@ private:
       return D->transfer(In, *F->getAs<AssignOriginFact>());
     case Fact::Kind::ReturnOfOrigin:
       return D->transfer(In, *F->getAs<ReturnOfOriginFact>());
+    case Fact::Kind::Use:
+      return D->transfer(In, *F->getAs<UseFact>());
     case Fact::Kind::TestPoint:
       return D->transfer(In, *F->getAs<TestPointFact>());
     }
@@ -676,6 +710,7 @@ public:
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const AssignOriginFact &) { return In; }
   Lattice transfer(Lattice In, const ReturnOfOriginFact &) { return In; }
+  Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }
 };
 
@@ -693,6 +728,20 @@ static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
   return A;
 }
 
+/// Checks if set A is a subset of set B.
+template <typename T>
+static bool isSubsetOf(const llvm::ImmutableSet<T> &A,
+                       const llvm::ImmutableSet<T> &B) {
+  // Empty set is a subset of all sets.
+  if (A.isEmpty())
+    return true;
+
+  for (const T &Elem : A)
+    if (!B.contains(Elem))
+      return false;
+  return true;
+}
+
 /// Computes the key-wise union of two ImmutableMaps.
 // TODO(opt): This key-wise join is a performance bottleneck. A more
 // efficient merge could be implemented using a Patricia Trie or HAMT
@@ -700,7 +749,7 @@ static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
 template <typename K, typename V, typename Joiner>
 static llvm::ImmutableMap<K, V>
 join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
-     typename llvm::ImmutableMap<K, V>::Factory &F, Joiner joinValues) {
+     typename llvm::ImmutableMap<K, V>::Factory &F, Joiner JoinValues) {
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
 
@@ -710,7 +759,7 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
     const K &Key = Entry.first;
     const V &ValB = Entry.second;
     if (const V *ValA = A.lookup(Key))
-      A = F.add(A, Key, joinValues(*ValA, ValB));
+      A = F.add(A, Key, JoinValues(*ValA, ValB));
     else
       A = F.add(A, Key, ValB);
   }
@@ -723,17 +772,14 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
 // ========================================================================= //
 
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
+using ExpiredLoanMap = llvm::ImmutableMap<LoanID, const ExpireFact *>;
 
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
   OriginLoanMap::Factory OriginMapFactory;
   LoanSet::Factory LoanSetFactory;
-
-  /// Creates a singleton set containing only the given loan ID.
-  LoanSet createLoanSet(LoanID LID) {
-    return LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID);
-  }
+  ExpiredLoanMap::Factory ExpiredLoanMapFactory;
 };
 
 /// Represents the dataflow lattice for loan propagation.
@@ -774,13 +820,15 @@ struct LoanPropagationLattice {
 class LoanPropagationAnalysis
     : public DataflowAnalysis<LoanPropagationAnalysis, LoanPropagationLattice,
                               Direction::Forward> {
-
-  LifetimeFactory &Factory;
+  OriginLoanMap::Factory &OriginLoanMapFactory;
+  LoanSet::Factory &LoanSetFactory;
 
 public:
   LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                          LifetimeFactory &Factory)
-      : DataflowAnalysis(C, AC, F), Factory(Factory) {}
+                          LifetimeFactory &LFactory)
+      : DataflowAnalysis(C, AC, F),
+        OriginLoanMapFactory(LFactory.OriginMapFactory),
+        LoanSetFactory(LFactory.LoanSetFactory) {}
 
   using Base::transfer;
 
@@ -792,9 +840,9 @@ public:
   // TODO(opt): Keep the state small by removing origins which become dead.
   Lattice join(Lattice A, Lattice B) {
     OriginLoanMap JoinedOrigins =
-        utils::join(A.Origins, B.Origins, Factory.OriginMapFactory,
-                    [this](LoanSet S1, LoanSet S2) {
-                      return utils::join(S1, S2, Factory.LoanSetFactory);
+        utils::join(A.Origins, B.Origins, OriginLoanMapFactory,
+                    [&](LoanSet S1, LoanSet S2) {
+                      return utils::join(S1, S2, LoanSetFactory);
                     });
     return Lattice(JoinedOrigins);
   }
@@ -803,8 +851,9 @@ public:
   Lattice transfer(Lattice In, const IssueFact &F) {
     OriginID OID = F.getOriginID();
     LoanID LID = F.getLoanID();
-    return LoanPropagationLattice(Factory.OriginMapFactory.add(
-        In.Origins, OID, Factory.createLoanSet(LID)));
+    return LoanPropagationLattice(OriginLoanMapFactory.add(
+        In.Origins, OID,
+        LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID)));
   }
 
   /// The destination origin's loan set is replaced by the source's.
@@ -814,7 +863,7 @@ public:
     OriginID SrcOID = F.getSrcOriginID();
     LoanSet SrcLoans = getLoans(In, SrcOID);
     return LoanPropagationLattice(
-        Factory.OriginMapFactory.add(In.Origins, DestOID, SrcLoans));
+        OriginLoanMapFactory.add(In.Origins, DestOID, SrcLoans));
   }
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) {
@@ -825,7 +874,7 @@ private:
   LoanSet getLoans(Lattice L, OriginID OID) {
     if (auto *Loans = L.Origins.lookup(OID))
       return *Loans;
-    return Factory.LoanSetFactory.getEmptySet();
+    return LoanSetFactory.getEmptySet();
   }
 };
 
@@ -835,10 +884,11 @@ private:
 
 /// The dataflow lattice for tracking the set of expired loans.
 struct ExpiredLattice {
-  LoanSet Expired;
+  /// Map from an expired `LoanID` to the `ExpireFact` that made it expire.
+  ExpiredLoanMap Expired;
 
   ExpiredLattice() : Expired(nullptr) {};
-  explicit ExpiredLattice(LoanSet S) : Expired(S) {}
+  explicit ExpiredLattice(ExpiredLoanMap M) : Expired(M) {}
 
   bool operator==(const ExpiredLattice &Other) const {
     return Expired == Other.Expired;
@@ -851,8 +901,8 @@ struct ExpiredLattice {
     OS << "ExpiredLattice State:\n";
     if (Expired.isEmpty())
       OS << "  <empty>\n";
-    for (const LoanID &LID : Expired)
-      OS << "  Loan " << LID << " is expired\n";
+    for (const auto &[ID, _] : Expired)
+      OS << "  Loan " << ID << " is expired\n";
   }
 };
 
@@ -861,26 +911,31 @@ class ExpiredLoansAnalysis
     : public DataflowAnalysis<ExpiredLoansAnalysis, ExpiredLattice,
                               Direction::Forward> {
 
-  LoanSet::Factory &Factory;
+  ExpiredLoanMap::Factory &Factory;
 
 public:
   ExpiredLoansAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
                        LifetimeFactory &Factory)
-      : DataflowAnalysis(C, AC, F), Factory(Factory.LoanSetFactory) {}
+      : DataflowAnalysis(C, AC, F), Factory(Factory.ExpiredLoanMapFactory) {}
 
   using Base::transfer;
 
   StringRef getAnalysisName() const { return "ExpiredLoans"; }
 
-  Lattice getInitialState() { return Lattice(Factory.getEmptySet()); }
+  Lattice getInitialState() { return Lattice(Factory.getEmptyMap()); }
 
-  /// Merges two lattices by taking the union of the expired loan sets.
-  Lattice join(Lattice L1, Lattice L2) const {
-    return Lattice(utils::join(L1.Expired, L2.Expired, Factory));
+  /// Merges two lattices by taking the union of the two expired loans.
+  Lattice join(Lattice L1, Lattice L2) {
+    return Lattice(
+        utils::join(L1.Expired, L2.Expired, Factory,
+                    // Take the last expiry fact to make this hermetic.
+                    [](const ExpireFact *F1, const ExpireFact *F2) {
+                      return F1->getExpiryLoc() > F2->getExpiryLoc() ? F1 : F2;
+                    }));
   }
 
   Lattice transfer(Lattice In, const ExpireFact &F) {
-    return Lattice(Factory.add(In.Expired, F.getLoanID()));
+    return Lattice(Factory.add(In.Expired, F.getLoanID(), &F));
   }
 
   // Removes the loan from the set of expired loans.
@@ -912,14 +967,115 @@ public:
   Lattice transfer(Lattice In, const IssueFact &F) {
     return Lattice(Factory.remove(In.Expired, F.getLoanID()));
   }
+
+  ExpiredLoanMap getExpiredLoans(ProgramPoint P) { return getState(P).Expired; }
 };
 
 // ========================================================================= //
-//  TODO:
-// - Modify loan expiry analysis to answer `bool isExpired(Loan L, Point P)`
-// - Modify origin liveness analysis to answer `bool isLive(Origin O, Point P)`
-// - Using the above three to perform the final error reporting.
+//                       Lifetime checker and Error reporter
 // ========================================================================= //
+
+/// Struct to store the complete context for a potential lifetime violation.
+struct PendingWarning {
+  SourceLocation ExpiryLoc; // Where the loan expired.
+  const Expr *UseExpr;      // Where the origin holding this loan was used.
+  Confidence ConfidenceLevel;
+};
+
+class LifetimeChecker {
+private:
+  llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  LoanPropagationAnalysis &LoanPropagation;
+  ExpiredLoansAnalysis &ExpiredLoans;
+  FactManager &FactMgr;
+  AnalysisDeclContext &ADC;
+  LifetimeSafetyReporter *Reporter;
+
+public:
+  LifetimeChecker(LoanPropagationAnalysis &LPA, ExpiredLoansAnalysis &ELA,
+                  FactManager &FM, AnalysisDeclContext &ADC,
+                  LifetimeSafetyReporter *Reporter)
+      : LoanPropagation(LPA), ExpiredLoans(ELA), FactMgr(FM), ADC(ADC),
+        Reporter(Reporter) {}
+
+  void run() {
+    llvm::TimeTraceScope TimeProfile("LifetimeChecker");
+    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
+      for (const Fact *F : FactMgr.getFacts(B))
+        if (const auto *UF = F->getAs<UseFact>())
+          checkUse(UF);
+    issuePendingWarnings();
+  }
+
+  /// Checks for use-after-free errors for a given use of an Origin.
+  ///
+  /// This method is called for each 'UseFact' identified in the control flow
+  /// graph. It determines if the loans held by the used origin have expired
+  /// at the point of use.
+  void checkUse(const UseFact *UF) {
+
+    OriginID O = UF->getUsedOrigin();
+
+    // Get the set of loans that the origin might hold at this program point.
+    LoanSet HeldLoans = LoanPropagation.getLoans(O, UF);
+
+    // Get the set of all loans that have expired at this program point.
+    ExpiredLoanMap AllExpiredLoans = ExpiredLoans.getExpiredLoans(UF);
+
+    // If the pointer holds no loans or no loans have expired, there's nothing
+    // to check.
+    if (HeldLoans.isEmpty() || AllExpiredLoans.isEmpty())
+      return;
+
+    // Identify loans that which have expired but are held by the pointer. Using
+    // them is a use-after-free.
+    llvm::SmallVector<LoanID> DefaultedLoans;
+    // A definite UaF error occurs if all loans the origin might hold have
+    // expired.
+    bool IsDefiniteError = true;
+    for (LoanID L : HeldLoans) {
+      if (AllExpiredLoans.contains(L))
+        DefaultedLoans.push_back(L);
+      else
+        // If at least one loan is not expired, this use is not a definite UaF.
+        IsDefiniteError = false;
+    }
+    // If there are no defaulted loans, the use is safe.
+    if (DefaultedLoans.empty())
+      return;
+
+    // Determine the confidence level of the error (definite or maybe).
+    Confidence CurrentConfidence =
+        IsDefiniteError ? Confidence::Definite : Confidence::Maybe;
+
+    // For each expired loan, create a pending warning.
+    for (LoanID DefaultedLoan : DefaultedLoans) {
+      // If we already have a warning for this loan with a higher or equal
+      // confidence, skip this one.
+      if (FinalWarningsMap.count(DefaultedLoan) &&
+          CurrentConfidence <= FinalWarningsMap[DefaultedLoan].ConfidenceLevel)
+        continue;
+
+      auto *EF = AllExpiredLoans.lookup(DefaultedLoan);
+      assert(EF && "Could not find ExpireFact for an expired loan.");
+
+      FinalWarningsMap[DefaultedLoan] = {/*ExpiryLoc=*/(*EF)->getExpiryLoc(),
+                                         /*UseExpr=*/UF->getUseExpr(),
+                                         /*ConfidenceLevel=*/CurrentConfidence};
+    }
+  }
+
+  void issuePendingWarnings() {
+    if (!Reporter)
+      return;
+    for (const auto &[LID, Warning] : FinalWarningsMap) {
+      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
+      const Expr *IssueExpr = L.IssueExpr;
+      Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr,
+                                   Warning.ExpiryLoc, Warning.ConfidenceLevel);
+    }
+  }
+};
 
 // ========================================================================= //
 //                  LifetimeSafetyAnalysis Class Implementation
@@ -928,8 +1084,9 @@ public:
 // We need this here for unique_ptr with forward declared class.
 LifetimeSafetyAnalysis::~LifetimeSafetyAnalysis() = default;
 
-LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC)
-    : AC(AC), Factory(std::make_unique<LifetimeFactory>()),
+LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                                               LifetimeSafetyReporter *Reporter)
+    : AC(AC), Reporter(Reporter), Factory(std::make_unique<LifetimeFactory>()),
       FactMgr(std::make_unique<FactManager>()) {}
 
 void LifetimeSafetyAnalysis::run() {
@@ -952,6 +1109,8 @@ void LifetimeSafetyAnalysis::run() {
   ///    blocks; only Decls are visible.  Therefore, loans in a block that
   ///    never reach an Origin associated with a Decl can be safely dropped by
   ///    the analysis.
+  /// 3. Collapse ExpireFacts belonging to same source location into a single
+  ///    Fact.
   LoanPropagation =
       std::make_unique<LoanPropagationAnalysis>(Cfg, AC, *FactMgr, *Factory);
   LoanPropagation->run();
@@ -959,6 +1118,10 @@ void LifetimeSafetyAnalysis::run() {
   ExpiredLoans =
       std::make_unique<ExpiredLoansAnalysis>(Cfg, AC, *FactMgr, *Factory);
   ExpiredLoans->run();
+
+  LifetimeChecker Checker(*LoanPropagation, *ExpiredLoans, *FactMgr, AC,
+                          Reporter);
+  Checker.run();
 }
 
 LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,
@@ -967,9 +1130,13 @@ LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,
   return LoanPropagation->getLoans(OID, PP);
 }
 
-LoanSet LifetimeSafetyAnalysis::getExpiredLoansAtPoint(ProgramPoint PP) const {
+std::vector<LoanID>
+LifetimeSafetyAnalysis::getExpiredLoansAtPoint(ProgramPoint PP) const {
   assert(ExpiredLoans && "ExpiredLoansAnalysis has not been run.");
-  return ExpiredLoans->getState(PP).Expired;
+  std::vector<LoanID> Result;
+  for (const auto &pair : ExpiredLoans->getExpiredLoans(PP))
+    Result.push_back(pair.first);
+  return Result;
 }
 
 std::optional<OriginID>
@@ -1009,8 +1176,9 @@ llvm::StringMap<ProgramPoint> LifetimeSafetyAnalysis::getTestPoints() const {
 }
 } // namespace internal
 
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC) {
-  internal::LifetimeSafetyAnalysis Analysis(AC);
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
   Analysis.run();
 }
 } // namespace clang::lifetimes
