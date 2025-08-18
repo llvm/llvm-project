@@ -184,7 +184,7 @@ define i32 @test2(i32 %a) {
 ; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, 10, 4, 22
 ; RV32IXQCIBMZBS-NEXT:    ret
   %1 = and i32 %a, -62914561 ; 0xfc3fffff
-  %2 = or i32 %1, 41943040   ; 0x06400000
+  %2 = or i32 %1, 41943040   ; 0x02800000
   ret i32 %2
 }
 
