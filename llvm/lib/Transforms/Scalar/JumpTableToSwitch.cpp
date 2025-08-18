@@ -22,7 +22,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <limits>
 
@@ -149,9 +148,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
         std::numeric_limits<uint32_t>::max(), TotalCount);
 
     for (const auto &[G, C] : Targets) {
-      auto It = GuidToCounter.insert({G, C});
+      [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
       assert(It.second);
-      (void)It;
     }
   }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
@@ -161,6 +159,10 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
     DTUpdates.push_back({DominatorTree::Insert, B, Tail});
 
     CallBase *Call = cast<CallBase>(CB->clone());
+    // The MD_prof metadata (VP kind), if it existed, can be dropped, it doesn't
+    // make sense on a direct call. Note that the values are used for the branch
+    // weights of the switch.
+    Call->setMetadata(LLVMContext::MD_prof, nullptr);
     Call->setCalledFunction(Func);
     Call->insertInto(B, B->end());
     Switch->addCase(
@@ -182,8 +184,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   if (HadProfile && !ProfcheckDisableMetadataFixes) {
     // At least one of the targets must've been taken.
     assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
-    setProfMetadata(F.getParent(), Switch, BranchWeights,
-                    *llvm::max_element(BranchWeights));
+    setBranchWeights(*Switch, downscaleWeights(BranchWeights),
+                     /*IsExpected=*/false);
   } else
     setExplicitlyUnknownBranchWeights(*Switch);
   if (PHI)

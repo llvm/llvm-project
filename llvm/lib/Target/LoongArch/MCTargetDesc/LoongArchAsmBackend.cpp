@@ -216,10 +216,19 @@ getRelocPairForSize(unsigned Size) {
 // size, the fixup encodes MaxBytesToEmit in the higher bits and references a
 // per-section marker symbol.
 bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+  // Alignments before the first linker-relaxable instruction have fixed sizes
+  // and do not require relocations. Alignments after a linker-relaxable
+  // instruction require a relocation, even if the STI specifies norelax.
+  //
+  // firstLinkerRelaxable is the layout order within the subsection, which may
+  // be smaller than the section's order. Therefore, alignments in a
+  // lower-numbered subsection may be unnecessarily treated as linker-relaxable.
+  auto *Sec = F.getParent();
+  if (F.getLayoutOrder() <= Sec->firstLinkerRelaxable())
+    return false;
+
   // Use default handling unless linker relaxation is enabled and the
   // MaxBytesToEmit >= the nop size.
-  if (!F.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
-    return false;
   const unsigned MinNopLen = 4;
   unsigned MaxBytesToEmit = F.getAlignMaxBytesToEmit();
   if (MaxBytesToEmit < MinNopLen)
@@ -254,8 +263,6 @@ bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN);
   F.setVarFixups({Fixup});
   F.setLinkerRelaxable();
-  if (!F.getParent()->isLinkerRelaxable())
-    F.getParent()->setFirstLinkerRelaxable(F.getLayoutOrder());
   return true;
 }
 
