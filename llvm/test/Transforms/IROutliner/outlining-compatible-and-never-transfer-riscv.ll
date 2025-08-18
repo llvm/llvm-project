@@ -139,7 +139,7 @@ attributes #1 = { "interrupt"="qci-nest" }
 ; CHECK-LABEL: define {{[^@]+}}@outline_attrs1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = all oca i32, align 4
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
