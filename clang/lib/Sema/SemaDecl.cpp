@@ -14710,11 +14710,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     unsigned NumInits = ILE->getNumInits();
     if (NumInits > 2) {
       auto concatenatedPartsAt = [&](unsigned Index) -> unsigned {
-        const Expr *E = ILE->getInit(Index);
-        if (E) {
+        if (const Expr *E = ILE->getInit(Index))
           if (const auto *S = dyn_cast<StringLiteral>(E->IgnoreImpCasts()))
             return S->getNumConcatenated();
-        }
         return 0;
       };
 
@@ -14738,11 +14736,11 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
           unsigned R = I + 1 < NumInits ? concatenatedPartsAt(I + 1) : 0;
 
           // Skip neighbors with multi-part concatenations.
-          if (L > 1 || R > 1)
+          if (R > 1)
             continue;
 
           // Diagnose when at least one neighbor is a single literal.
-          if (L || R) {
+          if (R == 1 || L == 1) {
             SmallVector<FixItHint, 1> Hints;
             // Insert a comma between the two tokens of this element.
             Hints.push_back(FixItHint::CreateInsertion(
