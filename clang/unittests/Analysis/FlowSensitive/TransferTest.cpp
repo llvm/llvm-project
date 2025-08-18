@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -34,6 +35,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -3586,28 +3588,28 @@ TEST(TransferTest, StaticCastNoOp) {
 TEST(TransferTest, StaticCastBaseToDerived) {
   std::string Code = R"cc(
     struct Base {
-      char c;
+      char C;
     };
     struct Intermediate : public Base {
-      bool b;
+      bool B;
     };
     struct Derived : public Intermediate {
-      int i;
+      int I;
     };
     Base& getBaseRef();
     void target(Base* BPtr) {
       Derived* DPtr = static_cast<Derived*>(BPtr);
-      DPtr->c;
-      DPtr->b;
-      DPtr->i;
+      DPtr->C;
+      DPtr->B;
+      DPtr->I;
       Derived& DRef = static_cast<Derived&>(*BPtr);
-      DRef.c;
-      DRef.b;
-      DRef.i;
+      DRef.C;
+      DRef.B;
+      DRef.I;
       Derived& DRefFromFunc = static_cast<Derived&>(getBaseRef());
-      DRefFromFunc.c;
-      DRefFromFunc.b;
-      DRefFromFunc.i;
+      DRefFromFunc.C;
+      DRefFromFunc.B;
+      DRefFromFunc.I;
       // [[p]]
     }
   )cc";
@@ -3795,6 +3797,54 @@ TEST(TransferTest, ImplicitDerivedToBaseCast) {
 
         EXPECT_EQ(Env.getValue(*Cast), Env.getValue(*New));
       });
+}
+
+TEST(TransferTest, ReinterpretCast) {
+  std::string Code = R"cc(
+    struct S {
+        int I;
+    };
+
+    void target(unsigned char* Bytes) {
+        S& SRef = reinterpret_cast<S&>(Bytes);
+        SRef.I;
+        S* SPtr = reinterpret_cast<S*>(Bytes);
+        SPtr->I;
+        // [[p]]
+    }
+  )cc";
+  runDataflow(Code, [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
+                           &Results,
+                       ASTContext &ASTCtx) {
+    ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+    const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+    const ValueDecl *I = findValueDecl(ASTCtx, "I");
+    ASSERT_THAT(I, NotNull());
+
+    // No particular knowledge of I's value is modeled, but for both casts,
+    // the fields of S are modeled.
+
+    {
+      auto &Loc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "SRef");
+      std::vector<const ValueDecl *> Children;
+      for (const auto &Entry : Loc.children()) {
+        Children.push_back(Entry.getFirst());
+      }
+
+      EXPECT_THAT(Children, UnorderedElementsAre(I));
+    }
+
+    {
+      auto &Loc = cast<RecordStorageLocation>(
+          getValueForDecl<PointerValue>(ASTCtx, Env, "SPtr").getPointeeLoc());
+      std::vector<const ValueDecl *> Children;
+      for (const auto &Entry : Loc.children()) {
+        Children.push_back(Entry.getFirst());
+      }
+
+      EXPECT_THAT(Children, UnorderedElementsAre(I));
+    }
+  });
 }
 
 TEST(TransferTest, IntegralCast) {
