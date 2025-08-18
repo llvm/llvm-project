@@ -112,20 +112,20 @@ define void @f(i32 %v, ptr noalias  %outp) {
 ; V6M-NEXT:    push {r4, lr}
 ; V6M-NEXT:    movs r2, #0
 ; V6M-NEXT:    str r2, [r1]
-; V6M-NEXT:    movs r2, #14
-; V6M-NEXT:    ands r2, r0
+; V6M-NEXT:    movs r3, #14
+; V6M-NEXT:    ands r3, r0
 ; V6M-NEXT:    movs r4, #4
 ; V6M-NEXT:    ands r4, r0
-; V6M-NEXT:    movs r3, #2
-; V6M-NEXT:    ands r3, r0
+; V6M-NEXT:    movs r2, #2
+; V6M-NEXT:    ands r2, r0
 ; V6M-NEXT:    lsls r0, r0, #31
 ; V6M-NEXT:    bne .LBB0_5
 ; V6M-NEXT:  @ %bb.1: @ %if.then
 ; V6M-NEXT:    movs r0, #129
-; V6M-NEXT:    cmp r3, #0
+; V6M-NEXT:    cmp r2, #0
 ; V6M-NEXT:    beq .LBB0_3
 ; V6M-NEXT:  @ %bb.2:
-; V6M-NEXT:    lsls r3, r0, #8
+; V6M-NEXT:    lsls r2, r0, #8
 ; V6M-NEXT:  .LBB0_3: @ %if.then
 ; V6M-NEXT:    cmp r4, #0
 ; V6M-NEXT:    beq .LBB0_10
@@ -134,22 +134,22 @@ define void @f(i32 %v, ptr noalias  %outp) {
 ; V6M-NEXT:    b .LBB0_9
 ; V6M-NEXT:  .LBB0_5: @ %if.else
 ; V6M-NEXT:    movs r0, #129
-; V6M-NEXT:    cmp r3, #0
+; V6M-NEXT:    cmp r2, #0
 ; V6M-NEXT:    beq .LBB0_7
 ; V6M-NEXT:  @ %bb.6:
-; V6M-NEXT:    lsls r3, r0, #6
+; V6M-NEXT:    lsls r2, r0, #6
 ; V6M-NEXT:  .LBB0_7: @ %if.else
 ; V6M-NEXT:    cmp r4, #0
 ; V6M-NEXT:    beq .LBB0_10
 ; V6M-NEXT:  @ %bb.8: @ %if.else
 ; V6M-NEXT:    lsls r0, r0, #5
 ; V6M-NEXT:  .LBB0_9: @ %if.else
-; V6M-NEXT:    adds r3, r3, r0
+; V6M-NEXT:    adds r2, r2, r0
 ; V6M-NEXT:  .LBB0_10: @ %if.else
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    beq .LBB0_12
 ; V6M-NEXT:  @ %bb.11: @ %if.end
-; V6M-NEXT:    str r3, [r1]
+; V6M-NEXT:    str r2, [r1]
 ; V6M-NEXT:  .LBB0_12: @ %exit
 ; V6M-NEXT:    pop {r4, pc}
 entry:

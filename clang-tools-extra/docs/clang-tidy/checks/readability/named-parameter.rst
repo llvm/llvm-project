@@ -23,3 +23,12 @@ If a parameter is not utilized, its name can be commented out in a function defi
     }
 
 Corresponding cpplint.py check name: `readability/function`.
+
+Options
+-------
+
+.. option:: InsertPlainNamesInForwardDecls
+
+   If set to `true`, the check will insert parameter names without comments for
+   forward declarations only. Otherwise, the check will insert parameter names
+   as comments (e.g., ``/*param*/``). Default is `false`.

@@ -25,6 +25,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {AMDGPUMCExpr::S_REL64, "rel64"},
     {AMDGPUMCExpr::S_ABS32_LO, "abs32@lo"},
     {AMDGPUMCExpr::S_ABS32_HI, "abs32@hi"},
+    {AMDGPUMCExpr::S_ABS64, "abs64"},
 };
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
@@ -74,8 +75,9 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
   if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
     return 20;
 
-  // VOP3PX encoding.
-  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts))
+  // VOP3PX/VOP3PX2 encoding.
+  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
+      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
     return 16;
 
   // 64-bit instruction with 32-bit literal.

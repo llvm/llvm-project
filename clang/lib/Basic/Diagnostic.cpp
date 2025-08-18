@@ -1348,6 +1348,7 @@ void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     case DiagnosticsEngine::ak_declcontext:
     case DiagnosticsEngine::ak_attr:
     case DiagnosticsEngine::ak_expr:
+    case DiagnosticsEngine::ak_attr_info:
       getDiags()->ConvertArgToString(Kind, getRawArg(ArgNo),
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),

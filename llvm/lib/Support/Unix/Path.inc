@@ -876,6 +876,12 @@ void mapped_file_region::unmapImpl() {
     ::munmap(Mapping, Size);
 }
 
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
+}
+
 void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
@@ -1190,7 +1196,7 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
-  if (ssize_t(NumRead) == -1)
+  if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
 // for reading in more cases than other platforms.

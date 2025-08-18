@@ -14,22 +14,22 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:  // %bb.2: // %for.body.us.preheader
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    add x11, x2, x11, lsl #1
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov w9, wzr
+; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mov x12, #4 // =0x4
 ; CHECK-NEXT:    mov x13, #8 // =0x8
 ; CHECK-NEXT:  .LBB0_3: // %for.body.us
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1
 ; CHECK-NEXT:    // Child Loop BB0_4 Depth 2
-; CHECK-NEXT:    add x14, x0, x8, lsl #2
-; CHECK-NEXT:    sbfiz x15, x9, #1, #32
+; CHECK-NEXT:    add x14, x0, x9, lsl #2
+; CHECK-NEXT:    sbfiz x15, x8, #1, #32
 ; CHECK-NEXT:    mov x16, x2
 ; CHECK-NEXT:    ldp s0, s1, [x14]
 ; CHECK-NEXT:    add x15, x15, #8
 ; CHECK-NEXT:    ldp s2, s3, [x14, #8]
-; CHECK-NEXT:    ubfiz x14, x9, #1, #32
+; CHECK-NEXT:    ubfiz x14, x8, #1, #32
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    fcvt h1, s1
 ; CHECK-NEXT:    fcvt h2, s2
@@ -91,8 +91,8 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:  // %bb.5: // %while.cond.i..exit_crit_edge.us
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    add x8, x8, #4
-; CHECK-NEXT:    add w9, w9, #16
+; CHECK-NEXT:    add x9, x9, #4
+; CHECK-NEXT:    add w8, w8, #16
 ; CHECK-NEXT:    cmp w10, w1
 ; CHECK-NEXT:    b.ne .LBB0_3
 ; CHECK-NEXT:  .LBB0_6: // %exit78

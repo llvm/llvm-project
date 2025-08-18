@@ -52,18 +52,18 @@ define void @test_pipelined_1(ptr noalias %in, ptr noalias %out, i32 signext %cn
 ;
 ; CHECK-PIPELINED-LABEL: test_pipelined_1:
 ; CHECK-PIPELINED:       # %bb.0: # %entry
-; CHECK-PIPELINED-NEXT:    blez a2, .LBB1_7
+; CHECK-PIPELINED-NEXT:    blez a2, .LBB1_6
 ; CHECK-PIPELINED-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-PIPELINED-NEXT:    lw a4, 0(a1)
 ; CHECK-PIPELINED-NEXT:    addi a2, a2, -1
-; CHECK-PIPELINED-NEXT:    addi a3, a0, 4
 ; CHECK-PIPELINED-NEXT:    sh2add.uw a6, a2, a1
+; CHECK-PIPELINED-NEXT:    addi a2, a0, 4
 ; CHECK-PIPELINED-NEXT:    addi a1, a1, 4
 ; CHECK-PIPELINED-NEXT:    addi a6, a6, 4
 ; CHECK-PIPELINED-NEXT:    beq a1, a6, .LBB1_5
 ; CHECK-PIPELINED-NEXT:  # %bb.2: # %for.body
 ; CHECK-PIPELINED-NEXT:    lw a5, 0(a1)
-; CHECK-PIPELINED-NEXT:    addi a2, a3, 4
+; CHECK-PIPELINED-NEXT:    addi a3, a2, 4
 ; CHECK-PIPELINED-NEXT:    addi a4, a4, 1
 ; CHECK-PIPELINED-NEXT:    addi a1, a1, 4
 ; CHECK-PIPELINED-NEXT:    beq a1, a6, .LBB1_4
@@ -72,22 +72,20 @@ define void @test_pipelined_1(ptr noalias %in, ptr noalias %out, i32 signext %cn
 ; CHECK-PIPELINED-NEXT:    sw a4, 0(a0)
 ; CHECK-PIPELINED-NEXT:    mv a4, a5
 ; CHECK-PIPELINED-NEXT:    lw a5, 0(a1)
-; CHECK-PIPELINED-NEXT:    mv a0, a3
-; CHECK-PIPELINED-NEXT:    mv a3, a2
-; CHECK-PIPELINED-NEXT:    addi a2, a2, 4
+; CHECK-PIPELINED-NEXT:    mv a0, a2
+; CHECK-PIPELINED-NEXT:    mv a2, a3
+; CHECK-PIPELINED-NEXT:    addi a3, a3, 4
 ; CHECK-PIPELINED-NEXT:    addi a4, a4, 1
 ; CHECK-PIPELINED-NEXT:    addi a1, a1, 4
 ; CHECK-PIPELINED-NEXT:    bne a1, a6, .LBB1_3
 ; CHECK-PIPELINED-NEXT:  .LBB1_4:
 ; CHECK-PIPELINED-NEXT:    sw a4, 0(a0)
-; CHECK-PIPELINED-NEXT:    j .LBB1_6
+; CHECK-PIPELINED-NEXT:    mv a0, a2
+; CHECK-PIPELINED-NEXT:    mv a4, a5
 ; CHECK-PIPELINED-NEXT:  .LBB1_5:
-; CHECK-PIPELINED-NEXT:    mv a3, a0
-; CHECK-PIPELINED-NEXT:    mv a5, a4
-; CHECK-PIPELINED-NEXT:  .LBB1_6:
-; CHECK-PIPELINED-NEXT:    addi a5, a5, 1
-; CHECK-PIPELINED-NEXT:    sw a5, 0(a3)
-; CHECK-PIPELINED-NEXT:  .LBB1_7: # %for.end
+; CHECK-PIPELINED-NEXT:    addi a4, a4, 1
+; CHECK-PIPELINED-NEXT:    sw a4, 0(a0)
+; CHECK-PIPELINED-NEXT:  .LBB1_6: # %for.end
 ; CHECK-PIPELINED-NEXT:    ret
 entry:
   %cmp = icmp sgt i32 %cnt, 0

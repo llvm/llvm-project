@@ -211,27 +211,27 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cmp w12, #2
 ; CHECK-NEXT:    b.ne LBB0_43
 ; CHECK-NEXT:  ; %bb.35: ; %while.cond130.preheader
-; CHECK-NEXT:    ldrb w12, [x9, x11]
-; CHECK-NEXT:    cbz w12, LBB0_23
+; CHECK-NEXT:    ldrb w8, [x9, x11]
+; CHECK-NEXT:    cbz w8, LBB0_23
 ; CHECK-NEXT:  ; %bb.36: ; %land.rhs134.preheader
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov x12, xzr
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    b LBB0_38
 ; CHECK-NEXT:  LBB0_37: ; %if.then152
 ; CHECK-NEXT:    ; in Loop: Header=BB0_38 Depth=1
-; CHECK-NEXT:    add x12, x9, x8
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    add x12, x12, x11
-; CHECK-NEXT:    ldrb w12, [x12, #1]
-; CHECK-NEXT:    cbz w12, LBB0_43
+; CHECK-NEXT:    add x8, x9, x12
+; CHECK-NEXT:    add x12, x12, #1
+; CHECK-NEXT:    add x8, x8, x11
+; CHECK-NEXT:    ldrb w8, [x8, #1]
+; CHECK-NEXT:    cbz w8, LBB0_43
 ; CHECK-NEXT:  LBB0_38: ; %land.rhs134
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x13, x10, x8
+; CHECK-NEXT:    add x13, x10, x12
 ; CHECK-NEXT:    ldrb w13, [x13, x11]
 ; CHECK-NEXT:    cbz w13, LBB0_23
 ; CHECK-NEXT:  ; %bb.39: ; %while.body139
 ; CHECK-NEXT:    ; in Loop: Header=BB0_38 Depth=1
-; CHECK-NEXT:    cmp w12, w13
+; CHECK-NEXT:    cmp w8, w13
 ; CHECK-NEXT:    b.eq LBB0_37
 ; CHECK-NEXT:  ; %bb.40: ; %while.body139
 ; CHECK-NEXT:    ; in Loop: Header=BB0_38 Depth=1
@@ -239,7 +239,7 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    b.eq LBB0_37
 ; CHECK-NEXT:  ; %bb.41: ; %while.body139
 ; CHECK-NEXT:    ; in Loop: Header=BB0_38 Depth=1
-; CHECK-NEXT:    cmp w12, #94
+; CHECK-NEXT:    cmp w8, #94
 ; CHECK-NEXT:    b.eq LBB0_37
 ; CHECK-NEXT:  LBB0_42:
 ; CHECK-NEXT:    mov w0, wzr

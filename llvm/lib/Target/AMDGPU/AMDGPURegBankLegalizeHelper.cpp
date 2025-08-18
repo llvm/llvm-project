@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 
 #define DEBUG_TYPE "amdgpu-regbanklegalize"
 
@@ -34,7 +33,7 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
     : ST(B.getMF().getSubtarget<GCNSubtarget>()), B(B), MRI(*B.getMRI()),
-      MUI(MUI), RBI(RBI), RBLRules(RBLRules),
+      MUI(MUI), RBI(RBI), RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
@@ -57,6 +56,224 @@ void RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   lower(MI, Mapping, WaterfallSgprs);
 }
 
+bool RegBankLegalizeHelper::executeInWaterfallLoop(
+    MachineIRBuilder &B, iterator_range<MachineBasicBlock::iterator> Range,
+    SmallSet<Register, 4> &SGPROperandRegs) {
+  // Track use registers which have already been expanded with a readfirstlane
+  // sequence. This may have multiple uses if moving a sequence.
+  DenseMap<Register, Register> WaterfalledRegMap;
+
+  MachineBasicBlock &MBB = B.getMBB();
+  MachineFunction &MF = B.getMF();
+
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
+  unsigned MovExecOpc, MovExecTermOpc, XorTermOpc, AndSaveExecOpc, ExecReg;
+  if (IsWave32) {
+    MovExecOpc = AMDGPU::S_MOV_B32;
+    MovExecTermOpc = AMDGPU::S_MOV_B32_term;
+    XorTermOpc = AMDGPU::S_XOR_B32_term;
+    AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B32;
+    ExecReg = AMDGPU::EXEC_LO;
+  } else {
+    MovExecOpc = AMDGPU::S_MOV_B64;
+    MovExecTermOpc = AMDGPU::S_MOV_B64_term;
+    XorTermOpc = AMDGPU::S_XOR_B64_term;
+    AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B64;
+    ExecReg = AMDGPU::EXEC;
+  }
+
+#ifndef NDEBUG
+  const int OrigRangeSize = std::distance(Range.begin(), Range.end());
+#endif
+
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register SaveExecReg = MRI.createVirtualRegister(WaveRC);
+  Register InitSaveExecReg = MRI.createVirtualRegister(WaveRC);
+
+  // Don't bother using generic instructions/registers for the exec mask.
+  B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(InitSaveExecReg);
+
+  Register SavedExec = MRI.createVirtualRegister(WaveRC);
+
+  // To insert the loop we need to split the block. Move everything before
+  // this point to a new block, and insert a new empty block before this
+  // instruction.
+  MachineBasicBlock *LoopBB = MF.CreateMachineBasicBlock();
+  MachineBasicBlock *BodyBB = MF.CreateMachineBasicBlock();
+  MachineBasicBlock *RestoreExecBB = MF.CreateMachineBasicBlock();
+  MachineBasicBlock *RemainderBB = MF.CreateMachineBasicBlock();
+  MachineFunction::iterator MBBI(MBB);
+  ++MBBI;
+  MF.insert(MBBI, LoopBB);
+  MF.insert(MBBI, BodyBB);
+  MF.insert(MBBI, RestoreExecBB);
+  MF.insert(MBBI, RemainderBB);
+
+  LoopBB->addSuccessor(BodyBB);
+  BodyBB->addSuccessor(RestoreExecBB);
+  BodyBB->addSuccessor(LoopBB);
+
+  // Move the rest of the block into a new block.
+  RemainderBB->transferSuccessorsAndUpdatePHIs(&MBB);
+  RemainderBB->splice(RemainderBB->begin(), &MBB, Range.end(), MBB.end());
+
+  MBB.addSuccessor(LoopBB);
+  RestoreExecBB->addSuccessor(RemainderBB);
+
+  B.setInsertPt(*LoopBB, LoopBB->end());
+
+  // +-MBB:------------+
+  // | ...             |
+  // | %0 = G_INST_1   |
+  // | %Dst = MI %Vgpr |
+  // | %1 = G_INST_2   |
+  // | ...             |
+  // +-----------------+
+  // ->
+  // +-MBB-------------------------------+
+  // | ...                               |
+  // | %0 = G_INST_1                     |
+  // | %SaveExecReg = S_MOV_B32 $exec_lo |
+  // +----------------|------------------+
+  //                  |                         /------------------------------|
+  //                  V                        V                               |
+  // +-LoopBB---------------------------------------------------------------+  |
+  // | %CurrentLaneReg:sgpr(s32) = READFIRSTLANE %Vgpr                      |  |
+  // |   instead of executing for each lane, see if other lanes had         |  |
+  // |   same value for %Vgpr and execute for them also.                    |  |
+  // | %CondReg:vcc(s1) = G_ICMP eq %CurrentLaneReg, %Vgpr                  |  |
+  // | %CondRegLM:sreg_32 = ballot %CondReg // copy vcc to sreg32 lane mask |  |
+  // | %SavedExec = S_AND_SAVEEXEC_B32 %CondRegLM                           |  |
+  // |   exec is active for lanes with the same "CurrentLane value" in Vgpr |  |
+  // +----------------|-----------------------------------------------------+  |
+  //                  V                                                        |
+  // +-BodyBB------------------------------------------------------------+     |
+  // | %Dst = MI %CurrentLaneReg:sgpr(s32)                               |     |
+  // |   executed only for active lanes and written to Dst               |     |
+  // | $exec = S_XOR_B32 $exec, %SavedExec                               |     |
+  // |   set active lanes to 0 in SavedExec, lanes that did not write to |     |
+  // |   Dst yet, and set this as new exec (for READFIRSTLANE and ICMP)  |     |
+  // | SI_WATERFALL_LOOP LoopBB                                          |-----|
+  // +----------------|--------------------------------------------------+
+  //                  V
+  // +-RestoreExecBB--------------------------+
+  // | $exec_lo = S_MOV_B32_term %SaveExecReg |
+  // +----------------|-----------------------+
+  //                  V
+  // +-RemainderBB:----------------------+
+  // | %1 = G_INST_2                     |
+  // | ...                               |
+  // +---------------------------------- +
+
+  // Move the instruction into the loop body. Note we moved everything after
+  // Range.end() already into a new block, so Range.end() is no longer valid.
+  BodyBB->splice(BodyBB->end(), &MBB, Range.begin(), MBB.end());
+
+  // Figure out the iterator range after splicing the instructions.
+  MachineBasicBlock::iterator NewBegin = Range.begin()->getIterator();
+  auto NewEnd = BodyBB->end();
+  assert(std::distance(NewBegin, NewEnd) == OrigRangeSize);
+
+  B.setMBB(*LoopBB);
+  Register CondReg;
+
+  for (MachineInstr &MI : make_range(NewBegin, NewEnd)) {
+    for (MachineOperand &Op : MI.all_uses()) {
+      Register OldReg = Op.getReg();
+      if (!SGPROperandRegs.count(OldReg))
+        continue;
+
+      // See if we already processed this register in another instruction in
+      // the sequence.
+      auto OldVal = WaterfalledRegMap.find(OldReg);
+      if (OldVal != WaterfalledRegMap.end()) {
+        Op.setReg(OldVal->second);
+        continue;
+      }
+
+      Register OpReg = Op.getReg();
+      LLT OpTy = MRI.getType(OpReg);
+
+      // TODO: support for agpr
+      assert(MRI.getRegBank(OpReg) == VgprRB);
+      Register CurrentLaneReg = MRI.createVirtualRegister({SgprRB, OpTy});
+      buildReadFirstLane(B, CurrentLaneReg, OpReg, RBI);
+
+      // Build the comparison(s), CurrentLaneReg == OpReg.
+      unsigned OpSize = OpTy.getSizeInBits();
+      unsigned PartSize = (OpSize % 64 == 0) ? 64 : 32;
+      LLT PartTy = LLT::scalar(PartSize);
+      unsigned NumParts = OpSize / PartSize;
+      SmallVector<Register, 8> OpParts;
+      SmallVector<Register, 8> CurrentLaneParts;
+
+      if (NumParts == 1) {
+        OpParts.push_back(OpReg);
+        CurrentLaneParts.push_back(CurrentLaneReg);
+      } else {
+        auto UnmergeOp = B.buildUnmerge({VgprRB, PartTy}, OpReg);
+        auto UnmergeCurrLane = B.buildUnmerge({SgprRB, PartTy}, CurrentLaneReg);
+        for (unsigned i = 0; i < NumParts; ++i) {
+          OpParts.push_back(UnmergeOp.getReg(i));
+          CurrentLaneParts.push_back(UnmergeCurrLane.getReg(i));
+        }
+      }
+
+      for (unsigned i = 0; i < NumParts; ++i) {
+        Register CmpReg = MRI.createVirtualRegister(VccRB_S1);
+        B.buildICmp(CmpInst::ICMP_EQ, CmpReg, CurrentLaneParts[i], OpParts[i]);
+
+        if (!CondReg)
+          CondReg = CmpReg;
+        else
+          CondReg = B.buildAnd(VccRB_S1, CondReg, CmpReg).getReg(0);
+      }
+
+      Op.setReg(CurrentLaneReg);
+
+      // Make sure we don't re-process this register again.
+      WaterfalledRegMap.insert(std::pair(OldReg, Op.getReg()));
+    }
+  }
+
+  // Copy vcc to sgpr32/64, ballot becomes a no-op during instruction selection.
+  Register CondRegLM =
+      MRI.createVirtualRegister({WaveRC, LLT::scalar(IsWave32 ? 32 : 64)});
+  B.buildIntrinsic(Intrinsic::amdgcn_ballot, CondRegLM).addReg(CondReg);
+
+  // Update EXEC, save the original EXEC value to SavedExec.
+  B.buildInstr(AndSaveExecOpc)
+      .addDef(SavedExec)
+      .addReg(CondRegLM, RegState::Kill);
+  MRI.setSimpleHint(SavedExec, CondRegLM);
+
+  B.setInsertPt(*BodyBB, BodyBB->end());
+
+  // Update EXEC, switch all done bits to 0 and all todo bits to 1.
+  B.buildInstr(XorTermOpc).addDef(ExecReg).addReg(ExecReg).addReg(SavedExec);
+
+  // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
+  // s_cbranch_scc0?
+
+  // Loop back to V_READFIRSTLANE_B32 if there are still variants to cover.
+  B.buildInstr(AMDGPU::SI_WATERFALL_LOOP).addMBB(LoopBB);
+
+  // Save the EXEC mask before the loop.
+  B.setInsertPt(MBB, MBB.end());
+  B.buildInstr(MovExecOpc).addDef(SaveExecReg).addReg(ExecReg);
+
+  // Restore the EXEC mask after the loop.
+  B.setInsertPt(*RestoreExecBB, RestoreExecBB->begin());
+  B.buildInstr(MovExecTermOpc).addDef(ExecReg).addReg(SaveExecReg);
+
+  // Set the insert point after the original instruction, so any new
+  // instructions will be in the remainder.
+  B.setInsertPt(*RemainderBB, RemainderBB->begin());
+
+  return true;
+}
+
 void RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
                                       ArrayRef<LLT> LLTBreakdown, LLT MergeTy) {
   MachineFunction &MF = B.getMF();
@@ -77,7 +294,8 @@ void RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
       BasePlusOffset = Base;
     } else {
       auto Offset = B.buildConstant({PtrRB, OffsetTy}, ByteOffset);
-      BasePlusOffset = B.buildPtrAdd({PtrRB, PtrTy}, Base, Offset).getReg(0);
+      BasePlusOffset =
+          B.buildObjectPtrOffset({PtrRB, PtrTy}, Base, Offset).getReg(0);
     }
     auto *OffsetMMO = MF.getMachineMemOperand(&BaseMMO, ByteOffset, PartTy);
     auto LoadPart = B.buildLoad({DstRB, PartTy}, BasePlusOffset, *OffsetMMO);
@@ -392,7 +610,7 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
 
   switch (Mapping.LoweringMethod) {
   case DoNotLower:
-    return;
+    break;
   case VccExtToSel:
     return lowerVccExtToSel(MI);
   case UniExtToSel: {
@@ -528,7 +746,10 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   }
 
-  // TODO: executeInWaterfallLoop(... WaterfallSgprs)
+  if (!WaterfallSgprs.empty()) {
+    MachineBasicBlock::iterator I = MI.getIterator();
+    executeInWaterfallLoop(B, make_range(I, std::next(I)), WaterfallSgprs);
+  }
 }
 
 LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
@@ -540,6 +761,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr16:
     return LLT::scalar(16);
   case Sgpr32:
+  case Sgpr32_WF:
   case Sgpr32Trunc:
   case Sgpr32AExt:
   case Sgpr32AExtBoolInReg:
@@ -578,6 +800,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S32:
     return LLT::fixed_vector(2, 32);
   case SgprV4S32:
+  case SgprV4S32_WF:
   case VgprV4S32:
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
@@ -651,6 +874,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
     return VccRB;
   case Sgpr16:
   case Sgpr32:
+  case Sgpr32_WF:
   case Sgpr64:
   case Sgpr128:
   case SgprP1:
@@ -663,6 +887,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprV2S16:
   case SgprV2S32:
   case SgprV4S32:
+  case SgprV4S32_WF:
   case SgprB32:
   case SgprB64:
   case SgprB96:
@@ -922,6 +1147,14 @@ void RegBankLegalizeHelper::applyMappingSrc(
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
         Op.setReg(CopyToVgpr.getReg(0));
       }
+      break;
+    }
+    // sgpr waterfall, scalars and vectors
+    case Sgpr32_WF:
+    case SgprV4S32_WF: {
+      assert(Ty == getTyFromID(MethodIDs[i]));
+      if (RB != SgprRB)
+        SgprWaterfallOperandRegs.insert(Reg);
       break;
     }
     // sgpr and vgpr scalars with extend

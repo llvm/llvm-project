@@ -84,7 +84,9 @@ public:
 
   ConceptReference *getConceptReference() const { return ConceptRef; }
 
-  ConceptDecl *getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+  ConceptDecl *getNamedConcept() const {
+    return cast<ConceptDecl>(ConceptRef->getNamedConcept());
+  }
 
   // FIXME: Several of the following functions can be removed. Instead the
   // caller can directly work with the ConceptReference.
@@ -310,6 +312,7 @@ public:
       // TODO: Can we maybe not save the whole template parameter list and just
       //  the type constraint? Saving the whole TPL makes it easier to handle in
       //  serialization but is less elegant.
+      ReturnTypeRequirement(TemplateParameterList *TPL, bool IsDependent);
       ReturnTypeRequirement(TemplateParameterList *TPL);
 
       bool isDependent() const {

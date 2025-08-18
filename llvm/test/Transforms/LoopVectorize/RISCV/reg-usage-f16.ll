@@ -1,6 +1,10 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfh -debug-only=loop-vectorize,vplan --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s --check-prefix=ZVFH
-; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfhmin -debug-only=loop-vectorize,vplan --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s --check-prefix=ZVFHMIN
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfh -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize,vplan --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s --check-prefix=ZVFH
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfhmin -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize,vplan --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s --check-prefix=ZVFHMIN
+
+; TODO: -prefer-predicate-over-epilogue=scalar-epilogue was added to allow
+; unrolling. Calculate register pressure for all VPlans, not just unrolled ones,
+; and remove.
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add

@@ -143,7 +143,7 @@ namespace cwg305 { // cwg305: no
   void h(B *b) {
     struct B {}; // #cwg305-h-B
     b->~B();
-    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'cwg305::A') of the object being destroyed}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'A') of the object being destroyed}}
     //   expected-note@#cwg305-h-B {{type 'B' found by destructor name lookup}}
   }
 
@@ -1027,7 +1027,7 @@ namespace cwg357 { // cwg357: 2.7
     void f() const; // #cwg357-f
   };
   template<typename T> void A<T>::f() {}
-  // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'A<T>'}}
+  // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::A<T>'}}
   //   expected-note@#cwg357-A {{defined here}}
   //   expected-note@#cwg357-f {{member declaration does not match because it is const qualified}}
 
@@ -1800,8 +1800,8 @@ namespace cwg399 { // cwg399: 11
 
   void f() {
     D_object.~B();
-    // expected-error@-1 {{destructor type 'cwg399::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    //   expected-note@#cwg399-B {{type 'cwg399::B' found by destructor name lookup}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'D' of the object being destroyed}}
+    //   expected-note@#cwg399-B {{type 'B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();

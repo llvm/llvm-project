@@ -51,6 +51,12 @@ public:
 
   FunctionPointer toFunctionPointer(const Context &Ctx) const;
 
+  bool isBaseCastPossible() const {
+    if (PtrOffset < 0)
+      return true;
+    return static_cast<uint64_t>(PtrOffset) <= Base.getByteOffset();
+  }
+
   Pointer getBase() const {
     if (PtrOffset < 0)
       return Base.atField(-PtrOffset);

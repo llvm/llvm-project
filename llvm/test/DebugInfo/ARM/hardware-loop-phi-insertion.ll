@@ -4,7 +4,7 @@
 ;; records when they appear immediately after the last existing phi node.
 
 ; CHECK-LABEL: for.body:
-; CHECK-NEXT: = phi i32
+; CHECK-NEXT: = phi ptr
 ; CHECK-NEXT: = phi i32
 ; CHECK-NEXT: #dbg_value
 

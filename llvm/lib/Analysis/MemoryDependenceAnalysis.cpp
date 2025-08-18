@@ -150,6 +150,10 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+      Loc = MemoryLocation::getForArgument(II, 0, TLI);
+      // These intrinsics don't really modify the memory, but returning Mod
+      // will allow them to be handled conservatively.
+      return ModRefInfo::Mod;
     case Intrinsic::invariant_start:
       Loc = MemoryLocation::getForArgument(II, 1, TLI);
       // These intrinsics don't really modify the memory, but returning Mod
@@ -353,7 +357,7 @@ static bool canSkipClobberingStore(const StoreInst *SI,
   if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
     return false;
   unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNonDebugInstruction())
+  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
     if (++NumVisitedInsts > ScanLimit ||
         isModSet(BatchAA.getModRefInfo(I, MemLoc)))
       return false;
@@ -441,11 +445,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       Intrinsic::ID ID = II->getIntrinsicID();
       switch (ID) {
       case Intrinsic::lifetime_start: {
-        // FIXME: This only considers queries directly on the invariant-tagged
-        // pointer, not on query pointers that are indexed off of them.  It'd
-        // be nice to handle that at some point (the right approach is to use
-        // GetPointerBaseWithConstantOffset).
-        MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(1));
+        MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(0));
         if (BatchAA.isMustAlias(ArgLoc, MemLoc))
           return MemDepResult::getDef(II);
         continue;
@@ -983,33 +983,37 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
 static void
 SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
                          unsigned NumSortedEntries) {
-  switch (Cache.size() - NumSortedEntries) {
-  case 0:
-    // done, no new entries.
-    break;
-  case 2: {
-    // Two new entries, insert the last one into place.
-    NonLocalDepEntry Val = Cache.back();
-    Cache.pop_back();
-    MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-        std::upper_bound(Cache.begin(), Cache.end() - 1, Val);
-    Cache.insert(Entry, Val);
-    [[fallthrough]];
+
+  // If only one entry, don't sort.
+  if (Cache.size() < 2)
+    return;
+
+  unsigned s = Cache.size() - NumSortedEntries;
+
+  // If the cache is already sorted, don't sort it again.
+  if (s == 0)
+    return;
+
+  // If no entry is sorted, sort the whole cache.
+  if (NumSortedEntries == 0) {
+    llvm::sort(Cache);
+    return;
   }
-  case 1:
-    // One new entry, Just insert the new value at the appropriate position.
-    if (Cache.size() != 1) {
+
+  // If the number of unsorted entires is small and the cache size is big, using
+  // insertion sort is faster. Here use Log2_32 to quickly choose the sort
+  // method.
+  if (s < Log2_32(Cache.size())) {
+    while (s > 0) {
       NonLocalDepEntry Val = Cache.back();
       Cache.pop_back();
       MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-          llvm::upper_bound(Cache, Val);
+          std::upper_bound(Cache.begin(), Cache.end() - s + 1, Val);
       Cache.insert(Entry, Val);
+      s--;
     }
-    break;
-  default:
-    // Added many values, do a full scale sort.
+  } else {
     llvm::sort(Cache);
-    break;
   }
 }
 

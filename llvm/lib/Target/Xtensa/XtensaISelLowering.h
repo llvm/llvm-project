@@ -45,6 +45,8 @@ enum {
   RET,
   RETW,
 
+  RUR,
+
   // Select with condition operator - This selects between a true value and
   // a false value (ops #2 and #3) based on the boolean result of comparing
   // the lhs and rhs (ops #0 and #1) of a conditional expression with the
@@ -143,6 +145,12 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+    return true;
+  }
+
+  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
 
@@ -160,6 +168,8 @@ private:
   SDValue LowerImmediate(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 

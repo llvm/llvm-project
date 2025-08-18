@@ -126,14 +126,14 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    decl {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-NEXT:    jmp LBB0_8
 ; CHECK-NEXT:  LBB0_18: ## %bb43
-; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:  Ltmp5:
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    calll _OnOverFlow
 ; CHECK-NEXT:  Ltmp6:
 ; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:  LBB0_2: ## %bb29
-; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:  Ltmp7:
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    calll _OnOverFlow
 ; CHECK-NEXT:  Ltmp8:
 ; CHECK-NEXT:  LBB0_3: ## %bb30

@@ -466,15 +466,11 @@ TEST_F(IRBuilderTest, Lifetime) {
 
   CallInst *Start1 = Builder.CreateLifetimeStart(Var1);
   CallInst *Start2 = Builder.CreateLifetimeStart(Var2);
-  CallInst *Start3 = Builder.CreateLifetimeStart(Var3, Builder.getInt64(100));
+  CallInst *Start3 = Builder.CreateLifetimeStart(Var3);
 
-  EXPECT_EQ(Start1->getArgOperand(0), Builder.getInt64(-1));
-  EXPECT_EQ(Start2->getArgOperand(0), Builder.getInt64(-1));
-  EXPECT_EQ(Start3->getArgOperand(0), Builder.getInt64(100));
-
-  EXPECT_EQ(Start1->getArgOperand(1), Var1);
-  EXPECT_EQ(Start2->getArgOperand(1)->stripPointerCasts(), Var2);
-  EXPECT_EQ(Start3->getArgOperand(1), Var3);
+  EXPECT_EQ(Start1->getArgOperand(0), Var1);
+  EXPECT_EQ(Start2->getArgOperand(0), Var2);
+  EXPECT_EQ(Start3->getArgOperand(0), Var3);
 
   Value *End1 = Builder.CreateLifetimeEnd(Var1);
   Builder.CreateLifetimeEnd(Var2);
@@ -920,9 +916,11 @@ TEST_F(IRBuilderTest, DIBuilder) {
     // --------------------------
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
     DILabel *AlwaysPreserveLabel = DIB.createLabel(
-        BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
-    DILabel *Label =
-        DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
+        BarScope, "meles_meles", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ true);
+    DILabel *Label = DIB.createLabel(
+        BarScope, "badger", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ false);
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.

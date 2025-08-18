@@ -31,12 +31,79 @@
 #include "../../../test_compare.h"
 
 template <class T>
-std::initializer_list<T> il = {1, 2, 4, 5};
+constexpr std::initializer_list<T> il = {1, 2, 4, 5};
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   const auto il1 = il<int>;
   const auto il2 = il<short>;
 
+  {
+    // flat_set(sorted_unique_t, initializer_list<value_type>);
+    using M       = std::flat_set<int, std::less<int>, KeyContainer<int>>;
+    auto m        = M(std::sorted_unique, il1);
+    auto expected = M{1, 2, 4, 5};
+    assert(m == expected);
+
+    // explicit(false)
+    M m2 = {std::sorted_unique, il1};
+    assert(m2 == m);
+  }
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&);
+    using M = std::flat_set<int, std::function<bool(int, int)>, KeyContainer<int>>;
+    auto m  = M(std::sorted_unique, il1, std::less<int>());
+    assert(m == M({1, 2, 4, 5}, std::less<>()));
+    assert(m.key_comp()(1, 2) == true);
+
+    // explicit(false)
+    M m2 = {std::sorted_unique, il1, std::less<int>()};
+    assert(m2 == m);
+  }
+  {
+    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&);
+    // greater
+    using M = std::flat_set<int, std::greater<int>, KeyContainer<int, min_allocator<int>>>;
+    std::initializer_list<int> il4{5, 4, 2, 1};
+    auto m = M(std::sorted_unique, il4, std::greater<int>());
+    assert((m == M{5, 4, 2, 1}));
+  }
+  {
+    // flat_set(sorted_unique_t, initializer_list<value_type>,  const Allocator&)
+    using A1      = test_allocator<short>;
+    using M       = std::flat_set<short, std::less<int>, KeyContainer<short, A1>>;
+    auto m        = M(std::sorted_unique, il2, A1(5));
+    auto expected = M{1, 2, 4, 5};
+    assert(m == expected);
+    assert(M(m).extract().get_allocator() == A1(5));
+
+    // explicit(false)
+    M m2 = {std::sorted_unique, il2, A1(5)};
+    assert(m2 == m);
+    assert(std::move(m2).extract().get_allocator() == A1(5));
+  }
+  {
+    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&, const Allocator&);
+    using C  = test_less<int>;
+    using A1 = test_allocator<short>;
+    using M  = std::flat_set<short, C, KeyContainer<short, A1>>;
+    auto m   = M(std::sorted_unique, il2, C(3), A1(5));
+    assert((m == M{1, 2, 4, 5}));
+    assert(m.key_comp() == C(3));
+    assert(std::move(m).extract().get_allocator() == A1(5));
+  }
+  {
+    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&, const Allocator&);
+    // explicit(false)
+    using A1 = test_allocator<short>;
+    using M  = std::flat_set<short, std::less<int>, KeyContainer<short, A1>>;
+    M m      = {std::sorted_unique, il2, {}, A1(5)}; // implicit ctor
+    assert((m == M{1, 2, 4, 5}));
+    assert(std::move(m).extract().get_allocator() == A1(5));
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -82,73 +149,20 @@ void test() {
         !std::is_constructible_v<M, std::sorted_unique_t, std::initializer_list<const int>, std::allocator<int>>);
   }
 
-  {
-    // flat_set(sorted_unique_t, initializer_list<value_type>);
-    using M       = std::flat_set<int>;
-    auto m        = M(std::sorted_unique, il1);
-    auto expected = M{1, 2, 4, 5};
-    assert(m == expected);
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
 
-    // explicit(false)
-    M m2 = {std::sorted_unique, il1};
-    assert(m2 == m);
-  }
-  {
-    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&);
-    using M = std::flat_set<int, std::function<bool(int, int)>>;
-    auto m  = M(std::sorted_unique, il1, std::less<int>());
-    assert(m == M({1, 2, 4, 5}, std::less<>()));
-    assert(m.key_comp()(1, 2) == true);
-
-    // explicit(false)
-    M m2 = {std::sorted_unique, il1, std::less<int>()};
-    assert(m2 == m);
-  }
-  {
-    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&);
-    // greater
-    using M = std::flat_set<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    std::initializer_list<int> il4{5, 4, 2, 1};
-    auto m = M(std::sorted_unique, il4, std::greater<int>());
-    assert((m == M{5, 4, 2, 1}));
-  }
-  {
-    // flat_set(sorted_unique_t, initializer_list<value_type>,  const Allocator&)
-    using A1      = test_allocator<short>;
-    using M       = std::flat_set<short, std::less<int>, std::deque<short, A1>>;
-    auto m        = M(std::sorted_unique, il2, A1(5));
-    auto expected = M{1, 2, 4, 5};
-    assert(m == expected);
-    assert(M(m).extract().get_allocator() == A1(5));
-
-    // explicit(false)
-    M m2 = {std::sorted_unique, il2, A1(5)};
-    assert(m2 == m);
-    assert(std::move(m2).extract().get_allocator() == A1(5));
-  }
-  {
-    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&, const Allocator&);
-    using C  = test_less<int>;
-    using A1 = test_allocator<short>;
-    using M  = std::flat_set<short, C, std::vector<short, A1>>;
-    auto m   = M(std::sorted_unique, il2, C(3), A1(5));
-    assert((m == M{1, 2, 4, 5}));
-    assert(m.key_comp() == C(3));
-    assert(std::move(m).extract().get_allocator() == A1(5));
-  }
-  {
-    // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&, const Allocator&);
-    // explicit(false)
-    using A1 = test_allocator<short>;
-    using M  = std::flat_set<short, std::less<int>, std::deque<short, A1>>;
-    M m      = {std::sorted_unique, il2, {}, A1(5)}; // implicit ctor
-    assert((m == M{1, 2, 4, 5}));
-    assert(std::move(m).extract().get_allocator() == A1(5));
-  }
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

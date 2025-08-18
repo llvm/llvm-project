@@ -17,6 +17,8 @@
 
 namespace lldb_private {
 
+using handle_t = void *;
+
 // Windows-specific implementation of the MainLoopBase class. It can monitor
 // socket descriptors for readability using WSAEventSelect. Non-socket file
 // descriptors are not supported.
@@ -33,15 +35,15 @@ public:
 
   class IOEvent {
   public:
-    IOEvent(IOObject::WaitableHandle event) : m_event(event) {}
+    IOEvent(handle_t event) : m_event(event) {}
     virtual ~IOEvent() {}
     virtual void WillPoll() {}
     virtual void DidPoll() {}
     virtual void Disarm() {}
-    IOObject::WaitableHandle GetHandle() { return m_event; }
+    handle_t GetHandle() { return m_event; }
 
   protected:
-    IOObject::WaitableHandle m_event;
+    handle_t m_event;
   };
   using IOEventUP = std::unique_ptr<IOEvent>;
 

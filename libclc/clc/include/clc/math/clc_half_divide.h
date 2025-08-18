@@ -9,7 +9,7 @@
 #ifndef __CLC_MATH_CLC_HALF_DIVIDE_H__
 #define __CLC_MATH_CLC_HALF_DIVIDE_H__
 
-#define __FLOAT_ONLY
+#define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_divide
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 

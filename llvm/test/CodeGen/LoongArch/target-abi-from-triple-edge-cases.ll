@@ -24,9 +24,9 @@
 ; NO-WARNING-NOT:  warning: triple-implied ABI conflicts with provided target-abi 'lp64d', using target-abi
 
 ;; Check that ILP32-on-LA64 and LP64-on-LA32 combinations are handled properly.
-; RUN: llc --mtriple=loongarch64 --target-abi=ilp32d --mattr=+d < %s 2>&1 \
+; RUN: llc --mtriple=loongarch64-linux-gnu --target-abi=ilp32d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=LP64D,32ON64
-; RUN: llc --mtriple=loongarch32 --target-abi=lp64d --mattr=+d < %s 2>&1 \
+; RUN: llc --mtriple=loongarch32-linux-gnu --target-abi=lp64d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=ILP32D,64ON32
 
 ; 32ON64: warning: 32-bit ABIs are not supported for 64-bit targets, ignoring and using triple-implied ABI
@@ -48,12 +48,6 @@
 ; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64D-LP64F-NOF
 
 ; LP64D-LP64F-NOF: warning: both target-abi and the triple-implied ABI are invalid, ignoring and using feature-implied ABI
-
-;; Check that triple-implied ABI are invalid, use feature-implied ABI
-; RUN: llc --mtriple=loongarch64 --mattr=-f < %s 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64D-NONE-NOF
-
-; LP64D-NONE-NOF: warning: the triple-implied ABI is invalid, ignoring and using feature-implied ABI
 
 define float @f(float %a) {
 ; ILP32D-LABEL: f:

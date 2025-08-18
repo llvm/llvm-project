@@ -209,9 +209,24 @@ important. This member identifies the suspension point at which the coroutine
 is currently suspended.
 
 However, it is non-trivial to map this number back to a source code location.
-In simple cases, one might correctly guess the source code location. In more
-complex cases, we can modify the C++ code to store additional information in
-the promise type:
+The compiler emits debug info labels for the suspension points. This allows us
+to map the suspension point index back to a source code location. In gdb, we
+can use the ``info line`` command to get the source code location of the
+suspension point.
+
+::
+
+  (gdb) info line -function coro_task -label __coro_resume_2
+  Line 45 of "llvm-example.cpp" starts at address 0x1b1b <_ZL9coro_taski.resume+555> and ends at 0x1b46 <_ZL9coro_taski.resume+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
+
+LLDB does not support looking up labels. Furthermore, those labels are only emitted
+starting with clang 21.0.
+
+For simple cases, you might still be able to guess the suspension point correctly.
+Alternatively, you might also want to modify your coroutine library to store
+the line number of the current suspension point in the promise:
 
 .. code-block:: c++
 
@@ -220,8 +235,6 @@ the promise type:
     ...
     void* _coro_return_address = nullptr;
   };
-
-  #include <source_location>
 
   // For all the awaiter types we need:
   class awaiter {

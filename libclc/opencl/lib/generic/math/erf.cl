@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_erf.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/erf.h>
 
-#define FUNCTION erf
+#define __CLC_FUNCTION erf
 #define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

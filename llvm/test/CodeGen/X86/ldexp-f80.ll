@@ -3,33 +3,29 @@
 ; FIXME: Expansion without libcall
 ; XUN: llc -mtriple=i386-pc-win32 < %s | FileCheck -check-prefix=WIN32 %s
 
-define x86_fp80 @ldexp_f80(x86_fp80 %arg0, i32 %arg1) {
+define x86_fp80 @ldexp_f80(x86_fp80 %arg0, i32 %arg1) nounwind {
 ; X64-LABEL: ldexp_f80:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    callq ldexpl@PLT
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %ldexp = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 %arg1)
   ret x86_fp80 %ldexp
 }
 
-define x86_fp80 @test_strict_ldexp_f80_i32(ptr addrspace(1) %out, x86_fp80 %a, i32 %b) #2 {
+define x86_fp80 @test_strict_ldexp_f80_i32(ptr addrspace(1) %out, x86_fp80 %a, i32 %b) nounwind #2 {
 ; X64-LABEL: test_strict_ldexp_f80_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    movl %esi, %edi
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    callq ldexpl@PLT
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call x86_fp80 @llvm.experimental.constrained.ldexp.f80.i32(x86_fp80 %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret x86_fp80 %result
