@@ -225,7 +225,8 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
     // Step #3: Register target-specific builtins for AuxTarget.
     for (const auto &Shard : AuxTargetShards)
       for (const auto &I : Shard.Infos) {
-        Table.get(I.getName(Shard)).setBuiltinID(ID);
+        if (builtinIsSupported(*Shard.Strings, I, LangOpts))
+          Table.get(I.getName(Shard)).setBuiltinID(ID);
         ++ID;
       }
   }
