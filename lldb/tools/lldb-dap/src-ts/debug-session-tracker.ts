@@ -1,12 +1,17 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
 
+export interface LLDBDapCapabilities extends DebugProtocol.Capabilities {
+  /** The debug adapter supports the `moduleSymbols` request. */
+  supportsModuleSymbolsRequest?: boolean;
+}
+
 /** A helper type for mapping event types to their corresponding data type. */
 // prettier-ignore
 interface EventMap {
   "module": DebugProtocol.ModuleEvent;
   "exited": DebugProtocol.ExitedEvent;
-  "initialized": DebugProtocol.InitializedEvent;
+  "capabilities": DebugProtocol.CapabilitiesEvent;
 }
 
 /** A type assertion to check if a ProtocolMessage is an event or if it is a specific event. */
@@ -40,7 +45,8 @@ export class DebugSessionTracker
   private modulesChanged = new vscode.EventEmitter<
     vscode.DebugSession | undefined
   >();
-  private sessionInitialized = new vscode.EventEmitter<vscode.DebugSession>();
+  private sessionGotCapabilities =
+      new vscode.EventEmitter<[ vscode.DebugSession, LLDBDapCapabilities ]>();
   private sessionExited = new vscode.EventEmitter<vscode.DebugSession>();
 
   /**
@@ -52,8 +58,9 @@ export class DebugSessionTracker
     this.modulesChanged.event;
 
   /** Fired when a debug session is initialized. */
-  onDidInitializeSession: vscode.Event<vscode.DebugSession> =
-    this.sessionInitialized.event;
+  onDidGetSessionCapabilities:
+      vscode.Event<[ vscode.DebugSession, LLDBDapCapabilities ]> =
+      this.sessionGotCapabilities.event;
 
   /** Fired when a debug session is exiting. */
   onDidExitSession: vscode.Event<vscode.DebugSession> =
@@ -159,8 +166,8 @@ export class DebugSessionTracker
       );
 
       this.sessionExited.fire(session);
-    } else if (isEvent(message, "initialized")) {
-      this.sessionInitialized.fire(session);
+    } else if (isEvent(message, "capabilities")) {
+      this.sessionGotCapabilities.fire([ session, message.body.capabilities ]);
     }
   }
 }

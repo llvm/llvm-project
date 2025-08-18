@@ -601,6 +601,9 @@ class ModuleSymbolsRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "moduleSymbols"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureSupportsModuleSymbolsRequest};
+  }
   llvm::Expected<protocol::ModuleSymbolsResponseBody>
   Run(const protocol::ModuleSymbolsArguments &args) const override;
 };

@@ -59,6 +59,14 @@ void SendTargetBasedCapabilities(DAP &dap) {
     dap.Send(protocol::Event{"capabilities", body});
 }
 
+void SendCustomCapabilities(DAP &dap) {
+  protocol::CapabilitiesEventBody body;
+  body.capabilities = dap.GetCustomCapabilities();
+
+  // Notify the client about the custom capabilities.
+  dap.Send(protocol::Event{"capabilities", body});
+}
+
 // "ProcessEvent": {
 //   "allOf": [
 //     { "$ref": "#/definitions/Event" },

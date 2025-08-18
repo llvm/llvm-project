@@ -35,33 +35,16 @@ export class SymbolsProvider extends DisposableContext {
       },
     ));
 
-    this.tracker.onDidInitializeSession((session) => {
-      this.GetLLDBServerVersion(session).then((version) => {
-        if (version !== undefined) {
-          if (version[0] >= 22) {
-            vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", true);
-          }
-        }
-      });
+    this.tracker.onDidGetSessionCapabilities(([ _session, capabilities ]) => {
+      if (capabilities.supportsModuleSymbolsRequest) {
+        vscode.commands.executeCommand(
+            "setContext", "lldb-dap.supportsModuleSymbolsRequest", true);
+      }
     });
 
     this.tracker.onDidExitSession((_session) => {
       vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", false);
     });
-  }
-
-  private async GetLLDBServerVersion(session: vscode.DebugSession): Promise<[number, number, number] | undefined> {
-    const commandEscapePrefix = session.configuration.commandEscapePrefix || getDefaultConfigKey("commandEscapePrefix");
-    const response = await session.customRequest("evaluate", { expression: commandEscapePrefix + "version", context: "repl" });
-
-    const versionLine = response.result?.split("\n")[0];
-    if (!versionLine) return undefined;
-    
-    const versionMatch = versionLine.match(/(\d+)\.(\d+)\.(\d+)/);
-    if (!versionMatch) return undefined;
-
-    const [major, minor, patch] = versionMatch.slice(1, 4).map(Number);
-    return [major, minor, patch];
   }
 
   private async SelectModuleAndShowSymbols(session: vscode.DebugSession) {

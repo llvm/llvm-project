@@ -46,6 +46,10 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   // may have different capabilities than the final target.
   SendTargetBasedCapabilities(dap);
 
+  /// Send custom capabilities to the client.
+  /// This is consumed by the lldb-dap specific editor extension.
+  SendCustomCapabilities(dap);
+
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
   // Client requests the baseline of currently existing threads after
