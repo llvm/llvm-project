@@ -2382,13 +2382,13 @@ libc_support_library(
     name = "__support_math_coshf16",
     hdrs = ["src/__support/math/coshf16.h"],
     deps = [
-        ":__support_math_expxf16_utils",
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
-        ":__support_fputil_except_value_utils",
         ":__support_fputil_rounding_mode",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_expxf16_utils",
     ],
 )
 
