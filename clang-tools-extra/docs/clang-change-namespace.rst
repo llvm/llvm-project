@@ -170,6 +170,7 @@ Inline namespace doesn't work
 Consider this usage of two versions of implementations for a `greet` function:
 
 .. code-block:: c++
+
   #include <cstdio>
 
   namespace Greeter {
