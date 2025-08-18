@@ -24931,18 +24931,19 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op, const SDLoc &dl,
 }
 
 SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Cond = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  SDValue Op2 = Op.getOperand(2);
+  SDValue Cond = Op.getOperand(0); // condition
+  SDValue TrueOp = Op.getOperand(1);  // true_value
+  SDValue FalseOp = Op.getOperand(2); // false_value
   SDLoc DL(Op);
-  MVT VT = Op1.getSimpleValueType();
+  MVT VT = TrueOp.getSimpleValueType();
 
   // Handle soft float16 by converting to integer operations
   if (isSoftF16(VT, Subtarget)) {
     MVT NVT = VT.changeTypeToInteger();
-    return DAG.getBitcast(VT, DAG.getNode(ISD::CTSELECT, DL, NVT, Cond,
-                                          DAG.getBitcast(NVT, Op1),
-                                          DAG.getBitcast(NVT, Op2)));
+    SDValue CtSelect =
+        DAG.getNode(ISD::CTSELECT, DL, NVT, Cond, DAG.getBitcast(NVT, FalseOp),
+                    DAG.getBitcast(NVT, TrueOp));
+    return DAG.getBitcast(VT, CtSelect);
   }
 
   // Handle vector types
@@ -24950,15 +24951,14 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     // Handle soft float16 vectors
     if (isSoftF16(VT, Subtarget)) {
       MVT NVT = VT.changeVectorElementTypeToInteger();
-      return DAG.getBitcast(VT, DAG.getNode(ISD::CTSELECT, DL, NVT, Cond,
-                                            DAG.getBitcast(NVT, Op1),
-                                            DAG.getBitcast(NVT, Op2)));
+      SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, NVT, Cond,
+                                     DAG.getBitcast(NVT, FalseOp),
+                                     DAG.getBitcast(NVT, TrueOp));
+      return DAG.getBitcast(VT, CtSelect);
     }
 
     unsigned VectorWidth = VT.getSizeInBits();
     MVT EltVT = VT.getVectorElementType();
-    unsigned NumElts = VT.getVectorNumElements();
-
     // Check if we have the necessary SIMD support
     bool HasSSE = Subtarget.hasSSE1();
     bool HasAVX = Subtarget.hasAVX();
@@ -24978,22 +24978,12 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     // Handle special cases for floating point vectors
     if (EltVT.isFloatingPoint()) {
-      // For AVX-512, use mask-based selection for better performance
-      if (HasAVX512 && VectorWidth == 512) {
-        // Convert condition to mask and use masked select
-        MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-        SDValue Mask = DAG.getSetCC(DL, MaskVT, Cond,
-                                    DAG.getConstant(0, DL, Cond.getValueType()),
-                                    ISD::SETNE);
-        return DAG.getSelect(DL, VT, Mask, Op1, Op2);
-      }
-
       // For vector floating point with AVX, use VBLENDV-style operations
       if (HasAVX && (VectorWidth == 256 || VectorWidth == 128)) {
         // Convert to bitwise operations using the condition
         MVT IntVT = VT.changeVectorElementTypeToInteger();
-        SDValue IntOp1 = DAG.getBitcast(IntVT, Op1);
-        SDValue IntOp2 = DAG.getBitcast(IntVT, Op2);
+        SDValue IntOp1 = DAG.getBitcast(IntVT, TrueOp);
+        SDValue IntOp2 = DAG.getBitcast(IntVT, FalseOp);
 
         // Create the CTSELECT node with integer types
         SDValue IntResult =
@@ -25008,131 +24998,8 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     // use the generic X86 CTSELECT node which will be matched by the patterns
     SDValue CC = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
     SDValue EFLAGS = EmitTest(Cond, X86::COND_NE, DL, DAG, Subtarget);
-
-    // Create the X86 CTSELECT node - note operand order: false, true, cc, flags
-    return DAG.getNode(X86ISD::CTSELECT, DL, VT, Op2, Op1, CC, EFLAGS);
-  }
-
-  // Lower FP selects into a CMP/AND/ANDN/OR sequence when the necessary SSE ops
-  // are available, Otherwise FP cmovs get lowered into a less efficient branch
-  // sequence later.
-  if (Cond.getOpcode() == ISD::SETCC && isScalarFPTypeInSSEReg(VT) &&
-      VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
-    SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);
-    bool IsAlwaysSignaling;
-    unsigned SSECC =
-        translateX86FSETCC(cast<CondCodeSDNode>(Cond.getOperand(2))->get(),
-                           CondOp0, CondOp1, IsAlwaysSignaling);
-
-    // TODO: CTSELECT does not look for AVX support and optimize it using vector
-    // select
-    if (SSECC < 8) {
-      SDValue Cmp = DAG.getNode(X86ISD::FSETCC, DL, VT, CondOp0, CondOp1,
-                                DAG.getTargetConstant(SSECC, DL, MVT::i8));
-      SDValue AndN = DAG.getNode(X86ISD::FANDN, DL, VT, Cmp, Op2);
-      SDValue And = DAG.getNode(X86ISD::FAND, DL, VT, Cmp, Op1);
-      return DAG.getNode(X86ISD::FOR, DL, VT, AndN, And);
-    }
-  }
-
-  // Try to optimize special patterns when comparing with zero
-  if (Cond.getOpcode() == X86ISD::SETCC &&
-      Cond.getOperand(1).getOpcode() == X86ISD::CMP &&
-      isNullConstant(Cond.getOperand(1).getOperand(1))) {
-
-    SDValue CmpOp0 = Cond.getOperand(1).getOperand(0);
-    unsigned CondCode = Cond.getConstantOperandVal(0);
-
-    // Special handling for __builtin_ffs(X) - 1 pattern
-    auto MatchFFSMinus1 = [&](SDValue Op1, SDValue Op2) {
-      return (Op1.getOpcode() == ISD::CTTZ_ZERO_UNDEF && Op1.hasOneUse() &&
-              Op1.getOperand(0) == CmpOp0 && isAllOnesConstant(Op2));
-    };
-
-    if ((VT == MVT::i32 || VT == MVT::i64) &&
-        ((CondCode == X86::COND_NE && MatchFFSMinus1(Op1, Op2)) ||
-         (CondCode == X86::COND_E && MatchFFSMinus1(Op2, Op1)))) {
-      // Keep original comparison for FFS pattern
-    } else {
-
-      auto TryOptimizeAndOneSelect =
-          [&](SDValue CmpOp0, SDValue Op1, SDValue Op2, unsigned CondCode,
-              SDLoc DL, SelectionDAG &DAG,
-              const X86Subtarget &Subtarget) -> SDValue {
-        if (CondCode != X86::COND_E || CmpOp0.getOpcode() != ISD::AND ||
-            !isOneConstant(CmpOp0.getOperand(1)))
-          return SDValue();
-
-        EVT CmpVT = CmpOp0.getValueType();
-        EVT SelectVT = Op1.getValueType();
-
-        /// function to create a mask for LSB operations
-        auto SplatLSB = [&](EVT SplatVT) {
-          SDValue AdjustedValue;
-
-          if (CmpVT.bitsGT(SplatVT)) {
-            AdjustedValue = DAG.getNode(ISD::TRUNCATE, DL, SplatVT, CmpOp0);
-          } else if (CmpVT.bitsLT(SplatVT)) {
-            SDValue Extended =
-                DAG.getNode(ISD::ANY_EXTEND, DL, SplatVT, CmpOp0.getOperand(0));
-            AdjustedValue = DAG.getNode(ISD::AND, DL, SplatVT, Extended,
-                                        DAG.getConstant(1, DL, SplatVT));
-          } else {
-            AdjustedValue = CmpOp0;
-          }
-
-          return DAG.getNegative(AdjustedValue, DL, SplatVT);
-        };
-
-        // CTSELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
-        if (isNullConstant(Op1) && isAllOnesConstant(Op2))
-          return SplatLSB(SelectVT);
-
-        // CTSELECT (AND(X,1) == 0), C1, C2 ->
-        // XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
-        if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(Op1) &&
-            isa<ConstantSDNode>(Op2)) {
-          SDValue Mask = SplatLSB(SelectVT);
-          SDValue Diff = DAG.getNode(ISD::XOR, DL, SelectVT, Op1, Op2);
-          SDValue Flip = DAG.getNode(ISD::AND, DL, SelectVT, Mask, Diff);
-          return DAG.getNode(ISD::XOR, DL, SelectVT, Op1, Flip);
-        }
-
-        return SDValue();
-      };
-
-      /// Try to optimize min/max patterns with sign bit operations
-      auto TryOptimizeMinMaxPattern =
-          [&](SDValue CmpOp0, SDValue Op1, SDValue Op2, unsigned CondCode,
-              MVT VT, SDLoc DL, SelectionDAG &DAG,
-              const X86Subtarget &Subtarget) -> SDValue {
-        if ((VT != MVT::i32 && VT != MVT::i64) || !isNullConstant(Op2) ||
-            CmpOp0 != Op1)
-          return SDValue();
-
-        if (CondCode == X86::COND_S ||                     // smin(x, 0)
-            (CondCode == X86::COND_G && hasAndNot(Op1))) { // smax(x, 0)
-          // (ctselect (x < 0), x, 0) -> ((x >> (size_in_bits(x)-1))) & x
-          // (ctselect (x > 0), x, 0) -> (~(x >> (size_in_bits(x)-1))) & x
-          unsigned ShCt = VT.getSizeInBits() - 1;
-          SDValue ShiftAmt = DAG.getConstant(ShCt, DL, VT);
-          SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, Op1, ShiftAmt);
-          if (CondCode == X86::COND_G)
-            Shift = DAG.getNOT(DL, Shift, VT);
-          return DAG.getNode(ISD::AND, DL, VT, Shift, Op1);
-        }
-        return SDValue();
-      };
-      // Try AND(X,1) optimizations
-      if (SDValue OptResult = TryOptimizeAndOneSelect(
-              CmpOp0, Op1, Op2, CondCode, DL, DAG, Subtarget))
-        return OptResult;
-
-      // Try min/max pattern optimizations
-      if (SDValue OptResult = TryOptimizeMinMaxPattern(
-              CmpOp0, Op1, Op2, CondCode, VT, DL, DAG, Subtarget))
-        return OptResult;
-    }
+    // Create the X86 CTSELECT node - note operand order: true, false, cc, flags
+    return DAG.getNode(X86ISD::CTSELECT, DL, VT, FalseOp, TrueOp, CC, EFLAGS);
   }
 
   // Look past (and (setcc_carry (cmp ...)), 1)
@@ -25202,9 +25069,9 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
       ProcessConditionFlags(Cond, VT, DL, DAG, Subtarget);
 
   // Handle i8 CTSELECT with truncate optimization
-  if (Op.getValueType() == MVT::i8 &&
-      Op1.getOpcode() == ISD::TRUNCATE && Op2.getOpcode() == ISD::TRUNCATE) {
-    SDValue T1 = Op1.getOperand(0), T2 = Op2.getOperand(0);
+  if (Op.getValueType() == MVT::i8 && TrueOp.getOpcode() == ISD::TRUNCATE &&
+      FalseOp.getOpcode() == ISD::TRUNCATE) {
+    SDValue T1 = TrueOp.getOperand(0), T2 = FalseOp.getOperand(0);
     if (T1.getValueType() == T2.getValueType() &&
         T1.getOpcode() != ISD::CopyFromReg &&
         T2.getOpcode() != ISD::CopyFromReg) {
@@ -25216,26 +25083,26 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   // Promote small integer types to avoid partial register stalls
   if ((Op.getValueType() == MVT::i8) ||
-      (Op.getValueType() == MVT::i16 && !X86::mayFoldLoad(Op1, Subtarget) &&
-       !X86::mayFoldLoad(Op2, Subtarget))) {
-    Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
-    Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
-    SDValue Ops[] = {Op2, Op1, CC, ProcessedCond};
+      (Op.getValueType() == MVT::i16 && !X86::mayFoldLoad(TrueOp, Subtarget) &&
+       !X86::mayFoldLoad(FalseOp, Subtarget))) {
+    TrueOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueOp);
+    FalseOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, FalseOp);
+    SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
     SDValue Cmov = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Ops);
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
   }
 
   if (isScalarFPTypeInSSEReg(VT)) {
     MVT IntVT = (VT == MVT::f32) ? MVT::i32 : MVT::i64;
-    Op1 = DAG.getBitcast(IntVT, Op1);
-    Op2 = DAG.getBitcast(IntVT, Op2);
-    SDValue Ops[] = {Op2, Op1, CC, ProcessedCond};
+    TrueOp = DAG.getBitcast(IntVT, TrueOp);
+    FalseOp = DAG.getBitcast(IntVT, FalseOp);
+    SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
     SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, IntVT, Ops);
     return DAG.getBitcast(VT, CtSelect);
   }
 
   // Create final CTSELECT node
-  SDValue Ops[] = {Op2, Op1, CC, ProcessedCond};
+  SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
   return DAG.getNode(X86ISD::CTSELECT, DL, Op.getValueType(), Ops,
                      Op->getFlags());
 }
@@ -36293,456 +36160,6 @@ X86TargetLowering::EmitLoweredCascadedSelect(MachineInstr &FirstCMOV,
   return SinkMBB;
 }
 
-struct CtSelectInstructions {
-  unsigned PAndOpc;
-  unsigned PAndnOpc;
-  unsigned POrOpc;
-  unsigned BroadcastOpc;
-  unsigned IntMoveOpc;
-  unsigned MoveOpc;
-  bool Use256;
-  bool UseVEX;
-  bool UseBlendInstr;
-};
-
-static CtSelectInstructions
-getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
-  CtSelectInstructions Instructions = {};
-
-  switch (Opcode) {
-  case X86::CTSELECT_V2F64:
-    if (Subtarget.hasSSE2()) {
-      Instructions.PAndOpc = X86::PANDrr;
-      Instructions.PAndnOpc = X86::PANDNrr;
-      Instructions.POrOpc = X86::PORrr;
-      Instructions.BroadcastOpc = X86::PSHUFDri;
-      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
-      Instructions.MoveOpc = X86::MOVAPDrr;
-    } else {
-      llvm_unreachable("Double precision vectors require SSE2");
-    }
-    break;
-  case X86::CTSELECT_V4F32:
-    if (Subtarget.hasSSE41()) {
-      Instructions.PAndOpc = X86::PANDrr;
-      Instructions.PAndnOpc = X86::PANDNrr;
-      Instructions.POrOpc = X86::PORrr;
-      Instructions.BroadcastOpc = X86::PSHUFDri;
-      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
-      Instructions.MoveOpc = X86::MOVAPSrr;
-      Instructions.UseBlendInstr = true;
-    } else if (Subtarget.hasSSE2()) {
-      Instructions.PAndOpc = X86::PANDrr;
-      Instructions.PAndnOpc = X86::PANDNrr;
-      Instructions.POrOpc = X86::PORrr;
-      Instructions.BroadcastOpc = X86::PSHUFDri;
-      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
-      Instructions.MoveOpc = X86::MOVAPSrr;
-    } else {
-      Instructions.PAndOpc = X86::ANDPSrr;
-      Instructions.PAndnOpc = X86::ANDNPSrr;
-      Instructions.POrOpc = X86::ORPSrr;
-      Instructions.BroadcastOpc = X86::SHUFPSrri;
-      Instructions.IntMoveOpc = X86::MOVSS2DIrr;
-      Instructions.MoveOpc = X86::MOVAPSrr;
-    }
-    break;
-  case X86::CTSELECT_V4I32:
-  case X86::CTSELECT_V2I64:
-  case X86::CTSELECT_V8I16:
-  case X86::CTSELECT_V16I8:
-    if (Subtarget.hasSSE2()) {
-      Instructions.PAndOpc = X86::PANDrr;
-      Instructions.PAndnOpc = X86::PANDNrr;
-      Instructions.POrOpc = X86::PORrr;
-      Instructions.BroadcastOpc = X86::PSHUFDri;
-      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
-      Instructions.MoveOpc = X86::MOVDQArr;
-    } else {
-      llvm_unreachable("Integer vector operations require SSE2");
-    }
-    break;
-  case X86::CTSELECT_V8F16:
-    if (Subtarget.hasSSE2()) {
-      Instructions.PAndOpc = X86::PANDrr;
-      Instructions.PAndnOpc = X86::PANDNrr;
-      Instructions.POrOpc = X86::PORrr;
-      Instructions.BroadcastOpc = X86::PSHUFDri;
-      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
-      Instructions.MoveOpc = X86::MOVDQArr;
-    } else {
-      llvm_unreachable("FP16 vector operations require SSE2");
-    }
-    break;
-  case X86::CTSELECT_V4F32X:
-  case X86::CTSELECT_V4I32X:
-  case X86::CTSELECT_V2F64X:
-  case X86::CTSELECT_V2I64X:
-  case X86::CTSELECT_V8I16X:
-  case X86::CTSELECT_V16I8X:
-  case X86::CTSELECT_V8F16X:
-    if (Subtarget.hasAVX()) {
-      Instructions.PAndOpc = X86::VPANDrr;
-      Instructions.PAndnOpc = X86::VPANDNrr;
-      Instructions.POrOpc = X86::VPORrr;
-      Instructions.BroadcastOpc = X86::VPSHUFDri;
-      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
-      Instructions.MoveOpc = (Opcode == X86::CTSELECT_V4F32X) ? X86::VMOVAPSrr
-                             : (Opcode == X86::CTSELECT_V2F64X)
-                                 ? X86::VMOVAPDrr
-                                 : X86::VMOVDQArr;
-      Instructions.UseVEX = true;
-    } else {
-      llvm_unreachable("AVX variants require AVX support");
-    }
-    break;
-  case X86::CTSELECT_V8F32:
-  case X86::CTSELECT_V8I32:
-    if (Subtarget.hasAVX()) {
-      Instructions.PAndOpc = X86::VPANDYrr;
-      Instructions.PAndnOpc = X86::VPANDNYrr;
-      Instructions.POrOpc = X86::VPORYrr;
-      Instructions.BroadcastOpc = X86::VPERMILPSYri;
-      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
-      Instructions.MoveOpc =
-          (Opcode == X86::CTSELECT_V8F32) ? X86::VMOVAPSYrr : X86::VMOVDQAYrr;
-      Instructions.Use256 = true;
-      Instructions.UseVEX = true;
-    } else {
-      llvm_unreachable("256-bit vectors require AVX");
-    }
-    break;
-  case X86::CTSELECT_V4F64:
-  case X86::CTSELECT_V4I64:
-    if (Subtarget.hasAVX()) {
-      Instructions.PAndOpc = X86::VPANDYrr;
-      Instructions.PAndnOpc = X86::VPANDNYrr;
-      Instructions.POrOpc = X86::VPORYrr;
-      Instructions.BroadcastOpc = X86::VPERMILPDYri;
-      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
-      Instructions.MoveOpc =
-          (Opcode == X86::CTSELECT_V4F64) ? X86::VMOVAPDYrr : X86::VMOVDQAYrr;
-      Instructions.Use256 = true;
-      Instructions.UseVEX = true;
-    } else {
-      llvm_unreachable("256-bit vectors require AVX");
-    }
-    break;
-  case X86::CTSELECT_V16I16:
-  case X86::CTSELECT_V32I8:
-  case X86::CTSELECT_V16F16:
-    if (Subtarget.hasAVX2()) {
-      Instructions.PAndOpc = X86::VPANDYrr;
-      Instructions.PAndnOpc = X86::VPANDNYrr;
-      Instructions.POrOpc = X86::VPORYrr;
-      Instructions.BroadcastOpc = X86::VPERMILPSYri;
-      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
-      Instructions.MoveOpc = X86::VMOVDQAYrr;
-      Instructions.Use256 = true;
-      Instructions.UseVEX = true;
-    } else if (Subtarget.hasAVX()) {
-      Instructions.PAndOpc = X86::VPANDYrr;
-      Instructions.PAndnOpc = X86::VPANDNYrr;
-      Instructions.POrOpc = X86::VPORYrr;
-      Instructions.BroadcastOpc = X86::VPERMILPSYri;
-      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
-      Instructions.MoveOpc = X86::VMOVDQAYrr;
-      Instructions.Use256 = true;
-      Instructions.UseVEX = true;
-    } else {
-      llvm_unreachable("256-bit integer vectors require AVX");
-    }
-    break;
-  default:
-    llvm_unreachable("Unexpected CTSELECT opcode");
-  }
-
-  return Instructions;
-}
-
-static Register createScalarMask(MachineBasicBlock *MBB, MachineInstr &MI,
-                                 const MIMetadata &MIMD,
-                                 const TargetInstrInfo *TII,
-                                 MachineRegisterInfo &MRI) {
-  const TargetRegisterClass *GR8Class = &X86::GR8RegClass;
-  const TargetRegisterClass *GR32Class = &X86::GR32RegClass;
-
-  Register CondByteReg = MRI.createVirtualRegister(GR8Class);
-  Register CondReg = MRI.createVirtualRegister(GR32Class);
-  Register ScalarMaskReg = MRI.createVirtualRegister(GR32Class);
-
-  // Create a condition value using appropriate SETCC instruction
-  BuildMI(*MBB, MI, MIMD, TII->get(X86::SETCCr), CondByteReg)
-      .addImm(X86::COND_E)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Zero-extend byte to 32-bit register (movzbl %al, %eax)
-  BuildMI(*MBB, MI, MIMD, TII->get(X86::MOVZX32rr8), CondReg)
-      .addReg(CondByteReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
-  BuildMI(*MBB, MI, MIMD, TII->get(X86::NEG32r), ScalarMaskReg)
-      .addReg(CondReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  return ScalarMaskReg;
-}
-
-static Register broadcastScalarMask(
-    MachineBasicBlock *MBB, MachineInstr &MI, const MIMetadata &MIMD,
-    const TargetInstrInfo *TII, MachineRegisterInfo &MRI,
-    Register ScalarMaskReg, const TargetRegisterClass *RC,
-    const CtSelectInstructions &Instructions, const X86Subtarget &Subtarget) {
-  // Step 1: Move scalar mask to vector register
-  Register VecFromScalarReg = MRI.createVirtualRegister(RC);
-  BuildMI(*MBB, MI, MIMD, TII->get(Instructions.IntMoveOpc), VecFromScalarReg)
-      .addReg(ScalarMaskReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Step 2: Broadcast mask across all elements
-  Register MaskReg = MRI.createVirtualRegister(RC);
-  if (Instructions.Use256) {
-    // For 256-bit vectors, broadcast across all elements
-    BuildMI(*MBB, MI, MIMD, TII->get(Instructions.BroadcastOpc), MaskReg)
-        .addReg(VecFromScalarReg)
-        .addImm(0)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge); // Broadcast element 0 to all
-                                                   // positions
-  } else {
-    // For 128-bit vectors
-    if (Subtarget.hasSSE2() || Instructions.UseVEX) {
-      // Use PSHUFD for efficient broadcasting
-      BuildMI(*MBB, MI, MIMD, TII->get(Instructions.BroadcastOpc), MaskReg)
-          .addReg(VecFromScalarReg)
-          .addImm(0x00)
-          .setMIFlag(MachineInstr::MIFlag::NoMerge); // Broadcast element 0 to
-                                                     // all positions
-    } else {
-      // SSE1 fallback using SHUFPS
-      BuildMI(*MBB, MI, MIMD, TII->get(Instructions.BroadcastOpc), MaskReg)
-          .addReg(VecFromScalarReg)
-          .addReg(VecFromScalarReg)
-          .addImm(0x00)
-          .setMIFlag(MachineInstr::MIFlag::NoMerge); // Broadcast element 0 to
-                                                     // all positions
-    }
-  }
-
-  return MaskReg;
-}
-
-MachineBasicBlock *
-X86TargetLowering::EmitLoweredCtSelect(MachineInstr &MI,
-                                       MachineBasicBlock *ThisMBB) const {
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const MIMetadata MIMD(MI);
-
-  MachineRegisterInfo &MRI = ThisMBB->getParent()->getRegInfo();
-  DebugLoc DL = MI.getDebugLoc();
-
-  // Extract operands: dst = ctselect src1, src2, cond
-  Register DstReg = MI.getOperand(0).getReg();
-  Register TrueReg = MI.getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
-  // Note: CondCode from MI.getOperand(3).getImm() is not used - we hardcode
-  // COND_E for sete
-
-  // Get the vector type to determine the appropriate instructions
-  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
-  unsigned Opcode = MI.getOpcode();
-
-  // Get instruction opcodes for this operation
-  CtSelectInstructions Instructions =
-      getCtSelectInstructions(Opcode, Subtarget);
-
-  // Step 1: Create scalar mask using SETCC + NEG
-  Register ScalarMaskReg = createScalarMask(ThisMBB, MI, MIMD, TII, MRI);
-
-  // Step 2: Move scalar mask to vector register and broadcast
-  Register MaskReg = broadcastScalarMask(
-      ThisMBB, MI, MIMD, TII, MRI, ScalarMaskReg, RC, Instructions, Subtarget);
-
-  // Step 3: Implement blend operation
-  if (Instructions.UseBlendInstr && Subtarget.hasSSE41() &&
-      !Instructions.Use256) {
-    // Use dedicated blend instructions for SSE4.1+
-    unsigned BlendOpc;
-    switch (Opcode) {
-    case X86::CTSELECT_V4F32:
-      BlendOpc = X86::BLENDVPSrr0;
-      break;
-    case X86::CTSELECT_V2F64:
-      BlendOpc = X86::BLENDVPDrr0;
-      break;
-    default:
-      BlendOpc = X86::PBLENDVBrr0;
-      break;
-    }
-
-    // BLENDV uses XMM0 as implicit mask register
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(X86::MOVAPSrr), X86::XMM0)
-        .addReg(MaskReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(BlendOpc), DstReg)
-        .addReg(FalseReg)
-        .addReg(TrueReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  } else {
-    // Use traditional AND/ANDN/OR approach
-    Register TempReg = MRI.createVirtualRegister(RC);
-    Register MaskCopyReg = MRI.createVirtualRegister(RC);
-    Register VecAndReg = MRI.createVirtualRegister(RC);
-    Register VecAndnReg = MRI.createVirtualRegister(RC);
-    Register FinalResultReg = MRI.createVirtualRegister(RC);
-
-    // Copy mask for first operation
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(Instructions.MoveOpc), TempReg)
-        .addReg(MaskReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    // mask & true_val
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(Instructions.PAndOpc), VecAndReg)
-        .addReg(TempReg)
-        .addReg(TrueReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    // Copy mask for second operation
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(Instructions.MoveOpc), MaskCopyReg)
-        .addReg(MaskReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    // ~mask & false_val
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(Instructions.PAndnOpc), VecAndnReg)
-        .addReg(MaskCopyReg)
-        .addReg(FalseReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    // Combine results
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(Instructions.POrOpc), FinalResultReg)
-        .addReg(VecAndReg)
-        .addReg(VecAndnReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    // Move final result to destination
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(Instructions.MoveOpc), DstReg)
-        .addReg(FinalResultReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  }
-  // Remove the original instruction
-  MI.eraseFromParent();
-  return ThisMBB;
-}
-
-MachineBasicBlock *
-X86TargetLowering::EmitLoweredCtSelectNoCMOV(MachineInstr &MI,
-                                             MachineBasicBlock *ThisMBB) const {
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const MIMetadata MIMD(MI);
-  MachineRegisterInfo &MRI = ThisMBB->getParent()->getRegInfo();
-  DebugLoc DL = MI.getDebugLoc();
-
-  // Get operands
-  Register DstReg = MI.getOperand(0).getReg();
-  Register TrueReg = MI.getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
-
-  X86::CondCode CC = X86::CondCode(MI.getOperand(3).getImm());
-  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
-
-  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
-  unsigned SETCCOp, MOVZXOp, NEGOp, ANDOp, XOROp, OROp;
-  const TargetRegisterClass *condRC;
-
-  if (RC == &X86::GR8RegClass) {
-    SETCCOp = X86::SETCCr;
-    MOVZXOp = 0; // No extension needed for 8-bit
-    NEGOp = X86::NEG8r;
-    ANDOp = X86::AND8rr;
-    XOROp = X86::XOR8ri;
-    OROp = X86::OR8rr;
-    condRC = &X86::GR8RegClass;
-  } else if (RC == &X86::GR16RegClass) {
-    SETCCOp = X86::SETCCr;
-    MOVZXOp = X86::MOVZX16rr8;
-    NEGOp = X86::NEG16r;
-    ANDOp = X86::AND16rr;
-    XOROp = X86::XOR16ri;
-    OROp = X86::OR16rr;
-    condRC = &X86::GR16RegClass;
-  } else if (RC == &X86::GR32RegClass) {
-    SETCCOp = X86::SETCCr;
-    MOVZXOp = X86::MOVZX32rr8;
-    NEGOp = X86::NEG32r;
-    ANDOp = X86::AND32rr;
-    XOROp = X86::XOR32ri;
-    OROp = X86::OR32rr;
-    condRC = &X86::GR32RegClass;
-  } else {
-    llvm_unreachable("Unsupported register class for conditional select");
-  }
-
-  // Step 1: Create condition value using SETCC instruction
-  Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(SETCCOp), CondByteReg)
-      .addImm(OppCC)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  Register CondReg;
-  if (RC == &X86::GR8RegClass) {
-    // For 8-bit, use the byte register directly
-    CondReg = CondByteReg;
-  } else {
-    // For 16/32-bit, zero-extend the byte to the target size
-    CondReg = MRI.createVirtualRegister(condRC);
-    BuildMI(*ThisMBB, MI, MIMD, TII->get(MOVZXOp), CondReg)
-        .addReg(CondByteReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  }
-
-  // Step 2: Convert condition to mask (1 -> 0xFFFF..., 0 -> 0x0000...)
-  // Use NEG to create all-ones mask when condition is true
-  Register MaskReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(NEGOp), MaskReg)
-      .addReg(CondReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Step 3: Implement conditional select using bitwise operations
-  // Result = (TrueReg & Mask) | (FalseReg & ~Mask)
-
-  // Create inverted mask (~Mask)
-  Register InvMaskReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(XOROp), InvMaskReg)
-      .addReg(MaskReg)
-      .addImm(-1)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge); // XOR with all 1s to invert
-
-  // Compute TrueReg & Mask
-  Register TrueMaskedReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(ANDOp), TrueMaskedReg)
-      .addReg(TrueReg)
-      .addReg(MaskReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Compute FalseReg & ~Mask
-  Register FalseMaskedReg = MRI.createVirtualRegister(condRC);
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(ANDOp), FalseMaskedReg)
-      .addReg(FalseReg)
-      .addReg(InvMaskReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Final result: (TrueReg & Mask) | (FalseReg & ~Mask)
-  BuildMI(*ThisMBB, MI, MIMD, TII->get(OROp), DstReg)
-      .addReg(TrueMaskedReg)
-      .addReg(FalseMaskedReg)
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-  // Remove the original instruction
-  MI.eraseFromParent();
-  return ThisMBB;
-}
-
 MachineBasicBlock *
 X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
                                      MachineBasicBlock *ThisMBB) const {
@@ -38143,6 +37560,124 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
 }
 
 MachineBasicBlock *
+X86TargetLowering::EmitLoweredCtSelect(MachineInstr &MI,
+                                       MachineBasicBlock *ThisMBB) const {
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const MIMetadata MIMD(MI);
+  MachineRegisterInfo &MRI = ThisMBB->getParent()->getRegInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Get operands
+  Register DstReg = MI.getOperand(0).getReg();
+  Register TrueReg = MI.getOperand(1).getReg();
+  Register FalseReg = MI.getOperand(2).getReg();
+
+  X86::CondCode CC = X86::CondCode(MI.getOperand(3).getImm());
+  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
+
+  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
+  unsigned SETCCOp, MOVZXOp, NEGOp, ANDOp, XOROp, OROp;
+  const TargetRegisterClass *condRC;
+
+  if (RC == &X86::GR8RegClass) {
+    SETCCOp = X86::SETCCr;
+    MOVZXOp = 0; // No extension needed for 8-bit
+    NEGOp = X86::NEG8r;
+    ANDOp = X86::AND8rr;
+    XOROp = X86::XOR8ri;
+    OROp = X86::OR8rr;
+    condRC = &X86::GR8RegClass;
+  } else if (RC == &X86::GR16RegClass) {
+    SETCCOp = X86::SETCCr;
+    MOVZXOp = X86::MOVZX16rr8;
+    NEGOp = X86::NEG16r;
+    ANDOp = X86::AND16rr;
+    XOROp = X86::XOR16ri;
+    OROp = X86::OR16rr;
+    condRC = &X86::GR16RegClass;
+  } else if (RC == &X86::GR32RegClass) {
+    SETCCOp = X86::SETCCr;
+    MOVZXOp = X86::MOVZX32rr8;
+    NEGOp = X86::NEG32r;
+    ANDOp = X86::AND32rr;
+    XOROp = X86::XOR32ri;
+    OROp = X86::OR32rr;
+    condRC = &X86::GR32RegClass;
+  } else {
+    llvm_unreachable("Unsupported register class for conditional select");
+  }
+
+  auto BundleStart = MI.getIterator();
+
+  // Step 1: Create condition value using SETCC instruction
+  Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  BuildMI(*ThisMBB, MI, MIMD, TII->get(SETCCOp), CondByteReg)
+      .addImm(OppCC)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  Register CondReg;
+  if (RC == &X86::GR8RegClass) {
+    // For 8-bit, use the byte register directly
+    CondReg = CondByteReg;
+  } else {
+    // For 16/32-bit, zero-extend the byte to the target size
+    CondReg = MRI.createVirtualRegister(condRC);
+    BuildMI(*ThisMBB, MI, MIMD, TII->get(MOVZXOp), CondReg)
+        .addReg(CondByteReg)
+        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  }
+
+  // Step 2: Convert condition to mask (1 -> 0xFFFF..., 0 -> 0x0000...)
+  // Use NEG to create all-ones mask when condition is true
+  Register MaskReg = MRI.createVirtualRegister(condRC);
+  BuildMI(*ThisMBB, MI, MIMD, TII->get(NEGOp), MaskReg)
+      .addReg(CondReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 3: Implement conditional select using bitwise operations
+  // Result = (TrueReg & Mask) | (FalseReg & ~Mask)
+
+  // Create inverted mask (~Mask)
+  Register InvMaskReg = MRI.createVirtualRegister(condRC);
+  BuildMI(*ThisMBB, MI, MIMD, TII->get(XOROp), InvMaskReg)
+      .addReg(MaskReg)
+      .addImm(-1)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge); // XOR with all 1s to invert
+
+  // Compute TrueReg & Mask
+  Register TrueMaskedReg = MRI.createVirtualRegister(condRC);
+  BuildMI(*ThisMBB, MI, MIMD, TII->get(ANDOp), TrueMaskedReg)
+      .addReg(TrueReg)
+      .addReg(MaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Compute FalseReg & ~Mask
+  Register FalseMaskedReg = MRI.createVirtualRegister(condRC);
+  BuildMI(*ThisMBB, MI, MIMD, TII->get(ANDOp), FalseMaskedReg)
+      .addReg(FalseReg)
+      .addReg(InvMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Final result: (TrueReg & Mask) | (FalseReg & ~Mask)
+  BuildMI(*ThisMBB, MI, MIMD, TII->get(OROp), DstReg)
+      .addReg(TrueMaskedReg)
+      .addReg(FalseMaskedReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Remove the original instruction
+  MI.eraseFromParent();
+
+  auto BundleEnd = MI.getIterator();
+  if (BundleStart != BundleEnd) {
+    // Only bundle if we have multiple instructions
+    MachineInstr *BundleHeader =
+        BuildMI(*ThisMBB, BundleStart, DL, TII->get(TargetOpcode::BUNDLE));
+    finalizeBundle(*ThisMBB, BundleHeader->getIterator(), std::next(BundleEnd));
+  }
+  return ThisMBB;
+}
+
+MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
@@ -38203,39 +37738,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::CMOV_VK64:
     return EmitLoweredSelect(MI, BB);
 
-  case X86::CTSELECT_V2F64:
-  case X86::CTSELECT_V4F32:
-  case X86::CTSELECT_V8F16:
-  case X86::CTSELECT_V2I64:
-  case X86::CTSELECT_V4I32:
-  case X86::CTSELECT_V8I16:
-  case X86::CTSELECT_V16I8:
-  case X86::CTSELECT_V2F64X:
-  case X86::CTSELECT_V4F32X:
-  case X86::CTSELECT_V8F16X:
-  case X86::CTSELECT_V2I64X:
-  case X86::CTSELECT_V4I32X:
-  case X86::CTSELECT_V8I16X:
-  case X86::CTSELECT_V16I8X:
-  case X86::CTSELECT_V4I64:
-  case X86::CTSELECT_V8I32:
-  case X86::CTSELECT_V16I16:
-  case X86::CTSELECT_V32I8:
-  case X86::CTSELECT_V4F64:
-  case X86::CTSELECT_V8F32:
-  case X86::CTSELECT_V16F16:
-  case X86::CTSELECT_V8I64:
-  case X86::CTSELECT_V16I32:
-  case X86::CTSELECT_V32I16:
-  case X86::CTSELECT_V64I8:
-  case X86::CTSELECT_V8F64:
-  case X86::CTSELECT_V16F32:
-  case X86::CTSELECT_V32F16:
-    return EmitLoweredCtSelect(MI, BB);
-
   case X86::CTSELECT_GR16rr:
   case X86::CTSELECT_GR32rr:
-    return EmitLoweredCtSelectNoCMOV(MI, BB);
+    return EmitLoweredCtSelect(MI, BB);
 
   case X86::CTSELECT_FP32rr:
   case X86::CTSELECT_FP64rr:

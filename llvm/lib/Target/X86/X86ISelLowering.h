@@ -1851,9 +1851,6 @@ namespace llvm {
     MachineBasicBlock *EmitLoweredSelect(MachineInstr &I,
                                          MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *EmitLoweredCtSelectNoCMOV(MachineInstr &MI,
-                                                 MachineBasicBlock *BB) const;
-
     MachineBasicBlock *EmitLoweredCtSelect(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 

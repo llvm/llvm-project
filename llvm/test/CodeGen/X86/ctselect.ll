@@ -10,7 +10,8 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %esi, %eax
-; X64:    retq
+; X64-NEXT:                                        # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_i8:
 ; X32:       # %bb.0:
@@ -28,7 +29,8 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %esi, %eax
-; X64:    retq
+; X64-NEXT:                                        # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_i16:
 ; X32:       # %bb.0:
@@ -289,10 +291,14 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
 define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
 ; X64-LABEL: test_ctselect_fcmp_oeq:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpeqss %xmm1, %xmm0
-; X64-NEXT:    andps %xmm0, %xmm2
-; X64-NEXT:    andnps %xmm3, %xmm0
-; X64-NEXT:    orps %xmm2, %xmm0
+; X64-NEXT:    movd %xmm2, %eax
+; X64-NEXT:    movd %xmm3, %ecx
+; X64-NEXT:    ucomiss %xmm1, %xmm0
+; X64-NEXT:    setnp %dl
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testb %dl, %sil
+; X64-NEXT:    cmovnel %eax, %ecx
+; X64-NEXT:    movd %ecx, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_fcmp_oeq:

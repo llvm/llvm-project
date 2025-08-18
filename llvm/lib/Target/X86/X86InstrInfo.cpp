@@ -486,16 +486,318 @@ bool X86InstrInfo::isFrameOperand(const MachineInstr &MI, unsigned int Op,
   return false;
 }
 
-bool X86InstrInfo::expandCtSelect(unsigned Opcode,
-                                  MachineInstrBuilder &MIB) const {
-  MachineInstr *MI = MIB.getInstr();
-  MachineBasicBlock &MBB = *MIB->getParent();
-  DebugLoc DL = MIB->getDebugLoc();
+struct CtSelectInstructions {
+  unsigned PAndOpc;
+  unsigned PAndnOpc;
+  unsigned POrOpc;
+  unsigned BroadcastOpc;
+  unsigned IntMoveOpc;
+  unsigned MoveOpc;
+  bool Use256;
+  bool UseVEX;
+  bool UseBlendInstr;
+};
+
+static CtSelectInstructions
+getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
+  CtSelectInstructions Instructions = {};
+
+  switch (Opcode) {
+  case X86::CTSELECT_V2F64:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVAPDrr;
+    } else {
+      llvm_unreachable("Double precision vectors require SSE2");
+    }
+    break;
+  case X86::CTSELECT_V4F32:
+    if (Subtarget.hasSSE41()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVAPSrr;
+      Instructions.UseBlendInstr = true;
+    } else if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVAPSrr;
+    } else {
+      Instructions.PAndOpc = X86::ANDPSrr;
+      Instructions.PAndnOpc = X86::ANDNPSrr;
+      Instructions.POrOpc = X86::ORPSrr;
+      Instructions.BroadcastOpc = X86::SHUFPSrri;
+      Instructions.IntMoveOpc = X86::MOVSS2DIrr;
+      Instructions.MoveOpc = X86::MOVAPSrr;
+    }
+    break;
+  case X86::CTSELECT_V4I32:
+  case X86::CTSELECT_V2I64:
+  case X86::CTSELECT_V8I16:
+  case X86::CTSELECT_V16I8:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVDQArr;
+    } else {
+      llvm_unreachable("Integer vector operations require SSE2");
+    }
+    break;
+  case X86::CTSELECT_V8F16:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVDQArr;
+    } else {
+      llvm_unreachable("FP16 vector operations require SSE2");
+    }
+    break;
+  case X86::CTSELECT_V4F32X:
+  case X86::CTSELECT_V4I32X:
+  case X86::CTSELECT_V2F64X:
+  case X86::CTSELECT_V2I64X:
+  case X86::CTSELECT_V8I16X:
+  case X86::CTSELECT_V16I8X:
+  case X86::CTSELECT_V8F16X:
+    if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDrr;
+      Instructions.PAndnOpc = X86::VPANDNrr;
+      Instructions.POrOpc = X86::VPORrr;
+      Instructions.BroadcastOpc = X86::VPSHUFDri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc = (Opcode == X86::CTSELECT_V4F32X) ? X86::VMOVAPSrr
+                             : (Opcode == X86::CTSELECT_V2F64X)
+                                 ? X86::VMOVAPDrr
+                                 : X86::VMOVDQArr;
+      Instructions.UseVEX = true;
+    } else {
+      llvm_unreachable("AVX variants require AVX support");
+    }
+    break;
+  case X86::CTSELECT_V8F32:
+  case X86::CTSELECT_V8I32:
+    if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPSYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc =
+          (Opcode == X86::CTSELECT_V8F32) ? X86::VMOVAPSYrr : X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+      Instructions.UseVEX = true;
+    } else {
+      llvm_unreachable("256-bit vectors require AVX");
+    }
+    break;
+  case X86::CTSELECT_V4F64:
+  case X86::CTSELECT_V4I64:
+    if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPDYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc =
+          (Opcode == X86::CTSELECT_V4F64) ? X86::VMOVAPDYrr : X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+      Instructions.UseVEX = true;
+    } else {
+      llvm_unreachable("256-bit vectors require AVX");
+    }
+    break;
+  case X86::CTSELECT_V16I16:
+  case X86::CTSELECT_V32I8:
+  case X86::CTSELECT_V16F16:
+    if (Subtarget.hasAVX2()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPSYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc = X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+      Instructions.UseVEX = true;
+    } else if (Subtarget.hasAVX()) {
+      Instructions.PAndOpc = X86::VPANDYrr;
+      Instructions.PAndnOpc = X86::VPANDNYrr;
+      Instructions.POrOpc = X86::VPORYrr;
+      Instructions.BroadcastOpc = X86::VPERMILPSYri;
+      Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
+      Instructions.MoveOpc = X86::VMOVDQAYrr;
+      Instructions.Use256 = true;
+      Instructions.UseVEX = true;
+    } else {
+      llvm_unreachable("256-bit integer vectors require AVX");
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected CTSELECT opcode");
+  }
+
+  return Instructions;
+}
+
+bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  const DebugLoc &DL = MI.getDebugLoc();
+  auto Instruction = getCtSelectInstructions(Opcode, Subtarget);
+
+  MachineBasicBlock *MBB = MI.getParent();
+
+  // Operand layout matches the TableGen definition:
+  // (outs VR128:$dst, VR128:$tmpx, GR32:$tmpg),
+  // (ins  VR128:$t, VR128:$f, i8imm:$cond)
+  Register Dst = MI.getOperand(0).getReg();
+  Register MaskReg = MI.getOperand(1).getReg();  // vector mask temp
+  Register TmpGPR = MI.getOperand(2).getReg();   // scalar mask temp (GPR32)
+  Register FalseVal = MI.getOperand(3).getReg(); // true_value
+  Register TrueVal = MI.getOperand(4).getReg();  // false_value
+  X86::CondCode CC = X86::CondCode(MI.getOperand(5).getImm()); // condition
+
+  auto BundleStart = MI.getIterator();
+
+  // Create scalar mask in tempGPR and broadcast to vector mask
+  BuildMI(*MBB, MI, DL, get(X86::MOV32ri), TmpGPR)
+      .addImm(0)
+      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  auto SubReg = TRI->getSubReg(TmpGPR, X86::sub_8bit);
+  BuildMI(*MBB, MI, DL, get(X86::SETCCr))
+      .addReg(SubReg)
+      .addImm(CC)
+      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+  // Zero-extend byte to 32-bit register (movzbl %al, %eax)
+  BuildMI(*MBB, MI, DL, get(X86::MOVZX32rr8), TmpGPR)
+      .addReg(SubReg)
+      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+  // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
+  BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
+
+  // Broadcast to TmpX (vector mask)
+  BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
+      .addReg(MaskReg)
+      .addReg(MaskReg)
+      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+  // Move scalar mask to vector register
+  BuildMI(*MBB, MI, DL, get(Instruction.IntMoveOpc), MaskReg)
+      .addReg(TmpGPR)
+      .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+  if (Instruction.Use256) {
+    // Broadcast to 256-bit vector register
+    BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+        .addReg(MaskReg)
+        .addImm(0)
+        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  } else {
+    if (Subtarget.hasSSE2() || Instruction.UseVEX) {
+      BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+          .addReg(MaskReg)
+          .addImm(0x00)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    } else {
+      BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
+          .addReg(MaskReg)
+          .addReg(MaskReg)
+          .addImm(0x00)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    }
+  }
+
+  if (Instruction.UseBlendInstr && Subtarget.hasSSE41() &&
+      !Instruction.Use256) {
+    // Use dedicated blend instructions for SSE4.1+
+    unsigned BlendOpc;
+    switch (Opcode) {
+    case X86::CTSELECT_V4F32:
+      BlendOpc = X86::BLENDVPSrr0;
+      break;
+    case X86::CTSELECT_V2F64:
+      BlendOpc = X86::BLENDVPDrr0;
+      break;
+    default:
+      BlendOpc = X86::PBLENDVBrr0;
+      break;
+    }
+
+    // BLENDV uses XMM0 as implicit mask register
+    // https://www.felixcloutier.com/x86/pblendvb
+    BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), X86::XMM0)
+        .addReg(MaskReg)
+        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+    BuildMI(*MBB, MI, DL, get(BlendOpc), Dst)
+        .addReg(FalseVal)
+        .addReg(TrueVal)
+        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+  } else {
+
+    // dst = mask
+    BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
+        .addReg(MaskReg)
+        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+    // mask &= true_val
+    BuildMI(*MBB, MI, DL, get(X86::PANDrr), MaskReg)
+        .addReg(MaskReg)
+        .addReg(TrueVal)
+        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+    // dst = ~mask & false_val
+    BuildMI(*MBB, MI, DL, get(X86::PANDNrr), Dst)
+        .addReg(Dst)
+        .addReg(FalseVal)
+        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+    // dst |= mask; (mask & t) | (~mask & f)
+    BuildMI(*MBB, MI, DL, get(X86::PORrr), Dst)
+        .addReg(Dst)
+        .addReg(MaskReg)
+        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+  }
+
+  MI.eraseFromParent();
+
+  auto BundleEnd = MI.getIterator();
+  if (BundleStart != BundleEnd) {
+    // Only bundle if we have multiple instructions
+    MachineInstr *BundleHeader =
+        BuildMI(*MBB, BundleStart, DL, get(TargetOpcode::BUNDLE));
+    finalizeBundle(*MBB, BundleHeader->getIterator(), std::next(BundleEnd));
+  }
+
+  return true;
+}
+
+bool X86InstrInfo::expandCtSelectWithCMOV(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
 
   // CTSELECT pseudo has: (outs dst), (ins true_val, false_val, cond)
-  MachineOperand &OperandRes = MI->getOperand(0); // destination register
-  MachineOperand &OperandTrue = MI->getOperand(1);  // true value
-  MachineOperand &OperandCond = MI->getOperand(3);  // condition code
+  MachineOperand &OperandRes = MI.getOperand(0);  // destination register
+  MachineOperand &OperandTrue = MI.getOperand(1); // true value
+  MachineOperand &OperandCond = MI.getOperand(3); // condition code
 
   assert(OperandTrue.isReg() && OperandRes.isReg() && OperandCond.isImm() &&
          "Invalid operand types");
@@ -504,20 +806,44 @@ bool X86InstrInfo::expandCtSelect(unsigned Opcode,
 
   assert(Subtarget.hasCMOV() && "target does not support CMOV instructions");
 
-  if (Subtarget.hasCMOV()) {
-    // Build CMOV instruction: copy the first 3 operands (dst, true, false) and
-    // add condition code
-    MachineInstrBuilder CmovBuilder =
-        BuildMI(MBB, MIB.getInstr(), DL, get(Opcode));
-    for (unsigned i = 0; i < MI->getNumOperands(); ++i) { // Copy
-      CmovBuilder.add(MIB->getOperand(i));
-    }
-  } else {
+  unsigned Opcode = 0;
+
+  switch (MI.getOpcode()) {
+  case X86::CTSELECT16rr:
+    Opcode = X86::CMOV16rr;
+    break;
+  case X86::CTSELECT32rr:
+    Opcode = X86::CMOV32rr;
+    break;
+  case X86::CTSELECT64rr:
+    Opcode = X86::CMOV64rr;
+    break;
+  case X86::CTSELECT16rm:
+    Opcode = X86::CMOV16rm;
+    break;
+  case X86::CTSELECT32rm:
+    Opcode = X86::CMOV32rm;
+    break;
+  case X86::CTSELECT64rm:
+    Opcode = X86::CMOV64rm;
+    break;
+  default:
+    llvm_unreachable("Invalid CTSELECT opcode");
+  }
+
+  if (!Subtarget.hasCMOV()) {
     llvm_unreachable("target does not support cmov");
   }
 
+  // Build CMOV instruction: copy the first 3 operands (dst, true, false)
+  // and add condition code
+  MachineInstrBuilder CmovBuilder = BuildMI(*MBB, MI, DL, get(Opcode));
+  for (unsigned i = 0u; i < MI.getNumOperands(); ++i) { // Copy
+    CmovBuilder.add(MI.getOperand(i));
+  }
+
   // Remove the original CTSELECT instruction
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return true;
 }
 
@@ -6417,23 +6743,39 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MIB->setDesc(get(X86::OR64ri32));
     break;
   case X86::CTSELECT64rr:
-  expandCtSelect(X86::CMOV64rr, MIB);
-    break;
   case X86::CTSELECT32rr:
-  expandCtSelect(X86::CMOV32rr, MIB);
-    break;
   case X86::CTSELECT16rr:
-  expandCtSelect(X86::CMOV16rr, MIB);
-    break;
   case X86::CTSELECT64rm:
-  expandCtSelect(X86::CMOV64rm, MIB);
-    break;
   case X86::CTSELECT32rm:
-  expandCtSelect(X86::CMOV32rm, MIB);
-    break;
   case X86::CTSELECT16rm:
-  expandCtSelect(X86::CMOV16rm, MIB);
-    break;
+    return expandCtSelectWithCMOV(MI);
+
+  case X86::CTSELECT_V2F64:
+  case X86::CTSELECT_V4F32:
+  case X86::CTSELECT_V8F16:
+  case X86::CTSELECT_V2I64:
+  case X86::CTSELECT_V4I32:
+  case X86::CTSELECT_V8I16:
+  case X86::CTSELECT_V16I8:
+  case X86::CTSELECT_V2F64X:
+  case X86::CTSELECT_V4F32X:
+  case X86::CTSELECT_V8F16X:
+  case X86::CTSELECT_V2I64X:
+  case X86::CTSELECT_V4I32X:
+  case X86::CTSELECT_V8I16X:
+  case X86::CTSELECT_V16I8X:
+  case X86::CTSELECT_V4I64:
+  case X86::CTSELECT_V8I32:
+  case X86::CTSELECT_V16I16:
+  case X86::CTSELECT_V32I8:
+  case X86::CTSELECT_V4F64:
+  case X86::CTSELECT_V8F32:
+  case X86::CTSELECT_V16F16:
+  case X86::CTSELECT_V8I64:
+  case X86::CTSELECT_V16I32:
+  case X86::CTSELECT_V8F64:
+  case X86::CTSELECT_V16F32:
+    return expandCtSelectVector(MI);
   }
   return false;
 }
