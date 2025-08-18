@@ -13,7 +13,6 @@
 #include <flang/Lower/OpenMP/Utils.h>
 
 #include "ClauseFinder.h"
-#include "flang/Lower/OpenMP/Clauses.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertExprToHLFIR.h>
 #include <flang/Lower/ConvertType.h>
@@ -196,16 +195,11 @@ static void generateArrayIndices(lower::AbstractConverter &converter,
   for (auto v : arr->subscript()) {
     if (std::holds_alternative<Triplet>(v.u))
       TODO(clauseLocation, "Triplet indexing in map clause is unsupported");
-
     auto expr = std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(v.u);
     mlir::Value subscript =
         fir::getBase(converter.genExprValue(toEvExpr(expr.value()), stmtCtx));
-    mlir::Value one = firOpBuilder.createIntegerConstant(
-        clauseLocation, firOpBuilder.getIndexType(), 1);
-    subscript = firOpBuilder.createConvert(
-        clauseLocation, firOpBuilder.getIndexType(), subscript);
-    indices.push_back(mlir::arith::SubIOp::create(firOpBuilder, clauseLocation,
-                                                  subscript, one));
+    indices.push_back(firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getIndexType(), subscript));
   }
 }
 
@@ -338,10 +332,41 @@ mlir::Value createParentSymAndGenIntermediateMaps(
                              subscriptIndices, objectList[i]);
         assert(!subscriptIndices.empty() &&
                "missing expected indices for map clause");
-        curValue = fir::CoordinateOp::create(
-            firOpBuilder, clauseLocation,
-            firOpBuilder.getRefType(arrType.getEleTy()), curValue,
-            subscriptIndices);
+        if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(curValue.getType())) {
+          fir::ExtendedValue exv =
+              hlfir::translateToExtendedValue(clauseLocation, firOpBuilder,
+                                              hlfir::Entity{curValue},
+                                              /*contiguousHint=*/
+                                              true)
+                  .first;
+
+          mlir::Type idxTy = firOpBuilder.getIndexType();
+          llvm::SmallVector<mlir::Value> shiftOperands;
+          for (unsigned dim = 0; dim < exv.rank(); ++dim) {
+            mlir::Value d =
+                firOpBuilder.createIntegerConstant(clauseLocation, idxTy, dim);
+            auto dimInfo = fir::BoxDimsOp::create(
+                firOpBuilder, clauseLocation, idxTy, idxTy, idxTy, curValue, d);
+            shiftOperands.push_back(dimInfo.getLowerBound());
+            shiftOperands.push_back(dimInfo.getExtent());
+          }
+          auto shapeShiftType =
+              fir::ShapeShiftType::get(firOpBuilder.getContext(), exv.rank());
+          mlir::Value shapeShift = fir::ShapeShiftOp::create(
+              firOpBuilder, clauseLocation, shapeShiftType, shiftOperands);
+          auto addrOp =
+              fir::BoxAddrOp::create(firOpBuilder, clauseLocation, curValue);
+          curValue = fir::ArrayCoorOp::create(
+              firOpBuilder, clauseLocation,
+              firOpBuilder.getRefType(arrType.getEleTy()), addrOp, shapeShift,
+              /*slice=*/mlir::Value{}, subscriptIndices,
+              /*typeparms=*/mlir::ValueRange{});
+        } else {
+          curValue = fir::CoordinateOp::create(
+              firOpBuilder, clauseLocation,
+              firOpBuilder.getRefType(arrType.getEleTy()), curValue,
+              subscriptIndices);
+        }
       }
     }
 
@@ -431,7 +456,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
       currentIndicesIdx++;
     }
   }
-
   return curValue;
 }
 
