@@ -2739,3 +2739,4 @@ def OMP_teams_loop : Directive<[Spelling<"teams loop">]> {
   let leafConstructs = [OMP_Teams, OMP_loop];
   let category = CA_Executable;
 }
+

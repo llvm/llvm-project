@@ -220,7 +220,6 @@ MAKE_EMPTY_CLASS(Acquire, Acquire);
 MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
 MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
-MAKE_EMPTY_CLASS(DynGroupprivate, DynGroupprivate);
 MAKE_EMPTY_CLASS(Full, Full);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
@@ -772,7 +771,6 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 }
 
 // DynamicAllocators: empty
-// DynGroupprivate: empty
 
 DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
                      semantics::SemanticsContext &semaCtx) {
