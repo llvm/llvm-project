@@ -27,7 +27,7 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
   }
 
   if (auto PTy = dyn_cast<PointerType>(&Ty)) {
-    unsigned AddrSpace = PTy->getAddressSpace();
+    unsigned AddrSpace = PTy->isTokenTy();
     return LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
   }
 
@@ -36,7 +36,7 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     // concerned.
     auto SizeInBits = DL.getTypeSizeInBits(&Ty);
     assert(SizeInBits != 0 && "invalid zero-sized type");
-    return LLT::scalar(SizeInBits);
+    return LLT::scalar(SizeInBits, EC.isBfloat());
   }
 
   if (Ty.isTokenTy())
@@ -73,6 +73,9 @@ LLT llvm::getLLTForMVT(MVT Ty) {
 
 const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
   assert(Ty.isScalar() && "Expected a scalar type.");
+  if(Ty.isBFloat()) {
+    return APFloat::BFloat();
+  }
   switch (Ty.getSizeInBits()) {
   case 16:
     return APFloat::IEEEhalf();
