@@ -424,11 +424,7 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   else if (isKnownNegative && !Known.isNonNegative())
     Known.makeNegative();
 
-  // Additional logic: If both operands are the same sign- or zero-extended
-  // value from a small integer, and the multiplication is (sext x) * (sext x)
-  // or (zext x) * (zext x), then the result cannot set bits above the maximum
-  // possible square. This allows InstCombine and other passes to fold (x * x) &
-  // (1 << N) to 0 when N is out of range.
+  // Check if both operands are the same sign-extension of a single value.
   const Value *A = nullptr;
 
   if (match(Op0, m_SExt(m_Value(A))) && match(Op1, m_SExt(m_Specific(A)))) {
