@@ -248,6 +248,8 @@ enum class IterationAction {
   Stop,
 };
 
+enum class HistoryPCType { Returns, ReturnsNoZerothFrame, Calls };
+
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
    case StatisticKind::ExpressionSuccessful:

@@ -24,9 +24,8 @@ using namespace lldb_private;
 // Constructor
 
 HistoryUnwind::HistoryUnwind(Thread &thread, std::vector<lldb::addr_t> pcs,
-                             bool pcs_are_call_addresses)
-    : Unwind(thread), m_pcs(pcs),
-      m_pcs_are_call_addresses(pcs_are_call_addresses) {}
+                             HistoryPCType pc_type)
+    : Unwind(thread), m_pcs(pcs), m_pc_type(pc_type) {}
 
 // Destructor
 
@@ -61,7 +60,7 @@ bool HistoryUnwind::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
   if (frame_idx < m_pcs.size()) {
     cfa = frame_idx;
     pc = m_pcs[frame_idx];
-    if (m_pcs_are_call_addresses)
+    if (m_pc_type == HistoryPCType::Calls)
       behaves_like_zeroth_frame = true;
     else
       behaves_like_zeroth_frame = (frame_idx == 0);
