@@ -2168,7 +2168,7 @@ def OMP_target_parallel_loop : Directive<[Spelling<"target parallel loop">]> {
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_DefaultMap>,
-    VersionedClause<OMPC_DynGroupprivate. 61>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
