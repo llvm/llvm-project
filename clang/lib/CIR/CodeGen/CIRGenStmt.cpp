@@ -33,6 +33,8 @@ void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
 }
 
 void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
+  // Add local scope to track new declared variables.
+  SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
   mlir::OpBuilder::InsertPoint scopeInsPt;
   builder.create<cir::ScopeOp>(
@@ -250,12 +252,17 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     else
       emitCompoundStmt(cast<CompoundStmt>(*s));
     break;
+  case Stmt::GotoStmtClass:
+    return emitGotoStmt(cast<GotoStmt>(*s));
   case Stmt::ContinueStmtClass:
     return emitContinueStmt(cast<ContinueStmt>(*s));
 
   // NullStmt doesn't need any handling, but we need to say we handled it.
   case Stmt::NullStmtClass:
     break;
+
+  case Stmt::LabelStmtClass:
+    return emitLabelStmt(cast<LabelStmt>(*s));
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
     // If we reached here, we must not handling a switch case in the top level.
@@ -270,6 +277,17 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
   }
 
   return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
+
+  if (emitLabel(*s.getDecl()).failed())
+    return mlir::failure();
+
+  if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
+    getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
+
+  return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
@@ -419,6 +437,24 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   return mlir::success();
 }
 
+mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
+  // FIXME: LLVM codegen inserts emit a stop point here for debug info
+  // sake when the insertion point is available, but doesn't do
+  // anything special when there isn't. We haven't implemented debug
+  // info support just yet, look at this again once we have it.
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  cir::GotoOp::create(builder, getLoc(s.getSourceRange()),
+                      s.getLabel()->getName());
+
+  // A goto marks the end of a block, create a new one for codegen after
+  // emitGotoStmt can resume building in that block.
+  // Insert the new block to continue codegen after goto.
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
   builder.createContinue(getLoc(s.getContinueLoc()));
@@ -426,6 +462,32 @@ CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
   // Insert the new block to continue codegen after the continue statement.
   builder.createBlock(builder.getBlock()->getParent());
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
+  // Create a new block to tag with a label and add a branch from
+  // the current one to it. If the block is empty just call attach it
+  // to this label.
+  mlir::Block *currBlock = builder.getBlock();
+  mlir::Block *labelBlock = currBlock;
+
+  if (!currBlock->empty()) {
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      labelBlock = builder.createBlock(builder.getBlock()->getParent());
+    }
+    builder.create<cir::BrOp>(getLoc(d.getSourceRange()), labelBlock);
+  }
+
+  builder.setInsertionPointToEnd(labelBlock);
+  builder.create<cir::LabelOp>(getLoc(d.getSourceRange()), d.getName());
+  builder.setInsertionPointToEnd(labelBlock);
+
+  //  FIXME: emit debug info for labels, incrementProfileCounter
+  assert(!cir::MissingFeatures::ehstackBranches());
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::generateDebugInfo());
   return mlir::success();
 }
 

@@ -1377,7 +1377,7 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
     // the true value, and a "borrow" to the left should be remembered.
     int64_t borrow = 0;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t p = uint64_t(qp) * uint64_t(v[i]);
+      uint64_t p = qp * uint64_t(v[i]);
       int64_t subres = int64_t(u[j+i]) - borrow - Lo_32(p);
       u[j+i] = Lo_32(subres);
       borrow = Hi_32(p) - Hi_32(subres);
@@ -3134,6 +3134,22 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   APInt C1Ext = C1.zext(FullWidth);
   APInt C2Ext = C2.zext(FullWidth);
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+}
+
+APInt APIntOps::mulsExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.sext(FullWidth);
+  APInt C2Ext = C2.sext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
+APInt APIntOps::muluExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.zext(FullWidth);
+  APInt C2Ext = C2.zext(FullWidth);
+  return C1Ext * C2Ext;
 }
 
 APInt APIntOps::pow(const APInt &X, int64_t N) {

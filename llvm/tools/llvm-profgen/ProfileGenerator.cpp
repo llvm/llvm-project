@@ -17,6 +17,9 @@
 #include <unordered_set>
 #include <utility>
 
+using namespace llvm;
+using namespace sampleprof;
+
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                     cl::Required,
                                     cl::desc("Output profile file"));
@@ -103,9 +106,6 @@ cl::opt<bool> InferMissingFrames(
     llvm::cl::desc(
         "Infer missing call frames due to compiler tail call elimination."),
     llvm::cl::Optional);
-
-using namespace llvm;
-using namespace sampleprof;
 
 namespace llvm {
 

@@ -129,20 +129,20 @@ class Mips_prefetch_ri<dag outs, dag ins, string opcodestr, string argstr>
 // MIPS extensions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVendorXMIPSCBOP] ,DecoderNamespace = "Xmipscbop" in {
-  def MIPS_PREFETCH : Mips_prefetch_ri<(outs), (ins GPR:$rs1, uimm9:$imm9, uimm5:$hint),
-                                        "mips.pref", "$hint, ${imm9}(${rs1})">,
-                       Sched<[]>;
+  def MIPS_PREF : Mips_prefetch_ri<(outs), (ins GPR:$rs1, uimm9:$imm9, uimm5:$hint),
+                                    "mips.pref", "$hint, ${imm9}(${rs1})">,
+                   Sched<[]>;
 }
 
 let Predicates = [HasVendorXMIPSCBOP] in {
   // Prefetch Data Write.
   def : Pat<(prefetch (AddrRegImm9  (XLenVT GPR:$rs1), uimm9:$imm9),
              (i32 1), timm, (i32 1)),
-            (MIPS_PREFETCH GPR:$rs1, uimm9:$imm9, 9)>;
+            (MIPS_PREF GPR:$rs1, uimm9:$imm9, 9)>;
   // Prefetch Data Read.
   def : Pat<(prefetch (AddrRegImm9 (XLenVT GPR:$rs1), uimm9:$imm9),
              (i32 0), timm, (i32 1)),
-            (MIPS_PREFETCH GPR:$rs1, uimm9:$imm9, 8)>;
+            (MIPS_PREF GPR:$rs1, uimm9:$imm9, 8)>;
 }
 
 let Predicates = [HasVendorXMIPSCMov], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
