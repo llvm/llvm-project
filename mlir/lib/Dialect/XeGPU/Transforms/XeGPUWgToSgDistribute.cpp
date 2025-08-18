@@ -166,7 +166,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       // Subtract startOfRange from the original subgroup id to get
       // the adjusted sg id
       Value startOfRangeVal =
-          rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+          arith::ConstantIndexOp::create(rewriter, loc, startOfRange);
       linearSgId =
           rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
     }
@@ -675,7 +675,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto newType = VectorType::get(sgShape, vecType.getElementType());
     auto sgAttr = DenseElementsAttr::get(newType, singleVal);
     auto cstOp =
-        rewriter.create<arith::ConstantOp>(op.getLoc(), newType, sgAttr);
+        arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
     if (auto newLayout = layout.dropSgLayoutAndData())
       xegpu::setLayoutAttr(cstOp->getResult(0), newLayout);
     SmallVector<Value> newConsts(count, cstOp);
