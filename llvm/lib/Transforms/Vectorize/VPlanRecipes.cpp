@@ -460,6 +460,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Load:
   case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExplicitVectorLength:
@@ -2972,6 +2974,24 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // is scalarized or not. Therefore, we handle GEPs with the memory
     // instruction cost.
     return 0;
+  case Instruction::Call: {
+    if (!isSingleScalar()) {
+      // TODO: Handle remaining call costs here as well.
+      if (VF.isScalable())
+        return InstructionCost::getInvalid();
+      break;
+    }
+
+    auto *CalledFn =
+        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    if (CalledFn->isIntrinsic())
+      break;
+
+    SmallVector<Type *, 4> Tys;
+    for (VPValue *ArgOp : drop_end(operands()))
+      Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
+    return Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
+  }
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::FAdd:

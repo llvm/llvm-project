@@ -15,6 +15,9 @@
 // sandbox-exec isn't available on iOS
 // UNSUPPORTED: ios
 
+// Symbolizer fails to find test functions on current macOS bot version
+// XFAIL: target=arm{{.*}}
+
 #include <CoreFoundation/CoreFoundation.h>
 
 #if defined(SHARED_LIB)

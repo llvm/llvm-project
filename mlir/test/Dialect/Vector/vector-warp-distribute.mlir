@@ -1803,3 +1803,24 @@ func.func @warp_propagate_nd_write(%laneid: index, %dest: memref<4x1024xf32>) {
 //       CHECK-DIST-AND-PROP:   %[[IDS:.+]]:2 = affine.delinearize_index %{{.*}} into (4, 8) : index, index
 //       CHECK-DIST-AND-PROP:   %[[INNER_ID:.+]] = affine.apply #map()[%[[IDS]]#1]
 //       CHECK-DIST-AND-PROP:   vector.transfer_write %[[W]], %{{.*}}[%[[IDS]]#0, %[[INNER_ID]]] {{.*}} : vector<1x128xf32>
+
+// -----
+func.func @warp_propagate_duplicated_operands_in_yield(%laneid: index)  {
+  %r:3 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>, vector<1xf32>, vector<1xf32>) {
+    %0 = "some_def"() : () -> (vector<32xf32>)
+    %1 = "some_other_def"() : () -> (vector<32xf32>)
+    %2 = math.exp %1 : vector<32xf32>
+    gpu.yield %2, %0, %0 : vector<32xf32>, vector<32xf32>, vector<32xf32>
+  }
+  "some_use"(%r#0) : (vector<1xf32>) -> ()
+  return
+}
+
+// CHECK-PROP-LABEL : func.func @warp_propagate_duplicated_operands_in_yield(
+// CHECK-PROP       :   %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+// CHECK-PROP       :     %{{.*}} = "some_def"() : () -> vector<32xf32>
+// CHECK-PROP       :     %[[T3:.*]] = "some_other_def"() : () -> vector<32xf32>
+// CHECK-PROP       :     gpu.yield %[[T3]] : vector<32xf32>
+// CHECK-PROP       :   }
+// CHECK-PROP       :   %[T1:.*] = math.exp %[[W]] : vector<1xf32>
+// CHECK-PROP       :   "some_use"(%[[T1]]) : (vector<1xf32>) -> ()

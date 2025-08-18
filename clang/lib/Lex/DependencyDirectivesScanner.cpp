@@ -83,6 +83,8 @@ struct Scanner {
   /// \returns True on error.
   bool scan(SmallVectorImpl<Directive> &Directives);
 
+  friend bool clang::scanInputForCXX20ModulesUsage(StringRef Source);
+
 private:
   /// Lexes next token and advances \p First and the \p Lexer.
   [[nodiscard]] dependency_directives_scan::Token &
@@ -1074,4 +1076,52 @@ void clang::printDependencyDirectivesAsSource(
       OS << Source.slice(Tok.Offset, Tok.getEnd());
     }
   }
+}
+
+static void skipUntilMaybeCXX20ModuleDirective(const char *&First,
+                                               const char *const End) {
+  assert(First <= End);
+  while (First != End) {
+    if (*First == '#') {
+      ++First;
+      skipToNewlineRaw(First, End);
+    }
+    skipWhitespace(First, End);
+    if (const auto Len = isEOL(First, End)) {
+      First += Len;
+      continue;
+    }
+    break;
+  }
+}
+
+bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+  const char *First = Source.begin();
+  const char *const End = Source.end();
+  skipUntilMaybeCXX20ModuleDirective(First, End);
+  if (First == End)
+    return false;
+
+  // Check if the next token can even be a module directive before creating a
+  // full lexer.
+  if (!(*First == 'i' || *First == 'e' || *First == 'm'))
+    return false;
+
+  llvm::SmallVector<dependency_directives_scan::Token> Tokens;
+  Scanner S(StringRef(First, End - First), Tokens, nullptr, SourceLocation());
+  S.TheLexer.setParsingPreprocessorDirective(true);
+  if (S.lexModule(First, End))
+    return false;
+  auto IsCXXNamedModuleDirective = [](const DirectiveWithTokens &D) {
+    switch (D.Kind) {
+    case dependency_directives_scan::cxx_module_decl:
+    case dependency_directives_scan::cxx_import_decl:
+    case dependency_directives_scan::cxx_export_module_decl:
+    case dependency_directives_scan::cxx_export_import_decl:
+      return true;
+    default:
+      return false;
+    }
+  };
+  return llvm::any_of(S.DirsWithToks, IsCXXNamedModuleDirective);
 }

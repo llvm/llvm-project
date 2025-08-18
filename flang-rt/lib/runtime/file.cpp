@@ -60,10 +60,16 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   return fd;
 }
 
-void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
+void OpenFile::Open(OpenStatus status, common::optional<Action> action,
     Position position, IoErrorHandler &handler) {
   if (fd_ >= 0 &&
       (status == OpenStatus::Old || status == OpenStatus::Unknown)) {
+    if (position == Position::Rewind) {
+      Seek(0, handler);
+    } else if (position == Position::Append) {
+      SeekToEnd(handler);
+    }
+    openPosition_ = position; // for INQUIRE(POSITION=)
     return;
   }
   CloseFd(handler);
@@ -131,8 +137,8 @@ void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
   }
   RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
-  if (fd_ >= 0 && position == Position::Append && !RawSeekToEnd()) {
-    handler.SignalError(IostatOpenBadAppend);
+  if (fd_ >= 0 && position == Position::Append) {
+    SeekToEnd(handler);
   }
   isTerminal_ = fd_ >= 0 && IsATerminal(fd_);
   mayRead_ = *action != Action::Write;
@@ -322,7 +328,7 @@ int OpenFile::WriteAsynchronously(FileOffset at, const char *buffer,
 }
 
 void OpenFile::Wait(int id, IoErrorHandler &handler) {
-  Fortran::common::optional<int> ioStat;
+  common::optional<int> ioStat;
   Pending *prev{nullptr};
   for (Pending *p{pending_.get()}; p; p = (prev = p)->next.get()) {
     if (p->id == id) {
@@ -353,13 +359,13 @@ void OpenFile::WaitAll(IoErrorHandler &handler) {
   }
 }
 
-Position OpenFile::InquirePosition() const {
+Position OpenFile::InquirePosition(FileOffset offset) const {
   if (openPosition_) { // from OPEN statement
     return *openPosition_;
   } else { // unit has been repositioned since opening
-    if (position_ == knownSize_.value_or(position_ + 1)) {
+    if (offset == knownSize_.value_or(offset + 1)) {
       return Position::Append;
-    } else if (position_ == 0 && mayPosition_) {
+    } else if (offset == 0 && mayPosition_) {
       return Position::Rewind;
     } else {
       return Position::AsIs; // processor-dependent & no common behavior
@@ -391,7 +397,7 @@ bool OpenFile::RawSeek(FileOffset at) {
 #endif
 }
 
-bool OpenFile::RawSeekToEnd() {
+bool OpenFile::SeekToEnd(IoErrorHandler &handler) {
 #ifdef _LARGEFILE64_SOURCE
   std::int64_t at{::lseek64(fd_, 0, SEEK_END)};
 #else
@@ -399,8 +405,10 @@ bool OpenFile::RawSeekToEnd() {
 #endif
   if (at >= 0) {
     knownSize_ = at;
+    SetPosition(at);
     return true;
   } else {
+    handler.SignalError(IostatOpenBadAppend);
     return false;
   }
 }

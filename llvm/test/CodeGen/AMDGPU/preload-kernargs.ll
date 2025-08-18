@@ -471,13 +471,11 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture inreg %out, <8 x
 ;
 ; GFX1250-LABEL: v8i32_arg:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_load_b256 s[4:11], s[0:1], 0x20
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v0, s8
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s9 :: v_dual_mov_b32 v2, s10
-; GFX1250-NEXT:    v_dual_mov_b32 v3, s11 :: v_dual_mov_b32 v4, s4
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s5 :: v_dual_mov_b32 v6, s6
-; GFX1250-NEXT:    v_mov_b32_e32 v7, s7
+; GFX1250-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v0, s14
+; GFX1250-NEXT:    v_dual_mov_b32 v1, s15 :: v_dual_mov_b32 v2, s16
+; GFX1250-NEXT:    v_dual_mov_b32 v3, s17 :: v_dual_mov_b32 v4, s10
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s11 :: v_dual_mov_b32 v6, s12
+; GFX1250-NEXT:    v_mov_b32_e32 v7, s13
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[2:3] offset:16
 ; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[2:3]

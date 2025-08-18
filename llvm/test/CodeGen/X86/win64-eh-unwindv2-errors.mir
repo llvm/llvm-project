@@ -106,7 +106,7 @@ body:             |
 # RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
 # RUN:    --check-prefix=BESTEFFORT
 # DEALLOC-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_after_epilog':
-# DEALLOC-AFTER-EPILOG-SAME: Unexpected mov or add instruction after the epilog
+# DEALLOC-AFTER-EPILOG-SAME: Unexpected lea, mov or add instruction after the epilog
 
 --- |
   define dso_local void @dealloc_after_epilog() local_unnamed_addr {

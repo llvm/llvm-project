@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -37,7 +38,8 @@ STATISTIC(TailCallMaxTailCallPath, "Length of the longest tail call path");
 static cl::opt<uint32_t>
     MaximumSearchDepth("max-search-depth", cl::init(UINT32_MAX - 1),
                        cl::desc("The maximum levels the DFS-based missing "
-                                "frame search should go with"));
+                                "frame search should go with"),
+                       cl::cat(ProfGenCategory));
 
 void MissingFrameInferrer::initialize(
     const ContextSampleCounterMap *SampleCounters) {

@@ -663,6 +663,7 @@ static RT_API_ATTRS bool TryFastPathRealDecimalInput(
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<PRECISION> *>(n) =
       converted.binary;
   io.HandleRelativePosition(p - str);
+  io.GotChar(p - str);
   // Set FP exception flags
   if (converted.flags != decimal::ConversionResultFlags::Exact) {
     RaiseFPExceptions(converted.flags);

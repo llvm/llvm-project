@@ -1529,6 +1529,7 @@ cc_library(
         ":basic",
         ":config",
         ":driver_options_inc_gen",
+        ":lex",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
