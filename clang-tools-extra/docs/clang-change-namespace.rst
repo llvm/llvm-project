@@ -164,6 +164,69 @@ The re-factoring looks correct but the code will not compile due to the name
 duplication. It is not up to the tool to ensure compilability in that sense.
 But one has to be aware of that.
 
+Inline namespace doesn't work
+-----------------------------
+
+Consider this usage of two versions of implementations for a `greet` function:
+
+.. code-block:: c++
+  #include <cstdio>
+
+  namespace Greeter {
+  inline namespace Version1 {
+    const char* greet() { return "Hello from version 1!"; }
+  } // namespace Version1
+  namespace Version2 {
+    const char* greet() { return "Hello from version 2!"; }
+  } // namespace Version2
+  } // namespace Greeter
+
+  int main(int argc, char* argv[]) {
+    printf("%s\n", Greeter::greet());
+    return 0;
+  }
+
+Note, that currently `Greeter::greet()` will result in a call to
+`Greeter::Version1::greet()` because that's the inlined namespace.
+
+Let's say you want to move one and make `Version2` the default now and remove
+the `inline` from the `Version1`. First let's try to turn `namespace Version2`
+into `inline namespace Version2`:
+
+.. code-block:: console
+
+  clang-change-namespace \
+    --old_namespace "Greeter::Version2" \
+    --new_namespace "inline Version2" \
+    --file_pattern main.cc main.cc
+
+But this will put the `inline` keyword in the wrong place resulting in:
+
+.. code-block:: c++
+
+  #include <cstdio>
+
+  namespace Greeter {
+  inline namespace Version1 {
+          const char* greet() { return "Hello from version 1!"; }
+  } // namespace Version1
+
+  } // namespace Greeter
+  namespace inline Greeter {
+  namespace Version2 {
+  const char *greet() { return "Hello from version 2!"; }
+  } // namespace Version2
+  } // namespace inline Greeter
+
+  int main(int argc, char* argv[]) {
+          printf("%s\n", Greeter::greet());
+          return 0;
+  }
+
+Apparently one cannot use `:program:`clang-change-namespace` to inline a
+namespace.
+
+
 :program:`clang-change-namespace` Command Line Options
 ======================================================
 
