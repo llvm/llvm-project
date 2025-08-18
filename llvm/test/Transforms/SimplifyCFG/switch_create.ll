@@ -1129,16 +1129,18 @@ define void @extra_cond_is_eq_cmp(i8 %c, i32 %x)  {
 ; CHECK-LABEL: @extra_cond_is_eq_cmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 32
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[C:%.*]], 97
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP4]]
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i8 [[C]], 99
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[OR_COND]], [[CMP9]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
+; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @foo1()
-; CHECK-NEXT:    br label [[SWITCH_EARLY_TEST]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %cmp = icmp eq i32 %x, 32
