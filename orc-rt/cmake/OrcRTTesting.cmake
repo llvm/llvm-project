@@ -6,7 +6,7 @@ if (NOT DEFINED ORC_RT_LLVM_TOOLS_DIR AND DEFINED LLVM_BINARY_DIR)
 endif()
 
 if (TARGET utils/llvm-lit/all)
-   list(APPEND utils/llvm-lit/all)
+   list(APPEND ORC_RT_TEST_DEPS utils/llvm-lit/all)
 endif()
 
 # Add dependence on FileCheck.
