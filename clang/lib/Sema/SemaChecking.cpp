@@ -2214,7 +2214,7 @@ static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
 
   QualType ArgTy = Arg->getType();
 
-  if (!ArgTy->isUnsignedIntegerType()) {
+  if (!ArgTy->isUnsignedIntegerType() && !ArgTy->isExtVectorBoolType()) {
     S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
         << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
         << ArgTy;
@@ -2239,7 +2239,7 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 
   QualType Arg0Ty = Arg0->getType();
 
-  if (!Arg0Ty->isUnsignedIntegerType()) {
+  if (!Arg0Ty->isUnsignedIntegerType() && !Arg0Ty->isExtVectorBoolType()) {
     S.Diag(Arg0->getBeginLoc(), diag::err_builtin_invalid_arg_type)
         << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
         << Arg0Ty;
