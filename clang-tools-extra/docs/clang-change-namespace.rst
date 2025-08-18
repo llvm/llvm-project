@@ -184,11 +184,12 @@ But one has to be aware of that.
 
   Additional argument to prepend to the compiler command line
 
-.. option:: --file_pattern=<string>     
+.. option:: --file_pattern=<string>
 
-  Only rename namespaces in files that match the given pattern.
+  Only rename namespaces in files that match the given regular expression
+  pattern.
 
-.. option:: -i                          
+.. option:: -i     
  
   Inplace edit <file>s, if specified.
 
