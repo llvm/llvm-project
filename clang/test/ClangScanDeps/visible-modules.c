@@ -30,7 +30,7 @@
 // RUN: %clang @%t/A.rsp
 
 /// Verify compilation & scan agree with each other.
-// RUN: not %clang @%t/tu.rsp 2>&1 | FileCheck %s --check-prefix=COMPILE
+// RUN: not %clang @%t/tu.rsp -o %t/blah.o 2>&1 | FileCheck %s --check-prefix=COMPILE
 
 // SINGLE:        "visible-clang-modules": [
 // SINGLE-NEXT:     "A"

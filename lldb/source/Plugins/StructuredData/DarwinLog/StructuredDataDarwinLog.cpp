@@ -574,8 +574,7 @@ public:
       return config_sp;
 
     // Handle source stream flags.
-    auto source_flags_sp =
-        StructuredData::DictionarySP(new StructuredData::Dictionary());
+    auto source_flags_sp = std::make_shared<StructuredData::Dictionary>();
     config_sp->AddItem("source-flags", source_flags_sp);
 
     source_flags_sp->AddBooleanItem("any-process", m_include_any_process);
@@ -591,8 +590,7 @@ public:
 
     // Handle filter rules
     if (!m_filter_rules.empty()) {
-      auto json_filter_rules_sp =
-          StructuredData::ArraySP(new StructuredData::Array);
+      auto json_filter_rules_sp = std::make_shared<StructuredData::Array>();
       config_sp->AddItem("filter-rules", json_filter_rules_sp);
       for (auto &rule_sp : m_filter_rules) {
         if (!rule_sp)
@@ -1603,6 +1601,7 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
 
   const char *func_name = "_libtrace_init";
   const lldb::addr_t offset = 0;
+  const bool offset_is_insn_count = false;
   const LazyBool skip_prologue = eLazyBoolCalculate;
   // This is an internal breakpoint - the user shouldn't see it.
   const bool internal = true;
@@ -1610,7 +1609,8 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
 
   auto breakpoint_sp = target.CreateBreakpoint(
       &module_spec_list, source_spec_list, func_name, eFunctionNameTypeFull,
-      eLanguageTypeC, offset, skip_prologue, internal, hardware);
+      eLanguageTypeC, offset, offset_is_insn_count, skip_prologue, internal,
+      hardware);
   if (!breakpoint_sp) {
     // Huh?  Bail here.
     LLDB_LOGF(log,

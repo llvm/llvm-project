@@ -1048,21 +1048,21 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    srliw a2, a0, 24
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    negw a2, a2
+; CHECK-NEXT:    neg a2, a2
 ; CHECK-NEXT:    sllw a0, a0, a3
 ; CHECK-NEXT:    andi a2, a2, -8
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    srliw a2, a0, 28
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 2
-; CHECK-NEXT:    negw a2, a2
+; CHECK-NEXT:    neg a2, a2
 ; CHECK-NEXT:    sllw a0, a0, a3
 ; CHECK-NEXT:    andi a2, a2, -4
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    srliw a2, a0, 30
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 1
-; CHECK-NEXT:    negw a2, a2
+; CHECK-NEXT:    neg a2, a2
 ; CHECK-NEXT:    sllw a0, a0, a3
 ; CHECK-NEXT:    andi a2, a2, -2
 ; CHECK-NEXT:    add a1, a1, a2
@@ -1090,21 +1090,21 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    srliw a2, a0, 24
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 3
-; NOREMOVAL-NEXT:    negw a2, a2
+; NOREMOVAL-NEXT:    neg a2, a2
 ; NOREMOVAL-NEXT:    sllw a0, a0, a3
 ; NOREMOVAL-NEXT:    andi a2, a2, -8
 ; NOREMOVAL-NEXT:    add a1, a1, a2
 ; NOREMOVAL-NEXT:    srliw a2, a0, 28
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 2
-; NOREMOVAL-NEXT:    negw a2, a2
+; NOREMOVAL-NEXT:    neg a2, a2
 ; NOREMOVAL-NEXT:    sllw a0, a0, a3
 ; NOREMOVAL-NEXT:    andi a2, a2, -4
 ; NOREMOVAL-NEXT:    add a1, a1, a2
 ; NOREMOVAL-NEXT:    srliw a2, a0, 30
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 1
-; NOREMOVAL-NEXT:    negw a2, a2
+; NOREMOVAL-NEXT:    neg a2, a2
 ; NOREMOVAL-NEXT:    sllw a0, a0, a3
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
 ; NOREMOVAL-NEXT:    add a1, a1, a2
@@ -1532,10 +1532,9 @@ define signext i32 @test21(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64I-NEXT:    andi a0, a0, 1104
 ; RV64I-NEXT:    or a0, a0, a6
 ; RV64I-NEXT:    addi a2, a2, 1
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    bltu a2, a5, .LBB25_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test21:

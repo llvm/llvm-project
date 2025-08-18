@@ -62,14 +62,16 @@ public:
     convPad[2] = kernelWidth - 1 + pad[2];
     convPad[3] = kernelWidth - 1 + pad[3];
 
-    auto reverse1 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, weight, /* axis = */ rewriter.getI32IntegerAttr(1));
-    auto reverse2 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, reverse1, /* axis = */ rewriter.getI32IntegerAttr(2));
+    auto reverse1 =
+        tosa::ReverseOp::create(rewriter, loc, weightTy, weight,
+                                /* axis = */ rewriter.getI32IntegerAttr(1));
+    auto reverse2 =
+        tosa::ReverseOp::create(rewriter, loc, weightTy, reverse1,
+                                /* axis = */ rewriter.getI32IntegerAttr(2));
 
-    Value conv2d = rewriter.create<tosa::Conv2DOp>(
-        loc, resultTy, input, reverse2, bias, op.getInputZp(), op.getWeightZp(),
-        rewriter.getDenseI64ArrayAttr(convPad),
+    Value conv2d = tosa::Conv2DOp::create(
+        rewriter, loc, resultTy, input, reverse2, bias, op.getInputZp(),
+        op.getWeightZp(), rewriter.getDenseI64ArrayAttr(convPad),
         rewriter.getDenseI64ArrayAttr(stride),
         rewriter.getDenseI64ArrayAttr({1, 1}),
         /* acc_type = */ op.getAccType());
@@ -216,8 +218,8 @@ public:
         inputPaddingVal, inputPadConst);
 
     // We use a zero bias as we need to broadcast the bias.
-    auto zeroBias = rewriter.create<tosa::ConstOp>(
-        loc,
+    auto zeroBias = tosa::ConstOp::create(
+        rewriter, loc,
         RankedTensorType::get({outputChannels * stride[0] * stride[1]},
                               biasETy),
         DenseElementsAttr::get(

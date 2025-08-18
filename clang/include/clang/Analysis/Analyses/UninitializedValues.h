@@ -50,6 +50,9 @@ private:
   /// Is this use a const reference to this variable?
   bool ConstRefUse = false;
 
+  /// Is this use a const pointer to this variable?
+  bool ConstPtrUse = false;
+
   /// This use is always uninitialized if it occurs after any of these branches
   /// is taken.
   SmallVector<Branch, 2> UninitBranches;
@@ -65,11 +68,14 @@ public:
   void setUninitAfterCall() { UninitAfterCall = true; }
   void setUninitAfterDecl() { UninitAfterDecl = true; }
   void setConstRefUse() { ConstRefUse = true; }
+  void setConstPtrUse() { ConstPtrUse = true; }
 
   /// Get the expression containing the uninitialized use.
   const Expr *getUser() const { return User; }
 
   bool isConstRefUse() const { return ConstRefUse; }
+  bool isConstPtrUse() const { return ConstPtrUse; }
+  bool isConstRefOrPtrUse() const { return ConstRefUse || ConstPtrUse; }
 
   /// The kind of uninitialized use.
   enum Kind {

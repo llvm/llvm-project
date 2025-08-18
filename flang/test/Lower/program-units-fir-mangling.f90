@@ -124,7 +124,7 @@ subroutine should_not_collide()
 ! CHECK: }
 end subroutine
 
-! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "test"} {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "TEST"} {
 program test
 ! CHECK: }
 contains

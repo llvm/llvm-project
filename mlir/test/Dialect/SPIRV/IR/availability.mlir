@@ -292,3 +292,17 @@ func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
   spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// Replicated Composite Constant op
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: constant_composite_replicate
+func.func @constant_composite_replicate() -> () {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_replicated_composites] ]
+  // CHECK: capabilities: [ [ReplicatedCompositesEXT] ]
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
+  spirv.Return
+}

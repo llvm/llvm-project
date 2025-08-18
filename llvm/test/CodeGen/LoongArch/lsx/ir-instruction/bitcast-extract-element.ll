@@ -4,8 +4,7 @@
 define i32 @bitcast_extract_v4f32(<4 x float> %a) nounwind {
 ; CHECK-LABEL: bitcast_extract_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x float> %a, i32 3
@@ -16,8 +15,7 @@ entry:
 define i64 @bitcast_extract_v2f64(<2 x double> %a) nounwind {
 ; CHECK-LABEL: bitcast_extract_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <2 x double> %a, i32 1

@@ -202,7 +202,7 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   // original vector's defining instruction if available, else immediately after
   // the alloca
   if (auto *Instr = dyn_cast<Instruction>(Vec))
-    Builder.SetInsertPoint(Instr->getNextNonDebugInstruction());
+    Builder.SetInsertPoint(Instr->getNextNode());
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
@@ -301,10 +301,20 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  Value *PtrOperand = GEPI.getPointerOperand();
-  Type *OrigGEPType = GEPI.getPointerOperandType();
-  Type *NewGEPType = OrigGEPType;
+  GEPOperator *GOp = cast<GEPOperator>(&GEPI);
+  Value *PtrOperand = GOp->getPointerOperand();
+  Type *NewGEPType = GOp->getSourceElementType();
   bool NeedsTransform = false;
+
+  // Unwrap GEP ConstantExprs to find the base operand and element type
+  while (auto *CE = dyn_cast<ConstantExpr>(PtrOperand)) {
+    if (auto *GEPCE = dyn_cast<GEPOperator>(CE)) {
+      GOp = GEPCE;
+      PtrOperand = GEPCE->getPointerOperand();
+      NewGEPType = GEPCE->getSourceElementType();
+    } else
+      break;
+  }
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
     NewGEPType = NewGlobal->getValueType();
@@ -312,25 +322,32 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     NeedsTransform = true;
   } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
     Type *AllocatedType = Alloca->getAllocatedType();
-    // Only transform if the allocated type is an array
-    if (AllocatedType != OrigGEPType && isa<ArrayType>(AllocatedType)) {
+    if (isa<ArrayType>(AllocatedType) &&
+        AllocatedType != GOp->getResultElementType()) {
       NewGEPType = AllocatedType;
       NeedsTransform = true;
     }
   }
 
-  // Note: We bail if this isn't a gep touched via alloca or global
-  // transformations
   if (!NeedsTransform)
     return false;
 
-  IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
+  // Keep scalar GEPs scalar; dxil-flatten-arrays will do flattening later
+  if (!isa<ArrayType>(GOp->getSourceElementType()))
+    NewGEPType = GOp->getSourceElementType();
 
+  IRBuilder<> Builder(&GEPI);
+  SmallVector<Value *, MaxVecSize> Indices(GOp->indices());
   Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
-                                    GEPI.getName(), GEPI.getNoWrapFlags());
-  GEPI.replaceAllUsesWith(NewGEP);
-  GEPI.eraseFromParent();
+                                    GOp->getName(), GOp->getNoWrapFlags());
+
+  GOp->replaceAllUsesWith(NewGEP);
+
+  if (auto *CE = dyn_cast<ConstantExpr>(GOp))
+    CE->destroyConstant();
+  else if (auto *OldGEPI = dyn_cast<GetElementPtrInst>(GOp))
+    OldGEPI->eraseFromParent();
+
   return true;
 }
 

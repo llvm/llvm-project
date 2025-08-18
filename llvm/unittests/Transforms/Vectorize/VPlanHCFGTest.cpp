@@ -59,7 +59,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   auto Iter = VecBB->begin();
   auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++);
   EXPECT_NE(nullptr, CanIV);
-  VPWidenPHIRecipe *Phi = dyn_cast<VPWidenPHIRecipe>(&*Iter++);
+  auto *Phi = dyn_cast<VPPhi>(&*Iter++);
   EXPECT_NE(nullptr, Phi);
 
   VPInstruction *Idx = dyn_cast<VPInstruction>(&*Iter++);
@@ -138,7 +138,7 @@ compound=true
     N4 [label =
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
-      "  WIDEN-PHI ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
+      "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
@@ -304,7 +304,7 @@ compound=true
     N4 [label =
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
-      "  WIDEN-PHI ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
+      "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +

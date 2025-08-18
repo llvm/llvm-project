@@ -3432,6 +3432,11 @@ def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
 
 def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
 
+def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
+def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;
+
+def : Pat<(HexagonTHREADPOINTER), (i32(COPY UGP))>;
+
 // The declared return value of the store-locked intrinsics is i32, but
 // the instructions actually define i1. To avoid register copies from
 // IntRegs to PredRegs and back, fold the entire pattern checking the

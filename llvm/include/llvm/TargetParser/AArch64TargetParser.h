@@ -276,14 +276,14 @@ LLVM_ABI bool isX18ReservedByDefault(const Triple &TT);
 // For a given set of feature names, which can be either target-features, or
 // fmv-features metadata, expand their dependencies and then return a bitmask
 // corresponding to the entries of AArch64::FeatPriorities.
-LLVM_ABI uint64_t getFMVPriority(ArrayRef<StringRef> Features);
+LLVM_ABI APInt getFMVPriority(ArrayRef<StringRef> Features);
 
 // For a given set of FMV feature names, expand their dependencies and then
 // return a bitmask corresponding to the entries of AArch64::CPUFeatures.
 // The values in CPUFeatures are not bitmasks themselves, they are sequential
 // (0, 1, 2, 3, ...). The resulting bitmask is used at runtime to test whether
 // a certain FMV feature is available on the host.
-LLVM_ABI uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
+LLVM_ABI APInt getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 LLVM_ABI void PrintSupportedExtensions();
 

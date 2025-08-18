@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-lifetime-safety -mllvm -debug-only=LifetimeFacts -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 struct MyObj {
@@ -44,7 +44,6 @@ MyObj* assign_and_return_local_addr() {
 // CHECK: Expire (LoanID: [[L_Y]])
 }
 
-
 // Return of Non-Pointer Type
 // CHECK-LABEL: Function: return_int_val
 // CHECK-NEXT: Block B{{[0-9]+}}:
@@ -80,7 +79,6 @@ void loan_expires_trivial() {
   // FIXME: Add check for Expire once trivial destructors are handled for expiration.
 }
 
-
 // CHECK-LABEL: Function: conditional
 void conditional(bool condition) {
   int a = 5;
@@ -101,6 +99,40 @@ void conditional(bool condition) {
 }
 
 
+// CHECK-LABEL: Function: pointers_in_a_cycle
+void pointers_in_a_cycle(bool condition) {
+  MyObj v1{1};
+  MyObj v2{1};
+  MyObj v3{1};
+
+  MyObj* p1 = &v1;
+  MyObj* p2 = &v2;
+  MyObj* p3 = &v3;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_V1:[0-9]+]], OriginID: [[O_ADDR_V1:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P1:[0-9]+]], SrcID: [[O_ADDR_V1]])
+// CHECK:   Issue (LoanID: [[L_V2:[0-9]+]], OriginID: [[O_ADDR_V2:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P2:[0-9]+]], SrcID: [[O_ADDR_V2]])
+// CHECK:   Issue (LoanID: [[L_V3:[0-9]+]], OriginID: [[O_ADDR_V3:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P3:[0-9]+]], SrcID: [[O_ADDR_V3]])
+
+  while (condition) {
+    MyObj* temp = p1;
+    p1 = p2;
+    p2 = p3;
+    p3 = temp;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   AssignOrigin (DestID: [[O_P1_RVAL:[0-9]+]], SrcID: [[O_P1]])
+// CHECK:   AssignOrigin (DestID: [[O_TEMP:[0-9]+]], SrcID: [[O_P1_RVAL]])
+// CHECK:   AssignOrigin (DestID: [[O_P2_RVAL:[0-9]+]], SrcID: [[O_P2]])
+// CHECK:   AssignOrigin (DestID: [[O_P1]], SrcID: [[O_P2_RVAL]])
+// CHECK:   AssignOrigin (DestID: [[O_P3_RVAL:[0-9]+]], SrcID: [[O_P3]])
+// CHECK:   AssignOrigin (DestID: [[O_P2]], SrcID: [[O_P3_RVAL]])
+// CHECK:   AssignOrigin (DestID: [[O_TEMP_RVAL:[0-9]+]], SrcID: [[O_TEMP]])
+// CHECK:   AssignOrigin (DestID: [[O_P3]], SrcID: [[O_TEMP_RVAL]])
+  }
+}
+
 // CHECK-LABEL: Function: overwrite_origin
 void overwrite_origin() {
   MyObj s1;
@@ -115,7 +147,6 @@ void overwrite_origin() {
 // CHECK:   Expire (LoanID: [[L_S2]])
 // CHECK:   Expire (LoanID: [[L_S1]])
 }
-
 
 // CHECK-LABEL: Function: reassign_to_null
 void reassign_to_null() {
@@ -152,6 +183,78 @@ void reassign_in_if(bool condition) {
 }
 
 
+// CHECK-LABEL: Function: assign_in_switch
+void assign_in_switch(int mode) {
+  MyObj s1;
+  MyObj s2;
+  MyObj s3;
+  MyObj* p = nullptr;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
+  switch (mode) {
+    case 1:
+      p = &s1;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_S1:[0-9]+]], OriginID: [[O_ADDR_S1:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P]], SrcID: [[O_ADDR_S1]])
+      break;
+    case 2:
+      p = &s2;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_S2:[0-9]+]], OriginID: [[O_ADDR_S2:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P]], SrcID: [[O_ADDR_S2]])
+      break;
+    default:
+      p = &s3;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_S3:[0-9]+]], OriginID: [[O_ADDR_S3:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P]], SrcID: [[O_ADDR_S3]])
+      break;
+  }
+// CHECK: Block B{{[0-9]+}}:
+// CHECK-DAG:   Expire (LoanID: [[L_S3]])
+// CHECK-DAG:   Expire (LoanID: [[L_S2]])
+// CHECK-DAG:   Expire (LoanID: [[L_S1]])
+}
+
+// CHECK-LABEL: Function: loan_in_loop
+void loan_in_loop(bool condition) {
+  MyObj* p = nullptr;
+  // CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+  // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
+  while (condition) {
+    MyObj inner;
+    p = &inner;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_INNER:[0-9]+]], OriginID: [[O_ADDR_INNER:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P]], SrcID: [[O_ADDR_INNER]])
+// CHECK:   Expire (LoanID: [[L_INNER]])
+  }
+}
+
+// CHECK-LABEL: Function: loop_with_break
+void loop_with_break(int count) {
+  MyObj s1;
+  MyObj s2;
+  MyObj* p = &s1;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_S1:[0-9]+]], OriginID: [[O_ADDR_S1:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_ADDR_S1]])
+  for (int i = 0; i < count; ++i) {
+    if (i == 5) {
+      p = &s2;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue (LoanID: [[L_S2:[0-9]+]], OriginID: [[O_ADDR_S2:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P]], SrcID: [[O_ADDR_S2]])
+      break;
+    }
+  }
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Expire (LoanID: [[L_S2]])
+// CHECK:   Expire (LoanID: [[L_S1]])
+}
+
 // CHECK-LABEL: Function: nested_scopes
 void nested_scopes() {
   MyObj* p = nullptr;
@@ -173,7 +276,6 @@ void nested_scopes() {
   }
 // CHECK:   Expire (LoanID: [[L_OUTER]])
 }
-
 
 // CHECK-LABEL: Function: pointer_indirection
 void pointer_indirection() {

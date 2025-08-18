@@ -309,7 +309,7 @@ void use() {
 
   S<double>(2);     // no warning
   S<int>(2);        // expected-warning {{ignoring temporary of type 'S<int>' declared with 'nodiscard'}}
-  S<const char>(2); // no warning (warn_unused_result does not diagnose constructor temporaries)
+  S<const char>(2); // expected-warning {{ignoring temporary of type 'S<const char>' declared with 'clang::warn_unused_result' attribute}}
 
   // function should take precedence over type
   obtain2(1.0);             // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
@@ -336,7 +336,7 @@ struct [[nodiscard]] G {
 void use2() {
   H{2};       // no warning
   H(2.0);     // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard'}}
-  H("Hello"); // no warning (warn_unused_result does not diagnose constructor temporaries)
+  H("Hello"); // expected-warning {{ignoring temporary created by a constructor declared with 'warn_unused_result' attribute}}
 
   // no warning for explicit cast to void
   (void)H(2);
@@ -364,3 +364,46 @@ void id_print_name() {
     ((int(*)())f)();
 }
 } // namespace GH117975
+
+namespace inheritance {
+// Test that [[nodiscard]] is not inherited by derived class types,
+// but is inherited by member functions
+struct [[nodiscard]] E {
+  [[nodiscard]] explicit E(int);
+  explicit E(const char*);
+  [[nodiscard]] int f();
+};
+struct F : E {
+  using E::E;
+};
+E e();
+F f();
+void test() {
+  e();     // expected-warning {{ignoring return value of type 'E' declared with 'nodiscard' attribute}}
+  f();     // no warning: derived class type does not inherit the attribute
+  E(1);    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  E("x");  // expected-warning {{ignoring temporary of type 'E' declared with 'nodiscard' attribute}}
+  F(1);    // no warning: inherited constructor does not inherit the attribute either
+  F("x");  // no warning
+  e().f(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  f().f(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+} // namespace inheritance
+
+namespace BuildStringOnClangScope {
+
+[[clang::warn_unused_result("Discarded result")]]
+bool makeClangTrue() { return true; }
+
+[[gnu::warn_unused_result("Discarded result")]]
+bool makeGccTrue() { return true; }
+
+void doClangThings() {
+  makeClangTrue(); // expected-warning {{ignoring return value of function declared with 'clang::warn_unused_result' attribute: Discarded result}}
+}
+
+void doGccThings() {
+  makeGccTrue(); // expected-warning {{ignoring return value of function declared with 'gnu::warn_unused_result' attribute}}
+}
+
+} // namespace BuildStringOnClangScope

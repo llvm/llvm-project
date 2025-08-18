@@ -182,6 +182,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DXILABI.cpp
   DynamicAPInt.cpp
   ELFAttributes.cpp
   ELFAttrParserCompact.cpp
@@ -380,7 +381,7 @@ if(LLVM_WITH_Z3)
     )
 endif()
 
-target_include_directories(LLVMSupport SYSTEM
+target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
-  )
+)

@@ -53,7 +53,7 @@ public:
 
     Compiler->createSema(getTranslationUnitKind(), CompletionConsumer);
     SemaSource->setCompilerInstance(Compiler);
-    Compiler->getSema().addExternalSource(SemaSource.get());
+    Compiler->getSema().addExternalSource(SemaSource);
 
     clang::ParseAST(Compiler->getSema(), Compiler->getFrontendOpts().ShowStats,
                     Compiler->getFrontendOpts().SkipFunctionBodies);

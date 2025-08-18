@@ -41,6 +41,13 @@ void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
   assert(!cir::MissingFeatures::cxxabiThisAlignment());
 }
 
+cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
+    GVALinkage linkage, const CXXDestructorDecl *dtor, CXXDtorType dt) const {
+  // Delegate back to cgm by default.
+  return cgm.getCIRLinkageForDeclarator(dtor, linkage,
+                                        /*isConstantVariable=*/false);
+}
+
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);

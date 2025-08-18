@@ -37,6 +37,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -46,6 +47,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -225,14 +227,11 @@ static bool hasRecursiveCallInPath(const FunctionDecl *FD, CFGBlock &Block) {
 
     // Skip function calls which are qualified with a templated class.
     if (const DeclRefExpr *DRE =
-            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts())) {
-      if (NestedNameSpecifier *NNS = DRE->getQualifier()) {
-        if (NNS->getKind() == NestedNameSpecifier::TypeSpec &&
-            isa<TemplateSpecializationType>(NNS->getAsType())) {
+            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts()))
+      if (NestedNameSpecifier NNS = DRE->getQualifier();
+          NNS.getKind() == NestedNameSpecifier::Kind::Type)
+        if (isa_and_nonnull<TemplateSpecializationType>(NNS.getAsType()))
           continue;
-        }
-      }
-    }
 
     const CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(CE);
     if (!MCE || isa<CXXThisExpr>(MCE->getImplicitObjectArgument()) ||
@@ -401,6 +400,146 @@ static bool isNoexcept(const FunctionDecl *FD) {
   return false;
 }
 
+/// Checks if the given expression is a reference to a function with
+/// 'noreturn' attribute.
+static bool isReferenceToNoReturn(const Expr *E) {
+  if (auto *DRef = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
+    if (auto *FD = dyn_cast<FunctionDecl>(DRef->getDecl()))
+      return FD->isNoReturn();
+  return false;
+}
+
+/// Checks if the given variable, which is assumed to be a function pointer, is
+/// initialized with a function having 'noreturn' attribute.
+static bool isInitializedWithNoReturn(const VarDecl *VD) {
+  if (const Expr *Init = VD->getInit()) {
+    if (auto *ListInit = dyn_cast<InitListExpr>(Init);
+        ListInit && ListInit->getNumInits() > 0)
+      Init = ListInit->getInit(0);
+    return isReferenceToNoReturn(Init);
+  }
+  return false;
+}
+
+namespace {
+
+/// Looks for statements, that can define value of the given variable.
+struct TransferFunctions : public StmtVisitor<TransferFunctions> {
+  const VarDecl *Var;
+  std::optional<bool> AllValuesAreNoReturn;
+
+  TransferFunctions(const VarDecl *VD) : Var(VD) {}
+
+  void reset() { AllValuesAreNoReturn = std::nullopt; }
+
+  void VisitDeclStmt(DeclStmt *DS) {
+    for (auto *DI : DS->decls())
+      if (auto *VD = dyn_cast<VarDecl>(DI))
+        if (VarDecl *Def = VD->getDefinition())
+          if (Def == Var)
+            AllValuesAreNoReturn = isInitializedWithNoReturn(Def);
+  }
+
+  void VisitUnaryOperator(UnaryOperator *UO) {
+    if (UO->getOpcode() == UO_AddrOf) {
+      if (auto *DRef =
+              dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenCasts()))
+        if (DRef->getDecl() == Var)
+          AllValuesAreNoReturn = false;
+    }
+  }
+
+  void VisitBinaryOperator(BinaryOperator *BO) {
+    if (BO->getOpcode() == BO_Assign)
+      if (auto *DRef = dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreParenCasts()))
+        if (DRef->getDecl() == Var)
+          AllValuesAreNoReturn = isReferenceToNoReturn(BO->getRHS());
+  }
+
+  void VisitCallExpr(CallExpr *CE) {
+    for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end(); I != E;
+         ++I) {
+      const Expr *Arg = *I;
+      if (Arg->isGLValue() && !Arg->getType().isConstQualified())
+        if (auto *DRef = dyn_cast<DeclRefExpr>(Arg->IgnoreParenCasts()))
+          if (auto VD = dyn_cast<VarDecl>(DRef->getDecl()))
+            if (VD->getDefinition() == Var)
+              AllValuesAreNoReturn = false;
+    }
+  }
+};
+} // namespace
+
+// Checks if all possible values of the given variable are functions with
+// 'noreturn' attribute.
+static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
+                                 AnalysisDeclContext &AC) {
+  // The set of possible values of a constant variable is determined by
+  // its initializer, unless it is a function parameter.
+  if (!isa<ParmVarDecl>(VD) && VD->getType().isConstant(AC.getASTContext())) {
+    if (const VarDecl *Def = VD->getDefinition())
+      return isInitializedWithNoReturn(Def);
+    return false;
+  }
+
+  // In multithreaded environment the value of a global variable may be changed
+  // asynchronously.
+  if (!VD->getDeclContext()->isFunctionOrMethod())
+    return false;
+
+  // Check the condition "all values are noreturn". It is satisfied if the
+  // variable is set to "noreturn" value in the current block or all its
+  // predecessors satisfies the condition.
+  using MapTy = llvm::DenseMap<const CFGBlock *, std::optional<bool>>;
+  using ValueTy = MapTy::value_type;
+  MapTy BlocksToCheck;
+  BlocksToCheck[&VarBlk] = std::nullopt;
+  const auto BlockSatisfiesCondition = [](ValueTy Item) {
+    return Item.getSecond().value_or(false);
+  };
+
+  TransferFunctions TF(VD);
+  BackwardDataflowWorklist Worklist(*AC.getCFG(), AC);
+  llvm::DenseSet<const CFGBlock *> Visited;
+  Worklist.enqueueBlock(&VarBlk);
+  while (const CFGBlock *B = Worklist.dequeue()) {
+    if (Visited.contains(B))
+      continue;
+    Visited.insert(B);
+    // First check the current block.
+    for (CFGBlock::const_reverse_iterator ri = B->rbegin(), re = B->rend();
+         ri != re; ++ri) {
+      if (std::optional<CFGStmt> cs = ri->getAs<CFGStmt>()) {
+        const Stmt *S = cs->getStmt();
+        TF.reset();
+        TF.Visit(const_cast<Stmt *>(S));
+        if (TF.AllValuesAreNoReturn) {
+          if (!TF.AllValuesAreNoReturn.value())
+            return false;
+          BlocksToCheck[B] = true;
+          break;
+        }
+      }
+    }
+
+    // If all checked blocks satisfy the condition, the check is finished.
+    if (llvm::all_of(BlocksToCheck, BlockSatisfiesCondition))
+      return true;
+
+    // If this block does not contain the variable definition, check
+    // its predecessors.
+    if (!BlocksToCheck[B]) {
+      Worklist.enqueuePredecessors(B);
+      BlocksToCheck.erase(B);
+      for (const auto &PredBlk : B->preds())
+        if (!BlocksToCheck.contains(PredBlk))
+          BlocksToCheck[PredBlk] = std::nullopt;
+    }
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Check for missing return value.
 //===----------------------------------------------------------------------===//
@@ -439,7 +578,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     // mark them as live.
     for (const auto *B : *cfg) {
       if (!live[B->getBlockID()]) {
-        if (B->pred_begin() == B->pred_end()) {
+        if (B->preds().empty()) {
           const Stmt *Term = B->getTerminatorStmt();
           if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
@@ -526,6 +665,17 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     if (!llvm::is_contained(B.succs(), &cfg->getExit())) {
       HasAbnormalEdge = true;
       continue;
+    }
+    if (auto *Call = dyn_cast<CallExpr>(S)) {
+      const Expr *Callee = Call->getCallee();
+      if (Callee->getType()->isPointerType())
+        if (auto *DeclRef =
+                dyn_cast<DeclRefExpr>(Callee->IgnoreParenImpCasts()))
+          if (auto *VD = dyn_cast<VarDecl>(DeclRef->getDecl()))
+            if (areAllValuesNoReturn(VD, B, AC)) {
+              HasAbnormalEdge = true;
+              continue;
+            }
     }
 
     HasPlainEdge = true;
@@ -987,10 +1137,19 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
 }
 
 /// Diagnose uninitialized const reference usages.
-static void DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
+static bool DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
                                              const UninitUse &Use) {
   S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_const_reference)
       << VD->getDeclName() << Use.getUser()->getSourceRange();
+  return !S.getDiagnostics().isLastDiagnosticIgnored();
+}
+
+/// Diagnose uninitialized const pointer usages.
+static bool DiagnoseUninitializedConstPtrUse(Sema &S, const VarDecl *VD,
+                                             const UninitUse &Use) {
+  S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_const_pointer)
+      << VD->getDeclName() << Use.getUser()->getSourceRange();
+  return !S.getDiagnostics().isLastDiagnosticIgnored();
 }
 
 /// DiagnoseUninitializedUse -- Helper function for diagnosing uses of an
@@ -1022,7 +1181,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
       if (CR.doesContainReference()) {
         S.Diag(DRE->getBeginLoc(), diag::warn_uninit_self_reference_in_init)
             << VD->getDeclName() << VD->getLocation() << DRE->getSourceRange();
-        return true;
+        return !S.getDiagnostics().isLastDiagnosticIgnored();
       }
     }
 
@@ -1045,7 +1204,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
     S.Diag(VD->getBeginLoc(), diag::note_var_declared_here)
         << VD->getDeclName();
 
-  return true;
+  return !S.getDiagnostics().isLastDiagnosticIgnored();
 }
 
 namespace {
@@ -1559,43 +1718,7 @@ public:
       UsesVec *vec = V.getPointer();
       bool hasSelfInit = V.getInt();
 
-      // Specially handle the case where we have uses of an uninitialized
-      // variable, but the root cause is an idiomatic self-init.  We want
-      // to report the diagnostic at the self-init since that is the root cause.
-      if (!vec->empty() && hasSelfInit && hasAlwaysUninitializedUse(vec))
-        DiagnoseUninitializedUse(S, vd,
-                                 UninitUse(vd->getInit()->IgnoreParenCasts(),
-                                           /* isAlwaysUninit */ true),
-                                 /* alwaysReportSelfInit */ true);
-      else {
-        // Sort the uses by their SourceLocations.  While not strictly
-        // guaranteed to produce them in line/column order, this will provide
-        // a stable ordering.
-        llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
-          // Move ConstRef uses to the back.
-          if (a.isConstRefUse() != b.isConstRefUse())
-            return b.isConstRefUse();
-          // Prefer a more confident report over a less confident one.
-          if (a.getKind() != b.getKind())
-            return a.getKind() > b.getKind();
-          return a.getUser()->getBeginLoc() < b.getUser()->getBeginLoc();
-        });
-
-        for (const auto &U : *vec) {
-          if (U.isConstRefUse()) {
-            DiagnoseUninitializedConstRefUse(S, vd, U);
-            break;
-          }
-
-          // If we have self-init, downgrade all uses to 'may be uninitialized'.
-          UninitUse Use = hasSelfInit ? UninitUse(U.getUser(), false) : U;
-
-          if (DiagnoseUninitializedUse(S, vd, Use))
-            // Skip further diagnostics for this variable. We try to warn only
-            // on the first point at which a variable is used uninitialized.
-            break;
-        }
-      }
+      diagnoseUnitializedVar(vd, hasSelfInit, vec);
 
       // Release the uses vector.
       delete vec;
@@ -1611,6 +1734,52 @@ private:
              U.getKind() == UninitUse::AfterCall ||
              U.getKind() == UninitUse::AfterDecl;
     });
+  }
+
+  // Print the diagnostic for the variable.  We try to warn only on the first
+  // point at which a variable is used uninitialized.  After the first
+  // diagnostic is printed, further diagnostics for this variable are skipped.
+  void diagnoseUnitializedVar(const VarDecl *vd, bool hasSelfInit,
+                              UsesVec *vec) {
+    // Specially handle the case where we have uses of an uninitialized
+    // variable, but the root cause is an idiomatic self-init.  We want
+    // to report the diagnostic at the self-init since that is the root cause.
+    if (hasSelfInit && hasAlwaysUninitializedUse(vec)) {
+      if (DiagnoseUninitializedUse(S, vd,
+                                   UninitUse(vd->getInit()->IgnoreParenCasts(),
+                                             /*isAlwaysUninit=*/true),
+                                   /*alwaysReportSelfInit=*/true))
+        return;
+    }
+
+    // Sort the uses by their SourceLocations.  While not strictly
+    // guaranteed to produce them in line/column order, this will provide
+    // a stable ordering.
+    llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
+      // Prefer the direct use of an uninitialized variable over its use via
+      // constant reference or pointer.
+      if (a.isConstRefOrPtrUse() != b.isConstRefOrPtrUse())
+        return b.isConstRefOrPtrUse();
+      // Prefer a more confident report over a less confident one.
+      if (a.getKind() != b.getKind())
+        return a.getKind() > b.getKind();
+      return a.getUser()->getBeginLoc() < b.getUser()->getBeginLoc();
+    });
+
+    for (const auto &U : *vec) {
+      if (U.isConstRefUse()) {
+        if (DiagnoseUninitializedConstRefUse(S, vd, U))
+          return;
+      } else if (U.isConstPtrUse()) {
+        if (DiagnoseUninitializedConstPtrUse(S, vd, U))
+          return;
+      } else {
+        // If we have self-init, downgrade all uses to 'may be uninitialized'.
+        UninitUse Use = hasSelfInit ? UninitUse(U.getUser(), false) : U;
+        if (DiagnoseUninitializedUse(S, vd, Use))
+          return;
+      }
+    }
   }
 };
 
@@ -1943,11 +2112,26 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
                          AccessKind AK, SourceLocation Loc) override {
-    assert((POK == POK_VarAccess || POK == POK_VarDereference) &&
-           "Only works for variables");
-    unsigned DiagID = POK == POK_VarAccess?
-                        diag::warn_variable_requires_any_lock:
-                        diag::warn_var_deref_requires_any_lock;
+    unsigned DiagID = 0;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      DiagID = diag::warn_variable_requires_any_lock;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      DiagID = diag::warn_var_deref_requires_any_lock;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("Only works for variables");
+      break;
+    }
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)
       << D << getLockKindFromAccessKind(AK));
     Warnings.emplace_back(std::move(Warning), getNotes());
@@ -2596,6 +2780,31 @@ public:
   }
 };
 
+namespace clang::lifetimes {
+namespace {
+class LifetimeSafetyReporterImpl : public LifetimeSafetyReporter {
+
+public:
+  LifetimeSafetyReporterImpl(Sema &S) : S(S) {}
+
+  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                          SourceLocation FreeLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_loan_expires_permissive
+               : diag::warn_lifetime_safety_loan_expires_strict)
+        << IssueExpr->getEndLoc();
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getEndLoc();
+  }
+
+private:
+  Sema &S;
+};
+} // namespace
+} // namespace clang::lifetimes
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
      TranslationUnitDecl *TU) {
   if (!TU)
@@ -2718,8 +2927,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = !Diags.isIgnored(
-      diag::warn_experimental_lifetime_safety_dummy_warning, D->getBeginLoc());
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
@@ -2820,7 +3028,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc())) {
+      !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_uninit_const_pointer, D->getBeginLoc())) {
     if (CFG *cfg = AC.getCFG()) {
       UninitValsDiagReporter reporter(S);
       UninitVariablesAnalysisStats stats;
@@ -2845,8 +3054,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (CFG *cfg = AC.getCFG())
-      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+    if (AC.getCFG()) {
+      lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+    }
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CIR_DIALECT_CIR_TYPES
-#define MLIR_CIR_DIALECT_CIR_TYPES
+#ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_TD
+#define CLANG_CIR_DIALECT_IR_CIRTYPES_TD
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
@@ -278,6 +278,35 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
         return ptrType.isPtrTo(type);
       return false;
     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CIR_VPtrType
+//===----------------------------------------------------------------------===//
+
+def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>
+]> {
+  let summary = "CIR type that is used for the vptr member of C++ objects";
+  let description = [{
+    `cir.vptr` is a special type used as the type for the vptr member of a C++
+    object. This avoids using arbitrary pointer types to declare vptr values
+    and allows stronger type-based checking for operations that use or provide
+    access to the vptr.
+
+    This type will be the element type of the 'vptr' member of structures that
+    require a vtable pointer. The `cir.vtable.address_point` operation returns
+    this type. The `cir.vtable.get_vptr` operations returns a pointer to this
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
+    operation to get the address of a virtual function pointer.
+
+    The pointer may also be cast to other pointer types in order to perform
+    pointer arithmetic based on information encoded in the AST layout to get
+    the offset from a pointer to a dynamic object to the base object pointer,
+    the base object offset value from the vtable, or the type information
+    entry for an object.
+    TODO: We should have special operations to do that too.
   }];
 }
 
@@ -635,7 +664,7 @@ def CIRRecordType : Type<
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType
+  CIR_ComplexType, CIR_VPtrType
 ]>;
 
-#endif // MLIR_CIR_DIALECT_CIR_TYPES
+#endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD
