@@ -529,18 +529,32 @@ public:
     symbolTable.insert(vd, addr.getPointer());
   }
 
-  // A class to allow inserting things into the declaration map during some sort
-  // of alternative generation (used currently for the OpenACC recipe
-  // generation), then reverting changes after the fact.
+  // A class to allow reverting changes to a var-decl's registration to the
+  // localDeclMap. This is used in cases where things are being inserted into
+  // the variable list but don't follow normal lookup/search rules, like in
+  // OpenACC recipe generation.
   class DeclMapRevertingRAII {
     CIRGenFunction &cgf;
-    CIRGenFunction::DeclMapTy originalMap;
+    const VarDecl *vd;
+    bool shouldDelete = false;
+    Address oldAddr = Address::invalid();
 
   public:
-    DeclMapRevertingRAII(CIRGenFunction &cgf)
-        : cgf(cgf), originalMap(cgf.localDeclMap) {}
+    DeclMapRevertingRAII(CIRGenFunction &cgf, const VarDecl *vd) : cgf(cgf), vd(vd) {
+      auto mapItr = cgf.localDeclMap.find(vd);
 
-    ~DeclMapRevertingRAII() { cgf.localDeclMap = std::move(originalMap); }
+      if (mapItr != cgf.localDeclMap.end())
+        oldAddr = mapItr->second;
+      else
+        shouldDelete = true;
+    }
+
+    ~DeclMapRevertingRAII() {
+      if (shouldDelete)
+        cgf.localDeclMap.erase(vd);
+      else
+        cgf.localDeclMap.insert_or_assign(vd, oldAddr);
+    }
   };
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);

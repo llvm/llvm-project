@@ -409,6 +409,7 @@ class OpenACCClauseCIREmitter final
         Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
     tempDeclEmission.EmittedAsOffload = true;
 
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf,temporary};
     cgf.setAddrOfLocalVar(
         temporary,
         Address{fromArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
@@ -433,7 +434,7 @@ class OpenACCClauseCIREmitter final
 
     CIRGenFunction::AutoVarEmission tempDeclEmission{
         CIRGenFunction::AutoVarEmission::invalid()};
-    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf};
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, varRecipe};
 
     // Do the 'init' section of the recipe IR, which does an alloca, then the
     // initialization (except for firstprivate).
