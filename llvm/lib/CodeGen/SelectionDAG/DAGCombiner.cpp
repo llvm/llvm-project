@@ -16342,12 +16342,12 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
       if (N0.getOpcode() == ISD::ABDU) {
         APInt UpperBits = APInt::getBitsSetFrom(SrcBits, TruncBits);
-        CanFold = DAG.MaskedValueIsZero(A, UpperBits) &&
-                  DAG.MaskedValueIsZero(B, UpperBits);
+        CanFold = DAG.MaskedValueIsZero(B, UpperBits) &&
+                  DAG.MaskedValueIsZero(A, UpperBits);
       } else {
         unsigned NeededBits = SrcBits - TruncBits;
-        CanFold = DAG.ComputeNumSignBits(A) > NeededBits &&
-                  DAG.ComputeNumSignBits(B) > NeededBits;
+        CanFold = DAG.ComputeNumSignBits(B) > NeededBits &&
+                  DAG.ComputeNumSignBits(A) > NeededBits;
       }
 
       if (CanFold) {
