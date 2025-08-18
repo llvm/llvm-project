@@ -30,6 +30,7 @@
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 namespace llvm {
@@ -40,8 +41,8 @@ class raw_ostream;
 class LLT {
 public:
   /// Get a low-level scalar or aggregate "bag of bits".
-  static constexpr LLT scalar(unsigned SizeInBits) {
-    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true,
+  static constexpr LLT scalar(unsigned SizeInBits, bool isBfloat) {
+    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true, /*isBfloat=*/isBfloat,
                ElementCount::getFixed(0), SizeInBits,
                /*AddressSpace=*/0};
   }
@@ -49,7 +50,7 @@ public:
   /// Get a low-level token; just a scalar with zero bits (or no size).
   static constexpr LLT token() {
     return LLT{/*isPointer=*/false, /*isVector=*/false,
-               /*isScalar=*/true,   ElementCount::getFixed(0),
+               /*isScalar=*/true, /*isBfloat=*/false, ElementCount::getFixed(0),
                /*SizeInBits=*/0,
                /*AddressSpace=*/0};
   }
@@ -57,14 +58,14 @@ public:
   /// Get a low-level pointer in the given address space.
   static constexpr LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
-    return LLT{/*isPointer=*/true, /*isVector=*/false, /*isScalar=*/false,
+    return LLT{/*isPointer=*/true, /*isVector=*/false, /*isScalar=*/false, /*isBfloat=*/false,
                ElementCount::getFixed(0), SizeInBits, AddressSpace};
   }
 
   /// Get a low-level vector of some number of elements and element width.
   static constexpr LLT vector(ElementCount EC, unsigned ScalarSizeInBits) {
     assert(!EC.isScalar() && "invalid number of vector elements");
-    return LLT{/*isPointer=*/false, /*isVector=*/true, /*isScalar=*/false,
+    return LLT{/*isPointer=*/false, /*isVector=*/true, /*isScalar=*/false, /*isBfloat=*/false,
                EC, ScalarSizeInBits, /*AddressSpace=*/0};
   }
 
@@ -80,10 +81,15 @@ public:
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
+ // Get a 16-bit brain float value.
+  static constexpr LLT bfloat16() {
+    return scalar(16, true);
+  }
+
   /// Get a 16-bit IEEE half value.
   /// TODO: Add IEEE semantics to type - This currently returns a simple `scalar(16)`.
   static constexpr LLT float16() {
-    return scalar(16);
+    return scalar(16, false);
   }
 
   /// Get a 32-bit IEEE float value.
@@ -136,10 +142,10 @@ public:
                          ElementCount EC, uint64_t SizeInBits,
                          unsigned AddressSpace)
       : LLT() {
-    init(isPointer, isVector, isScalar, EC, SizeInBits, AddressSpace);
+    init(isPointer, isVector, isScalar, isBfloat, E C, SizeInBits, AddressSpace);
   }
   explicit constexpr LLT()
-      : IsScalar(false), IsPointer(false), IsVector(false), RawData(0) {}
+      : IsScalar(false), IsPointer(false), IsVector(false), isBfloat(false), RawData(0) {}
 
   LLVM_ABI explicit LLT(MVT VT);
 
@@ -154,6 +160,7 @@ public:
   constexpr bool isPointerOrPointerVector() const {
     return IsPointer && isValid();
   }
+  constexpr bool isBfloat() const { return isBfloat; }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
@@ -304,6 +311,7 @@ private:
   /// isScalar : 1
   /// isPointer : 1
   /// isVector  : 1
+  /// isVector  : 1
   /// with 61 bits remaining for Kind-specific data, packed in bitfields
   /// as described below. As there isn't a simple portable way to pack bits
   /// into bitfields, here the different fields in the packed structure is
@@ -311,25 +319,27 @@ private:
   /// is a 2-element array, with the first element describing the bitfield size
   /// and the second element describing the bitfield offset.
   ///
-  /// +--------+---------+--------+----------+----------------------+
-  /// |isScalar|isPointer|isVector| RawData  |Notes                 |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    0    |   0    |    0     |Invalid               |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    0    |   1    |    0     |Tombstone Key         |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    1    |   0    |    0     |Empty Key             |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   1    |    0    |   0    |    0     |Token                 |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   1    |    0    |   0    | non-zero |Scalar                |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    1    |   0    | non-zero |Pointer               |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    0    |   1    | non-zero |Vector of non-pointer |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    1    |   1    | non-zero |Vector of pointer     |
-  /// +--------+---------+--------+----------+----------------------+
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |isScalar|isPointer|isVector| isBfloat  | RawData  |Notes                 |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   0    |    0    |   0    |    0     |    0     |Invalid               |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   0    |    0    |   1    |    0     |    0     |Tombstone Key         |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   0    |    1    |   0    |    0     |    0     |Empty Key             |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   1    |    0    |   0    |    0     |    0     |Token                 |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   1    |    0    |   0    |    0     | non-zero |Scalar                |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   1    |    0    |   0    |    1     | non-zero |Scalar (Bfloat 16)    |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   0    |    1    |   0    |    0     | non-zero |Pointer               |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   0    |    0    |   1    |    0     | non-zero |Vector of non-pointer |
+  /// +--------+---------+--------+----------+----------+----------------------+
+  /// |   0    |    1    |   1        0      | non-zero |Vector of pointer     |
+  /// +--------+---------+--------+----------+----------+----------------------+
   ///
   /// Everything else is reserved.
   typedef int BitFieldInfo[2];
@@ -340,17 +350,17 @@ private:
   ///   valid encodings, SizeInBits/SizeOfElement must be larger than 0.
   /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
   ///   SizeInBits: 32;
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 29};
+  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
   /// * Pointer (isPointer == 1 && isVector == 0):
   ///   SizeInBits: 16;
   ///   AddressSpace: 24;
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 45};
+  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
   static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
   ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
+  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
   static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
@@ -361,7 +371,8 @@ private:
   uint64_t IsScalar : 1;
   uint64_t IsPointer : 1;
   uint64_t IsVector : 1;
-  uint64_t RawData : 61;
+  uint64_t IsBfloat : 1;
+  uint64_t RawData : 60;
 
   static constexpr uint64_t getMask(const BitFieldInfo FieldInfo) {
     const int FieldSizeInBits = FieldInfo[0];
@@ -389,6 +400,7 @@ private:
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     this->IsScalar = IsScalar;
+    this->IsScalar = IsBfloat;
     if (IsPointer) {
       RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
                 maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
@@ -403,7 +415,7 @@ private:
 
 public:
   constexpr uint64_t getUniqueRAWLLTData() const {
-    return ((uint64_t)RawData) << 3 | ((uint64_t)IsScalar) << 2 |
+    return ((uint64_t)RawData) << 4 | ((uint64_t)IsBfloat) << 3 | ((uint64_t)IsScalar) << 2 |
            ((uint64_t)IsPointer) << 1 | ((uint64_t)IsVector);
   }
 };
