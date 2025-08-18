@@ -16,6 +16,21 @@ define float @fadd_seq(float %start, <4 x float> %vec) {
   ret float %res
 }
 
+define float @fadd_seq_scalar(float %start, <1 x float> %vec) {
+  ; CHECK-LABEL: name: fadd_seq_scalar
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d1, $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[COPY]], [[UV]]
+  ; CHECK-NEXT:   $s0 = COPY [[FADD]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  %res = call float @llvm.vector.reduce.fadd.v1f32(float %start, <1 x float> %vec)
+  ret float %res
+}
+
 define float @fadd_fast(float %start, <4 x float> %vec) {
   ; CHECK-LABEL: name: fadd_fast
   ; CHECK: bb.1 (%ir-block.0):
@@ -45,6 +60,20 @@ define double @fmul_seq(double %start, <4 x double> %vec) {
   ; CHECK-NEXT:   $d0 = COPY [[VECREDUCE_SEQ_FMUL]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   %res = call double @llvm.vector.reduce.fmul.v4f64(double %start, <4 x double> %vec)
+  ret double %res
+}
+
+define double @fmul_seq_scalar(double %start, <1 x double> %vec) {
+  ; CHECK-LABEL: name: fmul_seq_scalar
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0, $d1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d1
+  ; CHECK-NEXT:   [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $d0 = COPY [[FMUL]](s64)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0
+  %res = call double @llvm.vector.reduce.fmul.v1f64(double %start, <1 x double> %vec)
   ret double %res
 }
 
