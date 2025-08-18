@@ -162,7 +162,8 @@ public:
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     assert(!cir::MissingFeatures::opLoadStoreVolatile());
     assert(!cir::MissingFeatures::opLoadStoreMemOrder());
-    return create<cir::LoadOp>(loc, ptr, /*isDeref=*/false, alignmentAttr);
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+                               alignmentAttr);
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
