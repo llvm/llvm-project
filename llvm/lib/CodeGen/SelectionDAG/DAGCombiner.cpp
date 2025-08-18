@@ -16302,10 +16302,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       SDValue Y = N0.getOperand(1);
       unsigned SrcBits = X.getScalarValueSizeInBits();
       unsigned DstBits = VT.getScalarSizeInBits();
-      KnownBits KnownX = DAG.computeKnownBits(X);
-      KnownBits KnownY = DAG.computeKnownBits(Y);
-      if (KnownX.countMinLeadingZeros() >= (SrcBits - DstBits) &&
-          KnownY.countMinLeadingZeros() >= (SrcBits - DstBits)) {
+      APInt UpperBits = APInt::getBitsSetFrom(SrcBits, DstBits);
+      if (DAG.MaskedValueIsZero(X, UpperBits) &&
+          DAG.MaskedValueIsZero(Y, UpperBits)) {
         SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
         SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
         return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
@@ -16318,13 +16317,11 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         TLI.isOperationLegal(N0.getOpcode(), VT)) {
       SDValue X = N0.getOperand(0);
       SDValue Y = N0.getOperand(1);
-      unsigned SignBitsX = DAG.ComputeNumSignBits(X);
-      unsigned SignBitsY = DAG.ComputeNumSignBits(Y);
       unsigned SrcBits = X.getScalarValueSizeInBits();
       unsigned DstBits = VT.getScalarSizeInBits();
       unsigned NeededSignBits = SrcBits - DstBits + 1;
-
-      if (SignBitsX >= NeededSignBits && SignBitsY >= NeededSignBits) {
+      if (DAG.ComputeNumSignBits(X) >= NeededSignBits &&
+          DAG.ComputeNumSignBits(Y) >= NeededSignBits) {
         SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
         SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
         return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
