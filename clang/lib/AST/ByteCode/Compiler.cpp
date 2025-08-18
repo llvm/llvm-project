@@ -60,16 +60,18 @@ template <class Emitter> class OptionScope final {
 public:
   /// Root constructor, compiling or discarding primitives.
   OptionScope(Compiler<Emitter> *Ctx, bool NewDiscardResult,
-              bool NewInitializing)
+              bool NewInitializing, bool NewToLValue)
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitializing(Ctx->Initializing) {
+        OldInitializing(Ctx->Initializing), OldToLValue(NewToLValue) {
     Ctx->DiscardResult = NewDiscardResult;
     Ctx->Initializing = NewInitializing;
+    Ctx->ToLValue = NewToLValue;
   }
 
   ~OptionScope() {
     Ctx->DiscardResult = OldDiscardResult;
     Ctx->Initializing = OldInitializing;
+    Ctx->ToLValue = OldToLValue;
   }
 
 private:
@@ -78,6 +80,7 @@ private:
   /// Old discard flag to restore.
   bool OldDiscardResult;
   bool OldInitializing;
+  bool OldToLValue;
 };
 
 template <class Emitter>
@@ -222,6 +225,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   switch (CE->getCastKind()) {
   case CK_LValueToRValue: {
+    if (ToLValue && CE->getType()->isPointerType())
+      return this->delegate(SubExpr);
+
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
@@ -4140,13 +4146,13 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
 
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
-                             /*NewInitializing=*/false);
+                             /*NewInitializing=*/false, /*ToLValue=*/false);
   return this->Visit(E);
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
   // We're basically doing:
-  // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
+  // OptionScope<Emitter> Scope(this, DicardResult, Initializing, ToLValue);
   // but that's unnecessary of course.
   return this->Visit(E);
 }
@@ -4174,7 +4180,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   //  Otherwise,we have a primitive return value, produce the value directly
   //  and push it on the stack.
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
-                             /*NewInitializing=*/false);
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
   return this->Visit(E);
 }
 
@@ -4183,7 +4189,13 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!canClassify(E->getType()));
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
-                             /*NewInitializing=*/true);
+                             /*NewInitializing=*/true, /*ToLValue=*/false);
+  return this->Visit(E);
+}
+
+template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
   return this->Visit(E);
 }
 
@@ -4944,7 +4956,6 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
-
   if (BuiltinID == Builtin::BI__builtin_constant_p) {
     // Void argument is always invalid and harder to handle later.
     if (E->getArg(0)->getType()->isVoidType()) {
@@ -4989,11 +5000,31 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
   }
 
-  if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
-    // Put arguments on the stack.
-    for (const auto *Arg : E->arguments()) {
-      if (!this->visit(Arg))
+  // Prepare function arguments including special cases.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_object_size:
+  case Builtin::BI__builtin_dynamic_object_size: {
+    assert(E->getNumArgs() == 2);
+    const Expr *Arg0 = E->getArg(0);
+    if (Arg0->isGLValue()) {
+      if (!this->visit(Arg0))
         return false;
+
+    } else {
+      if (!this->visitAsLValue(Arg0))
+        return false;
+    }
+    if (!this->visit(E->getArg(1)))
+      return false;
+
+  } break;
+  default:
+    if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+      // Put arguments on the stack.
+      for (const auto *Arg : E->arguments()) {
+        if (!this->visit(Arg))
+          return false;
+      }
     }
   }
 
