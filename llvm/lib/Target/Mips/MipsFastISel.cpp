@@ -1293,7 +1293,7 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     SmallVector<CCValAssign, 16> RVLocs;
     MipsCCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
 
-    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips, CLI.RetTy);
+    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips);
 
     // Only handle a single return value.
     if (RVLocs.size() != 1)
