@@ -683,41 +683,43 @@ define void @test_stnp_v17f32(<17 x float> %v, ptr %ptr) {
 ;
 ; CHECK-BE-LABEL: test_stnp_v17f32:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    // kill: def $s4 killed $s4 def $q4
-; CHECK-BE-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-BE-NEXT:    ldr s16, [sp, #36]
-; CHECK-BE-NEXT:    // kill: def $s5 killed $s5 def $q5
 ; CHECK-BE-NEXT:    // kill: def $s1 killed $s1 def $q1
-; CHECK-BE-NEXT:    ldr s17, [sp, #4]
-; CHECK-BE-NEXT:    add x8, sp, #44
-; CHECK-BE-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-BE-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-BE-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-BE-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-BE-NEXT:    add x8, sp, #12
+; CHECK-BE-NEXT:    add x9, sp, #20
+; CHECK-BE-NEXT:    ldr s16, [sp, #36]
 ; CHECK-BE-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-BE-NEXT:    ldr s1, [sp, #4]
+; CHECK-BE-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-BE-NEXT:    add x10, sp, #52
 ; CHECK-BE-NEXT:    // kill: def $s6 killed $s6 def $q6
 ; CHECK-BE-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-BE-NEXT:    // kill: def $s7 killed $s7 def $q7
 ; CHECK-BE-NEXT:    // kill: def $s3 killed $s3 def $q3
-; CHECK-BE-NEXT:    ldr s1, [sp, #68]
-; CHECK-BE-NEXT:    ld1 { v16.s }[1], [x8]
-; CHECK-BE-NEXT:    add x8, sp, #12
-; CHECK-BE-NEXT:    ld1 { v17.s }[1], [x8]
-; CHECK-BE-NEXT:    add x8, sp, #52
-; CHECK-BE-NEXT:    str s1, [x0, #64]
-; CHECK-BE-NEXT:    ld1 { v16.s }[2], [x8]
-; CHECK-BE-NEXT:    add x8, sp, #20
+; CHECK-BE-NEXT:    ld1 { v1.s }[1], [x8]
+; CHECK-BE-NEXT:    ldr s5, [x9]
+; CHECK-BE-NEXT:    add x8, sp, #28
+; CHECK-BE-NEXT:    add x9, sp, #44
+; CHECK-BE-NEXT:    ld1 { v5.s }[1], [x8]
+; CHECK-BE-NEXT:    ld1 { v16.s }[1], [x9]
+; CHECK-BE-NEXT:    ldr s17, [x10]
+; CHECK-BE-NEXT:    add x8, sp, #60
 ; CHECK-BE-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-BE-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-BE-NEXT:    ld1 { v17.s }[2], [x8]
-; CHECK-BE-NEXT:    add x8, sp, #60
-; CHECK-BE-NEXT:    ld1 { v16.s }[3], [x8]
-; CHECK-BE-NEXT:    add x8, sp, #28
-; CHECK-BE-NEXT:    ld1 { v17.s }[3], [x8]
-; CHECK-BE-NEXT:    mov v4.s[3], v7.s[0]
-; CHECK-BE-NEXT:    add x8, x0, #48
-; CHECK-BE-NEXT:    mov v0.s[3], v3.s[0]
-; CHECK-BE-NEXT:    st1 { v16.4s }, [x8]
+; CHECK-BE-NEXT:    ld1 { v17.s }[1], [x8]
+; CHECK-BE-NEXT:    ldr s2, [sp, #68]
 ; CHECK-BE-NEXT:    add x8, x0, #32
-; CHECK-BE-NEXT:    st1 { v17.4s }, [x8]
+; CHECK-BE-NEXT:    zip1 v1.2d, v1.2d, v5.2d
+; CHECK-BE-NEXT:    add x9, x0, #48
+; CHECK-BE-NEXT:    str s2, [x0, #64]
+; CHECK-BE-NEXT:    zip1 v5.2d, v16.2d, v17.2d
+; CHECK-BE-NEXT:    mov v4.s[3], v7.s[0]
+; CHECK-BE-NEXT:    mov v0.s[3], v3.s[0]
+; CHECK-BE-NEXT:    st1 { v1.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    st1 { v5.4s }, [x9]
 ; CHECK-BE-NEXT:    st1 { v4.4s }, [x8]
 ; CHECK-BE-NEXT:    st1 { v0.4s }, [x0]
 ; CHECK-BE-NEXT:    ret
