@@ -101,7 +101,7 @@ void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps);
 
 } // end namespace Fortran::lower
