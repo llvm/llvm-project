@@ -15,6 +15,3 @@ d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 Revert "[SLP]Support LShr as base for copyable elements"
 breaks build rocPRIM
 ---
-needs AS PR:  Chaitanya
-a3bf27c6947 [OpenMP] Introduce omp.target_allocmem and omp.target_freemem omp dialect ops. (#145464)
----
