@@ -5,6 +5,7 @@
 // UNSUPPORTED: aarch64
 // UNSUPPORTED: darwin
 // UNSUPPORTED: ios
+// REQUIRES: x86-64-registered-target
 
 // RUN: %clangxx_asan -O0 -g %s -o %t
 // RUN: %env_asan_opts=symbolize=0 not %run %t DUMMY_ARG > %t.asan_report 2>&1
