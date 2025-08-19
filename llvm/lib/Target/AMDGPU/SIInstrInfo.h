@@ -1407,8 +1407,8 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  unsigned isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  unsigned isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
