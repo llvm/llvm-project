@@ -2398,7 +2398,8 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
         unsigned FixupBit;
         // RISC-V instructions are always little-endian.
-        // The FixupMap is indexed by actual bit positions in the LE instruction.
+        // The FixupMap is indexed by actual bit positions in the LE
+        // instruction.
         if (MAI->isLittleEndian() || ForceLE)
           FixupBit = i * 8 + j;
         else
