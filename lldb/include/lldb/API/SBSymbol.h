@@ -85,7 +85,7 @@ public:
 
   SymbolType GetType();
 
-  /// Get the ID of this symbol, usually the original symbol table index. .
+  /// Get the ID of this symbol, usually the original symbol table index.
   ///
   /// \returns
   ///   Returns the ID of this symbol.

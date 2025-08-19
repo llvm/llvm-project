@@ -8,7 +8,7 @@ import lldbdap_testcase
 class TestDAP_moduleSymbols(lldbdap_testcase.DAPTestCaseBase):
     def test_moduleSymbols(self):
         """
-        Test that the stack frame without a module still has assembly source.
+        Test that the moduleSymbols request returns correct symbols from the module.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
