@@ -2417,7 +2417,11 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   return 0;
 }
 
-unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) { return 16; }
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
+  if (isGFX1250(STI))
+    return 32;
+  return 16;
+}
 
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
