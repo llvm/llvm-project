@@ -1604,8 +1604,6 @@ bool BuiltinTemplateDecl::isPackProducingBuiltinTemplate() const {
 }
 
 bool clang::isPackProducingBuiltinTemplateName(TemplateName N) {
-  if (N.getKind() == TemplateName::DeducedTemplate)
-    return false;
   auto *T = dyn_cast_or_null<BuiltinTemplateDecl>(
       N.getTemplateDeclAndDefaultArgs().first);
   return T && T->isPackProducingBuiltinTemplate();
