@@ -10,6 +10,10 @@
 /// This file contains the definition of the RandomState class, a fast and
 /// lightweight pseudo-random number generator.
 ///
+/// The implementation is based on the xorshift* generator, seeded using the
+/// SplitMix64 generator for robust initialization. For more details on the
+/// algorithm, see: https://en.wikipedia.org/wiki/Xorshift
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef MATHTEST_RANDOMSTATE_HPP
