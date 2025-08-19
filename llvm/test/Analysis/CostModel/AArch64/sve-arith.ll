@@ -5,8 +5,8 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @scalable_sdiv() #0 {
 ; CHECK-LABEL: 'scalable_sdiv'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %sdiv_nxv16i8 = sdiv <vscale x 16 x i8> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %sdiv_nxv8i16 = sdiv <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:32 Lat:32 SizeLat:32 for: %sdiv_nxv16i8 = sdiv <vscale x 16 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:16 SizeLat:16 for: %sdiv_nxv8i16 = sdiv <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %sdiv_nxv4i32 = sdiv <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %sdiv_nxv2i64 = sdiv <vscale x 2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
@@ -22,8 +22,8 @@ entry:
 
 define void @scalable_udiv() #0 {
 ; CHECK-LABEL: 'scalable_udiv'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %udiv_nxv16i8 = udiv <vscale x 16 x i8> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %udiv_nxv8i16 = udiv <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:32 Lat:32 SizeLat:32 for: %udiv_nxv16i8 = udiv <vscale x 16 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:16 SizeLat:16 for: %udiv_nxv8i16 = udiv <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %udiv_nxv4i32 = udiv <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %udiv_nxv2i64 = udiv <vscale x 2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void

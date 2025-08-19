@@ -441,6 +441,9 @@ public:
 
   bool preferPredicatedReductionSelect() const override { return ST->hasSVE(); }
 
+  std::pair<InstructionCost, MVT>
+  getAdjustedTypeLegalizationCost(Type *Ty) const;
+
   /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
   /// architecture features are not present.
   std::optional<InstructionCost>

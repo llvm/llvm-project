@@ -4036,6 +4036,20 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
   return Cost;
 }
 
+std::pair<InstructionCost, MVT>
+AArch64TTIImpl::getAdjustedTypeLegalizationCost(Type *Ty) const {
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  if (LT.first > 1 && Ty->isVectorTy() && LT.second.isVector() &&
+      Ty->isScalableTy() == LT.second.isScalableVector() &&
+      LT.second.getVectorMinNumElements() <
+          cast<VectorType>(Ty)->getElementCount().getKnownMinValue())
+    return {
+        divideCeil(cast<VectorType>(Ty)->getElementCount().getKnownMinValue(),
+                   LT.second.getVectorMinNumElements()),
+        LT.second};
+  return LT;
+}
+
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -4049,19 +4063,21 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (VTy->getElementCount() == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
 
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
-
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  std::pair<InstructionCost, MVT> LT = getAdjustedTypeLegalizationCost(Ty);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD == ISD::ADD || ISD == ISD::SUB || ISD == ISD::MUL ||
+         ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
+         ISD == ISD::UREM || ISD == ISD::AND || ISD == ISD::OR ||
+         ISD == ISD::XOR || ISD == ISD::SRL || ISD == ISD::SRA ||
+         ISD == ISD::SHL || ISD == ISD::FADD || ISD == ISD::FSUB ||
+         ISD == ISD::FMUL || ISD == ISD::FDIV || ISD == ISD::FREM ||
+         ISD == ISD::FNEG);
 
   // Increase the cost for half and bfloat types if not architecturally
   // supported.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
-      ISD == ISD::FDIV || ISD == ISD::FREM)
+      ISD == ISD::FDIV || ISD == ISD::FREM) {
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
             [&](Type *PromotedTy) {
@@ -4070,10 +4086,46 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
             }))
       return *PromotedCost;
 
+    // fp128 all go via libcalls
+    if (Ty->getScalarType()->isFP128Ty())
+      return CostKind == TTI::TCK_CodeSize ? 1 : 10 * LT.first;
+  }
+
   switch (ISD) {
-  default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+  case ISD::ADD:
+  case ISD::SUB:
+    return LT.first; // Works OK for i128 too as it requires adds+adc.
+  case ISD::MUL:
+    // A v2i64 multiply is not legal for Neon.
+    // When SVE is available, then we can lower the v2i64 operation using
+    // the SVE mul instruction, which has a lower cost.
+
+    // There is no MUL.2d instruction, which means mul <2 x i64> is expensive as
+    // elements are extracted from the vectors and the muls scalarized. We
+    // estimate the cost for a i64 vector directly here, which is:
+    // - four 2-cost i64 extracts,
+    // - two 2-cost i64 inserts, and
+    // - two 1-cost muls.
+    // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
+    // LT.first = 2 the cost is 28. If both operands are extensions it will not
+    // need to scalarize so the cost can be cheaper (smull or umull), and SVE
+    // has a native instruction we can use for v2i64.
+    if (LT.second == MVT::v2i64 && !ST->hasSVE() &&
+        !isWideningInstruction(Ty, Opcode, Args)) {
+      return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
+             (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
+              getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
+                                 nullptr, nullptr) *
+                  2 +
+              getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
+                                 nullptr, nullptr));
+    }
+    // i128 multiply is umulh + 2*madd + mul.
+    if (Ty->getScalarSizeInBits() == 128)
+      return 2 * LT.first;
+    if (Ty->getScalarSizeInBits() <= 64)
+      return LT.first;
+    break;
   case ISD::SREM:
   case ISD::SDIV:
     /*
@@ -4288,44 +4340,28 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     }
     return Cost;
   }
-  case ISD::MUL:
-    // When SVE is available, then we can lower the v2i64 operation using
-    // the SVE mul instruction, which has a lower cost.
-    if (LT.second == MVT::v2i64 && ST->hasSVE())
-      return LT.first;
-
-    // When SVE is not available, there is no MUL.2d instruction,
-    // which means mul <2 x i64> is expensive as elements are extracted
-    // from the vectors and the muls scalarized.
-    // As getScalarizationOverhead is a bit too pessimistic, we
-    // estimate the cost for a i64 vector directly here, which is:
-    // - four 2-cost i64 extracts,
-    // - two 2-cost i64 inserts, and
-    // - two 1-cost muls.
-    // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
-    // LT.first = 2 the cost is 28. If both operands are extensions it will not
-    // need to scalarize so the cost can be cheaper (smull or umull).
-    // so the cost can be cheaper (smull or umull).
-    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
-      return LT.first;
-    return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
-           (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
-            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
-                               nullptr, nullptr) *
-                2 +
-            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                               nullptr, nullptr));
-  case ISD::ADD:
-  case ISD::XOR:
-  case ISD::OR:
   case ISD::AND:
-  case ISD::SRL:
-  case ISD::SRA:
-  case ISD::SHL:
-    // These nodes are marked as 'custom' for combining purposes only.
-    // We know that they are legal. See LowerAdd in ISelLowering.
+  case ISD::OR:
+  case ISD::XOR:
     return LT.first;
 
+  case ISD::SRA:
+  case ISD::SRL:
+  case ISD::SHL:
+    return LT.first; // TODOD: i128. Vectors could be better?
+
+  case ISD::FADD:
+  case ISD::FSUB:
+    return (CostKind == TTI::TCK_Latency ? 3 : 1) * LT.first;
+  case ISD::FMUL:
+    // TODOD: Make this Cleaner?
+    return (CostKind == TTI::TCK_Latency
+                ? 3
+                : (CostKind == TTI::TCK_RecipThroughput ? 2 : 1)) *
+           LT.first;
+  case ISD::FDIV:
+    // TODOD: Better numbers?
+    return (CostKind == TTI::TCK_CodeSize ? 1 : 4) * LT.first;
   case ISD::FNEG:
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
     if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
@@ -4335,29 +4371,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
          match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
       return 0;
-    [[fallthrough]];
-  case ISD::FADD:
-  case ISD::FSUB:
-    if (!Ty->getScalarType()->isFP128Ty())
-      return LT.first;
-    [[fallthrough]];
-  case ISD::FMUL:
-  case ISD::FDIV:
-    // These nodes are marked as 'custom' just to lower them to SVE.
-    // We know said lowering will incur no additional cost.
-    if (!Ty->getScalarType()->isFP128Ty())
-      return 2 * LT.first;
-
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return (CostKind == TTI::TCK_Latency ? 3 : 1) * LT.first;
   case ISD::FREM:
     // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
     // those functions are not declared in the module.
-    if (!Ty->isVectorTy())
+    if (!Ty->isVectorTy() && CostKind != TTI::TCK_CodeSize)
       return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
   }
+
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info);
 }
 
 InstructionCost

@@ -61,7 +61,7 @@ define void @andcmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64le = icmp slt i64 %a64, 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64leneg = icmp sle i64 %a64, -1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64gtneg = icmp sgt i64 %a64, -1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %a128 = and i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %a128 = and i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %c128 = icmp eq i128 %a128, 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %av16i8 = and <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cv16i8 = icmp ne <16 x i8> %av16i8, zeroinitializer
