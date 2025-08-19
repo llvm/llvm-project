@@ -20,8 +20,8 @@ void varargs(int count, ...) {
 // CIR:   %[[COUNT_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init]
 // CIR:   %[[ARGS:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
 // CIR:   cir.store %[[COUNT]], %[[COUNT_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[C12345:.+]] = cir.const #cir.int<12345> : !s32i
 // CIR:   %[[APTR:.+]] = cir.cast(array_to_ptrdecay, %[[ARGS]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[C12345:.+]] = cir.const #cir.int<12345> : !s32i
 // CIR:   cir.va_start %[[APTR]] %[[C12345]] : !cir.ptr<!rec___va_list_tag>, !s32i
 // CIR:   %[[APTR2:.+]] = cir.cast(array_to_ptrdecay, %[[ARGS]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[APTR2]] : !cir.ptr<!rec___va_list_tag>
@@ -54,8 +54,8 @@ void stdarg_start(int count, ...) {
 // CIR:   %[[COUNT2_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init]
 // CIR:   %[[ARGS2:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
 // CIR:   cir.store %[[COUNT2]], %[[COUNT2_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[C12345_2:.+]] = cir.const #cir.int<12345> : !s32i
 // CIR:   %[[APTR3:.+]] = cir.cast(array_to_ptrdecay, %[[ARGS2]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[C12345_2:.+]] = cir.const #cir.int<12345> : !s32i
 // CIR:   cir.va_start %[[APTR3]] %[[C12345_2]] : !cir.ptr<!rec___va_list_tag>, !s32i
 // CIR:   %[[APTR4:.+]] = cir.cast(array_to_ptrdecay, %[[ARGS2]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>), !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[APTR4]] : !cir.ptr<!rec___va_list_tag>
