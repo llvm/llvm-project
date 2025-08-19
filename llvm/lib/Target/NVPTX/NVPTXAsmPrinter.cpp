@@ -1482,9 +1482,8 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
     Register VR = Register::index2VirtReg(I);
     if (MRI->use_empty(VR) && MRI->def_empty(VR))
       continue;
-    const TargetRegisterClass *RC = MRI->getRegClass(VR);
-    DenseMap<unsigned, unsigned> &RCRegMap = VRegMapping[RC];
-    RCRegMap.insert(std::make_pair(VR, RCRegMap.size() + 1));
+    auto &RCRegMap = VRegMapping[MRI->getRegClass(VR)];
+    RCRegMap[VR] = RCRegMap.size() + 1;
   }
 
   // Emit declaration of the virtual registers or 'physical' registers for
