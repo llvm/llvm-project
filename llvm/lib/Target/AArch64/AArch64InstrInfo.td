@@ -8193,10 +8193,10 @@ def : Pat<(v8i16 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 // EDIT per word: 2s & 4s with MSL shifter
-def MOVIv2s_msl  : SIMDModifiedImmMoveMSL_2s<0, 0, {1,1,0,?}, V64, "movi", ".2s",
+def MOVIv2s_msl  : SIMDModifiedImmMoveMSL<0, 0, {1,1,0,?}, V64, "movi", ".2s",
                       [(set (v2i32 V64:$Rd),
                             (AArch64movi_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
-def MOVIv4s_msl  : SIMDModifiedImmMoveMSL_4s<1, 0, {1,1,0,?}, V128, "movi", ".4s",
+def MOVIv4s_msl  : SIMDModifiedImmMoveMSL<1, 0, {1,1,0,?}, V128, "movi", ".4s",
                       [(set (v4i32 V128:$Rd),
                             (AArch64movi_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
 
@@ -8239,10 +8239,10 @@ def : Pat<(v8i16 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
 
 // EDIT per word: 2s & 4s with MSL shifter
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-def MVNIv2s_msl   : SIMDModifiedImmMoveMSL_2s<0, 1, {1,1,0,?}, V64, "mvni", ".2s",
+def MVNIv2s_msl   : SIMDModifiedImmMoveMSL<0, 1, {1,1,0,?}, V64, "mvni", ".2s",
                       [(set (v2i32 V64:$Rd),
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
-def MVNIv4s_msl   : SIMDModifiedImmMoveMSL_4s<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
+def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
                       [(set (v4i32 V128:$Rd),
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
 }
