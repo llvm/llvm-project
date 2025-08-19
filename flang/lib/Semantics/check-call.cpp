@@ -1390,8 +1390,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       assumed.name(), dummyName);
                 } else if (object.type.attrs().test(characteristics::
                                    TypeAndShape::Attr::AssumedRank) &&
-                    !IsAssumedShape(assumed) &&
-                    !IsAssumedRank(assumed)) {
+                    !IsAssumedShape(assumed) && !IsAssumedRank(assumed)) {
                   messages.Say( // C711
                       "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed rank %s"_err_en_US,
                       assumed.name(), dummyName);
