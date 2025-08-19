@@ -300,6 +300,8 @@ COVMAP_HEADER(uint32_t, Int32Ty, CoverageSize, \
               llvm::ConstantInt::get(Int32Ty, CoverageMappingSize))
 COVMAP_HEADER(uint32_t, Int32Ty, Version, \
               llvm::ConstantInt::get(Int32Ty, CovMapVersion::CurrentVersion))
+COVMAP_HEADER(uint32_t, Int32Ty, CovInstrLevels, \
+              llvm::ConstantInt::get(Int32Ty, CovInstrLevels))
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
@@ -724,7 +726,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 12
 /* Coverage mapping format version (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 6
+#define INSTR_PROF_COVMAP_VERSION 7
 
 /* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
  * version for other variants of profile. We set the 8th most significant bit
