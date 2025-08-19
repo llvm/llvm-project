@@ -911,7 +911,7 @@ StringRef llvm::dwarf::RLEString(unsigned RLE) {
   }
 }
 
-StringRef llvm::dwarf::AddressSpaceString(unsigned AS, llvm::Triple TT) {
+StringRef llvm::dwarf::AddressSpaceString(unsigned AS, const llvm::Triple &TT) {
   switch (AS) {
 #define HANDLE_DW_ASPACE(ID, NAME)                                             \
   case DW_ASPACE_LLVM_##NAME:                                                  \

@@ -60,7 +60,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
   if (SubOpcode) {
     StringRef SubName = SubOperationEncodingString(Op->getCode(), *SubOpcode);
     assert(!SubName.empty() && "DW_OP SubOp has no name!");
-    OS << " " << SubName;
+    OS << ' ' << SubName;
   }
 
   if ((Op->getCode() >= DW_OP_breg0 && Op->getCode() <= DW_OP_breg31) ||

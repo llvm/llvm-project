@@ -133,6 +133,19 @@ enum : unsigned {
 };
 } // namespace DWARFAS
 
+namespace impl {
+// TODO: Move this into mapToDWARFAddrSpace when we switch to C++23
+// (see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2647r1.html)
+static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
+    DWARFAS::GENERIC,     //< AMDGPUAS::FLAT_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::GLOBAL_ADDRESS
+    DWARFAS::REGION,      //< AMDGPUAS::REGION_ADDRESS
+    DWARFAS::LOCAL,       //< AMDGPUAS::LOCAL_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::CONSTANT_ADDRESS
+    DWARFAS::PRIVATE_LANE //< AMDGPUAS::PRIVATE_ADDRESS
+};
+} // end namespace impl
+
 /// If @p LLVMAddressSpace has a corresponding DWARF encoding,
 /// return it; otherwise return the sentinel value -1 to indicate
 /// no such mapping exists.
@@ -144,20 +157,12 @@ enum : unsigned {
 ///
 /// Note: This could return std::optional<int> but that would require
 /// an extra #include.
-inline int mapToDWARFAddrSpace(unsigned LLVMAddrSpace) {
-  static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
-      DWARFAS::GENERIC,     //< AMDGPUAS::FLAT_ADDRESS
-      DWARFAS::GLOBAL,      //< AMDGPUAS::GLOBAL_ADDRESS
-      DWARFAS::REGION,      //< AMDGPUAS::REGION_ADDRESS
-      DWARFAS::LOCAL,       //< AMDGPUAS::LOCAL_ADDRESS
-      DWARFAS::GLOBAL,      //< AMDGPUAS::CONSTANT_ADDRESS
-      DWARFAS::PRIVATE_LANE //< AMDGPUAS::PRIVATE_ADDRESS
-  };
-  static constexpr unsigned SizeOfLLVMToDWARFAddrSpaceMapping =
-      sizeof(LLVMToDWARFAddrSpaceMapping) /
-      sizeof(LLVMToDWARFAddrSpaceMapping[0]);
+constexpr int mapToDWARFAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToDWARFAddrSpaceMapping =
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping) /
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping[0]);
   if (LLVMAddrSpace < SizeOfLLVMToDWARFAddrSpaceMapping)
-    return LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
+    return impl::LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
   return -1;
 }
 } // end namespace AMDGPU
