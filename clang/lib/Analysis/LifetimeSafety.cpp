@@ -175,6 +175,18 @@ public:
     return NewID;
   }
 
+  void dump(OriginID OID, llvm::raw_ostream &OS) const {
+    OS << OID << " (";
+    Origin O = getOrigin(OID);
+    if (const ValueDecl *VD = O.getDecl())
+      OS << "Decl: " << VD->getNameAsString();
+    else if (const Expr *E = O.getExpr())
+      OS << "Expr: " << E->getStmtClassName();
+    else
+      OS << "Unknown";
+    OS << ")";
+  }
+
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
@@ -222,7 +234,7 @@ public:
     return nullptr;
   }
 
-  virtual void dump(llvm::raw_ostream &OS) const {
+  virtual void dump(llvm::raw_ostream &OS, const OriginManager &) const {
     OS << "Fact (Kind: " << static_cast<int>(K) << ")\n";
   }
 };
@@ -237,9 +249,10 @@ public:
   IssueFact(LoanID LID, OriginID OID) : Fact(Kind::Issue), LID(LID), OID(OID) {}
   LoanID getLoanID() const { return LID; }
   OriginID getOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "Issue (LoanID: " << getLoanID() << ", OriginID: " << getOriginID()
-       << ")\n";
+  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+    OS << "Issue (LoanID: " << getLoanID() << ", ToOrigin: ";
+    OM.dump(getOriginID(), OS);
+    OS << ")\n";
   }
 };
 
@@ -256,7 +269,7 @@ public:
   LoanID getLoanID() const { return LID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
-  void dump(llvm::raw_ostream &OS) const override {
+  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
     OS << "Expire (LoanID: " << getLoanID() << ")\n";
   }
 };
@@ -274,9 +287,12 @@ public:
       : Fact(Kind::AssignOrigin), OIDDest(OIDDest), OIDSrc(OIDSrc) {}
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "AssignOrigin (DestID: " << getDestOriginID()
-       << ", SrcID: " << getSrcOriginID() << ")\n";
+  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+    OS << "AssignOrigin (Dest: ";
+    OM.dump(getDestOriginID(), OS);
+    OS << ", Src: ";
+    OM.dump(getSrcOriginID(), OS);
+    OS << ")\n";
   }
 };
 
@@ -290,8 +306,10 @@ public:
 
   ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
   OriginID getReturnedOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "ReturnOfOrigin (OriginID: " << getReturnedOriginID() << ")\n";
+  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+    OS << "ReturnOfOrigin (";
+    OM.dump(getReturnedOriginID(), OS);
+    OS << ")\n";
   }
 };
 
@@ -308,8 +326,10 @@ public:
   OriginID getUsedOrigin() const { return UsedOrigin; }
   const Expr *getUseExpr() const { return UseExpr; }
 
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "Use (OriginID: " << UsedOrigin << ")\n";
+  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+    OS << "Use (";
+    OM.dump(getUsedOrigin(), OS);
+    OS << ")\n";
   }
 };
 
@@ -326,7 +346,7 @@ public:
 
   StringRef getAnnotation() const { return Annotation; }
 
-  void dump(llvm::raw_ostream &OS) const override {
+  void dump(llvm::raw_ostream &OS, const OriginManager &) const override {
     OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
   }
 };
@@ -365,7 +385,7 @@ public:
       if (It != BlockToFactsMap.end()) {
         for (const Fact *F : It->second) {
           llvm::dbgs() << "    ";
-          F->dump(llvm::dbgs());
+          F->dump(llvm::dbgs(), OriginMgr);
         }
       }
       llvm::dbgs() << "  End of Block\n";
