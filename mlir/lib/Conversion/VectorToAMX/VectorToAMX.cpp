@@ -197,7 +197,7 @@ static Operation *
 loadStoreFromTransfer(PatternRewriter &rewriter,
                       VectorTransferOpInterface xferOp, bool isPacked,
                       TypedValue<amx::TileType> tileToStore = nullptr) {
-  if (!xferOp)
+  if (!xferOp || !isa<vector::TransferReadOp, vector::TransferWriteOp>(xferOp))
     return nullptr;
   if (xferOp.hasOutOfBoundsDim() ||
       !xferOp.getPermutationMap().isMinorIdentity())
@@ -279,6 +279,8 @@ loadStoreFromTransfer(PatternRewriter &rewriter,
   } else if (isa<vector::TransferWriteOp>(xferOp)) {
     amxTileOp = amx::TileStoreOp::create(rewriter, loc, src, tileIndicides,
                                          tileToStore);
+  } else {
+    llvm_unreachable("unsupported vector transfer op");
   }
 
   return amxTileOp;
