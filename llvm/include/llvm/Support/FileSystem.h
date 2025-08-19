@@ -1174,7 +1174,7 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// An enumeration for the lock kind.
 enum class LockKind {
   Exclusive, // Exclusive/writer lock
-  Shared     // Shared/writer lock
+  Shared     // Shared/reader lock
 };
 
 /// Try to locks the file during the specified time.
