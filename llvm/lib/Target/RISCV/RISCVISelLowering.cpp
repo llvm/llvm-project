@@ -16588,8 +16588,10 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
 // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
 // bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
 // can become a sext.w instead of a shift pair.
-static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performSETCCCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
                                    const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
   SDLoc dl(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -16604,6 +16606,20 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V =
           combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG, Subtarget))
     return V;
+
+  // (X & -4096) == 0 -> (X >> 12) == 0 if the AND constant can't use ANDI.
+  if (DCI.isAfterLegalizeDAG() && isNullConstant(N1) &&
+      N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
+      isa<ConstantSDNode>(N0.getOperand(1))) {
+    const APInt &AndRHSC =
+        cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+    if (!isInt<12>(AndRHSC.getSExtValue()) && AndRHSC.isNegatedPowerOf2()) {
+      unsigned ShiftBits = AndRHSC.countr_zero();
+      SDValue Shift = DAG.getNode(ISD::SRL, dl, VT, N0.getOperand(0),
+                                  DAG.getConstant(ShiftBits, dl, VT));
+      return DAG.getSetCC(dl, VT, Shift, N1, Cond);
+    }
+  }
 
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
@@ -20091,7 +20107,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
   }
   case ISD::SETCC:
-    return performSETCCCombine(N, DAG, Subtarget);
+    return performSETCCCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG:
     return performSIGN_EXTEND_INREGCombine(N, DCI, Subtarget);
   case ISD::ZERO_EXTEND:
