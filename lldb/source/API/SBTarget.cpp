@@ -766,16 +766,19 @@ SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
     const bool hardware = false;
     const LazyBool skip_prologue = eLazyBoolCalculate;
     const lldb::addr_t offset = 0;
+    const bool offset_is_insn_count = false;
     if (module_name && module_name[0]) {
       FileSpecList module_spec_list;
       module_spec_list.Append(FileSpec(module_name));
       sb_bp = target_sp->CreateBreakpoint(
           &module_spec_list, nullptr, symbol_name, eFunctionNameTypeAuto,
-          eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
+          eLanguageTypeUnknown, offset, offset_is_insn_count, skip_prologue,
+          internal, hardware);
     } else {
       sb_bp = target_sp->CreateBreakpoint(
           nullptr, nullptr, symbol_name, eFunctionNameTypeAuto,
-          eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
+          eLanguageTypeUnknown, offset, offset_is_insn_count, skip_prologue,
+          internal, hardware);
     }
   }
 
@@ -811,6 +814,17 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     const SBFileSpecList &comp_unit_list) {
   LLDB_INSTRUMENT_VA(this, symbol_name, name_type_mask, symbol_language,
                      module_list, comp_unit_list);
+  return BreakpointCreateByName(symbol_name, name_type_mask, symbol_language, 0,
+                                false, module_list, comp_unit_list);
+}
+
+lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
+    const char *symbol_name, uint32_t name_type_mask,
+    LanguageType symbol_language, lldb::addr_t offset,
+    bool offset_is_insn_count, const SBFileSpecList &module_list,
+    const SBFileSpecList &comp_unit_list) {
+  LLDB_INSTRUMENT_VA(this, symbol_name, name_type_mask, symbol_language, offset,
+                     offset_is_insn_count, module_list, comp_unit_list);
 
   SBBreakpoint sb_bp;
   if (TargetSP target_sp = GetSP();
@@ -821,7 +835,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
     sb_bp = target_sp->CreateBreakpoint(module_list.get(), comp_unit_list.get(),
-                                        symbol_name, mask, symbol_language, 0,
+                                        symbol_name, mask, symbol_language,
+                                        offset, offset_is_insn_count,
                                         skip_prologue, internal, hardware);
   }
 
@@ -1955,29 +1970,10 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 
   if (TargetSP target_sp = GetSP()) {
     if (Address *addr_ptr = base_addr.get()) {
-      DataBufferHeap data(
-          target_sp->GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
-      bool force_live_memory = true;
-      lldb_private::Status error;
-      lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
-      const size_t bytes_read =
-          target_sp->ReadMemory(*addr_ptr, data.GetBytes(), data.GetByteSize(),
-                                error, force_live_memory, &load_addr);
-
-      const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
-      if (!flavor_string || flavor_string[0] == '\0') {
-        // FIXME - we don't have the mechanism in place to do per-architecture
-        // settings.  But since we know that for now we only support flavors on
-        // x86 & x86_64,
-        const llvm::Triple::ArchType arch =
-            target_sp->GetArchitecture().GetTriple().getArch();
-        if (arch == llvm::Triple::x86 || arch == llvm::Triple::x86_64)
-          flavor_string = target_sp->GetDisassemblyFlavor();
+      if (llvm::Expected<DisassemblerSP> disassembler =
+              target_sp->ReadInstructions(*addr_ptr, count, flavor_string)) {
+        sb_instructions.SetDisassembler(*disassembler);
       }
-      sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-          target_sp->GetArchitecture(), nullptr, flavor_string,
-          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
-          *addr_ptr, data.GetBytes(), bytes_read, count, data_from_file));
     }
   }
 
