@@ -15,7 +15,7 @@ A legal instruction is defined as:
 * operating on **vregs that can be loaded and stored** -- if necessary, the
   target can select a ``G_LOAD``/``G_STORE`` of each gvreg operand.
 
-As opposed to SelectionDAG, there are no legalization phases.  In particular,
+Unlike SelectionDAG, there are no legalization phases.  In particular,
 'type' and 'operation' legalization are not separate.
 
 Legalization is iterative, and all state is contained in GMIR.  To maintain the
@@ -44,7 +44,7 @@ have a ``G_FOO`` instruction of the form::
   %1:_(s32) = G_CONSTANT i32 1
   %2:_(s32) = G_FOO %0:_(s32), %1:_(s32)
 
-it's impossible to say that G_FOO is legal iff %1 is a ``G_CONSTANT`` with
+it's impossible to say that ``G_FOO`` is legal iff %1 is a ``G_CONSTANT`` with
 value ``1``. However, the following::
 
   %2:_(s32) = G_FOO %0:_(s32), i32 1
@@ -93,8 +93,8 @@ legality contains:
 
 .. rubric:: Footnotes
 
-.. [#legalizer-legacy-footnote] An API is broadly similar to
-   SelectionDAG/TargetLowering is available but is not recommended as a more
+.. [#legalizer-legacy-footnote] An API that is broadly similar to
+   SelectionDAG/TargetLowering is available, but is not recommended as a more
    powerful API is available.
 
 Rule Processing and Declaring Rules
@@ -108,10 +108,10 @@ legalized as a result of the rules. If the ruleset is exhausted without
 satisfying any rule, then it is considered unsupported.
 
 When it doesn't declare the instruction legal, each pass over the rules may
-request that one type changes to another type. Sometimes this can cause multiple
+request that one type be changed to another type. Sometimes this can cause multiple
 types to change but we avoid this as much as possible as making multiple changes
 can make it difficult to avoid infinite loops where, for example, narrowing one
-type causes another to be too small and widening that type causes the first one
+type causes another to be too small, and widening that type causes the first one
 to be too big.
 
 In general, it's advisable to declare instructions legal as close to the top of
@@ -130,7 +130,7 @@ and the instruction::
 
   %2:_(s7) = G_ADD %0:_(s7), %1:_(s7)
 
-this doesn't meet the predicate for the :ref:`.legalFor() <legalfor>` as ``s7``
+This doesn't meet the predicate for the :ref:`.legalFor() <legalfor>` as ``s7``
 is not one of the listed types so it falls through to the
 :ref:`.clampScalar() <clampscalar>`. It does meet the predicate for this rule
 as the type is smaller than the ``s32`` and this rule instructs the legalizer
@@ -148,7 +148,7 @@ processing by the legalizer.
 Rule Actions
 """"""""""""
 
-There are various rule factories that append rules to a ruleset but they have a
+There are various rule factories that append rules to a ruleset, but they have a
 few actions in common:
 
 .. _legalfor:
@@ -202,7 +202,7 @@ few actions in common:
 Rule Predicates
 """""""""""""""
 
-The rule factories also have predicates in common:
+The rule factories also have the following predicates in common:
 
 * ``legal()``, ``lower()``, etc. are always satisfied.
 
@@ -269,81 +269,81 @@ Consumer Type Set
   The set of types which is the union of all possible types consumed by at
   least one legal instruction.
 
-Both sets are often identical but there's no guarantee of that. For example,
+Both sets are often identical, but there's no guarantee of that. For example,
 it's not uncommon to be unable to consume s64 but still be able to produce it
 for a few specific instructions.
 
 Minimum Rules For Scalars
 """""""""""""""""""""""""
 
-* G_ANYEXT must be legal for all inputs from the producer type set and all larger
+* ``G_ANYEXT`` must be legal for all inputs from the producer type set and all larger
   outputs from the consumer type set.
-* G_TRUNC must be legal for all inputs from the producer type set and all
+* ``G_TRUNC`` must be legal for all inputs from the producer type set and all
   smaller outputs from the consumer type set.
 
-G_ANYEXT, and G_TRUNC have mandatory legality since the GMIR requires a means to
+``G_ANYEXT`` and ``G_TRUNC`` have mandatory legality since the GMIR requires a means to
 connect operations with different type sizes. They are usually trivial to support
-since G_ANYEXT doesn't define the value of the additional bits and G_TRUNC is
-discarding bits. The other conversions can be lowered into G_ANYEXT/G_TRUNC
+since ``G_ANYEXT`` doesn't define the value of the additional bits and ``G_TRUNC`` is
+discarding bits. The other conversions can be lowered into ``G_ANYEXT``/``G_TRUNC``
 with some additional operations that are subject to further legalization. For
-example, G_SEXT can lower to::
+example, ``G_SEXT`` can lower to::
 
   %1 = G_ANYEXT %0
   %2 = G_CONSTANT ...
   %3 = G_SHL %1, %2
   %4 = G_ASHR %3, %2
 
-and the G_CONSTANT/G_SHL/G_ASHR can further lower to other operations or target
-instructions. Similarly, G_FPEXT has no legality requirement since it can lower
-to a G_ANYEXT followed by a target instruction.
+and the ``G_CONSTANT``/``G_SHL``/``G_ASHR`` can further lower to other operations or target
+instructions. Similarly, ``G_FPEXT`` has no legality requirement since it can lower
+to a ``G_ANYEXT`` followed by a target instruction.
 
-G_MERGE_VALUES and G_UNMERGE_VALUES do not have legality requirements since the
-former can lower to G_ANYEXT and some other legalizable instructions, while the
-latter can lower to some legalizable instructions followed by G_TRUNC.
+``G_MERGE_VALUES`` and ``G_UNMERGE_VALUES`` do not have legality requirements since the
+former can lower to ``G_ANYEXT`` and some other legalizable instructions, while the
+latter can lower to some legalizable instructions followed by ``G_TRUNC``.
 
 Minimum Legality For Vectors
 """"""""""""""""""""""""""""
 
 Within the vector types, there aren't any defined conversions in LLVM IR as
 vectors are often converted by reinterpreting the bits or by decomposing the
-vector and reconstituting it as a different type. As such, G_BITCAST is the
+vector and reconstituting it as a different type. As such, ``G_BITCAST`` is the
 only operation to account for. We generally don't require that it's legal
-because it can usually be lowered to COPY (or to nothing using
-replaceAllUses()). However, there are situations where G_BITCAST is non-trivial
+because it can usually be lowered to ``COPY`` (or to nothing using
+``replaceAllUses()``). However, there are situations where ``G_BITCAST`` is non-trivial
 (e.g. little-endian vectors of big-endian data such as on big-endian MIPS MSA and
-big-endian ARM NEON, see `_i_bitcast`). To account for this G_BITCAST must be
+big-endian ARM NEON, see `_i_bitcast`). To account for this, ``G_BITCAST`` must be
 legal for all type combinations that change the bit pattern in the value.
 
-There are no legality requirements for G_BUILD_VECTOR, or G_BUILD_VECTOR_TRUNC
+There are no legality requirements for ``G_BUILD_VECTOR``, or ``G_BUILD_VECTOR_TRUNC``
 since these can be handled by:
 * Declaring them legal.
 * Scalarizing them.
-* Lowering them to G_TRUNC+G_ANYEXT and some legalizable instructions.
+* Lowering them to ``G_TRUNC``+``G_ANYEXT`` and some legalizable instructions.
 * Lowering them to target instructions which are legal by definition.
 
-The same reasoning also allows G_UNMERGE_VALUES to lack legality requirements
+The same reasoning also allows ``G_UNMERGE_VALUES`` to lack legality requirements
 for vector inputs.
 
 Minimum Legality for Pointers
 """""""""""""""""""""""""""""
 
-There are no minimum rules for pointers since G_INTTOPTR and G_PTRTOINT can
-be selected to a COPY from register class to another by the legalizer.
+There are no minimum rules for pointers since ``G_INTTOPTR`` and ``G_PTRTOINT`` can
+be selected to a ``COPY`` from register class to another by the legalizer.
 
 Minimum Legality For Operations
 """""""""""""""""""""""""""""""
 
-The rules for G_ANYEXT, G_MERGE_VALUES, G_BITCAST, G_BUILD_VECTOR,
-G_BUILD_VECTOR_TRUNC, G_CONCAT_VECTORS, G_UNMERGE_VALUES, G_PTRTOINT, and
-G_INTTOPTR have already been noted above. In addition to those, the following
+The rules for ``G_ANYEXT``, ``G_MERGE_VALUES``, ``G_BITCAST``, ``G_BUILD_VECTOR``,
+``G_BUILD_VECTOR_TRUNC``, ``G_CONCAT_VECTORS``, ``G_UNMERGE_VALUES``, ``G_PTRTOINT``, and
+``G_INTTOPTR`` have already been noted above. In addition to those, the following
 operations have requirements:
 
-* For every type that can be produced by any instruction, G_IMPLICIT_DEF must be
-  legal.
-* G_PHI must be legal for all types in the producer and consumer typesets. This
+* ``G_IMPLICIT_DEF`` must be legal for every type that can be produced
+   by any instruction.
+* ``G_PHI`` must be legal for all types in the producer and consumer typesets. This
   is usually trivial as it requires no code to be selected.
-* At least one G_FRAME_INDEX must be legal
-* At least one G_BLOCK_ADDR must be legal
+* At least one ``G_FRAME_INDEX`` must be legal
+* At least one ``G_BLOCK_ADDR`` must be legal
 
-There are many other operations you'd expect to have legality requirements but
+There are many other operations you'd expect to have legality requirements, but
 they can be lowered to target instructions which are legal by definition.
