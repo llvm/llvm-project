@@ -16,6 +16,7 @@
 #include "CGCall.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
@@ -4532,6 +4533,15 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
     return LValue::MakeVectorElt(LHS.getAddress(), Idx, E->getBase()->getType(),
                                  LHS.getBaseInfo(), TBAAAccessInfo());
+  }
+
+  // The HLSL runtime handle the subscript expression on global resource arrays.
+  if (getLangOpts().HLSL && (E->getType()->isHLSLResourceRecord() ||
+                             E->getType()->isHLSLResourceRecordArray())) {
+    std::optional<LValue> LV =
+        CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+    if (LV.has_value())
+      return *LV;
   }
 
   // All the other cases basically behave like simple offsetting.
