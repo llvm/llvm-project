@@ -3106,6 +3106,15 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
+
+    // This assumes the registers are allocated by CCInfo in ascending order
+    // with no gaps.
+    Info->setNumWaveDispatchSGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::SGPR_32RegClass.getRegisters()));
+    Info->setNumWaveDispatchVGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::VGPR_32RegClass.getRegisters()));
+  } else if (Info->getNumKernargPreloadedSGPRs()) {
+    Info->setNumWaveDispatchSGPRs(Info->getNumUserSGPRs());
   }
 
   SmallVector<SDValue, 16> Chains;
@@ -6106,6 +6115,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   case MVT::f64:
     return true;
   case MVT::f16:
+  case MVT::bf16:
     return Subtarget->has16BitInsts() && !denormalModeIsFlushAllF64F16(MF);
   default:
     break;
@@ -6611,7 +6621,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
       ST->hasDPALU_DPP() &&
-      AMDGPU::isLegalDPALU_DPPControl(N->getConstantOperandVal(3)))
+      AMDGPU::isLegalDPALU_DPPControl(*ST, N->getConstantOperandVal(3)))
     SplitSize = 64;
 
   auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
@@ -10815,6 +10825,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain),
                    0);
+  case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var: {
     // these two intrinsics have two operands: barrier pointer and member count
     SDValue Chain = Op->getOperand(0);
@@ -10822,6 +10833,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarOp = Op->getOperand(2);
     SDValue CntOp = Op->getOperand(3);
     SDValue M0Val;
+    unsigned Opc = IntrinsicID == Intrinsic::amdgcn_s_barrier_init
+                       ? AMDGPU::S_BARRIER_INIT_M0
+                       : AMDGPU::S_BARRIER_SIGNAL_M0;
     // extract the BarrierID from bits 4-9 of BarOp
     SDValue BarID;
     BarID = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
@@ -10845,8 +10859,40 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
 
-    auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_M0, DL,
-                                     Op->getVTList(), Ops);
+    auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
+  case Intrinsic::amdgcn_s_barrier_join: {
+    // these three intrinsics have one operand: barrier pointer
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    SDValue BarOp = Op->getOperand(2);
+    unsigned Opc;
+
+    if (isa<ConstantSDNode>(BarOp)) {
+      uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
+      Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+
+      // extract the BarrierID from bits 4-9 of the immediate
+      unsigned BarID = (BarVal >> 4) & 0x3F;
+      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      Ops.push_back(K);
+      Ops.push_back(Chain);
+    } else {
+      Opc = AMDGPU::S_BARRIER_JOIN_M0;
+
+      // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
+      SDValue M0Val;
+      M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
+                          DAG.getShiftAmountConstant(4, MVT::i32, DL));
+      M0Val =
+          SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
+                                     DAG.getTargetConstant(0x3F, DL, MVT::i32)),
+                  0);
+      Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
+    }
+
+    auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
   case Intrinsic::amdgcn_s_prefetch_data: {
@@ -10877,6 +10923,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
+// Return whether the operation has NoUnsignedWrap property.
+static bool isNoUnsignedWrap(SDValue Addr) {
+  return (Addr.getOpcode() == ISD::ADD &&
+          Addr->getFlags().hasNoUnsignedWrap()) ||
+         Addr->getOpcode() == ISD::OR;
+}
+
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
   return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
@@ -10898,8 +10951,14 @@ SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
   if ((C1 = dyn_cast<ConstantSDNode>(N0)))
     N0 = SDValue();
   else if (DAG.isBaseWithConstantOffset(N0)) {
-    C1 = cast<ConstantSDNode>(N0.getOperand(1));
-    N0 = N0.getOperand(0);
+    // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
+    // being added, so we can only safely match a 32-bit addition with no
+    // unsigned overflow.
+    bool CheckNUW = AMDGPU::isGFX1250(*Subtarget);
+    if (!CheckNUW || isNoUnsignedWrap(N0)) {
+      C1 = cast<ConstantSDNode>(N0.getOperand(1));
+      N0 = N0.getOperand(0);
+    }
   }
 
   if (C1) {
@@ -15670,7 +15729,7 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f16 || !Subtarget->has16BitInsts())
+  if ((VT != MVT::f16 && VT != MVT::bf16) || !Subtarget->has16BitInsts())
     return SDValue();
 
   SDValue LHS = N->getOperand(0);
@@ -16835,6 +16894,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
+    // Check if we cannot determine the bit size of the given value type.  This
+    // can happen, for example, in this situation where we have an empty struct
+    // (size 0): `call void asm "", "v"({} poison)`-
+    if (VT == MVT::Other)
+      return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     const unsigned BitWidth = VT.getSizeInBits();
     switch (Constraint[0]) {
     default:
@@ -16883,12 +16947,25 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       }
       break;
     }
-    // We actually support i128, i16 and f16 as inline parameters
-    // even if they are not reported as legal
-    if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
-               VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
-      return std::pair(0U, RC);
+  } else if (Constraint == "VA" && Subtarget->hasGFX90AInsts()) {
+    const unsigned BitWidth = VT.getSizeInBits();
+    switch (BitWidth) {
+    case 16:
+      RC = &AMDGPU::AV_32RegClass;
+      break;
+    default:
+      RC = TRI->getVectorSuperClassForBitWidth(BitWidth);
+      if (!RC)
+        return std::pair(0U, nullptr);
+      break;
+    }
   }
+
+  // We actually support i128, i16 and f16 as inline parameters
+  // even if they are not reported as legal
+  if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
+             VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
+    return std::pair(0U, RC);
 
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
@@ -16902,7 +16979,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
     if (RC) {
       if (NumRegs > 1) {
-        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 >= RC->getNumRegs())
           return std::pair(0U, nullptr);
 
         uint32_t Width = NumRegs * 32;
@@ -16974,6 +17051,9 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'a':
       return C_RegisterClass;
     }
+  } else if (Constraint.size() == 2) {
+    if (Constraint == "VA")
+      return C_RegisterClass;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
@@ -17695,6 +17775,8 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
     if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics() &&
         RMW->hasMetadata("amdgpu.no.remote.memory"))
       return true;
+    if (Subtarget.hasEmulatedSystemScopeAtomics())
+      return true;
   } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
@@ -17942,8 +18024,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::UMax: {
     if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
         AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      // Always expand system scope min/max atomics.
-      if (HasSystemScope)
+      if (HasSystemScope && !Subtarget->hasEmulatedSystemScopeAtomics())
         return AtomicExpansionKind::CmpXChg;
     }
 

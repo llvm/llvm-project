@@ -1195,12 +1195,10 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-IC:       scalar.body:
-; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VAR2:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[VAR3:%.*]], [[SCALAR_BODY]] ]
+; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR2:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[VAR3:%.*]], [[SCALAR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[VAR3]] = add i64 0, 1
 ; UNROLL-NO-IC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; UNROLL-NO-IC-NEXT:    [[COND:%.*]] = icmp eq i64 [[I_NEXT]], 1000
@@ -1222,12 +1220,10 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       scalar.body:
-; UNROLL-NO-VF-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
-; UNROLL-NO-VF-NEXT:    [[VAR2:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[VAR3:%.*]], [[SCALAR_BODY]] ]
+; UNROLL-NO-VF-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR2:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[VAR3:%.*]], [[SCALAR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[VAR3]] = add i64 0, 1
 ; UNROLL-NO-VF-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; UNROLL-NO-VF-NEXT:    [[COND:%.*]] = icmp eq i64 [[I_NEXT]], 1000
@@ -1249,12 +1245,10 @@ define i64 @constant_folded_previous_value() {
 ; SINK-AFTER:       middle.block:
 ; SINK-AFTER-NEXT:    br label [[FOR_END:%.*]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; SINK-AFTER-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; SINK-AFTER:       scalar.body:
-; SINK-AFTER-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
-; SINK-AFTER-NEXT:    [[VAR2:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[VAR3:%.*]], [[SCALAR_BODY]] ]
+; SINK-AFTER-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
+; SINK-AFTER-NEXT:    [[VAR2:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[VAR3:%.*]], [[SCALAR_BODY]] ]
 ; SINK-AFTER-NEXT:    [[VAR3]] = add i64 0, 1
 ; SINK-AFTER-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; SINK-AFTER-NEXT:    [[COND:%.*]] = icmp eq i64 [[I_NEXT]], 1000
@@ -2742,17 +2736,14 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[TMP51:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    br label [[BB1:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[Y]], [[BB:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[BB]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-IC:       bb1:
 ; UNROLL-NO-IC-NEXT:    [[VAR:%.*]] = phi i32 [ [[VAR6:%.*]], [[BB2]] ], [ [[TMP51]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[VAR]]
 ; UNROLL-NO-IC:       bb2:
-; UNROLL-NO-IC-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NO-IC-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; UNROLL-NO-IC-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[Y]], [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
 ; UNROLL-NO-IC-NEXT:    [[VAR6]] = add i32 [[VAR5]], [[VAR4]]
 ; UNROLL-NO-IC-NEXT:    [[VAR7]] = udiv i32 219220132, [[VAR3]]
 ; UNROLL-NO-IC-NEXT:    [[VAR8]] = add nsw i32 [[VAR3]], -1
@@ -2805,17 +2796,14 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP13]], [[TMP12]]
 ; UNROLL-NO-VF-NEXT:    br label [[BB1:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[Y]], [[BB:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[BB]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-VF:       bb1:
 ; UNROLL-NO-VF-NEXT:    [[VAR:%.*]] = phi i32 [ [[VAR6:%.*]], [[BB2]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-VF-NEXT:    ret i32 [[VAR]]
 ; UNROLL-NO-VF:       bb2:
-; UNROLL-NO-VF-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NO-VF-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; UNROLL-NO-VF-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[Y]], [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
 ; UNROLL-NO-VF-NEXT:    [[VAR6]] = add i32 [[VAR5]], [[VAR4]]
 ; UNROLL-NO-VF-NEXT:    [[VAR7]] = udiv i32 219220132, [[VAR3]]
 ; UNROLL-NO-VF-NEXT:    [[VAR8]] = add nsw i32 [[VAR3]], -1
@@ -2891,17 +2879,14 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; SINK-AFTER-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP25]])
 ; SINK-AFTER-NEXT:    br label [[BB1:%.*]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[Y]], [[BB:%.*]] ]
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[BB]] ]
-; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    br label [[BB2:%.*]]
 ; SINK-AFTER:       bb1:
 ; SINK-AFTER-NEXT:    [[VAR:%.*]] = phi i32 [ [[VAR6:%.*]], [[BB2]] ], [ [[TMP27]], [[MIDDLE_BLOCK]] ]
 ; SINK-AFTER-NEXT:    ret i32 [[VAR]]
 ; SINK-AFTER:       bb2:
-; SINK-AFTER-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; SINK-AFTER-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; SINK-AFTER-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[Y]], [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
 ; SINK-AFTER-NEXT:    [[VAR6]] = add i32 [[VAR5]], [[VAR4]]
 ; SINK-AFTER-NEXT:    [[VAR7]] = udiv i32 219220132, [[VAR3]]
 ; SINK-AFTER-NEXT:    [[VAR8]] = add nsw i32 [[VAR3]], -1
@@ -3104,19 +3089,15 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[TMP75:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    br label [[BB1:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[Y]], [[BB:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[BB]] ]
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[BB]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-IC:       bb1:
 ; UNROLL-NO-IC-NEXT:    [[VAR:%.*]] = phi i32 [ [[VAR6:%.*]], [[BB2]] ], [ [[TMP75]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[VAR]]
 ; UNROLL-NO-IC:       bb2:
-; UNROLL-NO-IC-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; UNROLL-NO-IC-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; UNROLL-NO-IC-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[Y]], [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
 ; UNROLL-NO-IC-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[IV]]
 ; UNROLL-NO-IC-NEXT:    [[VAR6]] = add i32 [[VAR5]], [[VAR4]]
 ; UNROLL-NO-IC-NEXT:    [[VAR7]] = udiv i32 219220132, [[VAR3]]
@@ -3185,19 +3166,15 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP17]], [[TMP16]]
 ; UNROLL-NO-VF-NEXT:    br label [[BB1:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[Y]], [[BB:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[BB]] ]
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[BB]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-VF:       bb1:
 ; UNROLL-NO-VF-NEXT:    [[VAR:%.*]] = phi i32 [ [[VAR6:%.*]], [[BB2]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-VF-NEXT:    ret i32 [[VAR]]
 ; UNROLL-NO-VF:       bb2:
-; UNROLL-NO-VF-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; UNROLL-NO-VF-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; UNROLL-NO-VF-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[Y]], [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
 ; UNROLL-NO-VF-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[IV]]
 ; UNROLL-NO-VF-NEXT:    [[VAR6]] = add i32 [[VAR5]], [[VAR4]]
 ; UNROLL-NO-VF-NEXT:    [[VAR7]] = udiv i32 219220132, [[VAR3]]
@@ -3307,19 +3284,15 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    [[TMP39:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP37]])
 ; SINK-AFTER-NEXT:    br label [[BB1:%.*]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[Y]], [[BB:%.*]] ]
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[BB]] ]
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[BB]] ]
-; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    br label [[BB2:%.*]]
 ; SINK-AFTER:       bb1:
 ; SINK-AFTER-NEXT:    [[VAR:%.*]] = phi i32 [ [[VAR6:%.*]], [[BB2]] ], [ [[TMP39]], [[MIDDLE_BLOCK]] ]
 ; SINK-AFTER-NEXT:    ret i32 [[VAR]]
 ; SINK-AFTER:       bb2:
-; SINK-AFTER-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; SINK-AFTER-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; SINK-AFTER-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[Y]], [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ 0, [[SCALAR_PH]] ]
 ; SINK-AFTER-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[IV]]
 ; SINK-AFTER-NEXT:    [[VAR6]] = add i32 [[VAR5]], [[VAR4]]
 ; SINK-AFTER-NEXT:    [[VAR7]] = udiv i32 219220132, [[VAR3]]
@@ -3379,12 +3352,10 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP3]], i32 2
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
-; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[FOR:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FOR]], 15
 ; UNROLL-NO-IC-NEXT:    [[C:%.*]] = icmp eq i1 [[CMP]], true
 ; UNROLL-NO-IC-NEXT:    [[VEC_DEAD:%.*]] = and i1 [[C]], true
@@ -3422,12 +3393,10 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-VF:       loop:
-; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; UNROLL-NO-VF-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], [[LOOP]] ]
+; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-VF-NEXT:    [[FOR:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], [[LOOP]] ]
 ; UNROLL-NO-VF-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FOR]], 15
 ; UNROLL-NO-VF-NEXT:    [[C:%.*]] = icmp eq i1 [[CMP]], true
 ; UNROLL-NO-VF-NEXT:    [[VEC_DEAD:%.*]] = and i1 [[C]], true
@@ -3465,12 +3434,10 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP3]], i32 2
 ; SINK-AFTER-NEXT:    br label [[FOR_END:%.*]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ]
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; SINK-AFTER-NEXT:    br label [[LOOP:%.*]]
 ; SINK-AFTER:       loop:
-; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; SINK-AFTER-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], [[LOOP]] ]
+; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; SINK-AFTER-NEXT:    [[FOR:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], [[LOOP]] ]
 ; SINK-AFTER-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FOR]], 15
 ; SINK-AFTER-NEXT:    [[C:%.*]] = icmp eq i1 [[CMP]], true
 ; SINK-AFTER-NEXT:    [[VEC_DEAD:%.*]] = and i1 [[C]], true

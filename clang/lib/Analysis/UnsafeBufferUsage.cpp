@@ -182,18 +182,22 @@ public:
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                 bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
+        Node, TraverseQualifier);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                               bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
+        Node, TraverseQualifier);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
@@ -1985,6 +1989,14 @@ public:
       return false;
     const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
     if (!FD)
+      return false;
+
+    bool IsGlobalAndNotInAnyNamespace =
+        FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
+
+    // A libc function must either be in the std:: namespace or a global
+    // function that is not in any namespace:
+    if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
       return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {

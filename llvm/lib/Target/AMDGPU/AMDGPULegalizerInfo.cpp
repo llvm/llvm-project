@@ -26,6 +26,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -134,6 +135,14 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
 
     const int NewNumElts = (32 * NextMul32 + EltSize - 1) / EltSize;
     return std::pair(TypeIdx, LLT::fixed_vector(NewNumElts, EltTy));
+  };
+}
+
+// Retrieves the scalar type that's the same size as the mem desc
+static LegalizeMutation getScalarTypeFromMemDesc(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    return std::make_pair(TypeIdx, LLT::scalar(MemSize));
   };
 }
 
@@ -381,6 +390,16 @@ static LegalityPredicate isWideScalarExtLoadTruncStore(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
            Query.MMODescrs[0].MemoryTy.getSizeInBits() < Ty.getSizeInBits();
+  };
+}
+
+// If we have a truncating store or an extending load with a data size larger
+// than 32-bits and mem location is a power of 2
+static LegalityPredicate isTruncStoreToSizePowerOf2(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    return isWideScalarExtLoadTruncStore(TypeIdx)(Query) &&
+           isPowerOf2_64(MemSize);
   };
 }
 
@@ -1635,11 +1654,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::pair(0, EltTy);
             })
-    .minScalar(0, S32)
-    .narrowScalarIf(isWideScalarExtLoadTruncStore(0), changeTo(0, S32))
-    .widenScalarToNextPow2(0)
-    .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
-    .lower();
+        .minScalar(0, S32)
+        .narrowScalarIf(isTruncStoreToSizePowerOf2(0),
+                        getScalarTypeFromMemDesc(0))
+        .widenScalarToNextPow2(0)
+        .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
+        .lower();
   }
 
   // FIXME: Unaligned accesses not lowered.
@@ -5653,7 +5673,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (Size % 64 == 0) &&
       ST.hasDPALU_DPP() &&
-      AMDGPU::isLegalDPALU_DPPControl(MI.getOperand(4).getImm()))
+      AMDGPU::isLegalDPALU_DPPControl(ST, MI.getOperand(4).getImm()))
     SplitSize = 64;
 
   if (Size == SplitSize) {
@@ -5879,8 +5899,12 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo &MRI = *B.getMRI();
 
-  std::tie(BaseReg, ImmOffset) =
-      AMDGPU::getBaseWithConstantOffset(MRI, OrigOffset);
+  // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
+  // being added, so we can only safely match a 32-bit addition with no unsigned
+  // overflow.
+  bool CheckNUW = AMDGPU::isGFX1250(ST);
+  std::tie(BaseReg, ImmOffset) = AMDGPU::getBaseWithConstantOffset(
+      MRI, OrigOffset, /*KnownBits=*/nullptr, CheckNUW);
 
   // If BaseReg is a pointer, convert it to int.
   if (MRI.getType(BaseReg).isPointer())

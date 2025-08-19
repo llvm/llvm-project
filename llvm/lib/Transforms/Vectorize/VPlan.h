@@ -1019,7 +1019,11 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
-
+    /// Explicit user for the resume phi of the canonical induction in the main
+    /// VPlan, used by the epilogue vector loop.
+    ResumeForEpilogue,
+    /// Returns the value for vscale.
+    VScale,
   };
 
 private:
@@ -1167,6 +1171,7 @@ public:
     switch (VPI->getOpcode()) {
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
+    case VPInstruction::VScale:
       return true;
     default:
       return false;
@@ -1227,6 +1232,31 @@ public:
     return getAsRecipe()->getNumOperands();
   }
 
+  /// Returns an interator range over the incoming values.
+  VPUser::const_operand_range incoming_values() const {
+    return make_range(getAsRecipe()->op_begin(),
+                      getAsRecipe()->op_begin() + getNumIncoming());
+  }
+
+  using const_incoming_blocks_range = iterator_range<mapped_iterator<
+      detail::index_iterator, std::function<const VPBasicBlock *(size_t)>>>;
+
+  /// Returns an iterator range over the incoming blocks.
+  const_incoming_blocks_range incoming_blocks() const {
+    std::function<const VPBasicBlock *(size_t)> GetBlock = [this](size_t Idx) {
+      return getIncomingBlock(Idx);
+    };
+    return map_range(index_range(0, getNumIncoming()), GetBlock);
+  }
+
+  /// Returns an iterator range over pairs of incoming values and corresponding
+  /// incoming blocks.
+  detail::zippy<llvm::detail::zip_first, VPUser::const_operand_range,
+                const_incoming_blocks_range>
+  incoming_values_and_blocks() const {
+    return zip_equal(incoming_values(), incoming_blocks());
+  }
+
   /// Removes the incoming value for \p IncomingBlock, which must be a
   /// predecessor.
   void removeIncomingValueFor(VPBlockBase *IncomingBlock) const;
@@ -1242,12 +1272,24 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
       : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPInstruction>(U);
-    return R && R->getOpcode() == Instruction::PHI;
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *SDR) {
+    auto *VPI = dyn_cast<VPInstruction>(SDR);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
   }
 
   VPPhi *clone() override {
-    return new VPPhi(operands(), getDebugLoc(), getName());
+    auto *PhiR = new VPPhi(operands(), getDebugLoc(), getName());
+    PhiR->setUnderlyingValue(getUnderlyingValue());
+    return PhiR;
   }
 
   void execute(VPTransformState &State) override;
@@ -2286,6 +2328,11 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Returns the number of incoming values, also number of incoming blocks.
+  /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
+  /// incoming value, its start value.
+  unsigned getNumIncoming() const override { return 2; }
+
   /// Returns the recurrence kind of the reduction.
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -2396,11 +2443,11 @@ public:
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *I = IG->getMember(i)) {
-        if (I->getType()->isVoidTy())
+    for (unsigned I = 0; I < IG->getFactor(); ++I)
+      if (Instruction *Inst = IG->getMember(I)) {
+        if (Inst->getType()->isVoidTy())
           continue;
-        new VPValue(I, this);
+        new VPValue(Inst, this);
       }
 
     for (auto *SV : StoredValues)
@@ -3955,9 +4002,6 @@ public:
     Entry = VPBB;
     VPBB->setPlan(this);
   }
-
-  /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(Value *VectorTripCount, VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);

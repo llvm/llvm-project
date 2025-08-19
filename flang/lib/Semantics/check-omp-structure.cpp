@@ -10,7 +10,6 @@
 
 #include "check-directive-structure.h"
 #include "definable.h"
-#include "openmp-utils.h"
 #include "resolve-names-utils.h"
 
 #include "flang/Common/idioms.h"
@@ -27,6 +26,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -535,14 +535,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   }
   bool Pre(const parser::OmpEndAssumeDirective &x) {
     checker_(x.v.source, Directive::OMPD_assume);
-    return false;
-  }
-  bool Pre(const parser::OmpCriticalDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_critical);
-    return false;
-  }
-  bool Pre(const parser::OmpEndCriticalDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_critical);
     return false;
   }
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
@@ -2034,41 +2026,87 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
-  const auto &dir{std::get<parser::OmpCriticalDirective>(x.t)};
-  const auto &dirSource{std::get<parser::Verbatim>(dir.t).source};
-  const auto &endDir{std::get<parser::OmpEndCriticalDirective>(x.t)};
-  PushContextAndClauseSets(dirSource, llvm::omp::Directive::OMPD_critical);
+  const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
+  const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
+  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirName().v);
+
   const auto &block{std::get<parser::Block>(x.t)};
-  CheckNoBranching(block, llvm::omp::Directive::OMPD_critical, dir.source);
-  const auto &dirName{std::get<std::optional<parser::Name>>(dir.t)};
-  const auto &endDirName{std::get<std::optional<parser::Name>>(endDir.t)};
-  const auto &ompClause{std::get<parser::OmpClauseList>(dir.t)};
-  if (dirName && endDirName &&
-      dirName->ToString().compare(endDirName->ToString())) {
-    context_
-        .Say(endDirName->source,
-            parser::MessageFormattedText{
-                "CRITICAL directive names do not match"_err_en_US})
-        .Attach(dirName->source, "should be "_en_US);
-  } else if (dirName && !endDirName) {
-    context_
-        .Say(dirName->source,
-            parser::MessageFormattedText{
-                "CRITICAL directive names do not match"_err_en_US})
-        .Attach(dirName->source, "should be NULL"_en_US);
-  } else if (!dirName && endDirName) {
-    context_
-        .Say(endDirName->source,
-            parser::MessageFormattedText{
-                "CRITICAL directive names do not match"_err_en_US})
-        .Attach(endDirName->source, "should be NULL"_en_US);
+  CheckNoBranching(
+      block, llvm::omp::Directive::OMPD_critical, beginSpec.DirName().source);
+
+  auto getNameFromArg{[](const parser::OmpArgument &arg) {
+    if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
+      if (auto *designator{omp::GetDesignatorFromObj(*object)}) {
+        return getDesignatorNameIfDataRef(*designator);
+      }
+    }
+    return static_cast<const parser::Name *>(nullptr);
+  }};
+
+  auto checkArgumentList{[&](const parser::OmpArgumentList &args) {
+    if (args.v.size() > 1) {
+      context_.Say(args.source,
+          "Only a single argument is allowed in CRITICAL directive"_err_en_US);
+    } else if (!args.v.empty()) {
+      if (!getNameFromArg(args.v.front())) {
+        context_.Say(args.v.front().source,
+            "CRITICAL argument should be a name"_err_en_US);
+      }
+    }
+  }};
+
+  const parser::Name *beginName{nullptr};
+  const parser::Name *endName{nullptr};
+
+  auto &beginArgs{beginSpec.Arguments()};
+  checkArgumentList(beginArgs);
+
+  if (!beginArgs.v.empty()) {
+    beginName = getNameFromArg(beginArgs.v.front());
   }
-  if (!dirName && !ompClause.source.empty() &&
-      ompClause.source.NULTerminatedToString() != "hint(omp_sync_hint_none)") {
-    context_.Say(dir.source,
-        parser::MessageFormattedText{
-            "Hint clause other than omp_sync_hint_none cannot be specified for "
-            "an unnamed CRITICAL directive"_err_en_US});
+
+  if (endSpec) {
+    auto &endArgs{endSpec->Arguments()};
+    checkArgumentList(endArgs);
+
+    if (beginArgs.v.empty() != endArgs.v.empty()) {
+      parser::CharBlock source{
+          beginArgs.v.empty() ? endArgs.source : beginArgs.source};
+      context_.Say(source,
+          "Either both CRITICAL and END CRITICAL should have an argument, or none of them should"_err_en_US);
+    } else if (!beginArgs.v.empty()) {
+      endName = getNameFromArg(endArgs.v.front());
+      if (beginName && endName) {
+        if (beginName->ToString() != endName->ToString()) {
+          context_.Say(endName->source,
+              "The names on CRITICAL and END CRITICAL must match"_err_en_US);
+        }
+      }
+    }
+  }
+
+  for (auto &clause : beginSpec.Clauses().v) {
+    auto *hint{std::get_if<parser::OmpClause::Hint>(&clause.u)};
+    if (!hint) {
+      continue;
+    }
+    const int64_t OmpSyncHintNone = 0; // omp_sync_hint_none
+    std::optional<int64_t> hintValue{GetIntValue(hint->v.v)};
+    if (hintValue && *hintValue != OmpSyncHintNone) {
+      // Emit a diagnostic if the name is missing, and point to the directive
+      // with a missing name.
+      parser::CharBlock source;
+      if (!beginName) {
+        source = beginSpec.DirName().source;
+      } else if (endSpec && !endName) {
+        source = endSpec->DirName().source;
+      }
+
+      if (!source.empty()) {
+        context_.Say(source,
+            "When HINT other than 'omp_sync_hint_none' is present, CRITICAL directive should have a name"_err_en_US);
+      }
+    }
   }
 }
 
@@ -2543,6 +2581,7 @@ CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
 CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
+CHECK_SIMPLE_CLAUSE(DynGroupprivate, OMPC_dyn_groupprivate)
 CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
@@ -2853,7 +2892,8 @@ static bool CheckSymbolSupportsType(const Scope &scope,
 
 static bool IsReductionAllowedForType(
     const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
-    const Scope &scope, SemanticsContext &context) {
+    bool cannotBeBuiltinReduction, const Scope &scope,
+    SemanticsContext &context) {
   auto isLogical{[](const DeclTypeSpec &type) -> bool {
     return type.category() == DeclTypeSpec::Logical;
   }};
@@ -2864,6 +2904,10 @@ static bool IsReductionAllowedForType(
   auto checkOperator{[&](const parser::DefinedOperator &dOpr) {
     if (const auto *intrinsicOp{
             std::get_if<parser::DefinedOperator::IntrinsicOperator>(&dOpr.u)}) {
+      if (cannotBeBuiltinReduction) {
+        return false;
+      }
+
       // OMP5.2: The type [...] of a list item that appears in a
       // reduction clause must be valid for the combiner expression
       // See F2023: Table 10.2
@@ -2915,7 +2959,8 @@ static bool IsReductionAllowedForType(
         // IAND: arguments must be integers: F2023 16.9.100
         // IEOR: arguments must be integers: F2023 16.9.106
         // IOR: arguments must be integers: F2023 16.9.111
-        if (type.IsNumeric(TypeCategory::Integer)) {
+        if (type.IsNumeric(TypeCategory::Integer) &&
+            !cannotBeBuiltinReduction) {
           return true;
         }
       } else if (realName == "max" || realName == "min") {
@@ -2923,8 +2968,9 @@ static bool IsReductionAllowedForType(
         // F2023 16.9.135
         // MIN: arguments must be integer, real, or character:
         // F2023 16.9.141
-        if (type.IsNumeric(TypeCategory::Integer) ||
-            type.IsNumeric(TypeCategory::Real) || isCharacter(type)) {
+        if ((type.IsNumeric(TypeCategory::Integer) ||
+                type.IsNumeric(TypeCategory::Real) || isCharacter(type)) &&
+            !cannotBeBuiltinReduction) {
           return true;
         }
       }
@@ -2957,9 +3003,16 @@ void OmpStructureChecker::CheckReductionObjectTypes(
   GetSymbolsInObjectList(objects, symbols);
 
   for (auto &[symbol, source] : symbols) {
+    // Built in reductions require types which can be used in their initializer
+    // and combiner expressions. For example, for +:
+    // r = 0; r = r + r2
+    // But it might be valid to use these with DECLARE REDUCTION.
+    // Assumed size is already caught elsewhere.
+    bool cannotBeBuiltinReduction{evaluate::IsAssumedRank(*symbol)};
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
-      if (!IsReductionAllowedForType(ident, *type, scope, context_)) {
+      if (!IsReductionAllowedForType(
+              ident, *type, cannotBeBuiltinReduction, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
             symbol->name());

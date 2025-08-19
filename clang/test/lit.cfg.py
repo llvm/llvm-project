@@ -316,7 +316,7 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 
 # [PR8833] LLP64-incompatible tests
 if not re.match(
-    r"^(aarch64|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
+    r"^(aarch64|arm64ec|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
 ):
     config.available_features.add("LP64")
 

@@ -1607,7 +1607,6 @@ module std [system] {
   }
 
   module map {
-    module fwd { header "__fwd/map.h" }
     header "map"
     export *
     export std.iterator.reverse_iterator
@@ -1974,7 +1973,6 @@ module std [system] {
   }
 
   module set {
-    module fwd { header "__fwd/set.h" }
     header "set"
     export *
     export std.iterator.reverse_iterator
