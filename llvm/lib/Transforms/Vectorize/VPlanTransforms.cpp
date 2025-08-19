@@ -980,10 +980,11 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
     return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
                           Ops[1],
                           cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
-  case Instruction::InsertElement:
-    return Folder.FoldInsertElement(Ops[0], Ops[1], Ops[2]);
+  // An extract of a live-in is an extract of a broadcast, so return the
+  // broadcasted element.
   case Instruction::ExtractElement:
-    return Folder.FoldExtractElement(Ops[0], Ops[1]);
+    assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
+    return Ops[0];
   }
   return nullptr;
 }

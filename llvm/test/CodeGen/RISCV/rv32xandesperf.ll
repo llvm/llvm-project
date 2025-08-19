@@ -346,6 +346,31 @@ define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
   ret i8 %sext
 }
 
+; Make sure we don't use seqz+nds.bfos instead of snez+addi
+define i32 @sexti1_i32_setcc_2(i32 %a, i32 %b) {
+; CHECK-LABEL: sexti1_i32_setcc_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
+  %icmp = icmp eq i32 %a, %b
+  %sext = sext i1 %icmp to i32
+  ret i32 %sext
+}
+
+; Make sure we don't use nds.bfos instead of neg.
+define i32 @sexti1_i32_setcc_3(i32 %a, i32 %b) {
+; CHECK-LABEL: sexti1_i32_setcc_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a0, a1
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp slt i32 %a, %b
+  %sext = sext i1 %icmp to i32
+  ret i32 %sext
+}
+
 define i32 @sexti8_i32(i32 %a) {
 ; CHECK-LABEL: sexti8_i32:
 ; CHECK:       # %bb.0:

@@ -1695,13 +1695,9 @@ multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
 }
 
 let Predicates = [IsRV32] in {
-def : Pat<(i32 (seteq (i32 (and GPR:$rs1, 0xffffffff80000000)), 0)),
-          (XORI (i32 (SRLI GPR:$rs1, 31)), 1)>;
 def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
 }
 let Predicates = [IsRV64] in {
-def : Pat<(i64 (seteq (i64 (and GPR:$rs1, 0x8000000000000000)), 0)),
-          (XORI (i64 (SRLI GPR:$rs1, 63)), 1)>;
 def : Pat<(i64 (seteq (i64 (and GPR:$rs1, 0x0000000080000000)), 0)),
           (XORI (i64 (SRLIW GPR:$rs1, 31)), 1)>;
 def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
