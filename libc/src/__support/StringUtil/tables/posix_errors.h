@@ -63,7 +63,12 @@ LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(EPROTO, "Protocol error"),
     MsgMapping(EMULTIHOP, "Multihop attempted"),
     MsgMapping(EBADMSG, "Bad message"),
+#ifdef __EMSCRIPTEN__
+    // For now, match the musl string
+    MsgMapping(EOVERFLOW, "Value too large for data type"),
+#else
     MsgMapping(EOVERFLOW, "Value too large for defined data type"),
+#endif
     MsgMapping(ENOTSOCK, "Socket operation on non-socket"),
     MsgMapping(EDESTADDRREQ, "Destination address required"),
     MsgMapping(EMSGSIZE, "Message too long"),

@@ -16,7 +16,12 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
+#ifdef __EMSCRIPTEN__
+    // For now, match the musl name for errno 0.
+    MsgMapping(0, "No error information"),
+#else
     MsgMapping(0, "Success"),
+#endif
     MsgMapping(EDOM, "Numerical argument out of domain"),
     MsgMapping(ERANGE, "Numerical result out of range"),
     MsgMapping(EILSEQ, "Invalid or incomplete multibyte or wide character"),
