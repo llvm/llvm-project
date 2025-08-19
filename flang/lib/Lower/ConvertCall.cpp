@@ -880,10 +880,10 @@ struct CallContext {
               std::optional<mlir::Type> resultType, mlir::Location loc,
               Fortran::lower::AbstractConverter &converter,
               Fortran::lower::SymMap &symMap,
-              Fortran::lower::StatementContext &stmtCtx,
-              bool doCopyIn = true)
+              Fortran::lower::StatementContext &stmtCtx, bool doCopyIn = true)
       : procRef{procRef}, converter{converter}, symMap{symMap},
-        stmtCtx{stmtCtx}, resultType{resultType}, loc{loc}, doCopyIn{doCopyIn} {}
+        stmtCtx{stmtCtx}, resultType{resultType}, loc{loc}, doCopyIn{doCopyIn} {
+  }
 
   fir::FirOpBuilder &getBuilder() { return converter.getFirOpBuilder(); }
 
