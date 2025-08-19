@@ -54,28 +54,31 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    andi a2, a1, 1
 ; CHECK-NEXT:    bne a1, a3, .LBB1_3
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    j .LBB1_5
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    bnez a2, .LBB1_6
+; CHECK-NEXT:    j .LBB1_7
 ; CHECK-NEXT:  .LBB1_3: # %for.body.preheader.new
 ; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    andi a1, a1, -2
+; CHECK-NEXT:    neg a1, a1
 ; CHECK-NEXT:    addi a4, a0, 4
 ; CHECK-NEXT:  .LBB1_4: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a5, -4(a4)
 ; CHECK-NEXT:    lw a6, 0(a4)
-; CHECK-NEXT:    addi a3, a3, 2
+; CHECK-NEXT:    addi a3, a3, -2
 ; CHECK-NEXT:    addi a5, a5, 4
 ; CHECK-NEXT:    addi a6, a6, 4
 ; CHECK-NEXT:    sw a5, -4(a4)
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a4, a4, 8
 ; CHECK-NEXT:    bne a1, a3, .LBB1_4
-; CHECK-NEXT:  .LBB1_5: # %for.cond.cleanup.loopexit.unr-lcssa
+; CHECK-NEXT:  # %bb.5: # %for.cond.cleanup.loopexit.unr-lcssa.loopexit
+; CHECK-NEXT:    neg a1, a3
 ; CHECK-NEXT:    beqz a2, .LBB1_7
-; CHECK-NEXT:  # %bb.6: # %for.body.epil
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:  .LBB1_6: # %for.body.epil
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    lw a1, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    sw a1, 0(a0)

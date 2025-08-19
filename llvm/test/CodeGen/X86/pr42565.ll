@@ -5,16 +5,16 @@
 define void @HUF_writeCTable_wksp()  {
 ; CHECK-LABEL: HUF_writeCTable_wksp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $2, %eax
-; CHECK-NEXT:    movb $-2, %cl
+; CHECK-NEXT:    movb $-2, %al
+; CHECK-NEXT:    movl $2, %ecx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leal 1(%rcx), %edx
+; CHECK-NEXT:    leal 1(%rax), %edx
 ; CHECK-NEXT:    movb %dl, (%rax)
-; CHECK-NEXT:    movb %cl, (%rax)
-; CHECK-NEXT:    leaq 2(%rax), %rax
-; CHECK-NEXT:    addb $-2, %cl
+; CHECK-NEXT:    movb %al, (%rcx)
+; CHECK-NEXT:    addb $-2, %al
+; CHECK-NEXT:    leaq 2(%rcx), %rcx
 ; CHECK-NEXT:    jmp .LBB0_1
 entry:
   br label %for.body

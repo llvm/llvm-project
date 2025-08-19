@@ -33,17 +33,17 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    b.eq .LBB0_8
 ; CHECK-NEXT:  .LBB0_6: // %for.body.preheader1
-; CHECK-NEXT:    lsl x10, x9, #1
+; CHECK-NEXT:    lsl x11, x9, #1
 ; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    add x9, x1, x10
-; CHECK-NEXT:    add x10, x0, x10
+; CHECK-NEXT:    add x10, x1, x11
+; CHECK-NEXT:    add x11, x0, x11
 ; CHECK-NEXT:  .LBB0_7: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr h1, [x10], #2
-; CHECK-NEXT:    ldr h2, [x9]
+; CHECK-NEXT:    ldr h1, [x11], #2
+; CHECK-NEXT:    ldr h2, [x10]
 ; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fmadd h1, h1, h0, h2
-; CHECK-NEXT:    str h1, [x9], #2
+; CHECK-NEXT:    str h1, [x10], #2
 ; CHECK-NEXT:    b.ne .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: // %for.cond.cleanup
 ; CHECK-NEXT:    ret

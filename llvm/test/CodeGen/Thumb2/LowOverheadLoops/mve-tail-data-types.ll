@@ -921,33 +921,33 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(ptr nocapture readonly 
 ; CHECK-NEXT:    bic r7, r4, #3
 ; CHECK-NEXT:    movs r6, #1
 ; CHECK-NEXT:    subs r7, #4
-; CHECK-NEXT:    add.w r5, r3, #8
+; CHECK-NEXT:    add.w r5, r0, #8
 ; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    add.w lr, r6, r7, lsr #2
-; CHECK-NEXT:    add.w r6, r0, #8
+; CHECK-NEXT:    add.w r6, r3, #8
 ; CHECK-NEXT:    add.w r7, r1, #8
 ; CHECK-NEXT:  .LBB9_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r9, [r6, #-8]
+; CHECK-NEXT:    ldr r9, [r5, #-8]
 ; CHECK-NEXT:    add.w r8, r8, #4
 ; CHECK-NEXT:    ldr r4, [r7, #-8]
 ; CHECK-NEXT:    mla r4, r4, r9, r2
-; CHECK-NEXT:    str r4, [r5, #-8]
-; CHECK-NEXT:    ldr r9, [r6, #-4]
+; CHECK-NEXT:    str r4, [r6, #-8]
+; CHECK-NEXT:    ldr r9, [r5, #-4]
 ; CHECK-NEXT:    ldr r4, [r7, #-4]
 ; CHECK-NEXT:    mla r4, r4, r9, r2
-; CHECK-NEXT:    str r4, [r5, #-4]
-; CHECK-NEXT:    ldr.w r9, [r6]
+; CHECK-NEXT:    str r4, [r6, #-4]
+; CHECK-NEXT:    ldr.w r9, [r5]
 ; CHECK-NEXT:    ldr r4, [r7]
 ; CHECK-NEXT:    mla r4, r4, r9, r2
-; CHECK-NEXT:    str r4, [r5]
-; CHECK-NEXT:    ldr.w r9, [r6, #4]
-; CHECK-NEXT:    adds r6, #16
+; CHECK-NEXT:    str r4, [r6]
+; CHECK-NEXT:    ldr.w r9, [r5, #4]
+; CHECK-NEXT:    adds r5, #16
 ; CHECK-NEXT:    ldr r4, [r7, #4]
 ; CHECK-NEXT:    adds r7, #16
 ; CHECK-NEXT:    mla r4, r4, r9, r2
-; CHECK-NEXT:    str r4, [r5, #4]
-; CHECK-NEXT:    adds r5, #16
+; CHECK-NEXT:    str r4, [r6, #4]
+; CHECK-NEXT:    adds r6, #16
 ; CHECK-NEXT:    le lr, .LBB9_7
 ; CHECK-NEXT:  .LBB9_8: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    wls lr, r12, .LBB9_11

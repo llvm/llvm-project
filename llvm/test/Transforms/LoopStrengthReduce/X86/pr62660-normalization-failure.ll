@@ -9,18 +9,17 @@ define i64 @test_pr62660() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ -1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[LSR_IV_NEXT1:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = and i32 [[TMP]], 65535
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = and i32 [[TMP1]], 65535
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], -1
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[ADD]], [[CONV1]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT1]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], 8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add i64 [[LSR_IV_NEXT1]], -1
 ; CHECK-NEXT:    ret i64 [[LSR_IV_NEXT]]
 ;
 entry:

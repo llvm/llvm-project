@@ -7,38 +7,38 @@ target triple = "x86_64-apple-macos"
 declare i1 @cond()
 
 define ptr @test(ptr %dst, i64 %v4, i64 %v5, i64 %v6, i64 %v7)  {
-; CHECK-LABEL: define ptr @test
-; CHECK-SAME: (ptr [[DST:%.*]], i64 [[V4:%.*]], i64 [[V5:%.*]], i64 [[V6:%.*]], i64 [[V7:%.*]]) {
+; CHECK-LABEL: define ptr @test(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[V4:%.*]], i64 [[V5:%.*]], i64 [[V6:%.*]], i64 [[V7:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[V5]], [[V4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[V7]], [[V6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], -8
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[V5]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[V4]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP7]], 8
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[V5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[V7]], 3
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[V6]], 3
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], -8
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[V5]], [[V4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[V7]], [[V6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP9]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], -8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw i64 [[V5]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP12]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[V4]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[V5]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[V7]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[V6]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -8
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi ptr [ [[SCEVGEP5:%.*]], [[LOOP]] ], [ [[SCEVGEP3]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP1:%.*]], [[LOOP]] ], [ [[SCEVGEP]], [[ENTRY]] ]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[LSR_IV4]], i64 [[TMP9]]
-; CHECK-NEXT:    store i64 0, ptr [[SCEVGEP6]], align 8
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[LSR_IV4]], i64 [[TMP2]]
+; CHECK-NEXT:    store i64 0, ptr [[SCEVGEP2]], align 8
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
-; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr [[LSR_IV]], i64 [[TMP6]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[TMP1]]
-; CHECK-NEXT:    [[SCEVGEP5]] = getelementptr i8, ptr [[LSR_IV4]], i64 [[TMP6]]
+; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr [[LSR_IV]], i64 [[TMP8]]
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[TMP7]]
+; CHECK-NEXT:    [[SCEVGEP5]] = getelementptr i8, ptr [[LSR_IV4]], i64 [[TMP8]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[SCEVGEP2]], [[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[SCEVGEP6]], [[LOOP]] ]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 entry:
@@ -64,8 +64,8 @@ exit:
 }
 
 define i32 @test_pr63678(i1 %c) {
-; CHECK-LABEL: define i32 @test_pr63678
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-LABEL: define i32 @test_pr63678(
+; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_1_PREHEADER:%.*]]
 ; CHECK:       bb:

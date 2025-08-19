@@ -401,18 +401,18 @@ define %"class.std::complex" @double_complex_mul_v2f64(ptr noundef readonly capt
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    rdvl x8, #4
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    rdvl x9, #4
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:  .LBB4_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
-; CHECK-NEXT:    subs x2, x2, x8
-; CHECK-NEXT:    add x0, x0, x9
+; CHECK-NEXT:    subs x2, x2, x9
+; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
-; CHECK-NEXT:    add x1, x1, x9
+; CHECK-NEXT:    add x1, x1, x8
 ; CHECK-NEXT:    fmla z2.d, p0/m, z16.d, z4.d
 ; CHECK-NEXT:    fmla z0.d, p0/m, z16.d, z5.d
 ; CHECK-NEXT:    fmla z3.d, p0/m, z18.d, z6.d

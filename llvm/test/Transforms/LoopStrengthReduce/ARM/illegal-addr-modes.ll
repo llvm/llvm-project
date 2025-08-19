@@ -113,8 +113,7 @@ define void @negativeFourCase(ptr %ptr1, ptr %ptr2) nounwind {
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[C1_0104_US_I_I]], i32 [[LSR_IV]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i32 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SCEVGEP5]], align 4
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[C1_0104_US_I_I]], i32 [[LSR_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SCEVGEP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SCEVGEP4]], align 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i32 [[LSR_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SCEVGEP2]], align 4
 ; CHECK-NEXT:    br label [[IF_END37_US_I_I]]

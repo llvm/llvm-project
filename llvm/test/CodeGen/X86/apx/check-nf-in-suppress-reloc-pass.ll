@@ -30,8 +30,8 @@ define fastcc void @foo(i32 %0, i1 %or.cond) nounwind {
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    movq %r14, %rdx
 ; CHECK-NEXT:    callq *%r13
-; CHECK-NEXT:    incq %rbp
 ; CHECK-NEXT:    addq $20, %r14
+; CHECK-NEXT:    incq %rbp
 ; CHECK-NEXT:  .LBB0_1: # %for.body30
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %bl

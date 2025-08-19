@@ -143,15 +143,15 @@ define void @NonSCEVableIV(float %init, ptr %A, i32 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fp_inc, align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[X_05:%.*]] = phi float [ [[INIT]], [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    store float [[X_05]], ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    store float [[X_05]], ptr [[LSR_IV]], align 4
 ; CHECK-NEXT:    [[ADD]] = fsub float [[X_05]], [[TMP0]]
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[LSR_IV]] to i32
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[LSR_IV1]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 4
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV1]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

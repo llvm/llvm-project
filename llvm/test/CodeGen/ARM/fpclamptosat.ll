@@ -3658,25 +3658,28 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ;
 ; VFP2-LABEL: unroll_maxmin:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    subs r1, #8
+; VFP2-NEXT:    .save {r7, lr}
+; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    subs r0, #8
 ; VFP2-NEXT:    vldr s0, .LCPI54_0
-; VFP2-NEXT:    mov.w r2, #1024
+; VFP2-NEXT:    mvn r2, #7
+; VFP2-NEXT:    movw r12, #4088
 ; VFP2-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
-; VFP2-NEXT:    vldr s2, [r1, #8]
-; VFP2-NEXT:    subs r2, #2
+; VFP2-NEXT:    add.w lr, r1, r2
+; VFP2-NEXT:    adds r2, #8
+; VFP2-NEXT:    cmp r2, r12
+; VFP2-NEXT:    vldr s2, [lr, #8]
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
 ; VFP2-NEXT:    vmov r3, s2
 ; VFP2-NEXT:    str r3, [r0, #8]!
-; VFP2-NEXT:    vldr s2, [r1, #12]
-; VFP2-NEXT:    add.w r1, r1, #8
+; VFP2-NEXT:    vldr s2, [lr, #12]
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
 ; VFP2-NEXT:    vstr s2, [r0, #4]
 ; VFP2-NEXT:    bne .LBB54_1
 ; VFP2-NEXT:  @ %bb.2:
-; VFP2-NEXT:    bx lr
+; VFP2-NEXT:    pop {r7, pc}
 ; VFP2-NEXT:    .p2align 2
 ; VFP2-NEXT:  @ %bb.3:
 ; VFP2-NEXT:  .LCPI54_0:
@@ -3829,25 +3832,28 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ;
 ; VFP2-LABEL: unroll_minmax:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    subs r1, #8
+; VFP2-NEXT:    .save {r7, lr}
+; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    subs r0, #8
 ; VFP2-NEXT:    vldr s0, .LCPI55_0
-; VFP2-NEXT:    mov.w r2, #1024
+; VFP2-NEXT:    mvn r2, #7
+; VFP2-NEXT:    movw r12, #4088
 ; VFP2-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
-; VFP2-NEXT:    vldr s2, [r1, #8]
-; VFP2-NEXT:    subs r2, #2
+; VFP2-NEXT:    add.w lr, r1, r2
+; VFP2-NEXT:    adds r2, #8
+; VFP2-NEXT:    cmp r2, r12
+; VFP2-NEXT:    vldr s2, [lr, #8]
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
 ; VFP2-NEXT:    vmov r3, s2
 ; VFP2-NEXT:    str r3, [r0, #8]!
-; VFP2-NEXT:    vldr s2, [r1, #12]
-; VFP2-NEXT:    add.w r1, r1, #8
+; VFP2-NEXT:    vldr s2, [lr, #12]
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
 ; VFP2-NEXT:    vstr s2, [r0, #4]
 ; VFP2-NEXT:    bne .LBB55_1
 ; VFP2-NEXT:  @ %bb.2:
-; VFP2-NEXT:    bx lr
+; VFP2-NEXT:    pop {r7, pc}
 ; VFP2-NEXT:    .p2align 2
 ; VFP2-NEXT:  @ %bb.3:
 ; VFP2-NEXT:  .LCPI55_0:

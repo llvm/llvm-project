@@ -671,18 +671,18 @@ define dso_local void @test_nested(ptr noalias nocapture %pInT1, ptr noalias noc
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB14_2 Depth 2
 ; CHECK-NEXT:    ldr r4, [r1]
-; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vdup.32 q0, r4
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:  .LBB14_2: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB14_1 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vldrw.u32 q1, [r5], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r4]
-; CHECK-NEXT:    subs r6, #4
+; CHECK-NEXT:    vldrw.u32 q1, [r6], #16
+; CHECK-NEXT:    vldrw.u32 q2, [r5]
+; CHECK-NEXT:    subs r4, #4
 ; CHECK-NEXT:    vfms.f32 q2, q1, q0
-; CHECK-NEXT:    vstrb.8 q2, [r4], #16
+; CHECK-NEXT:    vstrb.8 q2, [r5], #16
 ; CHECK-NEXT:    bne .LBB14_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond6.for.end_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB14_1 Depth=1
