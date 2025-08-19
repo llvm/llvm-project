@@ -350,6 +350,7 @@ TEST_P(CASTest, BlobsBigParallel) {
 }
 
 #if LLVM_ENABLE_ONDISK_CAS
+#ifndef _WIN32 // create_link won't work for directories on Windows
 TEST(OnDiskCASTest, BlobsParallelMultiCAS) {
   // This test intentionally uses symlinked paths to the same CAS to subvert the
   // shared memory mappings that would normally be created within a single
@@ -405,8 +406,8 @@ TEST(OnDiskCASTest, BlobsBigParallelMultiCAS) {
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel(*CAS1, *CAS2, *CAS3, *CAS4, Size));
 }
+#endif // _WIN32
 
-#ifndef _WIN32 // FIXME: resize support on Windows.
 TEST(OnDiskCASTest, DiskSize) {
   setMaxOnDiskCASMappingSize();
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
@@ -454,5 +455,4 @@ TEST(OnDiskCASTest, DiskSize) {
   CAS.reset();
   CheckFileSizes(/*Mapped=*/false);
 }
-#endif
-#endif
+#endif // LLVM_ENABLE_ONDISK_CAS

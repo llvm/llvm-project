@@ -22,8 +22,10 @@ static StringRef canonicalize(SmallVectorImpl<char> &Path,
                               TreeEntry::EntryKind Kind,
                               sys::path::Style PathStyle) {
   const char PathSeparatorChar = get_separator(PathStyle)[0];
-  // Make absolute.
-  if (Path.empty() || !is_absolute(Path, PathStyle))
+  // Make absolute. Use has_root_directory instead of is_absolute
+  // because we may not have the drive like C: for abstract tree
+  // structures on Windows.
+  if (Path.empty() || !has_root_directory(Path, PathStyle))
     Path.insert(Path.begin(), PathSeparatorChar);
 
   // FIXME: consider rejecting ".." instead of removing them.
@@ -153,7 +155,7 @@ Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
     Tree *Current = &Root;
     StringRef Path = Entry.getPath();
     {
-      assert(is_absolute(Path, PathStyle) && "Expected absolute paths");
+      assert(has_root_directory(Path, PathStyle) && "Expected absolute paths");
       StringRef root_path = sys::path::root_path(Path, PathStyle);
       assert(!root_path.empty() && "Expected canonical POSIX absolute paths");
       Path.consume_front(root_path);

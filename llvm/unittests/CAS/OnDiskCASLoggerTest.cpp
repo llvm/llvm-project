@@ -159,7 +159,12 @@ TEST(OnDiskCASLoggerTest, MultiProcess) {
   SmallVector<ProcessInfo> PIs;
   for (int I = 0; I < 5; ++I) {
     bool ExecutionFailed;
+ #ifndef _WIN32
     auto PI = ExecuteNoWait(Executable, Argv, ArrayRef<StringRef>{}, {}, 0, &Error,
+ #else
+    // CreateProcessW will fail with zero-length env on Windows
+    auto PI = ExecuteNoWait(Executable, Argv, std::nullopt, {}, 0, &Error,
+ #endif
                             &ExecutionFailed);
     ASSERT_FALSE(ExecutionFailed) << Error;
     PIs.push_back(std::move(PI));
