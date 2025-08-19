@@ -35,15 +35,13 @@ class [[nodiscard]] RandomGenerator final
   using Base = RangeBasedGenerator<RandomGenerator<InTypes...>, InTypes...>;
 
   using Base::RangesTuple;
-  using Base::SizeToGenerate;
+  using Base::Size;
 
 public:
   explicit constexpr RandomGenerator(
       SeedTy BaseSeed, uint64_t Size,
       const IndexedRange<InTypes> &...Ranges) noexcept
-      : Base(Ranges...), BaseSeed(BaseSeed) {
-    SizeToGenerate = Size;
-  }
+      : Base(Size, Ranges...), BaseSeed(BaseSeed) {}
 
 private:
   [[nodiscard]] static uint64_t getRandomIndex(RandomState &RNG,

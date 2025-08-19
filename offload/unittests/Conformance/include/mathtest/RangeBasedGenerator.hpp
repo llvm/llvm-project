@@ -26,7 +26,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <tuple>
 
 namespace mathtest {
@@ -45,11 +44,10 @@ public:
                        [&](std::size_t Size) { return Size == BufferSize; }) &&
            "All input buffers must have the same size");
 
-    if (NextFlatIndex >= SizeToGenerate)
+    if (NextFlatIndex >= Size)
       return 0;
 
-    const auto BatchSize =
-        std::min<uint64_t>(BufferSize, SizeToGenerate - NextFlatIndex);
+    const auto BatchSize = std::min<uint64_t>(BufferSize, Size - NextFlatIndex);
     const auto CurrentFlatIndex = NextFlatIndex;
     NextFlatIndex += BatchSize;
 
@@ -71,40 +69,16 @@ protected:
 
   explicit constexpr RangeBasedGenerator(
       const IndexedRange<InTypes> &...Ranges) noexcept
-      : RangesTuple(Ranges...) {
-    const auto MaybeInputSpaceSize = getInputSpaceSize(Ranges...);
+      : RangesTuple(Ranges...) {}
 
-    assert(MaybeInputSpaceSize.has_value() &&
-           "The input space size is too large");
-    InputSpaceSize = *MaybeInputSpaceSize;
+  explicit constexpr RangeBasedGenerator(
+      uint64_t Size, const IndexedRange<InTypes> &...Ranges) noexcept
+      : RangesTuple(Ranges...), Size(Size) {}
 
-    assert((InputSpaceSize > 0) && "The input space size must be at least 1");
-  }
-
-  uint64_t SizeToGenerate = 0;
-  uint64_t InputSpaceSize = 1;
   RangesTupleType RangesTuple;
+  uint64_t Size = 0;
 
 private:
-  [[nodiscard]] static constexpr std::optional<uint64_t>
-  getInputSpaceSize(const IndexedRange<InTypes> &...Ranges) noexcept {
-    uint64_t InputSpaceSize = 1;
-    bool Overflowed = false;
-
-    auto Multiplier = [&](const uint64_t RangeSize) {
-      if (!Overflowed)
-        Overflowed =
-            __builtin_mul_overflow(InputSpaceSize, RangeSize, &InputSpaceSize);
-    };
-
-    (Multiplier(Ranges.getSize()), ...);
-
-    if (Overflowed)
-      return std::nullopt;
-
-    return InputSpaceSize;
-  }
-
   uint64_t NextFlatIndex = 0;
 };
 } // namespace mathtest

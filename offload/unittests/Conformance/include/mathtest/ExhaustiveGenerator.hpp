@@ -20,8 +20,10 @@
 #include "mathtest/RangeBasedGenerator.hpp"
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <tuple>
 
 namespace mathtest {
@@ -35,15 +37,19 @@ class [[nodiscard]] ExhaustiveGenerator final
   using Base = RangeBasedGenerator<ExhaustiveGenerator<InTypes...>, InTypes...>;
   using IndexArrayType = std::array<uint64_t, Base::NumInputs>;
 
-  using Base::InputSpaceSize;
   using Base::RangesTuple;
-  using Base::SizeToGenerate;
+  using Base::Size;
 
 public:
   explicit constexpr ExhaustiveGenerator(
       const IndexedRange<InTypes> &...Ranges) noexcept
       : Base(Ranges...) {
-    SizeToGenerate = InputSpaceSize;
+    const auto MaybeSize = getInputSpaceSize(Ranges...);
+
+    assert(MaybeSize.has_value() && "The size is too large");
+    Size = *MaybeSize;
+
+    assert((Size > 0) && "The size must be at least 1");
 
     IndexArrayType DimSizes = {};
     std::size_t DimIndex = 0;
@@ -85,6 +91,25 @@ private:
 
       writeInputsImpl<Index + 1>(NDIndex, Offset, BufferPtrsTuple);
     }
+  }
+
+  [[nodiscard]] static constexpr std::optional<uint64_t>
+  getInputSpaceSize(const IndexedRange<InTypes> &...Ranges) noexcept {
+    uint64_t InputSpaceSize = 1;
+    bool Overflowed = false;
+
+    auto Multiplier = [&](const uint64_t RangeSize) {
+      if (!Overflowed)
+        Overflowed =
+            __builtin_mul_overflow(InputSpaceSize, RangeSize, &InputSpaceSize);
+    };
+
+    (Multiplier(Ranges.getSize()), ...);
+
+    if (Overflowed)
+      return std::nullopt;
+
+    return InputSpaceSize;
   }
 
   IndexArrayType Strides = {};
