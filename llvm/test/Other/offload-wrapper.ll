@@ -24,7 +24,7 @@
 ; HIP-NEXT:   ret void
 ; HIP-NEXT: }
 
-; RUN: llvm-offload-wrapper --triple=x86-64 -kind=cuda %t -o %t.bc
+; RUN: llvm-offload-wrapper --triple=x86-64 -kind=cuda %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=CUDA
 
 ;      CUDA: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry], section "llvm_offload_entries$OA"
