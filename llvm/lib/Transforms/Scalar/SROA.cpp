@@ -2703,8 +2703,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
 /// \return A new vector containing all elements from V0 followed by all
 /// elements from V1
 static Value *mergeTwoVectors(Value *V0, Value *V1, const DataLayout &DL,
-                              Type *NewAIEltTy,
-                              IRBuilder<> &Builder) {
+                              Type *NewAIEltTy, IRBuilder<> &Builder) {
   assert(V0->getType()->isVectorTy() && V1->getType()->isVectorTy() &&
          "Can not merge two non-vector values");
 
@@ -2723,8 +2722,7 @@ static Value *mergeTwoVectors(Value *V0, Value *V1, const DataLayout &DL,
       // Calculate new number of elements to maintain same bit width
       unsigned TotalBits =
           VecType->getNumElements() * DL.getTypeSizeInBits(EltType);
-      unsigned NewNumElts =
-          TotalBits / DL.getTypeSizeInBits(NewAIEltTy);
+      unsigned NewNumElts = TotalBits / DL.getTypeSizeInBits(NewAIEltTy);
 
       auto *NewVecType = FixedVectorType::get(NewAIEltTy, NewNumElts);
       V = Builder.CreateBitCast(V, NewVecType);
@@ -3011,11 +3009,12 @@ public:
         Type *StoredValueType = SI->getValueOperand()->getType();
         if (!isa<FixedVectorType>(StoredValueType))
           return std::nullopt;
-        
+
         // The total number of stored bits should be the multiple of the new
         // alloca element type size
         if (DL.getTypeSizeInBits(StoredValueType) %
-            DL.getTypeSizeInBits(AllocatedEltTy) != 0)
+                DL.getTypeSizeInBits(AllocatedEltTy) !=
+            0)
           return std::nullopt;
         // If the stored value is a pointer, we do not handle it
         // TODO: handle this case by using inttoptr/ptrtoint
