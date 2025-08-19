@@ -5362,7 +5362,7 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 // Constant-time conditional selection instructions
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 1, isPseudo = 1, hasNoSchedulingInfo = 1, usesCustomInserter = 1 in {
+let hasSideEffects = 1, isPseudo = 1, hasNoSchedulingInfo = 1, Uses = [NZCV] in {
   def I32CTSELECT : Pseudo<(outs GPR32:$dst),
                            (ins GPR32:$tval, GPR32:$fval, i32imm:$cc),
                            [(set (i32 GPR32:$dst),

@@ -405,5 +405,23 @@ void AArch64MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.setOpcode(AArch64::RET);
     OutMI.addOperand(MCOperand::createReg(AArch64::LR));
     break;
+  case AArch64::I32CTSELECT:
+    OutMI.setOpcode(AArch64::CSELWr);
+    break;
+  case AArch64::I64CTSELECT:
+    OutMI.setOpcode(AArch64::CSELXr);
+    break;
+  case AArch64::BF16CTSELECT:
+    OutMI.setOpcode(AArch64::FCSELHrrr);
+    break;
+  case AArch64::F16CTSELECT:
+    OutMI.setOpcode(AArch64::FCSELHrrr);
+    break;
+  case AArch64::F32CTSELECT:
+    OutMI.setOpcode(AArch64::FCSELSrrr);
+    break;
+  case AArch64::F64CTSELECT:
+    OutMI.setOpcode(AArch64::FCSELDrrr);
+    break;
   }
 }

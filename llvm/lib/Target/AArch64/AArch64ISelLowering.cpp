@@ -3371,18 +3371,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitGetSMESaveSize(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
-  case AArch64::I32CTSELECT:
-    return EmitCTSELECT(MI, BB, AArch64::CSELWr);
-  case AArch64::I64CTSELECT:
-    return EmitCTSELECT(MI, BB, AArch64::CSELXr);
-  case AArch64::BF16CTSELECT:
-    return EmitCTSELECT(MI, BB, AArch64::FCSELHrrr);
-  case AArch64::F16CTSELECT:
-    return EmitCTSELECT(MI, BB, AArch64::FCSELHrrr);
-  case AArch64::F32CTSELECT:
-    return EmitCTSELECT(MI, BB, AArch64::FCSELSrrr);
-  case AArch64::F64CTSELECT:
-    return EmitCTSELECT(MI, BB, AArch64::FCSELDrrr);
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while bl call instruction (where statepoint will be lowered at the end)

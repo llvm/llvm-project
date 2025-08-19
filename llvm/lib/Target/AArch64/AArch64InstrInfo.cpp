@@ -1976,15 +1976,45 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
   return true;
 }
 
-bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
-      MI.getOpcode() != AArch64::CATCHRET)
-    return false;
+static inline void expandCtSelect(MachineBasicBlock &MBB, MachineInstr &MI, DebugLoc &DL, const MCInstrDesc &MCID) {
+  MachineInstrBuilder Builder = BuildMI(MBB, MI, DL, MCID);
+  for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
+    Builder.add(MI.getOperand(Idx));
+  }
+  Builder->setFlag(MachineInstr::NoMerge);
+  MBB.remove_instr(&MI);
+}
 
+bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   auto &Subtarget = MBB.getParent()->getSubtarget<AArch64Subtarget>();
   auto TRI = Subtarget.getRegisterInfo();
   DebugLoc DL = MI.getDebugLoc();
+
+  switch (MI.getOpcode()) {
+    case AArch64::I32CTSELECT:
+      expandCtSelect(MBB, MI, DL, get(AArch64::CSELWr));
+      return true;
+    case AArch64::I64CTSELECT:
+      expandCtSelect(MBB, MI, DL, get(AArch64::CSELXr));
+      return true;
+    case AArch64::BF16CTSELECT:
+      expandCtSelect(MBB, MI, DL, get(AArch64::FCSELHrrr));
+      return true;
+    case AArch64::F16CTSELECT:
+      expandCtSelect(MBB, MI, DL, get(AArch64::FCSELHrrr));
+      return true;
+    case AArch64::F32CTSELECT:
+      expandCtSelect(MBB, MI, DL, get(AArch64::FCSELSrrr));
+      return true;
+    case AArch64::F64CTSELECT:
+      expandCtSelect(MBB, MI, DL, get(AArch64::FCSELDrrr));
+      return true;
+  }
+
+  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
+      MI.getOpcode() != AArch64::CATCHRET)
+    return false;
 
   if (MI.getOpcode() == AArch64::CATCHRET) {
     // Skip to the first instruction before the epilog.
