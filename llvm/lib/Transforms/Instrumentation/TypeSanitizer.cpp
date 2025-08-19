@@ -493,7 +493,10 @@ void collectMemAccessInfo(
       if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
 
-      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst))
+      // TODO: This code was written before memset.pattern was added to
+      // MemIntrinsic, consider how to update it
+      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst) &&
+          !isa<MemSetPatternInst>(Inst))
         MemTypeResetInsts.push_back(&Inst);
     } else if (isa<AllocaInst>(Inst)) {
       MemTypeResetInsts.push_back(&Inst);
@@ -804,7 +807,10 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
         ConstantInt::get(IntptrTy, DL.getTypeAllocSize(A->getParamByValType()));
   } else {
     auto *I = cast<Instruction>(V);
-    if (auto *MI = dyn_cast<MemIntrinsic>(I)) {
+    // TODO: This code was written before memset.pattern was added to
+    // MemIntrinsic, consider how to update it
+    if (auto *MI = dyn_cast<MemIntrinsic>(I);
+        MI && !isa<MemSetPatternInst>(MI)) {
       if (MI->getDestAddressSpace() != 0)
         return false;
 

@@ -126,7 +126,10 @@ static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
     return {AI->getPointerOperand(), AI->getCompareOperand()->getType()};
   if (const auto *AI = dyn_cast<AtomicRMWInst>(Inst))
     return {AI->getPointerOperand(), AI->getValOperand()->getType()};
-  if (const auto *MI = dyn_cast<AnyMemIntrinsic>(Inst))
+  // TODO: This code was written before memset.pattern was added to
+  // AnyMemIntrinsic, consider how to update it
+  if (const auto *MI = dyn_cast<AnyMemIntrinsic>(Inst);
+      MI && !isa<MemSetPatternInst>(MI))
     return {MI->getRawDest(), Type::getInt8Ty(MI->getContext())};
 
   return {nullptr, nullptr};

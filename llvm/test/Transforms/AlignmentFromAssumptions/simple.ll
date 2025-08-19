@@ -365,6 +365,19 @@ entry:
   ret i32 0
 }
 
+define i32 @moo4(ptr nocapture %a) {
+; CHECK-LABEL: define i32 @moo4
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i16 32) ]
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 32 [[A]], i32 257, i64 10, i1 false)
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  tail call void @llvm.assume(i1 true) ["align"(ptr %a, i16 32)]
+  call void @llvm.experimental.memset.pattern(ptr align 4 %a, i32 257, i64 10, i1 false)
+  ret i32 0
+}
 
 ; Variable alignments appear to be legal, don't crash
 define i32 @pr51680(ptr nocapture %a, i32 %align) {

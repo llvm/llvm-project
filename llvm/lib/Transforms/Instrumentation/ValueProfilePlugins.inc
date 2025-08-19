@@ -46,6 +46,11 @@ public:
     if (isa<ConstantInt>(Length))
       return;
 
+    // TODO: This code was written before memset.pattern was added to
+    // MemIntrinsic, consider how to update it
+    if (isa<MemSetPatternInst>(MI))
+      return; // Not supported
+
     Instruction *InsertPt = &MI;
     Instruction *AnnotatedInst = &MI;
     Candidates->emplace_back(CandidateInfo{Length, InsertPt, AnnotatedInst});
