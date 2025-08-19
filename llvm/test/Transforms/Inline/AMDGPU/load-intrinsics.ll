@@ -3,44 +3,54 @@
 
 ; This test tests if the load intrinsic gets correct memory(argmem: read) attribute and
 ; the call instruction is assigned correct !alias.scope metadata post inlining
-
-define void @caller(ptr addrspace(3) %addr_f, ptr addrspace(1) %use_f) {
+define void @caller(ptr addrspace(3) %addr_f, ptr addrspace(1) %use_f, <4 x i32> %rsrc_f) {
 ; OPT-LABEL: define void @caller(
-; OPT-SAME: ptr addrspace(3) [[ADDR_F:%.*]], ptr addrspace(1) [[USE_F:%.*]]) {
+; OPT-SAME: ptr addrspace(3) [[ADDR_F:%.*]], ptr addrspace(1) [[USE_F:%.*]], <4 x i32> [[RSRC_F:%.*]]) {
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; OPT-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 ; OPT-NEXT:    [[GEP_I:%.*]] = getelementptr i64, ptr addrspace(3) [[ADDR_F]], i32 4
 ; OPT-NEXT:    [[VAL_I:%.*]] = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) [[GEP_I]]), !alias.scope [[META0]], !noalias [[META3]]
 ; OPT-NEXT:    store <2 x i32> [[VAL_I]], ptr addrspace(1) [[USE_F]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; OPT-NEXT:    call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> [[RSRC_F]], ptr addrspace(3) [[GEP_I]], i32 16, i32 16, i32 16, i32 0, i32 11), !alias.scope [[META0]], !noalias [[META3]]
+; OPT-NEXT:    call void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32> [[RSRC_F]], ptr addrspace(3) [[GEP_I]], i32 4, i32 8, i32 0, i32 0, i32 0, i32 0), !alias.scope [[META0]], !noalias [[META3]]
 ; OPT-NEXT:    ret void
 ;
 entry:
-  call void @callee(ptr addrspace(3) %addr_f, ptr addrspace(1) %use_f)
+  call void @callee(ptr addrspace(3) %addr_f, ptr addrspace(1) %use_f, <4 x i32> %rsrc_f)
   ret void
 }
 
-define void @callee(ptr addrspace(3) noalias %addr, ptr addrspace(1) noalias %use) {
+define void @callee(ptr addrspace(3) noalias %addr, ptr addrspace(1) noalias %use, <4 x i32> %rsrc) {
 ; OPT-LABEL: define void @callee(
-; OPT-SAME: ptr addrspace(3) noalias [[ADDR:%.*]], ptr addrspace(1) noalias [[USE:%.*]]) {
+; OPT-SAME: ptr addrspace(3) noalias [[ADDR:%.*]], ptr addrspace(1) noalias [[USE:%.*]], <4 x i32> [[RSRC:%.*]]) {
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr addrspace(3) [[ADDR]], i32 4
 ; OPT-NEXT:    [[VAL:%.*]] = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) [[GEP]])
 ; OPT-NEXT:    store <2 x i32> [[VAL]], ptr addrspace(1) [[USE]], align 8
+; OPT-NEXT:    call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> [[RSRC]], ptr addrspace(3) [[GEP]], i32 16, i32 16, i32 16, i32 0, i32 11)
+; OPT-NEXT:    call void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32> [[RSRC]], ptr addrspace(3) [[GEP]], i32 4, i32 8, i32 0, i32 0, i32 0, i32 0)
 ; OPT-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
-  %val = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32.p3(ptr addrspace(3) %gep)
+  %val = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) %gep)
   store <2 x i32> %val, ptr addrspace(1) %use
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %gep, i32 16, i32 16, i32 16, i32 0, i32 11)
+  call void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %gep, i32 4, i32 8, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
-;.
 ; Check Function Attribute on decl
 ; OPT: declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) captures(none)) #[[ATTR0:[0-9]+]]
+; OPT: declare void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32>, ptr addrspace(3) writeonly captures(none), i32 immarg, i32, i32, i32 immarg, i32 immarg) #[[ATTR1:[0-9]+]]
+; OPT: declare void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32>, ptr addrspace(3) writeonly captures(none), i32 immarg, i32, i32, i32, i32 immarg, i32 immarg) #[[ATTR1]]
 declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3))
+declare void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32>, ptr addrspace(3), i32, i32, i32, i32, i32)
+declare void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32>, ptr addrspace(3), i32, i32, i32, i32, i32, i32)
+;.
 ; OPT: attributes #[[ATTR0]] = { convergent nocallback nofree nounwind willreturn memory(argmem: read) }
-; OPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; OPT: attributes #[[ATTR1]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; OPT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ;.
 ; OPT: [[META0]] = !{[[META1:![0-9]+]]}
 ; OPT: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"callee: %addr"}

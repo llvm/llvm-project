@@ -1991,7 +1991,9 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                               //                bit 6 = swz
                               //           all: volatile op (bit 31, stripped at lowering)
-  [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
+  [IntrWillReturn, IntrArgMemOnly,
+   WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
 
@@ -2035,7 +2037,9 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                               //                bit 6 = swz
                               //           all: volatile op (bit 31, stripped at lowering)
-  [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+  [IntrWillReturn, IntrArgMemOnly,
+   WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
 
