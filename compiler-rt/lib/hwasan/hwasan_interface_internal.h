@@ -250,8 +250,7 @@ void __hwasan_set_error_report_callback(void (*callback)(const char *));
 
 // hwasan does not need fake stack, so we leave it empty here.
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_start_switch_fiber(void **, const void *bottom,
-                                    uptr size);
+void __sanitizer_start_switch_fiber(void **, const void *bottom, uptr size);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_finish_switch_fiber(void *, const void **bottom_old,
                                      uptr *size_old);

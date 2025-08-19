@@ -285,8 +285,7 @@ using namespace __hwasan;
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_start_switch_fiber(void **, const void *bottom,
-                                    uptr size) {
+void __sanitizer_start_switch_fiber(void **, const void *bottom, uptr size) {
   if (auto *t = GetCurrentThread())
     t->StartSwitchFiber((uptr)bottom, size);
   else
