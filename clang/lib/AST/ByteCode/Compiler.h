@@ -316,11 +316,11 @@ protected:
                                   bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
-  std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                const ValueDecl *ExtendingDecl = nullptr,
-                ScopeKind = ScopeKind::Block, bool IsConstexprUnknown = false);
-  std::optional<unsigned> allocateTemporary(const Expr *E);
+  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                               const ValueDecl *ExtendingDecl = nullptr,
+                               ScopeKind = ScopeKind::Block,
+                               bool IsConstexprUnknown = false);
+  UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -568,7 +568,7 @@ public:
 
   void addLocal(const Scope::Local &Local) override {
     if (!Idx) {
-      Idx = this->Ctx->Descriptors.size();
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
       this->Ctx->emitInitScope(*Idx, {});
     }
@@ -616,7 +616,7 @@ public:
   }
 
   /// Index of the scope in the chain.
-  std::optional<unsigned> Idx;
+  UnsignedOrNone Idx = std::nullopt;
 };
 
 /// Scope for storage declared in a compound statement.
