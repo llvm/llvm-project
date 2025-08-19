@@ -34,7 +34,7 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("-9223372036854775808", value="9223372036854775808")
         self.expect_var_path("+array", type="int *")
         self.expect_var_path("+enum_one", value="1")
-        self.expect_var_path("-enum_one", value="4294967295") # TODO: fix
+        self.expect_var_path("-enum_one", value="-1")
         self.expect_var_path("+bf.a", value="7")
         self.expect_var_path("+p", type="int *")
         self.expect(

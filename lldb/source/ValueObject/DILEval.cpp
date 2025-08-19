@@ -22,12 +22,15 @@
 namespace lldb_private::dil {
 
 static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+GetTypeSystemFromCU(std::shared_ptr<ExecutionContextScope> ctx) {
+  auto stack_frame = ctx->CalculateStackFrame();
+  if (!stack_frame)
+    return llvm::createStringError("no stack frame in this context");
   SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+      stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
 
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  symbol_context = stack_frame->GetSymbolContext(lldb::eSymbolContextModule);
   return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
@@ -39,74 +42,9 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
   return CompilerType();
 }
 
-static llvm::Expected<CompilerType>
-DoIntegralPromotion(CompilerType from, lldb::TypeSystemSP type_system,
-                    std::shared_ptr<StackFrame> ctx) {
-  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
-    return from;
-
-  if (!from.IsPromotableIntegerType())
-    return from;
-
-  if (from.IsUnscopedEnumerationType())
-    // TODO: fix this by creating CompilerType::GetEnumerationPromotionType()
-    return DoIntegralPromotion(from.GetEnumerationIntegerType(), type_system,
-                               ctx);
-  lldb::BasicType builtin_type =
-      from.GetCanonicalType().GetBasicTypeEnumeration();
-
-  uint64_t from_size = 0;
-  if (builtin_type == lldb::eBasicTypeWChar ||
-      builtin_type == lldb::eBasicTypeSignedWChar ||
-      builtin_type == lldb::eBasicTypeUnsignedWChar ||
-      builtin_type == lldb::eBasicTypeChar16 ||
-      builtin_type == lldb::eBasicTypeChar32) {
-    // Find the type that can hold the entire range of values for our type.
-    bool is_signed = from.IsSigned();
-    llvm::Expected<uint64_t> from_size = from.GetByteSize(ctx.get());
-    if (!from_size)
-      return from_size.takeError();
-
-    CompilerType promote_types[] = {
-        GetBasicType(type_system, lldb::eBasicTypeInt),
-        GetBasicType(type_system, lldb::eBasicTypeUnsignedInt),
-        GetBasicType(type_system, lldb::eBasicTypeLong),
-        GetBasicType(type_system, lldb::eBasicTypeUnsignedLong),
-        GetBasicType(type_system, lldb::eBasicTypeLongLong),
-        GetBasicType(type_system, lldb::eBasicTypeUnsignedLongLong),
-    };
-    for (CompilerType &type : promote_types) {
-      llvm::Expected<uint64_t> byte_size = type.GetByteSize(ctx.get());
-      if (!byte_size)
-        return byte_size.takeError();
-      if (*from_size < *byte_size ||
-          (*from_size == *byte_size && is_signed == type.IsSigned())) {
-        return type;
-      }
-    }
-    llvm_unreachable("char type should fit into long long");
-  }
-
-  // Here we can promote only to "int" or "unsigned int".
-  CompilerType int_type = GetBasicType(type_system, lldb::eBasicTypeInt);
-  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(ctx.get());
-  if (!int_byte_size)
-    return int_byte_size.takeError();
-
-  // Signed integer types can be safely promoted to "int".
-  if (from.IsSigned()) {
-    return int_type;
-  }
-  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
-  // their entire value range.
-  return (from_size == *int_byte_size)
-             ? GetBasicType(type_system, lldb::eBasicTypeUnsignedInt)
-             : int_type;
-}
-
 static lldb::ValueObjectSP
 ArrayToPointerConversion(lldb::ValueObjectSP valobj,
-                         std::shared_ptr<StackFrame> ctx) {
+                         std::shared_ptr<ExecutionContextScope> ctx) {
   assert(valobj->IsArrayType() &&
          "an argument to array-to-pointer conversion must be an array");
 
@@ -120,7 +58,8 @@ ArrayToPointerConversion(lldb::ValueObjectSP valobj,
 }
 
 static llvm::Expected<lldb::ValueObjectSP>
-UnaryConversion(lldb::ValueObjectSP valobj, std::shared_ptr<StackFrame> ctx) {
+UnaryConversion(lldb::ValueObjectSP valobj,
+                std::shared_ptr<ExecutionContextScope> ctx) {
   // Perform usual conversions for unary operators. At the moment this includes
   // array-to-pointer and the integral promotion for eligible types.
   llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU(ctx);
@@ -160,7 +99,8 @@ UnaryConversion(lldb::ValueObjectSP valobj, std::shared_ptr<StackFrame> ctx) {
   if (valobj->GetCompilerType().IsInteger() ||
       valobj->GetCompilerType().IsUnscopedEnumerationType()) {
     llvm::Expected<CompilerType> promoted_type =
-        DoIntegralPromotion(valobj->GetCompilerType(), *type_system, ctx);
+        type_system.get()->DoIntegralPromotion(valobj->GetCompilerType(),
+                                               ctx.get());
     if (!promoted_type)
       return promoted_type.takeError();
     if (!promoted_type->CompareTypes(valobj->GetCompilerType()))
