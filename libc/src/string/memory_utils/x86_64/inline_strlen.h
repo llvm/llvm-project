@@ -50,7 +50,7 @@ uint32_t CompareAndMask<__m128i, uint32_t>(const __m128i *block_ptr) {
 }
 
 namespace sse2 {
-size_t string_length(const char *src) {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   return string_length_vector<__m128i, uint32_t,
                               CompareAndMask<__m128i, uint32_t>>(src);
 }
@@ -66,7 +66,7 @@ uint32_t CompareAndMask<__m256i, uint32_t>(const __m256i *block_ptr) {
 }
 
 namespace avx2 {
-size_t string_length(const char *src) {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   return string_length_vector<__m256i, uint32_t,
                               CompareAndMask<__m256i, uint32_t>>(src);
 }
@@ -81,7 +81,7 @@ __mmask64 CompareAndMask<__m512i, __mmask64>(const __m512i *block_ptr) {
   return _mm512_cmp_epu8_mask(z, v, _MM_CMPINT_EQ);
 }
 namespace avx512 {
-size_t string_length(const char *src) {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   return string_length_vector<__m512i, __mmask64,
                               CompareAndMask<__m512i, __mmask64>>(src);
 }
