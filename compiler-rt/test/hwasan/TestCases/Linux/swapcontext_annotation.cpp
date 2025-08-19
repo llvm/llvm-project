@@ -1,4 +1,5 @@
-// Test hwasan __sanitizer_start_switch_fiber and __sanitizer_finish_switch_fiber interface.
+// Test hwasan __sanitizer_start_switch_fiber and
+// __sanitizer_finish_switch_fiber interface.
 
 // RUN: %clangxx_hwasan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
@@ -38,9 +39,11 @@ size_t main_thread_stacksize;
 const void *from_stack;
 size_t from_stacksize;
 
-// hwasan does not support longjmp with tagged stack pointer, make sure it is not tagged.
+// hwasan does not support longjmp with tagged stack pointer, make sure it is
+// not tagged.
 char __attribute__((no_sanitize("hwaddress"))) allocated_stack[kStackSize + 1];
-char __attribute__((no_sanitize("hwaddress"))) allocated_child_stack[kStackSize + 1];
+char __attribute__((
+    no_sanitize("hwaddress"))) allocated_child_stack[kStackSize + 1];
 
 __attribute__((noinline, noreturn)) void LongJump(jmp_buf env) {
   longjmp(env, 1);
