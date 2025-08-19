@@ -114,6 +114,14 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
+  /// Return maximum block size for maximum occupancy
+  Expected<uint64_t> maxGroupSize(GenericDeviceTy &Device,
+                                  uint64_t DynamicMemSize) const override {
+    return Plugin::error(
+        ErrorCode::UNSUPPORTED,
+        "occupancy calculations are not implemented for the host device");
+  }
+
 private:
   /// The kernel function to execute.
   void (*Func)(void);
@@ -293,6 +301,13 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // GenELF64PluginTy::isDataExchangable() returns false.
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "dataExchangeImpl not supported");
+  }
+
+  /// Insert a data fence between previous data operations and the following
+  /// operations. This is a no-op for Host devices as operations inserted into
+  /// a queue are in-order.
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
   }
 
   /// All functions are already synchronous. No need to do anything on this
