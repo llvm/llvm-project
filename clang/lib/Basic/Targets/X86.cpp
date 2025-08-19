@@ -348,7 +348,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BF16 = true;
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -1390,8 +1390,8 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-uint64_t X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
-  auto getPriority = [](StringRef Feature) -> uint64_t {
+llvm::APInt X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  auto getPriority = [](StringRef Feature) -> unsigned {
     // Valid CPUs have a 'key feature' that compares just better than its key
     // feature.
     using namespace llvm::X86;
@@ -1405,11 +1405,11 @@ uint64_t X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return getFeaturePriority(getFeature(Feature)) << 1;
   };
 
-  uint64_t Priority = 0;
+  unsigned Priority = 0;
   for (StringRef Feature : Features)
     if (!Feature.empty())
       Priority = std::max(Priority, getPriority(Feature));
-  return Priority;
+  return llvm::APInt(32, Priority);
 }
 
 bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {

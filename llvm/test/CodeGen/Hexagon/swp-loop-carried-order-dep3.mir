@@ -14,13 +14,11 @@
 # ```
 # 
 # Loop-carried dependencies exist from load for a[i+1] to store for a[i].
-# FIXME: Currently the following dependencies are missed.
-#
-# Loop carried edges from SU(7)
-#   Order
-#     SU(5)
 
 # CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT:   Loop carried edges from SU(7)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(5)
 # CHECK-NEXT: ===== Loop Carried Edges End =====
 
 --- |

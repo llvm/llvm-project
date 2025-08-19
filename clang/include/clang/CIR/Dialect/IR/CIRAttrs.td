@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#ifndef CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/EnumAttr.td"
 
-include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
+include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -42,22 +42,7 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   let assemblyFormat = [{}];
 }
 
-class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
-    : I32EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
-    : I64EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
-    : EnumAttr<CIR_Dialect, info, name, traits> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
+class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
     : CIR_Attr<name, attrMnemonic, traits> {
   let returnType = "bool";
   let defaultValue = "false";
@@ -142,7 +127,7 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
 // ZeroAttr
 //===----------------------------------------------------------------------===//
 
-def ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
+def CIR_ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
   let summary = "Attribute to represent zero initialization";
   let description = [{
     The ZeroAttr is used to indicate zero initialization on structs.
@@ -153,11 +138,23 @@ def ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
 // UndefAttr
 //===----------------------------------------------------------------------===//
 
-def UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
+def CIR_UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
   let summary = "Represent an undef constant";
   let description = [{
     The UndefAttr represents an undef constant, corresponding to LLVM's notion
     of undef.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_PoisonAttr : CIR_TypedAttr<"Poison", "poison"> {
+  let summary = "Represent a typed poison constant";
+  let description = [{
+    The PoisonAttr represents a typed poison constant, corresponding to LLVM's
+    notion of poison.
   }];
 }
 
@@ -267,7 +264,9 @@ def CIR_FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
 // ConstArrayAttr
 //===----------------------------------------------------------------------===//
 
-def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]> {
+def CIR_ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [
+  TypedAttrInterface
+]> {
   let summary = "A constant array from ArrayAttr or StringRefAttr";
   let description = [{
     An CIR array attribute is an array of literals of the specified attr types.
@@ -313,8 +312,9 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
 // ConstVectorAttr
 //===----------------------------------------------------------------------===//
 
-def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
-                               [TypedAttrInterface]> {
+def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
+  TypedAttrInterface
+]> {
   let summary = "A constant vector from ArrayAttr";
   let description = [{
     A CIR vector attribute is an array of literals of the specified attribute
@@ -345,7 +345,7 @@ def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
 // ConstPtrAttr
 //===----------------------------------------------------------------------===//
 
-def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
+def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
   let summary = "Holds a constant pointer value";
   let parameters = (ins
     AttributeSelfTypeParameter<"", "::cir::PointerType">:$type,
@@ -371,11 +371,100 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalViewAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
+  TypedAttrInterface
+]> {
+  let summary = "Provides constant access to a global address";
+  let description = [{
+    Get constant address of global `symbol` and optionally apply offsets to
+    access existing subelements. It provides a way to access globals from other
+    global and always produces a pointer.
+
+    The type of the input symbol can be different from `#cir.global_view`
+    output type, since a given view of the global might require a static
+    cast for initializing other globals.
+
+    A list of indices can be optionally passed and each element subsequently
+    indexes underlying types. For `symbol` types like `!cir.array`
+    and `!cir.record`, it leads to the constant address of sub-elements, while
+    for `!cir.ptr`, an offset is applied. The first index is relative to the
+    original symbol type, not the produced one.
+
+    The result type of this attribute may be an integer type. In such a case,
+    the pointer to the referenced global is casted to an integer and this
+    attribute represents the casted result.
+
+    Example:
+
+    ```
+      cir.global external @s = @".str2": !cir.ptr<i8>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s_addr = #cir.global_view<@s> : !s64i
+
+      cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]
+                                                   : !cir.array<i8 x 3>>
+      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+    ```
+
+    Note, that unlike LLVM IR's gep instruction, CIR doesn't add the leading
+    zero index when it's known to be constant zero, e.g. for pointers, i.e. we
+    use indexes exactly to access sub elements or for the offset. The leading
+    zero index is added later in the lowering.
+
+    Example:
+    ```
+    struct A {
+      int a;
+    };
+
+    struct B:  virtual A {
+      int b;
+    };
+    ```
+    VTT for B in CIR:
+    ```
+    cir.global linkonce_odr @_ZTT1B = #cir.const_array<[
+              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]>
+                   : !cir.array<!cir.ptr<!u8i> x 1>
+    ```
+    VTT for B in LLVM IR:
+    ```
+    @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds
+              ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::FlatSymbolRefAttr":$symbol,
+                        OptionalParameter<"mlir::ArrayAttr">:$indices);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol,
+                                        CArg<"mlir::ArrayAttr", "{}">:$indices), [{
+      return $_get(type.getContext(), type, symbol, indices);
+    }]>
+  ];
+
+  // let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      $symbol
+      (`,` $indices^)?
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
-def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
-                                [TypedAttrInterface]> {
+def CIR_ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex", [
+  TypedAttrInterface
+]> {
   let summary = "An attribute that contains a constant complex value";
   let description = [{
     The `#cir.const_complex` attribute contains a constant value of complex
@@ -457,7 +546,7 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
 // BitfieldInfoAttr
 //===----------------------------------------------------------------------===//
 
-def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
+def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
   let summary = "Represents info for a bit-field member";
   let description = [{
     Holds the following information about bitfields: name, storage type, size
@@ -489,31 +578,62 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
       is 4 bits wide, starts at offset 0, and is signed.
   }];
   let parameters = (ins "mlir::StringAttr":$name,
-                        "mlir::Type":$storageType,
+                        "mlir::Type":$storage_type,
                         "uint64_t":$size,
                         "uint64_t":$offset,
-                        "bool":$isSigned);
+                        "bool":$is_signed);
 
   let assemblyFormat = [{`<` struct($name,
-                                    $storageType,
+                                    $storage_type,
                                     $size,
                                     $offset,
-                                    $isSigned)
+                                    $is_signed)
                          `>`
                         }];
 
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$name,
-                     "mlir::Type":$storageType,
+                     "mlir::Type":$storage_type,
                      "uint64_t":$size,
                      "uint64_t":$offset,
-                     "bool":$isSigned
+                     "bool":$is_signed
                      ), [{
-      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storageType,
-                   size, offset, isSigned);
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storage_type,
+                   size, offset, is_signed);
     }]>
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// AddressPointAttr
+//===----------------------------------------------------------------------===//
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
+  let summary = "Address point attribute";
+
+  let description = [{
+    Attribute specifying the address point within a C++ virtual table (vtable).
+
+    The `index` (vtable index) parameter identifies which vtable to use within a
+    vtable group, while the `offset` (address point index) specifies the offset
+    within that vtable where the address begins.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+                                  address_point = <index = 0, offset = 2>)
+                                 : !cir.vptr
+    ```
+  }];
+
+  let parameters = (ins "int32_t":$index,
+                        "int32_t":$offset);
+
+  let assemblyFormat = [{
+    `<` struct($index, $offset) `>`
+  }];
+}
+
+#endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

@@ -438,10 +438,6 @@ LLVM_ABI extern char &UnpackMachineBundlesID;
 LLVM_ABI FunctionPass *
 createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
 
-/// FinalizeMachineBundles - This pass finalize machine instruction
-/// bundles (created earlier, e.g. during pre-RA scheduling).
-LLVM_ABI extern char &FinalizeMachineBundlesID;
-
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
 /// the intrinsic for later emission to the StackMap.
@@ -619,7 +615,7 @@ LLVM_ABI FunctionPass *createSelectOptimizePass();
 LLVM_ABI FunctionPass *createCallBrPass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
-ModulePass *createWindowsSecureHotPatchingPass();
+LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();

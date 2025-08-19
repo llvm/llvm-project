@@ -28,6 +28,10 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/InstructionCost.h"
 
+namespace {
+class GeneratedRTChecks;
+}
+
 namespace llvm {
 
 class LoopInfo;
@@ -62,12 +66,6 @@ class VPBuilder {
                                    ArrayRef<VPValue *> Operands, DebugLoc DL,
                                    const Twine &Name = "") {
     return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
-  }
-
-  VPInstruction *createInstruction(unsigned Opcode,
-                                   std::initializer_list<VPValue *> Operands,
-                                   DebugLoc DL, const Twine &Name = "") {
-    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name);
   }
 
 public:
@@ -172,8 +170,7 @@ public:
         new VPInstruction(Opcode, Operands, Flags, DL, Name));
   }
 
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -182,7 +179,7 @@ public:
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
-                                     std::initializer_list<VPValue *> Operands,
+                                     ArrayRef<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
                                      DebugLoc DL = DebugLoc::getUnknown(),
                                      const Twine &Name = "") {
@@ -232,7 +229,6 @@ public:
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
   /// and \p B.
-  /// TODO: add createFCmp when needed.
   VPInstruction *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
                             DebugLoc DL = DebugLoc::getUnknown(),
                             const Twine &Name = "") {
@@ -242,6 +238,17 @@ public:
         new VPInstruction(Instruction::ICmp, {A, B}, Pred, DL, Name));
   }
 
+  /// Create a new FCmp VPInstruction with predicate \p Pred and operands \p A
+  /// and \p B.
+  VPInstruction *createFCmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                            DebugLoc DL = DebugLoc::getUnknown(),
+                            const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_FCMP_PREDICATE &&
+           Pred <= CmpInst::LAST_FCMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::FCmp, {A, B}, Pred, DL, Name));
+  }
+
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -249,17 +256,40 @@ public:
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::none(), DL, Name));
   }
-  VPInstruction *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset,
-                                      DebugLoc DL = DebugLoc::getUnknown(),
-                                      const Twine &Name = "") {
+
+  VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
+                                    GEPNoWrapFlags GEPFlags,
+                                    DebugLoc DL = DebugLoc::getUnknown(),
+                                    const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::PtrAdd, {Ptr, Offset}, GEPFlags, DL, Name));
+  }
+
+  VPInstruction *createWidePtrAdd(VPValue *Ptr, VPValue *Offset,
+                                  DebugLoc DL = DebugLoc::getUnknown(),
+                                  const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::inBounds(), DL, Name));
+        new VPInstruction(VPInstruction::WidePtrAdd, {Ptr, Offset},
+                          GEPNoWrapFlags::none(), DL, Name));
   }
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
                          const Twine &Name = "") {
     return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  }
+
+  VPValue *createElementCount(Type *Ty, ElementCount EC) {
+    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPValue *RuntimeEC =
+        Plan.getOrAddLiveIn(ConstantInt::get(Ty, EC.getKnownMinValue()));
+    if (EC.isScalable()) {
+      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      RuntimeEC = EC.getKnownMinValue() == 1
+                      ? VScale
+                      : createOverflowingOp(Instruction::Mul,
+                                            {VScale, RuntimeEC}, {true, false});
+    }
+    return RuntimeEC;
   }
 
   /// Convert the input value \p Current to the corresponding value of an
@@ -479,6 +509,13 @@ public:
   /// all profitable VFs in ProfitableVFs.
   VectorizationFactor computeBestVF();
 
+  /// \return The desired interleave count.
+  /// If interleave count has been specified by metadata it will be returned.
+  /// Otherwise, the interleave count is computed and returned. VF and LoopCost
+  /// are the selected vectorization factor and the cost of the selected VF.
+  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
+                                 InstructionCost LoopCost);
+
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
@@ -559,6 +596,10 @@ private:
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
+
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans

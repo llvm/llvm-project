@@ -59,9 +59,14 @@ void RTDECL(PointerAssociateLowerBounds)(
 // Associates a pointer with a target with bounds remapping.  The target must be
 // simply contiguous &/or of rank 1.  The bounds constitute a [2,newRank]
 // integer array whose columns are [lower bound, upper bound] on each dimension.
+// Use the Monomorphic form if the pointer's type shouldn't change and
+// the target is polymorphic.
 void RTDECL(PointerAssociateRemapping)(Descriptor &, const Descriptor &target,
     const Descriptor &bounds, const char *sourceFile = nullptr,
     int sourceLine = 0);
+void RTDECL(PointerAssociateRemappingMonomorphic)(Descriptor &,
+    const Descriptor &target, const Descriptor &bounds,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Data pointer allocation and deallocation
 

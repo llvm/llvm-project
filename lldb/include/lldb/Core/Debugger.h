@@ -367,7 +367,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const std::string &GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() const { return m_instance_name; }
 
   bool GetShowInlineDiagnostics() const;
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt,-enable-ds128 < %s | FileCheck --check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=+load-store-opt,-enable-ds128 < %s | FileCheck --check-prefix=CI %s
 
 @lds = addrspace(3) global [512 x float] poison, align 4
 @lds.v2 = addrspace(3) global [512 x <2 x float>] poison, align 4

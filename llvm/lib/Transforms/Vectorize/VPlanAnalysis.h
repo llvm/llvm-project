@@ -58,9 +58,6 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(Type *CanonicalIVTy)
-      : CanonicalIVTy(CanonicalIVTy), Ctx(CanonicalIVTy->getContext()) {}
-
   VPTypeAnalysis(const VPlan &Plan);
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
@@ -85,8 +82,10 @@ struct VPRegisterUsage {
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
 
   /// Check if any of the tracked live intervals exceeds the number of
-  /// available registers for the target.
-  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) const;
+  /// available registers for the target. If non-zero, OverrideMaxNumRegs
+  /// is used in place of the target's number of registers.
+  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI,
+                         unsigned OverrideMaxNumRegs = 0) const;
 };
 
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs

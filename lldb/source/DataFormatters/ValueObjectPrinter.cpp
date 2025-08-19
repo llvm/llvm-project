@@ -14,8 +14,11 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -62,11 +65,22 @@ void ValueObjectPrinter::Init(
   m_summary.assign("");
   m_error.assign("");
   m_val_summary_ok = false;
-  m_printed_instance_pointers =
-      printed_instance_pointers
-          ? printed_instance_pointers
-          : InstancePointersSetSP(new InstancePointersSet());
+  m_printed_instance_pointers = printed_instance_pointers
+                                    ? printed_instance_pointers
+                                    : std::make_shared<InstancePointersSet>();
   SetupMostSpecializedValue();
+}
+
+static const char *maybeNewline(const std::string &s) {
+  // If the string already ends with a \n don't add another one.
+  if (s.empty() || s.back() != '\n')
+    return "\n";
+  return "";
+}
+
+bool ValueObjectPrinter::ShouldPrintObjectDescription() {
+  return ShouldPrintValueObject() && m_options.m_use_object_desc && !IsNil() &&
+         !IsUninitialized() && !m_options.m_pointer_as_array;
 }
 
 llvm::Error ValueObjectPrinter::PrintValueObject() {
@@ -76,6 +90,25 @@ llvm::Error ValueObjectPrinter::PrintValueObject() {
   if (m_orig_valobj.GetError().Fail() &&
       !m_orig_valobj.GetCompilerType().IsValid())
     return m_orig_valobj.GetError().ToError();
+
+  std::optional<std::string> object_desc;
+  if (ShouldPrintObjectDescription()) {
+    // The object description is invoked now, but not printed until after
+    // value/summary. Calling GetObjectDescription at the outset of printing
+    // allows for early discovery of errors. In the case of an error, the value
+    // object is printed normally.
+    llvm::Expected<std::string> object_desc_or_err =
+        GetMostSpecializedValue().GetObjectDescription();
+    if (!object_desc_or_err) {
+      auto error_msg = toString(object_desc_or_err.takeError());
+      *m_stream << "error: " << error_msg << maybeNewline(error_msg);
+
+      // Print the value object directly.
+      m_options.DisableObjectDescription();
+    } else {
+      object_desc = *object_desc_or_err;
+    }
+  }
 
   if (ShouldPrintValueObject()) {
     PrintLocationIfNeeded();
@@ -90,8 +123,10 @@ llvm::Error ValueObjectPrinter::PrintValueObject() {
   m_val_summary_ok =
       PrintValueAndSummaryIfNeeded(value_printed, summary_printed);
 
-  if (m_val_summary_ok)
+  if (m_val_summary_ok) {
+    PrintObjectDescriptionIfNeeded(object_desc);
     return PrintChildrenIfNeeded(value_printed, summary_printed);
+  }
   m_stream->EOL();
 
   return llvm::Error::success();
@@ -142,24 +177,6 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
   m_type_flags = m_compiler_type.GetTypeInfo();
   assert(m_cached_valobj &&
          "SetupMostSpecialized value must compute a valid ValueObject");
-}
-
-llvm::Expected<std::string> ValueObjectPrinter::GetDescriptionForDisplay() {
-  ValueObject &valobj = GetMostSpecializedValue();
-  llvm::Expected<std::string> maybe_str = valobj.GetObjectDescription();
-  if (maybe_str)
-    return maybe_str;
-
-  const char *str = nullptr;
-  if (!str)
-    str = valobj.GetSummaryAsCString();
-  if (!str)
-    str = valobj.GetValueAsCString();
-
-  if (!str)
-    return maybe_str;
-  llvm::consumeError(maybe_str.takeError());
-  return str;
 }
 
 const char *ValueObjectPrinter::GetRootNameForDisplay() {
@@ -468,38 +485,14 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
   return !error_printed;
 }
 
-llvm::Error
-ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
-                                                   bool summary_printed) {
-  if (ShouldPrintValueObject()) {
-    // let's avoid the overly verbose no description error for a nil thing
-    if (m_options.m_use_objc && !IsNil() && !IsUninitialized() &&
-        (!m_options.m_pointer_as_array)) {
-      if (!m_options.m_hide_value || ShouldShowName())
-        *m_stream << ' ';
-      llvm::Expected<std::string> object_desc =
-          (value_printed || summary_printed)
-              ? GetMostSpecializedValue().GetObjectDescription()
-              : GetDescriptionForDisplay();
-      if (!object_desc) {
-        // If no value or summary was printed, surface the error.
-        if (!value_printed && !summary_printed)
-          return object_desc.takeError();
-        // Otherwise gently nudge the user that they should have used
-        // `p` instead of `po`. Unfortunately we cannot be more direct
-        // about this, because we don't actually know what the user did.
-        *m_stream << "warning: no object description available\n";
-        llvm::consumeError(object_desc.takeError());
-      } else {
-        *m_stream << *object_desc;
-        // If the description already ends with a \n don't add another one.
-        if (object_desc->empty() || object_desc->back() != '\n')
-          *m_stream << '\n';
-      }
-      return llvm::Error::success();
-    }
-  }
-  return llvm::Error::success();
+void ValueObjectPrinter::PrintObjectDescriptionIfNeeded(
+    std::optional<std::string> object_desc) {
+  if (!object_desc)
+    return;
+
+  if (!m_options.m_hide_value || ShouldShowName())
+    *m_stream << ' ';
+  *m_stream << *object_desc << maybeNewline(*object_desc);
 }
 
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
@@ -524,7 +517,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (m_options.m_pointer_as_array)
     return true;
 
-  if (m_options.m_use_objc)
+  if (m_options.m_use_object_desc)
     return false;
 
   bool print_children = true;
@@ -819,9 +812,6 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
 llvm::Error ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
                                                       bool summary_printed) {
-  auto error = PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
-  if (error)
-    return error;
 
   ValueObject &valobj = GetMostSpecializedValue();
 
@@ -854,7 +844,7 @@ llvm::Error ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
       PrintChildren(value_printed, summary_printed, curr_ptr_depth);
   } else if (HasReachedMaximumDepth() && IsAggregate() &&
              ShouldPrintValueObject()) {
-    m_stream->PutCString("{...}\n");
+    m_stream->PutCString(" {...}\n");
     // The maximum child depth has been reached. If `m_max_depth` is the default
     // (i.e. the user has _not_ customized it), then lldb presents a warning to
     // the user. The warning tells the user that the limit has been reached, but

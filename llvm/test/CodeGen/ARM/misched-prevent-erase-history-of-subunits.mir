@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=thumbv7em-unknown-unknown -mcpu=cortex-m7 \
 # RUN:    -sched-model-force-enable-intervals \
 # RUN:    %s -run-pass=machine-scheduler -o - 2>&1 -debug | FileCheck %s
-# REQUIRES: arm-registered-target, asserts
+# REQUIRES: asserts
 
 # NOTE: Without the bugfix introduced in this code, the test below
 # would raise the assertion "A resource is being overwritten" from

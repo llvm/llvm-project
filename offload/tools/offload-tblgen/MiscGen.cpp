@@ -93,3 +93,30 @@ void EmitOffloadErrcodes(const RecordKeeper &Records, raw_ostream &OS) {
                   EnumVal.getDesc(), EtorVal++);
   }
 }
+
+// Emit macro calls for each info
+void EmitOffloadInfo(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
+  OS << R"(
+#ifndef OFFLOAD_DEVINFO
+#error Please define the macro OFFLOAD_DEVINFO(Name, Desc, Value)
+#endif
+
+// Device info codes are shared between PluginInterface and liboffload.
+// To add new error codes, add them to offload/liboffload/API/Device.td.
+
+)";
+
+  auto Enum = EnumRec{Records.getDef("DeviceInfo")};
+  // Bitfields start from 1, other enums from 0
+  uint32_t EtorVal = Enum.isBitField();
+  for (const auto &EnumVal : Enum.getValues()) {
+    OS << formatv(TAB_1 "OFFLOAD_DEVINFO({0}, \"{1}\", {2})\n",
+                  EnumVal.getName(), EnumVal.getDesc(), EtorVal);
+    if (Enum.isBitField()) {
+      EtorVal <<= 1u;
+    } else {
+      ++EtorVal;
+    }
+  }
+}
