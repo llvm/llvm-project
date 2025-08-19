@@ -149,6 +149,7 @@ private:
   friend class DeadBlock;
   friend class InterpState;
   friend class DynamicAllocator;
+  friend class Program;
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
         bool IsWeak, bool IsDummy, bool IsDead)
