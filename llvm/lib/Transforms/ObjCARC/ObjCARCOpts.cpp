@@ -125,6 +125,7 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 /// instruction in the same basic block with no intervening calls that
 /// could affect the autorelease pool.
 static bool HasFollowingAutoreleasePoolPop(Instruction *AutoreleaseInst) {
+  assert(IsAutorelease(GetBasicARCInstKind(AutoreleaseInst));
   BasicBlock *BB = AutoreleaseInst->getParent();
 
   // Look forward from the autorelease instruction
