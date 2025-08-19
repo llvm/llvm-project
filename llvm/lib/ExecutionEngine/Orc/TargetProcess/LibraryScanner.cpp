@@ -289,7 +289,8 @@ void DylibSubstitutor::configure(StringRef loaderPath) {
     loaderDir = execPath;
   } else {
     loaderDir = loaderPath.str();
-    sys::path::remove_filename(loaderDir);
+    if (!sys::fs::is_directory(loaderPath))
+      sys::path::remove_filename(loaderDir);
   }
 
 #ifdef __APPLE__
@@ -312,6 +313,9 @@ SearchPathResolver::resolve(StringRef stem, const DylibSubstitutor &subst,
     else
       sys::path::append(fullPath, stem);
 
+    LLVM_DEBUG(dbgs() << "SearchPathResolver::resolve FullPath = " << fullPath
+                      << "\n";);
+
     if (auto valid = validator.validate(fullPath.str()))
       return valid;
   }
@@ -323,7 +327,6 @@ std::optional<std::string>
 DylibResolverImpl::tryWithExtensions(StringRef libStem) const {
   LLVM_DEBUG(dbgs() << "tryWithExtensions: baseName = " << libStem << "\n";);
   SmallVector<StringRef, 4> candidates;
-  candidates.push_back(libStem); // original
 
   // Add extensions by platform
 #if defined(__APPLE__)
@@ -391,16 +394,18 @@ DylibResolverImpl::resolve(StringRef libStem, bool variateLibStem) const {
 
       return norm;
     }
-  } else {
-    for (const auto &resolver : resolvers) {
-      if (auto result = resolver.resolve(libStem, substitutor, validator)) {
-        LLVM_DEBUG(dbgs() << "  -> Resolved via search path: " << *result
-                          << "\n";);
+  }
 
-        return result;
-      }
+  for (const auto &resolver : resolvers) {
+    LLVM_DEBUG(dbgs() << "  -> Resolving via search path ... \n";);
+    if (auto result = resolver.resolve(libStem, substitutor, validator)) {
+      LLVM_DEBUG(dbgs() << "  -> Resolved via search path: " << *result
+                        << "\n";);
+
+      return result;
     }
   }
+
   // Expand libStem with paths, extensions, etc.
   // std::string foundName;
   if (variateLibStem) {
