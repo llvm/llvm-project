@@ -31,7 +31,6 @@ template <class Iterator, bool IsNoexcept>
 constexpr void test() {
   using Sentinel   = sentinel_wrapper<Iterator>;
   using View       = minimal_view<Iterator, Sentinel>;
-  using ConcatView = std::ranges::concat_view<View>;
 
   {
     std::array<int, 5> array1{0, 1, 2, 3, 4};
