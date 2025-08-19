@@ -3031,13 +3031,12 @@ void InitializeInterceptors() {
 #if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                      \
     (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
      defined(__s390x__))
-#  define PTHREAD_ABI_BASE "GLIBC_2.3.2"
-  TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_broadcast, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+  TSAN_INTERCEPT_VER(pthread_cond_init, "GLIBC_2.3.2");
+  TSAN_INTERCEPT_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  TSAN_INTERCEPT_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  TSAN_INTERCEPT_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  TSAN_INTERCEPT_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  TSAN_INTERCEPT_VER(pthread_cond_destroy, "GLIBC_2.3.2");
 #else
   TSAN_INTERCEPT(pthread_cond_init);
   TSAN_INTERCEPT(pthread_cond_signal);
