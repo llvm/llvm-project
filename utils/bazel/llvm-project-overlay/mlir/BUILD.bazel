@@ -4920,6 +4920,7 @@ cc_library(
         ":MemRefDialect",
         ":Support",
         ":TensorDialect",
+        ":UBDialect",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -10777,7 +10778,10 @@ gentbl_cc_library(
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Linalg/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 cc_library(

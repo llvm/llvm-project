@@ -90,11 +90,8 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     } break;
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
-    case CK_ArrayToPointerDecay: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: array-to-pointer decay");
-      return Address::invalid();
-    }
+    case CK_ArrayToPointerDecay:
+      return emitArrayToPointerDecay(ce->getSubExpr(), baseInfo);
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
@@ -1173,28 +1170,33 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     return;
   }
 
-  CXXDestructorDecl *referenceTemporaryDtor = nullptr;
-  if (const clang::RecordType *rt = e->getType()
-                                        ->getBaseElementTypeUnsafe()
-                                        ->getAs<clang::RecordType>()) {
-    // Get the destructor for the reference temporary.
-    auto *classDecl =
-        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
-    if (!classDecl->hasTrivialDestructor())
-      referenceTemporaryDtor =
-          classDecl->getDefinitionOrSelf()->getDestructor();
-  }
-
-  if (!referenceTemporaryDtor)
+  const QualType::DestructionKind dk = e->getType().isDestructedType();
+  if (dk == QualType::DK_none)
     return;
 
-  // Call the destructor for the temporary.
   switch (m->getStorageDuration()) {
   case SD_Static:
-  case SD_Thread:
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "pushTemporaryCleanup: static/thread storage duration");
-    return;
+  case SD_Thread: {
+    CXXDestructorDecl *referenceTemporaryDtor = nullptr;
+    if (const clang::RecordType *rt = e->getType()
+                                          ->getBaseElementTypeUnsafe()
+                                          ->getAs<clang::RecordType>()) {
+      // Get the destructor for the reference temporary.
+      if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+              rt->getOriginalDecl()->getDefinitionOrSelf())) {
+        if (!classDecl->hasTrivialDestructor())
+          referenceTemporaryDtor =
+              classDecl->getDefinitionOrSelf()->getDestructor();
+      }
+    }
+
+    if (!referenceTemporaryDtor)
+      return;
+
+    cgf.cgm.errorNYI(e->getSourceRange(), "pushTemporaryCleanup: static/thread "
+                                          "storage duration with destructors");
+    break;
+  }
 
   case SD_FullExpression:
     cgf.pushDestroy(NormalAndEHCleanup, referenceTemporary, e->getType(),
@@ -1626,7 +1628,9 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   emitLValue(e);
 }
 
-Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
+Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
+                                                LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::opTBAA());
   assert(e->getType()->isArrayType() &&
          "Array to pointer decay must have array source type!");
 
@@ -2063,8 +2067,8 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
 ///
 /// For named members of enums, this is the only way they are emitted.
 CIRGenFunction::ConstantEmission
-CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
-  ValueDecl *value = refExpr->getDecl();
+CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
+  const ValueDecl *value = refExpr->getDecl();
 
   // There is a lot more to do here, but for now only EnumConstantDecl is
   // supported.
@@ -2095,6 +2099,25 @@ CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 
   return ConstantEmission::forValue(cstToEmit);
+}
+
+static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CIRGenFunction &cgf,
+                                                        const MemberExpr *me) {
+  if (auto *vd = dyn_cast<VarDecl>(me->getMemberDecl())) {
+    // Try to emit static variable member expressions as DREs.
+    return DeclRefExpr::Create(
+        cgf.getContext(), NestedNameSpecifierLoc(), SourceLocation(), vd,
+        /*RefersToEnclosingVariableOrCapture=*/false, me->getExprLoc(),
+        me->getType(), me->getValueKind(), nullptr, nullptr, me->isNonOdrUse());
+  }
+  return nullptr;
+}
+
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(const MemberExpr *me) {
+  if (DeclRefExpr *dre = tryToConvertMemberExprToDeclRefExpr(*this, me))
+    return tryEmitAsConstant(dre);
+  return ConstantEmission();
 }
 
 mlir::Value CIRGenFunction::emitScalarConstant(

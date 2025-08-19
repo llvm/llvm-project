@@ -1627,7 +1627,7 @@ bool QualType::UseExcessPrecision(const ASTContext &Ctx) {
     switch (BT->getKind()) {
     case BuiltinType::Kind::Float16: {
       const TargetInfo &TI = Ctx.getTargetInfo();
-      if (TI.hasFloat16Type() && !TI.hasLegalHalfType() &&
+      if (TI.hasFloat16Type() && !TI.hasFastHalfType() &&
           Ctx.getLangOpts().getFloat16ExcessPrecision() !=
               Ctx.getLangOpts().ExcessPrecisionKind::FPP_None)
         return true;

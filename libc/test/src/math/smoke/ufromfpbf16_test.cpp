@@ -8,7 +8,7 @@
 
 #include "UfromfpTest.h"
 
-#include "src/math/ufromfpbf16.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/ufromfpbf16.h"
 
 LIST_UFROMFP_TESTS(bfloat16, LIBC_NAMESPACE::ufromfpbf16)
