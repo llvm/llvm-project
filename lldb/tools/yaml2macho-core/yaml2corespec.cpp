@@ -50,13 +50,6 @@ template <> struct MappingTraits<Thread> {
 };
 LLVM_YAML_IS_SEQUENCE_VECTOR(Thread)
 
-template <> struct llvm::yaml::ScalarEnumerationTraits<Endian> {
-  static void enumeration(IO &io, Endian &endian) {
-    io.enumCase(endian, "big", Endian::Big);
-    io.enumCase(endian, "little", Endian::Little);
-  }
-};
-
 template <> struct MappingTraits<MemoryRegion> {
   static void mapping(IO &io, MemoryRegion &memory) {
     io.mapRequired("addr", memory.addr);
@@ -98,7 +91,6 @@ template <> struct MappingTraits<CoreSpec> {
       fprintf(stderr, "Unrecognized cpu name %s, exiting.\n", cpuname.c_str());
       exit(1);
     }
-    io.mapRequired("endian", corespec.endian);
     io.mapOptional("threads", corespec.threads);
     io.mapOptional("memory-regions", corespec.memory_regions);
     if (corespec.cputype == llvm::MachO::CPU_TYPE_ARM ||

@@ -1,5 +1,4 @@
 cpu: arm64
-endian: little
 threads:
   # (lldb) reg read
   # % pbpaste | grep = | sed 's, ,,g' | awk -F= '{print "{name: " $1 ", value: " $2 "},"}'

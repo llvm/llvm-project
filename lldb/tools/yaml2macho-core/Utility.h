@@ -15,9 +15,4 @@
 void add_uint64(const CoreSpec &spec, std::vector<uint8_t> &buf, uint64_t val);
 void add_uint32(const CoreSpec &spec, std::vector<uint8_t> &buf, uint32_t val);
 
-void add_uint64_swap(std::vector<uint8_t> &buf, uint64_t val);
-void add_uint64(std::vector<uint8_t> &buf, uint64_t val);
-void add_uint32_swap(std::vector<uint8_t> &buf, uint32_t val);
-void add_uint32(std::vector<uint8_t> &buf, uint32_t val);
-
 #endif

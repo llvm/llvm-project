@@ -29,8 +29,6 @@ struct Thread {
   std::vector<RegisterSet> regsets;
 };
 
-enum Endian { Big = 0, Little = 1 };
-
 enum MemoryType { UInt8 = 0, UInt32, UInt64 };
 
 struct MemoryRegion {
@@ -47,12 +45,11 @@ struct CoreSpec {
   uint32_t cputype;
   uint32_t cpusubtype;
   int wordsize;
-  Endian endian;
 
   std::vector<Thread> threads;
   std::vector<MemoryRegion> memory_regions;
 
-  CoreSpec() : cputype(0), cpusubtype(0), wordsize(0), endian(Endian::Little) {}
+  CoreSpec() : cputype(0), cpusubtype(0), wordsize(0) {}
 };
 
 #endif
