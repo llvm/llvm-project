@@ -327,10 +327,13 @@ public:
       // Get the RecordStorageLocation for the record object underneath.
       RecordStorageLocation *Loc = nullptr;
       if (S->getType()->isPointerType()) {
-        assert(S->getType()->isPointerType());
         auto *PV = Env.get<PointerValue>(*SubExpr);
+        assert(PV != nullptr);
+        if (PV == nullptr)
+          break;
         Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());
       } else {
+        assert(S->getType()->isRecordType());
         if (SubExpr->isGLValue()) {
           Loc = Env.get<RecordStorageLocation>(*SubExpr);
         } else {
