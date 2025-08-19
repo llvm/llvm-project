@@ -328,37 +328,54 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       fir::TBAATree::SubtreeState *subTree =
           &state.getMutableFuncTreeWithScope(func, scopeOp).globalDataTree;
 
-      // The COMMON blocks have their own sub-tree root under the "global data"
-      // root, which is named after the name of the COMMON block.
+      // The COMMON blocks and global variables associated via EQUIVALENCE
+      // have their own sub-tree roots under the "global data"
+      // root, which is named after the name of the COMMON/EQUIVALENCE block.
       // If we can identify the name of the member variable, then
-      // we create a sub-tree under the root of the COMMON block
+      // we create a sub-tree under the root of the COMMON/EQUIVALENCE block
       // and place the tag there. If we cannot identify the name
       // of the member variable (e.g. for whatever reason there is no
       // fir.declare for it), then we place the tag under the root
-      // of the COMMON block.
-      auto globalOp = state.getGlobalDefiningOp(name);
-      // TODO: this is a subtle identification of the fact that
-      // the variable belongs to a COMMON block.
-      // Should we have an attribute on [hl]fir.declare
-      // that specifies the name of the COMMON block the variable
-      // belongs to?
-      if (globalOp &&
-          globalOp.getLinkName() ==
-              fir::FirOpBuilder::createCommonLinkage(globalOp->getContext())) {
-        // Get or create a sub-tree for the COMMON block.
+      // of the COMMON/EQUIVALENCE block.
+      if (auto globalOp = state.getGlobalDefiningOp(name)) {
+        // Get or create a sub-tree for the COMMON/EQUIVALENCE block
+        // or for a regular global variable.
         subTree = &subTree->getOrCreateNamedSubtree(name);
 
         auto declOp = mlir::dyn_cast_or_null<fir::DeclareOp>(
             source.origin.instantiationPoint);
         mlir::StringAttr varName;
-        if (declOp) {
+        if (declOp &&
+            // Equivalenced variables are defined by [hl]fir.declare
+            // operations with !fir.ptr<> results.
+            // TODO: the equivalenced variables belonging to a COMMON
+            // block, may alias each other, but the rest of the COMMON
+            // block variables may still be made non-aliasing with them.
+            // To implement that we need to know the sets of COMMON
+            // variables that alias between each other, then we can
+            // create separate sub-trees for each set.
+            !mlir::isa<fir::PointerType>(declOp.getType())) {
           // The tag for the variable will be placed under its own
           // root in the COMMON sub-tree.
-          varName = declOp.getUniqName();
-          tag = subTree->getTag(varName.str());
-        } else {
-          tag = subTree->getTag();
+          if (auto declName = declOp.getUniqName())
+            if (declName != name) {
+              // The declaration name does not match the name of the global
+              // for all variables in COMMON blocks by lowering, so all COMMON
+              // variables with known names must end up here.
+              // Declaration name of an equivalenced variable may match
+              // the global's name, but the EQUIVALENCE variables are filtered
+              // above - their tags will be created under the EQUIVALENCE's
+              // named root.
+              // The name check here is avoiding the creation of redundant
+              // roots for regular global variables.
+              varName = declName;
+              tag = subTree->getTag(varName.str());
+            }
         }
+
+        if (!varName)
+          tag = subTree->getTag();
+
         LLVM_DEBUG(llvm::dbgs().indent(2)
                    << "Variable named '"
                    << (varName ? varName.str() : "<unknown>")
