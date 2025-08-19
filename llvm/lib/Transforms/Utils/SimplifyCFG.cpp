@@ -332,6 +332,16 @@ public:
   }
 };
 
+// we synthesize a || b as select a, true, b
+// we synthesize a && b as select a, b, false
+// this function determines if SI is playing one of those roles.
+bool isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
+  return ((isa<ConstantInt>(SI->getTrueValue()) &&
+           (dyn_cast<ConstantInt>(SI->getTrueValue())->isOne())) ||
+          (isa<ConstantInt>(SI->getFalseValue()) &&
+           (dyn_cast<ConstantInt>(SI->getFalseValue())->isNullValue())));
+}
+
 } // end anonymous namespace
 
 /// Return true if all the PHI nodes in the basic block \p BB
@@ -4033,6 +4043,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  SmallVector<uint32_t, 2> MDWeights;
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
     SmallVector<uint64_t, 8> NewWeights;
@@ -4063,7 +4074,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     // Halve the weights if any of them cannot fit in an uint32_t
     fitWeights(NewWeights);
 
-    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+    append_range(MDWeights, NewWeights);
     setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
@@ -4100,6 +4111,13 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
+  if (!ProfcheckDisableMetadataFixes)
+    if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+      if (!MDWeights.empty()) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        setBranchWeights(SI, MDWeights[0], MDWeights[1],
+                         /*IsExpected=*/false);
+      }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4812,6 +4830,18 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     fitWeights(NewWeights);
 
     setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
+    // Cond may be a select instruction with the first operand set to "true", or
+    // the second to "false" (see how createLogicalOp works for `and` and `or`)
+    if (!ProfcheckDisableMetadataFixes)
+      if (auto *SI = dyn_cast<SelectInst>(Cond)) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        // The select is predicated on PBICond
+        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        // The corresponding probabilities are what was referred to above as
+        // PredCommon and PredOther.
+        setBranchWeights(SI, PredCommon, PredOther,
+                         /*IsExpected=*/false);
+      }
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
