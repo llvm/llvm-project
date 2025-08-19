@@ -107,7 +107,6 @@ concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 template <class T>
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
-
 struct NonSimpleNonCommonView : std::ranges::view_base {
   int* begin_;
   int* end_;
