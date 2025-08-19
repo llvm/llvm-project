@@ -19,12 +19,6 @@ namespace llvm {
 class raw_ostream;
 namespace mcdxbc {
 
-struct RootParameterHeader {
-  dxbc::RootParameterType ParameterType;
-  dxbc::ShaderVisibility ShaderVisibility;
-  uint32_t ParameterOffset;
-};
-
 struct RootParameterInfo {
   dxbc::RootParameterType Type;
   dxbc::ShaderVisibility Visibility;

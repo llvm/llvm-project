@@ -235,8 +235,6 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("RootConstants Element");
 
-  mcdxbc::RootParameterHeader Header;
-
   Expected<dxbc::ShaderVisibility> VisibilityOrErr =
       extractShaderVisibility(RootConstantNode, 1);
   if (auto E = VisibilityOrErr.takeError())
