@@ -640,7 +640,7 @@ void RuntimePointerChecking::groupChecks(
 
     // If there is no entry in the dependency partition, there are no potential
     // accesses to merge; simply add a new pointer checking group.
-    if (DepCands.findValue(Access) == DepCands.end()) {
+    if (!DepCands.contains(Access)) {
       CheckingGroups.push_back(RuntimeCheckingPtrGroup(I, *this));
       continue;
     }
@@ -848,7 +848,6 @@ public:
   getUnderlyingObjects() {
     return UnderlyingObjects;
   }
- }
 
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
@@ -1284,8 +1283,7 @@ bool AccessAnalysis::createCheckForAccess(
     // The id of the dependence set.
     unsigned DepId;
 
-    if (isDependencyCheckNeeded() &&
-        DepCands.findValue(Access) != DepCands.end()) {
+    if (isDependencyCheckNeeded() && DepCands.contains(Access)) {
       Value *Leader = DepCands.getLeaderValue(Access).getPointer();
       unsigned &LeaderId = DepSetId[Leader];
       if (!LeaderId)
@@ -1305,7 +1303,8 @@ bool AccessAnalysis::createCheckForAccess(
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(
-    RuntimePointerChecking &RtCheck, , RuntimePointerChecking &RtCheck, ScalarEvolution *SE,Loop *TheLoop,
+    const MemoryDepChecker &DepChecker, RuntimePointerChecking &RtCheck,
+    ScalarEvolution *SE, Loop *TheLoop,
     const DenseMap<Value *, const SCEV *> &StridesMap, Value *&UncomputablePtr,
     bool AllowPartial) {
   // Find pointers with computable bounds. We are going to use this information
@@ -1461,7 +1460,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   }
 
   if (MayNeedRTCheck && (CanDoRT || AllowPartial))
-    RtCheck.generateChecks(DepCands);
+    RtCheck.generateChecks(DepChecker, DepCands);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
@@ -2762,9 +2761,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       PtrRtChecking->Need = true;
 
       UncomputablePtr = nullptr;
-      HasCompletePtrRtChecking =
-          Accesses.canCheckPtrAtRT(getDepChecker(),*PtrRtChecking, TheLoop, SymbolicStrides,
-                                   UncomputablePtr, AllowPartial);
+      HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
+          getDepChecker(), *PtrRtChecking, PSE->getSE(), TheLoop,
+          SymbolicStrides, UncomputablePtr, AllowPartial);
 
       // Check that we found the bounds for the pointer.
       if (!HasCompletePtrRtChecking) {

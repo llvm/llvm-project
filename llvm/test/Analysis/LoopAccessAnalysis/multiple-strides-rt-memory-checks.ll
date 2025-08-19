@@ -31,6 +31,18 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    .inner:
 ; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %4 = load i32, ptr %1, align 4 ->
+; CHECK-NEXT:            store i32 %8, ptr %6, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %3 = load i32, ptr %2, align 4 ->
+; CHECK-NEXT:            store i32 %8, ptr %6, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %7 = load i32, ptr %6, align 4 ->
+; CHECK-NEXT:            store i32 %8, ptr %6, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:

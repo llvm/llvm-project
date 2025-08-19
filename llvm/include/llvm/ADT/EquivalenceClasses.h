@@ -297,8 +297,8 @@ public:
   void eraseClass(const ElemTy &V) {
     if (TheMapping.find(V) == TheMapping.end())
       return;
-    auto LeaderI = findValue(getLeaderValue(V));
-    for (auto MI = member_begin(LeaderI), ME = member_end(); MI != ME;) {
+    auto LeaderI = members(V);
+    for (auto MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
       const auto &ToErase = *MI;
       ++MI;
       TheMapping.erase(ToErase);
