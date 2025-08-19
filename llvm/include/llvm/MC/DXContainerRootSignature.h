@@ -50,7 +50,7 @@ struct RootParametersContainer {
 
   void addInfo(dxbc::RootParameterType Type, dxbc::ShaderVisibility Visibility,
                size_t Location) {
-    ParametersInfo.push_back(RootParameterInfo(Type, Visibility, Location));
+    ParametersInfo.emplace_back(Type, Visibility, Location);
   }
 
   void addParameter(dxbc::RootParameterType Type,
