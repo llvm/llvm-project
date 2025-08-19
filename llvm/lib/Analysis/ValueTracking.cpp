@@ -409,10 +409,24 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   }
 
   bool SelfMultiply = Op0 == Op1;
-  if (SelfMultiply)
+  if (SelfMultiply) {
     SelfMultiply &=
         isGuaranteedNotToBeUndef(Op0, Q.AC, Q.CxtI, Q.DT, Depth + 1);
-  Known = KnownBits::mul(Known, Known2, SelfMultiply);
+
+    Known = KnownBits::mul(Known, Known2, SelfMultiply);
+
+    unsigned SignBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
+    unsigned TyBits = Op0->getType()->getScalarSizeInBits();
+    unsigned OutValidBits = 2 * (TyBits - SignBits + 1);
+
+    if (OutValidBits < TyBits) {
+      APInt KnownZeroMask =
+          APInt::getHighBitsSet(TyBits, TyBits - OutValidBits + 1);
+      Known.Zero |= KnownZeroMask;
+    }
+  } else {
+    Known = KnownBits::mul(Known, Known2, SelfMultiply);
+  }
 
   // Only make use of no-wrap flags if we failed to compute the sign bit
   // directly.  This matters if the multiplication always overflows, in
@@ -423,22 +437,6 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
     Known.makeNonNegative();
   else if (isKnownNegative && !Known.isNonNegative())
     Known.makeNegative();
-
-  // Check if both operands are the same sign-extension of a single value.
-  const Value *A = nullptr;
-  if (match(Op0, m_SExt(m_Value(A))) && match(Op1, m_SExt(m_Specific(A)))) {
-    unsigned SignBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
-    unsigned TyBits = Op0->getType()->getScalarSizeInBits();
-    // The output of the Mul can be at most twice the valid bits
-    unsigned OutValidBits = 2 * (TyBits - SignBits + 1);
-    unsigned OutSignBits =
-        OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
-
-    if (OutSignBits > 1) {
-      APInt KnownZeroMask = APInt::getHighBitsSet(TyBits, OutSignBits);
-      Known.Zero |= KnownZeroMask;
-    }
-  }
 }
 
 void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
