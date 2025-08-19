@@ -952,8 +952,8 @@ template <typename opcode, typename valueType, unsigned int numOperands>
 inline parsed_inst_t ExpressionParser::buildNumericOp(
     OpBuilder &builder, std::enable_if_t<std::is_arithmetic_v<valueType>> *) {
   auto ty = buildLiteralType<valueType>(builder);
-  LLVM_DEBUG(llvm::dbgs() << "*** buildNumericOp: numOperands = " << numOperands
-                          << ", type = " << ty << " ***\n");
+  LDBG() << "*** buildNumericOp: numOperands = " << numOperands
+                          << ", type = " << ty << " ***";
   auto tysToPop = SmallVector<Type, numOperands>();
   tysToPop.resize(numOperands);
   std::fill(tysToPop.begin(), tysToPop.end(), ty);
@@ -961,8 +961,7 @@ inline parsed_inst_t ExpressionParser::buildNumericOp(
   if (failed(operands))
     return failure();
   auto op = builder.create<opcode>(*currentOpLoc, *operands).getResult();
-  LLVM_DEBUG(llvm::dbgs() << "Built: ");
-  LLVM_DEBUG(op.dump());
+  LDBG() << "Built operation: " << op;
   return {{op}};
 }
 
@@ -1428,10 +1427,9 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::FUNCTION>(ParserHead &ph,
   auto funcOp =
       builder.create<FuncOp>(opLoc, symbol, symbols.moduleFuncTypes[typeIdx]);
   Block *block = funcOp.addEntryBlock();
-  auto ip = builder.saveInsertionPoint();
+  OpBuilder::InsertionGuard guard{builder};
   builder.setInsertionPointToEnd(block);
   builder.create<ReturnOp>(opLoc);
-  builder.restoreInsertionPoint(ip);
   symbols.funcSymbols.push_back(
       {{FlatSymbolRefAttr::get(funcOp.getSymNameAttr())},
        symbols.moduleFuncTypes[typeIdx]});
@@ -1481,7 +1479,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
       globalLocation, symbol, globalType.type, globalType.isMutable);
   symbols.globalSymbols.push_back(
       {{FlatSymbolRefAttr::get(globalOp)}, globalOp.getType()});
-  auto ip = builder.saveInsertionPoint();
+  OpBuilder::InsertionGuard guard{builder};
   Block *block = builder.createBlock(&globalOp.getInitializer());
   builder.setInsertionPointToStart(block);
   parsed_inst_t expr = ph.parseExpression(builder, symbols);
@@ -1494,7 +1492,6 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
         globalLocation,
         "initializer result type does not match global declaration type");
   builder.create<ReturnOp>(globalLocation, *expr);
-  builder.restoreInsertionPoint(ip);
   return success();
 }
 
