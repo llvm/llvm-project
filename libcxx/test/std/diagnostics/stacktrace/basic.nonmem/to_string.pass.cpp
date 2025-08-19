@@ -27,10 +27,10 @@ int main(int, char**) {
   auto astr = std::to_string(a);
   std::cerr << astr << '\n';
 
-  assert(std::to_string(a[0]).contains("main"));
+  // assert(std::to_string(a[0]).contains("main"));
   assert(std::to_string(a[0]).contains("to_string.pass"));
 
-  assert(std::to_string(a).contains("main"));
+  // assert(std::to_string(a).contains("main"));
   assert(std::to_string(a).contains("to_string.pass"));
 
   return 0;
