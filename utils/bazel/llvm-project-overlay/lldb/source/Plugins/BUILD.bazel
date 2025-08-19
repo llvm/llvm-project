@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
 

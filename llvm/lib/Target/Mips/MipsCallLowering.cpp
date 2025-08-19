@@ -26,52 +26,6 @@ MipsCallLowering::MipsCallLowering(const MipsTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
 namespace {
-struct MipsOutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
-  /// Is this a return value, or an outgoing call operand.
-  bool IsReturn;
-
-  MipsOutgoingValueAssigner(CCAssignFn *AssignFn_, bool IsReturn)
-      : OutgoingValueAssigner(AssignFn_), IsReturn(IsReturn) {}
-
-  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State_) override {
-    MipsCCState &State = static_cast<MipsCCState &>(State_);
-
-    if (IsReturn)
-      State.PreAnalyzeReturnValue(EVT::getEVT(Info.Ty));
-    else
-      State.PreAnalyzeCallOperand(Info.Ty);
-
-    return CallLowering::OutgoingValueAssigner::assignArg(
-        ValNo, OrigVT, ValVT, LocVT, LocInfo, Info, Flags, State);
-  }
-};
-
-struct MipsIncomingValueAssigner : public CallLowering::IncomingValueAssigner {
-  /// Is this a call return value, or an incoming function argument.
-  bool IsReturn;
-
-  MipsIncomingValueAssigner(CCAssignFn *AssignFn_, bool IsReturn)
-      : IncomingValueAssigner(AssignFn_), IsReturn(IsReturn) {}
-
-  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State_) override {
-    MipsCCState &State = static_cast<MipsCCState &>(State_);
-
-    if (IsReturn)
-      State.PreAnalyzeCallResult(Info.Ty);
-    else
-      State.PreAnalyzeFormalArgument(Info.Ty, Flags);
-
-    return CallLowering::IncomingValueAssigner::assignArg(
-        ValNo, OrigVT, ValVT, LocVT, LocInfo, Info, Flags, State);
-  }
-};
-
 class MipsIncomingValueHandler : public CallLowering::IncomingValueHandler {
   const MipsSubtarget &STI;
 
@@ -329,8 +283,7 @@ bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                        F.getContext());
 
     MipsOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret);
-    MipsOutgoingValueAssigner Assigner(TLI.CCAssignFnForReturn(),
-                                       /*IsReturn*/ true);
+    OutgoingValueAssigner Assigner(TLI.CCAssignFnForReturn());
 
     if (!determineAssignments(Assigner, RetInfos, CCInfo))
       return false;
@@ -381,8 +334,7 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(F.getCallingConv()),
                        Align(1));
 
-  MipsIncomingValueAssigner Assigner(TLI.CCAssignFnForCall(),
-                                     /*IsReturn*/ false);
+  IncomingValueAssigner Assigner(TLI.CCAssignFnForCall());
   if (!determineAssignments(Assigner, ArgInfos, CCInfo))
     return false;
 
@@ -498,8 +450,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv),
                        Align(1));
 
-  MipsOutgoingValueAssigner Assigner(TLI.CCAssignFnForCall(),
-                                     /*IsReturn*/ false);
+  OutgoingValueAssigner Assigner(TLI.CCAssignFnForCall());
   if (!determineAssignments(Assigner, ArgInfos, CCInfo))
     return false;
 
@@ -536,8 +487,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     F.getCallingConv());
 
     SmallVector<CCValAssign, 8> ArgLocs;
-    MipsIncomingValueAssigner Assigner(TLI.CCAssignFnForReturn(),
-                                       /*IsReturn*/ true);
+    IncomingValueAssigner Assigner(TLI.CCAssignFnForReturn());
     CallReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), MIB);
 
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
