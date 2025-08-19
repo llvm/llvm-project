@@ -17357,6 +17357,10 @@ Decl *Sema::ActOnSkippedFunctionBody(Decl *Decl) {
   return Decl;
 }
 
+Decl *Sema::ActOnFinishFunctionBody(Decl *D, Stmt *BodyArg) {
+  return ActOnFinishFunctionBody(D, BodyArg, /*IsInstantiation=*/false);
+}
+
 /// RAII object that pops an ExpressionEvaluationContext when exiting a function
 /// body.
 class ExitFunctionBodyRAII {
@@ -17427,8 +17431,8 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
 
-Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
-                                    bool RetainFunctionScopeInfo) {
+Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
+                                    bool IsInstantiation) {
   FunctionScopeInfo *FSI = getCurFunction();
   FunctionDecl *FD = dcl ? dcl->getAsFunction() : nullptr;
 
@@ -17893,8 +17897,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   if (!IsInstantiation)
     PopDeclContext();
 
-  if (!RetainFunctionScopeInfo)
-    PopFunctionScopeInfo(ActivePolicy, dcl);
+  PopFunctionScopeInfo(ActivePolicy, dcl);
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for
   // deletion in some later function.
