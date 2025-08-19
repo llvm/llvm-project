@@ -2427,8 +2427,7 @@ void CheckHelper::CheckVolatile(const Symbol &symbol,
 
 void CheckHelper::CheckContiguous(const Symbol &symbol) {
   if (evaluate::IsVariable(symbol) &&
-      ((IsPointer(symbol) && symbol.Rank() > 0) ||
-          IsAssumedShape(symbol) ||
+      ((IsPointer(symbol) && symbol.Rank() > 0) || IsAssumedShape(symbol) ||
           IsAssumedRank(symbol))) {
   } else {
     parser::MessageFixedText msg{symbol.owner().IsDerivedType()

@@ -3165,8 +3165,7 @@ static bool IsSymbolPrivate(const Symbol &symbol) {
     case Scope::Kind::Subprogram:
     case Scope::Kind::BlockConstruct:
       return !symbol.attrs().test(Attr::SAVE) &&
-          !symbol.attrs().test(Attr::PARAMETER) &&
-          !IsAssumedShape(symbol) &&
+          !symbol.attrs().test(Attr::PARAMETER) && !IsAssumedShape(symbol) &&
           !symbol.flags().test(Symbol::Flag::InCommonBlock);
     default:
       return false;
