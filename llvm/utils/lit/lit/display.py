@@ -116,7 +116,7 @@ class Display(object):
 
     def print_result(self, test):
         # Show the test result line.
-        test_name = test.getFullNameRelPath(self.opts.printRelativePaths)
+        test_name = test.getFullName()
 
         extra_info = ""
         if test.result.attempts > 1:

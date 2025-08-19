@@ -94,7 +94,7 @@ def parse_args():
     format_group.add_argument(
         "-r",
         "--relative-paths",
-        dest="printRelativePaths",
+        dest="printPathRelativeCWD",
         help="Print paths relative to CWD",
         action="store_true",
     )
