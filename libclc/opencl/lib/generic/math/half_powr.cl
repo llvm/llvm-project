@@ -9,8 +9,8 @@
 #include <clc/math/clc_half_powr.h>
 #include <clc/opencl/math/half_powr.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION half_powr
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION half_powr
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/math/gentype.inc>

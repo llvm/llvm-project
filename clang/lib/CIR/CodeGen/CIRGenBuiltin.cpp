@@ -72,6 +72,19 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   return RValue::get(r);
 }
 
+template <class Operation>
+static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
+                                                 const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
+
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -111,6 +124,31 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   switch (builtinIDIfNoAsmLabel) {
   default:
     break;
+
+  // C stdarg builtins.
+  case Builtin::BI__builtin_stdarg_start:
+  case Builtin::BI__builtin_va_start:
+  case Builtin::BI__va_start: {
+    emitVAStart(builtinID == Builtin::BI__va_start
+                    ? emitScalarExpr(e->getArg(0))
+                    : emitVAListRef(e->getArg(0)).getPointer(),
+                emitScalarExpr(e->getArg(1)));
+    return {};
+  }
+
+  case Builtin::BI__builtin_va_end:
+    emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
+    return {};
+
+  case Builtin::BIfabs:
+  case Builtin::BIfabsf:
+  case Builtin::BIfabsl:
+  case Builtin::BI__builtin_fabs:
+  case Builtin::BI__builtin_fabsf:
+  case Builtin::BI__builtin_fabsf16:
+  case Builtin::BI__builtin_fabsl:
+  case Builtin::BI__builtin_fabsf128:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *e);
 
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
@@ -289,6 +327,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateright64:
     return emitRotate(e, /*isRotateLeft=*/false);
 
+  case Builtin::BI__builtin_return_address:
+  case Builtin::BI__builtin_frame_address: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
+    if (builtinID == Builtin::BI__builtin_return_address) {
+      return RValue::get(cir::ReturnAddrOp::create(
+          builder, loc,
+          builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+    }
+    return RValue::get(cir::FrameAddrOp::create(
+        builder, loc,
+        builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+  }
+
   case Builtin::BI__builtin_trap:
     emitTrap(loc, /*createNewBlock=*/true);
     return RValue::get(nullptr);
@@ -337,4 +389,14 @@ mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
   cgm.errorNYI(e->getSourceRange(),
                "emitCheckedArgForAssume: sanitizers are NYI");
   return {};
+}
+
+void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
+  // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
+  // early, defer to LLVM lowering.
+  cir::VAStartOp::create(builder, vaList.getLoc(), vaList, count);
+}
+
+void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
+  cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
 }
