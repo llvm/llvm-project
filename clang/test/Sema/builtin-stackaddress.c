@@ -38,6 +38,6 @@ return __builtin_frame_address(0xFFFFF);
 }
 
 void *i() {
-// expected-error@+1 {{too many arguments to function call, expected 0, have 1}}
-return __builtin_stack_address(0);
+  // expected-error@+1 {{too many arguments to function call, expected 0, have 1}}
+  return __builtin_stack_address(0);
 }
