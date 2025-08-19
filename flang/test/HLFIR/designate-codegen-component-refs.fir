@@ -220,3 +220,33 @@ func.func @test_array_comp_non_contiguous_slice(%arg0: !fir.ref<!fir.type<t_arra
 // CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_5]], %[[VAL_6]], %[[VAL_5]], %[[VAL_7]], %[[VAL_3]], %[[VAL_5]] : (index, index, index, index, index, index) -> !fir.slice<2>
 // CHECK:  %[[VAL_14:.*]] = fir.embox %[[VAL_11]](%[[VAL_4]]) {{\[}}%[[VAL_13]]] : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<6x17xf32>>
+
+func.func @test_array_comp_slice_contiguous(%arg0: !fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>) {
+  %c2 = arith.constant 2 : index
+  %c0_i32 = arith.constant 0 : i32
+  %4 = fir.shape %c2 : (index) -> !fir.shape<1>
+  %5 = hlfir.designate %arg0{"i"} shape %4 : (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>, !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>, volatile>
+  hlfir.assign %c0_i32 to %5 : i32, !fir.ref<!fir.array<2xi32>, volatile>
+  return
+}
+// CHECK-LABEL:   func.func @test_array_comp_slice_contiguous(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>) {
+// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.array<2xi32>, volatile>
+// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_4]] : (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>, index) -> (index, index, index)
+// CHECK:           %[[VAL_6:.*]] = fir.shift %[[VAL_5]]#0 : (index) -> !fir.shift<1>
+// CHECK:           %[[VAL_7:.*]] = fir.field_index i, !fir.type<_QMtypesTt{i:i32}>
+// CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_9]] : (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>, index) -> (index, index, index)
+// CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_12:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_13:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_12]] : (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>, index) -> (index, index, index)
+// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_10]]#0, %[[VAL_13]]#1 : index
+// CHECK:           %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_11]] : index
+// CHECK:           %[[VAL_16:.*]] = fir.slice %[[VAL_10]]#0, %[[VAL_15]], %[[VAL_8]] path %[[VAL_7]] : (index, index, index, !fir.field) -> !fir.slice<1>
+// CHECK:           %[[VAL_17:.*]] = fir.rebox %[[ARG0]](%[[VAL_6]]) {{\[}}%[[VAL_16]]] : (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>, volatile>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.ref<!fir.array<2xi32>, volatile>, volatile>
+// CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_17]] : (!fir.box<!fir.ref<!fir.array<2xi32>, volatile>, volatile>) -> !fir.ref<!fir.array<2xi32>, volatile>
