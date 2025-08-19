@@ -1697,6 +1697,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::XXPERM:
     return "PPCISD::XXPERM";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
+  case PPCISD::VSRQ:
+    return "PPCISD::VSRQ";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
   case PPCISD::Hi:              return "PPCISD::Hi";
   case PPCISD::Lo:              return "PPCISD::Lo";
@@ -16680,6 +16682,67 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
   llvm_unreachable("Expected a load or store node here");
 }
 
+// Combine VSR(VSRO input, shift), shift) to VSRQ(input, shift)
+//
+// PowerPC Vector Shift Instructions:
+// - vsro (Vector Shift Right by Octet): Shifts vector right by N bytes,
+//   where N is specified in bits 121:124 of the shift vector (4 bits, 0-15
+//   bytes)
+// - vsr (Vector Shift Right): Shifts vector right by N bits,
+//   where N is specified in bits 125:127 of the shift vector (3 bits, 0-7 bits)
+// - vsrq (Vector Shift Right Quadword): Shifts vector right by N bits,
+//   where N is specified in bits 57:63 of the shift vector (7 bits, 0-127 bits)
+//
+// Input DAG pattern: vsr(vsro(input, shift_vector), shift_vector)
+// performs the following shifts:
+//   1. vsro: input >> (bits[121:124] * 8) bits   [byte shifts converted to
+//   bits]
+//   2. vsr:  result >> bits[125:127] bits        [additional bit shifts]
+//   Total shift = (bits[121:124] * 8) + bits[125:127] bits
+//
+// Since bits 121:127 form a 7-bit value representing the total shift amount,
+// and vsrq uses the same 7-bit shift amount (assuming bits 57:63 map to
+// 121:127), we can replace the two-instruction sequence with a single vsrq
+// instruction.
+//
+// Optimization: vsr(vsro(input, shift), shift) -> vsrq(input, shift)
+SDValue PPCTargetLowering::combineVSROVSRToVSRQ(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+
+  // Only available on ISA 3.1+ (Power10+)
+  if (!Subtarget.isISA3_1())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue VSRInput = N->getOperand(1);
+  SDValue VSRShift = N->getOperand(2);
+
+  // Check if VSR input comes from a VSRO intrinsic
+  if (VSRInput.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
+    return SDValue();
+
+  unsigned VSROIntrinsicID = VSRInput->getConstantOperandVal(0);
+  if (VSROIntrinsicID != Intrinsic::ppc_altivec_vsro)
+    return SDValue();
+
+  // Check if VSRO uses the same shift amount register as VSR
+  SDValue VSROShift = VSRInput.getOperand(2);
+  if (VSRShift != VSROShift)
+    return SDValue();
+
+  // Check single use - VSRO result should only be used by this VSR
+  if (!VSRInput.hasOneUse())
+    return SDValue();
+
+  // Get the original input to VSRO instruction
+  SDValue VSROOrigInput = VSRInput.getOperand(1);
+
+  return DAG.getNode(PPCISD::VSRQ, SDLoc(N),
+                     N->getValueType(0), // Preserve original result type
+                     VSROOrigInput,      // Original input vector
+                     VSRShift);          // Shift amount
+}
+
 static bool isStoreConditional(SDValue Intrin, unsigned &StoreWidth) {
   unsigned IntrinsicID = Intrin.getConstantOperandVal(1);
   if (IntrinsicID == Intrinsic::ppc_stdcx)
@@ -17207,6 +17270,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
           }
         }
       }
+
+      // combine VSRO + VSR intrinsic calls to optimize with VSRQ
+      if (IID == Intrinsic::ppc_altivec_vsr)
+        return combineVSROVSRToVSRQ(N, DCI);
     }
 
     break;
