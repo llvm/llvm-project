@@ -1,5 +1,4 @@
 cpu: armv7m
-endian: little
 threads:
   - regsets:
       - flavor: gpr
