@@ -1373,10 +1373,13 @@ static bool checkTupleLikeDecomposition(Sema &S,
         S.BuildReferenceType(T, E.get()->isLValue(), Loc, B->getDeclName());
     if (RefType.isNull())
       return true;
-    auto *RefVD = VarDecl::Create(
-        S.Context, Src->getDeclContext(), Loc, Loc,
-        B->getDeclName().getAsIdentifierInfo(), RefType,
-        S.Context.getTrivialTypeSourceInfo(T, Loc), Src->getStorageClass());
+
+    // Don't give this VarDecl a TypeSourceInfo, since this is a synthesized
+    // entity and this type was never written in source code.
+    auto *RefVD =
+        VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
+                        B->getDeclName().getAsIdentifierInfo(), RefType,
+                        /*TInfo=*/nullptr, Src->getStorageClass());
     RefVD->setLexicalDeclContext(Src->getLexicalDeclContext());
     RefVD->setTSCSpec(Src->getTSCSpec());
     RefVD->setImplicit();
@@ -2148,7 +2151,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
 static bool CheckConstexprCtorInitializer(Sema &SemaRef,
                                           const FunctionDecl *Dcl,
                                           FieldDecl *Field,
-                                          llvm::SmallSet<Decl*, 16> &Inits,
+                                          llvm::SmallPtrSet<Decl *, 16> &Inits,
                                           bool &Diagnosed,
                                           Sema::CheckConstexprKind Kind) {
   // In C++20 onwards, there's nothing to check for validity.
@@ -2470,7 +2473,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         // Check initialization of non-static data members. Base classes are
         // always initialized so do not need to be checked. Dependent bases
         // might not have initializers in the member initializer list.
-        llvm::SmallSet<Decl*, 16> Inits;
+        llvm::SmallPtrSet<Decl *, 16> Inits;
         for (const auto *I: Constructor->inits()) {
           if (FieldDecl *FD = I->getMember())
             Inits.insert(FD);
@@ -7012,9 +7015,12 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E;
          ++I) {
       NamedDecl *D = (*I)->getUnderlyingDecl();
+      // Invalid IndirectFieldDecls have already been diagnosed with
+      // err_anonymous_record_member_redecl in
+      // SemaDecl.cpp:CheckAnonMemberRedeclaration.
       if (((isa<FieldDecl>(D) || isa<UnresolvedUsingValueDecl>(D)) &&
            Record->hasUserDeclaredConstructor()) ||
-          isa<IndirectFieldDecl>(D)) {
+          (isa<IndirectFieldDecl>(D) && !D->isInvalidDecl())) {
         Diag((*I)->getLocation(), diag::err_member_name_of_class)
           << D->getDeclName();
         break;

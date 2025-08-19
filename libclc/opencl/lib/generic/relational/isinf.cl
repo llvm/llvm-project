@@ -9,7 +9,7 @@
 #include <clc/opencl/relational/isinf.h>
 #include <clc/relational/clc_isinf.h>
 
-#define FUNCTION isinf
+#define __CLC_FUNCTION isinf
 #define __CLC_BODY "unary_def.inc"
 
 #include <clc/math/gentype.inc>

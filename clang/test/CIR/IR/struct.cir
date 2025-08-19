@@ -13,8 +13,9 @@
 // CHECK-DAG: !rec_S = !cir.record<struct "S" incomplete>
 // CHECK-DAG: !rec_U = !cir.record<union "U" incomplete>
 
-!rec_anon_struct = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
-!rec_anon_struct1 = !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct1 = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
+!rec_anon_struct2 = !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
 !rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
 !rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
 
@@ -42,18 +43,22 @@
 !rec_Node = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
 // CHECK-DAG: !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
 
+
+
 module  {
   cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!rec_S>
   cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!rec_U>
   cir.global external @p3 = #cir.ptr<null> : !cir.ptr<!rec_C>
+  cir.global external @arr = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
 // CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!rec_S>
 // CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!rec_U>
 // CHECK: cir.global external @p3 = #cir.ptr<null> : !cir.ptr<!rec_C>
+// CHECK: cir.global external @arr = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
 
   // Dummy function to use types and force them to be printed.
   cir.func @useTypes(%arg0: !rec_Node,
-                     %arg1: !rec_anon_struct1,
-                     %arg2: !rec_anon_struct,
+                     %arg1: !rec_anon_struct2,
+                     %arg2: !rec_anon_struct1,
                      %arg3: !rec_S1,
                      %arg4: !rec_Ac,
                      %arg5: !rec_P1,

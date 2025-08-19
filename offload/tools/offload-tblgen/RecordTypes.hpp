@@ -92,6 +92,8 @@ public:
 
   bool isTyped() const { return rec->getValueAsBit("is_typed"); }
 
+  bool isBitField() const { return rec->getValueAsBit("is_bit_field"); }
+
 private:
   const Record *rec;
   std::vector<EnumValueRec> vals;

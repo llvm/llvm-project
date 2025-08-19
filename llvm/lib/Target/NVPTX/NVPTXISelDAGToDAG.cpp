@@ -70,7 +70,7 @@ NVPTXDAGToDAGISel::getDivF32Level(const SDNode *N) const {
 }
 
 bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
-  return Subtarget->getTargetLowering()->usePrecSqrtF32(*MF, N);
+  return Subtarget->getTargetLowering()->usePrecSqrtF32(N);
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
@@ -80,11 +80,6 @@ bool NVPTXDAGToDAGISel::useF32FTZ() const {
 bool NVPTXDAGToDAGISel::allowFMA() const {
   const NVPTXTargetLowering *TL = Subtarget->getTargetLowering();
   return TL->allowFMA(*MF, OptLevel);
-}
-
-bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
-  const NVPTXTargetLowering *TL = Subtarget->getTargetLowering();
-  return TL->allowUnsafeFPMath(*MF);
 }
 
 bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
@@ -1032,9 +1027,16 @@ static inline bool isAddLike(const SDValue V) {
          (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
 }
 
+static SDValue stripAssertAlign(SDValue N) {
+  if (N.getOpcode() == ISD::AssertAlign)
+    N = N.getOperand(0);
+  return N;
+}
+
 // selectBaseADDR - Match a dag node which will serve as the base address for an
 // ADDR operand pair.
 static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
+  N = stripAssertAlign(N);
   if (const auto *GA = dyn_cast<GlobalAddressSDNode>(N))
     return DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(N),
                                        GA->getValueType(0), GA->getOffset(),
@@ -1049,6 +1051,7 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
 }
 
 static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
+  Addr = stripAssertAlign(Addr);
   APInt AccumulatedOffset(64u, 0);
   while (isAddLike(Addr)) {
     const auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
@@ -1060,7 +1063,7 @@ static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
       break;
 
     AccumulatedOffset += CI;
-    Addr = Addr->getOperand(0);
+    Addr = stripAssertAlign(Addr->getOperand(0));
   }
   return DAG->getSignedTargetConstant(AccumulatedOffset.getSExtValue(), DL,
                                       MVT::i32);
