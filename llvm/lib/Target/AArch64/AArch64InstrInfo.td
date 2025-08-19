@@ -4714,21 +4714,17 @@ def : Pat<(truncstorei32 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed32 GPR64
 def : Pat<(truncstorei16 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
           (STRHui (f16 (EXTRACT_SUBREG FPR64:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$offset)>;      
 
-let Predicates = [HasFullFP16] in {
   // truncstorei16 of f32 bitcasted to i32
-  def : Pat<(truncstorei16 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$off)),
-          (STRHui (f16 (EXTRACT_SUBREG FPR32:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$off)>;
-}
+def : Pat<(truncstorei16 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$off)),
+        (STRHui (f16 (EXTRACT_SUBREG FPR32:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$off)>;
 
-let Predicates = [HasFPARMv8] in {
   // truncstorei8 of f64 bitcasted to i64
-  def : Pat<(truncstorei8 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$off)),
-          (STRBui (aarch64mfp8 (EXTRACT_SUBREG FPR64:$Rt, bsub)), GPR64sp:$Rn, uimm12s1:$off)>;
+def : Pat<(truncstorei8 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$off)),
+        (STRBui (aarch64mfp8 (EXTRACT_SUBREG FPR64:$Rt, bsub)), GPR64sp:$Rn, uimm12s1:$off)>;
 
   // truncstorei8 of f32 bitcasted to i32
-  def : Pat<(truncstorei8 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$off)),
+def : Pat<(truncstorei8 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$off)),
         (STRBui (aarch64mfp8 (EXTRACT_SUBREG FPR32:$Rt, bsub)), GPR64sp:$Rn, uimm12s1:$off)>;
-}
 
 // truncstore i64
 def : Pat<(truncstorei32 GPR64:$Rt,
