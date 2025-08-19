@@ -1589,7 +1589,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   Value *ReplacementLow, *ReplacementHigh;
   bool FoldSExtICmp =
       match(Sel1, m_SExt(m_Value(Cmp1, m_ICmp(m_Value(), m_Value()))));
-  if (!(FoldSelectICmp ||
+  if (!(FoldSExtICmp ||
         match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
                              m_Value(ReplacementHigh)))) ||
       !match(Cmp1,
