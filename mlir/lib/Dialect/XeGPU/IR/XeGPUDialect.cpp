@@ -67,7 +67,7 @@ genOffsetsComputingInsts(OpBuilder &builder, Location loc,
        StaticTileOffsetRange(sizePerWg, distUnit)) {
     SmallVector<Value> base =
         llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
-          return builder.create<arith::ConstantIndexOp>(loc, d);
+          return arith::ConstantIndexOp::create(builder, loc, d);
         });
 
     SmallVector<Value> adds = llvm::map_to_vector(
@@ -80,7 +80,7 @@ genOffsetsComputingInsts(OpBuilder &builder, Location loc,
         llvm::zip_equal(adds, sizePerWg), [&](const auto &t) -> Value {
           return builder.createOrFold<index::RemUOp>(
               loc, std::get<0>(t),
-              builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+              arith::ConstantIndexOp::create(builder, loc, std::get<1>(t)));
         });
 
     offsets.push_back(mods);
