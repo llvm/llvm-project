@@ -5052,11 +5052,13 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   if (DppCtrlIdx >= 0) {
     unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
-        AMDGPU::isDPALU_DPP(MII.get(Opc))) {
-      // DP ALU DPP is supported for row_newbcast only on GFX9*
+    if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), DppCtrl) &&
+        AMDGPU::isDPALU_DPP(MII.get(Opc), getSTI())) {
+      // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
+      // only on GFX12.
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, "DP ALU dpp only supports row_newbcast");
+      Error(S, isGFX12() ? "DP ALU dpp only supports row_share"
+                         : "DP ALU dpp only supports row_newbcast");
       return false;
     }
   }
@@ -6268,8 +6270,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                        ExprVal, ValRange);
     } else if (ID == ".amdhsa_workgroup_processor_mode") {
-      if (IVersion.Major < 10)
-        return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      if (!supportsWGP(getSTI()))
+        return Error(IDRange.Start,
+                     "directive unsupported on " + getSTI().getCPU(), IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
                        ValRange);

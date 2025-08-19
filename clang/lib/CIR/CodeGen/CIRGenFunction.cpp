@@ -215,7 +215,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
   assert(isa<NamedDecl>(var) && "Needs a named decl");
-  assert(!cir::MissingFeatures::cgfSymbolTable());
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
   auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
   assert(allocaOp && "expected cir::AllocaOp");
@@ -224,6 +224,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  symbolTable.insert(var, allocaOp);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -356,7 +358,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   // destructor or a non-trivially copyable type.
   if (const RecordType *recordType =
           returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(recordType->getDecl()))
+    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+            recordType->getOriginalDecl()->getDefinitionOrSelf()))
       return classDecl->hasTrivialDestructor();
   }
   return returnType.isTriviallyCopyableType(astContext);
@@ -484,6 +487,9 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
+
   auto result = mlir::LogicalResult::success();
   if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
     emitCompoundStmtWithoutScope(*block);
@@ -530,6 +536,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   FunctionArgList args;
   QualType retTy = buildFunctionArgList(gd, args);
 
+  // Create a scope in the symbol table to hold variable declarations.
+  SymTableScopeTy varScope(symbolTable);
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
@@ -827,7 +835,9 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Ignore empty classes in C++.
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getDecl())->isEmpty())
+      if (cast<CXXRecordDecl>(rt->getOriginalDecl())
+              ->getDefinitionOrSelf()
+              ->isEmpty())
         return;
     }
   }
@@ -930,6 +940,23 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
 }
 
+mlir::Value CIRGenFunction::emitAlignmentAssumption(
+    mlir::Value ptrValue, QualType ty, SourceLocation loc,
+    SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
+  assert(!cir::MissingFeatures::sanitizers());
+  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
+                                      alignment, offsetValue);
+}
+
+mlir::Value CIRGenFunction::emitAlignmentAssumption(
+    mlir::Value ptrValue, const Expr *expr, SourceLocation assumptionLoc,
+    int64_t alignment, mlir::Value offsetValue) {
+  QualType ty = expr->getType();
+  SourceLocation loc = expr->getExprLoc();
+  return emitAlignmentAssumption(ptrValue, ty, loc, assumptionLoc, alignment,
+                                 offsetValue);
+}
+
 // TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {
@@ -977,10 +1004,6 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
-
-    case Type::Elaborated:
-      type = cast<clang::ElaboratedType>(ty)->getNamedType();
-      break;
 
     case Type::Adjusted:
       type = cast<clang::AdjustedType>(ty)->getAdjustedType();

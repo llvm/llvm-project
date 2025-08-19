@@ -31,7 +31,7 @@ define amdgpu_ps void @flat_prefetch_offset(ptr %ptr) {
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1] offset:512
 ; GCN-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i32, ptr %ptr, i32 128
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 128
   tail call void @llvm.amdgcn.flat.prefetch(ptr %gep, i32 0)
   ret void
 }

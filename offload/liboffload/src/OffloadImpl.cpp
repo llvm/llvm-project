@@ -765,7 +765,7 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
-    auto &Global = Program->KernelSymbols[Name];
+    auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
       GlobalTy GlobalObj{Name};
       if (auto Res =
@@ -831,6 +831,13 @@ Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
 Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
                                ol_symbol_info_t PropName, size_t *PropSizeRet) {
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
+}
+
+Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
+                                ol_host_function_cb_t Callback,
+                                void *UserData) {
+  return Queue->Device->Device->enqueueHostCall(Callback, UserData,
+                                                Queue->AsyncInfo);
 }
 
 } // namespace offload
