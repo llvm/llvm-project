@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++11 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -Wno-vla -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -Wno-vla -verify=ref,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++11 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++11                                         -verify=ref,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++20                                         -verify=ref,both %s
 
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
@@ -546,16 +546,14 @@ namespace IncDec {
              // expected-note 2{{increment of uninitialized}} \
              // expected-note {{read of uninitialized}}
       else
-        a++; // ref-note 2{{increment of uninitialized}} \
-             // expected-note 2{{increment of uninitialized}}
+        a++; // both-note 2{{increment of uninitialized}}
     } else {
       if (Pre)
         --a; // ref-note 3{{decrement of uninitialized}} \
              // expected-note 2{{decrement of uninitialized}} \
              // expected-note {{read of uninitialized}}
       else
-        a--; // ref-note 2{{decrement of uninitialized}} \
-             // expected-note 2{{decrement of uninitialized}}
+        a--; // both-note 2{{decrement of uninitialized}}
     }
     return 1;
   }
