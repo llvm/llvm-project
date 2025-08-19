@@ -903,31 +903,11 @@ bool IsAssumedRank(const Symbol &original) {
   return object && object->IsAssumedRank();
 }
 
-bool IsAssumedRank(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsAssumedRank(*expr);
-  } else {
-    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
-    CHECK(assumedTypeDummy);
-    return IsAssumedRank(*assumedTypeDummy);
-  }
-}
-
 bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
   return object && object->IsAssumedShape() &&
       !semantics::IsAllocatableOrObjectPointer(&ultimate);
-}
-
-bool IsAssumedShape(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsAssumedShape(*expr);
-  } else {
-    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
-    CHECK(assumedTypeDummy);
-    return IsAssumedShape(*assumedTypeDummy);
-  }
 }
 
 int GetCorank(const ActualArgument &arg) {
@@ -1221,7 +1201,7 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
 }
 
 bool HasVectorSubscript(const ActualArgument &actual) {
-  auto expr = actual.UnwrapExpr();
+  auto expr{actual.UnwrapExpr()};
   return expr && HasVectorSubscript(*expr);
 }
 

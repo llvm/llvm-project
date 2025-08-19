@@ -1565,7 +1565,7 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
     // the actual argument could be polymorphic array of child type,
     // while the dummy argument could be non-polymorphic array of parent type.)
     auto actualType{characteristics::TypeAndShape::Characterize(actual, fc)};
-    bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+    bool actualIsPolymorphic{actualType && actualType->type().IsPolymorphic()};
     if (actualIsPolymorphic && !dummyIsPolymorphic) {
       setCopyIn();
       setCopyOut();
