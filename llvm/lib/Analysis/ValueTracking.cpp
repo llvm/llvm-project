@@ -7394,8 +7394,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::fshr:
       case Intrinsic::smax:
       case Intrinsic::smin:
+      case Intrinsic::scmp:
       case Intrinsic::umax:
       case Intrinsic::umin:
+      case Intrinsic::ucmp:
       case Intrinsic::ptrmask:
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
