@@ -6526,8 +6526,8 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
-      // Having more target features is fine for inline ASM.
-      if (CB->isInlineAsm())
+      // Having more target features is fine for inline ASM and intrinsics.
+      if (CB->isInlineAsm() || CB->getIntrinsicID() != Intrinsic::not_intrinsic)
         continue;
 
       SmallVector<Type *, 8> Types;
@@ -6543,19 +6543,9 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
       if (all_of(Types, IsSimpleTy))
         continue;
 
-      if (Function *NestedCallee = CB->getCalledFunction()) {
-        // Assume that intrinsics are always ABI compatible.
-        if (NestedCallee->isIntrinsic())
-          continue;
-
-        // Do a precise compatibility check.
-        if (!areTypesABICompatible(Caller, NestedCallee, Types))
-          return false;
-      } else {
-        // We don't know the target features of the callee,
-        // assume it is incompatible.
+      // Do a precise compatibility check.
+      if (!areTypesABICompatible(Caller, Callee, Types))
         return false;
-      }
     }
   }
   return true;
