@@ -22356,20 +22356,12 @@ void RISCVTargetLowering::analyzeInputArgs(
     MachineFunction &MF, CCState &CCInfo,
     const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
     RISCVCCAssignFn Fn) const {
-  FunctionType *FType = MF.getFunction().getFunctionType();
-
   for (const auto &[Idx, In] : enumerate(Ins)) {
     MVT ArgVT = In.VT;
     ISD::ArgFlagsTy ArgFlags = In.Flags;
 
-    Type *ArgTy = nullptr;
-    if (IsRet)
-      ArgTy = FType->getReturnType();
-    else if (In.isOrigArg())
-      ArgTy = FType->getParamType(In.getOrigArgIndex());
-
     if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, IsRet,
-           ArgTy)) {
+           In.OrigTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << Idx << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -22384,10 +22376,9 @@ void RISCVTargetLowering::analyzeOutputArgs(
   for (const auto &[Idx, Out] : enumerate(Outs)) {
     MVT ArgVT = Out.VT;
     ISD::ArgFlagsTy ArgFlags = Out.Flags;
-    Type *OrigTy = CLI ? CLI->getArgs()[Out.OrigArgIndex].Ty : nullptr;
 
     if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, IsRet,
-           OrigTy)) {
+           Out.OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << Idx << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -23169,7 +23160,7 @@ bool RISCVTargetLowering::CanLowerReturn(
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
     if (CC_RISCV(i, VT, VT, CCValAssign::Full, ArgFlags, CCInfo,
-                 /*IsRet=*/true, nullptr))
+                 /*IsRet=*/true, Outs[i].OrigTy))
       return false;
   }
   return true;
