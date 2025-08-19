@@ -24,8 +24,6 @@ struct RootParameterInfo {
   dxbc::ShaderVisibility Visibility;
   size_t Location;
 
-  RootParameterInfo() = default;
-
   RootParameterInfo(dxbc::RootParameterType Type,
                     dxbc::ShaderVisibility Visibility, size_t Location)
       : Type(Type), Visibility(Visibility), Location(Location) {}
