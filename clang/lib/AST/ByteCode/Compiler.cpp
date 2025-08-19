@@ -3181,13 +3181,6 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
 
-    // Trivial copy/move constructor. Avoid copy.
-    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
-        Ctor->isTrivial() &&
-        E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
-                                        T->getAsCXXRecordDecl()))
-      return this->visitInitializer(E->getArg(0));
-
     // If we're discarding a construct expression, we still need
     // to allocate a variable and call the constructor and destructor.
     if (DiscardResult) {
@@ -3202,6 +3195,13 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
     }
+
+    // Trivial copy/move constructor. Avoid copy.
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial() &&
+        E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
+                                        T->getAsCXXRecordDecl()))
+      return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
     if (E->requiresZeroInitialization()) {
