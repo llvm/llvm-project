@@ -233,10 +233,12 @@ loadStoreFromTransfer(PatternRewriter &rewriter,
   VectorType vecTy = xferOp.getVectorType();
   ArrayRef<int64_t> vecShape = vecTy.getShape();
   ArrayRef<int64_t> memShape = memTy.getShape();
-  if (memShape.back() < vecShape.back())
+  if (memShape.back() == ShapedType::kDynamic ||
+      memShape.back() < vecShape.back())
     return nullptr;
   if (isPacked &&
       (memShape.back() != vecShape.back() ||
+       memShape[memShape.size() - 2] == ShapedType::kDynamic ||
        memShape[memShape.size() - 2] < vecShape[vecShape.size() - 2]))
     return nullptr;
 

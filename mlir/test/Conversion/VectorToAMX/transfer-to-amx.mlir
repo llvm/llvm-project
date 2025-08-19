@@ -6,7 +6,7 @@
 #map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
 #map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
 #map2 = affine_map<(m, n, k, vnni) -> (m, n)>
-func.func @transfers_into_amx_tiles(%A: memref<64x32x16x2xf16>,
+func.func @transfers_static_dims(%A: memref<64x32x16x2xf16>,
     %B: memref<64x16x32x2xf16>, %C: memref<64x64xf32>, %idx: index) {
   %c0_f16 = arith.constant 0.0 : f16
   %c0_f32 = arith.constant 0.0 : f32
@@ -26,7 +26,7 @@ func.func @transfers_into_amx_tiles(%A: memref<64x32x16x2xf16>,
   return
 }
 
-// CHECK-LABEL: @transfers_into_amx_tiles(
+// CHECK-LABEL: @transfers_static_dims(
 // CHECK-SAME:    %[[A:.+]]: memref<64x32x16x2xf16>,
 // CHECK-SAME:    %[[B:.+]]: memref<64x16x32x2xf16>,
 // CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>,
@@ -70,6 +70,40 @@ func.func @transfers_into_amx_tiles(%A: memref<64x32x16x2xf16>,
 
 // -----
 
+#map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
+#map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
+#map2 = affine_map<(m, n, k, vnni) -> (m, n)>
+func.func @transfer_dynamic_outer_dims(%A: memref<?x?x16x2xf16>,
+    %B: memref<?x?x32x2xf16>, %C: memref<?x64xf32>, %idx: index) {
+  %c0_f16 = arith.constant 0.0 : f16
+  %c0_f32 = arith.constant 0.0 : f32
+  %vecA = vector.transfer_read %A[%idx, %idx, %idx, %idx], %c0_f16
+    {in_bounds = [true, true, true]} : memref<?x?x16x2xf16>, vector<4x8x2xf16>
+  %vecB = vector.transfer_read %B[%idx, %idx, %idx, %idx], %c0_f16
+    {in_bounds = [true, true, true]} : memref<?x?x32x2xf16>, vector<8x16x2xf16>
+  %vecC = vector.transfer_read %C[%idx, %idx], %c0_f32
+    {in_bounds = [true, true]} : memref<?x64xf32>, vector<4x16xf32>
+  %vecD = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
+    %vecA, %vecB, %vecC : vector<4x8x2xf16>, vector<8x16x2xf16> into vector<4x16xf32>
+  vector.transfer_write %vecD, %C[%idx, %idx]
+    {in_bounds = [true, true]} : vector<4x16xf32>, memref<?x64xf32>
+  return
+}
+
+// CHECK-LABEL: @transfer_dynamic_outer_dims(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?x16x2xf16>,
+// CHECK-SAME:    %[[B:.+]]: memref<?x?x32x2xf16>,
+// CHECK-SAME:    %[[C:.+]]: memref<?x64xf32>
+// CHECK-NOT:  vector.transfer_read %[[A]]
+// CHECK-NOT:  vector.transfer_read %[[B]]
+// CHECK-NOT:  vector.transfer_read %[[C]]
+// CHECK-NOT:  vector.transfer_write{{.*}}%[[C]]
+
+// -----
+
 /// AMX tile can be loaded directly from the buffer. However, vector transfer
 /// has to remain due to other users that require data in registers.
 
@@ -93,14 +127,22 @@ func.func @transfer_read_multiple_users(%C: memref<64x64xf32>,
 
 // CHECK-LABEL: @transfer_read_multiple_users(
 // CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>,
+
+/// Load to AMX tile directly from buffer.
 // CHECK: %[[C_SUBVIEW:.+]] = memref.subview %[[C]]
 // CHECK: %[[C_TILE:.+]] = amx.tile_load %[[C_SUBVIEW]]
+
+/// Vector read remains to load data for the other non-AMX consumer.
 // CHECK: %[[C_VEC:.+]] = vector.transfer_read %[[C]]
+
+/// Contraction uses the directly loaded tile.
 // CHECK: %[[TILE_MUL:.+]] = amx.tile_mulf{{.*}}%[[C_TILE]]
-// CHECK: memref.alloca
-// CHECK: amx.tile_store
-// CHECK: vector.transfer_read
-// CHECK: %[[VEC_MUL:.+]] = arith.mulf %[[C_VEC]]
+
+/// Consumer uses original C value and the updated one after contraction.
+// CHECK: %[[RES_BUF:.+]] = memref.alloca
+// CHECK: amx.tile_store %[[RES_BUF]]
+// CHECK: %[[RES_VEC:.+]] = vector.transfer_read %[[RES_BUF]]
+// CHECK: %[[VEC_MUL:.+]] = arith.mulf %[[C_VEC]], %[[RES_VEC]]
 
 // -----
 
@@ -232,6 +274,41 @@ func.func @negative_1D_buffer(%C: memref<512xf32>,
 // CHECK: vector.transfer_read %[[C]]
 
 // -----
+
+#map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
+#map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
+#map2 = affine_map<(m, n, k, vnni) -> (m, n)>
+func.func @negative_dynamic_shapes(%A: memref<?x?x?x2xf16>,
+    %B: memref<?x?x2xf16>, %C: memref<?x?xf32>, %idx: index) {
+  %c0_f16 = arith.constant 0.0 : f16
+  %c0_f32 = arith.constant 0.0 : f32
+  %vecA = vector.transfer_read %A[%idx, %idx, %idx, %idx], %c0_f16
+    {in_bounds = [true, true, true]} : memref<?x?x?x2xf16>, vector<4x8x2xf16>
+  %vecB = vector.transfer_read %B[%idx, %idx, %idx], %c0_f16
+    {in_bounds = [true, true, true]} : memref<?x?x2xf16>, vector<8x16x2xf16>
+  %vecC = vector.transfer_read %C[%idx, %idx], %c0_f32
+    {in_bounds = [true, true]} : memref<?x?xf32>, vector<4x16xf32>
+  %vecD = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
+    %vecA, %vecB, %vecC : vector<4x8x2xf16>, vector<8x16x2xf16> into vector<4x16xf32>
+  vector.transfer_write %vecD, %C[%idx, %idx]
+    {in_bounds = [true, true]} : vector<4x16xf32>, memref<?x?xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_dynamic_shapes(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?x?x2xf16>,
+// CHECK-SAME:    %[[B:.+]]: memref<?x?x2xf16>,
+// CHECK-SAME:    %[[C:.+]]: memref<?x?xf32>
+// CHECK:  vector.transfer_read %[[A]]
+// CHECK:  vector.transfer_read %[[B]]
+// CHECK:  vector.transfer_read %[[C]]
+// CHECK:  vector.transfer_write{{.*}}%[[C]]
+
+// -----
+
 
 #map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
 #map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
