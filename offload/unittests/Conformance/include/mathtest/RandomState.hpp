@@ -24,7 +24,7 @@ struct SeedTy {
 class [[nodiscard]] RandomState {
   uint64_t State;
 
-  [[nodiscard]] static uint64_t splitMix64(uint64_t X) noexcept {
+  [[nodiscard]] static constexpr uint64_t splitMix64(uint64_t X) noexcept {
     X += 0x9E3779B97F4A7C15ULL;
     X = (X ^ (X >> 30)) * 0xBF58476D1CE4E5B9ULL;
     X = (X ^ (X >> 27)) * 0x94D049BB133111EBULL;
@@ -33,7 +33,7 @@ class [[nodiscard]] RandomState {
   }
 
 public:
-  explicit inline RandomState(SeedTy Seed) noexcept
+  explicit constexpr RandomState(SeedTy Seed) noexcept
       : State(splitMix64(Seed.Value)) {}
 
   [[nodiscard]] inline uint64_t next() noexcept {

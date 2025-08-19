@@ -57,7 +57,8 @@ public:
   }
 
 private:
-  constexpr IndexArrayType getNDIndex(uint64_t FlatIndex) const noexcept {
+  [[nodiscard]] constexpr IndexArrayType
+  getNDIndex(uint64_t FlatIndex) const noexcept {
     IndexArrayType NDIndex;
 
     for (std::size_t Index = 0; Index < Base::NumInputs; ++Index) {

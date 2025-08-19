@@ -26,6 +26,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <tuple>
 
 namespace mathtest {
@@ -71,9 +72,12 @@ protected:
   explicit constexpr RangeBasedGenerator(
       const IndexedRange<InTypes> &...Ranges) noexcept
       : RangesTuple(Ranges...) {
-    bool Overflowed = getSizeWithOverflow(Ranges..., InputSpaceSize);
+    const auto MaybeInputSpaceSize = getInputSpaceSize(Ranges...);
 
-    assert(!Overflowed && "The input space size is too large");
+    assert(MaybeInputSpaceSize.has_value() &&
+           "The input space size is too large");
+    InputSpaceSize = *MaybeInputSpaceSize;
+
     assert((InputSpaceSize > 0) && "The input space size must be at least 1");
   }
 
@@ -82,19 +86,23 @@ protected:
   RangesTupleType RangesTuple;
 
 private:
-  static bool getSizeWithOverflow(const IndexedRange<InTypes> &...Ranges,
-                                  uint64_t &Size) noexcept {
-    Size = 1;
+  [[nodiscard]] static constexpr std::optional<uint64_t>
+  getInputSpaceSize(const IndexedRange<InTypes> &...Ranges) noexcept {
+    uint64_t InputSpaceSize = 1;
     bool Overflowed = false;
 
     auto Multiplier = [&](const uint64_t RangeSize) {
       if (!Overflowed)
-        Overflowed = __builtin_mul_overflow(Size, RangeSize, &Size);
+        Overflowed =
+            __builtin_mul_overflow(InputSpaceSize, RangeSize, &InputSpaceSize);
     };
 
     (Multiplier(Ranges.getSize()), ...);
 
-    return Overflowed;
+    if (Overflowed)
+      return std::nullopt;
+
+    return InputSpaceSize;
   }
 
   uint64_t NextFlatIndex = 0;

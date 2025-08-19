@@ -46,8 +46,8 @@ public:
   }
 
 private:
-  static uint64_t getRandomIndex(RandomState &RNG,
-                                 uint64_t RangeSize) noexcept {
+  [[nodiscard]] static uint64_t getRandomIndex(RandomState &RNG,
+                                               uint64_t RangeSize) noexcept {
     if (RangeSize == 0)
       return 0;
 
