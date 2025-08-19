@@ -44,7 +44,7 @@ struct S {
 };
 RWStructuredBuffer<S> T3S0 : register(u3);
 
-// Resource array elements are initialized on access; make sure there is not call
+// Resource array elements are initialized on access; make sure there is no call
 // to initialize RWBuffer<double>.
 // CHECK-NOT: call target("dx.TypedBuffer", double, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
 RWBuffer<double> Array[10] : register(u4, space0);

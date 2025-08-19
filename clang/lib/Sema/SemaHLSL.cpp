@@ -351,18 +351,9 @@ getResourceArrayHandleType(VarDecl *VD) {
   assert(VD->getType()->isHLSLResourceRecordArray() &&
          "expected array of resource records");
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty)) {
+  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
-  }
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
-}
-
-// returns the element type of an array (including multi-dimensional array)
-static QualType getArrayElementType(QualType Ty) {
-  assert(Ty->isArrayType() && "expected array type");
-  while (const ArrayType *AT = dyn_cast<ArrayType>(Ty.getTypePtr()))
-    Ty = AT->getElementType();
-  return Ty;
 }
 
 // Returns true if the type is a leaf element type that is not valid to be
@@ -3706,12 +3697,10 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
   return true;
 }
 
-void SemaHLSL::createResourceRecordCtorArgs(const Type *ResourceTy,
-                                            StringRef VarName,
-                                            HLSLResourceBindingAttr *RBA,
-                                            HLSLVkBindingAttr *VkBinding,
-                                            uint32_t ArrayIndex,
-                                            llvm::SmallVector<Expr *> &Args) {
+void SemaHLSL::createResourceRecordCtorArgs(
+    const Type *ResourceTy, StringRef VarName, HLSLResourceBindingAttr *RBA,
+    HLSLVkBindingAttr *VkBinding, uint32_t ArrayIndex,
+    llvm::SmallVectorImpl<Expr *> &Args) {
   std::optional<uint32_t> RegisterSlot;
   uint32_t SpaceNo = 0;
   if (VkBinding) {
@@ -3776,7 +3765,7 @@ bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {
   // for the specific resource type is instantiated, so codegen can emit a call
   // to it when the array element is accessed.
   SmallVector<Expr *> Args;
-  QualType ResElementTy = getArrayElementType(VD->getType());
+  QualType ResElementTy = VD->getASTContext().getBaseElementType(VD->getType());
   createResourceRecordCtorArgs(ResElementTy.getTypePtr(), VD->getName(),
                                VD->getAttr<HLSLResourceBindingAttr>(),
                                VD->getAttr<HLSLVkBindingAttr>(), 0, Args);

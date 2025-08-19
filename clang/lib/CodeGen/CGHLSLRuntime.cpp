@@ -22,6 +22,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
@@ -84,20 +85,11 @@ void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
-// If the specified expr is a simple decay from an array to pointer,
-// return the array subexpression. Otherwise, return nullptr.
-static const Expr *getSubExprFromArrayDecayOperand(const Expr *E) {
-  const auto *CE = dyn_cast<CastExpr>(E);
-  if (!CE || CE->getCastKind() != CK_ArrayToPointerDecay)
-    return nullptr;
-  return CE->getSubExpr();
-}
-
 // Find array variable declaration from nested array subscript AST nodes
 static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
   const Expr *E = nullptr;
   while (ASE != nullptr) {
-    E = getSubExprFromArrayDecayOperand(ASE->getBase());
+    E = ASE->getBase()->IgnoreImpCasts();
     if (!E)
       return nullptr;
     ASE = dyn_cast<ArraySubscriptExpr>(E);
@@ -108,17 +100,12 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
 }
 
 // Get the total size of the array, or -1 if the array is unbounded.
-static int getTotalArraySize(const clang::Type *Ty) {
+static int getTotalArraySize(ASTContext &AST, const clang::Type *Ty) {
+  Ty = Ty->getUnqualifiedDesugaredType();
   assert(Ty->isArrayType() && "expected array type");
   if (Ty->isIncompleteArrayType())
     return -1;
-  int Size = 1;
-  while (const auto *CAT =
-             dyn_cast<ConstantArrayType>(Ty->getUnqualifiedDesugaredType())) {
-    Size *= CAT->getSExtSize();
-    Ty = CAT->getArrayElementTypeNoTypeQual();
-  }
-  return Size;
+  return AST.getConstantArrayElementCount(cast<ConstantArrayType>(Ty));
 }
 
 // Find constructor decl for a specific resource record type and binding
@@ -130,7 +117,7 @@ static int getTotalArraySize(const clang::Type *Ty) {
 static CXXConstructorDecl *findResourceConstructorDecl(ASTContext &AST,
                                                        QualType ResTy,
                                                        bool ExplicitBinding) {
-  SmallVector<QualType> ExpParmTypes = {
+  std::array<QualType, 5> ExpParmTypes = {
       AST.UnsignedIntTy, AST.UnsignedIntTy, AST.UnsignedIntTy,
       AST.UnsignedIntTy, AST.getPointerType(AST.CharTy.withConst())};
   ExpParmTypes[ExplicitBinding ? 2 : 1] = AST.IntTy;
@@ -139,8 +126,8 @@ static CXXConstructorDecl *findResourceConstructorDecl(ASTContext &AST,
   for (auto *Ctor : ResDecl->ctors()) {
     if (Ctor->getNumParams() != ExpParmTypes.size())
       continue;
-    ParmVarDecl **ParmIt = Ctor->param_begin();
-    QualType *ExpTyIt = ExpParmTypes.begin();
+    auto *ParmIt = Ctor->param_begin();
+    auto ExpTyIt = ExpParmTypes.begin();
     for (; ParmIt != Ctor->param_end() && ExpTyIt != ExpParmTypes.end();
          ++ParmIt, ++ExpTyIt) {
       if ((*ParmIt)->getType() != *ExpTyIt)
@@ -154,9 +141,9 @@ static CXXConstructorDecl *findResourceConstructorDecl(ASTContext &AST,
 
 static Value *buildNameForResource(llvm::StringRef BaseName,
                                    CodeGenModule &CGM) {
-  std::string Str(BaseName);
-  std::string GlobalName(Str + ".str");
-  return CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+  llvm::SmallString<64> GlobalName = {BaseName, ".str"};
+  return CGM.GetAddrOfConstantCString(BaseName.str(), GlobalName.c_str())
+      .getPointer();
 }
 
 static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
@@ -820,11 +807,13 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   if (!ArrayDecl || !ArrayDecl->hasGlobalStorage())
     return std::nullopt;
 
-  // FIXME: this is not yet implemented (llvm/llvm-project#145426)
-  assert(!ArraySubsExpr->getType()->isArrayType() &&
-         "indexing of array subsets it not supported yet");
+  if (ArraySubsExpr->getType()->isArrayType())
+    // FIXME: this is not yet implemented (llvm/llvm-project#145426)
+    llvm_unreachable(
+        "indexing of sub-arrays of multidimensional arrays not supported yet");
 
   // get the resource array type
+  ASTContext &AST = ArrayDecl->getASTContext();
   const Type *ResArrayTy = ArrayDecl->getType().getTypePtr();
   assert(ResArrayTy->isHLSLResourceRecordArray() &&
          "expected array of resource classes");
@@ -834,27 +823,22 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // dimensional array). The index is calculated as a sum of all indices
   // multiplied by the total size of the array at that level.
   Value *Index = nullptr;
-  Value *Multiplier = nullptr;
   const ArraySubscriptExpr *ASE = ArraySubsExpr;
   while (ASE != nullptr) {
     Value *SubIndex = CGF.EmitScalarExpr(ASE->getIdx());
     if (const auto *ArrayTy =
             dyn_cast<ConstantArrayType>(ASE->getType().getTypePtr())) {
-      Value *SubMultiplier =
-          llvm::ConstantInt::get(CGM.IntTy, ArrayTy->getSExtSize());
-      Multiplier = Multiplier ? CGF.Builder.CreateMul(Multiplier, SubMultiplier)
-                              : SubMultiplier;
+      Value *Multiplier = llvm::ConstantInt::get(
+          CGM.IntTy, AST.getConstantArrayElementCount(ArrayTy));
       SubIndex = CGF.Builder.CreateMul(SubIndex, Multiplier);
     }
 
     Index = Index ? CGF.Builder.CreateAdd(Index, SubIndex) : SubIndex;
-    ASE = dyn_cast<ArraySubscriptExpr>(
-        getSubExprFromArrayDecayOperand(ASE->getBase()));
+    ASE = dyn_cast<ArraySubscriptExpr>(ASE->getBase()->IgnoreParenImpCasts());
   }
 
-  // find binding info for the resource array
-  // (for implicit binding an HLSLResourceBindingAttr should have been added by
-  // SemaHLSL)
+  // find binding info for the resource array (for implicit binding
+  // an HLSLResourceBindingAttr should have been added by SemaHLSL)
   QualType ResourceTy = ArraySubsExpr->getType();
   HLSLVkBindingAttr *VkBinding = ArrayDecl->getAttr<HLSLVkBindingAttr>();
   HLSLResourceBindingAttr *RBA = ArrayDecl->getAttr<HLSLResourceBindingAttr>();
@@ -862,21 +846,20 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
 
   // lookup the resource class constructor based on the resource type and
   // binding
-  CXXConstructorDecl *CD =
-      findResourceConstructorDecl(ArrayDecl->getASTContext(), ResourceTy,
-                                  VkBinding || RBA->hasRegisterSlot());
+  CXXConstructorDecl *CD = findResourceConstructorDecl(
+      AST, ResourceTy, VkBinding || RBA->hasRegisterSlot());
 
   // create a temporary variable for the resource class instance (we need to
   // return an LValue)
   RawAddress TmpVar = CGF.CreateMemTemp(ResourceTy);
-  if (CGF.EmitLifetimeStart(TmpVar.getPointer())) {
+  if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
         NormalEHLifetimeMarker, TmpVar);
-  }
+
   AggValueSlot ValueSlot = AggValueSlot::forAddr(
       TmpVar, Qualifiers(), AggValueSlot::IsDestructed_t(true),
       AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
-      AggValueSlot::MayOverlap);
+      AggValueSlot::DoesNotOverlap);
 
   Address ThisAddress = ValueSlot.getAddress();
   llvm::Value *ThisPtr = CGF.getAsNaturalPointerTo(
@@ -884,7 +867,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
 
   // get total array size (= range size)
   llvm::Value *Range =
-      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(ResArrayTy));
+      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
 
   // assemble the constructor parameters
   CallArgList Args;

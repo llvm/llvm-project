@@ -26,6 +26,7 @@ function at-exit {
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${MONOREPO_ROOT}"/*.log artifacts/ || :
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
@@ -33,7 +34,7 @@ function at-exit {
 
   if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
-      $retcode "${BUILD_DIR}"/test-results.*.xml "${BUILD_DIR}"/ninja*.log \
+      $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
   fi
 }

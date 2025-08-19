@@ -239,7 +239,7 @@ private:
                                     HLSLResourceBindingAttr *RBA,
                                     HLSLVkBindingAttr *VkBinding,
                                     uint32_t ArrayIndex,
-                                    llvm::SmallVector<Expr *> &Args);
+                                    llvm::SmallVectorImpl<Expr *> &Args);
 };
 
 } // namespace clang
