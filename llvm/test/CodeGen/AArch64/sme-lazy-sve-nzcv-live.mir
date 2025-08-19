@@ -1,0 +1,132 @@
+# RUN: llc -mtriple=aarch64 -mattr=+sve -mattr=+sme -run-pass=aarch64-machine-sme-abi -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mattr=+sve -mattr=+sme -aarch64-new-sme-abi %s -o - | FileCheck %s --check-prefix=CHECK-ASM
+
+# This tests the unfortunate case the status flags ($nzcv) are live at the point
+# we want to restore ZA. Currently, this is handled by saving them to a scratch
+# register.
+
+--- |
+  define void @cmp_branch(i32 %0) "aarch64_inout_za" {
+    tail call void @clobber()
+    %2 = icmp sgt i32 %0, 100
+    br i1 %2, label %3, label %4
+
+  3:                                                ; preds = %1
+    tail call void @inout_call() #3
+    br label %4
+
+  4:                                                ; preds = %3, %1
+    tail call void @inout_call() #3
+    ret void
+  }
+
+  declare void @clobber()
+  declare void @inout_call() "aarch64_inout_za"
+...
+---
+name:            cmp_branch
+alignment:       4
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: gpr32common }
+  - { id: 1, class: gpr32 }
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasTailCall:     true
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: cmp_branch
+  ; CHECK: bb.0 (%ir-block.1):
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[RDSVLI_XI:%[0-9]+]]:gpr64 = RDSVLI_XI 1, implicit $vg
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $sp
+  ; CHECK-NEXT:   [[MSUBXrrr:%[0-9]+]]:gpr64 = MSUBXrrr [[RDSVLI_XI]], [[RDSVLI_XI]], [[COPY]]
+  ; CHECK-NEXT:   $sp = COPY [[MSUBXrrr]]
+  ; CHECK-NEXT:   STPXi [[MSUBXrrr]], [[RDSVLI_XI]], %stack.0, 0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXri]]
+  ; CHECK-NEXT:   MSR 56965, [[COPY2]]
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   RequiresZASavePseudo
+  ; CHECK-NEXT:   BL @clobber, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY1]], 101, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[MRS:%[0-9]+]]:gpr64 = MRS 55824, implicit-def $nzcv, implicit $nzcv
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 2, 1, implicit-def $nzcv
+  ; CHECK-NEXT:   [[MRS1:%[0-9]+]]:gpr64 = MRS 56965, implicit-def $nzcv
+  ; CHECK-NEXT:   $x0 = ADDXri %stack.0, 0, 0
+  ; CHECK-NEXT:   RestoreZAPseudo [[MRS1]], $x0, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
+  ; CHECK-NEXT:   MSR 56965, $xzr
+  ; CHECK-NEXT:   MSR 55824, [[MRS]], implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 11, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (%ir-block.3):
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   InOutZAUsePseudo
+  ; CHECK-NEXT:   BL @inout_call, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2 (%ir-block.4):
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   InOutZAUsePseudo
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   TCRETURNdi @inout_call, 0, csr_aarch64_aapcs, implicit $sp
+
+  bb.0 (%ir-block.1):
+    successors: %bb.1, %bb.2
+    liveins: $w0
+
+    %0:gpr32common = COPY $w0
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    RequiresZASavePseudo
+    BL @clobber, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %1:gpr32 = SUBSWri %0, 101, 0, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1 (%ir-block.3):
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    InOutZAUsePseudo
+    BL @inout_call, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.2 (%ir-block.4):
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    InOutZAUsePseudo
+    ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    TCRETURNdi @inout_call, 0, csr_aarch64_aapcs, implicit $sp
+...
+
+# CHECK-ASM-LABEL: cmp_branch
+#       CHECK-ASM:   msr TPIDR2_EL0, x10
+#  CHECK-ASM-NEXT:   bl clobber
+#  CHECK-ASM-NEXT:   cmp w20, #101
+#  CHECK-ASM-NEXT:   mrs x8, NZCV
+#  CHECK-ASM-NEXT:   smstart za
+#  CHECK-ASM-NEXT:   mrs x9, TPIDR2_EL0
+#  CHECK-ASM-NEXT:   sub x0, x29, #16
+#  CHECK-ASM-NEXT:   cbnz x9, .LBB0_2
+#       CHECK-ASM:   bl __arm_tpidr2_restore
+#  CHECK-ASM-NEXT: .LBB0_2:
+#  CHECK-ASM-NEXT:   msr TPIDR2_EL0, xzr
+#  CHECK-ASM-NEXT:   msr NZCV, x8
+#  CHECK-ASM-NEXT:   b.lt .LBB0_4
+#       CHECK-ASM:   bl inout_call
+#  CHECK-ASM-NEXT: .LBB0_4:
+#       CHECK-ASM:   b inout_call

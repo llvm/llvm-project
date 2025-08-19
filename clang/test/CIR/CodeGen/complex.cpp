@@ -799,3 +799,33 @@ void foo30() {
 // OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
 // OGCG: store float 1.000000e+00, ptr %[[A_REAL_PTR]], align 4
 // OGCG: store float 0.000000e+00, ptr %[[A_IMAG_PTR]], align 4
+
+void foo31() {
+  struct Wrapper {
+    int _Complex c;
+  };
+
+  Wrapper w;
+  int r = __real__ w.c;
+}
+
+// CIR: %[[W_ADDR:.*]] = cir.alloca !rec_Wrapper, !cir.ptr<!rec_Wrapper>, ["w"]
+// CIR: %[[REAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["r", init]
+// CIR: %[[ELEM_PTR:.*]] = cir.get_member %[[W_ADDR]][0] {name = "c"} : !cir.ptr<!rec_Wrapper> -> !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[TMP_ELEM_PTR:.*]] = cir.load{{.*}} %[[ELEM_PTR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: %[[REAL:.*]] = cir.complex.real %[[TMP_ELEM_PTR]] : !cir.complex<!s32i> -> !s32i
+// CIR: cir.store{{.*}} %[[REAL]], %[[REAL_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[W_ADDR:.*]] = alloca %struct.Wrapper, i64 1, align 4
+// LLVM: %[[REAL_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[ELEM_PTR:.*]] = getelementptr %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
+// LLVM: %[[TMP_ELEM_PTR:.*]] = load { i32, i32 }, ptr %[[ELEM_PTR]], align 4
+// LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %[[TMP_ELEM_PTR]], 0
+// LLVM: store i32 %[[REAL]], ptr %[[REAL_ADDR]], align 4
+
+// OGCG: %[[W_ADDR:.*]] = alloca %struct.Wrapper, align 4
+// OGCG: %[[REAL_ADDR:.*]] = alloca i32, align 4
+// OGCG: %[[ELEM_PTR:.*]] = getelementptr inbounds nuw %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
+// OGCG: %[[REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[ELEM_PTR]], i32 0, i32 0
+// OGCG: %[[REAL:.*]] = load i32, ptr %[[REAL_PTR]], align 4
+// OGCG: store i32 %[[REAL]], ptr %[[REAL_ADDR]], align 4

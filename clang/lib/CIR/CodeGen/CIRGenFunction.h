@@ -452,7 +452,8 @@ public:
     }
   };
 
-  ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const MemberExpr *me);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
@@ -1174,9 +1175,14 @@ public:
   LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
                                              mlir::Value &result);
 
-  void emitCompoundStmt(const clang::CompoundStmt &s);
+  mlir::LogicalResult
+  emitCompoundStmt(const clang::CompoundStmt &s, Address *lastValue = nullptr,
+                   AggValueSlot slot = AggValueSlot::ignored());
 
-  void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
+  mlir::LogicalResult
+  emitCompoundStmtWithoutScope(const clang::CompoundStmt &s,
+                               Address *lastValue = nullptr,
+                               AggValueSlot slot = AggValueSlot::ignored());
 
   void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
@@ -1412,6 +1418,27 @@ public:
   // Points to the outermost active conditional control. This is used so that
   // we know if a temporary should be destroyed conditionally.
   ConditionalEvaluation *outermostConditional = nullptr;
+
+  /// An RAII object to record that we're evaluating a statement
+  /// expression.
+  class StmtExprEvaluation {
+    CIRGenFunction &cgf;
+
+    /// We have to save the outermost conditional: cleanups in a
+    /// statement expression aren't conditional just because the
+    /// StmtExpr is.
+    ConditionalEvaluation *savedOutermostConditional;
+
+  public:
+    StmtExprEvaluation(CIRGenFunction &cgf)
+        : cgf(cgf), savedOutermostConditional(cgf.outermostConditional) {
+      cgf.outermostConditional = nullptr;
+    }
+
+    ~StmtExprEvaluation() {
+      cgf.outermostConditional = savedOutermostConditional;
+    }
+  };
 
   template <typename FuncTy>
   ConditionalInfo emitConditionalBlocks(const AbstractConditionalOperator *e,

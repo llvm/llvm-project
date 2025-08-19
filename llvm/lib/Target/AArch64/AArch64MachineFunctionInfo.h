@@ -213,9 +213,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// or return type
   bool IsSVECC = false;
 
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
-
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
 
@@ -234,14 +231,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // true if PStateSMReg is used.
   bool PStateSMRegUsed = false;
 
-  // Holds a pointer to a buffer that is large enough to represent
-  // all SME ZA state and any additional state required by the
-  // __arm_sme_save/restore support routines.
-  Register SMESaveBufferAddr = MCRegister::NoRegister;
-
-  // true if SMESaveBufferAddr is used.
-  bool SMESaveBufferUsed = false;
-
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
@@ -253,6 +242,16 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
   SMEAttrs SMEFnAttrs;
 
+  // Note: The following properties are only used for the old SME ABI lowering:
+  /// The frame-index for the TPIDR2 object used for lazy saves.
+  TPIDR2Object TPIDR2;
+  // Holds a pointer to a buffer that is large enough to represent
+  // all SME ZA state and any additional state required by the
+  // __arm_sme_save/restore support routines.
+  Register SMESaveBufferAddr = MCRegister::NoRegister;
+  // true if SMESaveBufferAddr is used.
+  bool SMESaveBufferUsed = false;
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -261,18 +260,19 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  // Old SME ABI lowering state getters/setters:
+  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
+  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
+
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
   }
   unsigned getPredicateRegForFillSpill() const {
     return PredicateRegForFillSpill;
   }
-
-  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
-  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
-
-  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
-  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
@@ -288,8 +288,6 @@ public:
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
-
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 

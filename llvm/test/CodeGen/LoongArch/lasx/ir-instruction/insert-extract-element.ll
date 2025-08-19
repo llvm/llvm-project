@@ -6,7 +6,9 @@ define <32 x i8> @insert_extract_v32i8(<32 x i8> %a) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr1, 15
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 1
+; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 17
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <32 x i8> %a, i32 31
@@ -19,7 +21,9 @@ define <16 x i16> @insert_extract_v16i16(<16 x i16> %a) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr1, 7
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 1
+; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 17
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <16 x i16> %a, i32 15

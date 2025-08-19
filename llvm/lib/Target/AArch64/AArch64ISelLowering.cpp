@@ -17,6 +17,7 @@
 #include "AArch64PerfectShuffle.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "Utils/AArch64SMEAttributes.h"
@@ -1996,6 +1997,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
     if (isOperationExpand(Op, MVT::f16))
       setOperationAction(Op, MVT::f16, Promote);
+}
+
+const AArch64TargetMachine &AArch64TargetLowering::getTM() const {
+  return static_cast<const AArch64TargetMachine &>(getTargetMachine());
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
@@ -8285,53 +8290,54 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  // Create a 16 Byte TPIDR2 object. The dynamic buffer
-  // will be expanded and stored in the static object later using a pseudonode.
-  if (Attrs.hasZAState()) {
-    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-    TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
-    SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                              DAG.getConstant(1, DL, MVT::i32));
-
-    SDValue Buffer;
-    if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-      Buffer = DAG.getNode(AArch64ISD::ALLOCATE_ZA_BUFFER, DL,
-                           DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
-    } else {
-      SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-      Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
-                           DAG.getVTList(MVT::i64, MVT::Other),
-                           {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
-      MFI.CreateVariableSizedObject(Align(16), nullptr);
+  if (!getTM().useNewSMEABILowering() || Attrs.hasAgnosticZAInterface()) {
+    // Old SME ABI lowering (deprecated):
+    // Create a 16 Byte TPIDR2 object. The dynamic buffer
+    // will be expanded and stored in the static object later using a
+    // pseudonode.
+    if (Attrs.hasZAState()) {
+      TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
+      TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
+      SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                DAG.getConstant(1, DL, MVT::i32));
+      SDValue Buffer;
+      if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
+        Buffer = DAG.getNode(AArch64ISD::ALLOCATE_ZA_BUFFER, DL,
+                             DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
+      } else {
+        SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+        Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
+                             DAG.getVTList(MVT::i64, MVT::Other),
+                             {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+        MFI.CreateVariableSizedObject(Align(16), nullptr);
+      }
+      Chain = DAG.getNode(
+          AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
+          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
+    } else if (Attrs.hasAgnosticZAInterface()) {
+      // Call __arm_sme_state_size().
+      SDValue BufferSize =
+          DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
+                      DAG.getVTList(MVT::i64, MVT::Other), Chain);
+      Chain = BufferSize.getValue(1);
+      SDValue Buffer;
+      if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
+        Buffer = DAG.getNode(AArch64ISD::ALLOC_SME_SAVE_BUFFER, DL,
+                             DAG.getVTList(MVT::i64, MVT::Other),
+                             {Chain, BufferSize});
+      } else {
+        // Allocate space dynamically.
+        Buffer = DAG.getNode(
+            ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
+            {Chain, BufferSize, DAG.getConstant(1, DL, MVT::i64)});
+        MFI.CreateVariableSizedObject(Align(16), nullptr);
+      }
+      // Copy the value to a virtual register, and save that in FuncInfo.
+      Register BufferPtr =
+          MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+      FuncInfo->setSMESaveBufferAddr(BufferPtr);
+      Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
     }
-    Chain = DAG.getNode(
-        AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
-        {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
-  } else if (Attrs.hasAgnosticZAInterface()) {
-    // Call __arm_sme_state_size().
-    SDValue BufferSize =
-        DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
-                    DAG.getVTList(MVT::i64, MVT::Other), Chain);
-    Chain = BufferSize.getValue(1);
-
-    SDValue Buffer;
-    if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-      Buffer =
-          DAG.getNode(AArch64ISD::ALLOC_SME_SAVE_BUFFER, DL,
-                      DAG.getVTList(MVT::i64, MVT::Other), {Chain, BufferSize});
-    } else {
-      // Allocate space dynamically.
-      Buffer = DAG.getNode(
-          ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
-          {Chain, BufferSize, DAG.getConstant(1, DL, MVT::i64)});
-      MFI.CreateVariableSizedObject(Align(16), nullptr);
-    }
-
-    // Copy the value to a virtual register, and save that in FuncInfo.
-    Register BufferPtr =
-        MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-    FuncInfo->setSMESaveBufferAddr(BufferPtr);
-    Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
   }
 
   if (CallConv == CallingConv::PreserveNone) {
@@ -8346,6 +8352,15 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
     }
+  }
+
+  if (getTM().useNewSMEABILowering()) {
+    // Clear new ZT0 state. TODO: Move this to the SME ABI pass.
+    if (Attrs.isNewZT0())
+      Chain = DAG.getNode(
+          ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
+          DAG.getConstant(Intrinsic::aarch64_sme_zero_zt, DL, MVT::i32),
+          DAG.getTargetConstant(0, DL, MVT::i32));
   }
 
   return Chain;
@@ -8919,7 +8934,6 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setSMESaveBufferUsed();
-
   TargetLowering::ArgListTy Args;
   Args.emplace_back(
       DAG.getCopyFromReg(Chain, DL, Info->getSMESaveBufferAddr(), MVT::i64),
@@ -9060,14 +9074,28 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       CallConv = CallingConv::AArch64_SVE_VectorCall;
   }
 
+  // Determine whether we need any streaming mode changes.
+  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+  bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
+  bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
+  auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
+    // TODO: Handle agnostic ZA functions.
+    if (!UseNewSMEABILowering || IsAgnosticZAFunction)
+      return std::nullopt;
+    if (!CallAttrs.caller().hasZAState() && !CallAttrs.caller().hasZT0State())
+      return std::nullopt;
+    return CallAttrs.requiresLazySave() ? AArch64ISD::REQUIRES_ZA_SAVE
+                                        : AArch64ISD::INOUT_ZA_USE;
+  }();
+
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(CLI);
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
-    if (!TailCallOpt && IsTailCall && CallConv != CallingConv::Tail &&
-        CallConv != CallingConv::SwiftTail)
+    if (!ZAMarkerNode && !TailCallOpt && IsTailCall &&
+        CallConv != CallingConv::Tail && CallConv != CallingConv::SwiftTail)
       IsSibCall = true;
 
     if (IsTailCall)
@@ -9119,9 +9147,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
   }
 
-  // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
-
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
     R << "call from '" << ore::NV("Caller", MF.getName()) << "' to '";
@@ -9135,7 +9160,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return R;
   };
 
-  bool RequiresLazySave = CallAttrs.requiresLazySave();
+  bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
   bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
@@ -9210,10 +9235,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
 
-  // Adjust the stack pointer for the new arguments...
+  // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
-  if (!IsSibCall)
+  assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
+  if (!IsSibCall) {
     Chain = DAG.getCALLSEQ_START(Chain, IsTailCall ? 0 : NumBytes, 0, DL);
+    if (ZAMarkerNode) {
+      // Note: We need the CALLSEQ_START to glue the ZAMarkerNode to, simply
+      // using a chain can result in incorrect scheduling. The markers refer to
+      // the position just before the CALLSEQ_START (though occur after as
+      // CALLSEQ_START lacks in-glue).
+      Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other),
+                          {Chain, Chain.getValue(1)});
+    }
+  }
 
   SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, AArch64::SP,
                                         getPointerTy(DAG.getDataLayout()));
@@ -9684,7 +9719,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallAttrs.requiresEnablingZAAfterCall())
+  if (RequiresLazySave || CallAttrs.requiresEnablingZAAfterCall())
     // Unconditionally resume ZA.
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue), Result,
@@ -9706,7 +9741,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue TPIDR2_EL0 = DAG.getNode(
         ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Result,
         DAG.getConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
-
     // Copy the address of the TPIDR2 block into X0 before 'calling' the
     // RESTORE_ZA pseudo.
     SDValue Glue;
@@ -9718,7 +9752,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getNode(AArch64ISD::RESTORE_ZA, DL, MVT::Other,
                     {Result, TPIDR2_EL0, DAG.getRegister(AArch64::X0, MVT::i64),
                      RestoreRoutine, RegMask, Result.getValue(1)});
-
     // Finally reset the TPIDR2_EL0 register to 0.
     Result = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Result,

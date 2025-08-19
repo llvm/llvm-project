@@ -1084,3 +1084,19 @@ namespace Virtual {
   static_assert(l.b == 10);
   static_assert(l.c == 10);
 }
+
+namespace DiscardedTrivialCXXConstructExpr {
+  struct S {
+    constexpr S(int a) : x(a) {}
+    int x;
+  };
+
+  constexpr int foo(int x) { // ref-error {{never produces a constant expression}}
+    throw S(3); // both-note {{not valid in a constant expression}} \
+                // ref-note {{not valid in a constant expression}}
+    return 1;
+  }
+
+  constexpr int y = foo(12); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+}

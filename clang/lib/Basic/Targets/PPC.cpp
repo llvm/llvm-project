@@ -89,6 +89,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 }
 
 static void defineXLCompatMacros(MacroBuilder &Builder) {
+  Builder.defineMacro("__builtin_bcdcopysign", "__builtin_ppc_bcdcopysign");
+  Builder.defineMacro("__builtin_bcdsetsign", "__builtin_ppc_bcdsetsign");
   Builder.defineMacro("__builtin_national2packed",
                       "__builtin_ppc_national2packed");
   Builder.defineMacro("__builtin_packed2national",

@@ -86,6 +86,19 @@ inline constexpr bool isPtrType(PrimType T) {
   return T == PT_Ptr || T == PT_MemberPtr;
 }
 
+inline constexpr bool isSignedType(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+  case PT_Sint16:
+  case PT_Sint32:
+  case PT_Sint64:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
 enum class CastKind : uint8_t {
   Reinterpret,
   Volatile,

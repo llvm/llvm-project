@@ -953,7 +953,7 @@ set<_Key, _Compare, _Allocator>::set(set&& __s, const allocator_type& __a) : __t
   if (__a != __s.get_allocator()) {
     const_iterator __e = cend();
     while (!__s.empty())
-      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__value_));
+      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__get_value()));
   }
 }
 
@@ -1416,7 +1416,7 @@ multiset<_Key, _Compare, _Allocator>::multiset(multiset&& __s, const allocator_t
   if (__a != __s.get_allocator()) {
     const_iterator __e = cend();
     while (!__s.empty())
-      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__value_));
+      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__get_value()));
   }
 }
 
