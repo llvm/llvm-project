@@ -19,13 +19,19 @@ namespace llvm {
 class raw_ostream;
 namespace mcdxbc {
 
+struct RootParameterHeader {
+  dxbc::RootParameterType ParameterType;
+  dxbc::ShaderVisibility ShaderVisibility;
+  uint32_t ParameterOffset;
+};
+
 struct RootParameterInfo {
-  dxbc::RTS0::v1::RootParameterHeader Header;
+  RootParameterHeader Header;
   size_t Location;
 
   RootParameterInfo() = default;
 
-  RootParameterInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location)
+  RootParameterInfo(RootParameterHeader Header, size_t Location)
       : Header(Header), Location(Location) {}
 };
 
@@ -46,39 +52,36 @@ struct RootParametersContainer {
   SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
   SmallVector<DescriptorTable> Tables;
 
-  void addInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location) {
+  void addInfo(RootParameterHeader Header, size_t Location) {
     ParametersInfo.push_back(RootParameterInfo(Header, Location));
   }
 
-  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
+  void addParameter(RootParameterHeader Header,
                     dxbc::RTS0::v1::RootConstants Constant) {
     addInfo(Header, Constants.size());
     Constants.push_back(Constant);
   }
 
-  void addInvalidParameter(dxbc::RTS0::v1::RootParameterHeader Header) {
-    addInfo(Header, -1);
-  }
+  void addInvalidParameter(RootParameterHeader Header) { addInfo(Header, -1); }
 
-  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
+  void addParameter(RootParameterHeader Header,
                     dxbc::RTS0::v2::RootDescriptor Descriptor) {
     addInfo(Header, Descriptors.size());
     Descriptors.push_back(Descriptor);
   }
 
-  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
-                    DescriptorTable Table) {
+  void addParameter(RootParameterHeader Header, DescriptorTable Table) {
     addInfo(Header, Tables.size());
     Tables.push_back(Table);
   }
 
-  std::pair<uint32_t, uint32_t>
+  std::pair<dxbc::RootParameterType, uint32_t>
   getTypeAndLocForParameter(uint32_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
     return {Info.Header.ParameterType, Info.Location};
   }
 
-  const dxbc::RTS0::v1::RootParameterHeader &getHeader(size_t Location) const {
+  const RootParameterHeader &getHeader(size_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
     return Info.Header;
   }
