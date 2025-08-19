@@ -517,10 +517,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (any_of(WidenOriginalIV->users(),
-               [WidenOriginalIV](VPUser *U) {
-                 return !U->usesScalars(WidenOriginalIV);
-               }) ||
+    if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
@@ -1263,9 +1260,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
-            return !U->usesScalars(RepOrWidenR);
-          }))
+          !vputils::onlyScalarValuesUsed(RepOrWidenR))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
@@ -2296,7 +2291,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
   // Remove dead EVL mask.
   if (EVLMask->getNumUsers() == 0)
-    EVLMask->getDefiningRecipe()->eraseFromParent();
+    ToErase.push_back(EVLMask->getDefiningRecipe());
 
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
@@ -2620,9 +2615,7 @@ void VPlanTransforms::createInterleaveGroups(
       VPValue *OffsetVPV =
           Plan.getOrAddLiveIn(ConstantInt::get(Plan.getContext(), -Offset));
       VPBuilder B(InsertPos);
-      Addr = NW.isInBounds()
-                 ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
-                 : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+      Addr = B.createNoWrapPtrAdd(InsertPos->getAddr(), OffsetVPV, NW);
     }
     // If the group is reverse, adjust the index to refer to the last vector
     // lane instead of the first. We adjust the index from the first vector
@@ -3216,8 +3209,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
-    if (all_of(VPV->users(),
-               [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
+    if (vputils::onlyScalarValuesUsed(VPV) ||
         (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
          isa<Constant>(VPV->getLiveInIRValue())))
       continue;
@@ -3288,6 +3280,52 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
       {Plan.getTripCount(), Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 1))},
       DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
   BTC->replaceAllUsesWith(TCMO);
+}
+
+void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(LoopRegion->getEntry()));
+  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
+  // excluding ones in replicate regions. Those are not materialized explicitly
+  // yet. Those vector users are still handled in VPReplicateRegion::execute(),
+  // via shouldPack().
+  // TODO: materialize build vectors for replicating recipes in replicating
+  // regions.
+  // TODO: materialize build vectors for VPInstructions.
+  for (VPBasicBlock *VPBB :
+       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      auto UsesVectorOrInsideReplicateRegion = [RepR, LoopRegion](VPUser *U) {
+        VPRegionBlock *ParentRegion =
+            cast<VPRecipeBase>(U)->getParent()->getParent();
+        return !U->usesScalars(RepR) || ParentRegion != LoopRegion;
+      };
+      if (!RepR || RepR->isSingleScalar() ||
+          none_of(RepR->users(), UsesVectorOrInsideReplicateRegion))
+        continue;
+
+      Type *ScalarTy = TypeInfo.inferScalarType(RepR);
+      unsigned Opcode = ScalarTy->isStructTy()
+                            ? VPInstruction::BuildStructVector
+                            : VPInstruction::BuildVector;
+      auto *BuildVector = new VPInstruction(Opcode, {RepR});
+      BuildVector->insertAfter(RepR);
+
+      RepR->replaceUsesWithIf(
+          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
+                           VPUser &U, unsigned) {
+            return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
+          });
+    }
+  }
 }
 
 void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
@@ -3373,7 +3411,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   // For users of the runtime VF, compute it as VF * vscale, and VFxUF as (VF *
   // vscale) * UF.
   VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
-  if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
+  if (!vputils::onlyScalarValuesUsed(&VF)) {
     VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
     VF.replaceUsesWithIf(
         BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });

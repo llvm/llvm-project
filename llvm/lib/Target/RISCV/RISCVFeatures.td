@@ -1055,13 +1055,13 @@ def FeatureStdExtSupm
                      "Indicates User-mode Pointer Masking">;
 
 def FeatureStdExtSmctr
-    : RISCVExperimentalExtension<1, 0,
-                                 "Control Transfer Records Machine Level",
-                                 [FeatureStdExtSscsrind]>;
+    : RISCVExtension<1, 0,
+                     "Control Transfer Records Machine Level",
+                     [FeatureStdExtSscsrind]>;
 def FeatureStdExtSsctr
-    : RISCVExperimentalExtension<1, 0,
-                                 "Control Transfer Records Supervisor Level",
-                                 [FeatureStdExtSscsrind]>;
+    : RISCVExtension<1, 0,
+                     "Control Transfer Records Supervisor Level",
+                     [FeatureStdExtSscsrind]>;
 def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
                             AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
                                "'Smctr' (Control Transfer Records Machine Level) or "
@@ -1641,6 +1641,14 @@ def HasVendorXAndesVDot
     : Predicate<"Subtarget->hasVendorXAndesVDot()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
                          "'XAndesVDot' (Andes Vector Dot Product Extension)">;
+
+def FeatureVendorXSMTVDot
+    : RISCVExtension<1, 0, "SpacemiT Vector Dot Product Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDot
+    : Predicate<"Subtarget->hasVendorXSMTVDot()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
+                         "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
