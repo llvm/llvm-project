@@ -129,6 +129,38 @@ struct OperandInfo {
   const_iterator end() const { return Fields.end(); }
 };
 
+/// Represents a parsed InstructionEncoding record or a record derived from it.
+class InstructionEncoding {
+  /// The Record this encoding originates from.
+  const Record *EncodingDef;
+
+  /// The instruction this encoding is for.
+  const CodeGenInstruction *Inst;
+
+  /// The name of this encoding (for debugging purposes).
+  std::string Name;
+
+public:
+  InstructionEncoding(const Record *EncodingDef, const CodeGenInstruction *Inst)
+      : EncodingDef(EncodingDef), Inst(Inst) {
+    const Record *InstDef = Inst->TheDef;
+
+    // Give this encoding a name.
+    if (EncodingDef != InstDef)
+      Name = (EncodingDef->getName() + Twine(':')).str();
+    Name.append(InstDef->getName());
+  }
+
+  /// Returns the Record this encoding originates from.
+  const Record *getRecord() const { return EncodingDef; }
+
+  /// Returns the instruction this encoding is for.
+  const CodeGenInstruction *getInstruction() const { return Inst; }
+
+  /// Returns the name of this encoding, for debugging purposes.
+  StringRef getName() const { return Name; }
+};
+
 typedef std::vector<uint32_t> FixupList;
 typedef std::vector<FixupList> FixupScopeList;
 typedef SmallSetVector<CachedHashString, 16> PredicateSet;
@@ -205,23 +237,18 @@ struct DecoderTableInfo {
   }
 };
 
-struct EncodingAndInst {
-  const Record *EncodingDef;
-  const CodeGenInstruction *Inst;
-  unsigned HwModeID;
-
-  EncodingAndInst(const Record *EncodingDef, const CodeGenInstruction *Inst,
-                  unsigned HwModeID = DefaultMode)
-      : EncodingDef(EncodingDef), Inst(Inst), HwModeID(HwModeID) {}
-};
-
 using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
   CodeGenTarget Target;
   const CodeGenHwModes &CGH;
-  std::vector<EncodingAndInst> Encodings;
+
+  /// All parsed encodings.
+  std::vector<InstructionEncoding> Encodings;
+
+  /// Encodings IDs for each HwMode. An ID is an index into Encodings.
+  SmallDenseMap<unsigned, std::vector<unsigned>> EncodingIDsByHwMode;
 
 public:
   DecoderEmitter(const RecordKeeper &RK, StringRef PredicateNamespace);
@@ -249,7 +276,7 @@ private:
       NamespacesHwModesMap &NamespacesWithHwModes) const;
 
   void
-  handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
+  handleHwModesUnrelatedEncodings(unsigned EncodingID,
                                   ArrayRef<unsigned> HwModeIDs,
                                   NamespacesHwModesMap &NamespacesWithHwModes);
 
@@ -312,13 +339,6 @@ private:
 };
 
 } // end anonymous namespace
-
-static raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
-  if (Value.EncodingDef != Value.Inst->TheDef)
-    OS << Value.EncodingDef->getName() << ":";
-  OS << Value.Inst->TheDef->getName();
-  return OS;
-}
 
 // Prints the bit value for each position.
 static void dumpBits(raw_ostream &OS, const BitsInit &Bits, unsigned BitWidth) {
@@ -497,7 +517,7 @@ protected:
   friend class Filter;
 
   // Vector of encodings to choose our filter.
-  ArrayRef<EncodingAndInst> Encodings;
+  ArrayRef<InstructionEncoding> Encodings;
 
   // Vector of encoding IDs for this filter chooser to work on.
   ArrayRef<unsigned> EncodingIDs;
@@ -528,7 +548,7 @@ protected:
   };
 
 public:
-  FilterChooser(ArrayRef<EncodingAndInst> Encodings,
+  FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs,
                 const std::map<unsigned, std::vector<OperandInfo>> &Ops,
                 unsigned BW, const DecoderEmitter *E)
@@ -538,7 +558,7 @@ public:
     doFilter();
   }
 
-  FilterChooser(ArrayRef<EncodingAndInst> Encodings,
+  FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs,
                 const std::map<unsigned, std::vector<OperandInfo>> &Ops,
                 const std::vector<BitValue> &ParentFilterBitValues,
@@ -557,7 +577,7 @@ public:
 protected:
   // Populates the insn given the uid.
   insn_t insnWithID(unsigned EncodingID) const {
-    const Record *EncodingDef = Encodings[EncodingID].EncodingDef;
+    const Record *EncodingDef = Encodings[EncodingID].getRecord();
     const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
     insn_t Insn(std::max(BitWidth, Bits.getNumBits()), BitValue::BIT_UNSET);
     // We may have a SoftFail bitmask, which specifies a mask where an encoding
@@ -824,7 +844,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   DenseMap<unsigned, unsigned> OpcodeToEncodingID;
   OpcodeToEncodingID.reserve(EncodingIDs.size());
   for (unsigned EncodingID : EncodingIDs) {
-    const Record *InstDef = Encodings[EncodingID].Inst->TheDef;
+    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
     OpcodeToEncodingID[Target.getInstrIntValue(InstDef)] = EncodingID;
   }
 
@@ -975,7 +995,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       auto EncodingID = EncI->second;
 
       if (!IsTry) {
-        OS << "// Opcode: " << Encodings[EncodingID]
+        OS << "// Opcode: " << Encodings[EncodingID].getName()
            << ", DecodeIdx: " << DecodeIdx << '\n';
         break;
       }
@@ -983,7 +1003,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       // Fallthrough for OPC_TryDecode.
       if (!IsFail) {
         uint32_t NumToSkip = emitNumToSkip(I, OS);
-        OS << "// Opcode: " << Encodings[EncodingID]
+        OS << "// Opcode: " << Encodings[EncodingID].getName()
            << ", DecodeIdx: " << DecodeIdx;
         emitNumToSkipComment(NumToSkip, /*InComment=*/true);
       }
@@ -1292,7 +1312,7 @@ bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
 bool FilterChooser::emitPredicateMatch(raw_ostream &OS,
                                        unsigned EncodingID) const {
   const ListInit *Predicates =
-      Encodings[EncodingID].EncodingDef->getValueAsListInit("Predicates");
+      Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
   bool IsFirstEmission = true;
   for (unsigned i = 0; i < Predicates->size(); ++i) {
     const Record *Pred = Predicates->getElementAsRecord(i);
@@ -1314,7 +1334,7 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &OS,
 
 bool FilterChooser::doesOpcodeNeedPredicate(unsigned EncodingID) const {
   const ListInit *Predicates =
-      Encodings[EncodingID].EncodingDef->getValueAsListInit("Predicates");
+      Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
   for (unsigned i = 0; i < Predicates->size(); ++i) {
     const Record *Pred = Predicates->getElementAsRecord(i);
     if (!Pred->getValue("AssemblerMatcherPredicate"))
@@ -1371,7 +1391,7 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
 
 void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
                                            unsigned EncodingID) const {
-  const Record *EncodingDef = Encodings[EncodingID].EncodingDef;
+  const Record *EncodingDef = Encodings[EncodingID].getRecord();
   const RecordVal *RV = EncodingDef->getValue("SoftFail");
   const BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
 
@@ -1397,7 +1417,7 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
     } else {
       // The bit is not set; this must be an error!
       errs() << "SoftFail Conflict: bit SoftFail{" << i << "} in "
-             << Encodings[EncodingID] << " is set but Inst{" << i
+             << Encodings[EncodingID].getName() << " is set but Inst{" << i
              << "} is unset!\n"
              << "  - You can only mark a bit as SoftFail if it is fully defined"
              << " (1/0 - not '?') in Inst\n";
@@ -1469,8 +1489,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                                       ? MCD::OPC_TryDecodeOrFail
                                                       : MCD::OPC_TryDecode);
   TableInfo.Table.push_back(DecoderOp);
-  NumEncodingsSupported++;
-  const Record *InstDef = Encodings[EncodingID].Inst->TheDef;
+  const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DIdx);
 
@@ -1765,10 +1784,10 @@ void FilterChooser::doFilter() {
 
   // Dump encodings.
   for (unsigned EncodingID : EncodingIDs) {
-    const EncodingAndInst &Enc = Encodings[EncodingID];
+    const InstructionEncoding &Enc = Encodings[EncodingID];
     errs() << Indent;
-    dumpBits(errs(), getBitsField(*Enc.EncodingDef, "Inst"), BitWidth);
-    errs() << "  " << Enc << '\n';
+    dumpBits(errs(), getBitsField(*Enc.getRecord(), "Inst"), BitWidth);
+    errs() << "  " << Enc.getName() << '\n';
   }
   PrintFatalError("Decoding conflict encountered");
 }
@@ -2425,34 +2444,68 @@ void DecoderEmitter::collectHwModesReferencedForEncodings(
 }
 
 void DecoderEmitter::handleHwModesUnrelatedEncodings(
-    const CodeGenInstruction *Instr, ArrayRef<unsigned> HwModeIDs,
+    unsigned EncodingID, ArrayRef<unsigned> HwModeIDs,
     NamespacesHwModesMap &NamespacesWithHwModes) {
-  const Record *InstDef = Instr->TheDef;
-
   switch (DecoderEmitterSuppressDuplicates) {
   case SUPPRESSION_DISABLE: {
     for (unsigned HwModeID : HwModeIDs)
-      Encodings.emplace_back(InstDef, Instr, HwModeID);
+      EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
     break;
   }
   case SUPPRESSION_LEVEL1: {
+    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
     std::string DecoderNamespace =
         InstDef->getValueAsString("DecoderNamespace").str();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
-        Encodings.emplace_back(InstDef, Instr, HwModeID);
+        EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
     } else {
       // Only emit the encoding once, as it's DecoderNamespace doesn't
       // contain any HwModes.
-      Encodings.emplace_back(InstDef, Instr, DefaultMode);
+      EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
     }
     break;
   }
   case SUPPRESSION_LEVEL2:
-    Encodings.emplace_back(InstDef, Instr, DefaultMode);
+    EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
     break;
   }
+}
+
+/// Checks if the given target-specific non-pseudo instruction
+/// is a candidate for decoding.
+static bool isDecodableInstruction(const Record *InstDef) {
+  return !InstDef->getValueAsBit("isAsmParserOnly") &&
+         !InstDef->getValueAsBit("isCodeGenOnly");
+}
+
+/// Checks if the given encoding is valid.
+static bool isValidEncoding(const Record *EncodingDef) {
+  const RecordVal *InstField = EncodingDef->getValue("Inst");
+  if (!InstField)
+    return false;
+
+  if (const auto *InstInit = dyn_cast<BitsInit>(InstField->getValue())) {
+    // Fixed-length encoding. Size must be non-zero.
+    if (!EncodingDef->getValueAsInt("Size"))
+      return false;
+
+    // At least one of the encoding bits must be complete (not '?').
+    return !InstInit->allInComplete();
+  }
+
+  if (const auto *InstInit = dyn_cast<DagInit>(InstField->getValue())) {
+    // Variable-length encoding.
+    // At least one of the encoding bits must be complete (not '?').
+    VarLenInst VLI(InstInit, InstField);
+    return !all_of(VLI, [](const EncodingSegment &Segment) {
+      return isa<UnsetInit>(Segment.Value);
+    });
+  }
+
+  // Inst field is neither BitsInit nor DagInit. This is something unsupported.
+  return false;
 }
 
 /// Parses all InstructionEncoding instances and fills internal data structures.
@@ -2466,28 +2519,67 @@ void DecoderEmitter::parseInstructionEncodings() {
   if (HwModeIDs.empty())
     HwModeIDs.push_back(DefaultMode);
 
-  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
+  ArrayRef<const CodeGenInstruction *> Instructions =
+      Target.getTargetNonPseudoInstructions();
   Encodings.reserve(Instructions.size());
-  NumInstructions = Instructions.size();
 
   for (const CodeGenInstruction *Inst : Instructions) {
     const Record *InstDef = Inst->TheDef;
-    if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
-      EncodingInfoByHwMode EBM(RV, CGH);
-      for (auto [HwModeID, EncodingDef] : EBM)
-        Encodings.emplace_back(EncodingDef, Inst, HwModeID);
+    if (!isDecodableInstruction(InstDef)) {
+      ++NumEncodingsLackingDisasm;
       continue;
     }
+
+    if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
+      EncodingInfoByHwMode EBM(RV, CGH);
+      for (auto [HwModeID, EncodingDef] : EBM) {
+        if (!isValidEncoding(EncodingDef)) {
+          // TODO: Should probably give a warning.
+          ++NumEncodingsOmitted;
+          continue;
+        }
+        unsigned EncodingID = Encodings.size();
+        Encodings.emplace_back(EncodingDef, Inst);
+        EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
+      }
+      continue; // Ignore encoding specified by Instruction itself.
+    }
+
+    if (!isValidEncoding(InstDef)) {
+      ++NumEncodingsOmitted;
+      continue;
+    }
+
+    unsigned EncodingID = Encodings.size();
+    Encodings.emplace_back(InstDef, Inst);
+
     // This instruction is encoded the same on all HwModes.
-    // According to user needs, provide varying degrees of suppression.
-    handleHwModesUnrelatedEncodings(Inst, HwModeIDs, NamespacesWithHwModes);
+    // According to user needs, add it to all, some, or only the default HwMode.
+    handleHwModesUnrelatedEncodings(EncodingID, HwModeIDs,
+                                    NamespacesWithHwModes);
   }
 
   for (const Record *EncodingDef :
        RK.getAllDerivedDefinitions("AdditionalEncoding")) {
     const Record *InstDef = EncodingDef->getValueAsDef("AliasOf");
+    // TODO: Should probably give a warning in these cases.
+    //   What's the point of specifying an additional encoding
+    //   if it is invalid or if the instruction is not decodable?
+    if (!isDecodableInstruction(InstDef)) {
+      ++NumEncodingsLackingDisasm;
+      continue;
+    }
+    if (!isValidEncoding(EncodingDef)) {
+      ++NumEncodingsOmitted;
+      continue;
+    }
     Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
   }
+
+  // Do some statistics.
+  NumInstructions = Instructions.size();
+  NumEncodingsSupported = Encodings.size();
+  NumEncodings = NumEncodingsSupported + NumEncodingsOmitted;
 }
 
 DecoderEmitter::DecoderEmitter(const RecordKeeper &RK,
@@ -2518,9 +2610,6 @@ namespace {
   emitInsertBits(OS);
   emitCheck(OS);
 
-  // Map of (namespace, hwmode, size) tuple to encoding IDs.
-  std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
-      EncMap;
   std::map<unsigned, std::vector<OperandInfo>> Operands;
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
@@ -2528,35 +2617,29 @@ namespace {
     InstrLen.resize(Target.getInstructions().size(), 0);
   unsigned MaxInstLen = 0;
 
-  for (const auto &[EncodingID, Encoding] : enumerate(Encodings)) {
-    const Record *EncodingDef = Encoding.EncodingDef;
-    const CodeGenInstruction *Inst = Encoding.Inst;
-    const Record *Def = Inst->TheDef;
-    unsigned Size = EncodingDef->getValueAsInt("Size");
-    if (Def->getValueAsString("Namespace") == "TargetOpcode" ||
-        Def->getValueAsBit("isPseudo") ||
-        Def->getValueAsBit("isAsmParserOnly") ||
-        Def->getValueAsBit("isCodeGenOnly")) {
-      NumEncodingsLackingDisasm++;
-      continue;
+  for (auto [EncodingID, Encoding] : enumerate(Encodings)) {
+    const Record *EncodingDef = Encoding.getRecord();
+    const CodeGenInstruction *Inst = Encoding.getInstruction();
+    unsigned BitWidth = populateInstruction(Target, *EncodingDef, *Inst,
+                                            EncodingID, Operands, IsVarLenInst);
+    assert(BitWidth && "Invalid encodings should have been filtered out");
+    if (IsVarLenInst) {
+      MaxInstLen = std::max(MaxInstLen, BitWidth);
+      InstrLen[Target.getInstrIntValue(Inst->TheDef)] = BitWidth;
     }
+  }
 
-    NumEncodings++;
-
-    if (!Size && !IsVarLenInst)
-      continue;
-
-    if (unsigned Len = populateInstruction(
-            Target, *EncodingDef, *Inst, EncodingID, Operands, IsVarLenInst)) {
-      if (IsVarLenInst) {
-        MaxInstLen = std::max(MaxInstLen, Len);
-        InstrLen[EncodingID] = Len;
-      }
+  // Map of (namespace, hwmode, size) tuple to encoding IDs.
+  std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
+      EncMap;
+  for (const auto &[HwModeID, EncodingIDs] : EncodingIDsByHwMode) {
+    for (unsigned EncodingID : EncodingIDs) {
+      const InstructionEncoding &Encoding = Encodings[EncodingID];
+      const Record *EncodingDef = Encoding.getRecord();
+      unsigned Size = EncodingDef->getValueAsInt("Size");
       StringRef DecoderNamespace =
           EncodingDef->getValueAsString("DecoderNamespace");
-      EncMap[{DecoderNamespace, Encoding.HwModeID, Size}].push_back(EncodingID);
-    } else {
-      NumEncodingsOmitted++;
+      EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }
 

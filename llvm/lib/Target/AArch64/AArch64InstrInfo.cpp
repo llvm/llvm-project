@@ -5085,8 +5085,13 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
-        MCRegister SrcRegX = TRI->getMatchingSuperReg(
-            SrcReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
+        assert(DestRegX.isValid() && "Destination super-reg not valid");
+        MCRegister SrcRegX =
+            SrcReg == AArch64::WZR
+                ? AArch64::XZR
+                : TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                           &AArch64::GPR64spRegClass);
+        assert(SrcRegX.isValid() && "Source super-reg not valid");
         // This instruction is reading and writing X registers.  This may upset
         // the register scavenger and machine verifier, so we need to indicate
         // that we are reading an undefined value from SrcRegX, but a proper
