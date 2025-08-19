@@ -13,14 +13,14 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION bitfield_extract_signed
-#define __RETTYPE __CLC_S_GENTYPE
+#define __CLC_FUNCTION bitfield_extract_signed
+#define __CLC_RETTYPE __CLC_S_GENTYPE
 
 #define __CLC_BODY <clc/integer/clc_bitfield_extract_decl.inc>
 #include <clc/integer/gentype.inc>
 
-#undef __RETTYPE
-#undef FUNCTION
+#undef __CLC_RETTYPE
+#undef __CLC_FUNCTION
 
 #endif // cl_khr_extended_bit_ops
 

@@ -9317,14 +9317,14 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
   // If we have an atomic type, try a non-atomic assignment, then just add an
   // atomic qualification step.
   if (const AtomicType *AtomicTy = dyn_cast<AtomicType>(LHSType)) {
-    AssignConvertType result =
+    AssignConvertType Result =
         CheckAssignmentConstraints(AtomicTy->getValueType(), RHS, Kind);
-    if (result != AssignConvertType::Compatible)
-      return result;
+    if (!IsAssignConvertCompatible(Result))
+      return Result;
     if (Kind != CK_NoOp && ConvertRHS)
       RHS = ImpCastExprToType(RHS.get(), AtomicTy->getValueType(), Kind);
     Kind = CK_NonAtomicToAtomic;
-    return AssignConvertType::Compatible;
+    return Result;
   }
 
   // If the left-hand side is a reference type, then we are in a
@@ -18120,6 +18120,8 @@ void Sema::PopExpressionEvaluationContext() {
     Cleanup.mergeFrom(Rec.ParentCleanup);
     MaybeODRUseExprs.insert_range(Rec.SavedMaybeODRUseExprs);
   }
+
+  DiagnoseMisalignedMembers();
 
   // Pop the current expression evaluation context off the stack.
   ExprEvalContexts.pop_back();
