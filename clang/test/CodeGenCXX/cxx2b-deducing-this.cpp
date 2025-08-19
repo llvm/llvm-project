@@ -264,3 +264,28 @@ void test() {
 // CHECK: call void @_ZNH5P27971C1cERKS0_
 // CHECK: call void @_ZN5P27971C1cEi
 }
+
+// This used to crash because we weren’t instantiating a dependent 'this'.
+namespace GH154054 {
+struct S {
+  int x;
+  auto byval() {
+    return [*this](this auto) { return this->x; };
+  }
+};
+
+void main() {
+  S s{ 42 };
+
+  if ( s.byval()() != 42)
+    __builtin_abort();
+}
+
+struct s {
+  auto f() { return [*this](this auto) { return this; }; }
+};
+
+void f() {
+  s().f()();
+}
+}
