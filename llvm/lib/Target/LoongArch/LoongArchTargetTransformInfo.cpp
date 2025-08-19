@@ -95,4 +95,13 @@ unsigned LoongArchTTIImpl::getPrefetchDistance() const { return 200; }
 
 bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
 
+bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+  case Intrinsic::vector_reduce_add:
+    return false;
+  }
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.

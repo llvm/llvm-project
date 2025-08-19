@@ -310,6 +310,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -377,6 +378,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -522,8 +524,53 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_TO_BF16(Op, DAG);
   case ISD::BF16_TO_FP:
     return lowerBF16_TO_FP(Op, DAG);
+  case ISD::VECREDUCE_ADD:
+    return lowerVECREDUCE_ADD(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+
+  SDLoc DL(Op);
+  MVT OpVT = Op.getSimpleValueType();
+  SDValue Val = Op.getOperand(0);
+  MVT ValTy = Val.getSimpleValueType().getScalarType();
+
+  SDValue Idx = DAG.getConstant(0, DL, Subtarget.getGRLenVT());
+  unsigned EC = Val.getSimpleValueType().getVectorNumElements();
+
+  switch (ValTy.SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected value type!");
+  case MVT::i8:
+    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i8, EC),
+                      Val, Val);
+    EC = EC / 2;
+    LLVM_FALLTHROUGH;
+  case MVT::i16:
+    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i16, EC),
+                      Val, Val);
+    EC = EC / 2;
+    LLVM_FALLTHROUGH;
+  case MVT::i32:
+    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i32, EC),
+                      Val, Val);
+    EC = EC / 2;
+    LLVM_FALLTHROUGH;
+  case MVT::i64:
+    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i64, EC),
+                      Val, Val);
+  }
+
+  if (Subtarget.hasExtLASX()) {
+    SDValue Tmp = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, Val,
+                              DAG.getConstant(2, DL, MVT::i64));
+    Val = DAG.getNode(ISD::ADD, DL, MVT::v4i64, Tmp, Val);
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val, Idx);
 }
 
 SDValue LoongArchTargetLowering::lowerPREFETCH(SDValue Op,
@@ -6659,6 +6706,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(XVMSKGEZ)
     NODE_NAME_CASE(XVMSKEQZ)
     NODE_NAME_CASE(XVMSKNEZ)
+    NODE_NAME_CASE(VHADDW)
   }
 #undef NODE_NAME_CASE
   return nullptr;
