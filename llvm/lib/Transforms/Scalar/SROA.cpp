@@ -2980,6 +2980,10 @@ public:
       AllocatedEltTy = FixedVecTy->getElementType();
     else
       return std::nullopt;
+    // If the allocated element type is a pointer, we do not handle it
+    // TODO: handle this case by using inttoptr/ptrtoint
+    if (AllocatedEltTy->isPtrOrPtrVectorTy())
+      return std::nullopt;
 
     for (Slice &S : P) {
       auto *User = cast<Instruction>(S.getUse()->getUser());
@@ -2997,6 +3001,10 @@ public:
         if (DL.getTypeSizeInBits(FixedVecTy) !=
             DL.getTypeSizeInBits(NewAI.getAllocatedType()))
           return std::nullopt;
+        // If the loaded value is a pointer, we do not handle it
+        // TODO: handle this case by using inttoptr/ptrtoint
+        if (FixedVecTy->getElementType()->isPtrOrPtrVectorTy())
+          return std::nullopt;
         TheLoad = LI;
       } else if (auto *SI = dyn_cast<StoreInst>(User)) {
         // The stored value should be a fixed vector type
@@ -3008,6 +3016,10 @@ public:
         // alloca element type size
         if (DL.getTypeSizeInBits(StoredValueType) %
             DL.getTypeSizeInBits(AllocatedEltTy) != 0)
+          return std::nullopt;
+        // If the stored value is a pointer, we do not handle it
+        // TODO: handle this case by using inttoptr/ptrtoint
+        if (StoredValueType->isPtrOrPtrVectorTy())
           return std::nullopt;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
                                 SI->getValueOperand());
