@@ -29,8 +29,8 @@ struct ThrowingMove {
 
 template <class Iterator, bool IsNoexcept>
 constexpr void test() {
-  using Sentinel   = sentinel_wrapper<Iterator>;
-  using View       = minimal_view<Iterator, Sentinel>;
+  using Sentinel = sentinel_wrapper<Iterator>;
+  using View     = minimal_view<Iterator, Sentinel>;
 
   {
     std::array<int, 5> array1{0, 1, 2, 3, 4};
