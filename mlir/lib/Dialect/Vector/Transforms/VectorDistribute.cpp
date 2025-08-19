@@ -2033,6 +2033,12 @@ private:
   DistributedReductionFn distributedReductionFn;
 };
 
+// This patterns distribute the `vector.multi_reduction` operation across
+// lanes in a warp. Currently only 2D to 1D reductions are supported and assumes
+// that source vector is distributed in column dimension (i.e. Each lane owns
+// complete column(s) of the source vector.
+// TODO: Add support for the case where source rows are distributed accross
+// lanes. Requires DistributionMapFn to express the data distribution.
 struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
   VectorMultiDimReductionDistribution(MLIRContext *context,
                                       PatternBenefit benefit = 1)
