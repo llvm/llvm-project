@@ -471,22 +471,19 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     }
 
     MCRegister ActualReg = findVRegWithEncoding(RegClass, RegEncoding);
-    MachineInstrBuilder MI;
-    if (IsSpill)
-      MI = BuildMI(MBB, II, DL, TII->get(Opcode)).addReg(ActualReg);
-    else
-      MI = BuildMI(MBB, II, DL, TII->get(Opcode), ActualReg);
-
-    MI.addReg(Base, getKillRegState(I + RegNumHandled == NumRegs))
-        .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                               VRegSize * RegNumHandled));
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, II, DL, TII->get(Opcode))
+            .addReg(ActualReg, getDefRegState(!IsSpill))
+            .addReg(Base, getKillRegState(I + RegNumHandled == NumRegs))
+            .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
+                                                   VRegSize * RegNumHandled));
 
     // Adding implicit-use of super register to describe we are using part of
     // super register, that prevents machine verifier complaining when part of
     // subreg is undef, see comment in MachineVerifier::checkLiveness for more
     // detail.
     if (IsSpill)
-      MI.addReg(Reg, RegState::Implicit);
+      MIB.addReg(Reg, RegState::Implicit);
 
     PreHandledNum = RegNumHandled;
     RegEncoding += RegNumHandled;
