@@ -7928,21 +7928,28 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   }
   Parser.Lex();
 
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
+      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
   // Check whether only the subsection name was provided.
   // If so, the user is trying to switch to a subsection that should have been
   // declared before.
   if (Parser.getTok().is(llvm::AsmToken::EndOfStatement)) {
+    if (SubsectionExists) {
+      getTargetStreamer().emitAttributesSubsection(
+          SubsectionName,
+          static_cast<AArch64BuildAttributes::SubsectionOptional>(
+              SubsectionExists->IsOptional),
+          static_cast<AArch64BuildAttributes::SubsectionType>(
+              SubsectionExists->ParameterType));
+      return false;
+    }
     // If subsection does not exists, report error.
-    if (!getTargetStreamer().hasSubsection(SubsectionName)) {
+    else {
       Error(Parser.getTok().getLoc(),
             "Could not switch to subsection '" + SubsectionName +
                 "' using subsection name, subsection has not been defined");
       return true;
     }
-    // Since subsection exists, no need to call
-    // AArch64TargetStreamer::emitAttributesSubsection(...)
-    getTargetStreamer().activateAttributesSubsection(SubsectionName);
-    return false;
   }
 
   // Otherwise, expecting 2 more parameters: consume a comma
@@ -7951,9 +7958,6 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   if (Parser.parseComma()) {
     return true;
   }
-
-  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
-      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;
