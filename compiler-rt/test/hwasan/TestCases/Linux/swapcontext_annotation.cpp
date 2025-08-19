@@ -1,14 +1,14 @@
 // Test hwasan __sanitizer_start_switch_fiber and __sanitizer_finish_switch_fiber interface.
 
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: seq 30 | xargs -i -- grep LOOPCHECK %s > %t.checks
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O0 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O1 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O2 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
-// RUN: %clangxx_hwasan -std=c++11 -lpthread -ldl -O3 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_hwasan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
 
 //
 // Android and musl do not support swapcontext.
@@ -21,7 +21,6 @@
 #include <sys/time.h>
 #include <ucontext.h>
 #include <unistd.h>
-#include <dlfcn.h>
 
 #include <sanitizer/common_interface_defs.h>
 
@@ -38,6 +37,10 @@ size_t main_thread_stacksize;
 
 const void *from_stack;
 size_t from_stacksize;
+
+// hwasan does not support longjmp with tagged stack pointer, make sure it is not tagged.
+char __attribute__((no_sanitize("hwaddress"))) allocated_stack[kStackSize + 1];
+char __attribute__((no_sanitize("hwaddress"))) allocated_child_stack[kStackSize + 1];
 
 __attribute__((noinline, noreturn)) void LongJump(jmp_buf env) {
   longjmp(env, 1);
@@ -168,23 +171,8 @@ int main(int argc, char **argv) {
     _exit(1);
   }
 
-  // We search malloc/free here because the original symbol is intercepted.
-  // Unfortunately, hwasan does not support longjmp with tagged stack pointer,
-  // so we use RTLD_NEXT to search original symbols assuming hwasan is
-  // statically linked (default behavior currently).
-  void *(*malloc_func)(size_t) = (void *(*)(size_t)) dlsym(RTLD_NEXT, "malloc");
-  if (malloc_func == nullptr) {
-    perror("dlsym malloc");
-    _exit(1);
-  }
-  void (*free_func)(void *) = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
-  if (free_func == nullptr) {
-    perror("dlsym free");
-    _exit(1);
-  }
-
-  char *heap = (char *)malloc_func(kStackSize + 1);
-  next_child_stack = (char *)malloc_func(kStackSize + 1);
+  char *heap = allocated_stack;
+  next_child_stack = allocated_child_stack;
   int ret = 0;
   // CHECK-NOT: WARNING: HWASan is ignoring requested __hwasan_handle_vfork
   for (unsigned int i = 0; i < 30; ++i) {
@@ -204,9 +192,6 @@ int main(int argc, char **argv) {
 
   // CHECK: Test passed
   printf("Test passed\n");
-
-  free_func(heap);
-  free_func(next_child_stack);
 
   return ret;
 }
