@@ -979,13 +979,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
+    Info.add("Vendor ID", uint64_t{4318}, "", DeviceInfo::VENDOR_ID);
+
+    Info.add("Memory Address Size", std::numeric_limits<CUdeviceptr>::digits,
+             "bits", DeviceInfo::ADDRESS_BITS);
+
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
-      Info.add("Global Memory Size", TmpSt, "bytes");
+      Info.add("Global Memory Size", TmpSt, "bytes",
+               DeviceInfo::GLOBAL_MEM_SIZE);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Number of Multiprocessors", TmpInt);
+      Info.add("Number of Multiprocessors", TmpInt, "",
+               DeviceInfo::NUM_COMPUTE_UNITS);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_GPU_OVERLAP, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1046,7 +1053,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CLOCK_RATE, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Clock Rate", TmpInt, "kHz");
+      Info.add("Clock Rate", TmpInt / 1000, "MHz",
+               DeviceInfo::MAX_CLOCK_FREQUENCY);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1083,7 +1091,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Memory Clock Rate", TmpInt, "kHz");
+      Info.add("Memory Clock Rate", TmpInt / 1000, "MHz",
+               DeviceInfo::MEMORY_CLOCK_RATE);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, TmpInt);
     if (Res == CUDA_SUCCESS)
