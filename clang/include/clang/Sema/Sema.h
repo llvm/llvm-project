@@ -4176,8 +4176,15 @@ public:
   /// return statement in the scope of a variable has the same NRVO candidate,
   /// that candidate is an NRVO variable.
   void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
-  Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
-  Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
+
+  /// Performs semantic analysis at the end of a function body.
+  ///
+  /// \param RetainFunctionScopeInfo If \c true, the client is responsible for
+  /// releasing the associated \p FunctionScopeInfo. This is useful when
+  /// building e.g. LambdaExprs.
+  Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body,
+                                bool IsInstantiation = false,
+                                bool RetainFunctionScopeInfo = false);
   Decl *ActOnSkippedFunctionBody(Decl *Decl);
   void ActOnFinishInlineFunctionDef(FunctionDecl *D);
 
@@ -6874,23 +6881,23 @@ public:
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
-  };
+  }
 
   ExpressionEvaluationContextRecord &currentEvaluationContext() {
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
-  };
+  }
 
   ExpressionEvaluationContextRecord &parentEvaluationContext() {
     assert(ExprEvalContexts.size() >= 2 &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts[ExprEvalContexts.size() - 2];
-  };
+  }
 
   const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
     return const_cast<Sema *>(this)->parentEvaluationContext();
-  };
+  }
 
   bool isAttrContext() const {
     return ExprEvalContexts.back().ExprContext ==
@@ -9140,8 +9147,7 @@ public:
 
   /// Complete a lambda-expression having processed and attached the
   /// lambda body.
-  ExprResult BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
-                             sema::LambdaScopeInfo *LSI);
+  ExprResult BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc);
 
   /// Get the return type to use for a lambda's conversion function(s) to
   /// function pointer type, given the type of the call operator.
