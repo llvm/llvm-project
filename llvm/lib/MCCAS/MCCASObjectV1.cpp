@@ -1723,7 +1723,7 @@ Expected<MCNopsFragmentRef>
 MCNopsFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
                           unsigned FragmentSize,
                           ArrayRef<char> FragmentContents) {
-  auto *NopsFrag = dyn_cast<MCNopsFragment>(&F);
+  auto *NopsFrag = cast<MCNopsFragment>(&F);
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
