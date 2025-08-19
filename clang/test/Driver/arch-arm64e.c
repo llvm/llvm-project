@@ -32,15 +32,16 @@
 // RUN: %clang -target arm64-apple-darwin -fptrauth-auth-traps -c %s -### 2>&1 | FileCheck %s --check-prefix TRAPS
 // TRAPS: "-cc1"{{.*}} {{.*}} "-fptrauth-auth-traps"
 
-
 // Check the arm64e defaults.
 
 // RUN: %clang -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // RUN: %clang -target arm64e-apple-macos -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULTMAC
+// RUN: %if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{ %clang -target arm64e-apple-macos -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULTARCH %}
 // RUN: %clang -mkernel -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // RUN: %clang -fapple-kext -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // DEFAULT: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel" {{.*}}"-target-cpu" "apple-a12"{{.*}}
 // DEFAULTMAC: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel" {{.*}}"-target-cpu" "apple-m1"{{.*}}
+// DEFAULTARCH: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel"
 
 // RUN: %clang -target arm64e-apple-none-macho -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-MACHO
 // DEFAULT-MACHO: "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-objc-isa" "-fptrauth-objc-class-ro" "-fptrauth-objc-interface-sel" {{.*}}"-target-cpu" "apple-a12"{{.*}}
@@ -76,13 +77,7 @@
 // Check that the default driver flags correctly propogate through to the compiler
 
 // RUN: %clang -target arm64-apple-macosx      -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
-// RUN: %clang -target arm64-apple-ios         -DNO_DEFAULT_PTRAUTH     %s -fsyntax-only -Xclang -verify=no_default_ptrauth
 // RUN: %clang -target arm64e-apple-macosx     -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
-// RUN: %clang -target arm64e-apple-ios        -DDARWIN_DEFAULT_PTRAUTH %s -fsyntax-only -Xclang -verify=darwin_ptrauth_defaults
-
-// A simple test case to test basic override logic
-// RUN: %clang -target arm64e-apple-macosx     -DDARWIN_DEFAULT_PTRAUTH_OVERRIDE -fno-ptrauth-calls %s -fsyntax-only -Xclang -verify=darwin_ptrauth_override
-
 
 #define ASSERT_MODE_AND_KIND(feature, enabled, kind)                           \
   _Static_assert(enabled == __has_##kind(feature),                             \
@@ -92,27 +87,17 @@
   ASSERT_MODE_AND_KIND(feature_name, 1, feature)
 #define ASSERT_FEATURE_DISABLED(feature_name)                                  \
   ASSERT_MODE_AND_KIND(feature_name, 0, feature)
-#define ASSERT_EXTENSION_ENABLED(extension_name)                               \
-  ASSERT_MODE_AND_KIND(extension_name, 1, extension)
-#define ASSERT_EXTENSION_DISABLED(extension_name)                              \
-  ASSERT_MODE_AND_KIND(extension_name, 0, extension)
 
-#if defined(DARWIN_DEFAULT_PTRAUTH) || defined(DARWIN_DEFAULT_PTRAUTH_OVERRIDE)
+#if defined(DARWIN_DEFAULT_PTRAUTH)
+#ifndef __PTRAUTH__
+#error The __PTRAUTH__ macro should be defined
+#endif
+
 ASSERT_FEATURE_ENABLED(ptrauth_intrinsics)
-ASSERT_EXTENSION_ENABLED(ptrauth_qualifier)
-
-#if defined(DARWIN_DEFAULT_PTRAUTH_OVERRIDE)
-ASSERT_FEATURE_DISABLED(ptrauth_calls)
-// These flags directly reflect the state of ptrauth_calls, but exist
-// for backward compatibility reasons
-ASSERT_FEATURE_DISABLED(ptrauth_member_function_pointer_type_discrimination)
-ASSERT_FEATURE_DISABLED(ptrauth_objc_method_list_pointer)
-#else
+ASSERT_FEATURE_ENABLED(ptrauth_qualifier)
 ASSERT_FEATURE_ENABLED(ptrauth_calls)
 ASSERT_FEATURE_ENABLED(ptrauth_member_function_pointer_type_discrimination)
 ASSERT_FEATURE_ENABLED(ptrauth_objc_method_list_pointer)
-#endif
-
 ASSERT_FEATURE_ENABLED(ptrauth_returns)
 ASSERT_FEATURE_ENABLED(ptrauth_vtable_pointer_address_discrimination)
 ASSERT_FEATURE_ENABLED(ptrauth_vtable_pointer_type_discrimination)
@@ -129,8 +114,11 @@ ASSERT_FEATURE_ENABLED(ptrauth_objc_signable_class)
 #endif
 
 #ifdef NO_DEFAULT_PTRAUTH
+#ifdef __PTRAUTH__
+#error The __PTRAUTH__ macro should not be defined
+#endif
 ASSERT_FEATURE_DISABLED(ptrauth_intrinsics)
-ASSERT_EXTENSION_DISABLED(ptrauth_qualifier)
+ASSERT_FEATURE_DISABLED(ptrauth_qualifier)
 ASSERT_FEATURE_DISABLED(ptrauth_calls)
 ASSERT_FEATURE_DISABLED(ptrauth_returns)
 ASSERT_FEATURE_DISABLED(ptrauth_vtable_pointer_address_discrimination)
@@ -151,4 +139,3 @@ ASSERT_FEATURE_DISABLED(ptrauth_objc_method_list_pointer)
 
 // darwin_ptrauth_defaults-no-diagnostics
 // no_default_ptrauth-no-diagnostics
-// darwin_ptrauth_override-no-diagnostics
