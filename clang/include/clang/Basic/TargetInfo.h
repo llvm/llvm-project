@@ -548,10 +548,22 @@ public:
 
   /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
   /// 'unsigned _BitInt' for this target, in bits.
+  /// Note: 64-bit _BitInt types get special handling to ensure consistent
+  /// alignment with long long types, particularly important for x86-32 targets.
   unsigned getBitIntWidth(unsigned NumBits) const {
     return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
   }
   unsigned getBitIntAlign(unsigned NumBits) const {
+    // Special case: 64-bit _BitInt should have the same alignment behavior as long long
+    // This ensures consistency with GCC and proper alignment on x86-32 targets
+    if (NumBits == 64) {
+      unsigned ABIAlign = std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), 
+                                              getCharWidth(), getBitIntMaxAlign());
+      unsigned TypeSize = NumBits;
+      return std::max(ABIAlign, TypeSize);
+    }
+    
+    // Default behavior for other sizes
     return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
                                 getBitIntMaxAlign());
   }
