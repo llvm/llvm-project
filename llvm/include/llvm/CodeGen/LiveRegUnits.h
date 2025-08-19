@@ -26,6 +26,7 @@ namespace llvm {
 
 class MachineInstr;
 class MachineBasicBlock;
+class TargetLowering;
 
 /// A set of register units used to track register liveness.
 class LiveRegUnits {
@@ -135,8 +136,11 @@ public:
   /// Adds registers living out of block \p MBB.
   /// Live out registers are the union of the live-in registers of the successor
   /// blocks and pristine registers. Live out registers of the end block are the
-  /// callee saved registers.
-  LLVM_ABI void addLiveOuts(const MachineBasicBlock &MBB);
+  /// callee saved registers. If the target lowering information \p TLI is
+  /// provided, runtime-defined live ins of successors will be excluded from the
+  /// live outs.
+  LLVM_ABI void addLiveOuts(const MachineBasicBlock &MBB,
+                            const TargetLowering *TLI = nullptr);
 
   /// Adds registers living into block \p MBB.
   LLVM_ABI void addLiveIns(const MachineBasicBlock &MBB);

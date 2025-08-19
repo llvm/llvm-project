@@ -277,7 +277,7 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
     }
 
     LiveRegUnits LiveUnits(*TRI);
-    LiveUnits.addLiveOuts(MBB);
+    LiveUnits.addLiveOuts(MBB, Subtarget->getTargetLowering());
 
     auto GetPhysLiveRegs = [&] {
       LiveRegs PhysLiveRegs = LiveRegs::None;

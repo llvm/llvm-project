@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 using namespace llvm;
 
@@ -86,9 +87,15 @@ void LiveRegUnits::accumulate(const MachineInstr &MI) {
 
 /// Add live-in registers of basic block \p MBB to \p LiveUnits.
 static void addBlockLiveIns(LiveRegUnits &LiveUnits,
-                            const MachineBasicBlock &MBB) {
-  for (const auto &LI : MBB.liveins())
+                            const MachineBasicBlock &MBB,
+                            MCPhysReg ExceptionPointer = {},
+                            MCPhysReg ExceptionSelector = {}) {
+  for (const auto &LI : MBB.liveins()) {
+    if (MBB.isEHPad() &&
+        (LI.PhysReg == ExceptionPointer || LI.PhysReg == ExceptionSelector))
+      continue;
     LiveUnits.addRegMasked(LI.PhysReg, LI.LaneMask);
+  }
 }
 
 /// Adds all callee saved registers to \p LiveUnits.
@@ -135,14 +142,25 @@ void LiveRegUnits::addPristines(const MachineFunction &MF) {
   addUnits(Pristine.getBitVector());
 }
 
-void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB) {
+void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB,
+                               const TargetLowering *TLI) {
   const MachineFunction &MF = *MBB.getParent();
 
   addPristines(MF);
 
+  MCPhysReg ExceptionPointer;
+  MCPhysReg ExceptionSelector;
+
+  // Remove live-ins from successors that are defined by the runtime.
+  if (TLI && MF.getFunction().hasPersonalityFn()) {
+    auto PersonalityFn = MF.getFunction().getPersonalityFn();
+    ExceptionPointer = TLI->getExceptionPointerRegister(PersonalityFn);
+    ExceptionSelector = TLI->getExceptionSelectorRegister(PersonalityFn);
+  }
+
   // To get the live-outs we simply merge the live-ins of all successors.
   for (const MachineBasicBlock *Succ : MBB.successors())
-    addBlockLiveIns(*this, *Succ);
+    addBlockLiveIns(*this, *Succ, ExceptionPointer, ExceptionSelector);
 
   // For the return block: Add all callee saved registers.
   if (MBB.isReturnBlock()) {
