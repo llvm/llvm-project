@@ -954,6 +954,8 @@ public:
 
   Address emitArrayToPointerDecay(const Expr *array);
 
+  mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
+
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
 
