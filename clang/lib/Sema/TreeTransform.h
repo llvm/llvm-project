@@ -14326,7 +14326,9 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
   // for type deduction, so we need to recompute it.
   //
   // Always recompute the type if we're in the body of a lambda, and
-  // 'this' is dependent on a lambda's explicit object parameter.
+  // 'this' is dependent on a lambda's explicit object parameter; we
+  // also need to always rebuild the expression in this case to clear
+  // the flag.
   QualType T = [&]() {
     auto &S = getSema();
     if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
@@ -14336,7 +14338,8 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
     return S.getCurrentThisType();
   }();
 
-  if (!getDerived().AlwaysRebuild() && T == E->getType()) {
+  if (!getDerived().AlwaysRebuild() && T == E->getType() &&
+      !E->isCapturedByCopyInLambdaWithExplicitObjectParameter()) {
     // Mark it referenced in the new context regardless.
     // FIXME: this is a bit instantiation-specific.
     getSema().MarkThisReferenced(E);
