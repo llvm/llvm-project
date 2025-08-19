@@ -1,5 +1,4 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-toplev-func.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --load-func-profile-for-cg-matching 2>&1 | FileCheck %s -check-prefix=CHECK-TEXT
 ; RUN: llvm-profdata merge --sample %S/Inputs/pseudo-probe-stale-profile-toplev-func.prof -extbinary -o %t.extbinary
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.extbinary --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --load-func-profile-for-cg-matching 2>&1 | FileCheck %s -check-prefix=CHECK-EXTBIN

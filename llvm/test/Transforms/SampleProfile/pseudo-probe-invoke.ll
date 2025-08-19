@@ -1,4 +1,4 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
+; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes=pseudo-probe -S -o - | FileCheck %s
 
 $__clang_call_terminate = comdat any

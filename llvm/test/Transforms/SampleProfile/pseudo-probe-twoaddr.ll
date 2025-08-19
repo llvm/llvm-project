@@ -1,5 +1,5 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
-; RUN: llc -stop-after=twoaddressinstruction -mtriple=x86_64-- -o - %s | FileCheck %s
+; REQUIRES: x86-registered-target
+; RUN: llc -stop-after=twoaddressinstruction -o - %s | FileCheck %s
 
 
 define dso_local double @twoaddressinstruction(i1 %c) local_unnamed_addr {

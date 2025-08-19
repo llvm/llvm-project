@@ -1,5 +1,5 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
-; RUN: llc -print-after=slotindexes -stop-after=slotindexes -mtriple=x86_64-- %s -filetype=asm -o %t 2>&1 | FileCheck %s
+; REQUIRES: x86-registered-target
+; RUN: llc -print-after=slotindexes -stop-after=slotindexes %s -filetype=asm -o %t 2>&1 | FileCheck %s
 
 define void @foo(ptr %p) {
   store i32 0, ptr %p

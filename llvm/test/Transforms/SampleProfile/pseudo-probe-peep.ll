@@ -1,5 +1,5 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
-; RUN: llc -mtriple=x86_64-- -stop-after=peephole-opt -o - %s | FileCheck %s
+; REQUIRES: x86-registered-target
+; RUN: llc -stop-after=peephole-opt -o - %s | FileCheck %s
 
 define internal i32 @arc_compare(i1 %c) {
 entry:

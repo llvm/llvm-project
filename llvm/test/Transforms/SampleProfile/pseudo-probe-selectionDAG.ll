@@ -1,5 +1,5 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
-; RUN: opt < %s -codegenprepare -mtriple=x86_64 -S -o %t 
+; REQUIRES: x86-registered-target
+; RUN: opt < %s -codegenprepare -mtriple=x86_64 -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=IR
 ; RUN: llc -mtriple=x86_64-- -stop-after=finalize-isel %t -o - | FileCheck %s --check-prefix=MIR
 

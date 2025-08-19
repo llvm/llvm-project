@@ -1,23 +1,23 @@
-; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
-; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -function-sections -mtriple=x86_64-unknown-linux-gnu -S -o %t
+; REQUIRES: x86-registered-target
+; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
 ; For ELF.
-; RUN: llc -function-sections -mtriple=x86_64--linux <%t -filetype=asm -o %t1
+; RUN: llc -function-sections -mtriple=x86_64-unknown-linux-gnu <%t -filetype=asm -o %t1
 ; RUN: FileCheck %s < %t1 --check-prefixes=CHECK-ASM,CHECK-ASM-ELF
-; RUN: llc -function-sections -mtriple=x86_64--linux <%t -filetype=obj -o %t2
+; RUN: llc -function-sections -mtriple=x86_64-unknown-linux-gnu <%t -filetype=obj -o %t2
 ; RUN: llvm-objdump --section-headers %t2 | FileCheck %s --check-prefix=CHECK-OBJ
-; RUN: llvm-mc -triple=x86_64--linux -filetype=asm <%t1 -o %t3
+; RUN: llvm-mc -triple=x86_64-unknown-linux-gnu -filetype=asm <%t1 -o %t3
 ; RUN: FileCheck %s < %t3 --check-prefixes=CHECK-ASM,CHECK-ASM-ELF
-; RUN: llvm-mc -triple=x86_64--linux -filetype=obj <%t1 -o %t4
+; RUN: llvm-mc -triple=x86_64-unknown-linux-gnu -filetype=obj <%t1 -o %t4
 ; RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefix=CHECK-OBJ
 ; For COFF.
-; RUN: llc -function-sections -mtriple=x86_64--windows <%t -filetype=asm -o %t1
+; RUN: llc -function-sections -mtriple=x86_64-unknown-windows-msvc <%t -filetype=asm -o %t1
 ; RUN: FileCheck %s < %t1 --check-prefixes=CHECK-ASM,CHECK-ASM-COFF
-; RUN: llc -function-sections -mtriple=x86_64--windows <%t -filetype=obj -o %t2
+; RUN: llc -function-sections -mtriple=x86_64-unknown-windows-msvc <%t -filetype=obj -o %t2
 ; RUN: llvm-objdump --section-headers %t2 | FileCheck %s --check-prefixes=CHECK-OBJ
-; RUN: llvm-mc -triple=x86_64--windows -filetype=asm <%t1 -o %t3
+; RUN: llvm-mc -triple=x86_64-unknown-windows-msvc -filetype=asm <%t1 -o %t3
 ; RUN: FileCheck %s < %t3 --check-prefixes=CHECK-ASM,CHECK-ASM-COFF
-; RUN: llvm-mc -triple=x86_64--windows -filetype=obj <%t1 -o %t4
+; RUN: llvm-mc -triple=x86_64-unknown-windows-msvc -filetype=obj <%t1 -o %t4
 ; RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefixes=CHECK-OBJ
 
 
@@ -79,17 +79,20 @@ define dso_local i32 @entry() !dbg !14 {
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH3:]]
 ; CHECK-ASM-ELF-NEXT: .byte	5
 ; CHECK-ASM-ELF-NEXT: .ascii "entry"
-; CHECK-ASM-COFF: .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_foo2
+; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_foo2
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID1]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH1:]]
 ; CHECK-ASM-COFF-NEXT: .byte	4
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo2"
 ; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_foo
+; CHECK-ASM-COFF:      .pseudo_probe_desc_foo:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
 ; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_entry
+; CHECK-ASM-COFF:      .pseudo_probe_desc_entry:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID3]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH3:]]
 ; CHECK-ASM-COFF-NEXT: .byte	5
