@@ -1318,6 +1318,19 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   return gv;
 }
 
+/// Return a pointer to a constant array for the given string literal.
+cir::GlobalViewAttr
+CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                                 StringRef name) {
+  cir::GlobalOp gv = getGlobalForStringLiteral(s, name);
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(gv.getSymType());
+  assert(arrayTy && "String literal must be array");
+  assert(!cir::MissingFeatures::addressSpace());
+  cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
+
+  return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
 void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
                                             CIRGenFunction *cgf) {
   if (cgf && e->getType()->isVariablyModifiedType())
