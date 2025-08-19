@@ -68,33 +68,33 @@ void operator delete[](void* ptr, size_t sz) noexcept {
 }
 
 template <typename T>
-struct test_alloc {
-  using size_type     = size_t;
-  using value_type    = T;
-  using pointer       = T*;
-  using const_pointer = T const*;
+struct test_alloc : std::allocator<T> {
+  using base = std::allocator<T>;
 
   template <typename U>
   struct rebind {
     using other = test_alloc<U>;
   };
 
-  test_alloc() = default;
-
-  template <typename U = T>
-  test_alloc(const test_alloc<U>&) {}
-
-  bool operator==(auto const& rhs) const { return &rhs == this; }
-  bool operator==(test_alloc const&) const { return true; }
-
   T* allocate(size_t n) {
     ++custom_alloc;
-    return new T[n];
+    auto* ret = base::allocate(n);
+    std::cerr << "allocator: allocate(" << n << ") -> " << ret << '\n';
+    return ret;
   }
 
-  std::allocation_result<T*> allocate_at_least(size_t n) { return {.ptr = allocate(n), .count = n}; }
+  std::allocation_result<T*, size_t> allocate_at_least(size_t n) {
+    ++custom_alloc;
+    auto ret = base::allocate_at_least(n);
+    std::cerr << "allocator: atleast(" << n << ") -> " << ret.count << " @ " << ret.ptr << '\n';
+    return ret;
+  }
 
-  void deallocate(T*, size_t) { ++custom_dealloc; }
+  void deallocate(T* p, size_t n) {
+    ++custom_dealloc;
+    base::deallocate(p, n);
+    std::cerr << "allocator: deallocate(" << p << ", " << n << ")\n";
+  }
 };
 
 _LIBCPP_NO_TAIL_CALLS

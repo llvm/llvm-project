@@ -40,7 +40,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE inline void unwind_addrs(base& base, size
     if (!depth--) {
       break;
     }
-    auto& entry = base.__emplace_entry_();
+    auto& entry = base.__entries_.emplace_back();
     unw_get_reg(&cur, UNW_REG_IP, &entry.__addr_);
     if (!unw_is_signal_frame(&cur)) {
       --entry.__addr_;
@@ -76,7 +76,7 @@ struct unwind_backtrace {
     if (!ip) {
       return _Unwind_Reason_Code::_URC_NORMAL_STOP;
     }
-    auto& entry = base_.__emplace_entry_();
+    auto& entry = base_.__entries_.emplace_back();
     auto& eb    = (entry_base&)entry;
     eb.__addr_  = (ipBefore ? ip : ip - 1);
     return _Unwind_Reason_Code::_URC_NO_REASON;

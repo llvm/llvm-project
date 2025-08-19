@@ -48,8 +48,8 @@ bool addr2line::build_argv() {
   push_arg("--basenames");
   push_arg("-e");
   push_arg(main_image->name_);
-  auto* it  = base_.entries_begin();
-  auto* end = base_.entries_end();
+  auto* it  = base_.__entries_.begin();
+  auto* end = base_.__entries_.end();
   while (it != end) {
     auto& entry = *(entry_base*)(it++);
     push_arg("%p", (void*)entry.adjusted_addr());
@@ -82,7 +82,7 @@ use_available_progs.pass.cpp:84
 void addr2line::parse_sym(entry_base& entry, std::string_view view) const {
   if (!view.starts_with("??")) {
     // XXX should check for "_Z" prefix (mangled symbol) and use cxxabi.h / demangle?
-    entry.assign_desc(base_.__strings_.make_str(view));
+    entry.assign_desc(std::move(base_.__strings_.emplace_back().assign(view)));
   }
 }
 
@@ -90,7 +90,7 @@ void addr2line::parse_loc(entry_base& entry, std::string_view view) const {
   if (!view.starts_with("??")) {
     auto colon = view.find_last_of(":");
     if (colon != string_view::npos) {
-      entry.assign_file(base_.__strings_.make_str(view.substr(0, colon)));
+      entry.assign_file(std::move(base_.__strings_.emplace_back().assign(view.substr(0, colon))));
       entry.__line_ = atoi(view.data() + colon + 1);
     }
   }
@@ -105,22 +105,23 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<addr2line>(base& base) {
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  str line = base.__strings_.make_str();               // our read buffer
-  auto* entry_iter = base.entries_begin();    // position at first entry
-  while (spawner.stream_.good()) {            // loop until we get EOF from tool stdout
+  auto& line = base.__strings_.emplace_back().reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
+
+  auto* entry_iter = base.__entries_.begin();   // position at first entry
+  while (spawner.stream_.good()) {              // loop until we get EOF from tool stdout
     std::string_view view;
 
-    std::getline(spawner.stream_, line);      // consume one line
-    view = tool_base::strip(line);            // remove trailing and leading whitespace
-    if (view.empty()) { continue; }           // blank line: restart loop, checking for EOF
-    tool.parse_sym(*entry_iter, view);        // expecting symbol name
+    line.getline(spawner.stream_);              // consume one line
+    view = tool_base::strip(line.view());       // remove trailing and leading whitespace
+    if (view.empty()) { continue; }             // blank line: restart loop, checking for EOF
+    tool.parse_sym(*entry_iter, view);          // expecting symbol name
 
-    std::getline(spawner.stream_, line);      // consume one line
-    view = tool_base::strip(line);            // remove trailing and leading whitespace
-    if (view.empty()) { continue; }           // blank line: restart loop, checking for EOF
-    tool.parse_loc(*entry_iter, view);        // expecting "/path/to/sourcefile.cpp:42"
+    line.getline(spawner.stream_);              // consume one line
+    view = tool_base::strip(line.view());       // remove trailing and leading whitespace
+    if (view.empty()) { continue; }             // blank line: restart loop, checking for EOF
+    tool.parse_loc(*entry_iter, view);          // expecting "/path/to/sourcefile.cpp:42"
 
-    ++entry_iter;                             // one entry per two lines
+    ++entry_iter;                               // one entry per two lines
   }
 
   return true;

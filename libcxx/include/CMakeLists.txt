@@ -742,7 +742,7 @@ set(files
   __split_buffer
   __stacktrace/basic_stacktrace.h
   __stacktrace/stacktrace_entry.h
-  __stacktrace/string_manager.h
+  __stacktrace/alloc_helpers.h
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h

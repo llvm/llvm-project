@@ -14,9 +14,9 @@
 
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
+#  include <__stacktrace/alloc_helpers.h>
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
-#  include <__stacktrace/string_manager.h>
 #  include <cctype>
 #  include <cerrno>
 #  include <csignal>
@@ -37,9 +37,10 @@ struct tool_base {
   constexpr static size_t k_max_argv_ = base::__absolute_max_depth + 10;
   base& base_;
   char const* tool_prog_;
-  optional<str> argvs_[k_max_argv_]{}; // will hold our generated arg strings
-  char* argv_[k_max_argv_]{nullptr};   // refers to argvs_ strings as char** (includes null terminator)
-  size_t argc_{0};                     // number of args.  Note: argv_[argc_] is nullptr
+  // str* argvs_[k_max_argv_]{};        // holds ptrs to our generated arg strings (strings are owned by
+  // basic_stacktrace)
+  char* argv_[k_max_argv_]{nullptr}; // char arrays from the strings in `argvs_`
+  size_t argc_{0};                   // number of args.  Note: argv_[argc_] is nullptr
 
   _LIBCPP_HIDE_FROM_ABI tool_base(base& base, char const* tool_prog) : base_(base), tool_prog_(tool_prog) {
     argv_[0] = nullptr;
@@ -47,11 +48,12 @@ struct tool_base {
 
   _LIBCPP_HIDE_FROM_ABI void push_arg(std::string_view sv) {
     _LIBCPP_ASSERT(argc_ < k_max_argv_ - 1, "too many args");
-    argvs_[argc_] = base_.__strings_.make_str(); // Need to allocate chars to receive the string
-    argvs_[argc_]->assign(sv);                   // Copy from the view into the string
-    argv_[argc_]   = argvs_[argc_]->data();      // then we have a char pointer into that string
-    argv_[++argc_] = nullptr;                    // ensure there's always trailing null after last arg
+    auto& arg      = base_.__strings_.emplace_back().assign(sv);
+    argv_[argc_]   = arg.data();
+    argv_[++argc_] = nullptr; // ensure there's always trailing null after last arg
   }
+
+  _LIBCPP_HIDE_FROM_ABI void push_arg(str const& arg) { push_arg(arg.view()); }
 
   template <typename... _Args>
   _LIBCPP_HIDE_FROM_ABI void push_arg(char const* format, _Args&&... args) {
@@ -60,9 +62,10 @@ struct tool_base {
 #    pragma clang diagnostic ignored "-Wformat-security"
 #    pragma clang diagnostic ignored "-Wformat-nonliteral"
 #  endif
-    auto arg   = base_.__strings_.make_str();
-    auto bytes = 1 + snprintf(nullptr, 0, format, args...);
-    arg.resize_and_overwrite(bytes, [&](char* p, size_t sz) { return snprintf(p, sz, format, args...); });
+    auto sz   = snprintf(nullptr, 0, format, args...);
+    auto& arg = base_.__strings_.emplace_back().overwrite(sz, [&](char* buf, size_t) -> size_t {
+      return snprintf(buf, sz, format, args...);
+    });
     push_arg(arg);
 #  ifdef __clang__
 #    pragma clang diagnostic pop

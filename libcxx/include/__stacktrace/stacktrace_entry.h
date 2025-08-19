@@ -25,13 +25,11 @@ _LIBCPP_PUSH_MACROS
 #  include <__functional/function.h>
 #  include <__fwd/format.h>
 #  include <__fwd/ostream.h>
-#  include <__string/constexpr_c_functions.h>
 #  include <cstddef>
 #  include <cstdint>
-#  include <optional>
 #  include <string>
 
-#  include <__stacktrace/string_manager.h>
+#  include <__stacktrace/alloc_helpers.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -52,13 +50,13 @@ struct entry_base {
 #  endif
 
   uintptr_t __addr_{};
-  optional<str> __desc_{};
-  optional<str> __file_{};
+  str const* __desc_{literal_str::empty()};
+  str const* __file_{literal_str::empty()};
   uint_least32_t __line_{};
-  image* __image_{};
+  image const* __image_{};
 
-  void assign_desc(str __s) { __desc_ = std::move(__s); }
-  void assign_file(str __s) { __file_ = std::move(__s); }
+  void assign_desc(str const& __s) { __desc_ = &__s; }
+  void assign_file(str const& __s) { __file_ = &__s; }
 
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
@@ -91,8 +89,8 @@ public:
   }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const { return __desc_ ? string(*__desc_) : string{}; }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const { return __file_ ? string(*__file_) : string{}; }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const { return string(__desc_->view()); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const { return string(__file_->view()); }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI uint_least32_t source_line() const { return __line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
