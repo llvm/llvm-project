@@ -945,40 +945,8 @@ struct WarpOpForwardOperand : public WarpDistributionPattern {
   }
 };
 
-static VectorType
-tryFindDistributedType(TypedValue<VectorType> source,
-                       WarpExecuteOnLane0Op warpOp,
-                       const DistributionMapFn &distributionMapFn) {
-  VectorType distributedType = source.getType();
-  // Check if the source is yielded from the warp op.
-  gpu::YieldOp yieldOp = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-  auto *it = llvm::find_if(yieldOp->getOpOperands(), [&](OpOperand &operand) {
-    return operand.get() == source;
-  });
-
-  if (it != yieldOp->getOpOperands().end()) {
-    // If the source is yielded from the warp op, we can use the matching
-    // warp result type as the distributed source type.
-    distributedType =
-        cast<VectorType>(warpOp->getResultTypes()[it->getOperandNumber()]);
-  } else {
-    // If the source is not yielded from the warp op, we need to compute
-    // the distributed source type based on the distribution map and the
-    // warp size.
-    AffineMap map = distributionMapFn(source);
-    VectorType computed =
-        getDistributedType(source.getType(), map, warpOp.getWarpSize());
-    if (!computed)
-      return source.getType();
-    distributedType = computed;
-  }
-  return distributedType;
-}
-
 struct WarpOpBroadcast : public WarpDistributionPattern {
-  WarpOpBroadcast(MLIRContext *ctx, DistributionMapFn fn, PatternBenefit b = 1)
-      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -991,23 +959,18 @@ struct WarpOpBroadcast : public WarpDistributionPattern {
     auto destVecType =
         cast<VectorType>(warpOp->getResultTypes()[operandNumber]);
     Value broadcastSrc = broadcastOp.getSource();
-    Type srcDistributedType = broadcastSrc.getType();
-
-    if (isa<VectorType>(srcDistributedType))
-      srcDistributedType =
-          tryFindDistributedType(cast<TypedValue<VectorType>>(broadcastSrc),
-                                 warpOp, distributionMapFn);
+    Type broadcastSrcType = broadcastSrc.getType();
 
     // Check that the broadcast actually spans a set of values uniformly across
     // all threads. In other words, check that each thread can reconstruct
     // their own broadcast.
     // For that we simply check that the broadcast we want to build makes sense.
-    if (vector::isBroadcastableTo(srcDistributedType, destVecType) !=
+    if (vector::isBroadcastableTo(broadcastSrcType, destVecType) !=
         vector::BroadcastableToResult::Success)
       return failure();
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {broadcastSrc}, {srcDistributedType}, newRetIndices);
+        rewriter, warpOp, {broadcastSrc}, {broadcastSrcType}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value broadcasted = vector::BroadcastOp::create(
         rewriter, loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
@@ -1015,9 +978,6 @@ struct WarpOpBroadcast : public WarpDistributionPattern {
                                 broadcasted);
     return success();
   }
-
-private:
-  DistributionMapFn distributionMapFn;
 };
 
 /// Pattern to move shape cast out of the warp op. shape cast is basically a
@@ -2100,37 +2060,37 @@ struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           warpOp, "Only 1 reduction dimension is supported.");
 
+    // Create a constant vector to store the result of the reduction per lane.
+    TypedAttr zeroAttr =
+        rewriter.getZeroAttr(distributedResultType.getElementType());
+    Value result = arith::ConstantOp::create(
+        rewriter, reductionOp->getLoc(), distributedResultType,
+        DenseElementsAttr::get(distributedResultType, zeroAttr));
+
     // Col reduction.
     if (reductionDims[0] == 0) {
-      // Yield the source vector and the accumulator.
+      // Source vector must be distributable to lanes in the col dimension.
       if (sourceType.getShape()[1] % warpOp.getWarpSize() != 0)
         return rewriter.notifyMatchFailure(
             warpOp, "Source vector dimension must be divisible by warp size.");
+      // Compute source distributed type.
       SmallVector<int64_t> shape(sourceType.getShape());
       shape[1] = shape[1] / warpOp.getWarpSize();
       auto sourceDistributedType = VectorType::get(shape, elementType);
+
+      // Yield the source and acc vectors from the WarpOp.
       SmallVector<size_t> newRetIndices;
       auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
           rewriter, warpOp, {reductionOp.getSource(), reductionOp.getAcc()},
           {sourceDistributedType, distributedResultType}, newRetIndices);
       rewriter.setInsertionPointAfter(newWarpOp);
-      // Create new reduction op.
-      // auto newOp = vector::MultiDimReductionOp::create(
-      //     rewriter, reductionOp.getLoc(), distributedResultType,
-      //     reductionOp.getKind(),
-      //     /** source = **/ newWarpOp.getResult(newRetIndices[0]),
-      //     /** accumulator = **/ newWarpOp.getResult(newRetIndices[1]),
-      //     reductionDims);
-      // Create a constant zero value for storing the reduction result.
-      // rewriter.setInsertionPointAfter(reductionOp);
-      auto zeroAttr =
-          rewriter.getZeroAttr(distributedResultType.getElementType());
-      Value result = arith::ConstantOp::create(
-          rewriter, reductionOp->getLoc(), distributedResultType,
-          DenseElementsAttr::get(distributedResultType, zeroAttr));
+
       int nCols = sourceDistributedType.getShape()[1];
       Value source = newWarpOp.getResult(newRetIndices[0]);
       Value acc = newWarpOp.getResult(newRetIndices[1]);
+      // For each column owned by a lane, extract the column (of size nRows x
+      // 1), shape cast to 1D (nRows), do a vector.reduction and, insert the
+      // result back to the result vector.
       for (int i = 0; i < nCols; ++i) {
         Value col = vector::ExtractStridedSliceOp::create(
             rewriter, reductionOp.getLoc(), source, {0, i},
@@ -2143,7 +2103,6 @@ struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
             vector::ExtractOp::create(rewriter, reductionOp.getLoc(), acc, i);
         Value colReduce = vector::ReductionOp::create(
             rewriter, reductionOp.getLoc(), reductionOp.getKind(), col, accCol);
-        // Insert the reduced column into the result.
         result = vector::InsertOp::create(rewriter, reductionOp.getLoc(),
                                           colReduce, result, i);
       }
@@ -2151,19 +2110,13 @@ struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
       rewriter.replaceAllUsesWith(newWarpOp.getResult(operandNumber), result);
       return success();
     }
-    // Row reduction.
-    // Create a constant zero value for storing the reduction result.
+    // For row reductions, we simply rewrite the MultiReductionOp in terms of
+    // multiple ReductionOps. Actual distribution is done by the WarpOpReduction
+    // pattern.
     rewriter.setInsertionPointAfter(reductionOp);
-    auto zeroAttr =
-        rewriter.getZeroAttr(distributedResultType.getElementType());
-    Value result = arith::ConstantOp::create(
-        rewriter, reductionOp->getLoc(), distributedResultType,
-        DenseElementsAttr::get(distributedResultType, zeroAttr));
-    // Value result = arith::ConstantOp::create(
-    //     rewriter, reductionOp.getLoc(),
-    //     rewriter.getIntegerAttr(reductionOp.getType(), 0));
     int nRows = sourceType.getShape()[0];
-    // For each row, do a vector reduction.
+    // For each row of the source, extract the row vector, do a reduction and,
+    // insert the result back to the result.
     for (int i = 0; i < nRows; ++i) {
       Value source = vector::ExtractOp::create(rewriter, reductionOp.getLoc(),
                                                reductionOp.getSource(), i);
@@ -2201,15 +2154,16 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpExtract,
-               WarpOpForwardOperand, WarpOpConstant, WarpOpInsertScalar,
-               WarpOpInsert, WarpOpCreateMask, WarpOpExtractStridedSlice,
-               WarpOpInsertStridedSlice, VectorMultiDimReductionDistribution>(
-      patterns.getContext(), benefit);
+  patterns
+      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast, WarpOpExtract,
+           WarpOpForwardOperand, WarpOpConstant, WarpOpInsertScalar,
+           WarpOpInsert, WarpOpCreateMask, WarpOpExtractStridedSlice,
+           WarpOpInsertStridedSlice, VectorMultiDimReductionDistribution>(
+          patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
-  patterns.add<WarpOpScfForOp, WarpOpShapeCast, WarpOpBroadcast>(
-      patterns.getContext(), distributionMapFn, benefit);
+  patterns.add<WarpOpScfForOp, WarpOpShapeCast>(patterns.getContext(),
+                                                distributionMapFn, benefit);
 }
 
 void mlir::vector::populateDistributeReduction(
