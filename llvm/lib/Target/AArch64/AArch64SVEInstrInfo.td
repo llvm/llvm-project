@@ -700,8 +700,8 @@ let Predicates = [HasSVE_or_SME] in {
   defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr", "SDIVR_ZPZZ", int_aarch64_sve_sdivr, DestructiveBinaryCommWithRev, "SDIV_ZPmZ", /*isReverseInstr*/ 1>;
   defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr", "UDIVR_ZPZZ", int_aarch64_sve_udivr, DestructiveBinaryCommWithRev, "UDIV_ZPmZ", /*isReverseInstr*/ 1>;
 
-  defm SDIV_ZPZZ  : sve_int_bin_pred_sd<AArch64sdiv_p>;
-  defm UDIV_ZPZZ  : sve_int_bin_pred_sd<AArch64udiv_p>;
+  defm SDIV_ZPZZ  : sve_int_bin_pred_sd<AArch64sdiv_p, vp_sdiv>;
+  defm UDIV_ZPZZ  : sve_int_bin_pred_sd<AArch64udiv_p, vp_udiv>;
 
   defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", AArch64sdot>;
   defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", AArch64udot>;

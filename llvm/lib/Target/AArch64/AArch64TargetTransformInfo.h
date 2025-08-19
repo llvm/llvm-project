@@ -156,6 +156,17 @@ public:
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
+  TargetTransformInfo::VPLegalization
+  getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
+    using VPLegalization = TargetTransformInfo::VPLegalization;
+    switch (PI.getIntrinsicID()) {
+    case Intrinsic::vp_sdiv:
+    case Intrinsic::vp_udiv:
+      return VPLegalization(VPLegalization::Discard, VPLegalization::Legal);
+    }
+    return BaseT::getVPLegalizationStrategy(PI);
+  }
+
   bool shouldMaximizeVectorBandwidth(
       TargetTransformInfo::RegisterKind K) const override;
 

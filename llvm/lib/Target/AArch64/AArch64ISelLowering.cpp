@@ -1594,6 +1594,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::OR, VT, Custom);
     }
 
+    for (auto VT : {MVT::nxv4i32, MVT::nxv2i64}) {
+      setOperationAction(ISD::VP_SDIV, VT, Legal);
+      setOperationAction(ISD::VP_UDIV, VT, Legal);
+    }
+    // SVE doesn't have i8 and i16 DIV operations, so custom lower them to
+    // 32-bit operations.
+    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16}) {
+      setOperationAction(ISD::VP_SDIV, VT, Custom);
+      setOperationAction(ISD::VP_UDIV, VT, Custom);
+    }
+
     // Illegal unpacked integer vector types.
     for (auto VT : {MVT::nxv8i8, MVT::nxv4i16, MVT::nxv2i32}) {
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
@@ -7462,6 +7473,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::SDIV:
   case ISD::UDIV:
     return LowerDIV(Op, DAG);
+  case ISD::VP_SDIV:
+  case ISD::VP_UDIV:
+    return LowerVP_DIV(Op, DAG);
   case ISD::SMIN:
   case ISD::UMIN:
   case ISD::SMAX:
@@ -15865,6 +15879,39 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   SDValue Op1Hi = DAG.getNode(UnpkHi, DL, WidenedVT, Op.getOperand(1));
   SDValue ResultLo = DAG.getNode(Op.getOpcode(), DL, WidenedVT, Op0Lo, Op1Lo);
   SDValue ResultHi = DAG.getNode(Op.getOpcode(), DL, WidenedVT, Op0Hi, Op1Hi);
+  SDValue ResultLoCast = DAG.getNode(AArch64ISD::NVCAST, DL, VT, ResultLo);
+  SDValue ResultHiCast = DAG.getNode(AArch64ISD::NVCAST, DL, VT, ResultHi);
+  return DAG.getNode(AArch64ISD::UZP1, DL, VT, ResultLoCast, ResultHiCast);
+}
+
+SDValue AArch64TargetLowering::LowerVP_DIV(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  bool Signed = Op.getOpcode() == ISD::VP_SDIV;
+
+  // SVE doesn't have i8 and i16 DIV operations; widen them to 32-bit
+  // operations, and truncate the result.
+  EVT WidenedVT;
+  if (VT == MVT::nxv16i8)
+    WidenedVT = MVT::nxv8i16;
+  else if (VT == MVT::nxv8i16)
+    WidenedVT = MVT::nxv4i32;
+  else
+    llvm_unreachable("Unexpected Custom DIV operation");
+
+  auto [MaskLo, MaskHi] = DAG.SplitVector(Op.getOperand(2), DL);
+  auto [EVLLo, EVLHi] = DAG.SplitEVL(Op.getOperand(3), WidenedVT, DL);
+  unsigned UnpkLo = Signed ? AArch64ISD::SUNPKLO : AArch64ISD::UUNPKLO;
+  unsigned UnpkHi = Signed ? AArch64ISD::SUNPKHI : AArch64ISD::UUNPKHI;
+  SDValue Op0Lo = DAG.getNode(UnpkLo, DL, WidenedVT, Op.getOperand(0));
+  SDValue Op1Lo = DAG.getNode(UnpkLo, DL, WidenedVT, Op.getOperand(1));
+  SDValue Op0Hi = DAG.getNode(UnpkHi, DL, WidenedVT, Op.getOperand(0));
+  SDValue Op1Hi = DAG.getNode(UnpkHi, DL, WidenedVT, Op.getOperand(1));
+  SDValue ResultLo =
+      DAG.getNode(Op.getOpcode(), DL, WidenedVT, Op0Lo, Op1Lo, MaskLo, EVLLo);
+  SDValue ResultHi =
+      DAG.getNode(Op.getOpcode(), DL, WidenedVT, Op0Hi, Op1Hi, MaskHi, EVLHi);
   SDValue ResultLoCast = DAG.getNode(AArch64ISD::NVCAST, DL, VT, ResultLo);
   SDValue ResultHiCast = DAG.getNode(AArch64ISD::NVCAST, DL, VT, ResultHi);
   return DAG.getNode(AArch64ISD::UZP1, DL, VT, ResultLoCast, ResultHiCast);

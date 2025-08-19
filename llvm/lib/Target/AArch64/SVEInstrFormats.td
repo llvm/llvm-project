@@ -9788,12 +9788,17 @@ multiclass sve_int_bin_pred_bhsd<SDPatternOperator op> {
 }
 
 // As sve_int_bin_pred but when only i32 and i64 vector types are required.
-multiclass sve_int_bin_pred_sd<SDPatternOperator op> {
+multiclass sve_int_bin_pred_sd<SDPatternOperator op, SDPatternOperator vp_op> {
   def _S_UNDEF : PredTwoOpPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
   def _D_UNDEF : PredTwoOpPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv4i32, !cast<Pseudo>(NAME # _S_UNDEF)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv2i64, !cast<Pseudo>(NAME # _D_UNDEF)>;
+
+  def : Pat<(nxv4i32 (vp_op nxv4i32:$lhs, nxv4i32:$rhs, nxv4i1:$pred, (i32 srcvalue))),
+            (!cast<Pseudo>(NAME # _S_UNDEF) $pred, $lhs, $rhs)>;
+  def : Pat<(nxv2i64 (vp_op nxv2i64:$lhs, nxv2i64:$rhs, nxv2i1:$pred, (i32 srcvalue))),
+            (!cast<Pseudo>(NAME # _D_UNDEF) $pred, $lhs, $rhs)>;
 }
 
 // Predicated pseudo integer two operand instructions. Second operand is an
