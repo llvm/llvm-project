@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
@@ -24,15 +25,12 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
-Address CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s,
-                                                     Address *lastValue,
-                                                     AggValueSlot slot) {
+mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
+    const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
   const Stmt *exprResult = s.getStmtExprResult();
   assert((!lastValue || (lastValue && exprResult)) &&
          "If lastValue is not null then the CompoundStmt must have a "
          "StmtExprResult");
-
-  Address retAlloca = Address::invalid();
 
   for (Stmt *curStmt : s.body()) {
     // We have to special case labels here. They are statements, but when put
@@ -44,7 +42,7 @@ Address CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s,
       while (!isa<Expr>(exprResult)) {
         if (const auto *ls = dyn_cast<LabelStmt>(exprResult)) {
           if (emitLabel(*ls->getDecl()).failed())
-            return Address::invalid();
+            return mlir::failure();
           exprResult = ls->getSubStmt();
         } else if (const auto *as = dyn_cast<AttributedStmt>(exprResult)) {
           // FIXME: Update this if we ever have attributes that affect the
@@ -68,18 +66,16 @@ Address CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s,
       }
     } else {
       if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-        return Address::invalid();
+        return mlir::failure();
     }
   }
 
-  return retAlloca;
+  return mlir::success();
 }
 
-Address CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
-                                         Address *lastValue,
-                                         AggValueSlot slot) {
-  Address retAlloca = Address::invalid();
-
+mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
+                                                     Address *lastValue,
+                                                     AggValueSlot slot) {
   // Add local scope to track new declared variables.
   SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
@@ -88,14 +84,10 @@ Address CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
       scopeLoc, [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
         scopeInsPt = b.saveInsertionPoint();
       });
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeInsPt);
-    LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
-    retAlloca = emitCompoundStmtWithoutScope(s, lastValue, slot);
-  }
-
-  return retAlloca;
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.restoreInsertionPoint(scopeInsPt);
+  LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
+  return emitCompoundStmtWithoutScope(s, lastValue, slot);
 }
 
 void CIRGenFunction::emitStopPoint(const Stmt *s) {
@@ -298,10 +290,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     return emitDeclStmt(cast<DeclStmt>(*s));
   case Stmt::CompoundStmtClass:
     if (useCurrentScope)
-      emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
-    else
-      emitCompoundStmt(cast<CompoundStmt>(*s));
-    break;
+      return emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
+    return emitCompoundStmt(cast<CompoundStmt>(*s));
   case Stmt::GotoStmtClass:
     return emitGotoStmt(cast<GotoStmt>(*s));
   case Stmt::ContinueStmtClass:

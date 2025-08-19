@@ -1174,11 +1174,11 @@ public:
   LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
                                              mlir::Value &result);
 
-  Address emitCompoundStmt(const clang::CompoundStmt &s,
-                           Address *lastValue = nullptr,
-                           AggValueSlot slot = AggValueSlot::ignored());
+  mlir::LogicalResult
+  emitCompoundStmt(const clang::CompoundStmt &s, Address *lastValue = nullptr,
+                   AggValueSlot slot = AggValueSlot::ignored());
 
-  Address
+  mlir::LogicalResult
   emitCompoundStmtWithoutScope(const clang::CompoundStmt &s,
                                Address *lastValue = nullptr,
                                AggValueSlot slot = AggValueSlot::ignored());

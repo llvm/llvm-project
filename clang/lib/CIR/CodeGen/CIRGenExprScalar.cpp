@@ -188,13 +188,13 @@ public:
   mlir::Value VisitStmtExpr(StmtExpr *e) {
     CIRGenFunction::StmtExprEvaluation eval(cgf);
     if (e->getType()->isVoidType()) {
-      cgf.emitCompoundStmt(*e->getSubStmt());
+      (void)cgf.emitCompoundStmt(*e->getSubStmt());
       return {};
     }
 
     Address retAlloca =
         cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
-    cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca);
+    (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca);
 
     return cgf.emitLoadOfScalar(cgf.makeAddrLValue(retAlloca, e->getType()),
                                 e->getExprLoc());
