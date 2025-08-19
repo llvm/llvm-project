@@ -4961,14 +4961,11 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
 Value *
 InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // Try to push freeze through instructions that propagate but don't produce
-  // poison as far as possible.  If an operand of freeze follows three
-  // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
-  // guaranteed-non-poison operands then push the freeze through to the one
-  // operand that is not guaranteed non-poison.  The actual transform is as
-  // follows.
+  // poison as far as possible. If an operand of freeze is one-use and does
+  // not produce poison then push the freeze through to the operands that are
+  // not guaranteed non-poison. The actual transform is as follows.
   //   Op1 = ...                        ; Op1 can be posion
-  //   Op0 = Inst(Op1, NonPoisonOps...) ; Op0 has only one use and only have
-  //                                    ; single guaranteed-non-poison operands
+  //   Op0 = Inst(Op1, NonPoisonOps...) ; Op0 has only one use
   //   ... = Freeze(Op0)
   // =>
   //   Op1 = ...
@@ -4994,29 +4991,24 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // If operand is guaranteed not to be poison, there is no need to add freeze
   // to the operand. So we first find the operand that is not guaranteed to be
   // poison.
-  Value *MaybePoisonOperand = nullptr;
+  SmallSetVector<Value *, 4> MaybePoisonOperands;
   for (Value *V : OrigOpInst->operands()) {
-    if (isa<MetadataAsValue>(V) || isGuaranteedNotToBeUndefOrPoison(V) ||
-        // Treat identical operands as a single operand.
-        (MaybePoisonOperand && MaybePoisonOperand == V))
+    if (isa<MetadataAsValue>(V) || isGuaranteedNotToBeUndefOrPoison(V))
       continue;
-    if (!MaybePoisonOperand)
-      MaybePoisonOperand = V;
-    else
-      return nullptr;
+    MaybePoisonOperands.insert(V);
   }
 
   OrigOpInst->dropPoisonGeneratingAnnotations();
 
   // If all operands are guaranteed to be non-poison, we can drop freeze.
-  if (!MaybePoisonOperand)
+  if (MaybePoisonOperands.empty())
     return OrigOp;
 
   Builder.SetInsertPoint(OrigOpInst);
-  Value *FrozenMaybePoisonOperand = Builder.CreateFreeze(
-      MaybePoisonOperand, MaybePoisonOperand->getName() + ".fr");
-
-  OrigOpInst->replaceUsesOfWith(MaybePoisonOperand, FrozenMaybePoisonOperand);
+  for (Value *V : MaybePoisonOperands) {
+    Value *Frozen = Builder.CreateFreeze(V, V->getName() + ".fr");
+    OrigOpInst->replaceUsesOfWith(V, Frozen);
+  }
   return OrigOp;
 }
 
