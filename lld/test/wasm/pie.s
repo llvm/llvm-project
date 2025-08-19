@@ -41,8 +41,6 @@ foo:
   drop
 
   global.get __stack_pointer
-  i32.load 0
-  call_indirect  () -> (i32)
   drop
 
   global.get __wasm_first_page_end@GOT
