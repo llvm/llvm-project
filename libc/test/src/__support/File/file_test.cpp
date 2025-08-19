@@ -493,3 +493,21 @@ TEST(LlvmLibcFileTest, WriteNothing) {
   ASSERT_EQ(f_lbf->close(), 0);
   ASSERT_EQ(f_nbf->close(), 0);
 }
+
+TEST(LlvmLibcFileTest, WriteSplit) {
+  constexpr size_t FILE_BUFFER_SIZE = 8;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+
+  static constexpr size_t AVAIL = 12;
+  f->seek(-AVAIL, SEEK_END);
+
+  const char data[] = "hello";
+  ASSERT_EQ(sizeof(data) - 1, f->write(data, sizeof(data) - 1).value);
+
+  const char data2[] = " extra data";
+  static constexpr size_t WR_EXPECTED = AVAIL - (sizeof(data) - 1);
+  ASSERT_EQ(WR_EXPECTED, f->write(data2, sizeof(data2) - 1).value);
+  EXPECT_TRUE(f->error());
+}
