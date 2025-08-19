@@ -739,10 +739,6 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
   // cases than just looking for AND with imm.
   KnownBits Known = CurDAG->computeKnownBits(Node->getOperand(0));
 
-  // Non-zero in the sense that they're not provably zero, which is the key
-  // point if we want to use this value.
-  APInt NotKnownZero = ~Known.Zero;
-
   // The bits being inserted must only set those bits that are known to be zero.
   if (!OrImm.isSubsetOf(Known.Zero)) {
     // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
