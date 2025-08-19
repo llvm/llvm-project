@@ -3391,8 +3391,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       MemcpyInByVal ? 0 : ABI.GetCalleeAllocdArgSizeInBytes(CallConv);
   CCInfo.AllocateStack(ReservedArgArea, Align(1));
 
-  CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs(),
-                             ES ? ES->getSymbol() : nullptr);
+  CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs());
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned StackSize = CCInfo.getStackSize();
@@ -3687,10 +3686,7 @@ SDValue MipsTargetLowering::LowerCallResult(
   MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                      *DAG.getContext());
 
-  const ExternalSymbolSDNode *ES =
-      dyn_cast_or_null<const ExternalSymbolSDNode>(CLI.Callee.getNode());
-  CCInfo.AnalyzeCallResult(Ins, RetCC_Mips, CLI.RetTy,
-                           ES ? ES->getSymbol() : nullptr);
+  CCInfo.AnalyzeCallResult(Ins, RetCC_Mips, CLI.OrigRetTy);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {

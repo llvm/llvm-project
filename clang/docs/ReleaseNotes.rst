@@ -137,6 +137,12 @@ Non-comprehensive list of changes in this release
 - ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
   now be used in constant expressions.
 
+- Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
+  features has been deprecated, and is restricted to the arm64e target only. The
+  correct method to check for these features is to test for the ``__PTRAUTH__``
+  macro.
+
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
@@ -168,6 +174,8 @@ Improvements to Clang's diagnostics
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
+- ``-Wstring-concatenation`` now diagnoses every missing comma in an initializer list,
+  rather than stopping after the first. (#GH153745)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
@@ -199,6 +207,8 @@ Bug Fixes in This Version
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
+- Fixed a crash with incompatible pointer to integer conversions in designated
+  initializers involving string literals. (#GH154046)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -320,6 +330,7 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
 
 libclang
 --------
