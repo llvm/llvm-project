@@ -15729,7 +15729,7 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f16 || !Subtarget->has16BitInsts())
+  if ((VT != MVT::f16 && VT != MVT::bf16) || !Subtarget->has16BitInsts())
     return SDValue();
 
   SDValue LHS = N->getOperand(0);
@@ -16894,6 +16894,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
+    // Check if we cannot determine the bit size of the given value type.  This
+    // can happen, for example, in this situation where we have an empty struct
+    // (size 0): `call void asm "", "v"({} poison)`-
+    if (VT == MVT::Other)
+      return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     const unsigned BitWidth = VT.getSizeInBits();
     switch (Constraint[0]) {
     default:
@@ -17788,23 +17793,9 @@ atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
 
 /// Return if a flat address space atomicrmw can access private memory.
 static bool flatInstrMayAccessPrivate(const Instruction *I) {
-  const MDNode *NoaliasAddrSpaceMD =
-      I->getMetadata(LLVMContext::MD_noalias_addrspace);
-  if (!NoaliasAddrSpaceMD)
-    return true;
-
-  for (unsigned I = 0, E = NoaliasAddrSpaceMD->getNumOperands() / 2; I != E;
-       ++I) {
-    auto *Low = mdconst::extract<ConstantInt>(
-        NoaliasAddrSpaceMD->getOperand(2 * I + 0));
-    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS)) {
-      auto *High = mdconst::extract<ConstantInt>(
-          NoaliasAddrSpaceMD->getOperand(2 * I + 1));
-      return High->getValue().ule(AMDGPUAS::PRIVATE_ADDRESS);
-    }
-  }
-
-  return true;
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_noalias_addrspace);
+  return !MD ||
+         !AMDGPU::hasValueInRangeLikeMetadata(*MD, AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 TargetLowering::AtomicExpansionKind

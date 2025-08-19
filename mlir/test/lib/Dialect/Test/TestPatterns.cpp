@@ -1177,8 +1177,8 @@ struct TestNonRootReplacement : public RewritePattern {
     auto illegalOp = ILLegalOpF::create(rewriter, op->getLoc(), resultType);
     auto legalOp = LegalOpB::create(rewriter, op->getLoc(), resultType);
 
-    rewriter.replaceOp(illegalOp, legalOp);
     rewriter.replaceOp(op, illegalOp);
+    rewriter.replaceOp(illegalOp, legalOp);
     return success();
   }
 };
@@ -1362,6 +1362,7 @@ public:
     // Helper function that replaces the given op with a new op of the given
     // name and doubles each result (1 -> 2 replacement of each result).
     auto replaceWithDoubleResults = [&](Operation *op, StringRef name) {
+      rewriter.setInsertionPointAfter(op);
       SmallVector<Type> types;
       for (Type t : op->getResultTypes()) {
         types.push_back(t);
@@ -1381,6 +1382,23 @@ public:
     Operation *repl1 = replaceWithDoubleResults(op, "test.step_1");
     // Now replace test.step_1 with test.legal_op.
     replaceWithDoubleResults(repl1, "test.legal_op");
+    return success();
+  }
+};
+
+/// Pattern that erases 'test.type_consumers' iff the input operand is the
+/// result of a 1:1 type conversion.
+/// Used to test correct skipping of 1:1 patterns in the 1:N case.
+class TestTypeConsumerOpPattern
+    : public OpConversionPattern<TestTypeConsumerOp> {
+public:
+  TestTypeConsumerOpPattern(MLIRContext *ctx, const TypeConverter &converter)
+      : OpConversionPattern<TestTypeConsumerOp>(converter, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(TestTypeConsumerOp op, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -1496,8 +1514,8 @@ struct TestLegalizePatternDriver
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace, TestReplaceWithValidConsumer>(
-        &getContext(), converter);
+                 TestBlockArgReplace, TestReplaceWithValidConsumer,
+                 TestTypeConsumerOpPattern>(&getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1556,14 +1574,19 @@ struct TestLegalizePatternDriver
     target.addDynamicallyLegalOp<ConvertBlockArgsOp>(
         [](ConvertBlockArgsOp op) { return op.getIsLegal(); });
 
+    // Set up configuration.
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
+    config.foldingMode = foldingMode;
+    config.buildMaterializations = buildMaterializations;
+    config.attachDebugMaterializationKind = attachDebugMaterializationKind;
+    DumpNotifications dumpNotifications;
+    config.listener = &dumpNotifications;
+
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      ConversionConfig config;
-      DumpNotifications dumpNotifications;
-      config.listener = &dumpNotifications;
       config.unlegalizedOps = &unlegalizedOps;
-      config.foldingMode = foldingMode;
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
@@ -1581,10 +1604,6 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
-      ConversionConfig config;
-      DumpNotifications dumpNotifications;
-      config.foldingMode = foldingMode;
-      config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
                                      std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyFullConversion failed";
@@ -1597,8 +1616,6 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
-    ConversionConfig config;
-    config.foldingMode = foldingMode;
     config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
                                        std::move(patterns), config)))
@@ -1634,6 +1651,19 @@ struct TestLegalizePatternDriver
                                   "after-patterns",
                                   "Only attempt to fold not legal operations "
                                   "after applying patterns"))};
+  Option<bool> allowPatternRollback{*this, "allow-pattern-rollback",
+                                    llvm::cl::desc("Allow pattern rollback"),
+                                    llvm::cl::init(true)};
+  Option<bool> attachDebugMaterializationKind{
+      *this, "attach-debug-materialization-kind",
+      llvm::cl::desc(
+          "Attach materialization kind to unrealized_conversion_cast ops"),
+      llvm::cl::init(false)};
+  Option<bool> buildMaterializations{
+      *this, "build-materializations",
+      llvm::cl::desc(
+          "If set to 'false', leave unrealized_conversion_cast ops in place"),
+      llvm::cl::init(true)};
 };
 } // namespace
 

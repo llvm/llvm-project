@@ -24,7 +24,7 @@ let SchedModel = Andes45Model in {
 
 //===----------------------------------------------------------------------===//
 // Andes 45 series CPU
-//   - 2 Interger Arithmetic and Logical Units (ALU)
+//   - 2 Integer Arithmetic and Logical Units (ALU)
 //   - Multiply / Divide Unit (MDU)
 //   - Load Store Unit (LSU)
 //   - Control and Status Register Unit (CSR)

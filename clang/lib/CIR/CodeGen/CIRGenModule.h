@@ -102,6 +102,7 @@ public:
   clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+  clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
@@ -119,6 +120,9 @@ public:
   /// -------
 
   mlir::Operation *lastGlobalOp = nullptr;
+
+  /// Tell the consumer that this variable has been instantiated.
+  void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
 

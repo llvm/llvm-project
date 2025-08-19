@@ -126,6 +126,8 @@ public:
   void Leave(const parser::OpenMPAllocatorsConstruct &);
   void Enter(const parser::OpenMPRequiresConstruct &);
   void Leave(const parser::OpenMPRequiresConstruct &);
+  void Enter(const parser::OpenMPGroupprivate &);
+  void Leave(const parser::OpenMPGroupprivate &);
   void Enter(const parser::OpenMPThreadprivate &);
   void Leave(const parser::OpenMPThreadprivate &);
 
@@ -222,8 +224,9 @@ private:
       const parser::OmpObject &obj, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
-  void CheckThreadprivateOrDeclareTargetVar(
-      const parser::OmpObjectList &objList);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
@@ -267,8 +270,10 @@ private:
       const evaluate::Assignment &read, parser::CharBlock source);
   void CheckAtomicWriteAssignment(
       const evaluate::Assignment &write, parser::CharBlock source);
-  void CheckAtomicUpdateAssignment(
+  std::optional<evaluate::Assignment> CheckAtomicUpdateAssignment(
       const evaluate::Assignment &update, parser::CharBlock source);
+  std::pair<bool, bool> CheckAtomicUpdateAssignmentRhs(const SomeExpr &atom,
+      const SomeExpr &rhs, parser::CharBlock source, bool suppressDiagnostics);
   void CheckAtomicConditionalUpdateAssignment(const SomeExpr &cond,
       parser::CharBlock condSource, const evaluate::Assignment &assign,
       parser::CharBlock assignSource);
