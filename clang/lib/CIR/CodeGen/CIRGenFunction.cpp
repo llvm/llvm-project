@@ -1080,4 +1080,10 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
   } while (type->isVariablyModifiedType());
 }
 
+Address CIRGenFunction::emitVAListRef(const Expr *e) {
+  if (getContext().getBuiltinVaListType()->isArrayType())
+    return emitPointerWithAlignment(e);
+  return emitLValue(e).getAddress();
+}
+
 } // namespace clang::CIRGen
