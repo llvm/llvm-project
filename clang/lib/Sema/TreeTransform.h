@@ -5417,6 +5417,7 @@ QualType TreeTransform<Derived>::TransformTypeInObjectScope(
   case TypeLoc::Typedef:
   case TypeLoc::TemplateSpecialization:
   case TypeLoc::SubstTemplateTypeParm:
+  case TypeLoc::SubstTemplateTypeParmPack:
   case TypeLoc::PackIndexing:
   case TypeLoc::Enum:
   case TypeLoc::Record:
