@@ -52,8 +52,7 @@ struct InstantiationView {
   std::unique_ptr<SourceCoverageView> View;
 
   InstantiationView(StringRef FunctionName, unsigned Line,
-                    std::unique_ptr<SourceCoverageView> View)
-      : FunctionName(FunctionName), Line(Line), View(std::move(View)) {}
+                    std::unique_ptr<SourceCoverageView> View);
 
   friend bool operator<(const InstantiationView &LHS,
                         const InstantiationView &RHS) {

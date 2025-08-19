@@ -34,6 +34,10 @@ ExpansionView& ExpansionView::operator=(ExpansionView &&RHS) {
   return *this;
 }
 
+InstantiationView::InstantiationView(StringRef FunctionName, unsigned Line,
+                  std::unique_ptr<SourceCoverageView> View)
+    : FunctionName(FunctionName), Line(Line), View(std::move(View)) {}
+
 void CoveragePrinter::StreamDestructor::operator()(raw_ostream *OS) const {
   if (OS == &outs())
     return;
