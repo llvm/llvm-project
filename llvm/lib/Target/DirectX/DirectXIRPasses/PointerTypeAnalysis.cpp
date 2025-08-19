@@ -50,6 +50,11 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
   }
 
   for (const auto *User : V->users()) {
+    // This assert is here because there have been ConstantExpr GEPs with no
+    // users causing the pointer type analysis to misclassify the PointeeTy.
+    [[maybe_unused]] const Constant *C = dyn_cast<Constant>(User);
+    assert((!C || !C->use_empty()) && "A Constant should not have no uses");
+
     Type *NewPointeeTy = nullptr;
     if (const auto *Inst = dyn_cast<LoadInst>(User)) {
       NewPointeeTy = Inst->getType();

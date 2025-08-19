@@ -153,6 +153,8 @@ bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
     NewLoad->setAlignment(LI.getAlign());
     LI.replaceAllUsesWith(NewLoad);
     LI.eraseFromParent();
+    if (CE->use_empty())
+      CE->destroyConstant();
     visitGetElementPtrInst(*OldGEP);
     return true;
   }
@@ -173,6 +175,8 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
     NewStore->setAlignment(SI.getAlign());
     SI.replaceAllUsesWith(NewStore);
     SI.eraseFromParent();
+    if (CE->use_empty())
+      CE->destroyConstant();
     visitGetElementPtrInst(*OldGEP);
     return true;
   }
@@ -343,7 +347,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
 
   GOp->replaceAllUsesWith(NewGEP);
 
-  if (auto *CE = dyn_cast<ConstantExpr>(GOp))
+  if (auto *CE = dyn_cast<ConstantExpr>(GOp); CE && CE->use_empty())
     CE->destroyConstant();
   else if (auto *OldGEPI = dyn_cast<GetElementPtrInst>(GOp))
     OldGEPI->eraseFromParent();
