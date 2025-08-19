@@ -25,7 +25,7 @@ define ptx_device float @t1_f32(float %x, float %y, float %z) {
 define ptx_device float @t2_f32(float %x, float %y, float %z, float %w) {
 ; CHECK-LABEL: t2_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t2_f32_param_0];
@@ -72,7 +72,7 @@ define ptx_device double @t1_f64(double %x, double %y, double %z) {
 define ptx_device double @t2_f64(double %x, double %y, double %z, double %w) {
 ; CHECK-LABEL: t2_f64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [t2_f64_param_0];
