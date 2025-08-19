@@ -489,24 +489,21 @@ define i32 @or_pmovmskb_pmovmskb(<16 x i8> %a0, <8 x i16> %a1) {
   ret i32 %7
 }
 
-; TODO: FREEZE(MOVMSK(X)) -> MOVMSK(FREEZE(X))
+; FREEZE(MOVMSK(X)) -> MOVMSK(FREEZE(X))
 define i32 @movmskps_freeze(<4 x i32> %a0) {
 ; SSE-LABEL: movmskps_freeze:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    andl $15, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: movmskps_freeze:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    andl $15, %eax
 ; AVX-NEXT:    retq
 ;
 ; ADL-LABEL: movmskps_freeze:
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vmovmskps %xmm0, %eax
-; ADL-NEXT:    andl $15, %eax
 ; ADL-NEXT:    retq
   %1 = icmp slt <4 x i32> %a0, zeroinitializer
   %2 = sext <4 x i1> %1 to <4 x i32>
