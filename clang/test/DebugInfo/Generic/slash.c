@@ -2,5 +2,5 @@
 // RUN: %clang -target x86_64-linux-gnu  -ffile-reproducible -emit-llvm -S -g %s -o - | FileCheck --check-prefix=LINUX %s
 int main() { return 0; }
 
-// WIN:   !DIFile(filename: "{{.*}}\\debug-info-slash.c"
-// LINUX: !DIFile(filename: "{{.*}}/debug-info-slash.c"
+// WIN:   !DIFile(filename: "{{.*}}\\slash.c"
+// LINUX: !DIFile(filename: "{{.*}}/slash.c"
