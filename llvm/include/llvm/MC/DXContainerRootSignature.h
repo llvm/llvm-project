@@ -11,6 +11,7 @@
 
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Compiler.h"
+#include <cstdint>
 #include <limits>
 
 namespace llvm {

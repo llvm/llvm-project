@@ -21,34 +21,34 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !9 = !{ !"UAV", i32 5, i32 1, i32 10, i32 5, i32 2 }
 
 ;CHECK-LABEL: Definition for 'main':
-;CHECK-NEXT: Flags: 0x000001
-;CHECK-NEXT: Version: 2
-;CHECK-NEXT: RootParametersOffset: 24
-;CHECK-NEXT: NumParameters: 3
-;CHECK-NEXT: - Parameter Type: Constants32Bit
-;CHECK-NEXT:   Shader Visibility: All
-;CHECK-NEXT:   Register Space: 2
-;CHECK-NEXT:   Shader Register: 1
-;CHECK-NEXT:   Num 32 Bit Values: 3
-;CHECK-NEXT: - Parameter Type: SRV
-;CHECK-NEXT:   Shader Visibility: Vertex
-;CHECK-NEXT:   Register Space: 5
-;CHECK-NEXT:   Shader Register: 4
-;CHECK-NEXT:   Flags: 4
-;CHECK-NEXT: - Parameter Type: DescriptorTable
-;CHECK-NEXT:   Shader Visibility: All
-;CHECK-NEXT:   NumRanges: 2
-;CHECK-NEXT:   - Range Type: 0
-;CHECK-NEXT:     Register Space: 0
-;CHECK-NEXT:     Base Shader Register: 1
-;CHECK-NEXT:     Num Descriptors: 1
-;CHECK-NEXT:     Offset In Descriptors From Table Start: 4294967295
-;CHECK-NEXT:     Flags: 4
-;CHECK-NEXT:   - Range Type: 1
-;CHECK-NEXT:     Register Space: 10
-;CHECK-NEXT:     Base Shader Register: 1
-;CHECK-NEXT:     Num Descriptors: 5
-;CHECK-NEXT:     Offset In Descriptors From Table Start: 5
-;CHECK-NEXT:     Flags: 2
-;CHECK-NEXT: NumStaticSamplers: 0
-;CHECK-NEXT: StaticSamplersOffset: 0
+;CHECK-NEXT:  Flags: 0x000001
+;CHECK-NEXT:  Version: 2
+;CHECK-NEXT:  RootParametersOffset: 24
+;CHECK-NEXT:  NumParameters: 3
+;CHECK-NEXT:  - Parameter Type: Constants32Bit
+;CHECK-NEXT:    Shader Visibility: All
+;CHECK-NEXT:    Register Space: 2
+;CHECK-NEXT:    Shader Register: 1
+;CHECK-NEXT:    Num 32 Bit Values: 3
+;CHECK-NEXT:  - Parameter Type: SRV
+;CHECK-NEXT:    Shader Visibility: Vertex
+;CHECK-NEXT:    Register Space: 5
+;CHECK-NEXT:    Shader Register: 4
+;CHECK-NEXT:    Flags: 4
+;CHECK-NEXT:  - Parameter Type: DescriptorTable
+;CHECK-NEXT:    Shader Visibility: All
+;CHECK-NEXT:    NumRanges: 2
+;CHECK-NEXT:    - Range Type: 0
+;CHECK-NEXT:      Register Space: 0
+;CHECK-NEXT:      Base Shader Register: 1
+;CHECK-NEXT:      Num Descriptors: 1
+;CHECK-NEXT:      Offset In Descriptors From Table Start: 4294967295
+;CHECK-NEXT:      Flags: 4
+;CHECK-NEXT:    - Range Type: 1
+;CHECK-NEXT:      Register Space: 10
+;CHECK-NEXT:      Base Shader Register: 1
+;CHECK-NEXT:      Num Descriptors: 5
+;CHECK-NEXT:      Offset In Descriptors From Table Start: 5
+;CHECK-NEXT:      Flags: 2
+;CHECK-NEXT:  NumStaticSamplers: 0
+;CHECK-NEXT:  StaticSamplersOffset: 0

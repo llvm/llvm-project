@@ -57,7 +57,7 @@ extractShaderVisibility(MDNode *Node, unsigned int OpId) {
     if (!dxbc::isValidShaderVisibility(*Val))
       return make_error<RootSignatureValidationError<uint32_t>>(
           "ShaderVisibility", *Val);
-    return static_cast<dxbc::ShaderVisibility>(*Val);
+    return dxbc::ShaderVisibility(*Val);
   }
   return make_error<InvalidRSMetadataValue>("ShaderVisibility");
 }
@@ -258,8 +258,6 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   else
     return make_error<InvalidRSMetadataValue>("Num32BitValues");
 
-  // The parameter offset doesn't matter here - we recalculate it during
-  // serialization  Header.ParameterOffset = 0;
   RSD.ParametersContainer.addParameter(dxbc::RootParameterType::Constants32Bit,
                                        *VisibilityOrErr, Constants);
 
