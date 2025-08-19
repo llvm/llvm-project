@@ -199,7 +199,6 @@ namespace std {
 #  include <__compare/three_way_comparable.h>
 #  include <__concepts/invocable.h>
 #  include <__config>
-#  include <__cstddef/ptrdiff_t.h>
 #  include <__exception/exception.h>
 #  include <__format/range_format.h>
 #  include <__functional/hash.h>
@@ -207,6 +206,7 @@ namespace std {
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
+#  include <__iterator/upper_bounded_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
@@ -225,7 +225,6 @@ namespace std {
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_core_convertible.h>
 #  include <__type_traits/is_destructible.h>
-#  include <__type_traits/is_function.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_object.h>
@@ -238,7 +237,6 @@ namespace std {
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/is_trivially_relocatable.h>
-#  include <__type_traits/is_unbounded_array.h>
 #  include <__type_traits/negation.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/remove_cv.h>
@@ -622,11 +620,11 @@ public:
 
 #    if _LIBCPP_STD_VER >= 26
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-  using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
-  using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
+  using iterator       = __upper_bounded_iterator<__bounded_iter<__wrap_iter<__pointer>>, optional, 1>;
+  using const_iterator = __upper_bounded_iterator<__bounded_iter<__wrap_iter<__const_pointer>>, optional, 1>;
 #      else
-  using iterator       = __wrap_iter<__pointer>;
-  using const_iterator = __wrap_iter<__const_pointer>;
+  using iterator       = __upper_bounded_iterator<__wrap_iter<__pointer>, optional, 1>;
+  using const_iterator = __upper_bounded_iterator<__wrap_iter<__const_pointer>, optional, 1>;
 #      endif
 #    endif
   using __trivially_relocatable _LIBCPP_NODEBUG =
@@ -841,7 +839,7 @@ public:
         std::__wrap_iter<__pointer>(std::addressof(this->__get())),
         std::__wrap_iter<__pointer>(std::addressof(this->__get()) + (this->has_value() ? 1 : 0)));
 #      else
-    return iterator(std::addressof(this->__get()));
+    return iterator(__wrap_iter<__pointer>(std::addressof(this->__get())));
 #      endif
   }
 
@@ -852,7 +850,7 @@ public:
         std::__wrap_iter<__const_pointer>(std::addressof(this->__get())),
         std::__wrap_iter<__const_pointer>(std::addressof(this->__get()) + (this->has_value() ? 1 : 0)));
 #      else
-    return const_iterator(std::addressof(this->__get()));
+    return const_iterator(__wrap_iter<__const_pointer>(std::addressof(this->__get())));
 #      endif
   }
 
