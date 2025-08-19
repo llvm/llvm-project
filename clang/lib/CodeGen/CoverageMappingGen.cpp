@@ -2604,6 +2604,15 @@ void CoverageMappingModuleGen::emit() {
   };
   auto CovDataHeaderTy =
       llvm::StructType::get(Ctx, ArrayRef(CovDataHeaderTypes));
+
+  // By default, clang instruments the code for "statement" and "branch"
+  // coverage, and can instrument for MCDC when `-fcoverage-mcdc` is passed.
+  uint32_t CovInstrLevels = CoverageCapabilities::CovInstrLevel::Statement |
+                            CoverageCapabilities::CovInstrLevel::Branch;
+  if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+      CGM.getCodeGenOpts().MCDCCoverage)
+    CovInstrLevels |= CoverageCapabilities::CovInstrLevel::MCDC;
+
   llvm::Constant *CovDataHeaderVals[] = {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
