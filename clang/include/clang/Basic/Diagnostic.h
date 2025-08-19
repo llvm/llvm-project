@@ -1233,6 +1233,7 @@ class DiagnosticBuilder : public StreamingDiagnostic {
   friend class DiagnosticsEngine;
   friend class PartialDiagnostic;
   friend class Diagnostic;
+  friend class RuntimeTrapDiagnosticBuilder;
 
   mutable DiagnosticsEngine *DiagObj = nullptr;
 
@@ -1533,6 +1534,72 @@ const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
   return Report(SourceLocation(), DiagID);
 }
+
+//===----------------------------------------------------------------------===//
+// RuntimeTrapDiagnosticBuilder
+//===----------------------------------------------------------------------===//
+/// Class to make it convenient to construct "trap reasons" to attach to trap
+/// instructions.
+///
+/// Although this class inherits from `DiagnosticBuilder` it has very different
+/// semantics.
+///
+/// * This class should only be used with trap diagnostics (declared in
+/// `DiagnosticTrapKinds.td`).
+/// * The `RuntimeTrapDiagnosticBuilder` does not emit diagnostics to the normal
+///   diagnostics consumers on destruction like normal Diagnostic builders.
+///   Instead it does nothing on destruction.
+/// * Users of this class that want to retrieve the "trap reason" should call
+///   call the `getMessage()` and `getCategory()` and use those results before
+///   the builder is destroyed.
+/// * Unlike the `DiagnosticBuilder` the `RuntimeDiagnosticBuilder` should never
+/// be created as a temporary (i.e. rvalue) and instead should be stored. This
+/// is because the class is only useful if `getMessage()` and `getCategory()`
+/// can be called.
+///
+/// Given that this class inherits from `DiagnosticBuilder` it inherits all of
+/// its abilities to format diagnostic messages and consume various types in
+/// class (e.g. Type, Exprs, etc.). This makes it particularly suited to
+/// printing types and expressions from the AST while codegen-ing runtime
+/// checks.
+///
+///
+/// Example use via the `CodeGenModule::RuntimeDiag` helper.
+///
+/// \code
+/// {
+///   auto* RTDB = CGM.RuntimeDiag(diag::trap_diagnostic);
+///   *RTDB << 0 << SomeExpr << SomeType;
+///   consume(RTDB->getCategory(), RTDB->getMessage());
+/// }
+/// \endcode
+///
+///
+class RuntimeTrapDiagnosticBuilder : public DiagnosticBuilder {
+public:
+  RuntimeTrapDiagnosticBuilder(DiagnosticsEngine *DiagObj, unsigned DiagID);
+  ~RuntimeTrapDiagnosticBuilder();
+
+  // Prevent accidentally copying or assigning
+  RuntimeTrapDiagnosticBuilder &
+  operator=(const RuntimeTrapDiagnosticBuilder &) = delete;
+  RuntimeTrapDiagnosticBuilder &
+  operator=(const RuntimeTrapDiagnosticBuilder &&) = delete;
+  RuntimeTrapDiagnosticBuilder(const RuntimeTrapDiagnosticBuilder &) = delete;
+  RuntimeTrapDiagnosticBuilder(const RuntimeTrapDiagnosticBuilder &&) = delete;
+
+  /// \return Format the trap message and return it. Note the lifetime of
+  /// the underlying storage pointed to by the returned StringRef is the same
+  /// as the lifetime of this class. This means it is likely unsafe to store
+  /// the returned StringRef.
+  StringRef getMessage();
+  /// \return Return the trap category. These are the `CategoryName` property
+  /// of `trap` diagnostics declared in `DiagnosticTrapKinds.td`.
+  StringRef getCategory();
+
+private:
+  llvm::SmallVector<char, 64> MessageStorage;
+};
 
 //===----------------------------------------------------------------------===//
 // Diagnostic

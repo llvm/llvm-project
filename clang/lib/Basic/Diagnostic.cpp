@@ -664,6 +664,8 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
 
 void DiagnosticsEngine::Report(Level DiagLevel, const Diagnostic &Info) {
   assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
+  assert(!getDiagnosticIDs()->isTrapDiag(Info.getID()) &&
+         "Trap diagnostics should not be consumed by the DiagnosticsEngine");
   Client->HandleDiagnostic(DiagLevel, Info);
   if (Client->IncludeInDiagnosticCounts()) {
     if (DiagLevel == Warning)
@@ -791,6 +793,35 @@ DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
   IsActive = D.IsActive;
   IsForceEmit = D.IsForceEmit;
   D.Clear();
+}
+
+RuntimeTrapDiagnosticBuilder::RuntimeTrapDiagnosticBuilder(
+    DiagnosticsEngine *DiagObj, unsigned DiagID)
+    : DiagnosticBuilder(DiagObj, SourceLocation(), DiagID) {
+  assert(DiagObj->getDiagnosticIDs()->isTrapDiag(DiagID));
+}
+
+RuntimeTrapDiagnosticBuilder::~RuntimeTrapDiagnosticBuilder() {
+  // Make sure that when `DiagnosticBuilder::~DiagnosticBuilder()`
+  // calls `Emit()` that it does nothing.
+  Clear();
+}
+
+StringRef RuntimeTrapDiagnosticBuilder::getMessage() {
+  if (MessageStorage.size() == 0) {
+    // Render the Diagnostic
+    Diagnostic Info(DiagObj, *this);
+    Info.FormatDiagnostic(MessageStorage);
+  }
+  return StringRef(MessageStorage.data(), MessageStorage.size());
+}
+
+StringRef RuntimeTrapDiagnosticBuilder::getCategory() {
+  auto CategoryID =
+      DiagObj->getDiagnosticIDs()->getCategoryNumberForDiag(DiagID);
+  if (CategoryID == 0)
+    return "";
+  return DiagObj->getDiagnosticIDs()->getCategoryNameFromID(CategoryID);
 }
 
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO,

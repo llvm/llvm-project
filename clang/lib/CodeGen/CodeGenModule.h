@@ -23,6 +23,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticTrap.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
@@ -1822,6 +1823,12 @@ public:
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;
+  }
+
+  /// Helper function to construct a RuntimeTrapDiagnosticBuilder
+  [[nodiscard]] std::unique_ptr<RuntimeTrapDiagnosticBuilder>
+  RuntimeDiag(unsigned DiagID) {
+    return std::make_unique<RuntimeTrapDiagnosticBuilder>(&getDiags(), DiagID);
   }
 
 private:

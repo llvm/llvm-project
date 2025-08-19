@@ -33,6 +33,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3782,7 +3783,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
-    ArrayRef<llvm::Value *> DynamicArgs) {
+    ArrayRef<llvm::Value *> DynamicArgs,
+    std::unique_ptr<RuntimeTrapDiagnosticBuilder> RTDB) {
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
@@ -3821,7 +3823,9 @@ void CodeGenFunction::EmitCheck(
   }
 
   if (TrapCond)
-    EmitTrapCheck(TrapCond, CheckHandler, NoMerge);
+    EmitTrapCheck(TrapCond, CheckHandler, NoMerge,
+                  RTDB ? RTDB->getMessage() : "",
+                  RTDB ? RTDB->getCategory() : "");
   if (!FatalCond && !RecoverableCond)
     return;
 
@@ -4133,7 +4137,8 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge) {
+                                    bool NoMerge, StringRef Message,
+                                    StringRef Category) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4144,12 +4149,15 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+  llvm::StringRef TrapMessage =
+      Message.size() > 0 ? Message : GetUBSanTrapForHandler(CheckHandlerID);
+  llvm::StringRef TrapCategory =
+      Category.size() > 0 ? Category : "Undefined Behavior Sanitizer";
 
   if (getDebugInfo() && !TrapMessage.empty() &&
       CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+        TrapLocation, TrapCategory, TrapMessage);
   }
 
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||

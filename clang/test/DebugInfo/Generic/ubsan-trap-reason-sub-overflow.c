@@ -1,9 +1,20 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -O0 -debug-info-kind=standalone -dwarf-version=5 \
-// RUN: -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -emit-llvm %s -o - | FileCheck %s
+// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow \
+// RUN: -fsanitize-trap=signed-integer-overflow,unsigned-integer-overflow \
+// RUN: -emit-llvm %s -o - | FileCheck %s
 
-int sub_overflow(int a, int b) { return a - b; }
+int ssub_overflow(int a, int b) { return a - b; }
+
+unsigned sub_overflow(unsigned c, unsigned d) { return c - d; }
+
+// CHECK-LABEL: @ssub_overflow
+// CHECK: call void @llvm.ubsantrap(i8 21) {{.*}}!dbg [[SLOC:![0-9]+]]
 
 // CHECK-LABEL: @sub_overflow
 // CHECK: call void @llvm.ubsantrap(i8 21) {{.*}}!dbg [[LOC:![0-9]+]]
+
+// CHECK: [[SLOC]] = !DILocation(line: 0, scope: [[SMSG:![0-9]+]], {{.+}})
+// CHECK: [[SMSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$signed integer subtraction overflow in 'a - b'"
+
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Integer subtraction overflowed"
+// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$unsigned integer subtraction overflow in 'c - d'"
