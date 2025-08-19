@@ -417,7 +417,7 @@ class StdDequePrinter(object):
     def __init__(self, val):
         self.val = val
         self.size = int(val["__size_"])
-        self.start_ptr = self.val["__map_"]["__data_"]["__begin_"]
+        self.start_ptr = self.val["__map_"]["__begin_"]
         self.first_block_start_index = int(self.val["__start_"])
         self.node_type = self.start_ptr.type
         self.block_size = self._calculate_block_size(val.type.template_argument(0))
