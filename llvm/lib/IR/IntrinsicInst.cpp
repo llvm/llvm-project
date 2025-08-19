@@ -613,8 +613,12 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   if (EC.isScalable()) {
     // Compare vscale patterns
     uint64_t VScaleFactor;
-    if (match(VLParam, m_Mul(m_VScale(), m_ConstantInt(VScaleFactor))))
+    if (match(VLParam,
+              m_NUWTruncOrSelf(m_Mul(m_VScale(), m_ConstantInt(VScaleFactor)))))
       return VScaleFactor >= EC.getKnownMinValue();
+    if (match(VLParam,
+              m_NUWTruncOrSelf(m_Shl(m_VScale(), m_ConstantInt(VScaleFactor)))))
+      return 1 << VScaleFactor >= EC.getKnownMinValue();
     return (EC.getKnownMinValue() == 1) && match(VLParam, m_VScale());
   }
 

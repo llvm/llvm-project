@@ -2193,6 +2193,13 @@ m_TruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_Trunc(Op), Op);
 }
 
+template <typename OpTy>
+inline match_combine_or<NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>,
+                        OpTy>
+m_NUWTruncOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_NUWTrunc(Op), Op);
+}
+
 /// Matches SExt.
 template <typename OpTy>
 inline CastInst_match<OpTy, SExtInst> m_SExt(const OpTy &Op) {
