@@ -114,14 +114,8 @@ struct NonSimpleNonCommonView : std::ranges::view_base {
   constexpr explicit NonSimpleNonCommonView(int* b, int* e) : begin_(b), end_(e) {}
   constexpr auto begin() const { return static_cast<const int*>(begin_); }
   constexpr auto end() const { return sentinel_wrapper<const int*>(end_); }
-  constexpr int* begin()
-  {
-    return begin_;
-  }
-  constexpr auto end()
-  {
-    return sentinel_wrapper<int*>(end_);
-  }
+  constexpr int* begin() { return begin_; }
+  constexpr auto end() { return sentinel_wrapper<int*>(end_); }
 };
 
 static_assert(!HasOnlyNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
