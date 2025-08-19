@@ -427,29 +427,16 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   // Check if both operands are the same sign-extension of a single value.
   const Value *A = nullptr;
   if (match(Op0, m_SExt(m_Value(A))) && match(Op1, m_SExt(m_Specific(A)))) {
-    // Product of (sext x) * (sext x) is always non-negative.
-    // Compute the maximum possible square and fold all out-of-range bits.
-    Type *FromTy = A->getType();
-    Type *ToTy = Op0->getType();
-    if (FromTy->isIntegerTy() && ToTy->isIntegerTy() &&
-        FromTy->getScalarSizeInBits() < ToTy->getScalarSizeInBits()) {
-      unsigned FromBits = FromTy->getScalarSizeInBits();
-      unsigned ToBits = ToTy->getScalarSizeInBits();
-      // For signed, the maximum absolute value is max(|min|, |max|)
-      APInt minVal = APInt::getSignedMinValue(FromBits);
-      APInt maxVal = APInt::getSignedMaxValue(FromBits);
-      APInt absMin = minVal.abs();
-      APInt absMax = maxVal.abs();
-      APInt maxAbs = absMin.ugt(absMax) ? absMin : absMax;
-      APInt maxSquare = maxAbs.zext(ToBits);
-      maxSquare = maxSquare * maxSquare;
-      // All bits above the highest set bit in maxSquare are known zero.
-      unsigned MaxBit = maxSquare.isZero() ? 0 : maxSquare.logBase2();
-      if (MaxBit + 1 < ToBits) {
-        APInt KnownZeroMask =
-            APInt::getHighBitsSet(ToBits, ToBits - (MaxBit + 1));
-        Known.Zero |= KnownZeroMask;
-      }
+    unsigned SignBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
+    unsigned TyBits = Op0->getType()->getScalarSizeInBits();
+    // The output of the Mul can be at most twice the valid bits
+    unsigned OutValidBits = 2 * (TyBits - SignBits + 1);
+    unsigned OutSignBits =
+        OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
+
+    if (OutSignBits > 1) {
+      APInt KnownZeroMask = APInt::getHighBitsSet(TyBits, OutSignBits);
+      Known.Zero |= KnownZeroMask;
     }
   }
 }
