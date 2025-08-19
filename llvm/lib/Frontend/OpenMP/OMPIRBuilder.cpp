@@ -5930,7 +5930,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
     createIfVersion(CanonicalLoop, IfCond, VMap, LIA, LI, L, "simd");
   }
 
-  SmallSet<BasicBlock *, 8> Reachable;
+  SmallPtrSet<BasicBlock *, 8> Reachable;
 
   // Get the basic blocks from the loop in which memref instructions
   // can be found.
@@ -7247,7 +7247,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
           BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
       if (!AfterIP)
         return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
+      restoreIPandDebugLoc(Builder, *AfterIP);
 
       if (IfCond)
         return emitIfClause(IfCond, EndThenGen, EndElseGen, AllocaIP);

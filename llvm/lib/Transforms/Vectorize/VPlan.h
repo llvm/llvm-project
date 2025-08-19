@@ -1021,8 +1021,9 @@ public:
     ExtractLane,
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
-    ResumeForEpilogue
-
+    ResumeForEpilogue,
+    /// Returns the value for vscale.
+    VScale,
   };
 
 private:
@@ -1170,6 +1171,7 @@ public:
     switch (VPI->getOpcode()) {
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
+    case VPInstruction::VScale:
       return true;
     default:
       return false;
@@ -1228,6 +1230,31 @@ public:
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
     return getAsRecipe()->getNumOperands();
+  }
+
+  /// Returns an interator range over the incoming values.
+  VPUser::const_operand_range incoming_values() const {
+    return make_range(getAsRecipe()->op_begin(),
+                      getAsRecipe()->op_begin() + getNumIncoming());
+  }
+
+  using const_incoming_blocks_range = iterator_range<mapped_iterator<
+      detail::index_iterator, std::function<const VPBasicBlock *(size_t)>>>;
+
+  /// Returns an iterator range over the incoming blocks.
+  const_incoming_blocks_range incoming_blocks() const {
+    std::function<const VPBasicBlock *(size_t)> GetBlock = [this](size_t Idx) {
+      return getIncomingBlock(Idx);
+    };
+    return map_range(index_range(0, getNumIncoming()), GetBlock);
+  }
+
+  /// Returns an iterator range over pairs of incoming values and corresponding
+  /// incoming blocks.
+  detail::zippy<llvm::detail::zip_first, VPUser::const_operand_range,
+                const_incoming_blocks_range>
+  incoming_values_and_blocks() const {
+    return zip_equal(incoming_values(), incoming_blocks());
   }
 
   /// Removes the incoming value for \p IncomingBlock, which must be a
@@ -2301,6 +2328,11 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Returns the number of incoming values, also number of incoming blocks.
+  /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
+  /// incoming value, its start value.
+  unsigned getNumIncoming() const override { return 2; }
+
   /// Returns the recurrence kind of the reduction.
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -3079,10 +3111,11 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
+                       VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
-                            {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L, L.getDebugLoc()),
+                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
+                            L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -3160,11 +3193,11 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr, VPValue &EVL,
+                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
-                            {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S,
-                            S.getDebugLoc()) {
+                            {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
+                            S.isReverse(), S, S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -3970,9 +4003,6 @@ public:
     Entry = VPBB;
     VPBB->setPlan(this);
   }
-
-  /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
