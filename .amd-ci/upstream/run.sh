@@ -16,7 +16,7 @@ execute_and_check()
                 echo "########################################################"
                 echo "Execution of command : $cmd - was failed"
                 echo "Please check ${WORKSPACE}/command_executed.txt file for commands executed till now"
-                rm -v ${WORKSPACE}/build_success.txt
+                rm -v "${WORKSPACE}/build_success.txt"
                 exit 1
                 echo "########################################################"
         fi
@@ -33,21 +33,27 @@ LLVM_VERSION_PATCH=$(grep -w "set(LLVM_VERSION_PATCH" "${_ver_file}" | awk -F' '
 CLANG_VERSION=$LLVM_VERSION_MAJOR.$LLVM_VERSION_MINOR.$LLVM_VERSION_PATCH
 echo "CLANG_VERSION value is - $CLANG_VERSION" > "${WORKSPACE}"/VERSION_AND_COMMIT_HASH_OF_BUILD_"${BUILD_NUMBER}".txt
 
-echo "source  aocc-essentials/build_essentials/linux/aocc_env.sh"
-source aocc-essentials/build_essentials/linux/aocc_env.sh
+if test -d aocc-essentials
+then
+  ess_dir=aocc-essentials
+else
+  ess_dir=llvm-project/aocc-essentials
+fi
 
-echo ". /proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/environment-modules-5.4.0-j6k56q3i/bin/../init/bash"
-. /proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/environment-modules-5.4.0-j6k56q3i/bin/../init/bash
-
-echo "module use --prepend /proj/csse_jenkins2/swtools/c/modulefiles"
-module use --prepend /proj/csse_jenkins2/swtools/c/modulefiles
-
-echo "module load gcc/11.4.0"
-module load gcc/11.4.0
+mod_cmd1=". ${ess_dir}/build_essentials/linux/aocc_env.sh"
+echo "${mod_cmd1}"
+${mod_cmd1}
+mod_cmd2=". /proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/environment-modules-5.4.0-j6k56q3i/init/bash"
+echo "${mod_cmd2}"
+${mod_cmd2}
+mod_cmd3="module load gcc/11.4.0"
+echo "${mod_cmd3}"
+${mod_cmd3}
 
 execute_and_check "mkdir -p ${WORKSPACE}/BUILD"
 execute_and_check "cd  ${WORKSPACE}/BUILD"
-echo "Executing cmake"
+
+set -x
 cmake \
     -G Ninja \
     -DCMAKE_BUILD_TYPE:STRING=Release \
@@ -80,11 +86,10 @@ cmake \
     -DLLVM_TARGETS_TO_BUILD:STRING="X86;AMDGPU" \
     -DFLANG_RUNTIME_F128_MATH_LIB=libquadmath
 
-echo 'cmake -G Ninja -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${JOB_NAME}-${BUILD_NUMBER}" -DCMAKE_CXX_STANDARD=17 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_LIT_ARGS=-v -DCLANG_DEFAULT_LINKER=lld -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra;flang" -DLLVM_ENABLE_RUNTIMES="openmp;flang-rt;compiler-rt" -S "${WORKSPACE}/llvm-project/llvm" -B "${WORKSPACE}/BUILD" -DPython3_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python -DCMAKE_INSTALL_MESSAGE=LAZY -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DLLVM_PARALLEL_LINK_JOBS=16 -DBUILD_SHARED_LIBS:STRING=ON -DLIBOMP_OMP_VERSION=50 -DLIBOMP_OMPT_SUPPORT=ON -DLIBOMP_USE_DEBUGGER=ON -DLIBOMP_CFLAGS="-O2" -DLIBOMP_CPPFLAGS="-O2" -DLIBOMPTARGET_OMPD_SUPPORT=ON  -DLIBOMP_OMPD_ENABLED=ON -DLIBOMP_OMPD_SUPPORT=ON -DFLANG_ENABLE_WERROR=ON -DFLANG_ENABLE_WERROR=ON -DLLVM_TARGETS_TO_BUILD:STRING="X86;AMDGPU" -DFLANG_RUNTIME_F128_MATH_LIB=libquadmath'
-
-echo "ninja -C ${WORKSPACE}/BUILD install"
 ninja -C "${WORKSPACE}"/BUILD install
-    if [ "$?" -eq 0 ]; then
+stat=$?
+set +x
+    if [ "${stat}" -eq 0 ]; then
         echo "********************************************************"
         echo "Execution of command : ninja -C ${WORKSPACE}/BUILD install - was successful" >> "${WORKSPACE}/command_executed.txt"
         echo "Execution of command : ninja -C ${WORKSPACE}/BUILD install - was successful"
@@ -102,16 +107,18 @@ ninja -C "${WORKSPACE}"/BUILD install
 execute_and_check "cd ${WORKSPACE}"
 execute_and_check "tar -cJf ${JOB_NAME}-${BUILD_NUMBER}.tar.xz ${JOB_NAME}-${BUILD_NUMBER}"
 
-echo "ninja -C ${WORKSPACE}/BUILD check-flang check-mlir"
+set -x
 ninja -C "${WORKSPACE}"/BUILD check-flang check-mlir
-    if [ "$?" -eq 0 ]; then
+stat=$?
+set +x
+    if [ "${stat}" -eq 0 ]; then
         echo "********************************************************"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang - was successful" >> "${WORKSPACE}/command_executed.txt"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang - was successful"
+        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang check-mlir - was successful" >> "${WORKSPACE}/command_executed.txt"
+        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang check-mlir - was successful"
         echo "********************************************************"
     else
         echo "########################################################"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang - was failed"
+        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang check-mlir - was failed"
         echo "Please check ${WORKSPACE}/command_executed.txt file for commands executed till now"
         rm -v "${WORKSPACE}"/build_success.txt
         exit 1
