@@ -1,36 +1,26 @@
-// RUN: %clang -target x86_64 -S -emit-llvm %s -o - | llvm-cxxfilt | FileCheck %s --check-prefix=llvm
-// RUN: %clang -target x86_64 -S %s -o - | llvm-cxxfilt | FileCheck %s --check-prefix=x64
-
-extern void f(int, int, int, long, long, long, long, long, long, long, long);
+// RUN: %clang_cc1 -emit-llvm %s -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=COMMON,NO-OPT
+// RUN: %clang_cc1 -emit-llvm %s -O3 -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=COMMON,OPT
 
 struct S {
   void *a();
 };
 
-// llvm-LABEL: define {{[^@]+}} @S::a()
-// llvm:       call   {{[^@]+}} @llvm.stackaddress.p0()
-//
-// x64-LABEL: S::a():
-// x64:       movq  %rsp, %rax
+// COMMON-LABEL: @S::a()
+// COMMON: call ptr @llvm.stackaddress.p0()
 void *S::a() {
-  void *p = __builtin_stack_address();
-  f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
-  return p;
+  return __builtin_stack_address();
 }
 
-// llvm-LABEL: define {{[^@]+}} @two()
-// llvm:       call   {{[^@]+}} @"two()::$_0::operator()() const"
-//
-// llvm-LABEL: define {{[^@]+}} @"two()::$_0::operator()() const"
-// llvm:       call   {{[^@]+}} @llvm.stackaddress.p0()
-//
-// x64-LABEL: two()::$_0::operator()() const:
-// x64:       movq  %rsp, %rax
+// COMMON-LABEL: define {{[^@]+}} @two()
 void *two() {
-  auto l = []() {
-    void *p = __builtin_stack_address();
-    f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
-    return p;
-  };
+
+  // The compiler is allowed to inline a function calling `__builtin_stack_address`.
+  //
+  // OPT-NOT: define {{[^@]+}} @"two()::$_0::operator()() const"
+  // OPT: call {{[^@]+}} @llvm.stackaddress.p0()
+  //
+  // NO-OPT-DAG: define {{[^@]+}} @"two()::$_0::operator()() const"
+  // NO-OPT-DAG: call {{[^@]+}} @"two()::$_0::operator()() const"
+  auto l = []() { return __builtin_stack_address(); };
   return l();
 }
