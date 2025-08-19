@@ -1595,7 +1595,7 @@ static LogicalResult verifyLoopRegions(Operation &op, Region &condition,
                           "'i1', but returns ")
            << exprOp.getResult().getType();
 
-  Operation &last = *std::next(condBlock.begin());
+  Operation &last = condBlock.back();
   auto condYield = dyn_cast<emitc::YieldOp>(last);
   if (!condYield)
     return op.emitOpError("expected last op in condition region to be "

@@ -260,7 +260,7 @@ struct CppEmitter {
   }
 
   /// Get expression currently being emitted.
-  Operation *getEmittedExpression() { return emittedExpression; }
+  ExpressionOp getEmittedExpression() { return emittedExpression; }
 
   /// Determine whether given value is part of the expression potentially being
   /// emitted.
@@ -324,7 +324,7 @@ private:
   unsigned int valueCount{0};
 
   /// State of the current expression being emitted.
-  Operation *emittedExpression = nullptr;
+  ExpressionOp emittedExpression;
   SmallVector<int> emittedExpressionPrecedence;
 
   void pushExpressionPrecedence(int precedence) {
@@ -1764,12 +1764,12 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
                 emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
                 emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
-                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp, emitc::GlobalOp,
-                emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
-                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
-                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
-                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
-                emitc::VariableOp, emitc::VerbatimOp, emitc::WhileOp>(
+                emitc::ForOp, emitc::FuncOp, emitc::GlobalOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
+                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
+                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
+                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
+                emitc::VerbatimOp, emitc::WhileOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
