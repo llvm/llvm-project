@@ -351,7 +351,7 @@ def CIR_ConstRecordAttr : CIR_Attr<"ConstRecord", "const_record", [
   let summary = "Represents a constant record";
   let description = [{
     Effectively supports "struct-like" constants. It's must be built from
-    an `mlir::ArrayAttr `instance where each elements is a typed attribute
+    an `mlir::ArrayAttr` instance where each element is a typed attribute
     (`mlir::TypedAttribute`).
 
     Example:
