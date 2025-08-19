@@ -652,11 +652,14 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ldexpbf16
   libc.src.math.llogbbf16
   libc.src.math.logbbf16
+  libc.src.math.modfbf16
   libc.src.math.nanbf16
   libc.src.math.nextafterbf16
   libc.src.math.nextdownbf16
   libc.src.math.nexttowardbf16
   libc.src.math.nextupbf16
+  libc.src.math.remainderbf16
+  libc.src.math.remquobf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
   libc.src.math.setpayloadbf16
