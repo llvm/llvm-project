@@ -593,51 +593,51 @@ define ptx_kernel void @foo19(ptr noalias readonly %from, ptr %to, i32 %n) {
 ; SM20-LABEL: foo19(
 ; SM20:       {
 ; SM20-NEXT:    .reg .pred %p<2>;
-; SM20-NEXT:    .reg .b32 %r<10>;
-; SM20-NEXT:    .reg .b64 %rd<8>;
+; SM20-NEXT:    .reg .b32 %r<4>;
+; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0: // %entry
-; SM20-NEXT:    ld.param.b32 %r8, [foo19_param_2];
-; SM20-NEXT:    ld.param.b64 %rd5, [foo19_param_0];
-; SM20-NEXT:    cvta.to.global.u64 %rd7, %rd5;
-; SM20-NEXT:    ld.param.b64 %rd6, [foo19_param_1];
-; SM20-NEXT:    cvta.to.global.u64 %rd2, %rd6;
-; SM20-NEXT:    mov.b32 %r9, 0f00000000;
+; SM20-NEXT:    ld.param.b32 %r2, [foo19_param_2];
+; SM20-NEXT:    ld.param.b64 %rd2, [foo19_param_0];
+; SM20-NEXT:    cvta.to.global.u64 %rd4, %rd2;
+; SM20-NEXT:    ld.param.b64 %rd3, [foo19_param_1];
+; SM20-NEXT:    cvta.to.global.u64 %rd1, %rd3;
+; SM20-NEXT:    mov.b32 %r3, 0f00000000;
 ; SM20-NEXT:  $L__BB18_1: // %loop
 ; SM20-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM20-NEXT:    ld.global.b32 %r7, [%rd7];
-; SM20-NEXT:    add.rn.f32 %r9, %r7, %r9;
-; SM20-NEXT:    add.s64 %rd7, %rd7, 4;
-; SM20-NEXT:    add.s32 %r8, %r8, -1;
-; SM20-NEXT:    setp.ne.b32 %p1, %r8, 0;
+; SM20-NEXT:    ld.global.b32 %r1, [%rd4];
+; SM20-NEXT:    add.rn.f32 %r3, %r1, %r3;
+; SM20-NEXT:    add.s64 %rd4, %rd4, 4;
+; SM20-NEXT:    add.s32 %r2, %r2, -1;
+; SM20-NEXT:    setp.ne.b32 %p1, %r2, 0;
 ; SM20-NEXT:    @%p1 bra $L__BB18_1;
 ; SM20-NEXT:  // %bb.2: // %exit
-; SM20-NEXT:    st.global.b32 [%rd2], %r9;
+; SM20-NEXT:    st.global.b32 [%rd1], %r3;
 ; SM20-NEXT:    ret;
 ;
 ; SM35-LABEL: foo19(
 ; SM35:       {
 ; SM35-NEXT:    .reg .pred %p<2>;
-; SM35-NEXT:    .reg .b32 %r<10>;
-; SM35-NEXT:    .reg .b64 %rd<8>;
+; SM35-NEXT:    .reg .b32 %r<4>;
+; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0: // %entry
-; SM35-NEXT:    ld.param.b32 %r8, [foo19_param_2];
-; SM35-NEXT:    ld.param.b64 %rd5, [foo19_param_0];
-; SM35-NEXT:    cvta.to.global.u64 %rd7, %rd5;
-; SM35-NEXT:    ld.param.b64 %rd6, [foo19_param_1];
-; SM35-NEXT:    cvta.to.global.u64 %rd2, %rd6;
-; SM35-NEXT:    mov.b32 %r9, 0f00000000;
+; SM35-NEXT:    ld.param.b32 %r2, [foo19_param_2];
+; SM35-NEXT:    ld.param.b64 %rd2, [foo19_param_0];
+; SM35-NEXT:    cvta.to.global.u64 %rd4, %rd2;
+; SM35-NEXT:    ld.param.b64 %rd3, [foo19_param_1];
+; SM35-NEXT:    cvta.to.global.u64 %rd1, %rd3;
+; SM35-NEXT:    mov.b32 %r3, 0f00000000;
 ; SM35-NEXT:  $L__BB18_1: // %loop
 ; SM35-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM35-NEXT:    ld.global.nc.b32 %r7, [%rd7];
-; SM35-NEXT:    add.rn.f32 %r9, %r7, %r9;
-; SM35-NEXT:    add.s64 %rd7, %rd7, 4;
-; SM35-NEXT:    add.s32 %r8, %r8, -1;
-; SM35-NEXT:    setp.ne.b32 %p1, %r8, 0;
+; SM35-NEXT:    ld.global.nc.b32 %r1, [%rd4];
+; SM35-NEXT:    add.rn.f32 %r3, %r1, %r3;
+; SM35-NEXT:    add.s64 %rd4, %rd4, 4;
+; SM35-NEXT:    add.s32 %r2, %r2, -1;
+; SM35-NEXT:    setp.ne.b32 %p1, %r2, 0;
 ; SM35-NEXT:    @%p1 bra $L__BB18_1;
 ; SM35-NEXT:  // %bb.2: // %exit
-; SM35-NEXT:    st.global.b32 [%rd2], %r9;
+; SM35-NEXT:    st.global.b32 [%rd1], %r3;
 ; SM35-NEXT:    ret;
 entry:
   br label %loop

@@ -21,7 +21,7 @@ target triple = "nvptx64-nvidia-cuda"
 define float @caller_md(float %a, float %b) {
 ; CHECK-LABEL: caller_md(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [caller_md_param_0];
@@ -62,7 +62,7 @@ define float @callee_md(%struct.float2 alignstack(8) %a) {
 define float @caller(float %a, float %b) {
 ; CHECK-LABEL: caller(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [caller_param_0];
