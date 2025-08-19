@@ -517,13 +517,11 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ; W32-NEXT:    .local i64
 ; W32-NEXT:  # %bb.0: # %entry
 ; W32-NEXT:    local.get 3
+; W32-NEXT:    i64.const -1
 ; W32-NEXT:    i64.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i64.eqz
-; W32-NEXT:    i64.extend_i32_u
-; W32-NEXT:    i64.const 1
-; W32-NEXT:    i64.and
-; W32-NEXT:    i64.sub
+; W32-NEXT:    i64.select
 ; W32-NEXT:    local.tee 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i64.load 0
@@ -577,13 +575,11 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ; W64-NEXT:    .local i64
 ; W64-NEXT:  # %bb.0: # %entry
 ; W64-NEXT:    local.get 3
+; W64-NEXT:    i64.const -1
 ; W64-NEXT:    i64.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i64.eqz
-; W64-NEXT:    i64.extend_i32_u
-; W64-NEXT:    i64.const 1
-; W64-NEXT:    i64.and
-; W64-NEXT:    i64.sub
+; W64-NEXT:    i64.select
 ; W64-NEXT:    local.tee 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i64.load 0

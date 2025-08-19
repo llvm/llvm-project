@@ -378,9 +378,9 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ; RV32-NEXT:    lw a5, 4(a2)
 ; RV32-NEXT:    lw a6, 0(a3)
 ; RV32-NEXT:    lw a7, 4(a3)
-; RV32-NEXT:    seqz t0, a0
-; RV32-NEXT:    addi a0, t0, -1
-; RV32-NEXT:    neg t0, t0
+; RV32-NEXT:    snez t0, a0
+; RV32-NEXT:    neg a0, t0
+; RV32-NEXT:    addi t0, t0, -1
 ; RV32-NEXT:    and a6, a0, a6
 ; RV32-NEXT:    and a1, t0, a1
 ; RV32-NEXT:    and a7, a0, a7
