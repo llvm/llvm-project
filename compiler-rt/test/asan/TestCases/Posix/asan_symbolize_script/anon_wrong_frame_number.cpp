@@ -5,7 +5,6 @@
 // UNSUPPORTED: aarch64
 // UNSUPPORTED: darwin
 // UNSUPPORTED: ios
-// XFAIL: *
 
 // RUN: %clangxx_asan -O0 -g %s -o %t
 // RUN: %env_asan_opts=symbolize=0 not %run %t DUMMY_ARG > %t.asan_report 2>&1
