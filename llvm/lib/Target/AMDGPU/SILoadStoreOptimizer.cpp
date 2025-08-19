@@ -1637,7 +1637,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
-  // For 8- or 16-bit tbuffer formats there is no 3-component encoding.
+  // For 8-bit or 16-bit tbuffer formats there is no 3-component encoding.
   // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
   // and use XYZ of XYZW to enable the merge.
   unsigned NumCombinedComponents = CI.Width + Paired.Width;
@@ -1686,7 +1686,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
-  // For 8- or 16-bit tbuffer formats there is no 3-component encoding.
+  // For 8-bit or 16-bit tbuffer formats there is no 3-component encoding.
   // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
   // and use XYZ of XYZW to enable the merge.
   unsigned NumCombinedComponents = CI.Width + Paired.Width;
