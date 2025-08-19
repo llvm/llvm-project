@@ -427,3 +427,12 @@ config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 # crashes before resizing the file.
 config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)
