@@ -1280,14 +1280,6 @@ mlir::Value genComplexPow(fir::FirOpBuilder &builder, mlir::Location loc,
                           const MathOperation &mathOp,
                           mlir::FunctionType mathLibFuncType,
                           llvm::ArrayRef<mlir::Value> args) {
-  if (auto expInt = fir::getIntIfConstant(args[1]))
-    if (*expInt >= 2 && *expInt <= 8) {
-      mlir::Value result = args[0];
-      for (int i = 1; i < *expInt; ++i)
-        result = builder.create<mlir::complex::MulOp>(loc, result, args[0]);
-      return builder.createConvert(loc, mathLibFuncType.getResult(0), result);
-    }
-
   bool canUseApprox = mlir::arith::bitEnumContainsAny(
       builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
   bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
