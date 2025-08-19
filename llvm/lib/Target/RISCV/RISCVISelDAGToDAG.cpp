@@ -744,7 +744,7 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
   APInt NotKnownZero = ~Known.Zero;
 
   // The bits being inserted must only set those bits that are known to be zero.
-  if ((OrImm & NotKnownZero) != 0) {
+  if (!OrImm.isSubsetOf(Known.Zero)) {
     // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
     // currently handle this case.
     return false;
