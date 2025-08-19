@@ -14,8 +14,9 @@ include "mlir/IR/Constraints.td"
 
 // ------------------ Begin of "form" conversions
 //
-// These conversions allow for the transformation of linalg ops between different forms.
-// Structured ops can be represented in different forms, such as named ops, category ops, and generic ops.
+// These conversions allow for the transformation of linalg ops between
+// different forms. Structured ops can be represented in different forms,
+// such as generic ops, category ops, and named ops.
 //
 // The operation tree is as follows:
 //   generic     category      named
@@ -32,8 +33,9 @@ include "mlir/IR/Constraints.td"
 //  generic <---> category <---> named
 //      \-------------------------/
 //
-// generic subsumes category which subsumes named.
-// The generalization path is guaranteed, the specialization path is not.
+// generic subsumes category which subsumes structured named (not softmax,
+// convolutions, etc). The generalization path is guaranteed, the
+// specialization path is not.
 
 def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
   let summary = "Convert linalg ops between forms";
@@ -72,12 +74,14 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
     //  TODOs: `generic-to-category`, `category-to-named`
 }
 
-def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">, Deprecated<"Use 'linalg-morph-ops' instead."> {
+def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">,
+                                   Deprecated<"Use 'linalg-morph-ops' instead."> {
   let summary = "Convert named ops into generic ops";
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
-def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">, Deprecated<"Use 'linalg-morph-ops' instead."> {
+def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">,
+                                     Deprecated<"Use 'linalg-morph-ops' instead."> {
   let summary = "Convert generic ops back to named ops";
   let dependentDialects = ["linalg::LinalgDialect"];
 }
