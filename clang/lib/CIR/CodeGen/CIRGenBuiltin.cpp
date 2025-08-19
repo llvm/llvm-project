@@ -125,6 +125,21 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   default:
     break;
 
+  // C stdarg builtins.
+  case Builtin::BI__builtin_stdarg_start:
+  case Builtin::BI__builtin_va_start:
+  case Builtin::BI__va_start: {
+    emitVAStart(builtinID == Builtin::BI__va_start
+                    ? emitScalarExpr(e->getArg(0))
+                    : emitVAListRef(e->getArg(0)).getPointer(),
+                emitScalarExpr(e->getArg(1)));
+    return {};
+  }
+
+  case Builtin::BI__builtin_va_end:
+    emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
+    return {};
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -374,4 +389,14 @@ mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
   cgm.errorNYI(e->getSourceRange(),
                "emitCheckedArgForAssume: sanitizers are NYI");
   return {};
+}
+
+void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
+  // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
+  // early, defer to LLVM lowering.
+  cir::VAStartOp::create(builder, vaList.getLoc(), vaList, count);
+}
+
+void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
+  cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
 }
