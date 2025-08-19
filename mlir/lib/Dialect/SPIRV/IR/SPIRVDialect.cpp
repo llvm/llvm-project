@@ -1065,9 +1065,8 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
   return verifyRegionAttribute(op->getLoc(), argType, attribute);
 }
 
-LogicalResult
-SPIRVDialect::verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
-                                          unsigned resultIndex,
-                                          NamedAttribute attribute) {
+LogicalResult SPIRVDialect::verifyRegionResultAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    NamedAttribute attribute) {
   return op->emitError("cannot attach SPIR-V attributes to region result");
 }
