@@ -1939,8 +1939,17 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         PrimType TargetT = classifyPrim(Init->getType());
 
         auto Eval = [&](const IntegerLiteral *IL, unsigned ElemIndex) {
-          if (!this->emitConst(IL->getValue(), Init))
-            return false;
+          if (TargetT == PT_Float) {
+            if (!this->emitConst(IL->getValue(), classifyPrim(IL), Init))
+              return false;
+            const auto *Sem = &Ctx.getFloatSemantics(CAT->getElementType());
+            if (!this->emitCastIntegralFloating(classifyPrim(IL), Sem,
+                                                getFPOptions(E), E))
+              return false;
+          } else {
+            if (!this->emitConst(IL->getValue(), TargetT, Init))
+              return false;
+          }
           return this->emitInitElem(TargetT, ElemIndex, IL);
         };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
@@ -4108,8 +4117,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 
   PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
   if (isIntegralType(SecondFieldT)) {
-    if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()),
-                         SecondFieldT, E))
+    if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
     return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
   }
@@ -4119,7 +4127,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
   if (!this->emitExpandPtr(E))
     return false;
-  if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
+  if (!this->emitConst(ArrayType->getSize(), PT_Uint64, E))
     return false;
   if (!this->emitArrayElemPtrPop(PT_Uint64, E))
     return false;
@@ -4497,12 +4505,18 @@ bool Compiler<Emitter>::emitConst(T Value, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
                                   const Expr *E) {
+  return this->emitConst(static_cast<const APInt &>(Value), Ty, E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::emitConst(const APInt &Value, PrimType Ty,
+                                  const Expr *E) {
   if (Ty == PT_IntAPS)
     return this->emitConstIntAPS(Value, E);
   if (Ty == PT_IntAP)
     return this->emitConstIntAP(Value, E);
 
-  if (Value.isSigned())
+  if (isSignedType(Ty))
     return this->emitConst(Value.getSExtValue(), Ty, E);
   return this->emitConst(Value.getZExtValue(), Ty, E);
 }
