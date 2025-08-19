@@ -2237,7 +2237,8 @@ static void fillOverallFunction(
   // Transfer the attributes from the function to the new function.
   for (Attribute A :
        CurrentOS->ExtractedFunction->getAttributes().getFnAttrs()) {
-    if (M.getTargetTriple().isRISCV() && A.getKindAsString() == "interrupt")
+    if (M.getTargetTriple().isRISCV() && A.isStringAttribute() &&
+        A.getKindAsString() == "interrupt")
       continue;
 
     CurrentGroup.OutlinedFunction->addFnAttr(A);

@@ -134,8 +134,8 @@ block_7:
   ret void
 }
 
-attributes #0 = { "interrupt"="machine" }
-attributes #1 = { "interrupt"="qci-nest" }
+attributes #0 = { "interrupt"="machine" optsize }
+attributes #1 = { "interrupt"="qci-nest" optsize }
 ; CHECK-LABEL: define {{[^@]+}}@outline_attrs1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -291,8 +291,8 @@ attributes #1 = { "interrupt"="qci-nest" }
 ; CHECK-NEXT:    ret void
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { "interrupt"="machine" }
-; CHECK: attributes #[[ATTR1]] = { "interrupt"="qci-nest" }
+; CHECK: attributes #[[ATTR0]] = { optsize "interrupt"="machine" }
+; CHECK: attributes #[[ATTR1]] = { optsize "interrupt"="qci-nest" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR3]] = { minsize optsize }
 ;.
