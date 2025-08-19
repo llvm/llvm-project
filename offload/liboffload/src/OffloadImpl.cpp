@@ -781,6 +781,24 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
+Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
+                                       ol_symbol_handle_t Kernel,
+                                       size_t DynamicMemSize,
+                                       size_t *GroupSize) {
+  if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
+    return createOffloadError(ErrorCode::SYMBOL_KIND,
+                              "provided symbol is not a kernel");
+  auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
+
+  auto Res = KernelImpl->maxGroupSize(*Device->Device, DynamicMemSize);
+  if (auto Err = Res.takeError())
+    return Err;
+
+  *GroupSize = *Res;
+
+  return Error::success();
+}
+
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
                           ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
