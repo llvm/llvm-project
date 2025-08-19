@@ -7,11 +7,9 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
 ; W32-LABEL: test_ctselect_smin_zero:
 ; W32:         .functype test_ctselect_smin_zero (i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 0
-; W32-NEXT:    i32.lt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.const 31
+; W32-NEXT:    i32.shr_s
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    # fallthrough-return
@@ -19,11 +17,9 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
 ; W64-LABEL: test_ctselect_smin_zero:
 ; W64:         .functype test_ctselect_smin_zero (i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 0
-; W64-NEXT:    i32.lt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.const 31
+; W64-NEXT:    i32.shr_s
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    # fallthrough-return
@@ -37,11 +33,12 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
 ; W32-LABEL: test_ctselect_smax_zero:
 ; W32:         .functype test_ctselect_smax_zero (i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    i32.gt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    # fallthrough-return
@@ -49,11 +46,12 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
 ; W64-LABEL: test_ctselect_smax_zero:
 ; W64:         .functype test_ctselect_smax_zero (i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    i32.gt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    # fallthrough-return
@@ -68,11 +66,12 @@ define i32 @test_ctselect_smin_generic(i32 %x, i32 %y) {
 ; W32:         .functype test_ctselect_smin_generic (i32, i32) -> (i32)
 ; W32-NEXT:    .local i32
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.lt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.tee 2
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
@@ -88,11 +87,12 @@ define i32 @test_ctselect_smin_generic(i32 %x, i32 %y) {
 ; W64:         .functype test_ctselect_smin_generic (i32, i32) -> (i32)
 ; W64-NEXT:    .local i32
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.lt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    local.tee 2
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
@@ -114,11 +114,12 @@ define i32 @test_ctselect_smax_generic(i32 %x, i32 %y) {
 ; W32:         .functype test_ctselect_smax_generic (i32, i32) -> (i32)
 ; W32-NEXT:    .local i32
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.gt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.tee 2
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
@@ -134,11 +135,12 @@ define i32 @test_ctselect_smax_generic(i32 %x, i32 %y) {
 ; W64:         .functype test_ctselect_smax_generic (i32, i32) -> (i32)
 ; W64-NEXT:    .local i32
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.gt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    local.tee 2
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
@@ -160,11 +162,12 @@ define i32 @test_ctselect_umin_generic(i32 %x, i32 %y) {
 ; W32:         .functype test_ctselect_umin_generic (i32, i32) -> (i32)
 ; W32-NEXT:    .local i32
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.lt_u
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.tee 2
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
@@ -180,11 +183,12 @@ define i32 @test_ctselect_umin_generic(i32 %x, i32 %y) {
 ; W64:         .functype test_ctselect_umin_generic (i32, i32) -> (i32)
 ; W64-NEXT:    .local i32
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.lt_u
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    local.tee 2
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
@@ -206,11 +210,12 @@ define i32 @test_ctselect_umax_generic(i32 %x, i32 %y) {
 ; W32:         .functype test_ctselect_umax_generic (i32, i32) -> (i32)
 ; W32-NEXT:    .local i32
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.gt_u
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.tee 2
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
@@ -226,11 +231,12 @@ define i32 @test_ctselect_umax_generic(i32 %x, i32 %y) {
 ; W64:         .functype test_ctselect_umax_generic (i32, i32) -> (i32)
 ; W64-NEXT:    .local i32
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.gt_u
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    local.tee 2
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
@@ -252,11 +258,9 @@ define i32 @test_ctselect_abs(i32 %x) {
 ; W32:         .functype test_ctselect_abs (i32) -> (i32)
 ; W32-NEXT:    .local i32
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 0
-; W32-NEXT:    i32.lt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.const 31
+; W32-NEXT:    i32.shr_s
 ; W32-NEXT:    local.tee 1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
@@ -274,11 +278,9 @@ define i32 @test_ctselect_abs(i32 %x) {
 ; W64:         .functype test_ctselect_abs (i32) -> (i32)
 ; W64-NEXT:    .local i32
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 0
-; W64-NEXT:    i32.lt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.const 31
+; W64-NEXT:    i32.shr_s
 ; W64-NEXT:    local.tee 1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
@@ -303,11 +305,9 @@ define i32 @test_ctselect_nabs(i32 %x) {
 ; W32:         .functype test_ctselect_nabs (i32) -> (i32)
 ; W32-NEXT:    .local i32
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 0
-; W32-NEXT:    i32.lt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.const 31
+; W32-NEXT:    i32.shr_s
 ; W32-NEXT:    local.tee 1
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
@@ -325,11 +325,9 @@ define i32 @test_ctselect_nabs(i32 %x) {
 ; W64:         .functype test_ctselect_nabs (i32) -> (i32)
 ; W64-NEXT:    .local i32
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 0
-; W64-NEXT:    i32.lt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.const 31
+; W64-NEXT:    i32.shr_s
 ; W64-NEXT:    local.tee 1
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
@@ -353,21 +351,17 @@ define i32 @test_ctselect_sign_extend(i32 %x) {
 ; W32-LABEL: test_ctselect_sign_extend:
 ; W32:         .functype test_ctselect_sign_extend (i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 0
-; W32-NEXT:    i32.lt_s
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.const 31
+; W32-NEXT:    i32.shr_s
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_sign_extend:
 ; W64:         .functype test_ctselect_sign_extend (i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 0
-; W64-NEXT:    i32.lt_s
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.const 31
+; W64-NEXT:    i32.shr_s
 ; W64-NEXT:    # fallthrough-return
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 -1, i32 0)
@@ -379,11 +373,10 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 ; W32-LABEL: test_ctselect_zero_extend:
 ; W32:         .functype test_ctselect_zero_extend (i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 0
-; W32-NEXT:    i32.ne
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    # fallthrough-return
@@ -391,11 +384,10 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 ; W64-LABEL: test_ctselect_zero_extend:
 ; W64:         .functype test_ctselect_zero_extend (i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 0
-; W64-NEXT:    i32.ne
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    # fallthrough-return
@@ -446,8 +438,6 @@ define i32 @test_ctselect_identical_operands(i1 %cond, i32 %x) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
 ; W32-NEXT:    local.get 1
@@ -465,8 +455,6 @@ define i32 @test_ctselect_identical_operands(i1 %cond, i32 %x) {
 ; W64-NEXT:  # %bb.0:
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
@@ -489,11 +477,12 @@ define i32 @test_ctselect_inverted_condition(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; W32-LABEL: test_ctselect_inverted_condition:
 ; W32:         .functype test_ctselect_inverted_condition (i32, i32, i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.ne
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.tee 1
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.and
@@ -508,11 +497,12 @@ define i32 @test_ctselect_inverted_condition(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; W64-LABEL: test_ctselect_inverted_condition:
 ; W64:         .functype test_ctselect_inverted_condition (i32, i32, i32, i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const -1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.ne
-; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.select
 ; W64-NEXT:    local.tee 1
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i32.and
@@ -538,22 +528,16 @@ define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c, 
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 2
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
@@ -589,22 +573,16 @@ define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c, 
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 2
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
@@ -643,11 +621,9 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 ; W32-LABEL: test_ctselect_i64_smin_zero:
 ; W32:         .functype test_ctselect_i64_smin_zero (i64) -> (i64)
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i64.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i64.const 63
-; W32-NEXT:    i64.shr_u
-; W32-NEXT:    i64.sub
+; W32-NEXT:    i64.shr_s
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i64.and
 ; W32-NEXT:    # fallthrough-return
@@ -655,11 +631,9 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 ; W64-LABEL: test_ctselect_i64_smin_zero:
 ; W64:         .functype test_ctselect_i64_smin_zero (i64) -> (i64)
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i64.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i64.const 63
-; W64-NEXT:    i64.shr_u
-; W64-NEXT:    i64.sub
+; W64-NEXT:    i64.shr_s
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    # fallthrough-return

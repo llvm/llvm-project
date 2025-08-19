@@ -8,22 +8,20 @@
 define i1 @test_ctselect_i1(i1 %cond, i1 %a, i1 %b) {
 ; M32-LABEL: test_ctselect_i1:
 ; M32:       # %bb.0:
-; M32-NEXT:    negu $1, $4
-; M32-NEXT:    and $2, $1, $5
-; M32-NEXT:    xori $1, $1, 1
-; M32-NEXT:    and $1, $1, $6
+; M32-NEXT:    xori $2, $4, 1
+; M32-NEXT:    and $1, $4, $5
+; M32-NEXT:    and $2, $2, $6
 ; M32-NEXT:    jr $ra
-; M32-NEXT:    or $2, $2, $1
+; M32-NEXT:    or $2, $1, $2
 ;
 ; M64-LABEL: test_ctselect_i1:
 ; M64:       # %bb.0:
-; M64-NEXT:    sll $1, $4, 0
-; M64-NEXT:    sll $2, $5, 0
-; M64-NEXT:    sll $3, $6, 0
-; M64-NEXT:    negu $1, $1
-; M64-NEXT:    and $2, $1, $2
-; M64-NEXT:    xori $1, $1, 1
-; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    sll $2, $4, 0
+; M64-NEXT:    sll $1, $6, 0
+; M64-NEXT:    xori $2, $2, 1
+; M64-NEXT:    and $1, $2, $1
+; M64-NEXT:    and $2, $4, $5
+; M64-NEXT:    sll $2, $2, 0
 ; M64-NEXT:    jr $ra
 ; M64-NEXT:    or $2, $2, $1
   %result = call i1 @llvm.ct.select.i1(i1 %cond, i1 %a, i1 %b)
@@ -37,9 +35,8 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; M32-NEXT:    andi $1, $4, 1
 ; M32-NEXT:    lui $2, 32767
 ; M32-NEXT:    lui $3, 32768
-; M32-NEXT:    andi $1, $1, 1
-; M32-NEXT:    ori $2, $2, 65535
 ; M32-NEXT:    negu $1, $1
+; M32-NEXT:    ori $2, $2, 65535
 ; M32-NEXT:    and $2, $1, $2
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $3
@@ -53,7 +50,6 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; M64-NEXT:    lui $3, 32768
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    ori $2, $2, 65535
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
@@ -69,7 +65,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; M32-LABEL: test_ctselect_null_ptr:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    jr $ra
 ; M32-NEXT:    and $2, $1, $5
@@ -77,7 +72,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; M64-LABEL: test_ctselect_null_ptr:
 ; M64:       # %bb.0:
 ; M64-NEXT:    andi $1, $4, 1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    jr $ra
 ; M64-NEXT:    and $2, $1, $5
@@ -90,7 +84,6 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; M32-LABEL: test_ctselect_function_ptr:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $5
 ; M32-NEXT:    not $1, $1
@@ -102,7 +95,6 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; M64:       # %bb.0:
 ; M64-NEXT:    andi $1, $4, 1
 ; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    and $2, $1, $5
 ; M64-NEXT:    xor $1, $1, $3
@@ -118,8 +110,8 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
 ; M32-LABEL: test_ctselect_ptr_cmp:
 ; M32:       # %bb.0:
 ; M32-NEXT:    xor $1, $4, $5
-; M32-NEXT:    sltiu $1, $1, 1
-; M32-NEXT:    negu $1, $1
+; M32-NEXT:    sltu $1, $zero, $1
+; M32-NEXT:    addiu $1, $1, -1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
@@ -129,17 +121,14 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
 ; M64-LABEL: test_ctselect_ptr_cmp:
 ; M64:       # %bb.0:
 ; M64-NEXT:    xor $1, $4, $5
+; M64-NEXT:    daddiu $3, $zero, -1
 ; M64-NEXT:    daddiu $2, $zero, -1
-; M64-NEXT:    sltiu $1, $1, 1
-; M64-NEXT:    dsll $1, $1, 32
-; M64-NEXT:    dsrl $1, $1, 32
-; M64-NEXT:    andi $1, $1, 1
-; M64-NEXT:    dnegu $1, $1
-; M64-NEXT:    and $3, $1, $6
-; M64-NEXT:    xor $1, $1, $2
-; M64-NEXT:    and $1, $1, $7
+; M64-NEXT:    movn $3, $zero, $1
+; M64-NEXT:    xor $2, $3, $2
+; M64-NEXT:    and $1, $3, $6
+; M64-NEXT:    and $2, $2, $7
 ; M64-NEXT:    jr $ra
-; M64-NEXT:    or $2, $3, $1
+; M64-NEXT:    or $2, $1, $2
   %cmp = icmp eq ptr %p1, %p2
   %result = call ptr @llvm.ct.select.p0(i1 %cmp, ptr %a, ptr %b)
   ret ptr %result
@@ -152,7 +141,6 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; M32-LABEL: test_ctselect_struct_ptr:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $5
 ; M32-NEXT:    not $1, $1
@@ -164,7 +152,6 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; M64:       # %bb.0:
 ; M64-NEXT:    andi $1, $4, 1
 ; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    and $2, $1, $5
 ; M64-NEXT:    xor $1, $1, $3
@@ -182,76 +169,68 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; M32-NEXT:    andi $1, $4, 1
 ; M32-NEXT:    lw $2, 16($sp)
 ; M32-NEXT:    lw $3, 20($sp)
-; M32-NEXT:    andi $4, $6, 1
-; M32-NEXT:    lw $6, 32($sp)
-; M32-NEXT:    andi $1, $1, 1
-; M32-NEXT:    andi $4, $4, 1
+; M32-NEXT:    lw $4, 24($sp)
 ; M32-NEXT:    negu $1, $1
-; M32-NEXT:    negu $4, $4
 ; M32-NEXT:    and $2, $1, $2
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $3
-; M32-NEXT:    andi $3, $7, 1
-; M32-NEXT:    lw $7, 24($sp)
-; M32-NEXT:    andi $3, $3, 1
 ; M32-NEXT:    or $1, $2, $1
-; M32-NEXT:    negu $2, $3
-; M32-NEXT:    andi $3, $5, 1
-; M32-NEXT:    andi $3, $3, 1
-; M32-NEXT:    not $5, $2
-; M32-NEXT:    negu $3, $3
-; M32-NEXT:    and $1, $3, $1
-; M32-NEXT:    not $3, $3
-; M32-NEXT:    and $3, $3, $7
-; M32-NEXT:    or $1, $1, $3
-; M32-NEXT:    not $3, $4
-; M32-NEXT:    and $1, $4, $1
-; M32-NEXT:    lw $4, 28($sp)
-; M32-NEXT:    and $3, $3, $4
-; M32-NEXT:    or $1, $1, $3
+; M32-NEXT:    andi $2, $5, 1
+; M32-NEXT:    negu $2, $2
+; M32-NEXT:    not $3, $2
 ; M32-NEXT:    and $1, $2, $1
+; M32-NEXT:    and $2, $3, $4
+; M32-NEXT:    andi $4, $6, 1
+; M32-NEXT:    andi $3, $7, 1
+; M32-NEXT:    lw $6, 32($sp)
+; M32-NEXT:    negu $4, $4
+; M32-NEXT:    or $1, $1, $2
+; M32-NEXT:    negu $3, $3
+; M32-NEXT:    and $1, $4, $1
+; M32-NEXT:    not $2, $4
+; M32-NEXT:    lw $4, 28($sp)
+; M32-NEXT:    not $5, $3
+; M32-NEXT:    and $2, $2, $4
+; M32-NEXT:    or $1, $1, $2
 ; M32-NEXT:    and $2, $5, $6
+; M32-NEXT:    and $1, $3, $1
 ; M32-NEXT:    jr $ra
 ; M32-NEXT:    or $2, $1, $2
 ;
 ; M64-LABEL: test_ctselect_deeply_nested:
 ; M64:       # %bb.0:
-; M64-NEXT:    sll $2, $4, 0
-; M64-NEXT:    sll $4, $5, 0
-; M64-NEXT:    sll $3, $8, 0
-; M64-NEXT:    sll $5, $9, 0
-; M64-NEXT:    sll $6, $6, 0
-; M64-NEXT:    sll $1, $7, 0
-; M64-NEXT:    lw $8, 0($sp)
-; M64-NEXT:    andi $2, $2, 1
-; M64-NEXT:    andi $4, $4, 1
-; M64-NEXT:    andi $6, $6, 1
+; M64-NEXT:    sll $1, $4, 0
+; M64-NEXT:    sll $2, $7, 0
+; M64-NEXT:    sll $5, $5, 0
+; M64-NEXT:    sll $4, $9, 0
+; M64-NEXT:    sll $7, $8, 0
 ; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    andi $5, $5, 1
 ; M64-NEXT:    andi $2, $2, 1
-; M64-NEXT:    andi $4, $4, 1
-; M64-NEXT:    andi $6, $6, 1
-; M64-NEXT:    andi $1, $1, 1
-; M64-NEXT:    negu $2, $2
-; M64-NEXT:    negu $4, $4
-; M64-NEXT:    negu $6, $6
 ; M64-NEXT:    negu $1, $1
-; M64-NEXT:    and $3, $2, $3
-; M64-NEXT:    not $2, $2
-; M64-NEXT:    not $7, $1
-; M64-NEXT:    and $2, $2, $5
-; M64-NEXT:    or $2, $3, $2
+; M64-NEXT:    negu $5, $5
+; M64-NEXT:    negu $2, $2
+; M64-NEXT:    not $3, $1
+; M64-NEXT:    and $1, $1, $7
+; M64-NEXT:    lw $7, 0($sp)
+; M64-NEXT:    and $3, $3, $4
+; M64-NEXT:    sll $4, $6, 0
+; M64-NEXT:    not $6, $2
+; M64-NEXT:    or $1, $1, $3
+; M64-NEXT:    not $3, $5
+; M64-NEXT:    andi $4, $4, 1
+; M64-NEXT:    and $1, $5, $1
+; M64-NEXT:    sll $5, $10, 0
+; M64-NEXT:    negu $4, $4
+; M64-NEXT:    and $3, $3, $5
+; M64-NEXT:    or $1, $1, $3
 ; M64-NEXT:    not $3, $4
-; M64-NEXT:    and $2, $4, $2
-; M64-NEXT:    sll $4, $10, 0
-; M64-NEXT:    and $3, $3, $4
+; M64-NEXT:    and $1, $4, $1
 ; M64-NEXT:    sll $4, $11, 0
-; M64-NEXT:    or $2, $2, $3
-; M64-NEXT:    not $3, $6
-; M64-NEXT:    and $2, $6, $2
 ; M64-NEXT:    and $3, $3, $4
-; M64-NEXT:    or $2, $2, $3
-; M64-NEXT:    and $1, $1, $2
-; M64-NEXT:    and $2, $7, $8
+; M64-NEXT:    or $1, $1, $3
+; M64-NEXT:    and $1, $2, $1
+; M64-NEXT:    and $2, $6, $7
 ; M64-NEXT:    jr $ra
 ; M64-NEXT:    or $2, $1, $2
   %sel1 = call i32 @llvm.ct.select.i32(i1 %c1, i32 %a, i32 %b)

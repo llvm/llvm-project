@@ -47,8 +47,6 @@ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
 ; W32-NEXT:    local.get 1
@@ -66,8 +64,6 @@ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ; W64-NEXT:  # %bb.0:
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub

@@ -7,10 +7,7 @@ define i1 @test_ctselect_i1(i1 %cond, i1 %a, i1 %b) {
 ; W32-LABEL: test_ctselect_i1:
 ; W32:         .functype test_ctselect_i1 (i32, i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.sub
-; W32-NEXT:    local.tee 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 0
@@ -24,10 +21,7 @@ define i1 @test_ctselect_i1(i1 %cond, i1 %a, i1 %b) {
 ; W64-LABEL: test_ctselect_i1:
 ; W64:         .functype test_ctselect_i1 (i32, i32, i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.sub
-; W64-NEXT:    local.tee 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    local.get 0
@@ -50,8 +44,6 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
 ; W32-NEXT:    i32.const 2147483647
@@ -69,8 +61,6 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; W64-NEXT:  # %bb.0:
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
@@ -97,8 +87,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.and
@@ -110,8 +98,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; W64-NEXT:    i64.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i64.extend_i32_u
-; W64-NEXT:    i64.const 1
-; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.const 1
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.sub
@@ -129,8 +115,6 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; W32-NEXT:  # %bb.0:
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
@@ -154,8 +138,6 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; W64-NEXT:    i64.extend_i32_u
 ; W64-NEXT:    i64.const 1
 ; W64-NEXT:    i64.and
-; W64-NEXT:    i64.const 1
-; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.tee 3
 ; W64-NEXT:    local.get 1
@@ -176,11 +158,12 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
 ; W32-LABEL: test_ctselect_ptr_cmp:
 ; W32:         .functype test_ctselect_ptr_cmp (i32, i32, i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const -1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.eq
-; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.select
 ; W32-NEXT:    local.tee 1
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.and
@@ -195,14 +178,12 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
 ; W64-LABEL: test_ctselect_ptr_cmp:
 ; W64:         .functype test_ctselect_ptr_cmp (i64, i64, i64, i64) -> (i64)
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i64.const -1
 ; W64-NEXT:    i64.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i64.eq
-; W64-NEXT:    i64.extend_i32_u
-; W64-NEXT:    i64.const 1
-; W64-NEXT:    i64.and
-; W64-NEXT:    i64.sub
+; W64-NEXT:    i64.select
 ; W64-NEXT:    local.tee 1
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i64.and
@@ -229,8 +210,6 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
 ; W32-NEXT:    local.get 1
@@ -250,8 +229,6 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; W64-NEXT:    i64.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i64.extend_i32_u
-; W64-NEXT:    i64.const 1
-; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.const 1
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.sub
@@ -278,14 +255,10 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; W32-NEXT:    local.get 3
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 3
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 2
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
@@ -294,14 +267,10 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 1
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
-; W32-NEXT:    i32.const 1
-; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
@@ -344,14 +313,10 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; W64-NEXT:    local.get 3
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 3
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 2
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
@@ -360,14 +325,10 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 1
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
-; W64-NEXT:    i32.const 1
-; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
