@@ -15,15 +15,15 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olCreateQueueTest);
 
 TEST_P(olCreateQueueTest, Success) {
   ol_queue_handle_t Queue = nullptr;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
-  ASSERT_NE(Queue, nullptr);
+  EXPECT_SUCCESS(olCreateQueue(Device, &Queue));
+  EXPECT_NE(Queue, nullptr);
 }
 
 TEST_P(olCreateQueueTest, InvalidNullHandleDevice) {
   ol_queue_handle_t Queue = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olCreateQueue(nullptr, &Queue));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olCreateQueue(nullptr, &Queue));
 }
 
 TEST_P(olCreateQueueTest, InvalidNullPointerQueue) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olCreateQueue(Device, nullptr));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olCreateQueue(Device, nullptr));
 }

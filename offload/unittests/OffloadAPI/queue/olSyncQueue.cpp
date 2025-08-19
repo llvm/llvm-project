@@ -14,5 +14,5 @@ using olSyncQueueTest = OffloadQueueTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olSyncQueueTest);
 
 TEST_P(olSyncQueueTest, SuccessEmptyQueue) {
-  ASSERT_SUCCESS(olSyncQueue(Queue));
+  EXPECT_SUCCESS(olSyncQueue(Queue));
 }

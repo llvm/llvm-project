@@ -15,23 +15,23 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetEventInfoSizeTest);
 
 TEST_P(olGetEventInfoSizeTest, SuccessQueue) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetEventInfoSize(Event, OL_EVENT_INFO_QUEUE, &Size));
-  ASSERT_EQ(Size, sizeof(ol_queue_handle_t));
+  EXPECT_SUCCESS(olGetEventInfoSize(Event, OL_EVENT_INFO_QUEUE, &Size));
+  EXPECT_EQ(Size, sizeof(ol_queue_handle_t));
 }
 
 TEST_P(olGetEventInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetEventInfoSize(nullptr, OL_EVENT_INFO_QUEUE, &Size));
 }
 
 TEST_P(olGetEventInfoSizeTest, InvalidEventInfoEnumeration) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
+  EXPECT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetEventInfoSize(Event, OL_EVENT_INFO_FORCE_UINT32, &Size));
 }
 
 TEST_P(olGetEventInfoSizeTest, InvalidNullPointer) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetEventInfoSize(Event, OL_EVENT_INFO_QUEUE, nullptr));
 }

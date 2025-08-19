@@ -13,7 +13,7 @@
 using olIterateDevicesTest = OffloadTest;
 
 TEST_F(olIterateDevicesTest, SuccessEmptyCallback) {
-  ASSERT_SUCCESS(olIterateDevices(
+  EXPECT_SUCCESS(olIterateDevices(
       [](ol_device_handle_t, void *) { return false; }, nullptr));
 }
 
@@ -21,7 +21,7 @@ TEST_F(olIterateDevicesTest, SuccessGetDevice) {
   uint32_t DeviceCount = 0;
   ol_device_handle_t Device = nullptr;
 
-  ASSERT_SUCCESS(olIterateDevices(
+  EXPECT_SUCCESS(olIterateDevices(
       [](ol_device_handle_t, void *Data) {
         auto Count = static_cast<uint32_t *>(Data);
         *Count += 1;
@@ -33,7 +33,7 @@ TEST_F(olIterateDevicesTest, SuccessGetDevice) {
     GTEST_SKIP() << "No available devices.";
   }
 
-  ASSERT_SUCCESS(olIterateDevices(
+  EXPECT_SUCCESS(olIterateDevices(
       [](ol_device_handle_t D, void *Data) {
         auto DevicePtr = static_cast<ol_device_handle_t *>(Data);
         *DevicePtr = D;
@@ -41,5 +41,5 @@ TEST_F(olIterateDevicesTest, SuccessGetDevice) {
       },
       &Device));
 
-  ASSERT_NE(Device, nullptr);
+  EXPECT_NE(Device, nullptr);
 }

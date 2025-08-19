@@ -15,63 +15,63 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetDeviceInfoSizeTest);
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessType) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, &Size));
-  ASSERT_EQ(Size, sizeof(ol_device_type_t));
+  EXPECT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, &Size));
+  EXPECT_EQ(Size, sizeof(ol_device_type_t));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessPlatform) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PLATFORM, &Size));
-  ASSERT_EQ(Size, sizeof(ol_platform_handle_t));
+  EXPECT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PLATFORM, &Size));
+  EXPECT_EQ(Size, sizeof(ol_platform_handle_t));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessName) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size));
-  ASSERT_NE(Size, 0ul);
+  EXPECT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size));
+  EXPECT_NE(Size, 0ul);
 }
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessVendor) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_VENDOR, &Size));
-  ASSERT_NE(Size, 0ul);
+  EXPECT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_VENDOR, &Size));
+  EXPECT_NE(Size, 0ul);
 }
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessDriverVersion) {
   size_t Size = 0;
-  ASSERT_SUCCESS(
+  EXPECT_SUCCESS(
       olGetDeviceInfoSize(Device, OL_DEVICE_INFO_DRIVER_VERSION, &Size));
-  ASSERT_NE(Size, 0ul);
+  EXPECT_NE(Size, 0ul);
 }
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSize) {
   size_t Size = 0;
-  ASSERT_SUCCESS(
+  EXPECT_SUCCESS(
       olGetDeviceInfoSize(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, &Size));
-  ASSERT_EQ(Size, sizeof(uint32_t));
+  EXPECT_EQ(Size, sizeof(uint32_t));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSizePerDimension) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(
+  EXPECT_SUCCESS(olGetDeviceInfoSize(
       Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION, &Size));
-  ASSERT_EQ(Size, sizeof(ol_dimensions_t));
-  ASSERT_EQ(Size, sizeof(uint32_t) * 3);
+  EXPECT_EQ(Size, sizeof(ol_dimensions_t));
+  EXPECT_EQ(Size, sizeof(uint32_t) * 3);
 }
 
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetDeviceInfoSize(nullptr, OL_DEVICE_INFO_TYPE, &Size));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, InvalidDeviceInfoEnumeration) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
+  EXPECT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_FORCE_UINT32, &Size));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullPointer) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, nullptr));
 }

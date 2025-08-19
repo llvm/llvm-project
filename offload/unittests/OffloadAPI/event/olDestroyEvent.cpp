@@ -16,11 +16,11 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olDestroyEventTest);
 TEST_P(olDestroyEventTest, Success) {
   ol_event_handle_t Event = nullptr;
   ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
-  ASSERT_NE(Event, nullptr);
-  ASSERT_SUCCESS(olSyncQueue(Queue));
-  ASSERT_SUCCESS(olDestroyEvent(Event));
+  EXPECT_NE(Event, nullptr);
+  EXPECT_SUCCESS(olSyncQueue(Queue));
+  EXPECT_SUCCESS(olDestroyEvent(Event));
 }
 
 TEST_P(olDestroyEventTest, InvalidNullEvent) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olDestroyEvent(nullptr));
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olDestroyEvent(nullptr));
 }
