@@ -25,7 +25,7 @@ namespace math {
 
 namespace expxf16_internal {
 
-LIBC_INLINE static constexpr ExpRangeReduction exp2_range_reduction(float16 x) {
+LIBC_INLINE static ExpRangeReduction exp2_range_reduction(float16 x) {
   // For -25 < x < 16, to compute 2^x, we perform the following range reduction:
   // find hi, mid, lo, such that:
   //   x = hi + mid + lo, in which
