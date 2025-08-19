@@ -9,5 +9,6 @@ add_lldb_tool(yaml2macho-core
     LINK_COMPONENTS
       Support
     LINK_LIBS
+      lldbUtility
       ${LLDB_SYSTEM_LIBS}
 )

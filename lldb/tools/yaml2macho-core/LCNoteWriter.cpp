@@ -6,42 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Utility/UUID.h"
+
 #include "LCNoteWriter.h"
 #include "Utility.h"
+
 #include <ctype.h>
 #include <stdlib.h>
 
 #include "llvm/BinaryFormat/MachO.h"
 
-bool ishex(char p) {
-  char upp = toupper(p);
-  if (isdigit(upp) || (upp >= 'A' && upp <= 'F'))
-    return true;
-  return false;
-}
-
 void create_lc_note_binary_load_cmd(const CoreSpec &spec,
                                     std::vector<uint8_t> &cmds,
-                                    std::string uuid, uint64_t slide,
+                                    std::string uuid_str, uint64_t slide,
                                     std::vector<uint8_t> &payload_bytes,
                                     off_t data_offset) {
 
   // Add the payload bytes to payload_bytes.
   size_t starting_payload_size = payload_bytes.size();
   add_uint32(spec, payload_bytes, 1); // version
-  // uuid_t uuid
-  const char *p = uuid.c_str();
-  while (*p && *(p + 1)) {
-    if (ishex(*p) && ishex(*(p + 1))) {
-      char byte[3] = {'\0', '\0', '\0'};
-      byte[0] = *p++;
-      byte[1] = *p++;
-      uint8_t val = strtoul(byte, nullptr, 16);
-      payload_bytes.push_back(val);
-    } else {
-      p++;
-    }
-  }
+  lldb_private::UUID uuid;
+  uuid.SetFromStringRef(uuid_str);
+  for (size_t i = 0; i < uuid.GetBytes().size(); i++)
+    payload_bytes.push_back(uuid.GetBytes().data()[i]);
   add_uint64(spec, payload_bytes, UINT64_MAX); // address
   add_uint64(spec, payload_bytes, slide);      // slide
   payload_bytes.push_back(0);                  // name_cstring
