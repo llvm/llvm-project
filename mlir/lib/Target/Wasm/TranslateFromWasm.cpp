@@ -954,7 +954,7 @@ inline parsed_inst_t ExpressionParser::buildNumericOp(
     OpBuilder &builder, std::enable_if_t<std::is_arithmetic_v<valueType>> *) {
   auto ty = buildLiteralType<valueType>(builder);
   LDBG() << "*** buildNumericOp: numOperands = " << numOperands
-                          << ", type = " << ty << " ***";
+         << ", type = " << ty << " ***";
   auto tysToPop = SmallVector<Type, numOperands>();
   tysToPop.resize(numOperands);
   std::fill(tysToPop.begin(), tysToPop.end(), ty);
