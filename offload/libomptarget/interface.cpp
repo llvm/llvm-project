@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 
 using llvm::SmallVector;
 
@@ -121,7 +122,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
            TargetDataFuncPtrTy TargetDataFunction, const char *RegionTypeMsg,
            const char *RegionName) {
   assert(PM && "Runtime not initialized");
-  static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
+  static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
   TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, Loc);
@@ -180,12 +181,24 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                                         /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
+
+  // Only allocate AttachInfo for targetDataBegin
+  std::unique_ptr<AttachInfoTy> AttachInfo;
+  if (TargetDataFunction == targetDataBegin)
+    AttachInfo = std::make_unique<AttachInfoTy>();
+
   Rc = TargetDataFunction(Loc, *DeviceOrErr, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo,
-                          false /* FromMapper */);
+                          AttachInfo.get(), /*FromMapper=*/false);
 
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
+  if (Rc == OFFLOAD_SUCCESS) {
+    // Process deferred ATTACH entries BEFORE synchronization
+    if (AttachInfo && !AttachInfo->AttachEntries.empty())
+      Rc = processAttachEntries(*DeviceOrErr, *AttachInfo, AsyncInfo);
+
+    if (Rc == OFFLOAD_SUCCESS)
+      Rc = AsyncInfo.synchronize();
+  }
 
 #ifdef OMPT_SUPPORT
   if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
@@ -334,7 +347,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
   assert(PM && "Runtime not initialized");
-  static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
+  static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
 
   // Target multiple devices if the user requests more than 1 device. The

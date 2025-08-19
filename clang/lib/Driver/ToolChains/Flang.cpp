@@ -186,6 +186,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_fdefer_desc_map, options::OPT_fno_defer_desc_map});
+  if (Args.hasArg(clang::driver::options::OPT_fcoarray))
+    CmdArgs.push_back("-fcoarray");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -951,6 +953,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -966,6 +970,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << A->getValue();
       break;
     }
+  } else {
+    Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                    options::OPT_fno_openmp_simd);
   }
 
   // Pass the path to compiler resource files.

@@ -27,6 +27,7 @@
 #ifdef OMPT_SUPPORT
 #include <omp-tools.h>
 #endif
+#include <mutex>
 
 extern "C" {
 
@@ -42,6 +43,7 @@ struct __tgt_device_image {
 struct __tgt_device_info {
   void *Context = nullptr;
   void *Device = nullptr;
+  void *Platform = nullptr;
 };
 
 /// This struct is a record of all the host code that may be offloaded to a
@@ -85,6 +87,9 @@ struct __tgt_async_info {
   /// A collection of allocations that are associated with this stream and that
   /// should be freed after finalization.
   llvm::SmallVector<void *, 2> AssociatedAllocations;
+
+  /// Mutex to guard access to AssociatedAllocations and the Queue.
+  std::mutex Mutex;
 
   /// The kernel launch environment used to issue a kernel. Stored here to
   /// ensure it is a valid location while the transfer to the device is

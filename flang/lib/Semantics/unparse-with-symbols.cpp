@@ -70,20 +70,6 @@ public:
     currStmt_ = std::nullopt;
   }
 
-  bool Pre(const parser::OmpCriticalDirective &x) {
-    currStmt_ = x.source;
-    return true;
-  }
-  void Post(const parser::OmpCriticalDirective &) { currStmt_ = std::nullopt; }
-
-  bool Pre(const parser::OmpEndCriticalDirective &x) {
-    currStmt_ = x.source;
-    return true;
-  }
-  void Post(const parser::OmpEndCriticalDirective &) {
-    currStmt_ = std::nullopt;
-  }
-
   // Directive arguments can be objects with symbols.
   bool Pre(const parser::OmpBeginDirective &x) {
     currStmt_ = x.source;

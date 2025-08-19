@@ -75,8 +75,7 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
     return nullptr;
 
   const RecordType *Ty = DerivedType->castAs<RecordType>();
-  Decl *D = Ty->getDecl();
-  return cast<CXXRecordDecl>(D);
+  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -92,7 +91,9 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
         const auto *Derived =
-            cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
+            cast<CXXRecordDecl>(
+                E->getType()->castAs<RecordType>()->getOriginalDecl())
+                ->getDefinitionOrSelf();
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -268,7 +269,7 @@ QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
   if (const auto *ECD = getEnumConstantDecl()) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     if (ED->isCompleteDefinition())
-      return Ctx.getTypeDeclType(ED);
+      return Ctx.getCanonicalTagType(ED);
   }
   return getType();
 }
@@ -2031,7 +2032,8 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD = unionType->castAs<RecordType>()->getDecl();
+  auto RD =
+      unionType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   return getTargetFieldForToUnionCast(RD, opType);
 }
 
@@ -2803,32 +2805,20 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
 
   case CXXTemporaryObjectExprClass:
   case CXXConstructExprClass: {
-    if (const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl()) {
-      const auto *WarnURAttr = Type->getAttr<WarnUnusedResultAttr>();
-      if (Type->hasAttr<WarnUnusedAttr>() ||
-          (WarnURAttr && WarnURAttr->IsCXX11NoDiscard())) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
-        return true;
-      }
-    }
-
     const auto *CE = cast<CXXConstructExpr>(this);
-    if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
-      const auto *WarnURAttr = Ctor->getAttr<WarnUnusedResultAttr>();
-      if (WarnURAttr && WarnURAttr->IsCXX11NoDiscard()) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
+    const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+    if ((Type && Type->hasAttr<WarnUnusedAttr>()) ||
+        CE->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
+
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
-
     return false;
   }
 
@@ -3221,7 +3211,7 @@ static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
 /// isTemporaryObject - Determines if this expression produces a
 /// temporary of the given class type.
 bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
-  if (!C.hasSameUnqualifiedType(getType(), C.getTypeDeclType(TempTy)))
+  if (!C.hasSameUnqualifiedType(getType(), C.getCanonicalTagType(TempTy)))
     return false;
 
   const Expr *E = skipTemporaryBindingsNoOpCastsAndParens(this);
@@ -3407,7 +3397,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+      RecordDecl *RD = ILE->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -4050,8 +4043,10 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
     return NPCK_CXX11_nullptr;
 
   if (const RecordType *UT = getType()->getAsUnionType())
-    if (!Ctx.getLangOpts().CPlusPlus11 &&
-        UT && UT->getDecl()->hasAttr<TransparentUnionAttr>())
+    if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
+        UT->getOriginalDecl()
+            ->getMostRecentDecl()
+            ->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))

@@ -21,14 +21,14 @@ set(ADDITIONAL_SHARED_LIBRARIES_TO_LINK
 set(HIPCC_BIN
   hipcc)
 set(HIPCC_SOURCES
-  src/hipBin.cpp
+  src/hipcc.cpp
   src/utils.cpp
 )
 
 set(HIPCONFIG_BIN
   hipconfig)
 set(HIPCONFIG_SOURCES
-  src/hipBin.cpp
+  src/hipconfig.cpp
   src/utils.cpp
 )
 

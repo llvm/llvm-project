@@ -42,8 +42,8 @@ namespace {
 static const IdentifierInfo *findAnonymousUnionVarDeclName(const VarDecl& VD) {
   const RecordType *RT = VD.getType()->getAs<RecordType>();
   assert(RT && "type of VarDecl is expected to be RecordType.");
-  assert(RT->getDecl()->isUnion() && "RecordType is expected to be a union.");
-  if (const FieldDecl *FD = RT->getDecl()->findFirstNamedDataMember()) {
+  assert(RT->getOriginalDecl()->isUnion() && "RecordType is expected to be a union.");
+  if (const FieldDecl *FD = RT->getOriginalDecl()->findFirstNamedDataMember()) {
     return FD->getIdentifier();
   }
 

@@ -354,4 +354,186 @@ entry:
   ret void
 }
 
+; Check for "SOP2/SOPC instruction requires too many immediate
+; constants" verifier error.  Frame index would fold into low half of
+; the lowered flat pointer add, and use s_add_u32 instead of
+; s_add_i32.
+
+; GCN-LABEL: {{^}}fi_sop2_s_add_u32_literal_error:
+; GCN: s_movk_i32 [[S_MOVK_I32_:s[0-9]+]], 0x1000
+; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0x1010, [[S_MOVK_I32_]]
+; GCN: s_addc_u32 [[ADD_HI:s[0-9]+]], s{{[0-9]+}}, 0
+define amdgpu_kernel void @fi_sop2_s_add_u32_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %Total3.ascast.i.i = addrspacecast ptr addrspace(5) %Total3.i.i to ptr
+  %gep = getelementptr i8, ptr %Total3.ascast.i.i, i64 4096
+  %p2i = ptrtoint ptr %gep to i64
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %icmp = icmp ugt i64 %p2i, 1
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_sop2_and_literal_error:
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x1fe00
+define amdgpu_kernel void @fi_sop2_and_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %p2i = ptrtoint ptr addrspace(5) %Total3.i.i to i32
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %or = and i32 %p2i, -512
+  %icmp = icmp ugt i32 %or, 9999999
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_sop2_or_literal_error:
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3039
+define amdgpu_kernel void @fi_sop2_or_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %p2i = ptrtoint ptr addrspace(5) %Total3.i.i to i32
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %or = or i32 %p2i, 12345
+  %icmp = icmp ugt i32 %or, 9999999
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; Check that we do not produce a verifier error after prolog
+; epilog. alloca1 and alloca2 will lower to literals.
+
+; GCN-LABEL: {{^}}s_multiple_frame_indexes_literal_offsets:
+; GCN: s_load_dword [[ARG0:s[0-9]+]]
+; GCN: s_movk_i32 [[ALLOCA1:s[0-9]+]], 0x44
+; GCN: s_cmp_eq_u32 [[ARG0]], 0
+; GCN: s_cselect_b32 [[SELECT:s[0-9]+]], [[ALLOCA1]], 0x48
+; GCN: s_mov_b32 [[ALLOCA0:s[0-9]+]], 0
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @s_multiple_frame_indexes_literal_offsets(i32 inreg %arg0) #0 {
+  %alloca0 = alloca [17 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %arg0, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","s,s"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; %alloca1 or alloca2 will lower to an inline constant, and one will
+; be a literal, so we could fold both indexes into the instruction.
+
+; GCN-LABEL: {{^}}s_multiple_frame_indexes_one_imm_one_literal_offset:
+; GCN: s_load_dword [[ARG0:s[0-9]+]]
+; GCN: s_mov_b32 [[ALLOCA1:s[0-9]+]], 64
+; GCN: s_cmp_eq_u32 [[ARG0]], 0
+; GCN: s_cselect_b32 [[SELECT:s[0-9]+]], [[ALLOCA1]], 0x44
+; GCN: s_mov_b32 [[ALLOCA0:s[0-9]+]], 0
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @s_multiple_frame_indexes_one_imm_one_literal_offset(i32 inreg %arg0) #0 {
+  %alloca0 = alloca [16 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %arg0, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","s,s"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_multiple_frame_indexes_imm_offsets:
+; GCN: s_load_dword [[ARG0:s[0-9]+]]
+; GCN: s_mov_b32 [[ALLOCA1:s[0-9]+]], 16
+; GCN: s_cmp_eq_u32 [[ARG0]], 0
+; GCN: s_cselect_b32 [[SELECT:s[0-9]+]], [[ALLOCA1]], 20
+; GCN: s_mov_b32 [[ALLOCA0:s[0-9]+]], 0
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @s_multiple_frame_indexes_imm_offsets(i32 inreg %arg0) #0 {
+  %alloca0 = alloca [4 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %arg0, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","s,s"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_multiple_frame_indexes_literal_offsets:
+; GCN: v_mov_b32_e32 [[ALLOCA1:v[0-9]+]], 0x48
+; GCN: v_mov_b32_e32 [[ALLOCA2:v[0-9]+]], 0x44
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[ALLOCA1]], [[ALLOCA2]], vcc
+; GCN: v_mov_b32_e32 [[ALLOCA0:v[0-9]+]], 0{{$}}
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @v_multiple_frame_indexes_literal_offsets() #0 {
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x()
+  %alloca0 = alloca [17 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %vgpr, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","v,v"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_multiple_frame_indexes_one_imm_one_literal_offset:
+; GCN: v_mov_b32_e32 [[ALLOCA1:v[0-9]+]], 0x44
+; GCN: v_mov_b32_e32 [[ALLOCA2:v[0-9]+]], 64
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[ALLOCA1]], [[ALLOCA2]], vcc
+; GCN: v_mov_b32_e32 [[ALLOCA0:v[0-9]+]], 0{{$}}
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @v_multiple_frame_indexes_one_imm_one_literal_offset() #0 {
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x()
+  %alloca0 = alloca [16 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %vgpr, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","v,v"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_multiple_frame_indexes_imm_offsets:
+; GCN: v_mov_b32_e32 [[ALLOCA1:v[0-9]+]], 12
+; GCN: v_mov_b32_e32 [[ALLOCA2:v[0-9]+]], 8
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[ALLOCA1]], [[ALLOCA2]], vcc
+; GCN: v_mov_b32_e32 [[ALLOCA0:v[0-9]+]], 0{{$}}
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @v_multiple_frame_indexes_imm_offsets() #0 {
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x()
+  %alloca0 = alloca [2 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %vgpr, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","v,v"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
 attributes #0 = { nounwind }

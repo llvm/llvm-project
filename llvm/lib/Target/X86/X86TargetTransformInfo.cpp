@@ -3310,11 +3310,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                             TTI::CastContextHint::None, CostKind);
   }
 
-  if (ISD == ISD::FP_ROUND && LTDest.second.getScalarType() == MVT::f16) {
-    // Conversion requires a libcall.
-    return InstructionCost::getInvalid();
-  }
-
   // TODO: Allow non-throughput costs that aren't binary.
   auto AdjustCost = [&CostKind](InstructionCost Cost,
                                 InstructionCost N = 1) -> InstructionCost {
@@ -5493,9 +5488,10 @@ InstructionCost X86TTIImpl::getPointersChainCost(
   return BaseT::getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
 }
 
-InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
-                                                      ScalarEvolution *SE,
-                                                      const SCEV *Ptr) const {
+InstructionCost
+X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                      const SCEV *Ptr,
+                                      TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -5509,7 +5505,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (Ty->isVectorTy() && SE && !ST->hasAVX2()) {
+  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
     // TODO: AVX2 is the current cut-off because we don't have correct
     //       interleaving costs for prior ISA's.
     if (!BaseT::isStridedAccess(Ptr))
@@ -5518,7 +5514,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
       return 1;
   }
 
-  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
 InstructionCost

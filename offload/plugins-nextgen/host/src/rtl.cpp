@@ -305,9 +305,17 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "dataExchangeImpl not supported");
   }
 
+  /// Insert a data fence between previous data operations and the following
+  /// operations. This is a no-op for Host devices as operations inserted into
+  /// a queue are in-order.
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     return Plugin::success();
   }
 
@@ -329,6 +337,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "initDeviceInfoImpl not supported");
   }
 
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    Callback(UserData);
+    return Plugin::success();
+  };
+
   /// This plugin does not support the event API. Do nothing without failing.
   Error createEventImpl(void **EventPtrStorage) override {
     *EventPtrStorage = nullptr;
@@ -342,6 +356,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error waitEventImpl(void *EventPtr,
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
+  }
+  Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
+    return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 

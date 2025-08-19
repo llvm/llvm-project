@@ -68,6 +68,7 @@
 #include "clang/Driver/Types.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1016,6 +1017,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
     Arg *A = new Arg(Opt, C.getArgs().getArgString(Index), Index,
                      C.getArgs().MakeArgString(Triple.split("-").first),
                      C.getArgs().MakeArgString("--offload-arch=" + Arch));
+    A->claim();
     C.getArgs().append(A);
     C.getArgs().AddSynthesizedArg(A);
     Triples.insert(Triple);
@@ -4198,6 +4200,11 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
+  if (Args.hasArgNoClaim(options::OPT_fmodules_driver))
+    // TODO: Check against all incompatible -fmodules-driver arguments
+    if (!ModulesModeCXX20 && !Args.hasArgNoClaim(options::OPT_fmodules))
+      Args.eraseArg(options::OPT_fmodules_driver);
+
   Arg *FinalPhaseArg;
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
 
@@ -4324,6 +4331,33 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   }
 }
 
+static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
+  const auto IsTypeCXXModule = [](const auto &Input) -> bool {
+    const auto TypeID = Input.first;
+    return (TypeID == types::TY_CXXModule);
+  };
+  return llvm::any_of(Inputs, IsTypeCXXModule);
+}
+
+llvm::ErrorOr<bool>
+Driver::ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const {
+  const auto CXXInputs = llvm::make_filter_range(
+      Inputs, [](const auto &Input) { return types::isCXX(Input.first); });
+  for (const auto &Input : CXXInputs) {
+    StringRef Filename = Input.second->getSpelling();
+    auto ErrOrBuffer = VFS->getBufferForFile(Filename);
+    if (!ErrOrBuffer)
+      return ErrOrBuffer.getError();
+    const auto Buffer = std::move(*ErrOrBuffer);
+
+    if (scanInputForCXX20ModulesUsage(Buffer->getBuffer())) {
+      Diags.Report(diag::remark_found_cxx20_module_usage) << Filename;
+      return true;
+    }
+  }
+  return false;
+}
+
 void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                           const InputList &Inputs, ActionList &Actions) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation actions");
@@ -4338,6 +4372,33 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
+  if (Args.hasFlag(options::OPT_fmodules_driver,
+                   options::OPT_fno_modules_driver, false)) {
+    // TODO: Move the logic for implicitly enabling explicit-module-builds out
+    // of -fmodules-driver once it is no longer experimental.
+    // Currently, this serves diagnostic purposes only.
+    bool UsesCXXModules = hasCXXModuleInputType(Inputs);
+    if (!UsesCXXModules) {
+      const auto ErrOrScanResult = ScanInputsForCXX20ModulesUsage(Inputs);
+      if (!ErrOrScanResult) {
+        Diags.Report(diag::err_cannot_open_file)
+            << ErrOrScanResult.getError().message();
+        return;
+      }
+      UsesCXXModules = *ErrOrScanResult;
+    }
+    if (UsesCXXModules || Args.hasArg(options::OPT_fmodules))
+      BuildDriverManagedModuleBuildActions(C, Args, Inputs, Actions);
+    return;
+  }
+
+  BuildDefaultActions(C, Args, Inputs, Actions);
+}
+
+void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
+                                 const InputList &Inputs,
+                                 ActionList &Actions) const {
+
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
       C.isOffloadingHostKind(Action::OFK_SYCL) ||
@@ -4346,15 +4407,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       Args.hasFlag(options::OPT_offload_new_driver,
                    options::OPT_no_offload_new_driver,
                    C.isOffloadingHostKind(Action::OFK_Cuda));
-
-  if (C.isOffloadingHostKind(Action::OFK_OpenMP) &&
-      Args.hasArg(options::OPT_offload_new_driver,
-                  options::OPT_no_offload_new_driver)) {
-    Arg *A = Args.getLastArg(options::OPT_offload_new_driver,
-                             options::OPT_no_offload_new_driver);
-    Diag(clang::diag::warn_ignored_clang_option) << A->getAsString(Args);
-    A->claim();
-  }
 
   bool HIPNoRDC =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
@@ -4398,10 +4450,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     for (phases::ID Phase : PL) {
 
+#if FIXME
       // We are done if this step is past what the user requested.
       if (Phase > FinalPhase)
         break;
-
+#endif
       // Add any offload action the host action depends on.
       if (!UseNewOffloadingDriver)
         Current = OffloadBuilder->addDeviceDependencesToHostAction(
@@ -4632,6 +4685,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   // Claim ignored clang-cl options.
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
+}
+
+void Driver::BuildDriverManagedModuleBuildActions(
+    Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
+    ActionList &Actions) const {
+  Diags.Report(diag::remark_performing_driver_managed_module_build);
+  return;
 }
 
 /// Returns the canonical name for the offloading architecture when using a HIP
