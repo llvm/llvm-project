@@ -518,6 +518,13 @@ public:
     symbolTable.insert(vd, addr.getPointer());
   }
 
+  /// Removes a declaration from the address-relationship.  This is a function
+  /// that shouldn't need to be used except in cases where we're adding/removing
+  /// things that aren't part of the language-semantics AST.
+  void removeAddrOfLocalVar(const clang::VarDecl *vd) {
+    localDeclMap.erase(vd);
+  }
+
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
   RValue convertTempToRValue(Address addr, clang::QualType type,
@@ -544,6 +551,11 @@ public:
   /// Return the Value of the vtable pointer member pointed to by thisAddr.
   mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);
+
+  /// Returns whether we should perform a type checked load when loading a
+  /// virtual function for virtual calls to members of RD. This is generally
+  /// true when both vcall CFI and whole-program-vtables are enabled.
+  bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
 
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
@@ -942,6 +954,8 @@ public:
 
   Address emitArrayToPointerDecay(const Expr *array);
 
+  mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
+
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
 
@@ -1112,6 +1126,8 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
+
+  mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
 
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 

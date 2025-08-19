@@ -588,10 +588,10 @@ TEST_F(ProgramEnvTest, TestLockFileExclusive) {
     // trying to acquire exclusive lock will fail and trying to acquire
     // non-exclusive will succeed.
     EXPECT_TRUE(
-        fs::tryLockFile(FD2, std::chrono::seconds(0), /*Exclusive=*/true));
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Exclusive));
 
     EXPECT_FALSE(
-        fs::tryLockFile(FD2, std::chrono::seconds(0), /*Exclusive=*/false));
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Shared));
 
     close(FD2);
     // Write a file to indicate just finished.
@@ -623,8 +623,8 @@ TEST_F(ProgramEnvTest, TestLockFileExclusive) {
   addEnvVar(EnvVar);
 
   // Lock the file.
-  ASSERT_NO_ERROR(fs::tryLockFile(FD1, std::chrono::seconds(0),
-                                  /*Exclusive=*/false));
+  ASSERT_NO_ERROR(
+      fs::tryLockFile(FD1, std::chrono::seconds(0), fs::LockKind::Exclusive));
 
   std::string Error;
   bool ExecutionFailed;

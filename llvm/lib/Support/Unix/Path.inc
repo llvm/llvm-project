@@ -876,6 +876,12 @@ void mapped_file_region::unmapImpl() {
     ::munmap(Mapping, Size);
 }
 
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
+}
+
 void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
@@ -1225,13 +1231,20 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
 }
 
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
-                            bool Exclusive) {
+                            LockKind Kind) {
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
     struct flock Lock;
     memset(&Lock, 0, sizeof(Lock));
-    Lock.l_type = Exclusive ? F_WRLCK : F_RDLCK;
+    switch (Kind) {
+    case LockKind::Exclusive:
+      Lock.l_type = F_WRLCK;
+      break;
+    case LockKind::Shared:
+      Lock.l_type = F_RDLCK;
+      break;
+    }
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
@@ -1247,10 +1260,17 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD, bool Exclusive) {
+std::error_code lockFile(int FD, LockKind Kind) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = Exclusive ? F_WRLCK : F_RDLCK;
+  switch (Kind) {
+  case LockKind::Exclusive:
+    Lock.l_type = F_WRLCK;
+    break;
+  case LockKind::Shared:
+    Lock.l_type = F_RDLCK;
+    break;
+  }
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;

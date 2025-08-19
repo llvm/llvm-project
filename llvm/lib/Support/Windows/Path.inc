@@ -1006,6 +1006,14 @@ void mapped_file_region::unmapImpl() {
 
 void mapped_file_region::dontNeedImpl() {}
 
+std::error_code mapped_file_region::sync() const {
+  if (!::FlushViewOfFile(Mapping, Size))
+    return mapWindowsError(GetLastError());
+  if (!::FlushFileBuffers(FileHandle))
+    return mapWindowsError(GetLastError());
+  return std::error_code();
+}
+
 int mapped_file_region::alignment() {
   SYSTEM_INFO SysInfo;
   ::GetSystemInfo(&SysInfo);
@@ -1330,8 +1338,8 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
 }
 
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
-                            bool Exclusive) {
-  DWORD Flags = Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+                            LockKind Kind) {
+  DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   Flags |= LOCKFILE_FAIL_IMMEDIATELY;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
@@ -1352,8 +1360,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
   return mapWindowsError(ERROR_LOCK_VIOLATION);
 }
 
-std::error_code lockFile(int FD, bool Exclusive) {
-  DWORD Flags = Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+std::error_code lockFile(int FD, LockKind Kind) {
+  DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))

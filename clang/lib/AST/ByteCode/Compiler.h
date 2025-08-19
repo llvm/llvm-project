@@ -282,6 +282,7 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
@@ -426,6 +427,7 @@ protected:
   bool DiscardResult = false;
 
   bool InStmtExpr = false;
+  bool ToLValue = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
