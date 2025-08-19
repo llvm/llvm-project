@@ -73,7 +73,7 @@ func.func @transfers_static_dims(%A: memref<64x32x16x2xf16>,
 #map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
 #map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
 #map2 = affine_map<(m, n, k, vnni) -> (m, n)>
-func.func @transfer_dynamic_outer_dims(%A: memref<?x?x16x2xf16>,
+func.func @transfers_dynamic_outer_dims(%A: memref<?x?x16x2xf16>,
     %B: memref<?x?x32x2xf16>, %C: memref<?x64xf32>, %idx: index) {
   %c0_f16 = arith.constant 0.0 : f16
   %c0_f32 = arith.constant 0.0 : f32
@@ -93,7 +93,7 @@ func.func @transfer_dynamic_outer_dims(%A: memref<?x?x16x2xf16>,
   return
 }
 
-// CHECK-LABEL: @transfer_dynamic_outer_dims(
+// CHECK-LABEL: @transfers_dynamic_outer_dims(
 // CHECK-SAME:    %[[A:.+]]: memref<?x?x16x2xf16>,
 // CHECK-SAME:    %[[B:.+]]: memref<?x?x32x2xf16>,
 // CHECK-SAME:    %[[C:.+]]: memref<?x64xf32>
