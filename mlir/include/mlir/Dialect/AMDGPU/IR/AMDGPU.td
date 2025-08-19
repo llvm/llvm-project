@@ -671,7 +671,9 @@ def AMDGPU_PermlanePermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_PermlanePerm,
 
 def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]>,
 Arguments<(ins AnyIntegerOrFloatOr1DVector:$src, 
-                AMDGPU_PermlanePermAttr:$kind)> {
+               AMDGPU_PermlanePermAttr:$kind,
+               DefaultValuedAttr<BoolAttr, "false">:$fi,
+               DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU permlane op";
   let description = [{
     High-level wrapper on `rocdl.permlane` variants.

@@ -10,6 +10,16 @@ func.func @test_permlane16_i32(%arg0 : i32) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: func @test_permlane16_i32_optional_attr
+// CHECK-SAME: (%[[ARG0:.*]]: i32)
+func.func @test_permlane16_i32_optional_attr(%arg0 : i32) -> i32 {
+// CHECK:  %[[PERM:.*]] = rocdl.permlane16.swap %[[ARG0]], %[[ARG0]], true, true : (i32, i32) -> <(i32, i32)>
+// CHECK:  %[[RES:.*]] = llvm.extractvalue %[[PERM]][0] : !llvm.struct<(i32, i32)>
+// CHECK:  return %[[RES]] : i32
+  %0 = amdgpu.permlane %arg0 swap_16 { fi = true, bound_ctrl = true }  : i32
+  return %0 : i32
+}
+
 // CHECK-LABEL: func @test_permlane32_i32
 // CHECK-SAME: (%[[ARG0:.*]]: i32)
 func.func @test_permlane32_i32(%arg0 : i32) -> i32 {
