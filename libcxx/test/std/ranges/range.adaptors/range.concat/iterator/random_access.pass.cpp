@@ -46,7 +46,7 @@ constexpr bool test() {
     // random_access_range and non common range
     std::ranges::concat_view v(SimpleNonCommonRandomAccessSized{buffer1}, NonSimpleCommonRandomAccessSized{buffer2});
     auto it                 = v.begin();
-    const auto canSubscript = [](auto&& it) { return requires { it[0]; }; };
+    const auto canSubscript = [](auto&& jt) { return requires { jt[0]; }; };
     static_assert(!canSubscript(it));
 
     static_assert(std::is_same_v<decltype(*it), const int&>);
