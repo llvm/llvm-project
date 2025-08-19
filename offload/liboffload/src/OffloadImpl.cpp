@@ -696,7 +696,7 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-Error olGetKernelMaxGroupSize_impl(ol_device_handle_t Device,
+Error olCalculateMaxOccupancy_impl(ol_device_handle_t Device,
                                    ol_symbol_handle_t Kernel,
                                    size_t DynamicMemSize, size_t *GroupSize) {
   if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)

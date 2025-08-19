@@ -44,16 +44,17 @@ def : Function {
 }
 
 def : Function {
-    let name = "olGetKernelMaxGroupSize";
-    let desc = "Get the maximum block size needed to achieve maximum occupancy.";
+    let name = "olCalculateMaxOccupancy";
+    let desc = "Given dynamic memory size, query the device for a workgroup size that will result in optimal occupancy.";
     let details = [];
     let params = [
         Param<"ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
         Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
-        Param<"size_t", "SharedMemory", "dynamic shared memory required", PARAM_IN>,
-        Param<"size_t*", "GroupSize", "maximum block size", PARAM_OUT>
+        Param<"size_t", "SharedMemory", "dynamic shared memory required per work item in bytes", PARAM_IN>,
+        Param<"size_t*", "GroupSize", "optimal block size", PARAM_OUT>
     ];
     let returns = [
         Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
+        Return<"OL_ERRC_UNSUPPORTED", ["The backend cannot provide this information"]>,
     ];
 }

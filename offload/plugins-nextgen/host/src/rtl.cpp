@@ -117,8 +117,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   /// Return maximum block size for maximum occupancy
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &Device,
                                   uint64_t DynamicMemSize) const override {
-    // TODO
-    return 1;
+    return Plugin::error(
+        ErrorCode::UNSUPPORTED,
+        "occupancy calculations are not implemented for the host device");
   }
 
 private:

@@ -575,7 +575,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// TODO: This needs to be implemented for amdgpu
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
                                   uint64_t DynamicMemSize) const override {
-    return 1;
+    return Plugin::error(
+        ErrorCode::UNSUPPORTED,
+        "occupancy calculations for AMDGPU are not yet implemented");
   }
 
   /// Print more elaborate kernel launch info for AMDGPU
