@@ -923,6 +923,10 @@ private:
 /// devices. This class relies on signals to implement streams and define the
 /// dependencies between asynchronous operations.
 struct AMDGPUStreamTy {
+public:
+  /// Function pointer type for `pushHostCallback`
+  using HostFnType = void (*)(void *);
+
 private:
   /// Utility struct holding arguments for async H2H memory copies.
   struct MemcpyArgsTy {
@@ -1085,7 +1089,7 @@ private:
   bool UseMultipleSdmaEngines;
 
   struct CallbackDataType {
-    void (*UserFn)(void *);
+    HostFnType UserFn;
     void *UserData;
     AMDGPUSignalTy *OutputSignal;
   };
@@ -1541,7 +1545,7 @@ public:
                                    OutputSignal->get());
   }
 
-  Error pushHostCallback(void (*Callback)(void *), void *UserData) {
+  Error pushHostCallback(HostFnType Callback, void *UserData) {
     // Retrieve an available signal for the operation's output.
     AMDGPUSignalTy *OutputSignal = nullptr;
     if (auto Err = SignalManager.getResource(OutputSignal))
@@ -2743,7 +2747,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+  Error enqueueHostCallImpl(AMDGPUStreamTy::HostFnType Callback, void *UserData,
                             AsyncInfoWrapperTy &AsyncInfo) override {
     AMDGPUStreamTy *Stream = nullptr;
     if (auto Err = getStream(AsyncInfo, Stream))
