@@ -101,13 +101,17 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
     ID->LifeState =
         AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
-  B->IsDynamic = true;
-
-  if (auto It = AllocationSites.find(D->asExpr()); It != AllocationSites.end())
+  if (auto It = AllocationSites.find(D->asExpr());
+      It != AllocationSites.end()) {
     It->second.Allocations.emplace_back(std::move(Memory));
-  else
+    B->setDynAllocId(It->second.NumAllocs);
+    ++It->second.NumAllocs;
+  } else {
     AllocationSites.insert(
         {D->asExpr(), AllocationSite(std::move(Memory), AllocForm)});
+    B->setDynAllocId(0);
+  }
+  assert(B->isDynamic());
   return B;
 }
 

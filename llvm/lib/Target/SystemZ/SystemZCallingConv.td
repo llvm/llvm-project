@@ -18,7 +18,7 @@ class CCIfSubtarget<string F, CCAction A>
 
 // Match if this specific argument was widened from a short vector type.
 class CCIfShortVector<CCAction A>
-    : CCIf<"static_cast<SystemZCCState *>(&State)->IsShortVector(ValNo)", A>;
+    : CCIf<"OrigTy->isVectorTy() && OrigTy->getPrimitiveSizeInBits() <= 64", A>;
 
 
 //===----------------------------------------------------------------------===//

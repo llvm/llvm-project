@@ -952,7 +952,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
-  Address emitArrayToPointerDecay(const Expr *array);
+  Address emitArrayToPointerDecay(const Expr *e,
+                                  LValueBaseInfo *baseInfo = nullptr);
 
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
@@ -1419,6 +1420,24 @@ public:
   mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
                                     const clang::Stmt *thenS,
                                     const clang::Stmt *elseS);
+
+  /// Build a "reference" to a va_list; this is either the address or the value
+  /// of the expression, depending on how va_list is defined.
+  Address emitVAListRef(const Expr *e);
+
+  /// Emits the start of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \param count The number of arguments in \c vaList
+  void emitVAStart(mlir::Value vaList, mlir::Value count);
+
+  /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  void emitVAEnd(mlir::Value vaList);
 
   /// ----------------------
   /// CIR build helpers

@@ -39,20 +39,19 @@ define void @test_flat_store_no_scratch_alloc(ptr %ptr, i32 %val) #0 {
     ret void
 }
 
-; TODO: handle
 define void @test_flat_store_noalias_addrspace(ptr %ptr, i32 %val) {
 ; GCN-LABEL: test_flat_store_noalias_addrspace:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
+; GCN-NEXT:    flat_store_b32 v[0:1], v2
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
     store i32 %val, ptr %ptr, !noalias.addrspace !{i32 5, i32 6}
     ret void
 }
 
-; TODO: would be nice to handle too
+; TODO: would be nice to handle
 define void @test_flat_store_select(ptr addrspace(1) %a, ptr addrspace(3) %b, i1 %cond, i32 %val) {
 ; GCN-SDAG-LABEL: test_flat_store_select:
 ; GCN-SDAG:       ; %bb.0:

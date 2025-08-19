@@ -713,6 +713,59 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   return true;
 }
 
+// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
+// being inserted only sets known zero bits.
+bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
+  // Supported only in Xqcibm for now.
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  using namespace SDPatternMatch;
+
+  SDValue And;
+  APInt MaskImm, OrImm;
+  if (!sd_match(Node, m_Or(m_OneUse(m_And(m_Value(And), m_ConstInt(MaskImm))),
+                           m_ConstInt(OrImm))))
+    return false;
+
+  // Compute the Known Zero for the AND as this allows us to catch more general
+  // cases than just looking for AND with imm.
+  KnownBits Known = CurDAG->computeKnownBits(Node->getOperand(0));
+
+  // The bits being inserted must only set those bits that are known to be zero.
+  if (!OrImm.isSubsetOf(Known.Zero)) {
+    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
+    // currently handle this case.
+    return false;
+  }
+
+  unsigned ShAmt, Width;
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!Known.Zero.isShiftedMask(ShAmt, Width))
+    return false;
+
+  // QC_INSB(I) dst, src, #width, #shamt.
+  SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
+  SDValue ImmNode;
+  auto Opc = RISCV::QC_INSB;
+
+  int32_t LIImm = OrImm.getSExtValue() >> ShAmt;
+
+  if (isInt<5>(LIImm)) {
+    Opc = RISCV::QC_INSBI;
+    ImmNode = CurDAG->getSignedTargetConstant(LIImm, DL, MVT::i32);
+  } else {
+    ImmNode = selectImm(CurDAG, DL, MVT::i32, LIImm, *Subtarget);
+  }
+
+  SDValue Ops[] = {And, ImmNode, CurDAG->getTargetConstant(Width, DL, VT),
+                   CurDAG->getTargetConstant(ShAmt, DL, VT)};
+  SDNode *BitIns = CurDAG->getMachineNode(Opc, DL, VT, Ops);
+  ReplaceNode(Node, BitIns);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
@@ -1375,6 +1428,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::OR: {
     if (trySignedBitfieldInsertInMask(Node))
+      return;
+
+    if (tryBitfieldInsertOpFromOrAndImm(Node))
       return;
 
     if (tryShrinkShlLogicImm(Node))

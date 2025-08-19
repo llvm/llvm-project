@@ -35,6 +35,7 @@ class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MDNode;
 class StringRef;
 class Triple;
 class raw_ostream;
@@ -1063,6 +1064,9 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 /// Similar to the function above, but returns std::nullopt if any error occurs.
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
+
+/// Checks if \p Val is inside \p MD, a !range-like metadata.
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
