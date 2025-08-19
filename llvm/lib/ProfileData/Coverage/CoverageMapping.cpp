@@ -978,6 +978,7 @@ Error CoverageMapping::loadFromReaders(
   Coverage.SingleByteCoverage =
       !ProfileReader || ProfileReader.value().get().hasSingleByteCoverage();
   for (const auto &CoverageReader : CoverageReaders) {
+    Coverage.AvailableInstrLevels |= CoverageReader->coverageCapabilities();
     for (auto RecordOrErr : *CoverageReader) {
       if (Error E = RecordOrErr.takeError())
         return E;
@@ -992,7 +993,7 @@ Error CoverageMapping::loadFromReaders(
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-        &ProfileReader) {
+        &ProfileReader, CoverageCapabilities RequestedCapabilities) {
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   if (Error E = loadFromReaders(CoverageReaders, ProfileReader, *Coverage))
     return std::move(E);
@@ -1013,6 +1014,7 @@ Error CoverageMapping::loadFromFile(
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
     CoverageMapping &Coverage, bool &DataFound,
+    CoverageCapabilities RequestedCapabilities,
     SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
   auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
       Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
@@ -1045,6 +1047,12 @@ Error CoverageMapping::loadFromFile(
   DataFound |= !Readers.empty();
   if (Error E = loadFromReaders(Readers, ProfileReader, Coverage))
     return createFileError(Filename, std::move(E));
+
+  // Check that all the requested coverage capabilities are available.
+  if (!Coverage.AvailableInstrLevels.includes(RequestedCapabilities))
+    return createFileError(
+        Filename, createStringError("is missing instrumentation levels"));
+
   return Error::success();
 }
 
@@ -1052,7 +1060,8 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<StringRef> ObjectFilenames,
     std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
     ArrayRef<StringRef> Arches, StringRef CompilationDir,
-    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs,
+    CoverageCapabilities RequestedCapabilities) {
   std::unique_ptr<IndexedInstrProfReader> ProfileReader;
   if (ProfileFilename) {
     auto ProfileReaderOrErr =
@@ -1081,7 +1090,8 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
     if (Error E = loadFromFile(File.value(), GetArch(File.index()),
                                CompilationDir, ProfileReaderRef, *Coverage,
-                               DataFound, &FoundBinaryIDs))
+                               DataFound, RequestedCapabilities,
+                               &FoundBinaryIDs))
       return std::move(E);
   }
 
@@ -1110,7 +1120,8 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
         std::string Path = std::move(*PathOpt);
         StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
         if (Error E = loadFromFile(Path, Arch, CompilationDir, ProfileReaderRef,
-                                   *Coverage, DataFound))
+                                   *Coverage, DataFound,
+                                   RequestedCapabilities))
           return std::move(E);
       } else if (CheckBinaryIDs) {
         return createFileError(

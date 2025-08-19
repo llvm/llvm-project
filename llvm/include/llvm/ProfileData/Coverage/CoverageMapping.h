@@ -1036,7 +1036,7 @@ class CoverageMapping {
 
   /// Keep track of the coverage capabilities of the loaded object file,
   /// which depends on the parameters used to compile it.
-  CovInstrLevel AvailableInstrLevels = CovInstrLevel::All;
+  CoverageCapabilities AvailableInstrLevels = CoverageCapabilities::none();
 
   std::optional<bool> SingleByteCoverage;
 
@@ -1055,6 +1055,7 @@ class CoverageMapping {
                std::optional<std::reference_wrapper<IndexedInstrProfReader>>
                    &ProfileReader,
                CoverageMapping &Coverage, bool &DataFound,
+               CoverageCapabilities RequestedCapabilities,
                SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
 
   /// Add a function record corresponding to \p Record.
@@ -1078,7 +1079,8 @@ public:
   LLVM_ABI static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
        std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-           &ProfileReader);
+           &ProfileReader,
+       CoverageCapabilities RequestCapabilities = CoverageCapabilities::none());
 
   /// Load the coverage mapping from the given object files and profile. If
   /// \p Arches is non-empty, it must specify an architecture for each object.
@@ -1088,7 +1090,8 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false,
+       CoverageCapabilities RequestCapabilities = CoverageCapabilities::none());
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
