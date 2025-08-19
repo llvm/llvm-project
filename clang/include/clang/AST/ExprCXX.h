@@ -5302,7 +5302,7 @@ public:
     return CoroutineSuspendExprBits.UseAwaitSuspendDestroy;
   }
 
-  void setUseAwaitSuspendDestroy(bool Use) {
+  void setUseAwaitSuspendDestroy(bool Use = true) {
     CoroutineSuspendExprBits.UseAwaitSuspendDestroy = Use;
   }
 

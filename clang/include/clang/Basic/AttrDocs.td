@@ -9373,12 +9373,20 @@ coroutine awaiter.  When applied, suspensions into the awaiter use an optimized
 call path that bypasses standard suspend intrinsics, and immediately destroys
 the suspending coro.
 
-Each annotated ``await_suspend`` member must contain a compatibility stub:
+Instead of calling the annotated ``await_suspend()``, the coroutine calls
+``await_suspend_destroy(Promise&)`` and immediately destroys the coroutine.
+
+Although it is not called, it is strongly recommended that `await_suspend()`
+contain the following portability stub.  The stub ensures the awaiter behaves
+equivalently without `coro_await_suspend_destroy` support, and makes the
+control flow clear to readers unfamiliar with the attribute:
 
 .. code-block:: c++
 
+  void await_suspend_destroy(Promise&) { /* actual implementation*/ }
   [[clang::coro_await_suspend_destroy]]
   void await_suspend(std::coroutine_handle<Promise> handle) {
+    // Stub to preserve behavior when the attribute is not supported
     await_suspend_destroy(handle.promise());
     handle.destroy();
   }
@@ -9387,10 +9395,9 @@ An awaiter type may provide both annotated and non-annotated overloads of
 ``await_suspend()``, as long as each invocation of an annotated overload has a
 corresponding ``await_suspend_destroy(Promise&)`` overload.
 
-Instead of calling the annotated ``await_suspend()``, the coroutine calls
-``await_suspend_destroy(Promise&)`` and immediately destroys the coroutine
-``await_suspend_destroy()`` must return ``void`` (Note: if desired, it
-would be straightforward to also support the "symmetric transfer"
+The return type of ``await_suspend()`` must match ``await_suspend_destroy()``. 
+The latter must return ``void``.  (Note: if desired, it would be
+straightforward to also support the "symmetric transfer"
 ``std::coroutine_handle`` return type.)
 
 This optimization improves code speed and size for "short-circuiting"
