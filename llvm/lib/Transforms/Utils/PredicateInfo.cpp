@@ -20,7 +20,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -291,6 +290,11 @@ void PredicateInfoBuilder::convertUsesToDFSOrdered(
     Value *Op, SmallVectorImpl<ValueDFS> &DFSOrderedSet) {
   for (auto &U : Op->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
+      // Lifetime intrinsics must work directly on alloca, do not replace them
+      // with a predicated copy.
+      if (I->isLifetimeStartOrEnd())
+        continue;
+
       ValueDFS VD;
       // Put the phi node uses in the incoming block.
       BasicBlock *IBlock;
@@ -370,6 +374,8 @@ void PredicateInfoBuilder::processAssume(
     Values.push_back(Cond);
     if (auto *Cmp = dyn_cast<CmpInst>(Cond))
       collectCmpOps(Cmp, Values);
+    else if (match(Cond, m_NUWTrunc(m_Value(Op0))))
+      Values.push_back(Op0);
 
     for (Value *V : Values) {
       if (shouldRename(V)) {
@@ -416,6 +422,8 @@ void PredicateInfoBuilder::processBranch(
       Values.push_back(Cond);
       if (auto *Cmp = dyn_cast<CmpInst>(Cond))
         collectCmpOps(Cmp, Values);
+      else if (match(Cond, m_NUWTrunc(m_Value(Op0))))
+        Values.push_back(Op0);
 
       for (Value *V : Values) {
         if (shouldRename(V)) {
@@ -707,6 +715,11 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
       return {{CmpInst::ICMP_EQ,
                TrueEdge ? ConstantInt::getTrue(Condition->getType())
                         : ConstantInt::getFalse(Condition->getType())}};
+    }
+
+    if (match(Condition, m_NUWTrunc(m_Specific(RenamedOp)))) {
+      return {{TrueEdge ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ,
+               ConstantInt::getNullValue(RenamedOp->getType())}};
     }
 
     CmpInst *Cmp = dyn_cast<CmpInst>(Condition);

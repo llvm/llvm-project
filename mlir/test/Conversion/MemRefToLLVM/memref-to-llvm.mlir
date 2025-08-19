@@ -464,7 +464,9 @@ func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fv
   // CHECK: llvm.atomicrmw _or %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw andi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
-  // CHECK-INTERFACE-COUNT-13: llvm.atomicrmw
+  memref.atomic_rmw xori %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  // CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} acq_rel
+  // CHECK-INTERFACE-COUNT-14: llvm.atomicrmw
   return
 }
 
