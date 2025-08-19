@@ -98,12 +98,12 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
   return Result;
 }
 
-static std::tuple<Value *, Value *, Value *, SmallVector<Instruction *>>
-extractThreeVariablesAndInstructions(Value *Root) {
+static std::tuple<Value *, Value *, Value *>
+extractThreeVariablesAndInstructions(
+    Value *Root, SmallVectorImpl<Instruction *> &Instructions) {
   SmallPtrSet<Value *, 3> Variables;
   SmallPtrSet<Value *, 32> Visited; // Prevent hanging during loop unrolling
                                     // (see bitreverse-hang.ll)
-  SmallVector<Instruction *> Instructions;
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
 
@@ -126,7 +126,7 @@ extractThreeVariablesAndInstructions(Value *Root) {
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
       if (!BO->isBitwiseLogicOp())
-        return {nullptr, nullptr, nullptr, {}};
+        return {nullptr, nullptr, nullptr};
 
       Instructions.push_back(BO);
 
@@ -150,7 +150,7 @@ extractThreeVariablesAndInstructions(Value *Root) {
         if (!FirstBB) {
           FirstBB = I->getParent();
         } else if (I->getParent() != FirstBB) {
-          return {nullptr, nullptr, nullptr, {}};
+          return {nullptr, nullptr, nullptr};
         }
       }
     }
@@ -166,11 +166,11 @@ extractThreeVariablesAndInstructions(Value *Root) {
         // For NOT operations, only check the variable operand (constant -1 is
         // handled by pattern matcher)
         if (!ValidOperands.count(NotV))
-          return {nullptr, nullptr, nullptr, {}};
+          return {nullptr, nullptr, nullptr};
       } else {
         for (Use &U : I->operands()) {
           if (!ValidOperands.count(U.get()))
-            return {nullptr, nullptr, nullptr, {}};
+            return {nullptr, nullptr, nullptr};
         }
       }
     }
@@ -188,10 +188,9 @@ extractThreeVariablesAndInstructions(Value *Root) {
       return A->comesBefore(B);
     });
 
-    return {SortedVars[0], SortedVars[1], SortedVars[2],
-            std::move(Instructions)};
+    return {SortedVars[0], SortedVars[1], SortedVars[2]};
   }
-  return {nullptr, nullptr, nullptr, {}};
+  return {nullptr, nullptr, nullptr};
 }
 
 /// Evaluate a boolean expression with bit-vector inputs for all 8 combinations.
@@ -246,8 +245,9 @@ static Value *foldThreeVarBoolExpr(Instruction &Root,
       !isa<BinaryOperator>(BO.getOperand(1)))
     return nullptr;
 
-  auto [Op0, Op1, Op2, Instructions] =
-      extractThreeVariablesAndInstructions(&Root);
+  SmallVector<Instruction *> Instructions;
+  auto [Op0, Op1, Op2] =
+      extractThreeVariablesAndInstructions(&Root, Instructions);
   if (!Op0 || !Op1 || !Op2)
     return nullptr;
 
