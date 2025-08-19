@@ -1609,7 +1609,6 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
 
   // Canonicalize Cmp1 into the form we expect.
   // FIXME: we shouldn't care about lanes that are 'undef' in the end?
-  bool SwapReplacement = false;
   switch (Pred1) {
   case ICmpInst::Predicate::ICMP_SLT:
     // The sext(icmp) case only is advantageous for SGT/SGTE since that enables
@@ -1636,7 +1635,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.
     Pred1 = ICmpInst::Predicate::ICMP_SLT;
-    SwapReplacement = true;
+    std::swap(ReplacementLow, ReplacementHigh);
     break;
   default:
     return nullptr; // Unknown predicate.
@@ -1666,12 +1665,9 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     return nullptr;
 
   if (FoldSExtICmp) {
-    ReplacementLow = Constant::getAllOnesValue(Sel1->getType());
-    ReplacementHigh = Constant::getNullValue(Sel1->getType());
+    ReplacementHigh = Constant::getAllOnesValue(Sel1->getType());
+    ReplacementLow = Constant::getNullValue(Sel1->getType());
   }
-
-  if (SwapReplacement)
-    std::swap(ReplacementLow, ReplacementHigh);
 
   // If we are matching from a truncated input, we need to sext the
   // ReplacementLow and ReplacementHigh values. Only do the transform if they
