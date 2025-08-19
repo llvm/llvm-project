@@ -1934,6 +1934,9 @@ module std [system] {
       header "__ranges/transform_view.h"
       export std.functional.bind_back
     }
+    module tuple_helpers {
+      header "__ranges/tuple_helpers.h"
+    }
     module view_interface {
       header "__ranges/view_interface.h"
     }
