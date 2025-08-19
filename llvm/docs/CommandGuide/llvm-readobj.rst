@@ -106,7 +106,7 @@ file formats.
 
 .. option:: --offloading
 
- Display list of HIP Offload bundles using URI syntax.
+ Display list of HIP offload bundles.
 
 .. option:: --relocations, --relocs, -r
 
