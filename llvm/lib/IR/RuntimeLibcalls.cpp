@@ -54,11 +54,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
     return;
   }
-
-  if (TT.getArch() == Triple::ArchType::msp430) {
-    setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
-                              CallingConv::MSP430_BUILTIN);
-  }
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
