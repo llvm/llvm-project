@@ -452,7 +452,8 @@ public:
     }
   };
 
-  ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const MemberExpr *me);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
@@ -952,7 +953,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
-  Address emitArrayToPointerDecay(const Expr *array);
+  Address emitArrayToPointerDecay(const Expr *e,
+                                  LValueBaseInfo *baseInfo = nullptr);
 
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
@@ -1173,9 +1175,14 @@ public:
   LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
                                              mlir::Value &result);
 
-  void emitCompoundStmt(const clang::CompoundStmt &s);
+  mlir::LogicalResult
+  emitCompoundStmt(const clang::CompoundStmt &s, Address *lastValue = nullptr,
+                   AggValueSlot slot = AggValueSlot::ignored());
 
-  void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
+  mlir::LogicalResult
+  emitCompoundStmtWithoutScope(const clang::CompoundStmt &s,
+                               Address *lastValue = nullptr,
+                               AggValueSlot slot = AggValueSlot::ignored());
 
   void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
@@ -1412,6 +1419,27 @@ public:
   // we know if a temporary should be destroyed conditionally.
   ConditionalEvaluation *outermostConditional = nullptr;
 
+  /// An RAII object to record that we're evaluating a statement
+  /// expression.
+  class StmtExprEvaluation {
+    CIRGenFunction &cgf;
+
+    /// We have to save the outermost conditional: cleanups in a
+    /// statement expression aren't conditional just because the
+    /// StmtExpr is.
+    ConditionalEvaluation *savedOutermostConditional;
+
+  public:
+    StmtExprEvaluation(CIRGenFunction &cgf)
+        : cgf(cgf), savedOutermostConditional(cgf.outermostConditional) {
+      cgf.outermostConditional = nullptr;
+    }
+
+    ~StmtExprEvaluation() {
+      cgf.outermostConditional = savedOutermostConditional;
+    }
+  };
+
   template <typename FuncTy>
   ConditionalInfo emitConditionalBlocks(const AbstractConditionalOperator *e,
                                         const FuncTy &branchGenFunc);
@@ -1419,6 +1447,24 @@ public:
   mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
                                     const clang::Stmt *thenS,
                                     const clang::Stmt *elseS);
+
+  /// Build a "reference" to a va_list; this is either the address or the value
+  /// of the expression, depending on how va_list is defined.
+  Address emitVAListRef(const Expr *e);
+
+  /// Emits the start of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \param count The number of arguments in \c vaList
+  void emitVAStart(mlir::Value vaList, mlir::Value count);
+
+  /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  void emitVAEnd(mlir::Value vaList);
 
   /// ----------------------
   /// CIR build helpers
