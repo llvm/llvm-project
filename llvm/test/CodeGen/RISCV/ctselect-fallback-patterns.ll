@@ -157,14 +157,12 @@ define i32 @test_ctselect_umax_generic(i32 %x, i32 %y) {
 define i32 @test_ctselect_abs(i32 %x) {
 ; RV64-LABEL: test_ctselect_abs:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a1, a0
-; RV64-NEXT:    negw a2, a0
-; RV64-NEXT:    slti a1, a1, 0
-; RV64-NEXT:    negw a3, a1
-; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    and a2, a3, a2
-; RV64-NEXT:    and a0, a1, a0
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    negw a1, a0
+; RV64-NEXT:    sraiw a2, a0, 31
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    not a2, a2
+; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_abs:
@@ -186,14 +184,12 @@ define i32 @test_ctselect_abs(i32 %x) {
 define i32 @test_ctselect_nabs(i32 %x) {
 ; RV64-LABEL: test_ctselect_nabs:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a1, a0
-; RV64-NEXT:    negw a2, a0
-; RV64-NEXT:    slti a1, a1, 0
-; RV64-NEXT:    addi a3, a1, -1
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a2, a3, a2
-; RV64-NEXT:    and a0, a1, a0
-; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    negw a1, a0
+; RV64-NEXT:    sraiw a2, a0, 31
+; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    not a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_nabs:
@@ -282,7 +278,6 @@ define i32 @test_ctselect_identical_operands(i1 %cond, i32 %x) {
 ;
 ; RV32-LABEL: test_ctselect_identical_operands:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a2, a0, a1
@@ -301,9 +296,9 @@ define i32 @test_ctselect_inverted_condition(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    sext.w a0, a0
 ; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    addi a1, a0, -1
-; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    neg a1, a0
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    and a1, a1, a3
 ; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    or a0, a0, a1
@@ -351,9 +346,6 @@ define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c, 
 ;
 ; RV32-LABEL: test_ctselect_chain:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    andi a2, a2, 1
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    slli a1, a1, 31
 ; RV32-NEXT:    slli a2, a2, 31

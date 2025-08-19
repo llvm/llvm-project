@@ -46,7 +46,6 @@ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_protected_no_branch:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a1, a0, a1

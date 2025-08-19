@@ -61,7 +61,6 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
 ; M32-LABEL: test_ctselect_i32:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $5
 ; M32-NEXT:    not $1, $1
@@ -74,7 +73,6 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    sll $2, $5, 0
 ; M64-NEXT:    sll $3, $6, 0
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
@@ -106,7 +104,6 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) {
 ; M64:       # %bb.0:
 ; M64-NEXT:    andi $1, $4, 1
 ; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    and $2, $1, $5
 ; M64-NEXT:    xor $1, $1, $3
@@ -121,7 +118,6 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
 ; M32-LABEL: test_ctselect_ptr:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $5
 ; M32-NEXT:    not $1, $1
@@ -133,7 +129,6 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
 ; M64:       # %bb.0:
 ; M64-NEXT:    andi $1, $4, 1
 ; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    and $2, $1, $5
 ; M64-NEXT:    xor $1, $1, $3
@@ -178,8 +173,8 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M32-LABEL: test_ctselect_icmp_eq:
 ; M32:       # %bb.0:
 ; M32-NEXT:    xor $1, $4, $5
-; M32-NEXT:    sltiu $1, $1, 1
-; M32-NEXT:    negu $1, $1
+; M32-NEXT:    sltu $1, $zero, $1
+; M32-NEXT:    addiu $1, $1, -1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
@@ -193,8 +188,8 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M64-NEXT:    sll $3, $7, 0
 ; M64-NEXT:    xor $1, $2, $1
 ; M64-NEXT:    sll $2, $6, 0
-; M64-NEXT:    sltiu $1, $1, 1
-; M64-NEXT:    negu $1, $1
+; M64-NEXT:    sltu $1, $zero, $1
+; M64-NEXT:    addiu $1, $1, -1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
 ; M64-NEXT:    and $1, $1, $3
@@ -209,8 +204,8 @@ define i32 @test_ctselect_icmp_ne(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M32-LABEL: test_ctselect_icmp_ne:
 ; M32:       # %bb.0:
 ; M32-NEXT:    xor $1, $4, $5
-; M32-NEXT:    sltu $1, $zero, $1
-; M32-NEXT:    negu $1, $1
+; M32-NEXT:    sltiu $1, $1, 1
+; M32-NEXT:    addiu $1, $1, -1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
@@ -224,8 +219,8 @@ define i32 @test_ctselect_icmp_ne(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M64-NEXT:    sll $3, $7, 0
 ; M64-NEXT:    xor $1, $2, $1
 ; M64-NEXT:    sll $2, $6, 0
-; M64-NEXT:    sltu $1, $zero, $1
-; M64-NEXT:    negu $1, $1
+; M64-NEXT:    sltiu $1, $1, 1
+; M64-NEXT:    addiu $1, $1, -1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
 ; M64-NEXT:    and $1, $1, $3
@@ -240,7 +235,8 @@ define i32 @test_ctselect_icmp_slt(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M32-LABEL: test_ctselect_icmp_slt:
 ; M32:       # %bb.0:
 ; M32-NEXT:    slt $1, $4, $5
-; M32-NEXT:    negu $1, $1
+; M32-NEXT:    xori $1, $1, 1
+; M32-NEXT:    addiu $1, $1, -1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
@@ -254,7 +250,8 @@ define i32 @test_ctselect_icmp_slt(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M64-NEXT:    sll $3, $7, 0
 ; M64-NEXT:    slt $1, $2, $1
 ; M64-NEXT:    sll $2, $6, 0
-; M64-NEXT:    negu $1, $1
+; M64-NEXT:    xori $1, $1, 1
+; M64-NEXT:    addiu $1, $1, -1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
 ; M64-NEXT:    and $1, $1, $3
@@ -269,7 +266,8 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M32-LABEL: test_ctselect_icmp_ult:
 ; M32:       # %bb.0:
 ; M32-NEXT:    sltu $1, $4, $5
-; M32-NEXT:    negu $1, $1
+; M32-NEXT:    xori $1, $1, 1
+; M32-NEXT:    addiu $1, $1, -1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
@@ -283,7 +281,8 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; M64-NEXT:    sll $3, $7, 0
 ; M64-NEXT:    sltu $1, $2, $1
 ; M64-NEXT:    sll $2, $6, 0
-; M64-NEXT:    negu $1, $1
+; M64-NEXT:    xori $1, $1, 1
+; M64-NEXT:    addiu $1, $1, -1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
 ; M64-NEXT:    and $1, $1, $3
@@ -301,7 +300,6 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
 ; M32-NEXT:    andi $1, $4, 1
 ; M32-NEXT:    lw $2, 0($5)
 ; M32-NEXT:    lw $3, 0($6)
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $2
 ; M32-NEXT:    not $1, $1
@@ -314,7 +312,6 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    lw $2, 0($5)
 ; M64-NEXT:    lw $3, 0($6)
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
@@ -334,14 +331,12 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $5, 1
 ; M32-NEXT:    lw $3, 16($sp)
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
 ; M32-NEXT:    or $1, $2, $1
 ; M32-NEXT:    andi $2, $4, 1
-; M32-NEXT:    andi $2, $2, 1
 ; M32-NEXT:    negu $2, $2
 ; M32-NEXT:    and $1, $2, $1
 ; M32-NEXT:    not $2, $2
@@ -355,7 +350,6 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
 ; M64-NEXT:    sll $2, $6, 0
 ; M64-NEXT:    sll $3, $7, 0
 ; M64-NEXT:    andi $1, $1, 1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
@@ -363,7 +357,6 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
 ; M64-NEXT:    sll $3, $8, 0
 ; M64-NEXT:    or $1, $2, $1
 ; M64-NEXT:    sll $2, $4, 0
-; M64-NEXT:    andi $2, $2, 1
 ; M64-NEXT:    andi $2, $2, 1
 ; M64-NEXT:    negu $2, $2
 ; M64-NEXT:    and $1, $2, $1
@@ -381,7 +374,6 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
 ; M32-LABEL: test_ctselect_f32:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $5
 ; M32-NEXT:    not $1, $1
@@ -395,7 +387,6 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    mfc1 $2, $f13
 ; M64-NEXT:    mfc1 $3, $f14
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
@@ -441,7 +432,6 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) {
 ; M64-NEXT:    andi $1, $4, 1
 ; M64-NEXT:    dmfc1 $2, $f13
 ; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    xor $1, $1, $3
@@ -461,14 +451,12 @@ define float @test_ctselect_f32_chain(i1 %cond1, i1 %cond2, float %a, float %b, 
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
 ; M32-NEXT:    lw $3, 16($sp)
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $6
 ; M32-NEXT:    not $1, $1
 ; M32-NEXT:    and $1, $1, $7
 ; M32-NEXT:    or $1, $2, $1
 ; M32-NEXT:    andi $2, $5, 1
-; M32-NEXT:    andi $2, $2, 1
 ; M32-NEXT:    negu $2, $2
 ; M32-NEXT:    and $1, $2, $1
 ; M32-NEXT:    not $2, $2
@@ -483,7 +471,6 @@ define float @test_ctselect_f32_chain(i1 %cond1, i1 %cond2, float %a, float %b, 
 ; M64-NEXT:    mfc1 $2, $f14
 ; M64-NEXT:    mfc1 $3, $f15
 ; M64-NEXT:    andi $1, $1, 1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    not $1, $1
@@ -491,7 +478,6 @@ define float @test_ctselect_f32_chain(i1 %cond1, i1 %cond2, float %a, float %b, 
 ; M64-NEXT:    mfc1 $3, $f16
 ; M64-NEXT:    or $1, $2, $1
 ; M64-NEXT:    sll $2, $5, 0
-; M64-NEXT:    andi $2, $2, 1
 ; M64-NEXT:    andi $2, $2, 1
 ; M64-NEXT:    negu $2, $2
 ; M64-NEXT:    and $1, $2, $1
@@ -512,7 +498,6 @@ define float @test_ctselect_f32_load(i1 %cond, ptr %p1, ptr %p2) {
 ; M32-NEXT:    andi $1, $4, 1
 ; M32-NEXT:    lw $2, 0($5)
 ; M32-NEXT:    lw $3, 0($6)
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $2
 ; M32-NEXT:    not $1, $1
@@ -526,7 +511,6 @@ define float @test_ctselect_f32_load(i1 %cond, ptr %p1, ptr %p2) {
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    lw $2, 0($5)
 ; M64-NEXT:    lw $3, 0($6)
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
@@ -571,7 +555,6 @@ define double @test_ctselect_f64_load(i1 %cond, ptr %p1, ptr %p2) {
 ; M64-NEXT:    andi $1, $4, 1
 ; M64-NEXT:    ld $2, 0($5)
 ; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    dnegu $1, $1
 ; M64-NEXT:    and $2, $1, $2
 ; M64-NEXT:    xor $1, $1, $3
@@ -592,16 +575,15 @@ define float @test_ctselect_f32_arithmetic(i1 %cond, float %x, float %y) {
 ; M32:       # %bb.0:
 ; M32-NEXT:    mtc1 $6, $f0
 ; M32-NEXT:    mtc1 $5, $f1
-; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
-; M32-NEXT:    add.s $f2, $f1, $f0
-; M32-NEXT:    sub.s $f0, $f1, $f0
-; M32-NEXT:    negu $1, $1
-; M32-NEXT:    mfc1 $2, $f2
+; M32-NEXT:    andi $2, $4, 1
+; M32-NEXT:    negu $2, $2
+; M32-NEXT:    sub.s $f2, $f1, $f0
+; M32-NEXT:    add.s $f0, $f1, $f0
+; M32-NEXT:    not $3, $2
+; M32-NEXT:    mfc1 $1, $f2
+; M32-NEXT:    and $1, $3, $1
 ; M32-NEXT:    mfc1 $3, $f0
-; M32-NEXT:    and $2, $1, $2
-; M32-NEXT:    not $1, $1
-; M32-NEXT:    and $1, $1, $3
+; M32-NEXT:    and $2, $2, $3
 ; M32-NEXT:    or $1, $2, $1
 ; M32-NEXT:    jr $ra
 ; M32-NEXT:    mtc1 $1, $f0
@@ -610,7 +592,6 @@ define float @test_ctselect_f32_arithmetic(i1 %cond, float %x, float %y) {
 ; M64:       # %bb.0:
 ; M64-NEXT:    add.s $f0, $f13, $f14
 ; M64-NEXT:    sll $1, $4, 0
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    mfc1 $2, $f0

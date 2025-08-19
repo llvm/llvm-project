@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -6450,24 +6449,6 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   setValue(&I, Result);
 }
 
-static SDValue createMask(SelectionDAG &DAG, const SDLoc &DL, SDValue Cond,
-                          EVT WorkingVT, const SDNodeFlags &Flag) {
-  if (WorkingVT.isVector())
-    return DAG.getSExtOrTrunc(Cond, DL, WorkingVT);
-
-  // Extend cond to WorkingVT and normalize to 0 or 1
-  if (Cond.getValueType() != WorkingVT)
-    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, WorkingVT, Cond, Flag);
-
-  // Normalize
-  SDValue One = DAG.getConstant(1, DL, WorkingVT);
-  SDValue Norm = DAG.getNode(ISD::AND, DL, WorkingVT, Cond, One, Flag);
-
-  // Mask = 0 - Norm
-  SDValue Zero = DAG.getConstant(0, DL, WorkingVT);
-  return DAG.getNode(ISD::SUB, DL, WorkingVT, Zero, Norm, Flag);
-}
-
 /// Fallback implementation is an alternative approach for managing architectures that don't have 
 /// native support for Constant-Time Select.
 SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
@@ -6502,7 +6483,7 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     WorkingF = DAG.getBitcast(WorkingVT, F);
   }
 
-  SDValue Mask = createMask(DAG, DL, Cond, WorkingVT, ProtectedFlag);
+  SDValue Mask = DAG.getSExtOrTrunc(Cond, DL, WorkingVT);
 
   SDValue AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
   SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes, ProtectedFlag);
@@ -6746,8 +6727,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // For now we'll only support scalar predicates
     // assert if Cond type is Vector
     // TODO: Maybe look into supporting vector predicates?
-    assert(!CondVT.isVector() &&
-           "ct.select fallback only supports scalar conditions");
+    if (CondVT.isVector()) {
+      report_fatal_error(
+          "llvm.ct.select: predicates with vector types not supported yet");
+    }
 
     // Handle scalar types
     if (TLI.isSelectSupported(
@@ -6771,8 +6754,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // We don't support scalable vector types yet, for now it'll only be
     // fix-width vector
     // TODO: Add support for scalable vectors
-    assert(!VT.isScalableVector() &&
-           "ct.select fallback doesn't supports scalable vectors");
+    if (VT.isScalableVector()) {
+      report_fatal_error(
+          "llvm.ct.select: fallback doesn't supports scalable vectors");
+    }
 
     setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
     return;

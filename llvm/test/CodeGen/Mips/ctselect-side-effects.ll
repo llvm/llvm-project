@@ -39,7 +39,6 @@ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ; M32-LABEL: test_protected_no_branch:
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    andi $1, $1, 1
 ; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    and $2, $1, $5
 ; M32-NEXT:    not $1, $1
@@ -52,7 +51,6 @@ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    sll $2, $5, 0
 ; M64-NEXT:    sll $3, $6, 0
-; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    and $2, $1, $2
@@ -174,9 +172,9 @@ define i32 @test_xor_with_const_operands() {
 ; M64:       # %bb.0:
 ; M64-NEXT:    jr $ra
 ; M64-NEXT:    addiu $2, $zero, 0
-  %a = xor i32 -1, -1      
-  %b = xor i32 0, 0       
-  %c = xor i32 42, 42    
+  %a = xor i32 -1, -1
+  %b = xor i32 0, 0
+  %c = xor i32 42, 42
   %result = or i32 %a, %b
   %final = or i32 %result, %c
   ret i32 %final  ; Should optimize to 0
