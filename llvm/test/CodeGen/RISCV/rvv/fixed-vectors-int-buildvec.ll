@@ -3424,16 +3424,14 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV32-NEXT:    vredsum.vs v8, v8, v16
 ; RV32-NEXT:    vredsum.vs v9, v10, v16
 ; RV32-NEXT:    vredsum.vs v10, v12, v16
-; RV32-NEXT:    vredsum.vs v11, v14, v16
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vmv.x.s a3, v11
+; RV32-NEXT:    vredsum.vs v8, v14, v16
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a2
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vslide1up.vx v9, v8, a2
+; RV32-NEXT:    vslide1up.vx v10, v9, a1
+; RV32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64V-ONLY-LABEL: buildvec_vredsum:
@@ -3443,16 +3441,14 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV64V-ONLY-NEXT:    vredsum.vs v8, v8, v16
 ; RV64V-ONLY-NEXT:    vredsum.vs v9, v10, v16
 ; RV64V-ONLY-NEXT:    vredsum.vs v10, v12, v16
-; RV64V-ONLY-NEXT:    vredsum.vs v11, v14, v16
 ; RV64V-ONLY-NEXT:    vmv.x.s a0, v8
 ; RV64V-ONLY-NEXT:    vmv.x.s a1, v9
 ; RV64V-ONLY-NEXT:    vmv.x.s a2, v10
-; RV64V-ONLY-NEXT:    vmv.x.s a3, v11
+; RV64V-ONLY-NEXT:    vredsum.vs v8, v14, v16
 ; RV64V-ONLY-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64V-ONLY-NEXT:    vmv.v.x v8, a0
-; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a1
-; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a2
-; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a3
+; RV64V-ONLY-NEXT:    vslide1up.vx v9, v8, a2
+; RV64V-ONLY-NEXT:    vslide1up.vx v10, v9, a1
+; RV64V-ONLY-NEXT:    vslide1up.vx v8, v10, a0
 ; RV64V-ONLY-NEXT:    ret
 ;
 ; RVA22U64-LABEL: buildvec_vredsum:
@@ -3502,16 +3498,14 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV64ZVE32-NEXT:    vredsum.vs v8, v8, v16
 ; RV64ZVE32-NEXT:    vredsum.vs v9, v10, v16
 ; RV64ZVE32-NEXT:    vredsum.vs v10, v12, v16
-; RV64ZVE32-NEXT:    vredsum.vs v11, v14, v16
 ; RV64ZVE32-NEXT:    vmv.x.s a0, v8
 ; RV64ZVE32-NEXT:    vmv.x.s a1, v9
 ; RV64ZVE32-NEXT:    vmv.x.s a2, v10
-; RV64ZVE32-NEXT:    vmv.x.s a3, v11
+; RV64ZVE32-NEXT:    vredsum.vs v8, v14, v16
 ; RV64ZVE32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64ZVE32-NEXT:    vmv.v.x v8, a0
-; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a1
-; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a3
+; RV64ZVE32-NEXT:    vslide1up.vx v9, v8, a2
+; RV64ZVE32-NEXT:    vslide1up.vx v10, v9, a1
+; RV64ZVE32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV64ZVE32-NEXT:    ret
   %247 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %arg0)
   %248 = insertelement <4 x i32> poison, i32 %247, i64 0
@@ -3531,16 +3525,14 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV32-NEXT:    vredmaxu.vs v9, v10, v10
 ; RV32-NEXT:    vredmaxu.vs v10, v12, v12
-; RV32-NEXT:    vredmaxu.vs v11, v14, v14
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vmv.x.s a3, v11
+; RV32-NEXT:    vredmaxu.vs v8, v14, v14
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a2
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vslide1up.vx v9, v8, a2
+; RV32-NEXT:    vslide1up.vx v10, v9, a1
+; RV32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64V-ONLY-LABEL: buildvec_vredmax:
@@ -3549,16 +3541,14 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV64V-ONLY-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64V-ONLY-NEXT:    vredmaxu.vs v9, v10, v10
 ; RV64V-ONLY-NEXT:    vredmaxu.vs v10, v12, v12
-; RV64V-ONLY-NEXT:    vredmaxu.vs v11, v14, v14
 ; RV64V-ONLY-NEXT:    vmv.x.s a0, v8
 ; RV64V-ONLY-NEXT:    vmv.x.s a1, v9
 ; RV64V-ONLY-NEXT:    vmv.x.s a2, v10
-; RV64V-ONLY-NEXT:    vmv.x.s a3, v11
+; RV64V-ONLY-NEXT:    vredmaxu.vs v8, v14, v14
 ; RV64V-ONLY-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64V-ONLY-NEXT:    vmv.v.x v8, a0
-; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a1
-; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a2
-; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a3
+; RV64V-ONLY-NEXT:    vslide1up.vx v9, v8, a2
+; RV64V-ONLY-NEXT:    vslide1up.vx v10, v9, a1
+; RV64V-ONLY-NEXT:    vslide1up.vx v8, v10, a0
 ; RV64V-ONLY-NEXT:    ret
 ;
 ; RVA22U64-LABEL: buildvec_vredmax:
@@ -3605,16 +3595,14 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV64ZVE32-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64ZVE32-NEXT:    vredmaxu.vs v9, v10, v10
 ; RV64ZVE32-NEXT:    vredmaxu.vs v10, v12, v12
-; RV64ZVE32-NEXT:    vredmaxu.vs v11, v14, v14
 ; RV64ZVE32-NEXT:    vmv.x.s a0, v8
 ; RV64ZVE32-NEXT:    vmv.x.s a1, v9
 ; RV64ZVE32-NEXT:    vmv.x.s a2, v10
-; RV64ZVE32-NEXT:    vmv.x.s a3, v11
+; RV64ZVE32-NEXT:    vredmaxu.vs v8, v14, v14
 ; RV64ZVE32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64ZVE32-NEXT:    vmv.v.x v8, a0
-; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a1
-; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a3
+; RV64ZVE32-NEXT:    vslide1up.vx v9, v8, a2
+; RV64ZVE32-NEXT:    vslide1up.vx v10, v9, a1
+; RV64ZVE32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV64ZVE32-NEXT:    ret
   %247 = tail call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> %arg0)
   %248 = insertelement <4 x i32> poison, i32 %247, i64 0

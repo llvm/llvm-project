@@ -4512,33 +4512,94 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
          "Illegal type which will result in reserved encoding");
 
   const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
+  auto getVSlide = [&](bool SlideUp, EVT ContainerVT, SDValue Passthru,
+                       SDValue Vec, SDValue Offset, SDValue Mask,
+                       SDValue VL) -> SDValue {
+    if (SlideUp)
+      return getVSlideup(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
+                         Mask, VL, Policy);
+    return getVSlidedown(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
+                         Mask, VL, Policy);
+  };
+
+  // General case: splat the first operand and sliding other operands down one
+  // by one to form a vector. Alternatively, if the last operand is an
+  // extraction from a reduction result, we can use the original vector
+  // reduction result as the start value and slide up instead of slide down.
+  // Such that we can avoid the splat.
+  SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
+  SDValue Reduce;
+  bool SlideUp = false;
+  // Find the first first non-undef from the tail.
+  auto ItLastNonUndef = find_if(Operands.rbegin(), Operands.rend(),
+                                [](SDValue V) { return !V.isUndef(); });
+  if (ItLastNonUndef != Operands.rend()) {
+    using namespace SDPatternMatch;
+    // Check if the last non-undef operand was extracted from a reduction.
+    for (unsigned Opc :
+         {RISCVISD::VECREDUCE_ADD_VL, RISCVISD::VECREDUCE_UMAX_VL,
+          RISCVISD::VECREDUCE_SMAX_VL, RISCVISD::VECREDUCE_UMIN_VL,
+          RISCVISD::VECREDUCE_SMIN_VL, RISCVISD::VECREDUCE_AND_VL,
+          RISCVISD::VECREDUCE_OR_VL, RISCVISD::VECREDUCE_XOR_VL,
+          RISCVISD::VECREDUCE_FADD_VL, RISCVISD::VECREDUCE_SEQ_FADD_VL,
+          RISCVISD::VECREDUCE_FMAX_VL, RISCVISD::VECREDUCE_FMIN_VL}) {
+      SlideUp = sd_match(
+          *ItLastNonUndef,
+          m_ExtractElt(m_AllOf(m_Opc(Opc), m_Value(Reduce)), m_Zero()));
+      if (SlideUp)
+        break;
+    }
+  }
+
+  if (SlideUp) {
+    // Adapt Reduce's type into ContainerVT.
+    if (Reduce.getValueType().getVectorMinNumElements() <
+        ContainerVT.getVectorMinNumElements())
+      Reduce = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), Reduce, 0);
+    else
+      Reduce = DAG.getExtractSubvector(DL, ContainerVT, Reduce, 0);
+
+    // Reverse the elements as we're going to slide up from the last element.
+    for (unsigned i = 0U, N = Operands.size(), H = divideCeil(N, 2); i < H; ++i)
+      std::swap(Operands[i], Operands[N - 1 - i]);
+  }
 
   SDValue Vec;
   UndefCount = 0;
-  for (SDValue V : Op->ops()) {
+  for (SDValue V : Operands) {
     if (V.isUndef()) {
       UndefCount++;
       continue;
     }
 
-    // Start our sequence with a TA splat in the hopes that hardware is able to
-    // recognize there's no dependency on the prior value of our temporary
-    // register.
+    // Start our sequence with either a TA splat or a reduction result in the
+    // hopes that hardware is able to recognize there's no dependency on the
+    // prior value of our temporary register.
     if (!Vec) {
-      Vec = DAG.getSplatVector(VT, DL, V);
-      Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+      if (SlideUp) {
+        Vec = Reduce;
+      } else {
+        Vec = DAG.getSplatVector(VT, DL, V);
+        Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+      }
+
       UndefCount = 0;
       continue;
     }
 
     if (UndefCount) {
       const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
-      Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                          Vec, Offset, Mask, VL, Policy);
+      Vec = getVSlide(SlideUp, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
+                      Offset, Mask, VL);
       UndefCount = 0;
     }
-    auto OpCode =
-      VT.isFloatingPoint() ? RISCVISD::VFSLIDE1DOWN_VL : RISCVISD::VSLIDE1DOWN_VL;
+
+    unsigned OpCode;
+    if (VT.isFloatingPoint())
+      OpCode = SlideUp ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VFSLIDE1DOWN_VL;
+    else
+      OpCode = SlideUp ? RISCVISD::VSLIDE1UP_VL : RISCVISD::VSLIDE1DOWN_VL;
+
     if (!VT.isFloatingPoint())
       V = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), V);
     Vec = DAG.getNode(OpCode, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
@@ -4546,8 +4607,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   }
   if (UndefCount) {
     const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
-    Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                        Vec, Offset, Mask, VL, Policy);
+    Vec = getVSlide(SlideUp, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
+                    Offset, Mask, VL);
   }
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
