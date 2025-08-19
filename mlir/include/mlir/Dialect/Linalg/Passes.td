@@ -10,6 +10,88 @@
 #define MLIR_DIALECT_LINALG_PASSES
 
 include "mlir/Pass/PassBase.td"
+include "mlir/IR/Constraints.td"
+
+// ------------------ Begin of "form" conversions
+//
+// These conversions allow for the transformation of linalg ops between
+// different forms. Structured ops can be represented in different forms,
+// such as generic ops, category ops, and named ops.
+//
+// The operation tree is as follows:
+//   generic     category      named
+//  ---------|-------------|----------
+//  generic ---> contract ----> matmul
+//           |              \-> batch_matmul
+//           |              \-> batch_reduce_matmul
+//           |              \-> ...
+//           \-> elementwise -> add
+//                          \-> sub
+//                          \-> ...
+//
+// Morphisms between representations can happen in the following 6 ways:
+//  generic <---> category <---> named
+//      \-------------------------/
+//
+// generic subsumes category which subsumes structured named (not softmax,
+// convolutions, etc). The generalization path is guaranteed, the
+// specialization path is not.
+
+def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
+  let summary = "Convert linalg ops between forms";
+
+  let description = [{
+    Convert a linalg op from one representation to another equivalent.
+    For example, a linalg named op `linalg.add` can also be written as an
+    category op `linalg.elementwise`, and can also be re-written as
+    a `linalg.generic`, giving the morphism:
+
+      named-op <--> category_op (elementwise, contraction, ..) <--> generic
+
+    Note that the set of `linalg.generic` subsumes named and category ops
+    and therefore not all `linalg.genric` can be converted to  named or
+    category op. Similarly, catgory ops subsume named ops.
+
+    Note:
+     Legacy converters:
+     `--linalg-generalize-named-ops` is the path `named-op --> generic-op`
+     `--linalg-specialize-generic-ops` is the path `named-op <-- generic-op`
+  }];
+  let dependentDialects = ["linalg::LinalgDialect"];
+
+  let options = [
+    // Generalization path is guaranteed.
+    Option<"namedToCategory", "named-to-category", "bool", /*default=*/"false",
+           "convert named ops to category op e.g. `linalg.elementwise`">,
+    Option<"categoryToGeneric", "category-to-generic", "bool", /*default=*/"false",
+           "convert category ops e.g. `linalg.elementwise` to `linalg.generic`">,
+    Option<"namedToGeneric", "named-to-generic", "bool", /*default=*/"false",
+           "convert named ops e.g. `linalg.add` to `linalg.generic`">,
+    
+    // Specialization path is not guaranteed.
+    Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
+           "convert linalg.generic to equivalent named ops"> ];
+    //  TODOs: `generic-to-category`, `category-to-named`
+}
+
+def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">,
+                                   Deprecated<"Use 'linalg-morph-ops' instead."> {
+  let summary = "Convert named ops into generic ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">,
+                                     Deprecated<"Use 'linalg-morph-ops' instead."> {
+  let summary = "Convert generic ops back to named ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def LinalgNamedOpConversionPass: Pass<"linalg-named-op-conversion"> {
+  let summary = "Convert from one named linalg op to another.";
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+}
+
+// ------------------ End of "form" conversions
 
 def ConvertElementwiseToLinalgPass : Pass<"convert-elementwise-to-linalg", ""> {
   let summary = "Convert ElementwiseMappable ops to linalg";
@@ -77,65 +159,11 @@ def LinalgElementwiseOpFusionPass : Pass<"linalg-fuse-elementwise-ops"> {
   ];
 }
 
-def LinalgNamedOpConversionPass: Pass<"linalg-named-op-conversion"> {
-  let summary = "Convert from one named linalg op to another.";
-  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
-}
-
 def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
   let summary = "Inline scalar operands into linalg generic ops";
   let dependentDialects = [
     "linalg::LinalgDialect"
   ];
-}
-
-def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
-  let summary = "Convert named op to category ops or generic and vice-versa";
-
-  let description = [{
-    Convert a linalg op from one representation to another equivalent.
-    For example, a linalg named op `linalg.add` can also be written as an
-    category op `linalg.elementwise`, and can also be re-written as
-    a `linalg.generic`, giving the morphism:
-
-      named-op <--> category_op (elementwise, contraction, ..) <--> generic
-
-    Note that the set of `linalg.generic` subsumes named and category ops
-    and therefore not all `linalg.genric` can be converted to  named or
-    category op. Similarly, catgory ops subsume named ops.
-
-    Note:
-     Legacy converters:
-     `--linalg-generalize-named-ops` is the path `named-op --> generic-op`
-     `--linalg-specialize-generic-ops` is the path `named-op <-- generic-op`
-  }];
-  let dependentDialects = ["linalg::LinalgDialect"];
-
-  let options = [
-    // named-op <--> category <--> generic
-
-    // Lowering options
-    Option<"namedToCategory", "named-to-category", "bool", /*default=*/"false",
-           "convert named ops to category op e.g. `linalg.elementwise`">,
-    Option<"categoryToGeneric", "category-to-generic", "bool", /*default=*/"false",
-           "convert category ops e.g. `linalg.elementwise` to `linalg.generic`">,
-    Option<"namedToGeneric", "named-to-generic", "bool", /*default=*/"false",
-           "convert named ops e.g. `linalg.add` to `linalg.generic`">,
-
-    // Lifting options
-    //  TODOs: `generic-to-category`, `category-to-named`
-    Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
-           "convert linalg.generic to equivalent named ops"> ];
-}
-
-def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
-  let summary = "Convert named ops into generic ops";
-  let dependentDialects = ["linalg::LinalgDialect"];
-}
-
-def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops"> {
-  let summary = "Convert generic ops back to named ops";
-  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
