@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=COMMON,NO-OPT
-// RUN: %clang_cc1 -emit-llvm %s -O3 -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=COMMON,OPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=COMMON,NO-OPT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -O3 -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=COMMON,OPT
 
 struct S {
   void *a();
