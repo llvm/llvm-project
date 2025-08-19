@@ -2078,14 +2078,19 @@ DeclResult Sema::CheckClassTemplate(
         // If we have a prior definition that is not visible, treat this as
         // simply making that previous definition visible.
         NamedDecl *Hidden = nullptr;
-        if (SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
+        bool HiddenDefVisible = false;
+        if (SkipBody &&
+            isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible)) {
           SkipBody->ShouldSkip = true;
           SkipBody->Previous = Def;
-          auto *Tmpl = cast<CXXRecordDecl>(Hidden)->getDescribedClassTemplate();
-          assert(Tmpl && "original definition of a class template is not a "
-                         "class template?");
-          makeMergedDefinitionVisible(Hidden);
-          makeMergedDefinitionVisible(Tmpl);
+          if (!HiddenDefVisible && Hidden) {
+            auto *Tmpl =
+                cast<CXXRecordDecl>(Hidden)->getDescribedClassTemplate();
+            assert(Tmpl && "original definition of a class template is not a "
+                           "class template?");
+            makeMergedDefinitionVisible(Hidden);
+            makeMergedDefinitionVisible(Tmpl);
+          }
         } else {
           Diag(NameLoc, diag::err_redefinition) << Name;
           Diag(Def->getLocation(), diag::note_previous_definition);
@@ -8956,10 +8961,13 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   if (TUK == TagUseKind::Definition) {
     RecordDecl *Def = Specialization->getDefinition();
     NamedDecl *Hidden = nullptr;
-    if (Def && SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
+    bool HiddenDefVisible = false;
+    if (Def && SkipBody &&
+        isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible)) {
       SkipBody->ShouldSkip = true;
       SkipBody->Previous = Def;
-      makeMergedDefinitionVisible(Hidden);
+      if (!HiddenDefVisible && Hidden)
+        makeMergedDefinitionVisible(Hidden);
     } else if (Def) {
       SourceRange Range(TemplateNameLoc, RAngleLoc);
       Diag(TemplateNameLoc, diag::err_redefinition) << Specialization << Range;
