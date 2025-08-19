@@ -911,38 +911,19 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   return false;
 }
 
-// Data should be swapped for big endian cores.
+// Data fixups should be swapped for big endian cores.
+// Instruction fixups should not be swapped as RISC-V instructions
+// are always little-endian.
 static bool isDataFixup(unsigned Kind) {
   switch (Kind) {
   default:
-    llvm_unreachable("Unknown fixup kind!");
+    return false;
 
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
     return true;
-
-  case RISCV::fixup_riscv_hi20:
-  case RISCV::fixup_riscv_lo12_i:
-  case RISCV::fixup_riscv_lo12_s:
-  case RISCV::fixup_riscv_pcrel_hi20:
-  case RISCV::fixup_riscv_pcrel_lo12_i:
-  case RISCV::fixup_riscv_pcrel_lo12_s:
-  case RISCV::fixup_riscv_jal:
-  case RISCV::fixup_riscv_branch:
-  case RISCV::fixup_riscv_call:
-  case RISCV::fixup_riscv_call_plt:
-  case RISCV::fixup_riscv_rvc_jump:
-  case RISCV::fixup_riscv_rvc_branch:
-  case RISCV::fixup_riscv_12_i:
-  case RISCV::fixup_riscv_rvc_imm:
-  case RISCV::fixup_riscv_qc_e_branch:
-  case RISCV::fixup_riscv_qc_e_32:
-  case RISCV::fixup_riscv_qc_abs20_u:
-  case RISCV::fixup_riscv_qc_e_call_plt:
-  case RISCV::fixup_riscv_nds_branch_10:
-    return false;
   }
 }
 
