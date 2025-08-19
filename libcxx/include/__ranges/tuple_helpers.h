@@ -23,6 +23,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 23
+
 namespace ranges {
 
 template <class _Fun, class _Tuple>
@@ -35,6 +37,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tu
 }
 
 } // namespace ranges
+
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
