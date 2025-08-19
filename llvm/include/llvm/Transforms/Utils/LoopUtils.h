@@ -324,12 +324,12 @@ LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                                       unsigned V = 0);
 
 /// Return either:
+/// - \c std::nullopt, if the implementation is unable to handle the loop form
+///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
 /// - The value of \c llvm.loop.estimated_trip_count from the loop metadata of
 ///   \p L, if that metadata is present.
 /// - Else, a new estimate of the trip count from the latch branch weights of
-///   \p L, if the estimation's implementation is able to handle the loop form
-///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
-/// - Else, \c std::nullopt.
+///   \p L.
 ///
 /// An estimated trip count is always a valid positive trip count, saturated at
 /// \c UINT_MAX.
@@ -350,16 +350,14 @@ getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
 
 /// Set \c llvm.loop.estimated_trip_count with the value \p EstimatedTripCount
-/// in the loop metadata of \p L.
+/// in the loop metadata of \p L.  Return false if the implementation is unable
+/// to handle the loop form of \p L (e.g., \p L must have a latch block that
+/// controls the loop exit).  Otherwise, return true.
 ///
 /// In addition, if \p EstimatedLoopInvocationWeight, set the branch weight
 /// metadata of \p L to reflect that \p L has an estimated
 /// \p EstimatedTripCount iterations and has \c *EstimatedLoopInvocationWeight
 /// exit weight through the loop's latch.
-///
-/// Return false if \p EstimatedLoopInvocationWeight and if branch weight
-/// metadata could not be successfully updated (e.g., if \p L does not have a
-/// latch block that controls the loop exit).  Otherwise, return true.
 ///
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the
