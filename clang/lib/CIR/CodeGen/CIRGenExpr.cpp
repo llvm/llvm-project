@@ -2067,8 +2067,8 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
 ///
 /// For named members of enums, this is the only way they are emitted.
 CIRGenFunction::ConstantEmission
-CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
-  ValueDecl *value = refExpr->getDecl();
+CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
+  const ValueDecl *value = refExpr->getDecl();
 
   // There is a lot more to do here, but for now only EnumConstantDecl is
   // supported.
@@ -2099,6 +2099,25 @@ CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 
   return ConstantEmission::forValue(cstToEmit);
+}
+
+static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CIRGenFunction &cgf,
+                                                        const MemberExpr *me) {
+  if (auto *vd = dyn_cast<VarDecl>(me->getMemberDecl())) {
+    // Try to emit static variable member expressions as DREs.
+    return DeclRefExpr::Create(
+        cgf.getContext(), NestedNameSpecifierLoc(), SourceLocation(), vd,
+        /*RefersToEnclosingVariableOrCapture=*/false, me->getExprLoc(),
+        me->getType(), me->getValueKind(), nullptr, nullptr, me->isNonOdrUse());
+  }
+  return nullptr;
+}
+
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(const MemberExpr *me) {
+  if (DeclRefExpr *dre = tryToConvertMemberExprToDeclRefExpr(*this, me))
+    return tryEmitAsConstant(dre);
+  return ConstantEmission();
 }
 
 mlir::Value CIRGenFunction::emitScalarConstant(
