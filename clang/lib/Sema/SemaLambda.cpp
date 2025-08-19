@@ -1968,15 +1968,14 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 }
 
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
-  LambdaScopeInfo &LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
+  LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
 
   if (LSI.CallOperator->hasAttr<SYCLKernelEntryPointAttr>())
     SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
 
-  ActOnFinishFunctionBody(LSI.CallOperator, Body, /*IsInstantiation=*/false,
-                          /*RetainFunctionScopeInfo=*/true);
+  ActOnFinishFunctionBody(LSI.CallOperator, Body);
 
-  return BuildLambdaExpr(StartLoc, Body->getEndLoc());
+  return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 
 static LambdaCaptureDefault
@@ -2133,9 +2132,8 @@ ConstructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
   return SourceRange(FixItStart, FixItEnd);
 }
 
-ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
-                                 SourceLocation EndLoc) {
-  LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(FunctionScopes.back());
+ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
+                                 LambdaScopeInfo *LSI) {
   // Collect information from the lambda scope.
   SmallVector<LambdaCapture, 4> Captures;
   SmallVector<Expr *, 4> CaptureInits;
@@ -2171,12 +2169,6 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
     TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
     PopExpressionEvaluationContext();
-
-    sema::AnalysisBasedWarnings::Policy WP =
-        AnalysisWarnings.getPolicyInEffectAt(EndLoc);
-    // We cannot release LSI until we finish computing captures, which
-    // requires the scope to be popped.
-    PoppedFunctionScopePtr _ = PopFunctionScopeInfo(&WP, LSI->CallOperator);
 
     // True if the current capture has a used capture or default before it.
     bool CurHasPreviousCapture = CaptureDefault != LCD_None;
