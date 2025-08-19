@@ -3496,6 +3496,8 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Interleave group being replicated.");
+  assert((!NeedsMaskForGaps || !State.VF.isScalable()) &&
+         "Masking gaps for scalable vectors is not yet supported.");
   const InterleaveGroup<Instruction> *Group = IG;
   Instruction *Instr = Group->getInsertPos();
 
@@ -3613,8 +3615,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
   assert(((MaskForGaps != nullptr) == NeedsMaskForGaps) &&
          "Mismatch between NeedsMaskForGaps and MaskForGaps");
-  assert((!MaskForGaps || !State.VF.isScalable()) &&
-         "masking gaps for scalable vectors is not yet supported.");
   ArrayRef<VPValue *> StoredValues = getStoredValues();
   // Collect the stored vector from each member.
   SmallVector<Value *, 4> StoredVecs;
