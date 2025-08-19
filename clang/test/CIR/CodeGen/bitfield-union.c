@@ -29,7 +29,7 @@ typedef union {
 demo d;
 zero_bit z;
 
-void main() {
+void f() {
     demo d;
     d.x = 1;
     d.y = 2;
@@ -39,7 +39,7 @@ void main() {
 // CIR: #bfi_y = #cir.bitfield_info<name = "y", storage_type = !u8i, size = 4, offset = 0, is_signed = true>
 // CIR: #bfi_z = #cir.bitfield_info<name = "z", storage_type = !u8i, size = 8, offset = 0, is_signed = true>
 
-// CIR:   cir.func no_proto dso_local @main
+// CIR:   cir.func no_proto dso_local @f
 // CIR:    [[ALLOC:%.*]] = cir.alloca !rec_demo, !cir.ptr<!rec_demo>, ["d"] {alignment = 4 : i64}
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
 // CIR:    [[X:%.*]] = cir.get_member [[ALLOC]][0] {name = "x"} : !cir.ptr<!rec_demo> -> !cir.ptr<!s32i>
@@ -52,7 +52,7 @@ void main() {
 // CIR:    [[SET2:%.*]] = cir.set_bitfield align(4) (#bfi_z, [[Z]] : !cir.ptr<!u8i>, [[ZERO]] : !s32i) -> !s32i
 // CIR:    cir.return
 
-// LLVM: define dso_local void @main
+// LLVM: define dso_local void @f
 // LLVM:   [[ALLOC:%.*]] = alloca %union.demo, i64 1, align 4
 // LLVM:   store i32 1, ptr [[ALLOC]], align 4
 // LLVM:   [[BFLOAD:%.*]] = load i8, ptr [[ALLOC]], align 4
@@ -61,7 +61,7 @@ void main() {
 // LLVM:   store i8 [[SET]], ptr [[ALLOC]], align 4
 // LLVM:   store i8 0, ptr [[ALLOC]], align 4
 
-// OGCG: define dso_local void @main
+// OGCG: define dso_local void @f
 // OGCG:   [[ALLOC:%.*]] = alloca %union.demo, align 4
 // OGCG:   store i32 1, ptr [[ALLOC]], align 4
 // OGCG:   [[BFLOAD:%.*]] = load i8, ptr [[ALLOC]], align 4
