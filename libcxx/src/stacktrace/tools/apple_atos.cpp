@@ -28,8 +28,8 @@ bool atos::build_argv() {
   push_arg(tool_prog_);
   push_arg("-p");
   push_arg("%d", getpid());
-  auto* it  = base_.entries_begin();
-  auto* end = base_.entries_end();
+  auto* it  = base_.__entries_.begin();
+  auto* end = base_.__entries_.end();
   while (it != end) {
     auto& entry = *(entry_base*)(it++);
     push_arg("%p", (void*)entry.__addr_);
@@ -45,7 +45,7 @@ void atos::parse(entry_base& entry, std::string_view view) const {
   // advance i to:   ^
   size_t i = 0;
   while (i < view.size() && !isspace(view[i])) { ++i; }
-  entry.assign_desc(base_.__strings_.make_str(view.substr(0, i)));
+  entry.assign_desc(std::move(base_.__strings_.emplace_back().assign(view.substr(0, i))));
 
   view = lstrip(ldrop(view, i));
 
@@ -57,7 +57,7 @@ void atos::parse(entry_base& entry, std::string_view view) const {
   view = drop_suffix(view, ")");  // simple.o0.nosplit.pass.cpp:19
   pos = view.find_last_of(":");   //                           ^here
   if (pos == std::string_view::npos) { return; }
-  entry.assign_file(base_.__strings_.make_str(view.substr(0, pos)));
+  entry.assign_file(std::move(base_.__strings_.emplace_back().assign(view.substr(0, pos))));
   auto lineno = view.substr(pos + 1);
   entry.__line_ = lineno.empty() ? 0 : stoi(string(lineno));
 }
@@ -71,14 +71,15 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<atos>(base& base) {
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  str line = base.__strings_.make_str();               // our read buffer
-  auto* entry_iter = base.entries_begin();    // position at first entry
-  while (spawner.stream_.good()) {            // loop until we get EOF from tool stdout
-    std::getline(spawner.stream_, line);      // consume a line from stdout
-    auto view = tool_base::strip(line);       // remove trailing and leading whitespace
-    if (view.empty()) { continue; }           // skip blank lines
+  auto& line = base.__strings_.emplace_back().reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
+
+  auto* entry_iter = base.__entries_.begin();    // position at first entry
+  while (spawner.stream_.good()) {               // loop until we get EOF from tool stdout
+    line.getline(spawner.stream_);               // consume a line from stdout
+    auto view = tool_base::strip(line.view());   // remove trailing and leading whitespace
+    if (view.empty()) { continue; }              // skip blank lines
     tool.parse(*entry_iter, view);
-    ++entry_iter;                             // one line per entry
+    ++entry_iter;                                // one line per entry
   }
 
   return true;

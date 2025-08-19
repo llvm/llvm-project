@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/images.h"
 #include <__config>
 #include <__stacktrace/basic_stacktrace.h>
+#include <__stacktrace/stacktrace_entry.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
+
+#include "stacktrace/images.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -22,11 +25,11 @@ ostream& entry_base::write_to(ostream& __os) const {
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
   __os << "0x" << std::hex << std::setfill('0') << std::setw(__k_addr_width) << __addr_;
-  if (__desc_) {
-    __os << ": " << *__desc_;
+  if (__desc_ && __desc_->size()) {
+    __os << ": " << __desc_;
   }
-  if (__file_) {
-    __os << ": " << *__file_;
+  if (__file_ && __file_->size()) {
+    __os << ": " << __file_;
   }
   if (__line_) {
     __os << ":" << std::dec << __line_;
@@ -35,7 +38,7 @@ ostream& entry_base::write_to(ostream& __os) const {
 }
 
 ostream& base::write_to(std::ostream& __os) const {
-  auto __count = __entries_size_();
+  auto __count = __entries_.size();
   if (!__count) {
     __os << "(empty stacktrace)";
   } else {
@@ -45,7 +48,7 @@ ostream& base::write_to(std::ostream& __os) const {
         __os << '\n';
       }
       __os << "  frame " << std::setw(3) << std::setfill(' ') << std::dec << (__i + 1) << ": "
-           << (stacktrace_entry&)__entry_at_(__i);
+           << *(stacktrace_entry const*)(__entries_.begin() + __i);
     }
   }
   return __os;
