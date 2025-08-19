@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cstdint>
