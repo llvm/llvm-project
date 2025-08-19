@@ -56,6 +56,16 @@ class TestCase(PExpectTest):
 
         self.quit()
 
+        # Re-enter the REPL with trailing input to trigger warning.
+        self.child.send("expression --repl -l c -- 3 + 3\n")
+        self.child.expect_exact("Warning: trailing input is ignored in --repl mode\n")
+        self.child.expect_exact("1>")
+
+        # Evaluate another expression after warning.
+        self.expect_repl("4 + 4", substrs=["(int) $3 = 8"])
+
+        self.quit()
+
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
