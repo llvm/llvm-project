@@ -34,7 +34,7 @@ important ones are:
   the source-level-language.
 
 * Source-level languages are often **widely** different from one another.
-  LLVM should not put any restrictions of the flavor of the source-language,
+  LLVM should not put any restrictions on the flavor of the source-language,
   and the debugging information should work with any language.
 
 * With code generator support, it should be possible to use an LLVM compiler
@@ -74,10 +74,10 @@ from and inspired by DWARF, but it is feasible to translate into other target
 debug info formats such as STABS.
 
 SamplePGO (also known as `AutoFDO <https://gcc.gnu.org/wiki/AutoFDO>`_)
-is a variant of profile guided optimizations which uses hardware sampling based
+is a variant of profile-guided optimizations which uses hardware sampling based
 profilers to collect branch frequency data with low overhead in production
 environments. It relies on debug information to associate profile information
-to LLVM IR which is then used to guide optimization heuristics. Maintaining
+with LLVM IR which is then used to guide optimization heuristics. Maintaining
 deterministic and distinct source locations is necessary to maximize the
 accuracy of mapping hardware sample counts to LLVM IR. For example, DWARF
 `discriminators <https://wiki.dwarfstd.org/Path_Discriminators.md>`_ allow
@@ -334,7 +334,7 @@ performs the assignment, and the destination address.
 The first three arguments are the same as for a ``#dbg_value``. The fourth
 argument is a ``DIAssignID`` used to reference a store. The fifth is the
 destination of the store, the sixth is a `complex
-expression <LangRef.html#diexpression>`_ that modfies it, and the seventh is a
+expression <LangRef.html#diexpression>`_ that modifies it, and the seventh is a
 `source location <LangRef.html#dilocation>`_.
 
 See :doc:`AssignmentTracking` for more info.
@@ -512,7 +512,7 @@ Here ``!13`` is metadata providing `location information
 information parameter to the records indicates that the variable ``X`` is
 declared at line number 2 at a function level scope in function ``foo``.
 
-Now lets take another example.
+Now, let's take another example.
 
 .. code-block:: llvm
 
@@ -532,14 +532,14 @@ Here ``!18`` indicates that ``Z`` is declared at line number 5 and column
 number 11 inside of lexical scope ``!17``.  The lexical scope itself resides
 inside of subprogram ``!4`` described above.
 
-The scope information attached with each instruction provides a straightforward
+The scope information attached to each instruction provides a straightforward
 way to find instructions covered by a scope.
 
 Object lifetime in optimized code
 =================================
 
 In the example above, every variable assignment uniquely corresponds to a
-memory store to the variable's position on the stack. However in heavily
+memory store to the variable's position on the stack. However, in heavily
 optimized code LLVM promotes most variables into SSA values, which can
 eventually be placed in physical registers or memory locations. To track SSA
 values through compilation, when objects are promoted to SSA values a
@@ -628,7 +628,7 @@ perhaps, be optimized into the following code:
   }
 
 What ``#dbg_value`` records should be placed to represent the original variable
-locations in this code? Unfortunately the second, third and fourth
+locations in this code? Unfortunately the second, third, and fourth
 #dbg_values for ``!1`` in the source function have had their operands
 (%tval, %fval, %merge) optimized out. Assuming we cannot recover them, we
 might consider this placement of #dbg_values:
@@ -696,7 +696,7 @@ How variable location metadata is transformed during CodeGen
 LLVM preserves debug information throughout mid-level and backend passes,
 ultimately producing a mapping between source-level information and
 instruction ranges. This
-is relatively straightforwards for line number information, as mapping
+is relatively straightforward for line number information, as mapping
 instructions to line numbers is a simple association. For variable locations
 however the story is more complex. As each ``#dbg_value`` record
 represents a source-level assignment of a value to a source variable, the
@@ -710,7 +710,7 @@ location fidelity are:
 2. Register allocation
 3. Block layout
 
-each of which are discussed below. In addition, instruction scheduling can
+each of which is discussed below. In addition, instruction scheduling can
 significantly change the ordering of the program, and occurs in a number of
 different passes.
 
@@ -782,13 +782,13 @@ And has the following operands:
    location operands, which may take any of the same values as the first
    operand of the ``DBG_VALUE`` instruction above. These variable location
    operands are inserted into the final DWARF Expression in positions indicated
-   by the DW_OP_LLVM_arg operator in the `DIExpression
+   by the ``DW_OP_LLVM_arg`` operator in the `DIExpression
    <LangRef.html#diexpression>`_.
 
 The position at which the DBG_VALUEs are inserted should correspond to the
 positions of their matching ``#dbg_value`` records in the IR block.  As
 with optimization, LLVM aims to preserve the order in which variable
-assignments occurred in the source program. However SelectionDAG performs some
+assignments occurred in the source program. However, SelectionDAG performs some
 instruction scheduling, which can reorder assignments (discussed below).
 Function parameter locations are moved to the beginning of the function if
 they're not already, to ensure they're immediately available on function entry.
@@ -855,19 +855,19 @@ If one compiles this IR with ``llc -o - -start-after=codegen-prepare -stop-after
     $eax = COPY %8, debug-location !5
     RET 0, $eax, debug-location !5
 
-Observe first that there is a DBG_VALUE instruction for every ``#dbg_value``
+Observe first that there is a ``DBG_VALUE`` instruction for every ``#dbg_value``
 record in the source IR, ensuring no source level assignments go missing.
 Then consider the different ways in which variable locations have been recorded:
 
 * For the first #dbg_value an immediate operand is used to record a zero value.
-* The #dbg_value of the PHI instruction leads to a DBG_VALUE of virtual register
+* The #dbg_value of the PHI instruction leads to a ``DBG_VALUE`` of virtual register
   ``%0``.
 * The first GEP has its effect folded into the first load instruction
   (as a 4-byte offset), but the variable location is salvaged by folding
-  the GEPs effect into the DIExpression.
+  the GEPs effect into the ``DIExpression``.
 * The second GEP is also folded into the corresponding load. However, it is
   insufficiently simple to be salvaged, and is emitted as a ``$noreg``
-  DBG_VALUE, indicating that the variable takes on an undefined location.
+  ``DBG_VALUE``, indicating that the variable takes on an undefined location.
 * The final #dbg_value has its Value placed in virtual register ``%1``.
 
 Instruction Scheduling
@@ -880,7 +880,7 @@ case the instruction sequence could be completely reversed. In such
 circumstances LLVM follows the principle applied to optimizations, that it is
 better for the debugger not to display any state than a misleading state.
 Thus, whenever instructions are advanced in order of execution, any
-corresponding DBG_VALUE is kept in its original position, and if an instruction
+corresponding ``DBG_VALUE`` is kept in its original position, and if an instruction
 is delayed then the variable is given an undefined location for the duration
 of the delay. To illustrate, consider this pseudo-MIR:
 
@@ -893,7 +893,7 @@ of the delay. To illustrate, consider this pseudo-MIR:
   %7:gr32 = SUB32rr %6, %5, implicit-def dead $eflags
   DBG_VALUE %7, $noreg, !5, !6
 
-Imagine that the SUB32rr were moved forward to give us the following MIR:
+Imagine that the ``SUB32rr`` were moved forward to give us the following MIR:
 
 .. code-block:: text
 
@@ -905,13 +905,13 @@ Imagine that the SUB32rr were moved forward to give us the following MIR:
   DBG_VALUE %7, $noreg, !5, !6
 
 In this circumstance LLVM would leave the MIR as shown above. Were we to move
-the DBG_VALUE of virtual register %7 upwards with the SUB32rr, we would re-order
+the ``DBG_VALUE`` of virtual register %7 upwards with the ``SUB32rr``, we would re-order
 assignments and introduce a new state of the program. Whereas with the solution
 above, the debugger will see one fewer combination of variable values, because
 ``!3`` and ``!5`` will change value at the same time. This is preferred over
 misrepresenting the original program.
 
-In comparison, if one sunk the MOV32rm, LLVM would produce the following:
+In comparison, if one sunk the ``MOV32rm``, LLVM would produce the following:
 
 .. code-block:: text
 
@@ -924,10 +924,10 @@ In comparison, if one sunk the MOV32rm, LLVM would produce the following:
   DBG_VALUE %1, $noreg, !1, !2
 
 Here, to avoid presenting a state in which the first assignment to ``!1``
-disappears, the DBG_VALUE at the top of the block assigns the variable the
+disappears, the ``DBG_VALUE`` at the top of the block assigns the variable the
 undefined location, until its value is available at the end of the block where
-an additional DBG_VALUE is added. Were any other DBG_VALUE for ``!1`` to occur
-in the instructions that the MOV32rm was sunk past, the DBG_VALUE for ``%1``
+an additional ``DBG_VALUE`` is added. Were any other ``DBG_VALUE`` for ``!1`` to occur
+in the instructions that the ``MOV32rm`` was sunk past, the ``DBG_VALUE`` for ``%1``
 would be dropped and the debugger would never observe it in the variable. This
 accurately reflects that the value is not available during the corresponding
 portion of the original program.
@@ -937,13 +937,13 @@ Variable locations during Register Allocation
 
 To avoid debug instructions interfering with the register allocator, the
 LiveDebugVariables pass extracts variable locations from a MIR function and
-deletes the corresponding DBG_VALUE instructions. Some localized copy
+deletes the corresponding ``DBG_VALUE`` instructions. Some localized copy
 propagation is performed within blocks. After register allocation, the
-VirtRegRewriter pass re-inserts DBG_VALUE instructions in their original
+VirtRegRewriter pass re-inserts ``DBG_VALUE`` instructions in their original
 positions, translating virtual register references into their physical
 machine locations. To avoid encoding incorrect variable locations, in this
-pass any DBG_VALUE of a virtual register that is not live, is replaced by
-the undefined location. The LiveDebugVariables may insert redundant DBG_VALUEs
+pass any ``DBG_VALUE`` of a virtual register that is not live, is replaced by
+the undefined location. The LiveDebugVariables may insert redundant ``DBG_VALUE``'s
 because of virtual register rewriting. These will be subsequently removed by
 the RemoveRedundantDebugValues pass.
 
@@ -956,11 +956,11 @@ LiveDebugValues pass runs to achieve two aims:
 * To propagate the location of variables through copies and register spills,
 * For every block, to record every valid variable location in that block.
 
-After this pass the DBG_VALUE instruction changes meaning: rather than
+After this pass the ``DBG_VALUE`` instruction changes meaning: rather than
 corresponding to a source-level assignment where the variable may change value,
 it asserts the location of a variable in a block, and loses effect outside the
 block. Propagating variable locations through copies and spills is
-straightforwards: determining the variable location in every basic block
+straightforward: determining the variable location in every basic block
 requires the consideration of control flow. Consider the following IR, which
 presents several difficulties:
 
@@ -1021,9 +1021,9 @@ predecessors then that location is propagated into the successor. If the
 predecessor locations disagree, the location becomes undefined.
 
 Once LiveDebugValues has run, every block should have all valid variable
-locations described by DBG_VALUE instructions within the block. Very little
+locations described by ``DBG_VALUE`` instructions within the block. Very little
 effort is then required by supporting classes (such as
-DbgEntityHistoryCalculator) to build a map of each instruction to every
+``DbgEntityHistoryCalculator``) to build a map of each instruction to every
 valid variable location, without the need to consider control flow. From
 the example above, it is otherwise difficult to determine that the location
 of variable ``!30`` should flow "up" into block ``%bb1``, but that the location
@@ -1057,7 +1057,7 @@ helper functions in ``lib/IR/DIBuilder.cpp``.
 C/C++ source file information
 -----------------------------
 
-``llvm::Instruction`` provides easy access to metadata attached with an
+``llvm::Instruction`` provides easy access to metadata attached to an
 instruction.  One can extract line number information encoded in LLVM IR using
 ``Instruction::getDebugLoc()`` and ``DILocation::getLine()``.
 
@@ -1081,7 +1081,7 @@ added by the front-end but doesn't correspond to source code written by the user
   }
 
 At the end of the scope the MyObject's destructor is called but it isn't written
-explicitly. This information is useful to avoid to have counters on brackets when
+explicitly. This information is useful to avoid having counters on brackets when
 making code coverage.
 
 C/C++ global variable information
@@ -1147,11 +1147,11 @@ a C/C++ front-end would generate the following descriptors:
   !8 = !{!"clang version 4.0.0"}
 
 
-The align value in DIGlobalVariable description specifies variable alignment in
-case it was forced by C11 _Alignas(), C++11 alignas() keywords or compiler
-attribute __attribute__((aligned ())). In other case (when this field is missing)
+The align value in ``DIGlobalVariable`` description specifies variable alignment in
+case it was forced by C11 ``_Alignas()``, C++11 ``alignas()`` keywords or compiler
+attribute ``__attribute__((aligned ()))``. In other case (when this field is missing)
 alignment is considered default. This is used when producing DWARF output
-for DW_AT_alignment value.
+for ``DW_AT_alignment`` value.
 
 C/C++ function information
 --------------------------
@@ -1200,7 +1200,7 @@ Given a class declaration with copy constructor declared as deleted:
      foo(const foo&) = deleted;
   };
 
-A C++ frontend would generate following:
+A C++ frontend would generate the following:
 
 .. code-block:: text
 
@@ -1247,7 +1247,7 @@ and this will materialize an additional DWARF attribute as:
      ...
      DW_AT_elemental [DW_FORM_flag_present]  (true)
 
-There are a few DWARF tags defined to represent Fortran specific constructs i.e DW_TAG_string_type for representing Fortran character(n). In LLVM this is represented as DIStringType.
+There are a few DWARF tags defined to represent Fortran specific constructs i.e ``DW_TAG_string_type`` for representing Fortran character(n). In LLVM, this is represented as ``DIStringType``.
 
 .. code-block:: fortran
 
@@ -1260,7 +1260,7 @@ a Fortran front-end would generate the following descriptors:
   !DILocalVariable(name: "string", arg: 1, scope: !10, file: !3, line: 4, type: !15)
   !DIStringType(name: "character(*)!2", stringLength: !16, stringLengthExpression: !DIExpression(), size: 32)
 
-A fortran deferred-length character can also contain the information of raw storage of the characters in addition to the length of the string. This information is encoded in the  stringLocationExpression field. Based on this information, DW_AT_data_location attribute is emitted in a DW_TAG_string_type debug info.
+A fortran deferred-length character can also contain the information of raw storage of the characters in addition to the length of the string. This information is encoded in the  stringLocationExpression field. Based on this information, ``DW_AT_data_location`` attribute is emitted in a ``DW_TAG_string_type`` debug info.
 
   !DIStringType(name: "character(*)!2", stringLengthExpression: !DIExpression(), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32)
 
@@ -1310,7 +1310,7 @@ Objective-C provides a simpler way to declare and define accessor methods using
 declared properties.  The language provides features to declare a property and
 to let compiler synthesize accessor methods.
 
-The debugger lets developer inspect Objective-C interfaces and their instance
+The debugger lets developers inspect Objective-C interfaces and their instance
 variables and class variables.  However, the debugger does not know anything
 about the properties defined in Objective-C interfaces.  The debugger consumes
 information generated by compiler in DWARF format.  The format does not support
@@ -1397,7 +1397,7 @@ don't need to know this convention, since we are given the name of the ivar
 directly.
 
 Also, it is common practice in ObjC to have different property declarations in
-the @interface and @implementation - e.g. to provide a read-only property in
+the ``@interface`` and ``@implementation`` - e.g. to provide a read-only property in
 the interface, and a read-write interface in the implementation.  In that case,
 the compiler should emit whichever property declaration will be in force in the
 current translation unit.
@@ -1659,7 +1659,7 @@ these accesses then tell us that we didn't have a match.
 Name Hash Tables
 """"""""""""""""
 
-To solve the issues mentioned above we have structured the hash tables a bit
+To solve the issues mentioned above, we have structured the hash tables a bit
 differently: a header, buckets, an array of all unique 32-bit hash values,
 followed by an array of hash value data offsets, one for each hash value, then
 the data for all hash values:
@@ -1707,7 +1707,7 @@ values, we can clarify the contents of the ``BUCKETS``, ``HASHES`` and
   |  ALL HASH DATA          |
   `-------------------------'
 
-So taking the exact same data from the standard hash example above we end up
+So taking the exact same data from the standard hash example above, we end up
 with:
 
 .. code-block:: none
@@ -1798,7 +1798,7 @@ debugger lookup.  If we repeat the same "``printf``" lookup from above, we
 would hash "``printf``" and find it matches ``BUCKETS[3]`` by taking the 32-bit
 hash value and modulo it by ``n_buckets``.  ``BUCKETS[3]`` contains "6" which
 is the index into the ``HASHES`` table.  We would then compare any consecutive
-32-bit hashes values in the ``HASHES`` array as long as the hashes would be in
+32-bit hash values in the ``HASHES`` array as long as the hashes would be in
 ``BUCKETS[3]``.  We do this by verifying that each subsequent hash value modulo
 ``n_buckets`` is still 3.  In the case of a failed lookup we would access the
 memory for ``BUCKETS[3]``, and then compare a few consecutive 32-bit hashes
@@ -1966,8 +1966,8 @@ array to be:
   HeaderData.atoms[0].type = eAtomTypeDIEOffset;
   HeaderData.atoms[0].form = DW_FORM_data4;
 
-This defines the contents to be the DIE offset (eAtomTypeDIEOffset) that is
-encoded as a 32-bit value (DW_FORM_data4).  This allows a single name to have
+This defines the contents to be the DIE offset (``eAtomTypeDIEOffset``) that is
+encoded as a 32-bit value (``DW_FORM_data4``).  This allows a single name to have
 multiple matching DIEs in a single file, which could come up with an inlined
 function for instance.  Future tables could include more information about the
 DIE such as flags indicating if the DIE is a function, method, block,
@@ -1978,7 +1978,7 @@ The KeyType for the DWARF table is a 32-bit string table offset into the
 may already contain copies of all of the strings.  This helps make sure, with
 help from the compiler, that we reuse the strings between all of the DWARF
 sections and keeps the hash table size down.  Another benefit to having the
-compiler generate all strings as DW_FORM_strp in the debug info, is that
+compiler generate all strings as ``DW_FORM_strp`` in the debug info, is that
 DWARF parsing can be made much faster.
 
 After a lookup is made, we get an offset into the hash data.  The hash data
@@ -2114,7 +2114,7 @@ We get a few type DIEs:
                   AT_type( {0x00000067} ( int ) )
                   AT_byte_size( 0x08 )
 
-The DW_TAG_pointer_type is not included because it does not have a ``DW_AT_name``.
+The ``DW_TAG_pointer_type`` is not included because it does not have a ``DW_AT_name``.
 
 "``.apple_namespaces``" section should contain all ``DW_TAG_namespace`` DIEs.
 If we run into a namespace that has no name this is an anonymous namespace, and
