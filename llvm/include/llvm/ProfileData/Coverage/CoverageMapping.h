@@ -984,6 +984,46 @@ public:
   ArrayRef<MCDCRecord> getMCDCRecords() const { return MCDCRecords; }
 };
 
+/// Represents a set of available capabilities
+class CoverageCapabilities {
+  uint32_t Capabilities;
+
+public:
+  enum CovInstrLevel {
+    Statement = (1 << 0),
+    Branch = (1 << 1),
+    MCDC = (1 << 2),
+  };
+
+  CoverageCapabilities(uint32_t Capabilities) : Capabilities(Capabilities){};
+
+  static CoverageCapabilities all() {
+    return CoverageCapabilities(Statement | Branch | MCDC);
+  }
+
+  static CoverageCapabilities none() {
+    return CoverageCapabilities(0);
+  }
+
+  bool hasCapability(CovInstrLevel Lvl) const {
+    return (this->Capabilities & Lvl) != 0;
+  }
+
+  /// Returns true if this includes all the capabilities of Other.
+  bool includes(const CoverageCapabilities &Other) const {
+    return (this->Capabilities & Other.Capabilities) == Other.Capabilities;
+  }
+
+  CoverageCapabilities& operator |= (const CoverageCapabilities &Rhs) {
+    this->Capabilities |= Rhs.Capabilities;
+    return *this;
+  }
+
+  CoverageCapabilities operator | (const CoverageCapabilities &Rhs) const {
+    return CoverageCapabilities(this->Capabilities | Rhs.Capabilities);
+  }
+};
+
 /// The mapping of profile information to coverage data.
 ///
 /// This is the main interface to get coverage information, using a profile to
@@ -993,6 +1033,10 @@ class CoverageMapping {
   std::vector<FunctionRecord> Functions;
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
+
+  /// Keep track of the coverage capabilities of the loaded object file,
+  /// which depends on the parameters used to compile it.
+  CovInstrLevel AvailableInstrLevels = CovInstrLevel::All;
 
   std::optional<bool> SingleByteCoverage;
 
@@ -1430,6 +1474,10 @@ struct CovMapHeader {
   template <llvm::endianness Endian> uint32_t getVersion() const {
     return support::endian::byte_swap<uint32_t, Endian>(Version);
   }
+
+  template <llvm::endianness Endian> uint32_t getCovInstrLevels() const {
+    return support::endian::byte_swap<uint32_t, Endian>(CovInstrLevels);
+  }
 };
 
 LLVM_PACKED_END
@@ -1452,6 +1500,8 @@ enum CovMapVersion {
   Version6 = 5,
   // Branch regions extended and Decision Regions added for MC/DC.
   Version7 = 6,
+  // Covmap header tracks the instrumentation level
+  Version8 = 7,
   // The current version is Version7.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
