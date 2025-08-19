@@ -280,6 +280,9 @@ public:
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
 
+  /// getSubcommand - Return the active subcommand, if one exists.
+  LLVM_ABI StringRef getSubcommand() const;
+
   /// @}
   /// @name Argument Lookup Utilities
   /// @{

@@ -10,6 +10,7 @@
 #define LLVM_OPTION_OPTTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
@@ -53,6 +54,12 @@ public:
 /// parts of the driver still use Option instances where convenient.
 class LLVM_ABI OptTable {
 public:
+  /// Represents a subcommand and its options in the option table.
+  struct Command {
+    const char *Name;
+    const char *HelpText;
+  };
+
   /// Entry for a single option instance in the option data table.
   struct Info {
     unsigned PrefixesOffset;
@@ -79,6 +86,7 @@ public:
     unsigned short AliasID;
     const char *AliasArgs;
     const char *Values;
+    unsigned CommandIDsOffset;
 
     bool hasNoPrefix() const { return PrefixesOffset == 0; }
 
@@ -92,6 +100,20 @@ public:
       return hasNoPrefix() ? ArrayRef<StringTable::Offset>()
                            : PrefixesTable.slice(PrefixesOffset + 1,
                                                  getNumPrefixes(PrefixesTable));
+    }
+
+    bool hasCommands() const { return CommandIDsOffset != 0; }
+
+    unsigned getNumCommandIDs(ArrayRef<unsigned> CommandIDsTable) const {
+      // We embed the number of command IDs in the value of the first offset.
+      return CommandIDsTable[CommandIDsOffset];
+    }
+
+    ArrayRef<unsigned> getCommandIDs(ArrayRef<unsigned> CommandIDsTable) const {
+      return hasCommands()
+                 ? CommandIDsTable.slice(CommandIDsOffset + 1,
+                                         getNumCommandIDs(CommandIDsTable))
+                 : ArrayRef<unsigned>();
     }
 
     void appendPrefixes(const StringTable &StrTable,
@@ -133,6 +155,12 @@ private:
   /// The option information table.
   ArrayRef<Info> OptionInfos;
 
+  /// The command information table.
+  ArrayRef<Command> Commands;
+
+  /// The command IDs table.
+  ArrayRef<unsigned> CommandIDsTable;
+
   bool IgnoreCase;
   bool GroupedShortOptions = false;
   bool DashDashParsing = false;
@@ -169,6 +197,10 @@ protected:
   OptTable(const StringTable &StrTable,
            ArrayRef<StringTable::Offset> PrefixesTable,
            ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+  OptTable(const StringTable &StrTable,
+           ArrayRef<StringTable::Offset> PrefixesTable,
+           ArrayRef<Info> OptionInfos, ArrayRef<Command> Commands,
+           ArrayRef<unsigned> CommandIDsTable, bool IgnoreCase = false);
 
   /// Build (or rebuild) the PrefixChars member.
   void buildPrefixChars();
@@ -350,6 +382,7 @@ public:
 private:
   std::unique_ptr<Arg>
   internalParseOneArg(const ArgList &Args, unsigned &Index,
+                      const Command *ActiveCommand,
                       std::function<bool(const Option &)> ExcludeOption) const;
 
 public:
@@ -410,7 +443,8 @@ public:
   ///                         texts.
   void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                  bool ShowHidden = false, bool ShowAllAliases = false,
-                 Visibility VisibilityMask = Visibility()) const;
+                 Visibility VisibilityMask = Visibility(),
+                 StringRef SubCommand = {}) const;
 
   void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                  unsigned FlagsToInclude, unsigned FlagsToExclude,
@@ -418,7 +452,8 @@ public:
 
 private:
   void internalPrintHelp(raw_ostream &OS, const char *Usage, const char *Title,
-                         bool ShowHidden, bool ShowAllAliases,
+                         StringRef Subcommand, bool ShowHidden,
+                         bool ShowAllAliases,
                          std::function<bool(const Info &)> ExcludeOption,
                          Visibility VisibilityMask) const;
 };
@@ -428,21 +463,38 @@ class GenericOptTable : public OptTable {
 protected:
   LLVM_ABI GenericOptTable(const StringTable &StrTable,
                            ArrayRef<StringTable::Offset> PrefixesTable,
-                           ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+                           ArrayRef<Info> OptionInfos, bool IgnoreCase = false)
+      : GenericOptTable(StrTable, PrefixesTable, OptionInfos, {}, {},
+                        IgnoreCase) {}
+  LLVM_ABI GenericOptTable(const StringTable &StrTable,
+                           ArrayRef<StringTable::Offset> PrefixesTable,
+                           ArrayRef<Info> OptionInfos,
+                           ArrayRef<Command> Commands,
+                           ArrayRef<unsigned> CommandIDsTable,
+                           bool IgnoreCase = false);
 };
 
 class PrecomputedOptTable : public OptTable {
 protected:
   PrecomputedOptTable(const StringTable &StrTable,
                       ArrayRef<StringTable::Offset> PrefixesTable,
-                      ArrayRef<Info> OptionInfos,
+                      ArrayRef<Info> OptionInfos, ArrayRef<Command> Commands,
+                      ArrayRef<unsigned> CommandIDsTable,
                       ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
                       bool IgnoreCase = false)
-      : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase) {
+      : OptTable(StrTable, PrefixesTable, OptionInfos, Commands,
+                 CommandIDsTable, IgnoreCase) {
     for (auto PrefixOffset : PrefixesUnionOffsets)
       PrefixesUnion.push_back(StrTable[PrefixOffset]);
     buildPrefixChars();
   }
+  PrecomputedOptTable(const StringTable &StrTable,
+                      ArrayRef<StringTable::Offset> PrefixesTable,
+                      ArrayRef<Info> OptionInfos,
+                      ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
+                      bool IgnoreCase = false)
+      : PrecomputedOptTable(StrTable, PrefixesTable, OptionInfos, {}, {},
+                            PrefixesUnionOffsets, IgnoreCase) {}
 };
 
 } // end namespace opt
@@ -452,33 +504,36 @@ protected:
 #define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                       \
     ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES)                                                           \
+    METAVAR, VALUES, COMMANDIDS_OFFSET)                                        \
   ID_PREFIX##ID
 
 #define LLVM_MAKE_OPT_ID(PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND,      \
                          GROUP, ALIAS, ALIASARGS, FLAGS, VISIBILITY, PARAM,    \
-                         HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES)      \
-  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, \
-                                  ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,    \
-                                  VISIBILITY, PARAM, HELPTEXT,                 \
-                                  HELPTEXTSFORVARIANTS, METAVAR, VALUES)
+                         HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES,      \
+                         COMMANDIDS_OFFSET)                                    \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                             \
+      OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
+      ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
+      METAVAR, VALUES, COMMANDIDS_OFFSET)
 
 #define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
     ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES)                                                           \
+    METAVAR, VALUES, COMMANDIDS_OFFSET)                                        \
   llvm::opt::OptTable::Info {                                                  \
     PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, HELPTEXT, HELPTEXTSFORVARIANTS,     \
         METAVAR, ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,  \
-        VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES      \
+        VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES,     \
+        COMMANDIDS_OFFSET                                                      \
   }
 
 #define LLVM_CONSTRUCT_OPT_INFO(                                               \
     PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS,  \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
+    COMMANDIDS_OFFSET)                                                         \
   LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                      \
       OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
       ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-      METAVAR, VALUES)
+      METAVAR, VALUES, COMMANDIDS_OFFSET)
 
 #endif // LLVM_OPTION_OPTTABLE_H

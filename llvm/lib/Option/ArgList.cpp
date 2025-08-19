@@ -20,6 +20,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -201,6 +202,17 @@ void ArgList::print(raw_ostream &O) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
+
+StringRef ArgList::getSubcommand() const {
+  for (const Arg *A : *this) {
+    if (A->getOption().getKind() == Option::InputClass) {
+      if (StringRef(A->getValue()).empty())
+        return StringRef();
+      return A->getValue();
+    }
+  }
+  return StringRef();
+}
 
 void InputArgList::releaseMemory() {
   // An InputArgList always owns its arguments.

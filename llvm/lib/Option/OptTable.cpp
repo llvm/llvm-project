@@ -80,8 +80,15 @@ OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 OptTable::OptTable(const StringTable &StrTable,
                    ArrayRef<StringTable::Offset> PrefixesTable,
                    ArrayRef<Info> OptionInfos, bool IgnoreCase)
+    : OptTable(StrTable, PrefixesTable, OptionInfos, {}, {}, IgnoreCase) {}
+
+OptTable::OptTable(const StringTable &StrTable,
+                   ArrayRef<StringTable::Offset> PrefixesTable,
+                   ArrayRef<Info> OptionInfos, ArrayRef<Command> Commands,
+                   ArrayRef<unsigned> CommandIDsTable, bool IgnoreCase)
     : StrTable(&StrTable), PrefixesTable(PrefixesTable),
-      OptionInfos(OptionInfos), IgnoreCase(IgnoreCase) {
+      OptionInfos(OptionInfos), Commands(Commands),
+      CommandIDsTable(CommandIDsTable), IgnoreCase(IgnoreCase) {
   // Explicitly zero initialize the error to work around a bug in array
   // value-initialization on MinGW with gcc 4.3.5.
 
@@ -415,16 +422,18 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
 
 std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                                            Visibility VisibilityMask) const {
-  return internalParseOneArg(Args, Index, [VisibilityMask](const Option &Opt) {
-    return !Opt.hasVisibilityFlag(VisibilityMask);
-  });
+  return internalParseOneArg(Args, Index, nullptr,
+                             [VisibilityMask](const Option &Opt) {
+                               return !Opt.hasVisibilityFlag(VisibilityMask);
+                             });
 }
 
 std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                                            unsigned FlagsToInclude,
                                            unsigned FlagsToExclude) const {
   return internalParseOneArg(
-      Args, Index, [FlagsToInclude, FlagsToExclude](const Option &Opt) {
+      Args, Index, nullptr,
+      [FlagsToInclude, FlagsToExclude](const Option &Opt) {
         if (FlagsToInclude && !Opt.hasFlag(FlagsToInclude))
           return true;
         if (Opt.hasFlag(FlagsToExclude))
@@ -434,7 +443,7 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
 }
 
 std::unique_ptr<Arg> OptTable::internalParseOneArg(
-    const ArgList &Args, unsigned &Index,
+    const ArgList &Args, unsigned &Index, const Command *ActiveCommand,
     std::function<bool(const Option &)> ExcludeOption) const {
   unsigned Prev = Index;
   StringRef Str = Args.getArgString(Index);
@@ -475,6 +484,18 @@ std::unique_ptr<Arg> OptTable::internalParseOneArg(
 
     if (ExcludeOption(Opt))
       continue;
+
+    // If a command is active, accept options for that command.
+    if (ActiveCommand) {
+      unsigned ActiveCommandID = ActiveCommand - Commands.data();
+      ArrayRef<unsigned> CommandIDs = Start->getCommandIDs(CommandIDsTable);
+      bool IsInCommand = is_contained(CommandIDs, ActiveCommandID);
+      // Command ID 0 is the top level command.
+      bool IsGlobal = is_contained(CommandIDs, 0);
+      // If not part of the command and not a global option, continue.
+      if (!IsInCommand && !IsGlobal)
+        continue;
+    }
 
     // See if this option matches.
     if (std::unique_ptr<Arg> A =
@@ -534,6 +555,21 @@ InputArgList OptTable::internalParseArgs(
 
   MissingArgIndex = MissingArgCount = 0;
   unsigned Index = 0, End = ArgArr.size();
+  const Command *ActiveCommand = nullptr;
+
+  // Look for subcommand which is positional.
+  if (!Commands.empty() && Index < End) {
+    StringRef FirstArg = Args.getArgString(Index);
+    if (isInput(PrefixesUnion, FirstArg)) {
+      for (const auto &C : Commands) {
+        if (FirstArg == C.Name) {
+          ActiveCommand = &C;
+          break;
+        }
+      }
+    }
+  }
+
   while (Index < End) {
     // Ingore nullptrs, they are response file's EOL markers
     if (Args.getArgString(Index) == nullptr) {
@@ -558,9 +594,10 @@ InputArgList OptTable::internalParseArgs(
     }
 
     unsigned Prev = Index;
-    std::unique_ptr<Arg> A = GroupedShortOptions
-                 ? parseOneArgGrouped(Args, Index)
-                 : internalParseOneArg(Args, Index, ExcludeOption);
+    std::unique_ptr<Arg> A =
+        GroupedShortOptions
+            ? parseOneArgGrouped(Args, Index)
+            : internalParseOneArg(Args, Index, ActiveCommand, ExcludeOption);
     assert((Index > Prev || GroupedShortOptions) &&
            "Parser failed to consume argument.");
 
@@ -715,9 +752,10 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
 
 void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          bool ShowHidden, bool ShowAllAliases,
-                         Visibility VisibilityMask) const {
+                         Visibility VisibilityMask,
+                         StringRef Subcommand) const {
   return internalPrintHelp(
-      OS, Usage, Title, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, Subcommand, ShowHidden, ShowAllAliases,
       [VisibilityMask](const Info &CandidateInfo) -> bool {
         return (CandidateInfo.Visibility & VisibilityMask) == 0;
       },
@@ -730,7 +768,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
   bool ShowHidden = !(FlagsToExclude & HelpHidden);
   FlagsToExclude &= ~HelpHidden;
   return internalPrintHelp(
-      OS, Usage, Title, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, {}, ShowHidden, ShowAllAliases,
       [FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
         if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
           return true;
@@ -742,8 +780,9 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
 }
 
 void OptTable::internalPrintHelp(
-    raw_ostream &OS, const char *Usage, const char *Title, bool ShowHidden,
-    bool ShowAllAliases, std::function<bool(const Info &)> ExcludeOption,
+    raw_ostream &OS, const char *Usage, const char *Title, StringRef Subcommand,
+    bool ShowHidden, bool ShowAllAliases,
+    std::function<bool(const Info &)> ExcludeOption,
     Visibility VisibilityMask) const {
   OS << "OVERVIEW: " << Title << "\n\n";
   OS << "USAGE: " << Usage << "\n\n";
@@ -751,6 +790,35 @@ void OptTable::internalPrintHelp(
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
+  StringRef TopLevelCommandName = "TopLevelCommand";
+  if (Subcommand.empty()) {
+    // Assume top level command (toolname) by default.
+    Subcommand = TopLevelCommandName;
+  }
+
+  const Command *ActiveCommand = nullptr;
+  for (const auto &C : Commands) {
+    if (Subcommand == C.Name) {
+      ActiveCommand = &C;
+      if (ActiveCommand->HelpText)
+        OS << ActiveCommand->HelpText << "\n\n";
+      // TODO: Need to sortout how to maintain helptext for toplevel and
+      // subcommands and show them in view. What does existing tool do?
+      break;
+    }
+  }
+
+  if ((!ActiveCommand || ActiveCommand->Name == TopLevelCommandName) &&
+      Commands.size() > 1) {
+    OS << "SUBCOMMANDS:\n\n";
+    for (const auto &C : Commands) {
+      if (C.Name == TopLevelCommandName)
+        continue;
+      // TODO(prabhuk): This should be better aligned in UI using a helper
+      OS << C.Name << " - " << C.HelpText << "\n";
+    }
+    OS << "\n";
+  }
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
     // FIXME: Split out option groups.
@@ -763,6 +831,18 @@ void OptTable::internalPrintHelp(
 
     if (ExcludeOption(CandidateInfo))
       continue;
+
+    if (ActiveCommand) {
+      // ActiveCommand won't be set for tools that did not create command group
+      // info table.
+      // TODO: Move this to a lambda outside the loop.
+      ArrayRef<unsigned> CommandIDs =
+          CandidateInfo.getCommandIDs(CommandIDsTable);
+      unsigned ActiveCommandID = ActiveCommand - Commands.data();
+      bool IsInCommand = is_contained(CommandIDs, ActiveCommandID);
+      if (!IsInCommand)
+        continue;
+    }
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
@@ -791,8 +871,12 @@ void OptTable::internalPrintHelp(
 
 GenericOptTable::GenericOptTable(const StringTable &StrTable,
                                  ArrayRef<StringTable::Offset> PrefixesTable,
-                                 ArrayRef<Info> OptionInfos, bool IgnoreCase)
-    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase) {
+                                 ArrayRef<Info> OptionInfos,
+                                 ArrayRef<Command> Commands,
+                                 ArrayRef<unsigned> CommandIDsTable,
+                                 bool IgnoreCase)
+    : OptTable(StrTable, PrefixesTable, OptionInfos, Commands, CommandIDsTable,
+               IgnoreCase) {
 
   std::set<StringRef> TmpPrefixesUnion;
   for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))
