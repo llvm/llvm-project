@@ -219,7 +219,7 @@ using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
-  std::vector<EncodingAndInst> NumberedEncodings;
+  std::vector<EncodingAndInst> Encodings;
 
 public:
   DecoderEmitter(const RecordKeeper &R, StringRef PredicateNamespace)
@@ -810,11 +810,11 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
                                    ArrayRef<unsigned> EncodingIDs) const {
   // We'll need to be able to map from a decoded opcode into the corresponding
   // EncodingID for this specific combination of BitWidth and Namespace. This
-  // is used below to index into NumberedEncodings.
+  // is used below to index into Encodings.
   DenseMap<unsigned, unsigned> OpcodeToEncodingID;
   OpcodeToEncodingID.reserve(EncodingIDs.size());
   for (unsigned EncodingID : EncodingIDs) {
-    const Record *InstDef = NumberedEncodings[EncodingID].Inst->TheDef;
+    const Record *InstDef = Encodings[EncodingID].Inst->TheDef;
     OpcodeToEncodingID[Target.getInstrIntValue(InstDef)] = EncodingID;
   }
 
@@ -965,7 +965,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       auto EncodingID = EncI->second;
 
       if (!IsTry) {
-        OS << "// Opcode: " << NumberedEncodings[EncodingID]
+        OS << "// Opcode: " << Encodings[EncodingID]
            << ", DecodeIdx: " << DecodeIdx << '\n';
         break;
       }
@@ -973,7 +973,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       // Fallthrough for OPC_TryDecode.
       if (!IsFail) {
         uint32_t NumToSkip = emitNumToSkip(I, OS);
-        OS << "// Opcode: " << NumberedEncodings[EncodingID]
+        OS << "// Opcode: " << Encodings[EncodingID]
            << ", DecodeIdx: " << DecodeIdx;
         emitNumToSkipComment(NumToSkip, /*InComment=*/true);
       }
@@ -2481,29 +2481,29 @@ namespace {
   if (HwModeIDs.empty())
     HwModeIDs.push_back(DefaultMode);
 
-  const auto &NumberedInstructions = Target.getInstructions();
-  NumberedEncodings.reserve(NumberedInstructions.size());
-  NumInstructions = NumberedInstructions.size();
+  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
+  Encodings.reserve(Instructions.size());
+  NumInstructions = Instructions.size();
 
-  for (const auto &NumberedInstruction : NumberedInstructions) {
-    const Record *InstDef = NumberedInstruction->TheDef;
+  for (const CodeGenInstruction *Inst : Instructions) {
+    const Record *InstDef = Inst->TheDef;
     if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, HWM);
       for (auto [HwModeID, EncodingDef] : EBM)
-        NumberedEncodings.emplace_back(EncodingDef, NumberedInstruction,
-                                       HwModeID);
+        Encodings.emplace_back(EncodingDef, Inst, HwModeID);
       continue;
     }
     // This instruction is encoded the same on all HwModes.
     // According to user needs, provide varying degrees of suppression.
-    handleHwModesUnrelatedEncodings(NumberedInstruction, HwModeIDs,
-                                    NamespacesWithHwModes, NumberedEncodings);
+    handleHwModesUnrelatedEncodings(Inst, HwModeIDs, NamespacesWithHwModes,
+                                    Encodings);
   }
-  for (const Record *NumberedAlias :
-       RK.getAllDerivedDefinitions("AdditionalEncoding"))
-    NumberedEncodings.emplace_back(
-        NumberedAlias,
-        &Target.getInstruction(NumberedAlias->getValueAsDef("AliasOf")));
+
+  for (const Record *EncodingDef :
+       RK.getAllDerivedDefinitions("AdditionalEncoding")) {
+    const Record *InstDef = EncodingDef->getValueAsDef("AliasOf");
+    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+  }
 
   // Map of (namespace, hwmode, size) tuple to encoding IDs.
   std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
@@ -2512,12 +2512,12 @@ namespace {
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
   if (IsVarLenInst)
-    InstrLen.resize(NumberedInstructions.size(), 0);
+    InstrLen.resize(Instructions.size(), 0);
   unsigned MaxInstLen = 0;
 
-  for (const auto &[NEI, NumberedEncoding] : enumerate(NumberedEncodings)) {
-    const Record *EncodingDef = NumberedEncoding.EncodingDef;
-    const CodeGenInstruction *Inst = NumberedEncoding.Inst;
+  for (const auto &[EncodingID, Encoding] : enumerate(Encodings)) {
+    const Record *EncodingDef = Encoding.EncodingDef;
+    const CodeGenInstruction *Inst = Encoding.Inst;
     const Record *Def = Inst->TheDef;
     unsigned Size = EncodingDef->getValueAsInt("Size");
     if (Def->getValueAsString("Namespace") == "TargetOpcode" ||
@@ -2533,16 +2533,15 @@ namespace {
     if (!Size && !IsVarLenInst)
       continue;
 
-    if (unsigned Len = populateInstruction(Target, *EncodingDef, *Inst, NEI,
-                                           Operands, IsVarLenInst)) {
+    if (unsigned Len = populateInstruction(
+            Target, *EncodingDef, *Inst, EncodingID, Operands, IsVarLenInst)) {
       if (IsVarLenInst) {
         MaxInstLen = std::max(MaxInstLen, Len);
-        InstrLen[NEI] = Len;
+        InstrLen[EncodingID] = Len;
       }
       StringRef DecoderNamespace =
           EncodingDef->getValueAsString("DecoderNamespace");
-      EncMap[{DecoderNamespace, NumberedEncoding.HwModeID, Size}].push_back(
-          NEI);
+      EncMap[{DecoderNamespace, Encoding.HwModeID, Size}].push_back(EncodingID);
     } else {
       NumEncodingsOmitted++;
     }
@@ -2554,7 +2553,7 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(NumberedEncodings, EncodingIDs, Operands, BitWidth, this);
+    FilterChooser FC(Encodings, EncodingIDs, Operands, BitWidth, this);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
