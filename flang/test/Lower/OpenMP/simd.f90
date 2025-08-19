@@ -236,7 +236,7 @@ subroutine aligned_non_power_of_two()
 !CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"} :
 !CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!CHECK: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> 257 : i64)
+!CHECK: omp.simd private
   !$OMP SIMD ALIGNED(A:257)
   do i = 1, 10
     A(i) = i

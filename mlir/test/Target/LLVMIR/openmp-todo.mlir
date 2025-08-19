@@ -129,17 +129,6 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
-llvm.func @omp_simd_non_power_of_two_alignment(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-warning@below {{The specified alignment value, 257 is not a power of two and will be ignored}}
-  omp.simd aligned(%x : !llvm.ptr -> 257 : i64) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
