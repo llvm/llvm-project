@@ -32,7 +32,6 @@ define amdgpu_kernel void @kernel1() #0 {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) @bar1)
     %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1)
     call void @llvm.amdgcn.s.barrier()
     call void @func1()
