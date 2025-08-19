@@ -6502,19 +6502,25 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   EVT WorkingVT = VT;
 
   if (VT.isVector() && !Cond.getValueType().isVector()) {
-    unsigned NumElems = VT.getVectorNumElements();
+    ElementCount NumElems = VT.getVectorElementCount();
     EVT CondVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElems);
-    Cond = DAG.getSplatBuildVector(CondVT, DL, Cond);
+
+    if (VT.isScalableVector()) {
+      Cond = DAG.getSplatVector(CondVT, DL, Cond);
+    } else {
+      Cond = DAG.getSplatBuildVector(CondVT, DL, Cond);
+    }
   }
 
   if (VT.isFloatingPoint()) {
     if (VT.isVector()) {
       // float vector -> int vector
       EVT ElemVT = VT.getVectorElementType();
-      unsigned int ElemBitWidth = ElemVT.getSizeInBits();
+      unsigned int ElemBitWidth = ElemVT.getScalarSizeInBits();
       EVT IntElemVT = EVT::getIntegerVT(*DAG.getContext(), ElemBitWidth);
+
       WorkingVT = EVT::getVectorVT(*DAG.getContext(), IntElemVT,
-                                   VT.getVectorNumElements());
+                                   VT.getVectorElementCount());
     } else {
       WorkingVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     }
@@ -6525,7 +6531,17 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
 
   SDValue Mask = DAG.getSExtOrTrunc(Cond, DL, WorkingVT);
 
-  SDValue AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
+  SDValue AllOnes;
+  if (WorkingVT.isScalableVector()) {
+    unsigned BitWidth = WorkingVT.getScalarSizeInBits();
+    APInt AllOnesVal = APInt::getAllOnes(BitWidth);
+    SDValue ScalarAllOnes =
+        DAG.getConstant(AllOnesVal, DL, WorkingVT.getScalarType());
+    AllOnes = DAG.getSplatVector(WorkingVT, DL, ScalarAllOnes);
+  } else {
+    AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
+  }
+
   SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes, ProtectedFlag);
 
   // (or (and WorkingT, Mask), (and F, ~Mask))
@@ -6757,14 +6773,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         report_fatal_error(
             "llvm.ct.select: non-integral pointers are not supported");
       }
-    }
-
-    // We don't support scalable vector types yet, for now it'll only be
-    // fix-width vector
-    // TODO: Add support for scalable vectors
-    if (VT.isScalableVector()) {
-      report_fatal_error(
-          "llvm.ct.select: fallback doesn't supports scalable vectors");
     }
 
     setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
