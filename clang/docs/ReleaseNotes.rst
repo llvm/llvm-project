@@ -323,7 +323,7 @@ AST Matchers
   allows it to ignore nodes in system headers when traversing the AST.
 
 - ``hasConditionVariableStatement`` now supports ``for`` loop, ``while`` loop
-  and ``switch`` statement.
+  and ``switch`` statements.
 
 clang-format
 ------------
