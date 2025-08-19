@@ -24,7 +24,7 @@ enum LANG {
   Cpp,
   HLSL,
   ObjC,
-  SYCLDevice,
+  SYCL,
 };
 } // end namespace clang::AttributeLangSupport
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -x c++ -fsycl-is-host -verify %s
+// RUN: %clang_cc1 -fsyntax-only -x c++ -fsycl-is-host -verify=sycl %s
 // RUN: %clang_cc1 -fsyntax-only -x c++ -fsycl-is-device -verify=sycl %s
 // RUN: %clang_cc1 -fsyntax-only -x hlsl -triple dxil-pc-shadermodel6.3-library -verify=hlsl %s
 
@@ -11,8 +11,8 @@
 // hlsl-error@#local{{'opencl_local' attribute is not supported in HLSL}}
 // hlsl-error@#private{{'opencl_private' attribute is not supported in HLSL}}
 
-// sycl-error@#constant{{'opencl_constant' attribute is not supported in SYCL when compiling for the device}}
-// sycl-error@#generic{{'opencl_generic' attribute is not supported in SYCL when compiling for the device}}
+// sycl-error@#constant{{'opencl_constant' attribute is not supported in SYCL}}
+// sycl-error@#generic{{'opencl_generic' attribute is not supported in SYCL}}
 
 int __attribute__((opencl_constant)) glob = 1; // #constant
 int __attribute__((opencl_generic)) gen; // #generic

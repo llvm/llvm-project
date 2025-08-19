@@ -161,7 +161,7 @@ Bug Fixes in This Version
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
-- Fix a crash when using opencl address space attributes in HLSL or SYCL device code.
+- Fix a crash when using opencl address space attributes in HLSL or SYCL.
   (#GH152460). 
 
 Bug Fixes to Compiler Builtins
