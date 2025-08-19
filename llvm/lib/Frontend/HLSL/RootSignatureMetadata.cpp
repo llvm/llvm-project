@@ -12,11 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
