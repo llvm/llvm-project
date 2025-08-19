@@ -2794,6 +2794,16 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
         return true;
       }
     }
+    if (CE->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
+
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
+    }
     return false;
   }
 
