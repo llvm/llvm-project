@@ -89,4 +89,8 @@ void gh154157(void) {
   typedef const struct T * T_Ref;
   static T_Ref _Atomic x = ATOMIC_VAR_INIT((void*)NULL); // c-warning {{implicit conversion when initializing '_Atomic(T_Ref)' with an expression of type 'void *' is not permitted in C++}} \
                                                             cxx-error {{cannot initialize a variable of type '_Atomic(T_Ref)' with an rvalue of type 'void *'}}
+  static T_Ref const y = ATOMIC_VAR_INIT((void*)NULL);   // c-warning {{implicit conversion when initializing 'const T_Ref' (aka 'const struct T *const') with an expression of type 'void *' is not permitted in C++}} \
+                                                            cxx-error {{cannot initialize a variable of type 'const T_Ref' (aka 'const struct T *const') with an rvalue of type 'void *'}}
+  static T_Ref z = ATOMIC_VAR_INIT((void*)NULL);         // c-warning {{implicit conversion when initializing 'T_Ref' (aka 'const struct T *') with an expression of type 'void *' is not permitted in C++}} \
+                                                            cxx-error {{cannot initialize a variable of type 'T_Ref' (aka 'const struct T *') with an rvalue of type 'void *'}}
 }
