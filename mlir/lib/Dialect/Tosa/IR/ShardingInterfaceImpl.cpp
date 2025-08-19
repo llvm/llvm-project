@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/ShardingInterfaceImpl.h"
-#include "mlir/Dialect/Mesh/IR/MeshOps.h"
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h"
+#include "mlir/Dialect/Shard/IR/ShardOps.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -19,7 +19,7 @@
 
 using namespace mlir;
 using namespace mlir::tosa;
-using namespace mlir::mesh;
+using namespace mlir::shard;
 
 namespace {
 
@@ -87,15 +87,15 @@ struct NegateOpSharding
     return maps;
   }
 
-  LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshSharding> operandShardings,
-                        ArrayRef<MeshSharding> resultShardings,
-                        IRMapping &spmdizationMap,
-                        SymbolTableCollection &symbolTable,
-                        OpBuilder &builder) const {
-    spmdizeTriviallyShardableOperation(*op, spmdizedOperands, operandShardings,
-                                       resultShardings, spmdizationMap,
-                                       symbolTable, builder);
+  LogicalResult partition(Operation *op, ArrayRef<Value> partitiondOperands,
+                          ArrayRef<Sharding> operandShardings,
+                          ArrayRef<Sharding> resultShardings,
+                          IRMapping &partitionMap,
+                          SymbolTableCollection &symbolTable,
+                          OpBuilder &builder) const {
+    partitionTriviallyShardableOperation(*op, partitiondOperands,
+                                         operandShardings, resultShardings,
+                                         partitionMap, symbolTable, builder);
     return success();
   }
 };

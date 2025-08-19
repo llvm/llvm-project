@@ -425,7 +425,7 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
                                              .getNonReferenceType()
                                              .getUnqualifiedType()
                                              .getDesugaredType(getASTContext());
-  QualType LambdaType = getASTContext().getRecordType(RD);
+  CanQualType LambdaType = getASTContext().getCanonicalTagType(RD);
   if (LambdaType == ExplicitObjectParameterType)
     return false;
 
@@ -457,7 +457,7 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
     return true;
   }
 
-  if (Paths.isAmbiguous(LambdaType->getCanonicalTypeUnqualified())) {
+  if (Paths.isAmbiguous(LambdaType)) {
     std::string PathsDisplay = getAmbiguousPathsDisplayString(Paths);
     Diag(CallLoc, diag::err_explicit_object_lambda_ambiguous_base)
         << LambdaType << PathsDisplay;
@@ -642,7 +642,7 @@ static EnumDecl *findEnumForBlockReturn(Expr *E) {
 
   //   - it is an expression of that formal enum type.
   if (const EnumType *ET = E->getType()->getAs<EnumType>()) {
-    return ET->getDecl();
+    return ET->getOriginalDecl()->getDefinitionOrSelf();
   }
 
   // Otherwise, nope.
@@ -759,7 +759,7 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
     assert(isa<BlockScopeInfo>(CSI));
     const EnumDecl *ED = findCommonEnumForBlockReturns(CSI.Returns);
     if (ED) {
-      CSI.ReturnType = Context.getTypeDeclType(ED);
+      CSI.ReturnType = Context.getCanonicalTagType(ED);
       adjustBlockReturnsToEnum(*this, CSI.Returns, CSI.ReturnType);
       return;
     }
@@ -1968,14 +1968,15 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 }
 
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
-  LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
+  LambdaScopeInfo &LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
 
   if (LSI.CallOperator->hasAttr<SYCLKernelEntryPointAttr>())
     SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
 
-  ActOnFinishFunctionBody(LSI.CallOperator, Body);
+  ActOnFinishFunctionBody(LSI.CallOperator, Body, /*IsInstantiation=*/false,
+                          /*RetainFunctionScopeInfo=*/true);
 
-  return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
+  return BuildLambdaExpr(StartLoc, Body->getEndLoc());
 }
 
 static LambdaCaptureDefault
@@ -2132,8 +2133,9 @@ ConstructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
   return SourceRange(FixItStart, FixItEnd);
 }
 
-ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
-                                 LambdaScopeInfo *LSI) {
+ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
+                                 SourceLocation EndLoc) {
+  LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(FunctionScopes.back());
   // Collect information from the lambda scope.
   SmallVector<LambdaCapture, 4> Captures;
   SmallVector<Expr *, 4> CaptureInits;
@@ -2169,6 +2171,12 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
     PopExpressionEvaluationContext();
+
+    sema::AnalysisBasedWarnings::Policy WP =
+        AnalysisWarnings.getPolicyInEffectAt(EndLoc);
+    // We cannot release LSI until we finish computing captures, which
+    // requires the scope to be popped.
+    PoppedFunctionScopePtr _ = PopFunctionScopeInfo(&WP, LSI->CallOperator);
 
     // True if the current capture has a used capture or default before it.
     bool CurHasPreviousCapture = CaptureDefault != LCD_None;

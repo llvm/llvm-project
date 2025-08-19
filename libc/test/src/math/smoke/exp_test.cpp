@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/libc_errno.h"
 #include "src/math/exp.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 using LlvmLibcExpTest = LIBC_NAMESPACE::testing::FPTest<double>;
 

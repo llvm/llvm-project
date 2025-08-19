@@ -220,8 +220,6 @@ bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
   return evaluateAsRelocatable(Expr, Res, Asm);
 }
 
-void PPCXCOFFMCAsmInfo::anchor() {}
-
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
     report_fatal_error("XCOFF is not supported for little-endian targets");

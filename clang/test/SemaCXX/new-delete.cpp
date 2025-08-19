@@ -109,7 +109,7 @@ void bad_news(int *ip)
 #elif __cplusplus <= 201103L
   // expected-error@-4 {{array size expression must have integral or unscoped enumeration type, not 'double'}}
 #else
-  // expected-warning@-6 {{implicit conversion from 'double' to 'unsigned int' changes value from 1.1 to 1}}
+  // expected-warning@-6 {{implicit conversion from 'double' to '__size_t' (aka 'unsigned int') changes value from 1.1 to 1}}
 #endif
 
   (void)new int[1][i];  // expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
@@ -721,19 +721,7 @@ int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
 #if __cplusplus >= 201402L && !defined(NEW_INTERP)
 // expected-error@-2 {{array size is not a constant expression}}
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
-#elif __cplusplus < 201103L && !defined(NEW_INTERP)
+#elif __cplusplus < 201103L
 // expected-error@-5 {{cannot allocate object of variably modified type}}
 // expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
-#endif
-#ifdef NEW_INTERP
-#if __cplusplus >= 201402L
-// expected-error@-10 {{array size is not a constant expression}}
-// expected-note@-11 {{cannot refer to element 12 of non-array}}
-#elif __cplusplus >= 201103L
-// expected-error@-13 {{only the first dimension of an allocated array may have dynamic size}}
-// expected-note@-14 {{cannot refer to element 12 of non-array}}
-#else
-// expected-error@-16 {{only the first dimension of an allocated array may have dynamic size}}
-// expected-note@-17 {{cannot refer to element 12 of non-array}}
-#endif
 #endif

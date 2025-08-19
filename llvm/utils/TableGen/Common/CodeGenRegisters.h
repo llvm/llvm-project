@@ -607,6 +607,8 @@ typedef SmallVector<unsigned, 16> TopoSigId;
 // CodeGenRegBank - Represent a target's registers and the relations between
 // them.
 class CodeGenRegBank {
+  const RecordKeeper &Records;
+
   SetTheory Sets;
 
   const CodeGenHwModes &CGH;

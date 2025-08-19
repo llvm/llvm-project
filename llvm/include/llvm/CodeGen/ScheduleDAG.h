@@ -237,8 +237,13 @@ class TargetRegisterInfo;
   };
 
   /// Keep record of which SUnit are in the same cluster group.
-  typedef SmallSet<SUnit *, 8> ClusterInfo;
+  typedef SmallPtrSet<SUnit *, 8> ClusterInfo;
   constexpr unsigned InvalidClusterId = ~0u;
+
+  /// Return whether the input cluster ID's are the same and valid.
+  inline bool isTheSameCluster(unsigned A, unsigned B) {
+    return A != InvalidClusterId && A == B;
+  }
 
   /// Scheduling unit. This is a node in the scheduling DAG.
   class SUnit {

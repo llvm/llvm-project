@@ -161,9 +161,6 @@ public:
     lock_.Take();
 #endif
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    if constexpr (!std::is_same_v<A, OpenStatementState>) {
-      state.mutableModes() = ConnectionState::modes;
-    }
     directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;
@@ -200,6 +197,10 @@ public:
 
   RT_API_ATTRS int GetAsynchronousId(IoErrorHandler &);
   RT_API_ATTRS bool Wait(int);
+  RT_API_ATTRS Position InquirePosition() const {
+    return OpenFile::InquirePosition(
+        static_cast<FileOffset>(frameOffsetInFile_ + recordOffsetInFrame_));
+  }
 
 private:
   static RT_API_ATTRS UnitMap &CreateUnitMap();

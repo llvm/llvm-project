@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains Offload API definitions related to launching kernels
+// This file contains Offload API definitions related to kernels
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,12 +35,28 @@ def : Function {
         Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN_OPTIONAL>,
         Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
-        Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
     let returns = [
-        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>,
         Return<"OL_ERRC_INVALID_ARGUMENT", ["`ArgumentsSize > 0 && ArgumentsData == NULL`"]>,
         Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
         Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
+    ];
+}
+
+def : Function {
+    let name = "olCalculateOptimalOccupancy";
+    let desc = "Given dynamic memory size, query the device for a workgroup size that will result in optimal occupancy.";
+    let details = [
+        "For most devices, this will be the largest workgroup size that will result in all work items fitting on the device at once.",
+    ];
+    let params = [
+        Param<"ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
+        Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
+        Param<"size_t", "SharedMemory", "dynamic shared memory required per work item in bytes", PARAM_IN>,
+        Param<"size_t*", "GroupSize", "optimal block size", PARAM_OUT>
+    ];
+    let returns = [
+        Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
+        Return<"OL_ERRC_UNSUPPORTED", ["The backend cannot provide this information"]>,
     ];
 }

@@ -19,11 +19,12 @@ set(CROSS_PROJECT_TEST_DEPS
   FileCheck
   check-gdb-llvm-support
   count
-  llvm-dwarfdump
+  llvm-ar
   llvm-config
+  llvm-dwarfdump
   llvm-objdump
-  split-file
   not
+  split-file
   )
 
 if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)

@@ -22,7 +22,7 @@ define dso_local void @_Z6test01v() addrspace(1) #0 {
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @C, align 4, !tbaa [[TBAA2:![0-9]+]]
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.start.p0(i64 4, ptr [[J]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.start.p0(ptr [[J]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store i32 0, ptr [[J]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
@@ -30,11 +30,11 @@ define dso_local void @_Z6test01v() addrspace(1) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.end.p0(i64 4, ptr [[J]]) #[[ATTR2]]
+; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.end.p0(ptr [[J]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[DO_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    store i32 undef, ptr [[I]], align 4
-; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.start.p0(i64 4, ptr [[I]]) #[[ATTR2]]
+; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond1:
@@ -43,7 +43,7 @@ define dso_local void @_Z6test01v() addrspace(1) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4:%.*]], label [[FOR_COND_CLEANUP3:%.*]]
 ; CHECK:       for.cond.cleanup3:
-; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.end.p0(i64 4, ptr [[I]]) #[[ATTR2]]
+; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[J]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    [[INC7:%.*]] = add nsw i32 [[TMP4]], 1
 ; CHECK-NEXT:    store i32 [[INC7]], ptr [[J]], align 4, !tbaa [[TBAA2]]
@@ -64,7 +64,7 @@ entry:
 do.body:                                          ; preds = %do.cond, %entry
   %0 = load i32, ptr @C, align 4, !tbaa !2
   %inc = add nsw i32 %0, 1
-  call addrspace(1) void @llvm.lifetime.start.p0(i64 4, ptr %j) #2
+  call addrspace(1) void @llvm.lifetime.start.p0(ptr %j) #2
   store i32 0, ptr %j, align 4, !tbaa !2
   br label %for.cond
 
@@ -74,12 +74,12 @@ for.cond:                                         ; preds = %for.inc6, %do.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call addrspace(1) void @llvm.lifetime.end.p0(i64 4, ptr %j) #2
+  call addrspace(1) void @llvm.lifetime.end.p0(ptr %j) #2
   br label %for.end8
 
 for.body:                                         ; preds = %for.cond
   store i32 undef, ptr %i, align 4
-  call addrspace(1) void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
+  call addrspace(1) void @llvm.lifetime.start.p0(ptr %i) #2
   store i32 0, ptr %i, align 4, !tbaa !2
   br label %for.cond1
 
@@ -90,7 +90,7 @@ for.cond1:                                        ; preds = %for.inc, %for.body
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
 
 for.cond.cleanup3:                                ; preds = %for.cond1
-  call addrspace(1) void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call addrspace(1) void @llvm.lifetime.end.p0(ptr %i) #2
   br label %for.end
 
 for.body4:                                        ; preds = %for.cond1
@@ -124,10 +124,10 @@ do.end:                                           ; preds = %do.cond
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) addrspace(1) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) addrspace(1) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) addrspace(1) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) addrspace(1) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

@@ -1,6 +1,6 @@
-; RUN: llc -stop-after=amdgpu-isel -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,ISEL %s
-; RUN: llc -stop-after=dead-mi-elimination -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,DEADMI %s
-; RUN: llc -global-isel -stop-after=irtranslator -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,GISEL
+; RUN: llc -stop-after=amdgpu-isel -mtriple=amdgcn-- -mcpu=gfx900 -o - %s | FileCheck --check-prefixes=CHECK,ISEL %s
+; RUN: llc -stop-after=dead-mi-elimination -mtriple=amdgcn-- -mcpu=gfx900 -o - %s | FileCheck --check-prefixes=CHECK,DEADMI %s
+; RUN: llc -global-isel -stop-after=irtranslator -mtriple=amdgcn-- -mcpu=gfx900 -o - %s | FileCheck %s --check-prefixes=CHECK,GISEL
 
 ; CHECK-LABEL: name:            basic_call
 ;       CHECK:    [[TOKEN:%[0-9]+]]{{[^ ]*}} = CONVERGENCECTRL_ENTRY

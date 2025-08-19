@@ -248,46 +248,50 @@ void InstrInfoEmitter::emitOperandNameMappings(
   /// scan of the instructions below.
 
   // Map of operand names to their ID.
-  std::map<StringRef, unsigned> OperandNameToID;
-  // Map from operand name enum value -> ID.
-  std::vector<unsigned> OperandEnumToID;
+  MapVector<StringRef, unsigned> OperandNameToID;
 
-  /// The keys of this map is a map which have OpName ID values as their keys
-  /// and instruction operand indices as their values. The values of this map
-  /// are lists of instruction names. This map helps to unique entries among
+  /// A key in this map is a vector mapping OpName ID values to instruction
+  /// operand indices or -1 (but without any trailing -1 values which will be
+  /// added later). The corresponding value in this map is the index of that row
+  /// in the emitted OperandMap table. This map helps to unique entries among
   /// instructions that have identical OpName -> Operand index mapping.
-  std::map<std::map<unsigned, unsigned>, std::vector<StringRef>> OperandMap;
+  MapVector<SmallVector<int>, unsigned> OperandMap;
 
   // Max operand index seen.
   unsigned MaxOperandNo = 0;
 
   // Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
-  // we can just skip them.
+  // add a dummy map entry for them.
+  OperandMap.try_emplace({}, 0);
+  unsigned FirstTargetVal = TargetInstructions.front()->EnumVal;
+  SmallVector<unsigned> InstructionIndex(FirstTargetVal, 0);
   for (const CodeGenInstruction *Inst : TargetInstructions) {
-    if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable"))
+    if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable")) {
+      InstructionIndex.push_back(0);
       continue;
-    std::map<unsigned, unsigned> OpList;
+    }
+    SmallVector<int> OpList;
     for (const auto &Info : Inst->Operands) {
       unsigned ID =
           OperandNameToID.try_emplace(Info.Name, OperandNameToID.size())
               .first->second;
+      OpList.resize(std::max((unsigned)OpList.size(), ID + 1), -1);
       OpList[ID] = Info.MIOperandNo;
       MaxOperandNo = std::max(MaxOperandNo, Info.MIOperandNo);
     }
-    OperandMap[OpList].push_back(Inst->TheDef->getName());
+    auto [It, Inserted] =
+        OperandMap.try_emplace(std::move(OpList), OperandMap.size());
+    InstructionIndex.push_back(It->second);
   }
 
   const size_t NumOperandNames = OperandNameToID.size();
-  OperandEnumToID.reserve(NumOperandNames);
-  for (const auto &Op : OperandNameToID)
-    OperandEnumToID.push_back(Op.second);
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "namespace llvm::" << Namespace << " {\n";
   OS << "enum class OpName {\n";
-  for (const auto &[I, Op] : enumerate(OperandNameToID))
-    OS << "  " << Op.first << " = " << I << ",\n";
+  for (const auto &[Op, I] : OperandNameToID)
+    OS << "  " << Op << " = " << I << ",\n";
   OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
   OS << "}; // enum class OpName\n\n";
   OS << "LLVM_READONLY\n";
@@ -307,28 +311,22 @@ void InstrInfoEmitter::emitOperandNameMappings(
     StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
     OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
        << "] = {\n";
-    for (const auto &Entry : OperandMap) {
-      const std::map<unsigned, unsigned> &OpList = Entry.first;
-
+    for (const auto &[OpList, _] : OperandMap) {
       // Emit a row of the OperandMap table.
       OS << "    {";
-      for (unsigned ID : OperandEnumToID) {
-        auto Iter = OpList.find(ID);
-        OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
-      }
+      for (unsigned ID = 0; ID < NumOperandNames; ++ID)
+        OS << (ID < OpList.size() ? OpList[ID] : -1) << ", ";
       OS << "},\n";
     }
     OS << "  };\n";
 
-    OS << "  switch(Opcode) {\n";
-    for (const auto &[TableIndex, Entry] : enumerate(OperandMap)) {
-      for (StringRef Name : Entry.second)
-        OS << "  case " << Namespace << "::" << Name << ":\n";
-      OS << "    return OperandMap[" << TableIndex
-         << "][static_cast<unsigned>(Name)];\n";
-    }
-    OS << "  default: return -1;\n";
-    OS << "  }\n";
+    Type = OperandMap.size() <= UINT8_MAX + 1 ? "uint8_t" : "uint16_t";
+    OS << "  static constexpr " << Type << " InstructionIndex[] = {";
+    for (auto [TableIndex, Entry] : enumerate(InstructionIndex))
+      OS << (TableIndex % 16 == 0 ? "\n    " : " ") << Entry << ',';
+    OS << "\n  };\n";
+
+    OS << "  return OperandMap[InstructionIndex[Opcode]][(unsigned)Name];\n";
   } else {
     // There are no operands, so no need to emit anything
     OS << "  return -1;\n";

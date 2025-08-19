@@ -97,13 +97,13 @@ void f1(void) {
 void f2(void) {
   int *p = malloc(12);
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2_realloc_0(void) {
   int *p = malloc(12);
   realloc(p,0);
-  realloc(p,0); // expected-warning{{Attempt to free released memory}}
+  realloc(p,0); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2_realloc_1(void) {
@@ -153,7 +153,7 @@ void reallocSizeZero1(void) {
   char *p = malloc(12);
   char *r = realloc(p, 0);
   if (!r) {
-    free(p); // expected-warning {{Attempt to free released memory}}
+    free(p); // expected-warning {{Attempt to release already released memory}}
   } else {
     free(r);
   }
@@ -163,11 +163,11 @@ void reallocSizeZero2(void) {
   char *p = malloc(12);
   char *r = realloc(p, 0);
   if (!r) {
-    free(p); // expected-warning {{Attempt to free released memory}}
+    free(p); // expected-warning {{Attempt to release already released memory}}
   } else {
     free(r);
   }
-  free(p); // expected-warning {{Attempt to free released memory}}
+  free(p); // expected-warning {{Attempt to release already released memory}}
 }
 
 void reallocSizeZero3(void) {
@@ -262,7 +262,7 @@ void reallocfRadar6337483_3(void) {
     char * tmp;
     tmp = (char*)reallocf(buf, 0x1000000);
     if (!tmp) {
-        free(buf); // expected-warning {{Attempt to free released memory}}
+        free(buf); // expected-warning {{Attempt to release already released memory}}
         return;
     }
     buf = tmp;
@@ -480,19 +480,19 @@ void pr6293(void) {
 void f7(void) {
   char *x = (char*) malloc(4);
   free(x);
-  x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
+  x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
 }
 
 void f8(void) {
   char *x = (char*) malloc(4);
   free(x);
-  char *y = strndup(x, 4); // expected-warning{{Use of memory after it is freed}}
+  char *y = strndup(x, 4); // expected-warning{{Use of memory after it is released}}
 }
 
 void f7_realloc(void) {
   char *x = (char*) malloc(4);
   realloc(x,0);
-  x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
+  x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
 }
 
 void PR6123(void) {
@@ -773,7 +773,7 @@ void nullFree(void) {
 void paramFree(int *p) {
   myfoo(p);
   free(p); // no warning
-  myfoo(p); // expected-warning {{Use of memory after it is freed}}
+  myfoo(p); // expected-warning {{Use of memory after it is released}}
 }
 
 void allocaFree(void) {
@@ -813,14 +813,14 @@ void mallocEscapeFreeFree(void) {
   int *p = malloc(12);
   myfoo(p);
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void mallocEscapeFreeUse(void) {
   int *p = malloc(12);
   myfoo(p);
   free(p);
-  myfoo(p); // expected-warning{{Use of memory after it is freed}}
+  myfoo(p); // expected-warning{{Use of memory after it is released}}
 }
 
 int *myalloc(void);
@@ -846,7 +846,7 @@ void mallocBindFreeUse(void) {
   int *x = malloc(12);
   int *y = x;
   free(y);
-  myfoo(x); // expected-warning{{Use of memory after it is freed}}
+  myfoo(x); // expected-warning{{Use of memory after it is released}}
 }
 
 void mallocEscapeMalloc(void) {
@@ -871,13 +871,13 @@ void mallocFreeMalloc(void) {
 void mallocFreeUse_params(void) {
   int *p = malloc(12);
   free(p);
-  myfoo(p); //expected-warning{{Use of memory after it is freed}}
+  myfoo(p); //expected-warning{{Use of memory after it is released}}
 }
 
 void mallocFreeUse_params2(void) {
   int *p = malloc(12);
   free(p);
-  myfooint(*p); //expected-warning{{Use of memory after it is freed}}
+  myfooint(*p); //expected-warning{{Use of memory after it is released}}
 }
 
 void mallocFailedOrNot(void) {
@@ -895,14 +895,14 @@ struct StructWithInt {
 int *mallocReturnFreed(void) {
   int *p = malloc(12);
   free(p);
-  return p; // expected-warning {{Use of memory after it is freed}}
+  return p; // expected-warning {{Use of memory after it is released}}
 }
 
 int useAfterFreeStruct(void) {
   struct StructWithInt *px= malloc(sizeof(struct StructWithInt));
   px->g = 5;
   free(px);
-  return px->g; // expected-warning {{Use of memory after it is freed}}
+  return px->g; // expected-warning {{Use of memory after it is released}}
 }
 
 void nonSymbolAsFirstArg(int *pp, struct StructWithInt *p);
@@ -935,7 +935,7 @@ void vallocEscapeFreeUse(void) {
   int *p = valloc(12);
   myfoo(p);
   free(p);
-  myfoo(p); // expected-warning{{Use of memory after it is freed}}
+  myfoo(p); // expected-warning{{Use of memory after it is released}}
 }
 
 int *Gl;
@@ -1543,7 +1543,7 @@ void freeButNoMalloc(int *p, int x){
     free(p);
     //user forgot a return here.
   }
-  free(p); // expected-warning {{Attempt to free released memory}}
+  free(p); // expected-warning {{Attempt to release already released memory}}
 }
 
 struct HasPtr {
@@ -1553,7 +1553,7 @@ struct HasPtr {
 char* reallocButNoMalloc(struct HasPtr *a, int c, int size) {
   int *s;
   char *b = realloc(a->p, size);
-  char *m = realloc(a->p, size); // expected-warning {{Attempt to free released memory}}
+  char *m = realloc(a->p, size); // expected-warning {{Attempt to release already released memory}}
   // We don't expect a use-after-free for a->P here because the warning above
   // is a sink.
   return a->p; // no-warning
@@ -1722,7 +1722,7 @@ void testOffsetZeroDoubleFree(void) {
   int *array = malloc(sizeof(int)*2);
   int *p = &array[0];
   free(p);
-  free(&array[0]); // expected-warning{{Attempt to free released memory}}
+  free(&array[0]); // expected-warning{{Attempt to release already released memory}}
 }
 
 void testOffsetPassedToStrlen(void) {
@@ -1835,7 +1835,7 @@ int testNoCheckerDataPropagationFromLogicalOpOperandToOpResult(void) {
    int ok = (param && value);
    free(param);
    free(value);
-   // Previously we ended up with 'Use of memory after it is freed' on return.
+   // Previously we ended up with 'Use of memory after it is released' on return.
    return ok; // no warning
 }
 
@@ -1954,9 +1954,23 @@ int conjure(void);
 void testExtent(void) {
   int x = conjure();
   clang_analyzer_dump(x);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   int *p = (int *)malloc(x);
   clang_analyzer_dumpExtent(p);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   free(p);
+}
+
+void gh149754(void *p) {
+  // This testcase demonstrates an unusual situation where a certain symbol
+  // (the value of `p`) is released (more precisely, transitions from
+  // untracked state to Released state) twice within the same bug path because
+  // the `EvalAssume` callback resets it to untracked state after the first
+  // time when it is released. This caused the failure of an assertion, which
+  // was since then removed for the codebase.
+  if (!realloc(p, 8)) {
+    realloc(p, 8);
+    free(p); // expected-warning {{Attempt to release already released memory}}
+  }
+  // expected-warning@+1 {{Potential memory leak}}
 }
