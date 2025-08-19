@@ -600,7 +600,7 @@ class ModuleSymbolsRequestHandler
           llvm::Expected<protocol::ModuleSymbolsResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
-  static llvm::StringLiteral GetCommand() { return "moduleSymbols"; }
+  static llvm::StringLiteral GetCommand() { return "__lldb_moduleSymbols"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureSupportsModuleSymbolsRequest};
   }

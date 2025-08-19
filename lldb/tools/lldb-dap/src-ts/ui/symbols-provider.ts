@@ -80,7 +80,7 @@ export class SymbolsProvider extends DisposableContext {
   }
 
   private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<SymbolType[]> {
-    const symbols_response: { symbols: Array<SymbolType> } = await session.customRequest("moduleSymbols", { moduleId, moduleName: '' });
+    const symbols_response: { symbols: Array<SymbolType> } = await session.customRequest("__lldb_moduleSymbols", { moduleId, moduleName: '' });
     return symbols_response?.symbols || [];
   }
 

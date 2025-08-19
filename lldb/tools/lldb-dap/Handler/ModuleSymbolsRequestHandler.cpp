@@ -31,7 +31,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
     if (!lldb_private::UUID::DecodeUUIDBytesFromString(args.moduleId,
                                                        uuid_bytes)
              .empty())
-      return llvm::make_error<DAPError>("Invalid module ID");
+      return llvm::make_error<DAPError>("invalid module ID");
 
     module_spec.SetUUIDBytes(uuid_bytes.data(), uuid_bytes.size());
   }
@@ -49,7 +49,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
   std::vector<Symbol> &symbols = response.symbols;
   lldb::SBModule module = dap.target.FindModule(module_spec);
   if (!module.IsValid())
-    return llvm::make_error<DAPError>("Module not found");
+    return llvm::make_error<DAPError>("module not found");
 
   const size_t num_symbols = module.GetNumSymbols();
   const size_t start_index = args.startIndex.value_or(0);
