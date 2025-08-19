@@ -19,7 +19,6 @@
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
 #include "flang/Support/Fortran-features.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
