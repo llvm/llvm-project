@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file implements the ActionCache class.
-///
-//===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASID.h"

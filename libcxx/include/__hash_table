@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___HASH_TABLE
 #define _LIBCPP___HASH_TABLE
 
+#include <__algorithm/fill_n.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__assert>
@@ -700,6 +701,38 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __size_; }
 
+  _LIBCPP_HIDE_FROM_ABI void
+  __copy_construct(__next_pointer __other_iter, __next_pointer __own_iter, size_t __current_chash) {
+    auto __bucket_count = bucket_count();
+
+    for (; __other_iter; __other_iter = __other_iter->__next_) {
+      __node_holder __new_node = __construct_node_hash(__other_iter->__hash(), __other_iter->__upcast()->__get_value());
+
+      size_t __new_chash = std::__constrain_hash(__new_node->__hash(), __bucket_count);
+      if (__new_chash != __current_chash) {
+        __bucket_list_[__new_chash] = __own_iter;
+        __current_chash             = __new_chash;
+      }
+
+      __own_iter->__next_ = static_cast<__next_pointer>(__new_node.release());
+      __own_iter          = __own_iter->__next_;
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __copy_construct(__next_pointer __other_iter) {
+    __next_pointer __own_iter = __first_node_.__ptr();
+    {
+      __node_holder __new_node = __construct_node_hash(__other_iter->__hash(), __other_iter->__upcast()->__get_value());
+      __own_iter->__next_      = static_cast<__next_pointer>(__new_node.release());
+    }
+
+    size_t __current_chash          = std::__constrain_hash(__own_iter->__next_->__hash(), bucket_count());
+    __bucket_list_[__current_chash] = __own_iter;
+    __other_iter                    = __other_iter->__next_;
+    __own_iter                      = __own_iter->__next_;
+    __copy_construct(__other_iter, __own_iter, __current_chash);
+  }
+
 public:
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __size_; }
 
@@ -1048,16 +1081,29 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const allocator_type& __a
       __max_load_factor_(1.0f) {}
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __other)
     : __bucket_list_(nullptr,
-                     __bucket_list_deleter(allocator_traits<__pointer_allocator>::select_on_container_copy_construction(
-                                               __u.__bucket_list_.get_deleter().__alloc()),
+                     __bucket_list_deleter(__pointer_alloc_traits::select_on_container_copy_construction(
+                                               __other.__bucket_list_.get_deleter().__alloc()),
                                            0)),
-      __node_alloc_(allocator_traits<__node_allocator>::select_on_container_copy_construction(__u.__node_alloc())),
+      __node_alloc_(__node_traits::select_on_container_copy_construction(__other.__node_alloc())),
       __size_(0),
-      __hasher_(__u.hash_function()),
-      __max_load_factor_(__u.__max_load_factor_),
-      __key_eq_(__u.__key_eq_) {}
+      __hasher_(__other.hash_function()),
+      __max_load_factor_(__other.__max_load_factor_),
+      __key_eq_(__other.__key_eq_) {
+  if (__other.size() == 0)
+    return;
+
+  auto& __bucket_list_del = __bucket_list_.get_deleter();
+  auto __bucket_count     = __other.bucket_count();
+  __bucket_list_.reset(__pointer_alloc_traits::allocate(__bucket_list_del.__alloc(), __bucket_count));
+  __bucket_list_del.size() = __bucket_count;
+
+  std::fill_n(__bucket_list_.get(), __bucket_count, nullptr);
+
+  __copy_construct(__other.__first_node_.__next_);
+  __size_ = __other.size();
+}
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u, const allocator_type& __a)
@@ -1131,14 +1177,75 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__copy_assign_alloc(const __hash_
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-__hash_table<_Tp, _Hash, _Equal, _Alloc>& __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __u) {
-  if (this != std::addressof(__u)) {
-    __copy_assign_alloc(__u);
-    hash_function()   = __u.hash_function();
-    key_eq()          = __u.key_eq();
-    max_load_factor() = __u.max_load_factor();
-    __assign_multi(__u.begin(), __u.end());
+__hash_table<_Tp, _Hash, _Equal, _Alloc>&
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __other) {
+  if (this == std::addressof(__other))
+    return *this;
+
+  __copy_assign_alloc(__other);
+  hash_function()   = __other.hash_function();
+  key_eq()          = __other.key_eq();
+  max_load_factor() = __other.max_load_factor();
+
+  if (__other.size() == 0) {
+    clear();
+    return *this;
   }
+
+  auto __bucket_count = __other.bucket_count();
+  if (__bucket_count != bucket_count()) {
+    auto& __bucket_list_del = __bucket_list_.get_deleter();
+    __bucket_list_.reset(__pointer_alloc_traits::allocate(__bucket_list_del.__alloc(), __bucket_count));
+    __bucket_list_del.size() = __bucket_count;
+  }
+  std::fill_n(__bucket_list_.get(), __bucket_count, nullptr);
+
+  if (!__first_node_.__next_) {
+    __copy_construct(__other.__first_node_.__next_);
+    __size_ = __other.size();
+    return *this;
+  }
+
+  __next_pointer __other_iter = __other.__first_node_.__next_;
+  __next_pointer __own_iter   = __first_node_.__ptr();
+  {
+    __node_pointer __next = __own_iter->__next_->__upcast();
+    __assign_value(__next->__get_value(), __other_iter->__upcast()->__get_value());
+    __next->__hash_ = __other_iter->__hash();
+  }
+  size_t __current_chash          = std::__constrain_hash(__own_iter->__next_->__hash(), __bucket_count);
+  __bucket_list_[__current_chash] = __own_iter;
+  __other_iter                    = __other_iter->__next_;
+  __own_iter                      = __own_iter->__next_;
+
+  // Go through the nodes of the incoming hash table and copy then into the destination hash table, reusing as many
+  // existing nodes as posssible in the destination.
+  while (__other_iter && __own_iter->__next_) {
+    __node_pointer __next = __own_iter->__next_->__upcast();
+    __assign_value(__next->__get_value(), __other_iter->__upcast()->__get_value());
+    __next->__hash_ = __other_iter->__hash();
+
+    size_t __new_chash = std::__constrain_hash(__next->__hash_, __bucket_count);
+    if (__new_chash != __current_chash) {
+      __bucket_list_[__new_chash] = __own_iter;
+      __current_chash             = __new_chash;
+    }
+
+    __other_iter = __other_iter->__next_;
+    __own_iter   = __own_iter->__next_;
+  }
+
+  // At this point we either have consumed the whole incoming hash table, or we don't have any more nodes to reuse in
+  // the destination. Either continue with constructing new nodes, or deallocate the left over nodes.
+  if (__own_iter->__next_) {
+    __deallocate_node(__own_iter->__next_);
+    __own_iter->__next_ = nullptr;
+  } else {
+    __copy_construct(__other_iter, __own_iter, __current_chash);
+  }
+
+  __size_ = __other.size();
+
   return *this;
 }
 

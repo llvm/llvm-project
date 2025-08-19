@@ -14,67 +14,69 @@
 // This file provides OpenCL C implementations of __clc_nextafter for
 // targets that don't support the clang builtin.
 
-#define CLC_AS_TYPE(x) __clc_as_##x
+#define __CLC_CLC_AS_TYPE(x) __clc_as_##x
 
-#define NEXTAFTER(FLOAT_TYPE, UINT_TYPE, INT_TYPE, INT_TYPE_SCALAR)            \
+#define __CLC_NEXTAFTER(FLOAT_TYPE, UINT_TYPE, INT_TYPE, INT_TYPE_SCALAR)      \
   _CLC_OVERLOAD _CLC_DEF FLOAT_TYPE __clc_nextafter(FLOAT_TYPE x,              \
                                                     FLOAT_TYPE y) {            \
     const UINT_TYPE sign_bit = (UINT_TYPE)1                                    \
                                << (sizeof(INT_TYPE_SCALAR) * 8 - 1);           \
-    UINT_TYPE ix = CLC_AS_TYPE(UINT_TYPE)(x);                                  \
+    UINT_TYPE ix = __CLC_CLC_AS_TYPE(UINT_TYPE)(x);                            \
     FLOAT_TYPE absx = __clc_fabs(x);                                           \
     UINT_TYPE mxu = sign_bit - ix;                                             \
-    INT_TYPE mx = CLC_AS_TYPE(INT_TYPE)(mxu);                                  \
-    mx = CLC_AS_TYPE(INT_TYPE)(ix) < (INT_TYPE)0 ? mx                          \
-                                                 : CLC_AS_TYPE(INT_TYPE)(ix);  \
-    UINT_TYPE iy = CLC_AS_TYPE(UINT_TYPE)(y);                                  \
+    INT_TYPE mx = __CLC_CLC_AS_TYPE(INT_TYPE)(mxu);                            \
+    mx = __CLC_CLC_AS_TYPE(INT_TYPE)(ix) < (INT_TYPE)0                         \
+             ? mx                                                              \
+             : __CLC_CLC_AS_TYPE(INT_TYPE)(ix);                                \
+    UINT_TYPE iy = __CLC_CLC_AS_TYPE(UINT_TYPE)(y);                            \
     FLOAT_TYPE absy = __clc_fabs(y);                                           \
     UINT_TYPE myu = sign_bit - iy;                                             \
-    INT_TYPE my = CLC_AS_TYPE(INT_TYPE)(myu);                                  \
-    my = CLC_AS_TYPE(INT_TYPE)(iy) < (INT_TYPE)0 ? my                          \
-                                                 : CLC_AS_TYPE(INT_TYPE)(iy);  \
-    INT_TYPE t = mx + (mx < my ? (INT_TYPE)1 : (INT_TYPE)-1);                  \
-    UINT_TYPE r = sign_bit - CLC_AS_TYPE(UINT_TYPE)(t);                        \
+    INT_TYPE my = __CLC_CLC_AS_TYPE(INT_TYPE)(myu);                            \
+    my = __CLC_CLC_AS_TYPE(INT_TYPE)(iy) < (INT_TYPE)0                         \
+             ? my                                                              \
+             : __CLC_CLC_AS_TYPE(INT_TYPE)(iy);                                \
+    INT_TYPE t = mx + (mx < my ? (INT_TYPE)1 : (INT_TYPE) - 1);                \
+    UINT_TYPE r = sign_bit - __CLC_CLC_AS_TYPE(UINT_TYPE)(t);                  \
     r = (t < (INT_TYPE)0 || (t == (INT_TYPE)0 && mx < my))                     \
             ? r                                                                \
-            : CLC_AS_TYPE(UINT_TYPE)(t);                                       \
+            : __CLC_CLC_AS_TYPE(UINT_TYPE)(t);                                 \
     r = __clc_isnan(x) ? ix : r;                                               \
     r = __clc_isnan(y) ? iy : r;                                               \
-    r = ((CLC_AS_TYPE(UINT_TYPE)(absx) | CLC_AS_TYPE(UINT_TYPE)(absy)) ==      \
-             (UINT_TYPE)0 ||                                                   \
+    r = ((__CLC_CLC_AS_TYPE(UINT_TYPE)(absx) |                                 \
+          __CLC_CLC_AS_TYPE(UINT_TYPE)(absy)) == (UINT_TYPE)0 ||               \
          ix == iy)                                                             \
             ? iy                                                               \
             : r;                                                               \
-    return CLC_AS_TYPE(FLOAT_TYPE)(r);                                         \
+    return __CLC_CLC_AS_TYPE(FLOAT_TYPE)(r);                                   \
   }
 
-NEXTAFTER(float, uint, int, int)
-NEXTAFTER(float2, uint2, int2, int)
-NEXTAFTER(float3, uint3, int3, int)
-NEXTAFTER(float4, uint4, int4, int)
-NEXTAFTER(float8, uint8, int8, int)
-NEXTAFTER(float16, uint16, int16, int)
+__CLC_NEXTAFTER(float, uint, int, int)
+__CLC_NEXTAFTER(float2, uint2, int2, int)
+__CLC_NEXTAFTER(float3, uint3, int3, int)
+__CLC_NEXTAFTER(float4, uint4, int4, int)
+__CLC_NEXTAFTER(float8, uint8, int8, int)
+__CLC_NEXTAFTER(float16, uint16, int16, int)
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-NEXTAFTER(double, ulong, long, long)
-NEXTAFTER(double2, ulong2, long2, long)
-NEXTAFTER(double3, ulong3, long3, long)
-NEXTAFTER(double4, ulong4, long4, long)
-NEXTAFTER(double8, ulong8, long8, long)
-NEXTAFTER(double16, ulong16, long16, long)
+__CLC_NEXTAFTER(double, ulong, long, long)
+__CLC_NEXTAFTER(double2, ulong2, long2, long)
+__CLC_NEXTAFTER(double3, ulong3, long3, long)
+__CLC_NEXTAFTER(double4, ulong4, long4, long)
+__CLC_NEXTAFTER(double8, ulong8, long8, long)
+__CLC_NEXTAFTER(double16, ulong16, long16, long)
 
 #endif
 
 #ifdef cl_khr_fp16
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-NEXTAFTER(half, ushort, short, short)
-NEXTAFTER(half2, ushort2, short2, short)
-NEXTAFTER(half3, ushort3, short3, short)
-NEXTAFTER(half4, ushort4, short4, short)
-NEXTAFTER(half8, ushort8, short8, short)
-NEXTAFTER(half16, ushort16, short16, short)
+__CLC_NEXTAFTER(half, ushort, short, short)
+__CLC_NEXTAFTER(half2, ushort2, short2, short)
+__CLC_NEXTAFTER(half3, ushort3, short3, short)
+__CLC_NEXTAFTER(half4, ushort4, short4, short)
+__CLC_NEXTAFTER(half8, ushort8, short8, short)
+__CLC_NEXTAFTER(half16, ushort16, short16, short)
 
 #endif

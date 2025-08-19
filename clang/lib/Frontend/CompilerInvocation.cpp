@@ -1548,9 +1548,10 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
     Opts.BlockByrefHelperFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
-    Opts.BlockDescriptorPointers =
-        PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
-                          BlockDescriptorConstantDiscriminator);
+    if (LangOpts.PointerAuthBlockDescriptorPointers)
+      Opts.BlockDescriptorPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            BlockDescriptorConstantDiscriminator);
 
     Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
@@ -3608,6 +3609,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_objc_interface_sel);
   if (Opts.PointerAuthObjcClassROPointers)
     GenerateArg(Consumer, OPT_fptrauth_objc_class_ro);
+  if (Opts.PointerAuthBlockDescriptorPointers)
+    GenerateArg(Consumer, OPT_fptrauth_block_descriptor_pointers);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3631,6 +3634,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
       Args.hasArg(OPT_faarch64_jump_table_hardening);
+  Opts.PointerAuthBlockDescriptorPointers =
+      Args.hasArg(OPT_fptrauth_block_descriptor_pointers);
   Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
   Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
   Opts.PointerAuthObjcInterfaceSel =

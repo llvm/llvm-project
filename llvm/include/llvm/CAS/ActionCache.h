@@ -78,9 +78,11 @@ public:
   virtual ~ActionCache() = default;
 
 protected:
+  // Implementation detail for \p get method.
   virtual Expected<std::optional<CASID>>
   getImpl(ArrayRef<uint8_t> ResolvedKey, bool CanBeDistributed) const = 0;
 
+  // Implementation details for \p put method.
   virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                         bool CanBeDistributed) = 0;
 

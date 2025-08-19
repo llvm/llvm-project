@@ -8,7 +8,7 @@ target triple = "arm64-apple-macosx"
 define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF2-LABEL: define void @load_store_interleave_group_tc_2(
 ; VF2-SAME: ptr noalias [[DATA:%.*]]) {
-; VF2-NEXT:  [[ENTRY:.*]]:
+; VF2-NEXT:  [[ENTRY:.*:]]
 ; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -23,10 +23,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[SCALAR_PH]]:
-; VF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF2-NEXT:    br label %[[LOOP:.*]]
 ; VF2:       [[LOOP]]:
-; VF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF2-NEXT:    [[MUL_2:%.*]] = shl nsw i64 [[IV]], 1
 ; VF2-NEXT:    [[DATA_0:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[MUL_2]]
 ; VF2-NEXT:    [[L_0:%.*]] = load i64, ptr [[DATA_0]], align 8
@@ -226,7 +225,7 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ;
 ; VF2-LABEL: define void @test_complex_add_float_tc_4(
 ; VF2-SAME: ptr [[RES:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
-; VF2-NEXT:  [[ENTRY:.*]]:
+; VF2-NEXT:  [[ENTRY:.*:]]
 ; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -252,10 +251,9 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[SCALAR_PH]]:
-; VF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF2-NEXT:    br label %[[LOOP:.*]]
 ; VF2:       [[LOOP]]:
-; VF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF2-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[IV]]
 ; VF2-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[IV]]
 ; VF2-NEXT:    [[L_A_0:%.*]] = load float, ptr [[GEP_A_0]], align 4
@@ -278,7 +276,7 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ;
 ; VF4-LABEL: define void @test_complex_add_float_tc_4(
 ; VF4-SAME: ptr [[RES:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*]]:
+; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -298,10 +296,9 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
-; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4-NEXT:    br label %[[LOOP:.*]]
 ; VF4:       [[LOOP]]:
-; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF4-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF4-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[IV]]
 ; VF4-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[IV]]
 ; VF4-NEXT:    [[L_A_0:%.*]] = load float, ptr [[GEP_A_0]], align 4

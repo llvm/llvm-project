@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file
-/// This file implements the underlying ActionCache implementations.
+/// \file This file implements the underlying ActionCache implementations.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -16,7 +15,7 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/Support/BLAKE3.h"
 
-#define DEBUG_TYPE "action-caches"
+#define DEBUG_TYPE "cas-action-caches"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -37,6 +36,7 @@ private:
   std::array<uint8_t, Size> Value;
 };
 
+/// Builtin InMemory ActionCache that stores the mapping in memory.
 class InMemoryActionCache final : public ActionCache {
 public:
   InMemoryActionCache()
