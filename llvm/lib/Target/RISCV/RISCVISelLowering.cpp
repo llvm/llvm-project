@@ -16639,33 +16639,38 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue
-performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
+performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = cast<VTSDNode>(N->getOperand(1))->getVT();
   unsigned Opc = Src.getOpcode();
+  SDLoc DL(N);
 
   // Fold (sext_inreg (fmv_x_anyexth X), i16) -> (fmv_x_signexth X)
   // Don't do this with Zhinx. We need to explicitly sign extend the GPR.
   if (Opc == RISCVISD::FMV_X_ANYEXTH && SrcVT.bitsGE(MVT::i16) &&
       Subtarget.hasStdExtZfhmin())
-    return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, SDLoc(N), VT,
-                       Src.getOperand(0));
+    return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, DL, VT, Src.getOperand(0));
 
   // Fold (sext_inreg (shl X, Y), i32) -> (sllw X, Y) iff Y u< 32
   if (Opc == ISD::SHL && Subtarget.is64Bit() && SrcVT == MVT::i32 &&
       VT == MVT::i64 && !isa<ConstantSDNode>(Src.getOperand(1)) &&
       DAG.computeKnownBits(Src.getOperand(1)).countMaxActiveBits() <= 5)
-    return DAG.getNode(RISCVISD::SLLW, SDLoc(N), VT, Src.getOperand(0),
+    return DAG.getNode(RISCVISD::SLLW, DL, VT, Src.getOperand(0),
                        Src.getOperand(1));
+
+  // Fold (sext_inreg (setcc), i1) -> (sub 0, (setcc))
+  if (Opc == ISD::SETCC && SrcVT == MVT::i1 && DCI.isAfterLegalizeDAG())
+    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
 
   // Fold (sext_inreg (xor (setcc), -1), i1) -> (add (setcc), -1)
   if (Opc == ISD::XOR && SrcVT == MVT::i1 &&
       isAllOnesConstant(Src.getOperand(1)) &&
-      Src.getOperand(0).getOpcode() == ISD::SETCC)
-    return DAG.getNode(ISD::ADD, SDLoc(N), VT, Src.getOperand(0),
-                       DAG.getAllOnesConstant(SDLoc(N), VT));
+      Src.getOperand(0).getOpcode() == ISD::SETCC && DCI.isAfterLegalizeDAG())
+    return DAG.getNode(ISD::ADD, DL, VT, Src.getOperand(0),
+                       DAG.getAllOnesConstant(DL, VT));
 
   return SDValue();
 }
@@ -20088,7 +20093,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, Subtarget);
   case ISD::SIGN_EXTEND_INREG:
-    return performSIGN_EXTEND_INREGCombine(N, DAG, Subtarget);
+    return performSIGN_EXTEND_INREGCombine(N, DCI, Subtarget);
   case ISD::ZERO_EXTEND:
     // Fold (zero_extend (fp_to_uint X)) to prevent forming fcvt+zexti32 during
     // type legalization. This is safe because fp_to_uint produces poison if
