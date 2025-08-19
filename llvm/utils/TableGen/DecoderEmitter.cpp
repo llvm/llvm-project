@@ -1489,7 +1489,6 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                                       ? MCD::OPC_TryDecodeOrFail
                                                       : MCD::OPC_TryDecode);
   TableInfo.Table.push_back(DecoderOp);
-  NumEncodingsSupported++;
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DIdx);
@@ -2474,6 +2473,41 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
   }
 }
 
+/// Checks if the given target-specific non-pseudo instruction
+/// is a candidate for decoding.
+static bool isDecodableInstruction(const Record *InstDef) {
+  return !InstDef->getValueAsBit("isAsmParserOnly") &&
+         !InstDef->getValueAsBit("isCodeGenOnly");
+}
+
+/// Checks if the given encoding is valid.
+static bool isValidEncoding(const Record *EncodingDef) {
+  const RecordVal *InstField = EncodingDef->getValue("Inst");
+  if (!InstField)
+    return false;
+
+  if (const auto *InstInit = dyn_cast<BitsInit>(InstField->getValue())) {
+    // Fixed-length encoding. Size must be non-zero.
+    if (!EncodingDef->getValueAsInt("Size"))
+      return false;
+
+    // At least one of the encoding bits must be complete (not '?').
+    return !InstInit->allInComplete();
+  }
+
+  if (const auto *InstInit = dyn_cast<DagInit>(InstField->getValue())) {
+    // Variable-length encoding.
+    // At least one of the encoding bits must be complete (not '?').
+    VarLenInst VLI(InstInit, InstField);
+    return !all_of(VLI, [](const EncodingSegment &Segment) {
+      return isa<UnsetInit>(Segment.Value);
+    });
+  }
+
+  // Inst field is neither BitsInit nor DagInit. This is something unsupported.
+  return false;
+}
+
 /// Parses all InstructionEncoding instances and fills internal data structures.
 void DecoderEmitter::parseInstructionEncodings() {
   // First, collect all encoding-related HwModes referenced by the target.
@@ -2485,19 +2519,34 @@ void DecoderEmitter::parseInstructionEncodings() {
   if (HwModeIDs.empty())
     HwModeIDs.push_back(DefaultMode);
 
-  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
+  ArrayRef<const CodeGenInstruction *> Instructions =
+      Target.getTargetNonPseudoInstructions();
   Encodings.reserve(Instructions.size());
-  NumInstructions = Instructions.size();
 
   for (const CodeGenInstruction *Inst : Instructions) {
     const Record *InstDef = Inst->TheDef;
+    if (!isDecodableInstruction(InstDef)) {
+      ++NumEncodingsLackingDisasm;
+      continue;
+    }
+
     if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, CGH);
       for (auto [HwModeID, EncodingDef] : EBM) {
+        if (!isValidEncoding(EncodingDef)) {
+          // TODO: Should probably give a warning.
+          ++NumEncodingsOmitted;
+          continue;
+        }
         unsigned EncodingID = Encodings.size();
         Encodings.emplace_back(EncodingDef, Inst);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
+      continue; // Ignore encoding specified by Instruction itself.
+    }
+
+    if (!isValidEncoding(InstDef)) {
+      ++NumEncodingsOmitted;
       continue;
     }
 
@@ -2513,8 +2562,24 @@ void DecoderEmitter::parseInstructionEncodings() {
   for (const Record *EncodingDef :
        RK.getAllDerivedDefinitions("AdditionalEncoding")) {
     const Record *InstDef = EncodingDef->getValueAsDef("AliasOf");
+    // TODO: Should probably give a warning in these cases.
+    //   What's the point of specifying an additional encoding
+    //   if it is invalid or if the instruction is not decodable?
+    if (!isDecodableInstruction(InstDef)) {
+      ++NumEncodingsLackingDisasm;
+      continue;
+    }
+    if (!isValidEncoding(EncodingDef)) {
+      ++NumEncodingsOmitted;
+      continue;
+    }
     Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
   }
+
+  // Do some statistics.
+  NumInstructions = Instructions.size();
+  NumEncodingsSupported = Encodings.size();
+  NumEncodings = NumEncodingsSupported + NumEncodingsOmitted;
 }
 
 DecoderEmitter::DecoderEmitter(const RecordKeeper &RK,
@@ -2545,9 +2610,6 @@ namespace {
   emitInsertBits(OS);
   emitCheck(OS);
 
-  // Map of (namespace, hwmode, size) tuple to encoding IDs.
-  std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
-      EncMap;
   std::map<unsigned, std::vector<OperandInfo>> Operands;
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
@@ -2555,39 +2617,29 @@ namespace {
     InstrLen.resize(Target.getInstructions().size(), 0);
   unsigned MaxInstLen = 0;
 
+  for (auto [EncodingID, Encoding] : enumerate(Encodings)) {
+    const Record *EncodingDef = Encoding.getRecord();
+    const CodeGenInstruction *Inst = Encoding.getInstruction();
+    unsigned BitWidth = populateInstruction(Target, *EncodingDef, *Inst,
+                                            EncodingID, Operands, IsVarLenInst);
+    assert(BitWidth && "Invalid encodings should have been filtered out");
+    if (IsVarLenInst) {
+      MaxInstLen = std::max(MaxInstLen, BitWidth);
+      InstrLen[Target.getInstrIntValue(Inst->TheDef)] = BitWidth;
+    }
+  }
+
+  // Map of (namespace, hwmode, size) tuple to encoding IDs.
+  std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
+      EncMap;
   for (const auto &[HwModeID, EncodingIDs] : EncodingIDsByHwMode) {
     for (unsigned EncodingID : EncodingIDs) {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const Record *EncodingDef = Encoding.getRecord();
-      const CodeGenInstruction *Inst = Encoding.getInstruction();
-      const Record *Def = Inst->TheDef;
       unsigned Size = EncodingDef->getValueAsInt("Size");
-      if (Def->getValueAsString("Namespace") == "TargetOpcode" ||
-          Def->getValueAsBit("isPseudo") ||
-          Def->getValueAsBit("isAsmParserOnly") ||
-          Def->getValueAsBit("isCodeGenOnly")) {
-        NumEncodingsLackingDisasm++;
-        continue;
-      }
-
-      NumEncodings++;
-
-      if (!Size && !IsVarLenInst)
-        continue;
-
-      if (unsigned Len =
-              populateInstruction(Target, *EncodingDef, *Inst, EncodingID,
-                                  Operands, IsVarLenInst)) {
-        if (IsVarLenInst) {
-          MaxInstLen = std::max(MaxInstLen, Len);
-          InstrLen[EncodingID] = Len;
-        }
-        StringRef DecoderNamespace =
-            EncodingDef->getValueAsString("DecoderNamespace");
-        EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
-      } else {
-        NumEncodingsOmitted++;
-      }
+      StringRef DecoderNamespace =
+          EncodingDef->getValueAsString("DecoderNamespace");
+      EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }
 
