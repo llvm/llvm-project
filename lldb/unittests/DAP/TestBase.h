@@ -9,6 +9,9 @@
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/lldb-forward.h"
@@ -76,6 +79,8 @@ private:
 /// messages.
 class TransportBase : public testing::Test {
 protected:
+  lldb_private::SubsystemRAII<lldb_private::FileSystem, lldb_private::HostInfo>
+      subsystems;
   lldb_private::MainLoop loop;
   std::unique_ptr<TestTransport> transport;
   MockMessageHandler<lldb_dap::protocol::Request, lldb_dap::protocol::Response,
