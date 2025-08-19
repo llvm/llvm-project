@@ -600,3 +600,5 @@ BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
 
   return std::move(Result);
 }
+llvm::remarks::BitstreamRemarkParser::BitstreamRemarkParser(StringRef Buf)
+    : RemarkParser(Format::Bitstream), ParserHelper(Buf) {}
