@@ -175,7 +175,12 @@ struct MissingFeatures {
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
+  static bool asmGoto() { return false; }
+  static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmMemoryEffects() { return false; }
+  static bool asmOutputOperands() { return false; }
+  static bool asmUnwindClobber() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
