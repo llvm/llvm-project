@@ -20739,14 +20739,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         Src.getOperand(0).getValueType().isScalableVector()) {
       EVT VT = N->getValueType(0);
       SDValue EVSrc = Src.getOperand(0);
-      EVT SrcVT = EVSrc.getValueType();
-      assert(SrcVT.getVectorElementType() == VT.getVectorElementType());
+      EVT EVSrcVT = EVSrc.getValueType();
+      assert(EVSrcVT.getVectorElementType() == VT.getVectorElementType());
       // Widths match, just return the original vector.
-      if (SrcVT == VT)
+      if (EVSrcVT == VT)
         return EVSrc;
       SDLoc DL(N);
       // Width is narrower, using insert_subvector.
-      if (SrcVT.getVectorMinNumElements() < VT.getVectorMinNumElements()) {
+      if (EVSrcVT.getVectorMinNumElements() < VT.getVectorMinNumElements()) {
         return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
                            EVSrc,
                            DAG.getConstant(0, DL, Subtarget.getXLenVT()));
