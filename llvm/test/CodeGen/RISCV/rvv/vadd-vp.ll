@@ -1393,31 +1393,22 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_unmasked(<vscale x 32 x i32> %va, i
 
 declare i32 @llvm.vscale.i32()
 
-; FIXME: The upper half of the operation is doing nothing.
-; FIXME: The branches comparing vscale vs. vscale should be constant-foldable.
-
-define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
+define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) vscale_range(2,1024) {
 ; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a2, a0, 2
-; CHECK-NEXT:    slli a1, a0, 1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB120_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB120_2:
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a1
+; CHECK-NEXT:    slli a1, a0, 1
+; CHECK-NEXT:    sub a1, a0, a1
+; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
 ; CHECK-NEXT:    ret
   %evl = call i32 @llvm.vscale.i32()
   %evl0 = mul i32 %evl, 8
