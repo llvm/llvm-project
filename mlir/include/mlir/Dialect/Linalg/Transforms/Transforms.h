@@ -24,6 +24,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -1962,8 +1963,11 @@ void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
     RewritePatternSet &patterns);
 
-/// Patterns to convert from one named op to another. These can be seen as
-/// canonicalizations of named ops into another named op.
+/// Patterns to simplify depthwise convolutions.
+void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
+
+/// Patterns to convert from one named op to another. So far only used on
+/// depthwise convolutions, so deprecated. Use the pattern avove.
 void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on

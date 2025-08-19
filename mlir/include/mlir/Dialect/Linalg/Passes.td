@@ -86,12 +86,18 @@ def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">,
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
-def LinalgNamedOpConversionPass: Pass<"linalg-named-op-conversion"> {
+def LinalgNamedOpConversionPass: Pass<"linalg-named-op-conversion">,
+                                 Deprecated<"Use 'simplify-depthwise-conv' instead."> {
   let summary = "Convert from one named linalg op to another.";
   let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
 }
 
 // ------------------ End of "form" conversions
+
+def SimplifyDepthwiseConvPass: Pass<"simplify-depthwise-conv"> {
+  let summary = "Simplify depthwise convolution.";
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+}
 
 def ConvertElementwiseToLinalgPass : Pass<"convert-elementwise-to-linalg", ""> {
   let summary = "Convert ElementwiseMappable ops to linalg";
