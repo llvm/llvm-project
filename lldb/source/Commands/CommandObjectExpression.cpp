@@ -640,15 +640,9 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
             repl_sp->SetValueObjectDisplayOptions(m_varobj_options);
           }
 
-          if (!expr.empty()) {
-            result.GetOutputStream().Printf(
-                "Warning: trailing input is ignored in --repl mode\n");
-          }
-
           IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
           io_handler_sp->SetIsDone(false);
           debugger.RunIOHandlerAsync(io_handler_sp);
-          return;
         } else {
           repl_error = Status::FromErrorStringWithFormat(
               "Couldn't create a REPL for %s",
