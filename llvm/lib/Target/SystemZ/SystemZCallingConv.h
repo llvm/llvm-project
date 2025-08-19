@@ -29,50 +29,6 @@ namespace SystemZ {
   extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
 } // end namespace SystemZ
 
-class SystemZCCState : public CCState {
-private:
-  /// Records whether the value was widened from a short vector type.
-  SmallVector<bool, 4> ArgIsShortVector;
-
-  // Check whether ArgVT is a short vector type.
-  bool IsShortVectorType(EVT ArgVT) {
-    return ArgVT.isVector() && ArgVT.getStoreSize() <= 8;
-  }
-
-public:
-  SystemZCCState(CallingConv::ID CC, bool isVarArg, MachineFunction &MF,
-                 SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
-      : CCState(CC, isVarArg, MF, locs, C) {}
-
-  void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                              CCAssignFn Fn) {
-    // Record whether the call operand was a short vector.
-    ArgIsShortVector.clear();
-    for (unsigned i = 0; i < Ins.size(); ++i)
-      ArgIsShortVector.push_back(IsShortVectorType(Ins[i].ArgVT));
-
-    CCState::AnalyzeFormalArguments(Ins, Fn);
-  }
-
-  void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                           CCAssignFn Fn) {
-    // Record whether the call operand was a short vector.
-    ArgIsShortVector.clear();
-    for (unsigned i = 0; i < Outs.size(); ++i)
-      ArgIsShortVector.push_back(IsShortVectorType(Outs[i].ArgVT));
-
-    CCState::AnalyzeCallOperands(Outs, Fn);
-  }
-
-  // This version of AnalyzeCallOperands in the base class is not usable
-  // since we must provide a means of accessing ISD::OutputArg::IsShortVector.
-  void AnalyzeCallOperands(const SmallVectorImpl<MVT> &Outs,
-                           SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
-                           CCAssignFn Fn) = delete;
-
-  bool IsShortVector(unsigned ValNo) { return ArgIsShortVector[ValNo]; }
-};
-
 // Handle i128 argument types.  These need to be passed by implicit
 // reference.  This could be as simple as the following .td line:
 //    CCIfType<[i128], CCPassIndirect<i64>>,
