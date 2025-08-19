@@ -38,13 +38,13 @@ static bool CheckDimArg(const std::optional<ActualArgument> &dimArg,
     const Expr<SomeType> &array, parser::ContextualMessages &messages,
     bool isLBound, std::optional<int> &dimVal) {
   dimVal.reset();
-  if (int rank{array.Rank()}; rank > 0 || IsAssumedRank(array)) {
+  if (int rank{array.Rank()}; rank > 0 || semantics::IsAssumedRank(array)) {
     auto named{ExtractNamedEntity(array)};
     if (auto dim64{ToInt64(dimArg)}) {
       if (*dim64 < 1) {
         messages.Say("DIM=%jd dimension must be positive"_err_en_US, *dim64);
         return false;
-      } else if (!IsAssumedRank(array) && *dim64 > rank) {
+      } else if (!semantics::IsAssumedRank(array) && *dim64 > rank) {
         messages.Say(
             "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
             *dim64, rank);
@@ -56,7 +56,7 @@ static bool CheckDimArg(const std::optional<ActualArgument> &dimArg,
             "DIM=%jd dimension is out of range for rank-%d assumed-size array"_err_en_US,
             *dim64, rank);
         return false;
-      } else if (IsAssumedRank(array)) {
+      } else if (semantics::IsAssumedRank(array)) {
         if (*dim64 > common::maxRank) {
           messages.Say(
               "DIM=%jd dimension is too large for any array (maximum rank %d)"_err_en_US,
@@ -189,7 +189,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         return Expr<T>{std::move(funcRef)};
       }
     }
-    if (IsAssumedRank(*array)) {
+    if (semantics::IsAssumedRank(*array)) {
       // Would like to return 1 if DIM=.. is present, but that would be
       // hiding a runtime error if the DIM= were too large (including
       // the case of an assumed-rank argument that's scalar).
@@ -240,7 +240,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         return Expr<T>{std::move(funcRef)};
       }
     }
-    if (IsAssumedRank(*array)) {
+    if (semantics::IsAssumedRank(*array)) {
     } else if (int rank{array->Rank()}; rank > 0) {
       bool takeBoundsFromShape{true};
       if (auto named{ExtractNamedEntity(*array)}) {

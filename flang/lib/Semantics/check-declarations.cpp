@@ -633,7 +633,7 @@ void CheckHelper::CheckValue(
           "VALUE attribute may not apply to a type with a coarray ultimate component"_err_en_US);
     }
   }
-  if (evaluate::IsAssumedRank(symbol)) {
+  if (IsAssumedRank(symbol)) {
     messages_.Say(
         "VALUE attribute may not apply to an assumed-rank array"_err_en_US);
   }
@@ -743,7 +743,7 @@ void CheckHelper::CheckObjectEntity(
           "Coarray '%s' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR"_err_en_US,
           symbol.name());
     }
-    if (evaluate::IsAssumedRank(symbol)) {
+    if (IsAssumedRank(symbol)) {
       messages_.Say("Coarray '%s' may not be an assumed-rank array"_err_en_US,
           symbol.name());
     }
@@ -889,7 +889,7 @@ void CheckHelper::CheckObjectEntity(
                 "!DIR$ IGNORE_TKR may not apply to an allocatable or pointer"_err_en_US);
           }
         } else if (ignoreTKR.test(common::IgnoreTKR::Rank)) {
-          if (ignoreTKR.count() == 1 && evaluate::IsAssumedRank(symbol)) {
+          if (ignoreTKR.count() == 1 && IsAssumedRank(symbol)) {
             Warn(common::UsageWarning::IgnoreTKRUsage,
                 "!DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array"_warn_en_US);
           } else if (inExplicitExternalInterface) {
@@ -1206,7 +1206,7 @@ void CheckHelper::CheckObjectEntity(
   if (derived && derived->IsVectorType()) {
     CHECK(type);
     std::string typeName{type->AsFortran()};
-    if (evaluate::IsAssumedShape(symbol)) {
+    if (IsAssumedShape(symbol)) {
       SayWithDeclaration(symbol,
           "Assumed-shape entity of %s type is not supported"_err_en_US,
           typeName);
@@ -1214,7 +1214,7 @@ void CheckHelper::CheckObjectEntity(
       SayWithDeclaration(symbol,
           "Deferred-shape entity of %s type is not supported"_err_en_US,
           typeName);
-    } else if (evaluate::IsAssumedRank(symbol)) {
+    } else if (IsAssumedRank(symbol)) {
       SayWithDeclaration(symbol,
           "Assumed rank entity of %s type is not supported"_err_en_US,
           typeName);
@@ -2428,8 +2428,8 @@ void CheckHelper::CheckVolatile(const Symbol &symbol,
 void CheckHelper::CheckContiguous(const Symbol &symbol) {
   if (evaluate::IsVariable(symbol) &&
       ((IsPointer(symbol) && symbol.Rank() > 0) ||
-          evaluate::IsAssumedShape(symbol) ||
-          evaluate::IsAssumedRank(symbol))) {
+          IsAssumedShape(symbol) ||
+          IsAssumedRank(symbol))) {
   } else {
     parser::MessageFixedText msg{symbol.owner().IsDerivedType()
             ? "CONTIGUOUS component '%s' should be an array with the POINTER attribute"_port_en_US
@@ -3460,7 +3460,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
 bool CheckHelper::CheckDioDummyIsData(
     const Symbol &subp, const Symbol *arg, std::size_t position) {
   if (arg && arg->detailsIf<ObjectEntityDetails>()) {
-    if (evaluate::IsAssumedRank(*arg)) {
+    if (IsAssumedRank(*arg)) {
       messages_.Say(arg->name(),
           "Dummy argument '%s' may not be assumed-rank"_err_en_US, arg->name());
       return false;

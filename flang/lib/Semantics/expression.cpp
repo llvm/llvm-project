@@ -4632,7 +4632,7 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
 
 bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
   for (const std::optional<ActualArgument> &arg : actuals_) {
-    if (arg && IsAssumedRank(arg->UnwrapExpr())) {
+    if (arg && semantics::IsAssumedRank(arg->UnwrapExpr())) {
       context_.Say(source_,
           "An assumed-rank dummy argument is not allowed %s"_err_en_US, where);
       fatalErrors_ = true;

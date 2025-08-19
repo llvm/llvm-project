@@ -949,7 +949,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        if (IsAssumedRank(*call.arguments().front())) {
+        if (semantics::IsAssumedRank(*call.arguments().front())) {
           return Shape{MaybeExtentExpr{}};
         } else {
           return Shape{

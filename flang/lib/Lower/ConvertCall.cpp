@@ -880,9 +880,10 @@ struct CallContext {
               std::optional<mlir::Type> resultType, mlir::Location loc,
               Fortran::lower::AbstractConverter &converter,
               Fortran::lower::SymMap &symMap,
-              Fortran::lower::StatementContext &stmtCtx)
+              Fortran::lower::StatementContext &stmtCtx, bool doCopyIn = true)
       : procRef{procRef}, converter{converter}, symMap{symMap},
-        stmtCtx{stmtCtx}, resultType{resultType}, loc{loc} {}
+        stmtCtx{stmtCtx}, resultType{resultType}, loc{loc}, doCopyIn{doCopyIn} {
+  }
 
   fir::FirOpBuilder &getBuilder() { return converter.getFirOpBuilder(); }
 
@@ -924,6 +925,7 @@ struct CallContext {
   Fortran::lower::StatementContext &stmtCtx;
   std::optional<mlir::Type> resultType;
   mlir::Location loc;
+  bool doCopyIn;
 };
 
 using ExvAndCleanup =
@@ -1243,12 +1245,17 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
-  Fortran::evaluate::FoldingContext &foldingContext{
-      callContext.converter.getFoldingContext()};
-  auto [suggestCopyIn, suggestCopyOut] = Fortran::evaluate::MayNeedCopyInOut(
-      *arg.entity, arg.characteristics, foldingContext);
-  bool mustDoCopyIn = actual.isArray() && suggestCopyIn;
-  bool mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
+  bool mustDoCopyIn{false};
+  bool mustDoCopyOut{false};
+
+  if (callContext.doCopyIn) {
+    Fortran::evaluate::FoldingContext &foldingContext{
+        callContext.converter.getFoldingContext()};
+    auto [suggestCopyIn, suggestCopyOut] = Fortran::evaluate::MayNeedCopyInOut(
+        arg.entity, arg.characteristics, foldingContext);
+    mustDoCopyIn = actual.isArray() && suggestCopyIn;
+    mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
+  }
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
@@ -2954,8 +2961,11 @@ void Fortran::lower::convertUserDefinedAssignmentToHLFIR(
     const evaluate::ProcedureRef &procRef, hlfir::Entity lhs, hlfir::Entity rhs,
     Fortran::lower::SymMap &symMap) {
   Fortran::lower::StatementContext definedAssignmentContext;
+  // For defined assignment, don't use regular copy-in/copy-out mechanism:
+  // defined assignment generates hlfir.region_assign construct, and this
+  // construct automatically handles any copy-in.
   CallContext callContext(procRef, /*resultType=*/std::nullopt, loc, converter,
-                          symMap, definedAssignmentContext);
+                          symMap, definedAssignmentContext, /*doCopyIn=*/false);
   Fortran::lower::CallerInterface caller(procRef, converter);
   mlir::FunctionType callSiteType = caller.genFunctionType();
   PreparedActualArgument preparedLhs{lhs, /*isPresent=*/std::nullopt};

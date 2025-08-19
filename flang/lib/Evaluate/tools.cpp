@@ -890,46 +890,6 @@ std::optional<Expr<SomeType>> ConvertToType(
   }
 }
 
-bool IsAssumedRank(const Symbol &original) {
-  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (assoc->rank()) {
-      return false; // in RANK(n) or RANK(*)
-    } else if (assoc->IsAssumedRank()) {
-      return true; // RANK DEFAULT
-    }
-  }
-  const Symbol &symbol{semantics::ResolveAssociations(original)};
-  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
-  return object && object->IsAssumedRank();
-}
-
-bool IsAssumedRank(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsAssumedRank(*expr);
-  } else {
-    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
-    CHECK(assumedTypeDummy);
-    return IsAssumedRank(*assumedTypeDummy);
-  }
-}
-
-bool IsAssumedShape(const Symbol &symbol) {
-  const Symbol &ultimate{ResolveAssociations(symbol)};
-  const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
-  return object && object->IsAssumedShape() &&
-      !semantics::IsAllocatableOrObjectPointer(&ultimate);
-}
-
-bool IsAssumedShape(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsAssumedShape(*expr);
-  } else {
-    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
-    CHECK(assumedTypeDummy);
-    return IsAssumedShape(*assumedTypeDummy);
-  }
-}
-
 int GetCorank(const ActualArgument &arg) {
   const auto *expr{arg.UnwrapExpr()};
   return GetCorank(*expr);
@@ -1221,7 +1181,7 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
 }
 
 bool HasVectorSubscript(const ActualArgument &actual) {
-  auto expr = actual.UnwrapExpr();
+  auto expr{actual.UnwrapExpr()};
   return expr && HasVectorSubscript(*expr);
 }
 
@@ -2332,6 +2292,26 @@ bool IsDummy(const Symbol &symbol) {
           [](const SubprogramDetails &x) { return x.isDummy(); },
           [](const auto &) { return false; }},
       ResolveAssociations(symbol).details());
+}
+
+bool IsAssumedRank(const Symbol &original) {
+  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) {
+      return false; // in RANK(n) or RANK(*)
+    } else if (assoc->IsAssumedRank()) {
+      return true; // RANK DEFAULT
+    }
+  }
+  const Symbol &symbol{semantics::ResolveAssociations(original)};
+  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedRank();
+}
+
+bool IsAssumedShape(const Symbol &symbol) {
+  const Symbol &ultimate{ResolveAssociations(symbol)};
+  const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedShape() &&
+      !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
 bool IsDeferredShape(const Symbol &symbol) {

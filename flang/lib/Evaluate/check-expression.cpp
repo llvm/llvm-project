@@ -1501,7 +1501,7 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
   }
   // All the checks below are for arrays
 
-  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+  bool actualIsAssumedRank{semantics::IsAssumedRank(actual)};
   bool actualIsArray{actualIsAssumedRank || actual.Rank() > 0};
   bool dummyIsAssumedRank{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedRank)};
@@ -1554,7 +1554,7 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
 
   bool dummyIsAssumedShape{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
-  bool actualIsAssumedShape{IsAssumedShape(actual)};
+  bool actualIsAssumedShape{semantics::IsAssumedShape(actual)};
   if ((actualIsAssumedRank && dummyIsAssumedRank) ||
       (actualIsAssumedShape && dummyIsAssumedShape)) {
     // Assumed-rank and assumed-shape arrays are represented by descriptors,
@@ -1565,7 +1565,7 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
     // the actual argument could be polymorphic array of child type,
     // while the dummy argument could be non-polymorphic array of parent type.)
     auto actualType{characteristics::TypeAndShape::Characterize(actual, fc)};
-    bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+    bool actualIsPolymorphic{actualType && actualType->type().IsPolymorphic()};
     if (actualIsPolymorphic && !dummyIsPolymorphic) {
       setCopyIn();
       setCopyOut();

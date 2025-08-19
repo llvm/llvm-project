@@ -177,12 +177,16 @@ std::pair<bool, bool> MayNeedCopyInOut(
 std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &,
     const characteristics::DummyArgument &, FoldingContext &);
 
-inline std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
+inline std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc) {
-  if (dummy)
-    return MayNeedCopyInOut(actual, *dummy, fc);
-  else
-    return MayNeedCopyInOut(actual, fc);
+  if (!actual) {
+    return {false, false};
+  }
+  if (dummy) {
+    return MayNeedCopyInOut(*actual, *dummy, fc);
+  } else {
+    return MayNeedCopyInOut(*actual, fc);
+  }
 }
 
 } // namespace Fortran::evaluate
