@@ -1061,6 +1061,62 @@ def CIR_BrOp : CIR_Op<"br",[
 }
 
 //===----------------------------------------------------------------------===//
+// GotoOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
+  let description = [{
+
+  Transfers control to the specified `label`. This requires a corresponding
+  `cir.label` to exist and is used by to represent source level `goto`s
+  that jump across region boundaries. Alternatively, `cir.br` is used to
+  construct goto's that don't violate such boundaries.
+
+  `cir.goto` is completely symbolic (i.e. it "jumps" on a label that isn't
+  yet materialized) and should be taken into account by passes and analysis
+  when deciding if it's safe to make some assumptions about a given region
+  or basic block.
+
+  Example:
+  ```C++
+    int test(int x) {
+      if (x)
+        goto label;
+      {
+        x = 10;
+    label:
+        return x;
+      }
+    }
+  ```
+
+  ```mlir
+    cir.scope {  // REGION #1
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      cir.if %3 {
+        cir.goto "label"
+      }
+      }
+      cir.scope {  // REGION #2
+        %2 = cir.const #cir.int<10> : !s32i
+        cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+        cir.br ^bb1
+      ^bb1:  // pred: ^bb0
+        cir.label "label"
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        cir.store %3, %1 : !s32i, !cir.ptr<!s32i>
+        %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+        cir.return %4 : !s32i
+      }
+      cir.unreachable
+  ```
+  }];
+  let arguments = (ins StrAttr:$label);
+  let assemblyFormat = [{ $label attr-dict }];
+}
+
+//===----------------------------------------------------------------------===//
 // LabelOp
 //===----------------------------------------------------------------------===//
 
@@ -1750,6 +1806,87 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetVPtr
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
+  let summary = "Get a the address of the vtable pointer for an object";
+  let description = [{
+    The `vtable.get_vptr` operation retrieves the address of the vptr for a
+    C++ object. This operation requires that the object pointer points to
+    the start of a complete object. (TODO: Describe how we get that).
+    The vptr will always be at offset zero in the object, but this operation
+    is more explicit about what is being retrieved than a direct bitcast.
+
+    The return type is always `!cir.ptr<!cir.vptr>`.
+
+    Example:
+    ```mlir
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the vptr address", [MemRead]>:$src
+  );
+
+  let results = (outs CIR_PtrToVPtr:$result);
+
+  let assemblyFormat = [{
+      $src `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetVirtualFnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
+  Pure
+]> {
+  let summary = "Get a the address of a virtual function pointer";
+  let description = [{
+    The `vtable.get_virtual_fn_addr` operation retrieves the address of a
+    virtual function pointer from an object's vtable (__vptr).
+    This is an abstraction to perform the basic pointer arithmetic to get
+    the address of the virtual function pointer, which can then be loaded and
+    called.
+
+    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
+    have been returned by a previous call to `cir.vatble.get_vptr`. The
+    `index` operand is an index of the virtual function in the vtable.
+
+    The return type is a pointer-to-pointer to the function type.
+
+    Example:
+    ```mlir
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_virtual_fn_addr %4[2] : !cir.vptr
+                  -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>>
+    %6 = cir.load align(8) %5 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>)
+                                                                 -> !s32i>>>,
+                                !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %7 = cir.call %6(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+                            !cir.ptr<!rec_C>) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr,
+    I64Attr:$index);
+
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -2208,6 +2345,68 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addTypes(resType);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// ReturnAddrOp and FrameAddrOp
+//===----------------------------------------------------------------------===//
+
+class CIR_FuncAddrBuiltinOp<string mnemonic> : CIR_Op<mnemonic, []> {
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_VoidPtrType:$result);
+  let assemblyFormat = [{
+    `(` $level `)` attr-dict
+  }];
+}
+
+def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
+  let summary =
+      "The return address of the current function, or of one of its callers";
+
+  let description = [{
+    Represents a call to builtin function ` __builtin_return_address` in CIR.
+    This builtin function returns the return address of the current function,
+    or of one of its callers.
+
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the return address of the current function,
+    value of 1 yields the return address of the caller of the current function,
+    and so forth.
+
+    Examples:
+
+    ```mlir
+    %p = return_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
+}
+
+def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
+  let summary =
+      "The frame address of the current function, or of one of its callers";
+
+  let description = [{
+    Represents a call to builtin function ` __builtin_frame_address` in CIR.
+    This builtin function returns the frame address of the current function,
+    or of one of its callers. The frame is the area on the stack that holds
+    local variables and saved registers. The frame address is normally the
+    address of the first word pushed on to the stack by the function.
+    However, the exact definition depends upon the processor and the calling
+    convention. If the processor has a dedicated frame pointer register, and
+    the function has a frame, then __builtin_frame_address returns the value of
+    the frame pointer register.
+
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the frame address of the current function,
+    value of 1 yields the frame address of the caller of the current function,
+    and so forth.
+
+    Examples:
+
+    ```mlir
+    %p = frame_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -3412,6 +3611,88 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
     `cir.fabs` computes the absolute value of a floating-point operand
     and returns a result of the same type, ignoring floating-point
     exceptions. It does not set `errno`.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Variadic Operations
+//===----------------------------------------------------------------------===//
+
+def CIR_VAStartOp : CIR_Op<"va_start"> {
+  let summary = "Starts a variable argument list";
+  let description = [{
+    The cir.va_start operation models the C/C++ va_start macro by
+    initializing a variable argument list at the given va_list storage
+    location.
+
+    The first operand must be a pointer to the target's `va_list`
+    representation. This operation has no results and produces its effect by
+    mutating the storage referenced by the pointer operand. The second operand
+    must be an integer value that contains the expected number of arguments in
+    that list.
+
+    Each `cir.va_start` must be paired with a corresponding `cir.va_end`
+    on the same logical `va_list` object along all control-flow paths. After
+    `cir.va_end`, the `va_list` must not be accessed unless reinitialized
+    with another `cir.va_start`.
+
+    Lowering maps this to the LLVM intrinsic `llvm.va_start`, passing the
+    appropriately decayed pointer to the underlying `va_list` storage.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast(array_to_ptrdecay, %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
+        !cir.ptr<!rec___va_list_tag>
+    %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
+    ```
+  }];
+  let arguments = (ins
+    CIR_PointerType:$arg_list,
+    CIR_AnyFundamentalIntType:$count
+  );
+
+  let assemblyFormat = [{
+    $arg_list $count attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VAEndOp : CIR_Op<"va_end"> {
+  let summary = "Ends a variable argument list";
+  let description = [{
+    The `cir.va_end` operation models the C/C++ va_end macro by finalizing
+    and cleaning up a variable argument list previously initialized with
+    `cir.va_start`.
+
+    The operand must be a pointer to the target's `va_list` representation.
+    This operation has no results and produces its effect by mutating the
+    storage referenced by the pointer operand.
+
+    `cir.va_end` must only be called after a matching `cir.va_start` on the
+    same `va_list` along all control-flow paths. After `cir.va_end`, the
+    `va_list` is invalid and must not be accessed unless reinitialized.
+
+    Lowering typically maps this to the LLVM intrinsic `llvm.va_end`,
+    passing the appropriately decayed pointer to the underlying `va_list`
+    storage.
+
+    Example:
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast(array_to_ptrdecay, %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
+        !cir.ptr<!rec___va_list_tag>
+    cir.va_end %p : !cir.ptr<!rec___va_list_tag>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$arg_list);
+
+  let assemblyFormat = [{
+    $arg_list attr-dict `:` type(operands)
   }];
 }
 

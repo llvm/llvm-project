@@ -7437,17 +7437,11 @@
 #    error "__cpp_lib_optional should have the value 202110L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_optional_range_support
-#      error "__cpp_lib_optional_range_support should be defined in c++26"
-#    endif
-#    if __cpp_lib_optional_range_support != 202406L
-#      error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_optional_range_support
-#      error "__cpp_lib_optional_range_support should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_optional_range_support
+#    error "__cpp_lib_optional_range_support should be defined in c++26"
+#  endif
+#  if __cpp_lib_optional_range_support != 202406L
+#    error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_out_ptr

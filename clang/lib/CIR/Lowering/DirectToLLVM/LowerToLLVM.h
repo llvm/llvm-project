@@ -209,6 +209,26 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override;
 };
 
+class CIRToLLVMReturnAddrOpLowering
+    : public mlir::OpConversionPattern<cir::ReturnAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::ReturnAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ReturnAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMFrameAddrOpLowering
+    : public mlir::OpConversionPattern<cir::FrameAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::FrameAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::FrameAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMAllocaOpLowering
     : public mlir::OpConversionPattern<cir::AllocaOp> {
   mlir::DataLayout const &dataLayout;
@@ -467,6 +487,27 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVTableGetVPtrOpLowering
+    : public mlir::OpConversionPattern<cir::VTableGetVPtrOp> {
+public:
+  using mlir::OpConversionPattern<cir::VTableGetVPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VTableGetVPtrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVTableGetVirtualFnAddrOpLowering
+    : public mlir::OpConversionPattern<cir::VTableGetVirtualFnAddrOp> {
+public:
+  using mlir::OpConversionPattern<
+      cir::VTableGetVirtualFnAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VTableGetVirtualFnAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:
@@ -681,6 +722,26 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::InlineAsmOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVAStartOpLowering
+    : public mlir::OpConversionPattern<cir::VAStartOp> {
+public:
+  using mlir::OpConversionPattern<cir::VAStartOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VAStartOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVAEndOpLowering
+    : public mlir::OpConversionPattern<cir::VAEndOp> {
+public:
+  using mlir::OpConversionPattern<cir::VAEndOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VAEndOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

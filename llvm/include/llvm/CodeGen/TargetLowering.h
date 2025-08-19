@@ -301,6 +301,9 @@ public:
   public:
     Value *Val;
     SDValue Node;
+    /// Original unlegalized argument type.
+    Type *OrigTy;
+    /// Same as OrigTy, or partially legalized for soft float libcalls.
     Type *Ty;
     bool IsSExt : 1;
     bool IsZExt : 1;
@@ -321,9 +324,9 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry(Value *Val, SDValue Node, Type *Ty)
-        : Val(Val), Node(Node), Ty(Ty), IsSExt(false), IsZExt(false),
-          IsNoExt(false), IsInReg(false), IsSRet(false), IsNest(false),
-          IsByVal(false), IsByRef(false), IsInAlloca(false),
+        : Val(Val), Node(Node), OrigTy(Ty), Ty(Ty), IsSExt(false),
+          IsZExt(false), IsNoExt(false), IsInReg(false), IsSRet(false),
+          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
           IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
@@ -3557,15 +3560,25 @@ public:
 
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return Libcalls.getLibcallName(Call);
+    // FIXME: Return StringRef
+    return Libcalls.getLibcallName(Call).data();
   }
 
   /// Get the libcall routine name for the specified libcall implementation
-  const char *getLibcallImplName(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplName(Call);
+  static StringRef getLibcallImplName(RTLIB::LibcallImpl Call) {
+    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
+  const char *getMemcpyName() const {
+    // FIXME: Return StringRef
+    return Libcalls.getMemcpyName().data();
+  }
+
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
+    return Libcalls.getSupportedLibcallImpl(FuncName);
+  }
 
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
@@ -4673,6 +4686,9 @@ public:
   /// implementation.
   struct CallLoweringInfo {
     SDValue Chain;
+    /// Original unlegalized return type.
+    Type *OrigRetTy = nullptr;
+    /// Same as OrigRetTy, or partially legalized for soft float libcalls.
     Type *RetTy = nullptr;
     bool RetSExt           : 1;
     bool RetZExt           : 1;
@@ -4727,6 +4743,14 @@ public:
     // setCallee with target/module-specific attributes
     CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
                                    SDValue Target, ArgListTy &&ArgsList) {
+      return setLibCallee(CC, ResultType, ResultType, Target,
+                          std::move(ArgsList));
+    }
+
+    CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
+                                   Type *OrigResultType, SDValue Target,
+                                   ArgListTy &&ArgsList) {
+      OrigRetTy = OrigResultType;
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
@@ -4741,7 +4765,7 @@ public:
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 AttributeSet ResultAttrs = {}) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
       IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
       RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
       RetZExt = ResultAttrs.hasAttribute(Attribute::ZExt);
@@ -4757,7 +4781,7 @@ public:
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 const CallBase &Call) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =

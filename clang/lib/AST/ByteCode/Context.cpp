@@ -398,17 +398,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-
-  {
-    InterpState State(Parent, *P, Stk, *this, Func);
-    if (Interpret(State)) {
-      assert(Stk.empty());
-      return true;
-    }
-    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
-    // remove values the State's destructor might access.
+  InterpState State(Parent, *P, Stk, *this, Func);
+  if (Interpret(State)) {
+    assert(Stk.empty());
+    return true;
   }
-
   Stk.clear();
   return false;
 }
