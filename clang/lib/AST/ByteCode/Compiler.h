@@ -347,9 +347,10 @@ private:
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
+  bool emitConst(const llvm::APInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
-    return emitConst(static_cast<llvm::APSInt>(Value), E);
+    return emitConst(Value, classifyPrim(E), E);
   }
 
   /// Emits an integer constant.
