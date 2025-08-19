@@ -293,3 +293,29 @@ void pointer_indirection() {
   int *q = *pp;
 // CHECK:   AssignOrigin (Dest: {{[0-9]+}} (Decl: q), Src: {{[0-9]+}} (Expr: ImplicitCastExpr))
 }
+
+// CHECK-LABEL: Function: test_use_facts
+void usePointer(MyObj*);
+void test_use_facts() {
+  // CHECK: Block B{{[0-9]+}}:
+  MyObj x;
+  MyObj *p;
+  p = &x;
+  // CHECK:   Use ([[O_P:[0-9]+]] (Decl: p) Write)
+  (void)*p;
+  // CHECK:   Use ([[O_P]] (Decl: p) Read)
+  usePointer(p);
+  // CHECK:   Use ([[O_P]] (Decl: p) Read)
+  p->id = 1;
+  // CHECK:   Use ([[O_P]] (Decl: p) Read)
+
+
+  MyObj* q;
+  q = p;
+  // CHECK:   Use ([[O_P]] (Decl: p) Read)
+  // CHECK:   Use ([[O_Q:[0-9]+]] (Decl: q) Write)
+  usePointer(q);
+  // CHECK:   Use ([[O_Q]] (Decl: q) Read)
+  q->id = 2;
+  // CHECK:   Use ([[O_Q]] (Decl: q) Read)
+}
