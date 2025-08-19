@@ -43,5 +43,7 @@ void alloc_foo(void) {
   (void)(int *)my_malloc(1);                              // expected-warning {{allocation of insufficient size '1' for type 'int' with size '4'}}
 
   struct ZeroSize *ptr18 = my_malloc(0); // okay becuase sizeof(struct ZeroSize) = 0
-                                         // allocation of size 0 is implementation defined behavior though
+
+  void *funcptr_1 = (void (*)(int))my_malloc(0); // expected-warning {{allocation of insufficient size '0' for type 'void (int)' with size '1'}}
+  void *funcptr_2 = (void (*)(int))my_malloc(1);
 }

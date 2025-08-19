@@ -7842,7 +7842,11 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
   auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
 
   QualType TargetType = DestType->getPointeeType();
-  auto LhsSize = S.Context.getTypeSizeInCharsIfKnown(TargetType);
+  // Find the destination size. As a special case function types have size of
+  // one byte to match the sizeof operator behavior.
+  auto LhsSize = TargetType->isFunctionType()
+                     ? CharUnits::One()
+                     : S.Context.getTypeSizeInCharsIfKnown(TargetType);
   if (LhsSize && Size < LhsSize)
     S.Diag(E->getExprLoc(), diag::warn_alloc_size)
         << Size.getQuantity() << TargetType << LhsSize->getQuantity();
