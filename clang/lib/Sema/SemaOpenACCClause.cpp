@@ -1774,18 +1774,27 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   }
 
   SmallVector<Expr *> ValidVars;
+  SmallVector<OpenACCReductionRecipe> Recipes;
 
   for (Expr *Var : Clause.getVarList()) {
     ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
                                                Clause.getReductionOp(), Var);
 
-    if (Res.isUsable())
+    if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
+
+      VarDecl *InitRecipe =
+          SemaRef.CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
+              .first;
+      // TODO: OpenACC: Create the reduction operation recipe here too.
+      Recipes.push_back({InitRecipe});
+    }
   }
 
   return SemaRef.CheckReductionClause(
       ExistingClauses, Clause.getDirectiveKind(), Clause.getBeginLoc(),
       Clause.getLParenLoc(), Clause.getReductionOp(), ValidVars,
+      Recipes,
       Clause.getEndLoc());
 }
 
@@ -2158,7 +2167,8 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-    ArrayRef<Expr *> Vars, SourceLocation EndLoc) {
+    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+    SourceLocation EndLoc) {
   if (DirectiveKind == OpenACCDirectiveKind::Loop ||
       isOpenACCCombinedDirectiveKind(DirectiveKind)) {
     // OpenACC 3.3 2.9.11: A reduction clause may not appear on a loop directive
@@ -2187,7 +2197,7 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
   }
 
   auto *Ret = OpenACCReductionClause::Create(
-      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, EndLoc);
+      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, Recipes, EndLoc);
   return Ret;
 }
 
