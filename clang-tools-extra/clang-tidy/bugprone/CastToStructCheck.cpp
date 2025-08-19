@@ -18,7 +18,11 @@ namespace clang::tidy::bugprone {
 CastToStructCheck::CastToStructCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredCasts(
-          utils::options::parseStringList(Options.get("IgnoredCasts", ""))) {}
+          utils::options::parseStringList(Options.get("IgnoredCasts", ""))) {
+  IgnoredCastsRegex.reserve(IgnoredCasts.size());
+  for (const auto &Str : IgnoredCasts)
+    IgnoredCastsRegex.emplace_back(Str);
+}
 
 void CastToStructCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredCasts",
@@ -60,14 +64,12 @@ void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
 
   const std::string FromName = FromPointee->getAsString();
   const std::string ToName = ToPointee->getAsString();
-  llvm::Regex FromR;
-  llvm::Regex ToR;
-  for (auto [Idx, Str] : llvm::enumerate(IgnoredCasts)) {
+  bool FromMatch = false;
+  for (auto [Idx, Regex] : llvm::enumerate(IgnoredCastsRegex)) {
     if (Idx % 2 == 0) {
-      FromR = llvm::Regex(Str);
+      FromMatch = Regex.match(FromName);
     } else {
-      ToR = llvm::Regex(Str);
-      if (FromR.match(FromName) && ToR.match(ToName))
+      if (FromMatch && Regex.match(ToName))
         return;
     }
   }

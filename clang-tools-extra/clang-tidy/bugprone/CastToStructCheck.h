@@ -30,6 +30,7 @@ public:
 
 private:
   std::vector<llvm::StringRef> IgnoredCasts;
+  std::vector<llvm::Regex> IgnoredCastsRegex;
 };
 
 } // namespace clang::tidy::bugprone
