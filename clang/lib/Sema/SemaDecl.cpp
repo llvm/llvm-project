@@ -14708,7 +14708,14 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       isa<InitListExpr>(var->getInit())) {
     const auto *ILE = cast<InitListExpr>(var->getInit());
     unsigned NumInits = ILE->getNumInits();
-    if (NumInits > 2)
+    if (NumInits > 2) {
+      auto concatenatedPartsAt = [&](unsigned Index) -> unsigned {
+        if (const Expr *E = ILE->getInit(Index))
+          if (const auto *S = dyn_cast<StringLiteral>(E->IgnoreImpCasts()))
+            return S->getNumConcatenated();
+        return 0;
+      };
+
       for (unsigned I = 0; I < NumInits; ++I) {
         const auto *Init = ILE->getInit(I);
         if (!Init)
@@ -14721,24 +14728,23 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
         // Diagnose missing comma in string array initialization.
         // Do not warn when all the elements in the initializer are concatenated
         // together. Do not warn for macros too.
-        if (NumConcat == 2 && !SL->getBeginLoc().isMacroID()) {
-          bool OnlyOneMissingComma = true;
-          for (unsigned J = I + 1; J < NumInits; ++J) {
-            const auto *Init = ILE->getInit(J);
-            if (!Init)
-              break;
-            const auto *SLJ = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
-            if (!SLJ || SLJ->getNumConcatenated() > 1) {
-              OnlyOneMissingComma = false;
-              break;
-            }
-          }
+        if (NumConcat == 2) {
+          if (SL->getBeginLoc().isMacroID())
+            continue;
 
-          if (OnlyOneMissingComma) {
+          unsigned L = I > 0 ? concatenatedPartsAt(I - 1) : 0;
+          unsigned R = I + 1 < NumInits ? concatenatedPartsAt(I + 1) : 0;
+
+          // Skip neighbors with multi-part concatenations.
+          if (R > 1)
+            continue;
+
+          // Diagnose when at least one neighbor is a single literal.
+          if (R == 1 || L == 1) {
             SmallVector<FixItHint, 1> Hints;
-            for (unsigned i = 0; i < NumConcat - 1; ++i)
-              Hints.push_back(FixItHint::CreateInsertion(
-                  PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
+            // Insert a comma between the two tokens of this element.
+            Hints.push_back(FixItHint::CreateInsertion(
+                PP.getLocForEndOfToken(SL->getStrTokenLoc(0)), ", "));
 
             Diag(SL->getStrTokenLoc(1),
                  diag::warn_concatenated_literal_array_init)
@@ -14746,10 +14752,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             Diag(SL->getBeginLoc(),
                  diag::note_concatenated_string_literal_silence);
           }
-          // In any case, stop now.
-          break;
         }
       }
+    }
   }
 
 
