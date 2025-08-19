@@ -160,6 +160,10 @@ protected:
     return make_range(CurArray, EndPointer());
   }
 
+  iterator_range<const void *const *> buckets() const {
+    return make_range(CurArray, EndPointer());
+  }
+
   /// insert_imp - This returns true if the pointer was new to the set, false if
   /// it was already in the set.  This is hidden from the client so that the
   /// derived class can check that the right type of pointer is passed in.
@@ -431,7 +435,8 @@ public:
   bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
-      const void **APtr = CurArray, **E = CurArray + NumEntries;
+      auto Buckets = small_buckets();
+      const void **APtr = Buckets.begin(), **E = Buckets.end();
       while (APtr != E) {
         PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(*APtr));
         if (P(Ptr)) {

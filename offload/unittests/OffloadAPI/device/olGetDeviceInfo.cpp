@@ -13,6 +13,38 @@
 using olGetDeviceInfoTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetDeviceInfoTest);
 
+#define OL_DEVICE_INFO_TEST_SUCCESS_CHECK(TestName, PropType, PropName, Dev,   \
+                                          Expr)                                \
+  TEST_P(olGetDeviceInfoTest, Test##Dev##TestName) {                           \
+    PropType Value;                                                            \
+    ASSERT_SUCCESS(olGetDeviceInfo(Dev, PropName, sizeof(Value), &Value));     \
+    Expr;                                                                      \
+  }
+
+#define OL_DEVICE_INFO_TEST_DEVICE_SUCCESS(TestName, PropType, PropName)       \
+  OL_DEVICE_INFO_TEST_SUCCESS_CHECK(TestName, PropType, PropName, Device, {})
+
+#define OL_DEVICE_INFO_TEST_HOST_SUCCESS(TestName, PropType, PropName)         \
+  OL_DEVICE_INFO_TEST_SUCCESS_CHECK(TestName, PropType, PropName, Host, {})
+
+#define OL_DEVICE_INFO_TEST_SUCCESS(TestName, PropType, PropName)              \
+  OL_DEVICE_INFO_TEST_DEVICE_SUCCESS(TestName, PropType, PropName)             \
+  OL_DEVICE_INFO_TEST_HOST_SUCCESS(TestName, PropType, PropName)
+
+#define OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(TestName, PropType, PropName,      \
+                                            LowBound)                          \
+  OL_DEVICE_INFO_TEST_SUCCESS_CHECK(TestName, PropType, PropName, Device,      \
+                                    ASSERT_GT(Value, LowBound))
+
+#define OL_DEVICE_INFO_TEST_HOST_VALUE_GT(TestName, PropType, PropName,        \
+                                          LowBound)                            \
+  OL_DEVICE_INFO_TEST_SUCCESS_CHECK(TestName, PropType, PropName, Host,        \
+                                    ASSERT_GT(Value, LowBound))
+
+#define OL_DEVICE_INFO_TEST_VALUE_GT(TestName, PropType, PropName, LowBound)   \
+  OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(TestName, PropType, PropName, LowBound)  \
+  OL_DEVICE_INFO_TEST_HOST_VALUE_GT(TestName, PropType, PropName, LowBound)
+
 TEST_P(olGetDeviceInfoTest, SuccessType) {
   ol_device_type_t DeviceType;
   ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_TYPE,
@@ -77,12 +109,8 @@ TEST_P(olGetDeviceInfoTest, SuccessDriverVersion) {
   ASSERT_EQ(std::strlen(DriverVersion.data()), Size - 1);
 }
 
-TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSize) {
-  uint32_t Value;
-  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE,
-                                 sizeof(Value), &Value));
-  ASSERT_GT(Value, 0u);
-}
+OL_DEVICE_INFO_TEST_VALUE_GT(MaxWorkGroupSize, uint32_t,
+                             OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, 0);
 
 TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSizePerDimension) {
   ol_dimensions_t Value{0, 0, 0};
@@ -93,6 +121,46 @@ TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSizePerDimension) {
   ASSERT_GT(Value.y, 0u);
   ASSERT_GT(Value.z, 0u);
 }
+
+OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(VendorId, uint32_t,
+                                    OL_DEVICE_INFO_VENDOR_ID, 0);
+OL_DEVICE_INFO_TEST_HOST_SUCCESS(VendorId, uint32_t, OL_DEVICE_INFO_VENDOR_ID);
+OL_DEVICE_INFO_TEST_VALUE_GT(NumComputeUnits, uint32_t,
+                             OL_DEVICE_INFO_NUM_COMPUTE_UNITS, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(SingleFPConfig, ol_device_fp_capability_flags_t,
+                             OL_DEVICE_INFO_SINGLE_FP_CONFIG, 0);
+OL_DEVICE_INFO_TEST_SUCCESS(HalfFPConfig, ol_device_fp_capability_flags_t,
+                            OL_DEVICE_INFO_HALF_FP_CONFIG);
+OL_DEVICE_INFO_TEST_VALUE_GT(DoubleFPConfig, ol_device_fp_capability_flags_t,
+                             OL_DEVICE_INFO_DOUBLE_FP_CONFIG, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthChar, uint32_t,
+                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthShort, uint32_t,
+                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthInt, uint32_t,
+                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthLong, uint32_t,
+                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthFloat, uint32_t,
+                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthDouble, uint32_t,
+                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE, 0);
+OL_DEVICE_INFO_TEST_SUCCESS(NativeVectorWidthHalf, uint32_t,
+                            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
+OL_DEVICE_INFO_TEST_VALUE_GT(MaxClockFrequency, uint32_t,
+                             OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(MemoryClockRate, uint32_t,
+                             OL_DEVICE_INFO_MEMORY_CLOCK_RATE, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(AddressBits, uint32_t, OL_DEVICE_INFO_ADDRESS_BITS,
+                             0);
+OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(MaxMemAllocSize, uint64_t,
+                                    OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, 0);
+OL_DEVICE_INFO_TEST_HOST_SUCCESS(MaxMemAllocSize, uint64_t,
+                                 OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE);
+OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(GlobalMemSize, uint64_t,
+                                    OL_DEVICE_INFO_GLOBAL_MEM_SIZE, 0);
+OL_DEVICE_INFO_TEST_HOST_SUCCESS(GlobalMemSize, uint64_t,
+                                 OL_DEVICE_INFO_GLOBAL_MEM_SIZE);
 
 TEST_P(olGetDeviceInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;

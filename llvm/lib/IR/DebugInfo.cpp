@@ -1927,12 +1927,9 @@ void at::deleteAll(Function *F) {
   }
 }
 
-/// FIXME: Remove this wrapper function and call
-/// DIExpression::calculateFragmentIntersect directly.
-template <typename T>
-bool calculateFragmentIntersectImpl(
+bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const T *AssignRecord,
+    uint64_t SliceSizeInBits, const DbgVariableRecord *AssignRecord,
     std::optional<DIExpression::FragmentInfo> &Result) {
   // No overlap if this DbgRecord describes a killed location.
   if (AssignRecord->isKillAddress())
@@ -1959,26 +1956,6 @@ bool calculateFragmentIntersectImpl(
   return DIExpression::calculateFragmentIntersect(
       DL, Dest, SliceOffsetInBits, SliceSizeInBits, Addr, AddrOffsetInBits,
       BitExtractOffsetInBits, VarFrag, Result, OffsetFromLocationInBits);
-}
-
-/// FIXME: Remove this wrapper function and call
-/// DIExpression::calculateFragmentIntersect directly.
-bool at::calculateFragmentIntersect(
-    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
-    std::optional<DIExpression::FragmentInfo> &Result) {
-  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
-                                        SliceSizeInBits, DbgAssign, Result);
-}
-
-/// FIXME: Remove this wrapper function and call
-/// DIExpression::calculateFragmentIntersect directly.
-bool at::calculateFragmentIntersect(
-    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
-    std::optional<DIExpression::FragmentInfo> &Result) {
-  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
-                                        SliceSizeInBits, DVRAssign, Result);
 }
 
 /// Update inlined instructions' DIAssignID metadata. We need to do this
