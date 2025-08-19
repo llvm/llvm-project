@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: generic-hardening
+
 // <optional>
 
 // template <class T> class optional::iterator;
