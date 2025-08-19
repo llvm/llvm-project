@@ -24,9 +24,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/Compiler.h"
 
 namespace mlir {
 namespace bufferization {
