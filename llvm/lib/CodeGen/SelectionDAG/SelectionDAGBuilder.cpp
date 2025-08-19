@@ -7328,9 +7328,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::stackaddress:
   case Intrinsic::stacksave: {
-    unsigned SDOpcode = Intrinsic == Intrinsic::stackaddress
-      ? ISD::STACKADDRESS
-      : ISD::STACKSAVE;
+    unsigned SDOpcode = Intrinsic == Intrinsic::stackaddress ? ISD::STACKADDRESS
+                                                             : ISD::STACKSAVE;
     SDValue Op = getRoot();
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     Res = DAG.getNode(SDOpcode, sdl, DAG.getVTList(VT, MVT::Other), Op);

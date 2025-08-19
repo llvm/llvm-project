@@ -1861,7 +1861,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKSAVE         , MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE      , MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32  , Custom);
-  setOperationAction(ISD::STACKADDRESS      , MVT::Other, Custom);
+  setOperationAction(ISD::STACKADDRESS, MVT::Other, Custom);
 
   setStackPointerRegisterToSaveRestore(SP::O6);
 
@@ -2734,13 +2734,14 @@ static SDValue LowerSTACKADDRESS(SDValue Op, SelectionDAG &DAG,
   // Unbias the stack pointer register.
   OffsetToStackStart += Subtarget->getStackPointerBias();
   // Move past the register save area: 8 in registers + 8 local registers.
-  OffsetToStackStart +=  16 * (Subtarget->is64Bit() ? 8 : 4);
+  OffsetToStackStart += 16 * (Subtarget->is64Bit() ? 8 : 4);
   // Move past the struct return address slot (4 bytes) on SPARC 32-bit.
   if (!Subtarget->is64Bit()) {
     OffsetToStackStart += 4;
   }
 
-  SDValue StackAddr = DAG.getNode(ISD::ADD, DL, VT, SP, DAG.getConstant(OffsetToStackStart, DL, VT));
+  SDValue StackAddr = DAG.getNode(ISD::ADD, DL, VT, SP,
+                                  DAG.getConstant(OffsetToStackStart, DL, VT));
   return DAG.getMergeValues({StackAddr, Chain}, DL);
 }
 
@@ -3141,7 +3142,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
                                                                Subtarget);
-  case ISD::STACKADDRESS:       return LowerSTACKADDRESS(Op, DAG, Subtarget);
+  case ISD::STACKADDRESS:
+    return LowerSTACKADDRESS(Op, DAG, Subtarget);
 
   case ISD::LOAD:               return LowerLOAD(Op, DAG);
   case ISD::STORE:              return LowerSTORE(Op, DAG);
