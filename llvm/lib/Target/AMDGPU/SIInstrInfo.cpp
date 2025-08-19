@@ -2905,7 +2905,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                                        MachineBasicBlock &RestoreBB,
                                        const DebugLoc &DL, int64_t BrOffset,
                                        RegScavenger *RS) const {
-  assert(RS && "RegScavenger required for long branching");
   assert(MBB.empty() &&
          "new block should be inserted for expanding unconditional branch");
   assert(MBB.pred_size() == 1);
@@ -4241,6 +4240,7 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
          MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
          MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
          MI.getOpcode() == AMDGPU::S_SETPRIO ||
+         MI.getOpcode() == AMDGPU::S_SETPRIO_INC_WG ||
          changesVGPRIndexingMode(MI);
 }
 

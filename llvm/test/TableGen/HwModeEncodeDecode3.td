@@ -118,14 +118,6 @@ def unrelated: Instruction {
 // exact duplicates and could effectively be merged into one.
 // DECODER-LABEL: DecoderTable32[] =
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTableAlt32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeA32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeB32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeC32[] =
-// DECODER-DAG: Opcode: unrelated
 // DECODER-LABEL: DecoderTable_ModeA32[] =
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
@@ -136,6 +128,14 @@ def unrelated: Instruction {
 // DECODER-LABEL: DecoderTable_ModeC32[] =
 // DECODER-DAG: Opcode: fooTypeEncC:foo
 // DECODER-DAG: Opcode: bar
+// DECODER-LABEL: DecoderTableAlt32[] =
+// DECODER-DAG: Opcode: unrelated
+// DECODER-LABEL: DecoderTableAlt_ModeA32[] =
+// DECODER-DAG: Opcode: unrelated
+// DECODER-LABEL: DecoderTableAlt_ModeB32[] =
+// DECODER-DAG: Opcode: unrelated
+// DECODER-LABEL: DecoderTableAlt_ModeC32[] =
+// DECODER-DAG: Opcode: unrelated
 // DECODER-LABEL: DecoderTable64[] =
 // DECODER-DAG: Opcode: fooTypeEncDefault:foo
 
@@ -143,8 +143,6 @@ def unrelated: Instruction {
 // reducing the four ‘Alt’ tables down to just one.
 // DECODER-SUPPRESS-O1-LABEL: DecoderTable32[] =
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: unrelated
 // DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeA32[] =
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:foo
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
@@ -155,6 +153,8 @@ def unrelated: Instruction {
 // DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeC32[] =
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncC:foo
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32[] =
+// DECODER-SUPPRESS-O1-DAG: Opcode: unrelated
 // DECODER-SUPPRESS-O1-LABEL: DecoderTable64[] =
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncDefault:foo
 
@@ -171,8 +171,6 @@ def unrelated: Instruction {
 // DECODER-SUPPRESS-O2-LABEL: DecoderTable32[] =
 // DECODER-SUPPRESS-O2-DAG: Opcode: bar
 // DECODER-SUPPRESS-O2-NOT: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32[] =
-// DECODER-SUPPRESS-O2-DAG: Opcode: unrelated
 // DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeA32[] =
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:foo
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
@@ -183,6 +181,8 @@ def unrelated: Instruction {
 // DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeC32[] =
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncC:foo
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32[] =
+// DECODER-SUPPRESS-O2-DAG: Opcode: unrelated
 // DECODER-SUPPRESS-O2-LABEL: DecoderTable64[] =
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncDefault:foo
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
