@@ -9,8 +9,6 @@
 #include "FeatureModule.h"
 #include "support/Logger.h"
 
-LLVM_INSTANTIATE_REGISTRY(clang::clangd::FeatureModuleRegistry)
-
 namespace clang {
 namespace clangd {
 
@@ -22,6 +20,10 @@ void FeatureModule::initialize(const Facilities &F) {
 FeatureModule::Facilities &FeatureModule::facilities() {
   assert(Fac && "Not initialized yet");
   return *Fac;
+}
+
+void FeatureModuleSet::add(std::unique_ptr<FeatureModule> M) {
+  Modules.push_back(std::move(M));
 }
 
 bool FeatureModuleSet::addImpl(void *Key, std::unique_ptr<FeatureModule> M,
@@ -37,3 +39,5 @@ bool FeatureModuleSet::addImpl(void *Key, std::unique_ptr<FeatureModule> M,
 
 } // namespace clangd
 } // namespace clang
+
+LLVM_INSTANTIATE_REGISTRY(clang::clangd::FeatureModuleRegistry)

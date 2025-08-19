@@ -1022,7 +1022,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     vlog("Adding feature module '{0}' ({1})", E.getName(), E.getDesc());
     ModuleSet.add(E.instantiate());
   }
-  Opts.FeatureModules = &ModuleSet;
+  if (ModuleSet.begin() != ModuleSet.end())
+    Opts.FeatureModules = &ModuleSet;
 
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.

@@ -178,9 +178,7 @@ public:
   const_iterator begin() const { return const_iterator(Modules.begin()); }
   const_iterator end() const { return const_iterator(Modules.end()); }
 
-  void add(std::unique_ptr<FeatureModule> M) {
-    Modules.push_back(std::move(M));
-  }
+  void add(std::unique_ptr<FeatureModule> M);
   template <typename Mod> bool add(std::unique_ptr<Mod> M) {
     return addImpl(&ID<Mod>::Key, std::move(M), LLVM_PRETTY_FUNCTION);
   }
@@ -194,7 +192,7 @@ public:
 
 template <typename Mod> int FeatureModuleSet::ID<Mod>::Key;
 
-typedef llvm::Registry<FeatureModule> FeatureModuleRegistry;
+using FeatureModuleRegistry = llvm::Registry<FeatureModule>;
 
 } // namespace clangd
 } // namespace clang
