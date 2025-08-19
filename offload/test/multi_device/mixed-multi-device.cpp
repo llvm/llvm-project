@@ -49,8 +49,8 @@ int main() {
 
   // clang-format off
   // CHECK: DEVID:  0 SGN:2 {{.*}} tripcount:0 rpc:1 md:0
-  // CHECK: DEVID:  0 SGN:5 {{.*}} tripcount:9999 rpc:1 md:1 md_LB:0 md_UB:4998
-  // CHECK: DEVID:  1 SGN:5 {{.*}} tripcount:9999 rpc:1 md:1 md_LB:4999 md_UB:9998
+  // CHECK: DEVID:  0 SGN:7 {{.*}} tripcount:9999 rpc:1 md:1 md_LB:0 md_UB:4998
+  // CHECK: DEVID:  1 SGN:7 {{.*}} tripcount:9999 rpc:1 md:1 md_LB:4999 md_UB:9998
   // CHECK: DEVID:  0 SGN:1 {{.*}} tripcount:0 rpc:1 md:0
   // clang-format on
 

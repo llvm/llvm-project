@@ -34,7 +34,7 @@ int main() {
   }
 
   // clang-format off
-  // CHECK: DEVID:  0 SGN:5 {{.*}} tripcount:1 rpc:0 md:1 md_LB:0 md_UB:0
+  // CHECK: DEVID:  0 SGN:7 {{.*}} tripcount:1 rpc:0 md:1 md_LB:0 md_UB:0
   // clang-format on
 
   // CHECK: a[0] = 0

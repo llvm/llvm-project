@@ -32,8 +32,8 @@ int main() {
   }
 
   // clang-format off
-  // CHECK: DEVID:  0 SGN:5 {{.*}} tripcount:15000 rpc:0 md:1 md_LB:0 md_UB:7499
-  // CHECK: DEVID:  1 SGN:5 {{.*}} tripcount:15000 rpc:0 md:1 md_LB:7500 md_UB:14999
+  // CHECK: DEVID:  0 SGN:7 {{.*}} tripcount:15000 rpc:0 md:1 md_LB:0 md_UB:7499
+  // CHECK: DEVID:  1 SGN:7 {{.*}} tripcount:15000 rpc:0 md:1 md_LB:7500 md_UB:14999
   // clang-format on
 
   // Checking the results are correct:
