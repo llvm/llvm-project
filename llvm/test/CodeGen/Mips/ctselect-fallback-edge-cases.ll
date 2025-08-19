@@ -334,9 +334,9 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ; M32-NEXT:    or $1, $4, $5
 ; M32-NEXT:    lw $3, 4($7)
 ; M32-NEXT:    lw $4, 4($6)
-; M32-NEXT:    sltiu $1, $1, 1
-; M32-NEXT:    addiu $2, $1, -1
-; M32-NEXT:    negu $1, $1
+; M32-NEXT:    sltu $1, $zero, $1
+; M32-NEXT:    negu $2, $1
+; M32-NEXT:    addiu $1, $1, -1
 ; M32-NEXT:    and $3, $2, $3
 ; M32-NEXT:    and $4, $1, $4
 ; M32-NEXT:    or $3, $4, $3
@@ -388,36 +388,33 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ;
 ; M64-LABEL: cmovznz4_builtin_ctselect:
 ; M64:       # %bb.0: # %entry
-; M64-NEXT:    sltiu $1, $4, 1
-; M64-NEXT:    daddiu $3, $zero, -1
-; M64-NEXT:    dsll $1, $1, 32
-; M64-NEXT:    ld $2, 0($5)
+; M64-NEXT:    daddiu $2, $zero, -1
+; M64-NEXT:    daddiu $1, $zero, -1
+; M64-NEXT:    ld $3, 0($5)
+; M64-NEXT:    movn $2, $zero, $4
 ; M64-NEXT:    ld $4, 0($6)
-; M64-NEXT:    dsrl $1, $1, 32
-; M64-NEXT:    andi $1, $1, 1
-; M64-NEXT:    dnegu $1, $1
-; M64-NEXT:    xor $3, $1, $3
-; M64-NEXT:    and $2, $1, $2
-; M64-NEXT:    and $4, $3, $4
-; M64-NEXT:    or $2, $2, $4
-; M64-NEXT:    sd $2, 0($7)
-; M64-NEXT:    ld $2, 8($6)
+; M64-NEXT:    xor $1, $2, $1
+; M64-NEXT:    and $3, $2, $3
+; M64-NEXT:    and $4, $1, $4
+; M64-NEXT:    or $3, $3, $4
+; M64-NEXT:    sd $3, 0($7)
+; M64-NEXT:    ld $3, 8($6)
 ; M64-NEXT:    ld $4, 8($5)
-; M64-NEXT:    and $2, $3, $2
-; M64-NEXT:    and $4, $1, $4
-; M64-NEXT:    or $2, $4, $2
-; M64-NEXT:    sd $2, 8($7)
-; M64-NEXT:    ld $2, 16($6)
+; M64-NEXT:    and $3, $1, $3
+; M64-NEXT:    and $4, $2, $4
+; M64-NEXT:    or $3, $4, $3
+; M64-NEXT:    sd $3, 8($7)
+; M64-NEXT:    ld $3, 16($6)
 ; M64-NEXT:    ld $4, 16($5)
-; M64-NEXT:    and $2, $3, $2
-; M64-NEXT:    and $4, $1, $4
-; M64-NEXT:    or $2, $4, $2
-; M64-NEXT:    sd $2, 16($7)
-; M64-NEXT:    ld $2, 24($6)
-; M64-NEXT:    and $2, $3, $2
-; M64-NEXT:    ld $3, 24($5)
+; M64-NEXT:    and $3, $1, $3
+; M64-NEXT:    and $4, $2, $4
+; M64-NEXT:    or $3, $4, $3
+; M64-NEXT:    sd $3, 16($7)
+; M64-NEXT:    ld $3, 24($6)
 ; M64-NEXT:    and $1, $1, $3
-; M64-NEXT:    or $1, $1, $2
+; M64-NEXT:    ld $3, 24($5)
+; M64-NEXT:    and $2, $2, $3
+; M64-NEXT:    or $1, $2, $1
 ; M64-NEXT:    jr $ra
 ; M64-NEXT:    sd $1, 24($7)
 entry:
