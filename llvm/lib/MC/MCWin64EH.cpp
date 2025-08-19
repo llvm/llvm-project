@@ -22,6 +22,7 @@ class MCSection;
 
 /// MCExpr that represents the epilog unwind code in an unwind table.
 class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
+  StringRef FunctionName;
   const MCSymbol *FunctionEnd;
   const MCSymbol *UnwindV2Start;
   const MCSymbol *EpilogEnd;
@@ -30,8 +31,8 @@ class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
 
   MCUnwindV2EpilogTargetExpr(const WinEH::FrameInfo &FrameInfo,
                              const WinEH::FrameInfo::Epilog &Epilog,
-                             uint8_t EpilogSize_)
-      : FunctionEnd(FrameInfo.FuncletOrFuncEnd),
+                             uint8_t EpilogSize_, StringRef FunctionName_)
+      : FunctionName(FunctionName_), FunctionEnd(FrameInfo.FuncletOrFuncEnd),
         UnwindV2Start(Epilog.UnwindV2Start), EpilogEnd(Epilog.End),
         EpilogSize(EpilogSize_), Loc(Epilog.Loc) {}
 
@@ -39,8 +40,10 @@ public:
   static MCUnwindV2EpilogTargetExpr *
   create(const WinEH::FrameInfo &FrameInfo,
          const WinEH::FrameInfo::Epilog &Epilog, uint8_t EpilogSize_,
+         StringRef FunctionName_,
          MCContext &Ctx) {
-    return new (Ctx) MCUnwindV2EpilogTargetExpr(FrameInfo, Epilog, EpilogSize_);
+    return new (Ctx) MCUnwindV2EpilogTargetExpr(FrameInfo, Epilog, EpilogSize_,
+                                                 FunctionName_);
   }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
@@ -337,7 +340,7 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
       // between the start of the epilog and the end of the function until
       // layout has been completed.
       auto *MCE = MCUnwindV2EpilogTargetExpr::create(*info, Epilog.second,
-                                                     EpilogSize, context);
+                                                     EpilogSize, info->Function->getName(), context);
       OS->addFixup(MCE, FK_Data_2);
       OS->appendContents(2, 0);
     }
@@ -383,14 +386,16 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   auto Offset = GetOptionalAbsDifference(*Asm, FunctionEnd, UnwindV2Start);
   if (!Offset) {
     Asm->getContext().reportError(
-        Loc, "Failed to evaluate epilog offset for Unwind v2");
+        Loc, "Failed to evaluate epilog offset for Unwind v2 in " + FunctionName);
     return false;
   }
   assert(*Offset > 0);
   constexpr uint16_t MaxEpilogOffset = 0x0fff;
   if (*Offset > MaxEpilogOffset) {
+    dbgs() << "Unwindv2: " << UnwindV2Start->getSection().getName();
+    dbgs() << "FunctionEnd: " << FunctionEnd->getSection().getName();
     Asm->getContext().reportError(Loc,
-                                  "Epilog offset is too large for Unwind v2");
+                                  "Epilog offset is too large (0x" + Twine::utohexstr(*Offset) + ") for Unwind v2 in " + FunctionName);
     return false;
   }
 
