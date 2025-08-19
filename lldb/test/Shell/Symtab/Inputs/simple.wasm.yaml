@@ -1,3 +1,15 @@
+# clang -target wasm32 -nostdlib -Wl,--no-entry -Wl,--export-all -O0 -g -o simple.wasm simple.c
+# char* str = "data str";
+#
+# int add(int a, int b) {
+#   return a + b;
+# }
+#
+# int main() {
+#   int i = 1;
+#   int j = 2;
+#   return add(i, j);
+# }
 --- !WASM
 FileHeader:
   Version:         0x1
@@ -37,13 +49,13 @@ Sections:
         Mutable:         true
         InitExpr:
           Opcode:          I32_CONST
-          Value:           66560
+          Value:           66576
       - Index:           1
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1024
+          Value:           1036
       - Index:           2
         Type:            I32
         Mutable:         false
@@ -55,44 +67,50 @@ Sections:
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1024
+          Value:           1040
       - Index:           4
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           66560
+          Value:           1040
       - Index:           5
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1024
+          Value:           66576
       - Index:           6
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           66560
+          Value:           1024
       - Index:           7
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           131072
+          Value:           66576
       - Index:           8
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           0
+          Value:           131072
       - Index:           9
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1
+          Value:           0
       - Index:           10
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1
+      - Index:           11
         Type:            I32
         Mutable:         false
         InitExpr:
@@ -115,6 +133,9 @@ Sections:
       - Name:            main
         Kind:            FUNCTION
         Index:           3
+      - Name:            str
+        Kind:            GLOBAL
+        Index:           1
       - Name:            __main_void
         Kind:            FUNCTION
         Index:           2
@@ -123,34 +144,34 @@ Sections:
         Index:           0
       - Name:            __dso_handle
         Kind:            GLOBAL
-        Index:           1
+        Index:           2
       - Name:            __data_end
         Kind:            GLOBAL
-        Index:           2
+        Index:           3
       - Name:            __stack_low
         Kind:            GLOBAL
-        Index:           3
+        Index:           4
       - Name:            __stack_high
         Kind:            GLOBAL
-        Index:           4
+        Index:           5
       - Name:            __global_base
         Kind:            GLOBAL
-        Index:           5
+        Index:           6
       - Name:            __heap_base
         Kind:            GLOBAL
-        Index:           6
+        Index:           7
       - Name:            __heap_end
         Kind:            GLOBAL
-        Index:           7
+        Index:           8
       - Name:            __memory_base
         Kind:            GLOBAL
-        Index:           8
+        Index:           9
       - Name:            __table_base
         Kind:            GLOBAL
-        Index:           9
+        Index:           10
       - Name:            __wasm_first_page_end
         Kind:            GLOBAL
-        Index:           10
+        Index:           11
   - Type:            CODE
     Functions:
       - Index:           0
@@ -169,6 +190,20 @@ Sections:
       - Index:           3
         Locals:          []
         Body:            1082808080000F0B
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   7
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           1024
+        Content:         '646174612073747200'
+      - SectionOffset:   22
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           1036
+        Content:         '00040000'
   - Type:            CUSTOM
     Name:            name
     FunctionNames:
@@ -183,8 +218,17 @@ Sections:
     GlobalNames:
       - Index:           0
         Name:            __stack_pointer
+    DataSegmentNames:
+      - Index:           0
+        Name:            .rodata
+      - Index:           1
+        Name:            .data
   - Type:            CUSTOM
+    HeaderSecSizeEncodingLen: 2
     Name:            producers
+    Languages:
+      - Name:            C11
+        Version:         ''
     Tools:
       - Name:            clang
         Version:         '22.0.0git'

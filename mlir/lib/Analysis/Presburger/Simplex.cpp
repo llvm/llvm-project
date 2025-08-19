@@ -433,7 +433,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
   normalizeDiv(divCoeffs, divDenom);
 
   domainSimplex.addDivisionVariable(divCoeffs, divDenom);
-  domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
+  (void)domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
 
   // Update `this` to account for the additional symbol we just added.
   appendSymbol();

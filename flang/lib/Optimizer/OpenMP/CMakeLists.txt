@@ -11,6 +11,7 @@ add_flang_library(FlangOpenMPTransforms
   MarkDeclareTarget.cpp
   LowerWorkshare.cpp
   LowerNontemporal.cpp
+  SimdOnly.cpp
 
   DEPENDS
   FIRDialect

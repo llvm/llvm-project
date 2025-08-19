@@ -576,7 +576,8 @@ void DataSharingProcessor::collectSymbols(
     if (collectPreDetermined) {
       // Similar to implicit symbols, collect pre-determined symbols only if
       // they are not defined by a nested `DeclarationConstruct`
-      return !visitor.isSymbolDefineByNestedDeclaration(sym) &&
+      return visitor.isSymbolDefineBy(sym, eval) &&
+             !visitor.isSymbolDefineByNestedDeclaration(sym) &&
              sym->test(semantics::Symbol::Flag::OmpPreDetermined);
     }
 

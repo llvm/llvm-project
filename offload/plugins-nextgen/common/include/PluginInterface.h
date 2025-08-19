@@ -1027,6 +1027,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Instert a data fence between previous data operations and the following
+  /// operations if necessary for the device
+  virtual Error dataFence(__tgt_async_info *AsyncInfo) = 0;
+
   /// Exchange data between devices (device to device transfer). Calling this
   /// function is only valid if GenericPlugin::isDataExchangable() passing the
   /// two devices returns true.
@@ -1085,6 +1089,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   // virtual bool IsGfx90aCoarseGrainUsmMapEnabled() { return false; }
   bool IsGfx90aCoarseGrainUsmMapEnabled();
   virtual bool IsGfx90aCoarseGrainUsmMapEnabledImpl() { return false; }
+
+  /// Enqueue a host call to AsyncInfo
+  Error enqueueHostCall(void (*Callback)(void *), void *UserData,
+                        __tgt_async_info *AsyncInfo);
+  virtual Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                                    AsyncInfoWrapperTy &AsyncInfo) = 0;
 
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
@@ -1821,6 +1831,10 @@ public:
   int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
                               int DstDeviceId, void *DstPtr, int64_t Size,
                               __tgt_async_info *AsyncInfo);
+
+  /// Places a fence between previous data movements and following data
+  /// movements if necessary on the device
+  int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
 
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel_sync(int32_t DeviceId, void *TgtEntryPtr,

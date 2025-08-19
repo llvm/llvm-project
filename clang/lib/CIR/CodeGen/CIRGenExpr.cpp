@@ -90,11 +90,8 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     } break;
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
-    case CK_ArrayToPointerDecay: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: array-to-pointer decay");
-      return Address::invalid();
-    }
+    case CK_ArrayToPointerDecay:
+      return emitArrayToPointerDecay(ce->getSubExpr(), baseInfo);
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
@@ -591,6 +588,12 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
             ? emitLoadOfReferenceLValue(addr, getLoc(e->getSourceRange()),
                                         vd->getType(), AlignmentSource::Decl)
             : makeAddrLValue(addr, ty, AlignmentSource::Decl);
+
+    // Statics are defined as globals, so they are not include in the function's
+    // symbol table.
+    assert((vd->isStaticLocal() || symbolTable.count(vd)) &&
+           "non-static locals should be already mapped");
+
     return lv;
   }
 
@@ -1620,7 +1623,9 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   emitLValue(e);
 }
 
-Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
+Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
+                                                LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::opTBAA());
   assert(e->getType()->isArrayType() &&
          "Array to pointer decay must have array source type!");
 

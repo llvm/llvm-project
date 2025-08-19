@@ -5332,6 +5332,7 @@ private:
         ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
         const auto *It = find(Op, I);
         assert(It != Op.end() && "Lane not set");
+        SmallPtrSet<Instruction *, 4> Visited;
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
@@ -5341,6 +5342,10 @@ private:
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+          if (!Visited.insert(In).second) {
+            It = find(make_range(std::next(It), Op.end()), I);
+            continue;
+          }
           ScheduleCopyableDataMapByInstUser
               .try_emplace(std::make_pair(std::make_pair(In, EI.EdgeIdx), I))
               .first->getSecond()
@@ -20796,6 +20801,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                         << BB->getName() << "\n");
       calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP,
                             ControlDependentMembers);
+    } else if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/!ReSchedule, SLP,
+                            ControlDependentMembers);
     }
 
     if (ReSchedule) {
@@ -20891,6 +20900,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       }
     }
     ScheduledBundlesList.pop_back();
+    SmallVector<ScheduleData *> ControlDependentMembers;
+    SmallPtrSet<Instruction *, 4> Visited;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;
@@ -20908,6 +20919,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
           const auto *It = find(Op, I);
           assert(It != Op.end() && "Lane not set");
+          SmallPtrSet<Instruction *, 4> Visited;
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
@@ -20917,6 +20929,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                    "Couldn't find extract lane");
             auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+            if (!Visited.insert(In).second) {
+              It = find(make_range(std::next(It), Op.end()), I);
+              break;
+            }
             ScheduleCopyableDataMapByInstUser
                 [std::make_pair(std::make_pair(In, EI.EdgeIdx), I)]
                     .pop_back();
@@ -20930,11 +20946,20 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I))
+        if (ScheduleData *OpSD = getScheduleData(I)) {
           OpSD->clearDirectDependencies();
+          if (RegionHasStackSave ||
+              !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+            ControlDependentMembers.push_back(OpSD);
+        }
         continue;
       }
       ScheduledBundles.find(I)->getSecond().pop_back();
+    }
+    if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
+                            ControlDependentMembers);
     }
     return std::nullopt;
   }
@@ -21304,7 +21329,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     }
   };
 
-  WorkList.push_back(Bundle.getBundle().front());
+  assert((Bundle || !ControlDeps.empty()) &&
+         "expected at least one instruction to schedule");
+  if (Bundle)
+    WorkList.push_back(Bundle.getBundle().front());
   WorkList.append(ControlDeps.begin(), ControlDeps.end());
   SmallPtrSet<ScheduleBundle *, 16> Visited;
   while (!WorkList.empty()) {
@@ -24413,7 +24441,7 @@ public:
       // correct, replace internal uses with undef, and mark for eventual
       // deletion.
 #ifndef NDEBUG
-      SmallSet<Value *, 4> IgnoreSet;
+      SmallPtrSet<Value *, 4> IgnoreSet;
       for (ArrayRef<Value *> RdxOps : ReductionOps)
         IgnoreSet.insert_range(RdxOps);
 #endif

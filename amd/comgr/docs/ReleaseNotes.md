@@ -47,6 +47,9 @@ Deprecated APIs
 
 Removed APIs
 ------------
+- The following Comgr metadata API has removed support for V2/V3 Code Objects:
+  - amd\_comgr\_lookup\_code\_object()
+  This API still supports Code Objects V4 and later.
 
 New Comgr Actions and Data Types
 --------------------------------
