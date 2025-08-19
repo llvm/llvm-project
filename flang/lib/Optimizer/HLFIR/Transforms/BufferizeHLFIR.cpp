@@ -450,7 +450,7 @@ struct AssociateOpConversion
                    mlir::isa<fir::BoxCharType>(assocType)) {
           mlir::Value lenVal = associate.getTypeparams()[0];
           auto refTy = mlir::cast<fir::ReferenceType>(sourceVar.getType());
-          auto charTy = mlir::dyn_cast<fir::CharacterType>(refTy.getEleTy());
+          auto charTy = mlir::cast<fir::CharacterType>(refTy.getEleTy());
           auto boxCharType =
               fir::BoxCharType::get(builder.getContext(), charTy.getFKind());
           sourceVar = builder.create<fir::EmboxCharOp>(loc, boxCharType,
