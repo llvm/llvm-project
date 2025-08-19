@@ -2578,7 +2578,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[symbol, source] : symbols) {
       if (!IsVariableListItem(*symbol) &&
-          !(IsNamedConstantListItem(*symbol) && SharedOrFirstprivate)) {
+          !(IsNamedConstant(*symbol) && SharedOrFirstprivate)) {
         deferredNonVariables_.insert({symbol, source});
       }
     }

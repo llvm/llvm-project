@@ -130,7 +130,7 @@ bool IsVariableListItem(const Symbol &sym) {
   return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
 }
 
-bool IsNamedConstantListItem(const Symbol &sym) {
+bool IsNamedConstant(const Symbol &sym) {
   return sym.attrs().test(Attr::PARAMETER);
 }
 
