@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_PLATFORM_ERRORS_H
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_PLATFORM_ERRORS_H
 
-#if defined(__linux__) || defined(__Fuchsia__) || defined(__EMSCRIPTEN__)
+#if defined(__linux__) || defined(__Fuchsia__)
 #include "tables/linux_platform_errors.h"
+#elif defined(__EMSCRIPTEN__)
+#include "tables/emscripten_platform_errors.h"
 #else
 #include "tables/minimal_platform_errors.h"
 #endif
