@@ -2695,6 +2695,40 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
+  // Factor a common operand across select feeding an 'or':
+  // (select Cond, (X | A), X) | B  ->  X | select Cond, (A | B), B
+  // (select Cond, X, (X | A)) | B  ->  X | select Cond, B, (A | B)
+  // and commuted variants swapping the operands of the outer 'or'.
+  auto TryFactorSelectOr = [&](Value *SelOp, Value *OtherOp) -> Instruction * {
+    auto *SI = dyn_cast<SelectInst>(SelOp);
+    if (!SI)
+      return nullptr;
+
+    Value *Cond = SI->getCondition();
+    Value *T = SI->getTrueValue();
+    Value *F = SI->getFalseValue();
+    Value *X, *A;
+
+    // Match: select Cond, (X|A), X
+    if (match(T, m_c_Or(m_Value(X), m_Value(A))) && F == X) {
+      Value *AorB = Builder.CreateOr(A, OtherOp);
+      Value *InnerSel = Builder.CreateSelect(Cond, AorB, OtherOp);
+      return BinaryOperator::CreateOr(X, InnerSel);
+    }
+    // Match: select Cond, X, (X|A)
+    if (match(F, m_c_Or(m_Value(X), m_Value(A))) && T == X) {
+      Value *AorB = Builder.CreateOr(A, OtherOp);
+      Value *InnerSel = Builder.CreateSelect(Cond, OtherOp, AorB);
+      return BinaryOperator::CreateOr(X, InnerSel);
+    }
+    return nullptr;
+  };
+
+  if (Instruction *R = TryFactorSelectOr(Op0, Op1))
+    return R;
+  if (Instruction *R = TryFactorSelectOr(Op1, Op0))
+    return R;
+
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
 
@@ -4021,6 +4055,42 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         return R;
     }
   }
+
+  // Factor a common operand across select feeding an 'or' before pushing the
+  // constant into the select arms:
+  // (select Cond, (X | A), X) | B  ->  X | select Cond, (A | B), B
+  // (select Cond, X, (X | A)) | B  ->  X | select Cond, B, (A | B)
+  // and commuted variants swapping the operands of the outer 'or'.
+  auto TryFactorSelectOrEarly = [&](Value *SelOp,
+                                    Value *OtherOp) -> Instruction * {
+    auto *SI = dyn_cast<SelectInst>(SelOp);
+    if (!SI)
+      return nullptr;
+
+    Value *Cond = SI->getCondition();
+    Value *T = SI->getTrueValue();
+    Value *F = SI->getFalseValue();
+    Value *X, *A;
+
+    // Match: select Cond, (X|A), X
+    if (match(T, m_c_Or(m_Value(X), m_Value(A))) && F == X) {
+      Value *AorB = Builder.CreateOr(A, OtherOp);
+      Value *InnerSel = Builder.CreateSelect(Cond, AorB, OtherOp);
+      return BinaryOperator::CreateOr(X, InnerSel);
+    }
+    // Match: select Cond, X, (X|A)
+    if (match(F, m_c_Or(m_Value(X), m_Value(A))) && T == X) {
+      Value *AorB = Builder.CreateOr(A, OtherOp);
+      Value *InnerSel = Builder.CreateSelect(Cond, OtherOp, AorB);
+      return BinaryOperator::CreateOr(X, InnerSel);
+    }
+    return nullptr;
+  };
+
+  if (Instruction *R = TryFactorSelectOrEarly(Op0, Op1))
+    return R;
+  if (Instruction *R = TryFactorSelectOrEarly(Op1, Op0))
+    return R;
 
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
