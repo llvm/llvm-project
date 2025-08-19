@@ -2483,6 +2483,8 @@ namespace {
 
   const auto &NumberedInstructions = Target.getInstructions();
   NumberedEncodings.reserve(NumberedInstructions.size());
+  NumInstructions = NumberedInstructions.size();
+
   for (const auto &NumberedInstruction : NumberedInstructions) {
     const Record *InstDef = NumberedInstruction->TheDef;
     if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
@@ -2509,6 +2511,8 @@ namespace {
   std::map<unsigned, std::vector<OperandInfo>> Operands;
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
+  if (IsVarLenInst)
+    InstrLen.resize(NumberedInstructions.size(), 0);
   unsigned MaxInstLen = 0;
 
   for (const auto &[NEI, NumberedEncoding] : enumerate(NumberedEncodings)) {
@@ -2524,15 +2528,10 @@ namespace {
       continue;
     }
 
-    if (NEI < NumberedInstructions.size())
-      NumInstructions++;
     NumEncodings++;
 
     if (!Size && !IsVarLenInst)
       continue;
-
-    if (IsVarLenInst)
-      InstrLen.resize(NumberedInstructions.size(), 0);
 
     if (unsigned Len = populateInstruction(Target, *EncodingDef, *Inst, NEI,
                                            Operands, IsVarLenInst)) {
