@@ -136,9 +136,7 @@ class Display(object):
         # Show the test failure output, if requested.
         if (test.isFailure() and self.opts.showOutput) or self.opts.showAllOutput:
             if test.isFailure():
-                print(
-                    "%s TEST '%s' FAILED %s" % ("*" * 20, test_name, "*" * 20)
-                )
+                print("%s TEST '%s' FAILED %s" % ("*" * 20, test_name, "*" * 20))
             out = test.result.output
             # Encode/decode so that, when using Python 3.6.5 in Windows 10,
             # print(out) doesn't raise UnicodeEncodeError if out contains

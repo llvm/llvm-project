@@ -329,7 +329,7 @@ def print_results(tests, elapsed, opts):
             sorted(tests_by_code[code], key=lambda t: t.getFullName()),
             code,
             opts.shown_codes,
-            opts.printRelativePaths
+            opts.printRelativePaths,
         )
 
     print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
