@@ -1513,7 +1513,7 @@ public:
   /// either \c emitVAListRef or \c emitMSVAListRef.
   ///
   /// \returns SSA value with the argument.
-  mlir::Value emitVAArg(VAArgExpr *ve, Address &vaListAddr);
+  mlir::Value emitVAArg(VAArgExpr *ve);
 
   /// ----------------------
   /// CIR build helpers

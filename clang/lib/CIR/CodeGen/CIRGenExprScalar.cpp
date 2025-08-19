@@ -400,16 +400,14 @@ public:
   }
 
   mlir::Value VisitVAArgExpr(VAArgExpr *ve) {
-    QualType Ty = ve->getType();
+    QualType ty = ve->getType();
 
-    if (Ty->isVariablyModifiedType()) {
-      cgf.cgm.errorNYI(ve->getSourceRange(), "variably modified types in varargs");
+    if (ty->isVariablyModifiedType()) {
+      cgf.cgm.errorNYI(ve->getSourceRange(),
+                       "variably modified types in varargs");
     }
 
-    Address argValue = Address::invalid();
-    mlir::Value val = cgf.emitVAArg(ve, argValue);
-
-    return val;
+    return cgf.emitVAArg(ve);
   }
 
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);

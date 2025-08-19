@@ -3152,6 +3152,7 @@ mlir::LogicalResult CIRToLLVMVAEndOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
     cir::VAArgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vaArgABILowering());
   auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
   auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
                                               adaptor.getArgList());

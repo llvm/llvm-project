@@ -3696,10 +3696,10 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
   }];
 }
 
-def CIR_VAArgOp : CIR_Op<"va.arg"> {
+def CIR_VAArgOp : CIR_Op<"va_arg"> {
   let summary = "Fetches next variadic element as a given type";
   let description = [{
-    The `cir.va.arg` operation models the C/C++ `va_arg` macro by reading the
+    The `cir.va_arg` operation models the C/C++ `va_arg` macro by reading the
     next argument from an active variable argument list and producing it as a
     value of a specified result type.
 
@@ -3708,15 +3708,11 @@ def CIR_VAArgOp : CIR_Op<"va.arg"> {
     the fetched value as the result, whose type is chosen by the user of the
     operation.
 
-    A `cir.va.arg` must only be used on a `va_list` that has been initialized
+    A `cir.va_arg` must only be used on a `va_list` that has been initialized
     with `cir.va.start` and not yet finalized by `cir.va.end`. The semantics
     (including alignment and promotion rules) follow the platform ABI; the
     frontend is responsible for providing a `va_list` pointer that matches the
     target representation.
-
-    Unless replaced by LoweringPrepare for the chosen target ABI this maps to
-    LLVM's `va_arg` instruction, yielding a value of the requested result type
-    and updating the underlying `va_list` pointer.
 
     Example:
     ```mlir
@@ -3727,7 +3723,7 @@ def CIR_VAArgOp : CIR_Op<"va.arg"> {
     cir.va.start %p : !cir.ptr<!rec___va_list_tag>
 
     // Fetch an `int` from the vararg list.
-    %v = cir.va.arg %p : (!cir.ptr<!rec___va_list_tag>) -> !s32i
+    %v = cir.va_arg %p : (!cir.ptr<!rec___va_list_tag>) -> !s32i
 
     cir.va.end %p : !cir.ptr<!rec___va_list_tag>
     ```
