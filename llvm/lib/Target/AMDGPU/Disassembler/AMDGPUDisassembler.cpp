@@ -598,6 +598,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
+    if (isGFX1250() && Bytes.size() >= 16) {
+      DecoderUInt128 DecW = eat16Bytes(Bytes);
+      if (tryDecodeInst(DecoderTableGFX1250128, MI, DecW, Address, CS))
+        break;
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
+
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
@@ -1907,6 +1914,8 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
     return isGFX11Plus() ? createRegOperand(M0) : createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
+  case 230: return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
+  case 231: return createRegOperand(SRC_FLAT_SCRATCH_BASE_HI);
   case 235: return createRegOperand(SRC_SHARED_BASE_LO);
   case 236: return createRegOperand(SRC_SHARED_LIMIT_LO);
   case 237: return createRegOperand(SRC_PRIVATE_BASE_LO);
@@ -1940,6 +1949,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
       return createRegOperand(SGPR_NULL);
     break;
   case 126: return createRegOperand(EXEC);
+  case 230: return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
   case 237: return createRegOperand(SRC_PRIVATE_BASE);
@@ -2556,6 +2566,9 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
+    if (isGFX1250())
+      PRINT_DIRECTIVE(".amdhsa_uses_cu_stores",
+                      KERNEL_CODE_PROPERTY_USES_CU_STORES);
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0)
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,

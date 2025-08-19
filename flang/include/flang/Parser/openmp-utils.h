@@ -68,14 +68,17 @@ struct DirectiveNameScope {
     return MakeName(x.source, llvm::omp::Directive::OMPD_nothing);
   }
 
-  static OmpDirectiveName GetOmpDirectiveName(const OmpBeginBlockDirective &x) {
-    auto &dir{std::get<OmpBlockDirective>(x.t)};
-    return MakeName(dir.source, dir.v);
-  }
-
   static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
     auto &dir{std::get<OmpLoopDirective>(x.t)};
     return MakeName(dir.source, dir.v);
+  }
+
+  static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {
+    if (auto &spec{std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
+      return spec->DirName();
+    } else {
+      return MakeName({}, llvm::omp::Directive::OMPD_section);
+    }
   }
 
   static OmpDirectiveName GetOmpDirectiveName(
@@ -92,16 +95,15 @@ struct DirectiveNameScope {
           std::is_same_v<T, OpenMPDepobjConstruct> ||
           std::is_same_v<T, OpenMPFlushConstruct> ||
           std::is_same_v<T, OpenMPInteropConstruct> ||
-          std::is_same_v<T, OpenMPSimpleStandaloneConstruct>) {
+          std::is_same_v<T, OpenMPSimpleStandaloneConstruct> ||
+          std::is_same_v<T, OpenMPGroupprivate>) {
         return x.v.DirName();
       } else {
         return GetOmpDirectiveName(x.v);
       }
     } else if constexpr (TupleTrait<T>) {
-      if constexpr (std::is_same_v<T, OpenMPAllocatorsConstruct> ||
-          std::is_same_v<T, OpenMPAtomicConstruct> ||
-          std::is_same_v<T, OpenMPDispatchConstruct>) {
-        return std::get<OmpDirectiveSpecification>(x.t).DirName();
+      if constexpr (std::is_base_of_v<OmpBlockConstruct, T>) {
+        return std::get<OmpBeginDirective>(x.t).DirName();
       } else if constexpr (std::is_same_v<T, OmpAssumeDirective> ||
           std::is_same_v<T, OmpCriticalDirective> ||
           std::is_same_v<T, OmpDeclareVariantDirective> ||

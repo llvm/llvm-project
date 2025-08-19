@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ====================================================
 Extra Clang Tools |release| |ReleaseNotesTitle|
 ====================================================
@@ -101,18 +104,44 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- :program:`clang-tidy` no longer attemps to analyze code from system headers
+  by default, greatly improving performance. This behavior is disabled if the
+  `SystemHeaders` option is enabled.
+
 - The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
 
+- Improved :program:`run-clang-tidy.py` by adding a new option
+  `enable-check-profile` to enable per-check timing profiles and print a
+  report based on all analyzed files.
+
+- Improved documentation of the `-line-filter` command-line flag of
+  :program:`clang-tidy` and :program:`run-clang-tidy.py`.
+
+- Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
+  count messages.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
+
+- New :doc:`misc-override-with-different-visibility
+  <clang-tidy/checks/misc/override-with-different-visibility>` check.
+
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -124,14 +153,32 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
+  false positive from analysis of a conditional expression in C.
+
+- Improved :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
+  declarations in system headers.
+
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
+
+- Improved :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
+  positive when enums or unions from system header files or the ``std``
+  namespace are treated as the tag or the data part of a user-defined
+  tagged union respectively.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
+  avoid false positives on inherited members in class templates.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
@@ -150,9 +197,25 @@ Changes in existing checks
   when the format string is converted to a different type by an implicit
   constructor call.
 
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
+  the type of the diagnosed variable.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` by printing
+  the type of the diagnosed variable.
+
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check by correctly
+  generating fix-it hints when size method is called from implicit ``this``.
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check by ignoring
+  declarations in system headers.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

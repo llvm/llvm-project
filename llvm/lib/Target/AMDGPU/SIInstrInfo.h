@@ -996,6 +996,11 @@ public:
 
   bool isBarrier(unsigned Opcode) const {
     return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
+           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
+           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
@@ -1051,7 +1056,7 @@ public:
     }
   }
 
-  bool isWaitcnt(unsigned Opcode) const {
+  static bool isWaitcnt(unsigned Opcode) {
     switch (getNonSoftWaitcntOpcode(Opcode)) {
     case AMDGPU::S_WAITCNT:
     case AMDGPU::S_WAITCNT_VSCNT:
@@ -1287,6 +1292,19 @@ public:
                          const MachineOperand &MO) const;
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
+
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
+  /// instructions. Packed math FP32 instructions typically accept SGPRs or
+  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
+  /// HW can only read the first SGPR and use it for both the low and high
+  /// operations.
+  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
+  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
+  /// be used.
+  bool isLegalGFX12PlusPackedMathFP32Operand(
+      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
+      const MachineOperand *MO = nullptr) const;
+
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -1389,8 +1407,8 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  unsigned isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  unsigned isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

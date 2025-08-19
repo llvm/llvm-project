@@ -795,9 +795,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
-  return OpenACCPrivateClause::Create(Ctx, Clause.getBeginLoc(),
-                                      Clause.getLParenLoc(),
-                                      Clause.getVarList(), Clause.getEndLoc());
+  llvm::SmallVector<VarDecl *> InitRecipes;
+
+  // Assemble the recipes list.
+  for (const Expr *VarExpr : Clause.getVarList())
+    InitRecipes.push_back(
+        SemaRef.CreateInitRecipe(OpenACCClauseKind::Private, VarExpr).first);
+
+  return OpenACCPrivateClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
+      InitRecipes, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
@@ -806,9 +813,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  llvm::SmallVector<OpenACCFirstPrivateRecipe> InitRecipes;
+
+  // Assemble the recipes list.
+  for (const Expr *VarExpr : Clause.getVarList())
+    InitRecipes.push_back(
+        SemaRef.CreateInitRecipe(OpenACCClauseKind::FirstPrivate, VarExpr));
+
   return OpenACCFirstPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
-      Clause.getEndLoc());
+      InitRecipes, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNoCreateClause(
@@ -1040,13 +1054,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  // Based on discussions, having more than 1 'architecture' on a 'set' is
-  // nonsensical, so we're going to fix the standard to reflect this.  Implement
-  // the limitation, since the Dialect requires this.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+  // OpenACC Pull #550 (https://github.com/OpenACC/openacc-spec/pull/550)
+  // clarified that Init, Shutdown, and Set only support a single architecture.
+  // Though the dialect only requires it for 'set' as far as we know, we'll just
+  // implement all 3 here.
+  if ((Clause.getDirectiveKind() == OpenACCDirectiveKind::Init ||
+       Clause.getDirectiveKind() == OpenACCDirectiveKind::Shutdown ||
+       Clause.getDirectiveKind() == OpenACCDirectiveKind::Set) &&
       Clause.getDeviceTypeArchitectures().size() > 1) {
     SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].getLoc(),
-                 diag::err_acc_device_type_multiple_archs);
+                 diag::err_acc_device_type_multiple_archs)
+        << Clause.getDirectiveKind();
     return nullptr;
   }
 
@@ -1756,18 +1774,27 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   }
 
   SmallVector<Expr *> ValidVars;
+  SmallVector<OpenACCReductionRecipe> Recipes;
 
   for (Expr *Var : Clause.getVarList()) {
     ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
                                                Clause.getReductionOp(), Var);
 
-    if (Res.isUsable())
+    if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
+
+      VarDecl *InitRecipe =
+          SemaRef.CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
+              .first;
+      // TODO: OpenACC: Create the reduction operation recipe here too.
+      Recipes.push_back({InitRecipe});
+    }
   }
 
   return SemaRef.CheckReductionClause(
       ExistingClauses, Clause.getDirectiveKind(), Clause.getBeginLoc(),
       Clause.getLParenLoc(), Clause.getReductionOp(), ValidVars,
+      Recipes,
       Clause.getEndLoc());
 }
 
@@ -2140,7 +2167,8 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-    ArrayRef<Expr *> Vars, SourceLocation EndLoc) {
+    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+    SourceLocation EndLoc) {
   if (DirectiveKind == OpenACCDirectiveKind::Loop ||
       isOpenACCCombinedDirectiveKind(DirectiveKind)) {
     // OpenACC 3.3 2.9.11: A reduction clause may not appear on a loop directive
@@ -2169,7 +2197,7 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
   }
 
   auto *Ret = OpenACCReductionClause::Create(
-      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, EndLoc);
+      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, Recipes, EndLoc);
   return Ret;
 }
 

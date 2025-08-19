@@ -29,7 +29,7 @@ class DeadBlock;
 class Pointer;
 class Context;
 template <unsigned A, bool B> class Integral;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 class Pointer;
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
@@ -39,6 +39,10 @@ struct BlockPointer {
   Block *Pointee;
   /// Start of the current subfield.
   unsigned Base;
+  /// Previous link in the pointer chain.
+  Pointer *Prev;
+  /// Next link in the pointer chain.
+  Pointer *Next;
 };
 
 struct IntPointer {
@@ -278,7 +282,7 @@ public:
   bool isLive() const {
     if (!isBlockPointer())
       return true;
-    return asBlockPointer().Pointee && !asBlockPointer().Pointee->IsDead;
+    return asBlockPointer().Pointee && !asBlockPointer().Pointee->isDead();
   }
   /// Checks if the item is a field in an object.
   bool isField() const {
@@ -564,10 +568,9 @@ public:
     if (!isBlockPointer())
       return false;
 
-    if (!asBlockPointer().Pointee)
-      return false;
-
-    return getDeclDesc()->isDummy();
+    if (const Block *Pointee = asBlockPointer().Pointee)
+      return Pointee->isDummy();
+    return false;
   }
 
   /// Checks if an object or a subfield is mutable.
@@ -590,7 +593,7 @@ public:
   }
 
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const {
+  UnsignedOrNone getDeclID() const {
     if (isBlockPointer()) {
       assert(asBlockPointer().Pointee);
       return asBlockPointer().Pointee->getDeclID();
@@ -725,6 +728,10 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialize all elements of a primitive array at once. This can be
+  /// used in situations where we *know* we have initialized *all* elements
+  /// of a primtive array.
+  void initializeAllElements() const;
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
@@ -797,6 +804,7 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
+  friend class Program;
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
@@ -828,15 +836,10 @@ private:
   /// Offset into the storage.
   uint64_t Offset = 0;
 
-  /// Previous link in the pointer chain.
-  Pointer *Prev = nullptr;
-  /// Next link in the pointer chain.
-  Pointer *Next = nullptr;
-
   Storage StorageKind = Storage::Int;
   union {
-    BlockPointer BS;
     IntPointer Int;
+    BlockPointer BS;
     FunctionPointer Fn;
     TypeidPointer Typeid;
   } PointeeStorage;

@@ -1170,6 +1170,16 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    Changed = true;
+  }
+
   if (Pos == Position::AFTER)
     --MI;
 
@@ -2078,6 +2088,16 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    Changed = true;
+  }
+
   if (VSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
@@ -2564,7 +2584,9 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
 
   // GFX12.5 only: Require SCOPE_SE on stores that may hit the scratch address
   // space.
-  if (TII->mayAccessScratchThroughFlat(MI) && Scope == CPol::SCOPE_CU)
+  // We also require SCOPE_SE minimum if we not have the "cu-stores" feature.
+  if (Scope == CPol::SCOPE_CU &&
+      (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(MI)))
     return setScope(MI, CPol::SCOPE_SE);
 
   return false;

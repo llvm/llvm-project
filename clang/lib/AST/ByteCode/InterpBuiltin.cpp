@@ -276,7 +276,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, StrPtr, AK_Read))
     return false;
 
-  if (!CheckDummy(S, OpPC, StrPtr, AK_Read))
+  if (!CheckDummy(S, OpPC, StrPtr.block(), AK_Read))
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
@@ -459,12 +459,13 @@ static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame, bool CheckSign,
                                   const CallExpr *Call) {
   const Floating &Arg = S.Stk.pop<Floating>();
-  bool IsInf = Arg.isInf();
+  APFloat F = Arg.getAPFloat();
+  bool IsInf = F.isInfinity();
 
   if (CheckSign)
-    pushInteger(S, IsInf ? (Arg.isNegative() ? -1 : 1) : 0, Call->getType());
+    pushInteger(S, IsInf ? (F.isNegative() ? -1 : 1) : 0, Call->getType());
   else
-    pushInteger(S, Arg.isInf(), Call->getType());
+    pushInteger(S, IsInf, Call->getType());
   return true;
 }
 
@@ -597,6 +598,17 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static inline Floating abs(InterpState &S, const Floating &In) {
+  if (!In.isNegative())
+    return In;
+
+  Floating Output = S.allocFloat(In.getSemantics());
+  APFloat New = In.getAPFloat();
+  New.changeSign();
+  Output.copy(New);
+  return Output;
+}
+
 // The C standard says "fabs raises no floating-point exceptions,
 // even if x is a signaling NaN. The returned value is independent of
 // the current rounding direction mode."  Therefore constant folding can
@@ -605,16 +617,7 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame) {
   const Floating &Val = S.Stk.pop<Floating>();
-  APFloat F = Val.getAPFloat();
-  if (!F.isNegative()) {
-    S.Stk.push<Floating>(Val);
-    return true;
-  }
-
-  Floating Result = S.allocFloat(Val.getSemantics());
-  F.changeSign();
-  Result.copy(F);
-  S.Stk.push<Floating>(Result);
+  S.Stk.push<Floating>(abs(S, Val));
   return true;
 }
 
@@ -1099,10 +1102,8 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
   Pointer &Result = S.Stk.peek<Pointer>();
 
   Result.elem<Floating>(0) = Arg1;
-  Result.atIndex(0).initialize();
   Result.elem<Floating>(1) = Arg2;
-  Result.atIndex(1).initialize();
-  Result.initialize();
+  Result.initializeAllElements();
 
   return true;
 }
@@ -1546,8 +1547,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Composite arrays
   if (IsArray) {
     const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
-                             IsArray ? std::nullopt : Descriptor::InlineDescMD);
+        S.P.createDescriptor(NewCall, ElemType.getTypePtr(), std::nullopt);
     Block *B =
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
@@ -1560,9 +1560,8 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   QualType AllocType = S.getASTContext().getConstantArrayType(
       ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
 
-  const Descriptor *Desc =
-      S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
-                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
+  const Descriptor *Desc = S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
+                                                Descriptor::InlineDescMD);
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
@@ -1689,6 +1688,57 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_elementwise_abs(InterpState &S, CodePtr OpPC,
+                                            const InterpFrame *Frame,
+                                            const CallExpr *Call,
+                                            unsigned BuiltinID) {
+  assert(Call->getNumArgs() == 1);
+  QualType Ty = Call->getArg(0)->getType();
+  if (Ty->isIntegerType()) {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    APSInt Val = popToAPSInt(S.Stk, ArgT);
+
+    pushInteger(S, Val.abs(), Call->getType());
+    return true;
+  }
+
+  if (Ty->isFloatingType()) {
+    Floating Val = S.Stk.pop<Floating>();
+    Floating Result = abs(S, Val);
+    S.Stk.push<Floating>(Result);
+    return true;
+  }
+
+  // Otherwise, the argument must be a vector.
+  assert(Call->getArg(0)->getType()->isVectorType());
+  const Pointer &Arg = S.Stk.pop<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+  // we can either have a vector of integer or a vector of floating point
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (ElemType->isIntegerType()) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = T::from(static_cast<T>(
+            APSInt(Arg.elem<T>(I).toAPSInt().abs(),
+                   ElemType->isUnsignedIntegerOrEnumerationType())));
+      });
+    } else {
+      Floating Val = Arg.elem<Floating>(I);
+      Dst.elem<Floating>(I) = abs(S, Val);
+    }
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 /// Can be called with an integer or vector as the first and only parameter.
 static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
                                                  const InterpFrame *Frame,
@@ -1728,9 +1778,9 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
         Dst.elem<T>(I) =
             T::from(Arg.elem<T>(I).toAPSInt().reverseBits().getZExtValue());
       }
-      Dst.atIndex(I).initialize();
     });
   }
+  Dst.initializeAllElements();
 
   return true;
 }
@@ -1786,7 +1836,27 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
 
+  if (DestPtr.getType()->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DestPtr.getType();
+    return false;
+  }
+  if (SrcPtr.getType()->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << SrcPtr.getType();
+    return false;
+  }
+
   QualType DestElemType = getElemType(DestPtr);
+  if (DestElemType->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DestElemType;
+    return false;
+  }
+
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
     RemainingDestElems = DestPtr.isUnknownSizeArray()
@@ -1825,16 +1895,6 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (!ASTCtx.hasSameUnqualifiedType(DestElemType, SrcElemType)) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_type_pun)
         << Move << SrcElemType << DestElemType;
-    return false;
-  }
-
-  if (DestElemType->isIncompleteType() ||
-      DestPtr.getType()->isIncompleteType()) {
-    QualType DiagType =
-        DestElemType->isIncompleteType() ? DestElemType : DestPtr.getType();
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_memcpy_incomplete_type)
-        << Move << DiagType;
     return false;
   }
 
@@ -2026,8 +2086,13 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     return true;
   }
 
-  if (Ptr.isDummy())
+  if (Ptr.isDummy()) {
+    if (Ptr.getType()->isIncompleteType())
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_ltor_incomplete_type)
+          << Ptr.getType();
     return false;
+  }
 
   // Null is only okay if the given size is 0.
   if (Ptr.isZero()) {
@@ -2105,29 +2170,32 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static unsigned computeFullDescSize(const ASTContext &ASTCtx,
-                                    const Descriptor *Desc) {
-
+static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
+                                                   const Descriptor *Desc) {
   if (Desc->isPrimitive())
     return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
   if (Desc->isArray())
     return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
            Desc->getNumElems();
+  if (Desc->isRecord()) {
+    // Can't use Descriptor::getType() as that may return a pointer type. Look
+    // at the decl directly.
+    return ASTCtx
+        .getTypeSizeInChars(
+            ASTCtx.getCanonicalTagType(Desc->ElemRecord->getDecl()))
+        .getQuantity();
+  }
 
-  if (Desc->isRecord())
-    return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
-  llvm_unreachable("Unhandled descriptor type");
-  return 0;
+  return std::nullopt;
 }
 
+/// Compute the byte offset of \p Ptr in the full declaration.
 static unsigned computePointerOffset(const ASTContext &ASTCtx,
                                      const Pointer &Ptr) {
   unsigned Result = 0;
 
   Pointer P = Ptr;
-  while (P.isArrayElement() || P.isField()) {
+  while (P.isField() || P.isArrayElement()) {
     P = P.expand();
     const Descriptor *D = P.getFieldDesc();
 
@@ -2140,7 +2208,6 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
         Result += ElemSize * P.getIndex();
       P = P.expand().getArray();
     } else if (P.isBaseClass()) {
-
       const auto *RD = cast<CXXRecordDecl>(D->asDecl());
       bool IsVirtual = Ptr.isVirtualBaseClass();
       P = P.getBase();
@@ -2169,30 +2236,136 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
   return Result;
 }
 
+/// Does Ptr point to the last subobject?
+static bool pointsToLastObject(const Pointer &Ptr) {
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+
+    if (P.isArrayElement()) {
+      P = P.expand().getArray();
+      continue;
+    }
+    if (P.isBaseClass()) {
+      if (P.getRecord()->getNumFields() > 0)
+        return false;
+      P = P.getBase();
+      continue;
+    }
+
+    Pointer Base = P.getBase();
+    if (const Record *R = Base.getRecord()) {
+      assert(P.getField());
+      if (P.getField()->getFieldIndex() != R->getNumFields() - 1)
+        return false;
+    }
+    P = Base;
+  }
+
+  return true;
+}
+
+/// Does Ptr point to the last object AND to a flexible array member?
+static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
+  auto isFlexibleArrayMember = [&](const Descriptor *FieldDesc) {
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+    FAMKind StrictFlexArraysLevel =
+        Ctx.getLangOpts().getStrictFlexArraysLevel();
+
+    if (StrictFlexArraysLevel == FAMKind::Default)
+      return true;
+
+    unsigned NumElems = FieldDesc->getNumElems();
+    if (NumElems == 0 && StrictFlexArraysLevel != FAMKind::IncompleteOnly)
+      return true;
+
+    if (NumElems == 1 && StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete)
+      return true;
+    return false;
+  };
+
+  const Descriptor *FieldDesc = Ptr.getFieldDesc();
+  if (!FieldDesc->isArray())
+    return false;
+
+  return Ptr.isDummy() && pointsToLastObject(Ptr) &&
+         isFlexibleArrayMember(FieldDesc);
+}
+
 static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
                                         const CallExpr *Call) {
+  const ASTContext &ASTCtx = S.getASTContext();
   PrimType KindT = *S.getContext().classify(Call->getArg(1));
-  [[maybe_unused]] unsigned Kind = popToAPSInt(S.Stk, KindT).getZExtValue();
-
+  // From the GCC docs:
+  // Kind is an integer constant from 0 to 3. If the least significant bit is
+  // clear, objects are whole variables. If it is set, a closest surrounding
+  // subobject is considered the object a pointer points to. The second bit
+  // determines if maximum or minimum of remaining bytes is computed.
+  unsigned Kind = popToAPSInt(S.Stk, KindT).getZExtValue();
   assert(Kind <= 3 && "unexpected kind");
-
+  bool UseFieldDesc = (Kind & 1u);
+  bool ReportMinimum = (Kind & 2u);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isZero())
+  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
+    // "If there are any side effects in them, it returns (size_t) -1
+    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
+    pushInteger(S, Kind <= 1 ? -1 : 0, Call->getType());
+    return true;
+  }
+
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
     return false;
 
+  // We can't load through pointers.
+  if (Ptr.isDummy() && Ptr.getType()->isPointerType())
+    return false;
+
+  bool DetermineForCompleteObject = Ptr.getFieldDesc() == Ptr.getDeclDesc();
   const Descriptor *DeclDesc = Ptr.getDeclDesc();
-  if (!DeclDesc)
+  assert(DeclDesc);
+
+  if (!UseFieldDesc || DetermineForCompleteObject) {
+    // Lower bound, so we can't fall back to this.
+    if (ReportMinimum && !DetermineForCompleteObject)
+      return false;
+
+    // Can't read beyond the pointer decl desc.
+    if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
+      return false;
+  } else {
+    if (isUserWritingOffTheEnd(ASTCtx, Ptr.expand())) {
+      // If we cannot determine the size of the initial allocation, then we
+      // can't given an accurate upper-bound. However, we are still able to give
+      // conservative lower-bounds for Type=3.
+      if (Kind == 1)
+        return false;
+    }
+  }
+
+  const Descriptor *Desc = UseFieldDesc ? Ptr.getFieldDesc() : DeclDesc;
+  assert(Desc);
+
+  std::optional<unsigned> FullSize = computeFullDescSize(ASTCtx, Desc);
+  if (!FullSize)
     return false;
 
-  const ASTContext &ASTCtx = S.getASTContext();
+  unsigned ByteOffset;
+  if (UseFieldDesc) {
+    if (Ptr.isBaseClass())
+      ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
+                   computePointerOffset(ASTCtx, Ptr);
+    else
+      ByteOffset =
+          computePointerOffset(ASTCtx, Ptr) -
+          computePointerOffset(ASTCtx, Ptr.expand().atIndex(0).narrow());
+  } else
+    ByteOffset = computePointerOffset(ASTCtx, Ptr);
 
-  unsigned ByteOffset = computePointerOffset(ASTCtx, Ptr);
-  unsigned FullSize = computeFullDescSize(ASTCtx, DeclDesc);
+  assert(ByteOffset <= *FullSize);
+  unsigned Result = *FullSize - ByteOffset;
 
-  pushInteger(S, FullSize - ByteOffset, Call->getType());
-
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 
@@ -2234,7 +2407,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckMutable(S, OpPC, Ptr))
       return false;
-    if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+    if (!CheckDummy(S, OpPC, Ptr.block(), AK_Read))
       return false;
   }
 
@@ -2255,7 +2428,6 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
                                             const CallExpr *Call,
                                             unsigned BuiltinID) {
-  Call->dumpColor();
   assert(Call->getNumArgs() == 2);
 
   // Single integer case.
@@ -2270,6 +2442,97 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
       Result = LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
     } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
       Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+    } else {
+      llvm_unreachable("Wrong builtin ID");
+    }
+
+    pushInteger(S, APSInt(std::move(Result), !LHS.isSigned()), Call->getType());
+    return true;
+  }
+
+  // Vector case.
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
+  assert(VT->getNumElements() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
+  assert(VT->getElementType()->isIntegralOrEnumerationType());
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APSInt Elem1;
+    APSInt Elem2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Elem1 = LHS.elem<T>(I).toAPSInt();
+      Elem2 = RHS.elem<T>(I).toAPSInt();
+    });
+
+    APSInt Result;
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_elementwise_add_sat:
+      Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
+                                       : Elem1.uadd_sat(Elem2),
+                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+      break;
+    case Builtin::BI__builtin_elementwise_sub_sat:
+      Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
+                                       : Elem1.usub_sat(Elem2),
+                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+      break;
+    case clang::X86::BI__builtin_ia32_pmulhuw128:
+    case clang::X86::BI__builtin_ia32_pmulhuw256:
+    case clang::X86::BI__builtin_ia32_pmulhuw512:
+      Result = APSInt(llvm::APIntOps::mulhu(Elem1, Elem2),
+                      /*isUnsigned=*/true);
+      break;
+    case clang::X86::BI__builtin_ia32_pmulhw128:
+    case clang::X86::BI__builtin_ia32_pmulhw256:
+    case clang::X86::BI__builtin_ia32_pmulhw512:
+      Result = APSInt(llvm::APIntOps::mulhs(Elem1, Elem2),
+                      /*isUnsigned=*/false);
+      break;
+    default:
+      llvm_unreachable("Wrong builtin ID");
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call,
+                                               unsigned BuiltinID) {
+  assert(Call->getNumArgs() == 2);
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+
+  // TODO: Support floating-point types.
+  if (!(Arg0Type->isIntegerType() ||
+        (Arg0Type->isVectorType() &&
+         Arg0Type->castAs<VectorType>()->getElementType()->isIntegerType())))
+    return false;
+
+  if (!Arg0Type->isVectorType()) {
+    assert(!Call->getArg(1)->getType()->isVectorType());
+    APSInt RHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
+    APSInt LHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
+    APInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+      Result = std::max(LHS, RHS);
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+      Result = std::min(LHS, RHS);
     } else {
       llvm_unreachable("Wrong builtin ID");
     }
@@ -2302,25 +2565,65 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
     });
 
     APSInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
-      Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
-                                       : Elem1.uadd_sat(Elem2),
+    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+      Result = APSInt(std::max(Elem1, Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
-      Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
-                                       : Elem1.usub_sat(Elem2),
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+      Result = APSInt(std::min(Elem1, Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
     } else {
       llvm_unreachable("Wrong builtin ID");
     }
 
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call,
+                                      unsigned BuiltinID) {
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned SourceLen = VT->getNumElements();
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(SourceLen / 2);
+
+  for (unsigned I = 0; I != SourceLen; I += 2) {
+    APSInt Elem1;
+    APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      const Pointer &E = Dst.atIndex(I);
-      E.deref<T>() = static_cast<T>(Result);
-      E.initialize();
+      Elem1 = LHS.elem<T>(I).toAPSInt();
+      Elem2 = RHS.elem<T>(I).toAPSInt();
     });
+
+    APSInt Result;
+    switch (BuiltinID) {
+    case clang::X86::BI__builtin_ia32_pmuludq128:
+    case clang::X86::BI__builtin_ia32_pmuludq256:
+    case clang::X86::BI__builtin_ia32_pmuludq512:
+      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2), true);
+      break;
+    case clang::X86::BI__builtin_ia32_pmuldq128:
+    case clang::X86::BI__builtin_ia32_pmuldq256:
+    case clang::X86::BI__builtin_ia32_pmuldq512:
+      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2), false);
+      break;
+    }
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
 
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -2691,6 +2994,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_popcount(S, OpPC, Frame, Call,
                                                 BuiltinID);
 
+  case Builtin::BI__builtin_elementwise_abs:
+    return interp__builtin_elementwise_abs(S, OpPC, Frame, Call, BuiltinID);
+
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_wmemcpy:
@@ -2729,7 +3035,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
+  case clang::X86::BI__builtin_ia32_pmulhuw128:
+  case clang::X86::BI__builtin_ia32_pmulhuw256:
+  case clang::X86::BI__builtin_ia32_pmulhuw512:
+  case clang::X86::BI__builtin_ia32_pmulhw128:
+  case clang::X86::BI__builtin_ia32_pmulhw256:
+  case clang::X86::BI__builtin_ia32_pmulhw512:
     return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
+
+  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_min:
+    return interp__builtin_elementwise_maxmin(S, OpPC, Call, BuiltinID);
+
+  case clang::X86::BI__builtin_ia32_pmuldq128:
+  case clang::X86::BI__builtin_ia32_pmuldq256:
+  case clang::X86::BI__builtin_ia32_pmuldq512:
+  case clang::X86::BI__builtin_ia32_pmuludq128:
+  case clang::X86::BI__builtin_ia32_pmuludq256:
+    return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
@@ -2758,7 +3081,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return false;
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
@@ -2791,7 +3114,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return false;
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
@@ -2803,7 +3126,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
         return false;
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
+      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
+          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
       break;
     }
     case OffsetOfNode::Identifier:

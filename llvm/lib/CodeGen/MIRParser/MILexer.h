@@ -78,6 +78,7 @@ struct MIToken {
     kw_nneg,
     kw_disjoint,
     kw_samesign,
+    kw_inbounds,
     kw_debug_location,
     kw_debug_instr_number,
     kw_dbg_instr_ref,

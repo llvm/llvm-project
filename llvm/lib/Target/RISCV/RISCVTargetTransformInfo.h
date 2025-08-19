@@ -114,6 +114,9 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+    return ST->hasVInstructions();
+  }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
@@ -240,6 +243,11 @@ public:
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
 
+  InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
@@ -265,7 +273,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalLoadStoreElementTypeForRVV(ElemType);
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
@@ -297,7 +305,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalLoadStoreElementTypeForRVV(ElemType);
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override {
@@ -397,6 +405,10 @@ public:
   }
 
   bool enableInterleavedAccessVectorization() const override { return true; }
+
+  bool enableMaskedInterleavedAccessVectorization() const override {
+    return ST->hasVInstructions();
+  }
 
   unsigned getMinTripCountTailFoldingThreshold() const override;
 

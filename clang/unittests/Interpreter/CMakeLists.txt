@@ -1,3 +1,34 @@
+if(EMSCRIPTEN)
+set(LLVM_COMPONENTS_TO_LINK
+  ""
+  )
+set(LLVM_LIBS_TO_LINK
+  ""
+  )
+set(CLANG_LIBS_TO_LINK
+  clangInterpreter
+  )
+else()
+set(LLVM_COMPONENTS_TO_LINK
+  ${LLVM_TARGETS_TO_BUILD}
+  Core
+  MC
+  OrcJIT
+  Support
+  TargetParser
+  )
+set(LLVM_LIBS_TO_LINK
+  LLVMTestingSupport
+  )
+set(CLANG_LIBS_TO_LINK
+  clangAST
+  clangBasic
+  clangInterpreter
+  clangFrontend
+  clangSema
+  )
+endif()
+
 add_distinct_clang_unittest(ClangReplInterpreterTests
   IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
@@ -8,23 +39,32 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   EXPORT_SYMBOLS
 
   CLANG_LIBS
-  clangAST
-  clangBasic
-  clangInterpreter
-  clangFrontend
-  clangSema
+  ${CLANG_LIBS_TO_LINK}
 
   LINK_LIBS
-  LLVMTestingSupport
+  ${LLVM_LIBS_TO_LINK}
 
   LLVM_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
-  Core
-  MC
-  OrcJIT
-  Support
-  TargetParser
+  ${LLVM_COMPONENTS_TO_LINK}
   )
+
+if(EMSCRIPTEN)
+# Without the above you try to link to LLVMSupport twice, and end
+# up with a duplicate symbol error when creating the main module
+get_target_property(LINKED_LIBS ClangReplInterpreterTests LINK_LIBRARIES)
+list(REMOVE_ITEM LINKED_LIBS LLVMSupport)
+set_target_properties(ClangReplInterpreterTests PROPERTIES LINK_LIBRARIES "${LINKED_LIBS}")
+target_link_options(ClangReplInterpreterTests
+  PUBLIC "SHELL: -s MAIN_MODULE=1"
+  PUBLIC "SHELL: -s ALLOW_MEMORY_GROWTH=1"
+  PUBLIC "SHELL: -s STACK_SIZE=32mb"
+  PUBLIC "SHELL: -s INITIAL_MEMORY=128mb"
+  PUBLIC "SHELL: --emrun"
+)
+set_target_properties(ClangReplInterpreterTests PROPERTIES
+  SUFFIX ".html"
+)
+endif()
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
