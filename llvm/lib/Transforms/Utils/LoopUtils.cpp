@@ -868,6 +868,27 @@ static std::optional<unsigned> estimateLoopTripCount(Loop *L) {
 std::optional<unsigned>
 llvm::getLoopEstimatedTripCount(Loop *L,
                                 unsigned *EstimatedLoopInvocationWeight) {
+  // If EstimatedLoopInvocationWeight, we do not support this loop if
+  // getExpectedExitLoopLatchBranch returns nullptr.
+  //
+  // FIXME: Also, this is a stop-gap solution for nested loops.  It avoids
+  // mistaking LLVMLoopEstimatedTripCount metadata to be for an outer loop when
+  // it was created for an inner loop.  The problem is that loop metadata is
+  // attached to the branch instruction in the loop latch block, but that can be
+  // shared by the loops.  The solution is to attach loop metadata to loop
+  // headers instead, but that would be a large change to LLVM.
+  //
+  // Until that happens, we work around the problem as follows.
+  // getExpectedExitLoopLatchBranch (which also guards
+  // setLoopEstimatedTripCount) will not recognize the same latch for both loops
+  // unless the latch exits both loops and has only two successors.  However, to
+  // exit both loops, the latch must have at least three successors: the inner
+  // loop header, the outer loop header (exit for the inner loop), and an exit
+  // for the outer loop.
+  BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
+  if (!ExitingBranch)
+    return std::nullopt;
+
   // If requested, either compute *EstimatedLoopInvocationWeight or return
   // nullopt if cannot.
   //
@@ -875,16 +896,14 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // weights to indicate estimated trip counts, this function will drop the
   // EstimatedLoopInvocationWeight parameter.
   if (EstimatedLoopInvocationWeight) {
-    if (BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L)) {
-      uint64_t LoopWeight = 0, ExitWeight = 0; // Inits expected to be unused.
-      if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
-        return std::nullopt;
-      if (L->contains(ExitingBranch->getSuccessor(1)))
-        std::swap(LoopWeight, ExitWeight);
-      if (!ExitWeight)
-        return std::nullopt;
-      *EstimatedLoopInvocationWeight = ExitWeight;
-    }
+    uint64_t LoopWeight = 0, ExitWeight = 0; // Inits expected to be unused.
+    if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
+      return std::nullopt;
+    if (L->contains(ExitingBranch->getSuccessor(1)))
+      std::swap(LoopWeight, ExitWeight);
+    if (!ExitWeight)
+      return std::nullopt;
+    *EstimatedLoopInvocationWeight = ExitWeight;
   }
 
   // Return the estimated trip count from metadata unless the metadata is
@@ -903,6 +922,15 @@ llvm::getLoopEstimatedTripCount(Loop *L,
 bool llvm::setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
     std::optional<unsigned> EstimatedloopInvocationWeight) {
+  // If EstimatedLoopInvocationWeight, we do not support this loop if
+  // getExpectedExitLoopLatchBranch returns nullptr.
+  //
+  // FIXME: See comments in getLoopEstimatedTripCount for why this is required
+  // here regardless of EstimatedLoopInvocationWeight.
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+
   // Set the metadata.
   addStringMetadataToLoop(L, LLVMLoopEstimatedTripCount, EstimatedTripCount);
 
@@ -915,7 +943,6 @@ bool llvm::setLoopEstimatedTripCount(
   // here at all.
   if (!EstimatedloopInvocationWeight)
     return true;
-  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
 
