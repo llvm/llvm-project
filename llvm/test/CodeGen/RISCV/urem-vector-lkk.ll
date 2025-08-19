@@ -778,9 +778,8 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
   ret <4 x i16> %1
 }
 
-; Don't fold i64 urem.
-define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
-; RV32I-LABEL: dont_fold_urem_i64:
+define <4 x i64> @fold_urem_i64(<4 x i64> %x) nounwind {
+; RV32I-LABEL: fold_urem_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -48
 ; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
@@ -850,7 +849,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 48
 ; RV32I-NEXT:    ret
 ;
-; RV32IM-LABEL: dont_fold_urem_i64:
+; RV32IM-LABEL: fold_urem_i64:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -48
 ; RV32IM-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
@@ -920,7 +919,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 48
 ; RV32IM-NEXT:    ret
 ;
-; RV64I-LABEL: dont_fold_urem_i64:
+; RV64I-LABEL: fold_urem_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -956,7 +955,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IM-LABEL: dont_fold_urem_i64:
+; RV64IM-LABEL: fold_urem_i64:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    ld a2, 8(a1)
 ; RV64IM-NEXT:    ld a3, 16(a1)
