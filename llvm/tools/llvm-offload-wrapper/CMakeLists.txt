@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BitWriter
+  Core
   Object
   Option
   FrontendOffloading
