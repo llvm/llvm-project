@@ -26,9 +26,9 @@ namespace NVVM {
 enum class PTXRegisterMod {
   /// Read register with no modifier
   Read = 0,
-  /// Read register with '+' modifier
+  /// Read register with '=' modifier
   Write = 2,
-  /// Read register with '=' modifier.
+  /// Read register with '+' modifier.
   /// Note that, this is not natively supported by LLVM, but it is possible to
   /// set read and write for the same operand.
   ReadWrite = 1,
@@ -67,13 +67,17 @@ class PtxBuilder {
   SmallVector<Value> ptxOperands;
   // Register constraints (read, write, readwrite) and register data types
   std::string registerConstraints;
-
+  // Modifiers
+  SmallVector<PTXRegisterMod> registerModifiers;
   bool hasResult = false;
+  bool needsManualMapping = false;
 
 public:
   /// Single constructor that only initializes members.
-  PtxBuilder(Operation *op, PatternRewriter &rewriter)
-      : interfaceOp(op), rewriter(rewriter) {}
+  PtxBuilder(Operation *op, PatternRewriter &rewriter,
+             bool needsManualMapping = false)
+      : interfaceOp(op), rewriter(rewriter),
+        needsManualMapping(needsManualMapping) {}
 
   /// Add an operand with the read/write input type.
   void insertValue(Value v, PTXRegisterMod itype = PTXRegisterMod::Read);
