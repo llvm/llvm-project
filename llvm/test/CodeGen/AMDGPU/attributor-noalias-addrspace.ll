@@ -480,7 +480,7 @@ bb.2.end:
 
 define internal void @callee_no_alias_addr_space_select(ptr %ptr1, ptr %ptr2, ptr %ptr3, i1 %cond1, i1 %cond2, i32 %val) #0 {
 ; CHECK-LABEL: define internal void @callee_no_alias_addr_space_select(
-; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 inreg [[COND1:%.*]], i1 inreg [[COND2:%.*]], i32 inreg [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[PTR4:%.*]] = select i1 [[COND1]], ptr addrspacecast (ptr addrspace(1) @gptr to ptr), ptr addrspacecast (ptr addrspace(4) @gptr2 to ptr)
 ; CHECK-NEXT:    [[PTR5:%.*]] = select i1 [[COND2]], ptr [[PTR4]], ptr addrspacecast (ptr addrspace(3) @gptr3 to ptr)
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[PTR5]], align 4, !noalias.addrspace [[META1:![0-9]+]]
@@ -516,7 +516,7 @@ define internal void @callee_no_alias_addr_space_select(ptr %ptr1, ptr %ptr2, pt
 
 define internal void @callee_alias_addr_space_branch(ptr %ptr1, ptr %ptr2, ptr %ptr3, i1 %cond1, i1 %cond2, i32 %val) #0 {
 ; CHECK-LABEL: define internal void @callee_alias_addr_space_branch(
-; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 inreg [[COND1:%.*]], i1 inreg [[COND2:%.*]], i32 inreg [[VAL:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
 ; CHECK:       [[BB_1_TRUE]]:
 ; CHECK-NEXT:    br label %[[BB_1_END:.*]]
