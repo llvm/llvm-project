@@ -35,7 +35,7 @@ The Basics
 ^^^^^^^^^^^
 
 #. Make sure that your Modules contain both a data layout specification and
-   target triple. Without these pieces, non of the target specific optimization
+   target triple. Without these pieces, non of the target-specific optimization
    will be enabled.  This can have a major effect on the generated code quality.
 
 #. For each function or global emitted, use the most private linkage type

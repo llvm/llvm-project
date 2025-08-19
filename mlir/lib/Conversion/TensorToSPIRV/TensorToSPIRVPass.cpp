@@ -41,6 +41,7 @@ class ConvertTensorToSPIRVPass
 
     SPIRVConversionOptions options;
     options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
+    options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
     RewritePatternSet patterns(context);

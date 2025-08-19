@@ -72,7 +72,7 @@ public:
   /// \}
 
 protected:
-  const MCSymbol *CurSymbol;
+  MCSymbol *CurSymbol;
 
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
 

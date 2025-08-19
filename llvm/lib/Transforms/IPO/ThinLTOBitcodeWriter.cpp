@@ -384,6 +384,10 @@ void splitAndWriteThinLTOBitcode(
   for (auto &F : M)
     if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && HasTypeMetadata(&F))
       CfiFunctions.insert(&F);
+  for (auto &A : M.aliases())
+    if (auto *F = dyn_cast<Function>(A.getAliasee()))
+      if (HasTypeMetadata(F))
+        CfiFunctions.insert(&A);
 
   // Remove all globals with type metadata, globals with comdats that live in
   // MergedM, and aliases pointing to such globals from the thin LTO module.
@@ -403,12 +407,12 @@ void splitAndWriteThinLTOBitcode(
   auto &Ctx = MergedM->getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
-    Function &F = *cast<Function>(V);
+    Function &F = *cast<Function>(V->getAliaseeObject());
     SmallVector<MDNode *, 2> Types;
     F.getMetadata(LLVMContext::MD_type, Types);
 
     SmallVector<Metadata *, 4> Elts;
-    Elts.push_back(MDString::get(Ctx, F.getName()));
+    Elts.push_back(MDString::get(Ctx, V->getName()));
     CfiFunctionLinkage Linkage;
     if (lowertypetests::isJumpTableCanonical(&F))
       Linkage = CFL_Definition;
@@ -428,29 +432,24 @@ void splitAndWriteThinLTOBitcode(
       NMD->addOperand(MD);
   }
 
-  SmallVector<MDNode *, 8> FunctionAliases;
+  MapVector<Function *, std::vector<GlobalAlias *>> FunctionAliases;
   for (auto &A : M.aliases()) {
     if (!isa<Function>(A.getAliasee()))
       continue;
 
     auto *F = cast<Function>(A.getAliasee());
-
-    Metadata *Elts[] = {
-        MDString::get(Ctx, A.getName()),
-        MDString::get(Ctx, F->getName()),
-        ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt8Ty(Ctx), A.getVisibility())),
-        ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt8Ty(Ctx), A.isWeakForLinker())),
-    };
-
-    FunctionAliases.push_back(MDTuple::get(Ctx, Elts));
+    FunctionAliases[F].push_back(&A);
   }
 
   if (!FunctionAliases.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
-    for (auto *MD : FunctionAliases)
-      NMD->addOperand(MD);
+    for (auto &Alias : FunctionAliases) {
+      SmallVector<Metadata *> Elts;
+      Elts.push_back(MDString::get(Ctx, Alias.first->getName()));
+      for (auto *A : Alias.second)
+        Elts.push_back(MDString::get(Ctx, A->getName()));
+      NMD->addOperand(MDTuple::get(Ctx, Elts));
+    }
   }
 
   SmallVector<MDNode *, 8> Symvers;

@@ -6,24 +6,28 @@ llvm-ir2vec - IR2Vec Embedding Generation Tool
 SYNOPSIS
 --------
 
-:program:`llvm-ir2vec` [*options*] *input-file*
+:program:`llvm-ir2vec` [*subcommand*] [*options*]
 
 DESCRIPTION
 -----------
 
 :program:`llvm-ir2vec` is a standalone command-line tool for IR2Vec. It
 generates IR2Vec embeddings for LLVM IR and supports triplet generation 
-for vocabulary training. It provides two main operation modes:
+for vocabulary training. The tool provides three main subcommands:
 
-1. **Triplet Mode**: Generates triplets (opcode, type, operands) for vocabulary
+1. **triplets**: Generates numeric triplets in train2id format for vocabulary
    training from LLVM IR.
 
-2. **Embedding Mode**: Generates IR2Vec embeddings using a trained vocabulary
+2. **entities**: Generates entity mapping files (entity2id.txt) for vocabulary 
+   training.
+
+3. **embeddings**: Generates IR2Vec embeddings using a trained vocabulary
    at different granularity levels (instruction, basic block, or function).
 
 The tool is designed to facilitate machine learning applications that work with
 LLVM IR by converting the IR into numerical representations that can be used by
-ML models.
+ML models. The `triplets` subcommand generates numeric IDs directly instead of string 
+triplets, streamlining the training data preparation workflow.
 
 .. note::
 
@@ -34,94 +38,130 @@ ML models.
 OPERATION MODES
 ---------------
 
-Triplet Generation Mode
-~~~~~~~~~~~~~~~~~~~~~~~
+Triplet Generation and Entity Mapping Modes are used for preparing
+vocabulary and training data for knowledge graph embeddings. The Embedding Mode
+is used for generating embeddings from LLVM IR using a pre-trained vocabulary.
 
-In triplet mode, :program:`llvm-ir2vec` analyzes LLVM IR and extracts triplets
-consisting of opcodes, types, and operands. These triplets can be used to train
-vocabularies for embedding generation.
+The Seed Embedding Vocabulary of IR2Vec is trained on a large corpus of LLVM IR
+by modeling the relationships between opcodes, types, and operands as a knowledge
+graph. For this purpose, Triplet Generation and Entity Mapping Modes generate
+triplets and entity mappings in the standard format used for knowledge graph
+embedding training (see 
+<https://github.com/thunlp/OpenKE/tree/OpenKE-PyTorch?tab=readme-ov-file#data-format> 
+for details).
+
+See `llvm/utils/mlgo-utils/IR2Vec/generateTriplets.py` for more details on how
+these two modes are used to generate the triplets and entity mappings.
+
+Triplet Generation
+~~~~~~~~~~~~~~~~~~
+
+With the `triplets` subcommand, :program:`llvm-ir2vec` analyzes LLVM IR and extracts
+numeric triplets consisting of opcode IDs, type IDs, and operand IDs. These triplets
+are generated in the standard format used for knowledge graph embedding training.
+The tool outputs numeric IDs directly using the ir2vec::Vocabulary mapping
+infrastructure, eliminating the need for string-to-ID preprocessing.
 
 Usage:
 
 .. code-block:: bash
 
-   llvm-ir2vec --mode=triplets input.bc -o triplets.txt
+   llvm-ir2vec triplets input.bc -o triplets_train2id.txt
 
-Embedding Generation Mode
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Entity Mapping Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In embedding mode, :program:`llvm-ir2vec` uses a pre-trained vocabulary to
+With the `entities` subcommand, :program:`llvm-ir2vec` generates the entity mappings
+supported by IR2Vec in the standard format used for knowledge graph embedding
+training. This subcommand outputs all supported entities (opcodes, types, and
+operands) with their corresponding numeric IDs, and is not specific for an
+LLVM IR file.
+
+Usage:
+
+.. code-block:: bash
+
+   llvm-ir2vec entities -o entity2id.txt
+
+Embedding Generation
+~~~~~~~~~~~~~~~~~~~~
+
+With the `embeddings` subcommand, :program:`llvm-ir2vec` uses a pre-trained vocabulary to
 generate numerical embeddings for LLVM IR at different levels of granularity.
 
 Example Usage:
 
 .. code-block:: bash
 
-   llvm-ir2vec --mode=embeddings --ir2vec-vocab-path=vocab.json --level=func input.bc -o embeddings.txt
+   llvm-ir2vec embeddings --ir2vec-vocab-path=vocab.json --level=func input.bc -o embeddings.txt
 
 OPTIONS
 -------
 
-.. option:: --mode=<mode>
-
- Specify the operation mode. Valid values are:
-
- * ``triplets`` - Generate triplets for vocabulary training
- * ``embeddings`` - Generate embeddings using trained vocabulary (default)
-
-.. option:: --level=<level>
-
- Specify the embedding generation level. Valid values are:
-
- * ``inst`` - Generate instruction-level embeddings
- * ``bb`` - Generate basic block-level embeddings  
- * ``func`` - Generate function-level embeddings (default)
-
-.. option:: --function=<name>
-
- Process only the specified function instead of all functions in the module.
-
-.. option:: --ir2vec-vocab-path=<path>
-
- Specify the path to the vocabulary file (required for embedding mode).
- The vocabulary file should be in JSON format and contain the trained
- vocabulary for embedding generation. See `llvm/lib/Analysis/models`
- for pre-trained vocabulary files.
-
-.. option:: --ir2vec-opc-weight=<weight>
-
- Specify the weight for opcode embeddings (default: 1.0). This controls
- the relative importance of instruction opcodes in the final embedding.
-
-.. option:: --ir2vec-type-weight=<weight>
-
- Specify the weight for type embeddings (default: 0.5). This controls
- the relative importance of type information in the final embedding.
-
-.. option:: --ir2vec-arg-weight=<weight>
-
- Specify the weight for argument embeddings (default: 0.2). This controls
- the relative importance of operand information in the final embedding.
+Global options:
 
 .. option:: -o <filename>
 
- Specify the output filename. Use ``-`` to write to standard output (default).
+   Specify the output filename. Use ``-`` to write to standard output (default).
 
 .. option:: --help
 
- Print a summary of command line options.
+   Print a summary of command line options.
 
-.. note::
+Subcommand-specific options:
 
-   ``--level``, ``--function``, ``--ir2vec-vocab-path``, ``--ir2vec-opc-weight``, 
-   ``--ir2vec-type-weight``, and ``--ir2vec-arg-weight`` are only used in embedding 
-   mode. These options are ignored in triplet mode.
+**embeddings** subcommand:
 
-INPUT FILE FORMAT
------------------
+.. option:: <input-file>
 
-:program:`llvm-ir2vec` accepts LLVM bitcode files (``.bc``) and LLVM IR files 
-(``.ll``) as input. The input file should contain valid LLVM IR.
+   The input LLVM IR or bitcode file to process. This positional argument is
+   required for the `embeddings` subcommand.
+
+.. option:: --level=<level>
+
+   Specify the embedding generation level. Valid values are:
+
+   * ``inst`` - Generate instruction-level embeddings
+   * ``bb`` - Generate basic block-level embeddings  
+   * ``func`` - Generate function-level embeddings (default)
+
+.. option:: --function=<name>
+
+   Process only the specified function instead of all functions in the module.
+
+.. option:: --ir2vec-vocab-path=<path>
+
+   Specify the path to the vocabulary file (required for embedding generation).
+   The vocabulary file should be in JSON format and contain the trained
+   vocabulary for embedding generation. See `llvm/lib/Analysis/models`
+   for pre-trained vocabulary files.
+
+.. option:: --ir2vec-opc-weight=<weight>
+
+   Specify the weight for opcode embeddings (default: 1.0). This controls
+   the relative importance of instruction opcodes in the final embedding.
+
+.. option:: --ir2vec-type-weight=<weight>
+
+   Specify the weight for type embeddings (default: 0.5). This controls
+   the relative importance of type information in the final embedding.
+
+.. option:: --ir2vec-arg-weight=<weight>
+
+   Specify the weight for argument embeddings (default: 0.2). This controls
+   the relative importance of operand information in the final embedding.
+
+
+**triplets** subcommand:
+
+.. option:: <input-file>
+
+   The input LLVM IR or bitcode file to process. This positional argument is
+   required for the `triplets` subcommand.
+
+**entities** subcommand:
+
+   No subcommand-specific options.
 
 OUTPUT FORMAT
 -------------
@@ -129,14 +169,34 @@ OUTPUT FORMAT
 Triplet Mode Output
 ~~~~~~~~~~~~~~~~~~~
 
-In triplet mode, the output consists of lines containing space-separated triplets:
+In triplet mode, the output consists of numeric triplets in train2id format with
+metadata headers. The format includes:
 
 .. code-block:: text
 
-   <opcode> <type> <operand1> <operand2> ...
+   MAX_RELATIONS=<max_relations_count>
+   <head_entity_id> <tail_entity_id> <relation_id>
+   <head_entity_id> <tail_entity_id> <relation_id>
+   ...
 
-Each line represents the information of one instruction, with the opcode, type,
-and operands.
+Each line after the metadata header represents one instruction relationship,
+with numeric IDs for head entity, relation, and tail entity. The metadata 
+header (MAX_RELATIONS) provides counts for post-processing and training setup.
+
+Entity Mode Output
+~~~~~~~~~~~~~~~~~~
+
+In entity mode, the output consists of entity mapping in the format:
+
+.. code-block:: text
+
+   <total_entities>
+   <entity_string>	<numeric_id>
+   <entity_string>	<numeric_id>
+   ...
+
+The first line contains the total number of entities, followed by one entity
+mapping per line with tab-separated entity string and numeric ID.
 
 Embedding Mode Output
 ~~~~~~~~~~~~~~~~~~~~~

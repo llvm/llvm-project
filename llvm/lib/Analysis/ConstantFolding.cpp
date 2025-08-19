@@ -1373,7 +1373,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
     return flushDenormalConstantFP(CFP, Inst, IsOutput);
 
-  if (isa<ConstantAggregateZero, UndefValue, ConstantExpr>(Operand))
+  if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
 
   Type *Ty = Operand->getType();
@@ -1388,6 +1388,9 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
 
     Ty = VecTy->getElementType();
   }
+
+  if (isa<ConstantExpr>(Operand))
+    return Operand;
 
   if (const auto *CV = dyn_cast<ConstantVector>(Operand)) {
     SmallVector<Constant *, 16> NewElts;
@@ -1482,6 +1485,9 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
+  case Instruction::PtrToAddr:
+    // TODO: Add some of the ptrtoint folds here as well.
+    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
@@ -1656,6 +1662,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
+  case Intrinsic::wasm_dot:
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
@@ -2628,14 +2635,14 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_ceil_d:
         return ConstantFoldFP(
             ceil, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
         return ConstantFoldFP(
             fabs, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_floor_ftz_f:
@@ -2643,7 +2650,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_floor_d:
         return ConstantFoldFP(
             floor, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_rcp_rm_ftz_f:
@@ -2676,11 +2683,12 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_round_ftz_f:
       case Intrinsic::nvvm_round_f:
       case Intrinsic::nvvm_round_d: {
-        // Use APFloat implementation instead of native libm call, as some
-        // implementations (e.g. on PPC) do not preserve the sign of negative 0.
+        // nvvm_round is lowered to PTX cvt.rni, which will round to nearest
+        // integer, choosing even integer if source is equidistant between two
+        // integers, so the semantics are closer to "rint" rather than "round".
         bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
         auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
-        V.roundToIntegral(APFloat::rmNearestTiesToAway);
+        V.roundToIntegral(APFloat::rmNearestTiesToEven);
         return ConstantFP::get(Ty->getContext(), V);
       }
 
@@ -2705,7 +2713,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return nullptr;
         return ConstantFoldFP(
             sqrt, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       // AMDGCN Intrinsics:
@@ -3983,6 +3991,30 @@ static Constant *ConstantFoldFixedVectorCall(
       Result[2 * I] = Elt0;
       Result[2 * I + 1] = Elt1;
     }
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::wasm_dot: {
+    unsigned NumElements =
+        cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
+
+    assert(NumElements == 8 && Result.size() == 4 &&
+           "wasm dot takes i16x8 and produces i32x4");
+    assert(Ty->isIntegerTy());
+    int32_t MulVector[8];
+
+    for (unsigned I = 0; I < NumElements; ++I) {
+      ConstantInt *Elt0 =
+          cast<ConstantInt>(Operands[0]->getAggregateElement(I));
+      ConstantInt *Elt1 =
+          cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+
+      MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
+    }
+    for (unsigned I = 0; I < Result.size(); I++) {
+      int64_t IAdd = (int64_t)MulVector[I * 2] + (int64_t)MulVector[I * 2 + 1];
+      Result[I] = ConstantInt::get(Ty, IAdd);
+    }
+
     return ConstantVector::get(Result);
   }
   default:

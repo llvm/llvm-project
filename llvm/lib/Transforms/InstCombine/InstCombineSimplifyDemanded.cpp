@@ -1834,14 +1834,17 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // segfaults which didn't exist in the original program.
       APInt DemandedPtrs(APInt::getAllOnes(VWidth)),
           DemandedPassThrough(DemandedElts);
-      if (auto *CV = dyn_cast<ConstantVector>(II->getOperand(2)))
+      if (auto *CMask = dyn_cast<Constant>(II->getOperand(2))) {
         for (unsigned i = 0; i < VWidth; i++) {
-          Constant *CElt = CV->getAggregateElement(i);
-          if (CElt->isNullValue())
-            DemandedPtrs.clearBit(i);
-          else if (CElt->isAllOnesValue())
-            DemandedPassThrough.clearBit(i);
+          if (Constant *CElt = CMask->getAggregateElement(i)) {
+            if (CElt->isNullValue())
+              DemandedPtrs.clearBit(i);
+            else if (CElt->isAllOnesValue())
+              DemandedPassThrough.clearBit(i);
+          }
         }
+      }
+
       if (II->getIntrinsicID() == Intrinsic::masked_gather)
         simplifyAndSetOp(II, 0, DemandedPtrs, PoisonElts2);
       simplifyAndSetOp(II, 3, DemandedPassThrough, PoisonElts3);

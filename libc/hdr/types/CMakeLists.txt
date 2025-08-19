@@ -242,6 +242,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_barrier_t
+  HDRS
+    pthread_barrier_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_barrier_t
+)
+
+add_proxy_header_library(
+  pthread_barrierattr_t
+  HDRS
+    pthread_barrierattr_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_barrierattr_t
+)
+
+add_proxy_header_library(
   atexithandler_t
   HDRS
     atexithandler_t.h
@@ -416,6 +432,7 @@ add_proxy_header_library(
     cpu_set_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.cpu_set_t
+    libc.include.sched
 )
 
 add_proxy_header_library(
@@ -434,4 +451,13 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.ACTION
     libc.include.search
+)
+
+add_proxy_header_library(
+  struct_sched_param
+  HDRS
+    struct_sched_param.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sched_param
+    libc.include.sched
 )

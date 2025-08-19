@@ -381,6 +381,7 @@ set(files
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -446,14 +447,12 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
-  __fwd/map.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
-  __fwd/set.h
   __fwd/span.h
   __fwd/sstream.h
   __fwd/stack.h

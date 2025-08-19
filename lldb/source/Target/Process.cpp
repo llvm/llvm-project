@@ -166,6 +166,9 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyDisableLangRuntimeUnwindPlans,
+        [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
 
   m_experimental_properties_up =
@@ -278,6 +281,15 @@ void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
   const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
   SetPropertyAtIndex(idx, disable);
   m_process->Flush();
+}
+
+void ProcessProperties::DisableLanguageRuntimeUnwindPlansCallback() {
+  if (!m_process)
+    return;
+  for (auto thread_sp : m_process->Threads()) {
+    thread_sp->ClearStackFrames();
+    thread_sp->DiscardThreadPlans(/*force*/ true);
+  }
 }
 
 bool ProcessProperties::GetDetachKeepsStopped() const {

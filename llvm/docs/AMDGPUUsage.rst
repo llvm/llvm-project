@@ -768,6 +768,9 @@ For example:
                                                   performant than code generated for XNACK replay
                                                   disabled.
 
+     cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
+                                                  If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -1768,6 +1771,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       using dedicated instructions, but may not send the DEALLOC_VGPRS
                                                       message. If a shader has this attribute, then all its callees must
                                                       match its value.
+                                                      An amd_cs_chain CC function with this enabled has an extra symbol
+                                                      prefixed with "_dvgpr$" with the value of the function symbol,
+                                                      offset by one less than the number of dynamic VGPR blocks required
+                                                      by the function encoded in bits 5..3.
 
      ================================================ ==========================================================
 
@@ -1887,7 +1894,7 @@ The AMDGPU backend supports the following calling conventions:
 AMDGPU MCExpr
 -------------
 
-As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
 ``MCExpr``\s.
 
   .. table:: AMDGPU MCExpr types:
@@ -5107,7 +5114,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     457:455 3 bits                                  Reserved, must be 0.
+     455     1 bit   USES_CU_STORES                  GFX12.5: Whether the ``cu-stores`` target attribute is enabled.
+                                                     If 0, then all stores are ``SCOPE_SE`` or higher.
+     457:456 2 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
@@ -5593,6 +5602,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
+                                                     GFX125*
+                                                       roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -18187,6 +18198,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_uses_cu_stores``                               0                   GFX12.5      Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.

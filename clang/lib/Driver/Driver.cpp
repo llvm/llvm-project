@@ -66,6 +66,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -910,7 +911,7 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
 
   SmallVector<std::string> GPUArchs;
   if (llvm::ErrorOr<std::string> Executable =
-          llvm::sys::findProgramByName(Program)) {
+          llvm::sys::findProgramByName(Program, {C.getDriver().Dir})) {
     llvm::SmallVector<StringRef> Args{*Executable};
     if (Kind == Action::OFK_HIP)
       Args.push_back("--only=amdgpu");
@@ -1012,6 +1013,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
     Arg *A = new Arg(Opt, C.getArgs().getArgString(Index), Index,
                      C.getArgs().MakeArgString(Triple.split("-").first),
                      C.getArgs().MakeArgString("--offload-arch=" + Arch));
+    A->claim();
     C.getArgs().append(A);
     C.getArgs().AddSynthesizedArg(A);
     Triples.insert(Triple);
@@ -3606,7 +3608,7 @@ class OffloadingActionBuilder final {
           if (!CompileDeviceOnly) {
             C.getDriver().Diag(diag::err_opt_not_valid_without_opt)
                 << "-fhip-emit-relocatable"
-                << "--cuda-device-only";
+                << "--offload-device-only";
           }
         }
       }
@@ -4187,6 +4189,11 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
+  if (Args.hasArgNoClaim(options::OPT_fmodules_driver))
+    // TODO: Check against all incompatible -fmodules-driver arguments
+    if (!ModulesModeCXX20 && !Args.hasArgNoClaim(options::OPT_fmodules))
+      Args.eraseArg(options::OPT_fmodules_driver);
+
   Arg *FinalPhaseArg;
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
 
@@ -4313,6 +4320,33 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   }
 }
 
+static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
+  const auto IsTypeCXXModule = [](const auto &Input) -> bool {
+    const auto TypeID = Input.first;
+    return (TypeID == types::TY_CXXModule);
+  };
+  return llvm::any_of(Inputs, IsTypeCXXModule);
+}
+
+llvm::ErrorOr<bool>
+Driver::ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const {
+  const auto CXXInputs = llvm::make_filter_range(
+      Inputs, [](const auto &Input) { return types::isCXX(Input.first); });
+  for (const auto &Input : CXXInputs) {
+    StringRef Filename = Input.second->getSpelling();
+    auto ErrOrBuffer = VFS->getBufferForFile(Filename);
+    if (!ErrOrBuffer)
+      return ErrOrBuffer.getError();
+    const auto Buffer = std::move(*ErrOrBuffer);
+
+    if (scanInputForCXX20ModulesUsage(Buffer->getBuffer())) {
+      Diags.Report(diag::remark_found_cxx20_module_usage) << Filename;
+      return true;
+    }
+  }
+  return false;
+}
+
 void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                           const InputList &Inputs, ActionList &Actions) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation actions");
@@ -4323,6 +4357,33 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   }
 
   handleArguments(C, Args, Inputs, Actions);
+
+  if (Args.hasFlag(options::OPT_fmodules_driver,
+                   options::OPT_fno_modules_driver, false)) {
+    // TODO: Move the logic for implicitly enabling explicit-module-builds out
+    // of -fmodules-driver once it is no longer experimental.
+    // Currently, this serves diagnostic purposes only.
+    bool UsesCXXModules = hasCXXModuleInputType(Inputs);
+    if (!UsesCXXModules) {
+      const auto ErrOrScanResult = ScanInputsForCXX20ModulesUsage(Inputs);
+      if (!ErrOrScanResult) {
+        Diags.Report(diag::err_cannot_open_file)
+            << ErrOrScanResult.getError().message();
+        return;
+      }
+      UsesCXXModules = *ErrOrScanResult;
+    }
+    if (UsesCXXModules || Args.hasArg(options::OPT_fmodules))
+      BuildDriverManagedModuleBuildActions(C, Args, Inputs, Actions);
+    return;
+  }
+
+  BuildDefaultActions(C, Args, Inputs, Actions);
+}
+
+void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
+                                 const InputList &Inputs,
+                                 ActionList &Actions) const {
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
@@ -4607,6 +4668,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
+void Driver::BuildDriverManagedModuleBuildActions(
+    Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
+    ActionList &Actions) const {
+  Diags.Report(diag::remark_performing_driver_managed_module_build);
+  return;
+}
+
 /// Returns the canonical name for the offloading architecture when using a HIP
 /// or CUDA architecture.
 static StringRef getCanonicalArchString(Compilation &C,
@@ -4774,6 +4842,21 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
+  bool HIPRelocatableObj =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_fhip_emit_relocatable,
+                   options::OPT_fno_hip_emit_relocatable, false);
+
+  if (!HIPNoRDC && HIPRelocatableObj)
+    C.getDriver().Diag(diag::err_opt_not_valid_with_opt)
+        << "-fhip-emit-relocatable"
+        << "-fgpu-rdc";
+
+  if (!offloadDeviceOnly() && HIPRelocatableObj)
+    C.getDriver().Diag(diag::err_opt_not_valid_without_opt)
+        << "-fhip-emit-relocatable"
+        << "--offload-device-only";
+
   // For HIP non-rdc non-device-only compilation, create a linker wrapper
   // action for each host object to link, bundle and wrap device files in
   // it.
@@ -4894,7 +4977,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
                            A->getOffloadingToolChain()->getTriple().isSPIRV();
       if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
            A->getType() != types::TY_LTO_BC) ||
-          !HIPNoRDC || !offloadDeviceOnly())
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -4919,13 +5002,14 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   }
 
   // HIP code in device-only non-RDC mode will bundle the output if it invoked
-  // the linker.
+  // the linker or if the user explicitly requested it.
   bool ShouldBundleHIP =
-      HIPNoRDC && offloadDeviceOnly() &&
       Args.hasFlag(options::OPT_gpu_bundle_output,
-                   options::OPT_no_gpu_bundle_output, true) &&
-      !llvm::any_of(OffloadActions,
-                    [](Action *A) { return A->getType() != types::TY_Image; });
+                   options::OPT_no_gpu_bundle_output, false) ||
+      (HIPNoRDC && offloadDeviceOnly() &&
+       llvm::none_of(OffloadActions, [](Action *A) {
+         return A->getType() != types::TY_Image;
+       }));
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
   if (offloadDeviceOnly() && !ShouldBundleHIP)
