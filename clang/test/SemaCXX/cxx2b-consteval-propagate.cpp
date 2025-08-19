@@ -610,19 +610,3 @@ namespace GH135281 {
   void (*ff)() = f2<B>; // expected-note {{instantiation of function template specialization}}
 }
 #endif
-
-namespace GH145776 {
-
-void runtime_only() {}
-consteval void comptime_only() {}
-
-void fn() {
-  []() {
-    runtime_only();
-    []() {
-      &comptime_only;
-    }();
-  }();
-}
-
-}
