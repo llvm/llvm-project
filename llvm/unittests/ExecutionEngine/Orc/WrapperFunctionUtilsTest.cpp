@@ -11,7 +11,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
-#include <future>
+#include <variant>
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -114,29 +114,29 @@ static void voidNoopAsync(unique_function<void(SPSEmpty)> SendResult) {
 
 static WrapperFunctionResult voidNoopAsyncWrapper(const char *ArgData,
                                                   size_t ArgSize) {
-  std::promise<WrapperFunctionResult> RP;
-  auto RF = RP.get_future();
+  std::variant<std::monostate, WrapperFunctionResult> Result;
 
   WrapperFunction<void()>::handleAsync(
-      ArgData, ArgSize,
-      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+      ArgData, ArgSize, [&](WrapperFunctionResult R) { Result = std::move(R); },
       voidNoopAsync);
 
-  return RF.get();
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "handleAsync should complete synchronously in tests");
+  return std::move(std::get<WrapperFunctionResult>(Result));
 }
 
 static WrapperFunctionResult addAsyncWrapper(const char *ArgData,
                                              size_t ArgSize) {
-  std::promise<WrapperFunctionResult> RP;
-  auto RF = RP.get_future();
+  std::variant<std::monostate, WrapperFunctionResult> Result;
 
   WrapperFunction<int32_t(int32_t, int32_t)>::handleAsync(
-      ArgData, ArgSize,
-      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+      ArgData, ArgSize, [&](WrapperFunctionResult R) { Result = std::move(R); },
       [](unique_function<void(int32_t)> SendResult, int32_t X, int32_t Y) {
         SendResult(X + Y);
       });
-  return RF.get();
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "handleAsync should complete synchronously in tests");
+  return std::move(std::get<WrapperFunctionResult>(Result));
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleAsyncVoid) {

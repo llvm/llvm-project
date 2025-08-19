@@ -12,6 +12,8 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/WindowsError.h"
 
+#include <variant>
+
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -92,13 +94,18 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
   std::vector<shared::WrapperFunctionCall> DeinitializeActions;
   {
-    std::promise<MSVCPExpected<std::vector<shared::WrapperFunctionCall>>> P;
-    auto F = P.get_future();
+    std::variant<std::monostate,
+                 Expected<std::vector<shared::WrapperFunctionCall>>>
+        Result;
     shared::runFinalizeActions(
         AI.Actions, [&](Expected<std::vector<shared::WrapperFunctionCall>> R) {
-          P.set_value(std::move(R));
+          Result = std::move(R);
         });
-    if (auto DeinitializeActionsOrErr = F.get())
+    assert(!std::holds_alternative<std::monostate>(Result) &&
+           "InProcessMemoryMapper should run finalize actions synchronously");
+    if (auto DeinitializeActionsOrErr = std::move(
+            std::get<Expected<std::vector<shared::WrapperFunctionCall>>>(
+                Result)))
       DeinitializeActions = std::move(*DeinitializeActionsOrErr);
     else
       return OnInitialized(DeinitializeActionsOrErr.takeError());
@@ -162,10 +169,11 @@ void InProcessMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
     }
 
     // deinitialize sub allocations
-    std::promise<MSVCPError> P;
-    auto F = P.get_future();
-    deinitialize(AllocAddrs, [&](Error Err) { P.set_value(std::move(Err)); });
-    if (Error E = F.get()) {
+    std::variant<std::monostate, Error> Result;
+    deinitialize(AllocAddrs, [&](Error Err) { Result = std::move(Err); });
+    assert(!std::holds_alternative<std::monostate>(Result) &&
+           "InProcessMemoryMapper should run deinitialize synchronously");
+    if (Error E = std::move(std::get<Error>(Result))) {
       Err = joinErrors(std::move(Err), std::move(E));
     }
 
@@ -195,10 +203,11 @@ InProcessMemoryMapper::~InProcessMemoryMapper() {
     }
   }
 
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  release(ReservationAddrs, [&](Error Err) { P.set_value(std::move(Err)); });
-  cantFail(F.get());
+  std::variant<std::monostate, Error> Result;
+  release(ReservationAddrs, [&](Error Err) { Result = std::move(Err); });
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "InProcessMemoryMapper should run release synchronously");
+  cantFail(std::move(std::get<Error>(Result)));
 }
 
 // SharedMemoryMapper
