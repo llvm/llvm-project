@@ -372,6 +372,44 @@ define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
   ret i8 %sext
 }
 
+; Make sure we don't use seqz+th.ext instead of snez+addi
+define i32 @sexti1_i32_setcc_2(i32 %a, i32 %b) {
+; RV32I-LABEL: sexti1_i32_setcc_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32_setcc_2:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    xor a0, a0, a1
+; RV32XTHEADBB-NEXT:    snez a0, a0
+; RV32XTHEADBB-NEXT:    addi a0, a0, -1
+; RV32XTHEADBB-NEXT:    ret
+  %icmp = icmp eq i32 %a, %b
+  %sext = sext i1 %icmp to i32
+  ret i32 %sext
+}
+
+; Make sure we don't use th.ext instead of neg.
+define i32 @sexti1_i32_setcc_3(i32 %a, i32 %b) {
+; RV32I-LABEL: sexti1_i32_setcc_3:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a0, a1
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32_setcc_3:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    slt a0, a0, a1
+; RV32XTHEADBB-NEXT:    neg a0, a0
+; RV32XTHEADBB-NEXT:    ret
+  %icmp = icmp slt i32 %a, %b
+  %sext = sext i1 %icmp to i32
+  ret i32 %sext
+}
+
 define i32 @sextb_i32(i32 %a) nounwind {
 ; RV32I-LABEL: sextb_i32:
 ; RV32I:       # %bb.0:
