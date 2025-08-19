@@ -145,8 +145,7 @@ struct SimplifyDepthwiseConvQOp
 };
 
 struct SimplifyDepthwiseConvPass
-    : public impl::SimplifyDepthwiseConvPassBase<
-          SimplifyDepthwiseConvPass> {
+    : public impl::SimplifyDepthwiseConvPassBase<SimplifyDepthwiseConvPass> {
   using impl::SimplifyDepthwiseConvPassBase<
       SimplifyDepthwiseConvPass>::SimplifyDepthwiseConvPassBase;
 
