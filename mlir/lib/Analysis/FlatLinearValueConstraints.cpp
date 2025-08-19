@@ -60,7 +60,7 @@ private:
                           AffineExpr localExpr) override {
     SimpleAffineExprFlattener::addLocalFloorDivId(dividend, divisor, localExpr);
     // Update localVarCst.
-    localVarCst.addLocalFloorDiv(dividend, divisor);
+    (void)localVarCst.addLocalFloorDiv(dividend, divisor);
   }
 
   LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
