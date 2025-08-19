@@ -1869,8 +1869,10 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FSHR:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SCMP:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UCMP:
   case TargetOpcode::G_PTRMASK:
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
