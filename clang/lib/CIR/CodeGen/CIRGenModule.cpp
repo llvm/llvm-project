@@ -503,11 +503,9 @@ cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
 
-  if (opts.CPlusPlus || opts.CPlusPlus11 || opts.CPlusPlus14 ||
-      opts.CPlusPlus17 || opts.CPlusPlus20 || opts.CPlusPlus23 ||
-      opts.CPlusPlus26)
+  if (opts.CPlusPlus)
     return CIRLang::CXX;
-  if (opts.C99 || opts.C11 || opts.C17 || opts.C23 ||
+  if (opts.C99 || opts.C11 || opts.C17 || opts.C23 || opts.C2y ||
       opts.LangStd == ClangStd::lang_c89 ||
       opts.LangStd == ClangStd::lang_gnu89)
     return CIRLang::C;
