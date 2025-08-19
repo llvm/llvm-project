@@ -2218,7 +2218,7 @@ static void relocationViaAlloca(
 /// vector.  Doing so has the effect of changing the output of a couple of
 /// tests in ways which make them less useful in testing fused safepoints.
 template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
-  SmallSet<T, 8> Seen;
+  SmallPtrSet<T, 8> Seen;
   erase_if(Vec, [&](const T &V) { return !Seen.insert(V).second; });
 }
 
