@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_BPF_BPFASMPRINTER_H
 #define LLVM_LIB_TARGET_BPF_BPFASMPRINTER_H
 
+#include "BPFTargetMachine.h"
 #include "BTFDebug.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
@@ -18,10 +19,11 @@ class BPFAsmPrinter : public AsmPrinter {
 public:
   explicit BPFAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
 
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
   bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override;
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &O) override;
@@ -36,6 +38,9 @@ public:
 
 private:
   BTFDebug *BTF;
+  TargetMachine &TM;
+
+  const BPFTargetMachine &getBTM() const;
 };
 
 } // namespace llvm

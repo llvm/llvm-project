@@ -52,6 +52,45 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   return false;
 }
 
+const BPFTargetMachine &BPFAsmPrinter::getBTM() const {
+  return static_cast<const BPFTargetMachine &>(TM);
+}
+
+bool BPFAsmPrinter::doFinalization(Module &M) {
+  // Remove unused globals which are previously used for jump table.
+  const BPFSubtarget *Subtarget = getBTM().getSubtargetImpl();
+  if (Subtarget->hasGotox()) {
+    std::vector<GlobalVariable *> Targets;
+    for (GlobalVariable &Global : M.globals()) {
+      if (Global.getLinkage() != GlobalValue::PrivateLinkage)
+        continue;
+      if (!Global.isConstant() || !Global.hasInitializer())
+        continue;
+
+      Constant *CV = dyn_cast<Constant>(Global.getInitializer());
+      if (!CV)
+        continue;
+      ConstantArray *CA = dyn_cast<ConstantArray>(CV);
+      if (!CA)
+        continue;
+
+      for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
+        if (!dyn_cast<BlockAddress>(CA->getOperand(i)))
+          continue;
+      }
+      Targets.push_back(&Global);
+    }
+
+    for (GlobalVariable *GV : Targets) {
+      GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
+      GV->dropAllReferences();
+      GV->eraseFromParent();
+    }
+  }
+
+  return AsmPrinter::doFinalization(M);
+}
+
 void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
                                  raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNum);
