@@ -2170,29 +2170,32 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static unsigned computeFullDescSize(const ASTContext &ASTCtx,
-                                    const Descriptor *Desc) {
-
+static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
+                                                   const Descriptor *Desc) {
   if (Desc->isPrimitive())
     return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
   if (Desc->isArray())
     return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
            Desc->getNumElems();
+  if (Desc->isRecord()) {
+    // Can't use Descriptor::getType() as that may return a pointer type. Look
+    // at the decl directly.
+    return ASTCtx
+        .getTypeSizeInChars(
+            ASTCtx.getCanonicalTagType(Desc->ElemRecord->getDecl()))
+        .getQuantity();
+  }
 
-  if (Desc->isRecord())
-    return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
-  llvm_unreachable("Unhandled descriptor type");
-  return 0;
+  return std::nullopt;
 }
 
+/// Compute the byte offset of \p Ptr in the full declaration.
 static unsigned computePointerOffset(const ASTContext &ASTCtx,
                                      const Pointer &Ptr) {
   unsigned Result = 0;
 
   Pointer P = Ptr;
-  while (P.isArrayElement() || P.isField()) {
+  while (P.isField() || P.isArrayElement()) {
     P = P.expand();
     const Descriptor *D = P.getFieldDesc();
 
@@ -2205,7 +2208,6 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
         Result += ElemSize * P.getIndex();
       P = P.expand().getArray();
     } else if (P.isBaseClass()) {
-
       const auto *RD = cast<CXXRecordDecl>(D->asDecl());
       bool IsVirtual = Ptr.isVirtualBaseClass();
       P = P.getBase();
@@ -2234,30 +2236,136 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
   return Result;
 }
 
+/// Does Ptr point to the last subobject?
+static bool pointsToLastObject(const Pointer &Ptr) {
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+
+    if (P.isArrayElement()) {
+      P = P.expand().getArray();
+      continue;
+    }
+    if (P.isBaseClass()) {
+      if (P.getRecord()->getNumFields() > 0)
+        return false;
+      P = P.getBase();
+      continue;
+    }
+
+    Pointer Base = P.getBase();
+    if (const Record *R = Base.getRecord()) {
+      assert(P.getField());
+      if (P.getField()->getFieldIndex() != R->getNumFields() - 1)
+        return false;
+    }
+    P = Base;
+  }
+
+  return true;
+}
+
+/// Does Ptr point to the last object AND to a flexible array member?
+static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
+  auto isFlexibleArrayMember = [&](const Descriptor *FieldDesc) {
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+    FAMKind StrictFlexArraysLevel =
+        Ctx.getLangOpts().getStrictFlexArraysLevel();
+
+    if (StrictFlexArraysLevel == FAMKind::Default)
+      return true;
+
+    unsigned NumElems = FieldDesc->getNumElems();
+    if (NumElems == 0 && StrictFlexArraysLevel != FAMKind::IncompleteOnly)
+      return true;
+
+    if (NumElems == 1 && StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete)
+      return true;
+    return false;
+  };
+
+  const Descriptor *FieldDesc = Ptr.getFieldDesc();
+  if (!FieldDesc->isArray())
+    return false;
+
+  return Ptr.isDummy() && pointsToLastObject(Ptr) &&
+         isFlexibleArrayMember(FieldDesc);
+}
+
 static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
                                         const CallExpr *Call) {
+  const ASTContext &ASTCtx = S.getASTContext();
   PrimType KindT = *S.getContext().classify(Call->getArg(1));
-  [[maybe_unused]] unsigned Kind = popToAPSInt(S.Stk, KindT).getZExtValue();
-
+  // From the GCC docs:
+  // Kind is an integer constant from 0 to 3. If the least significant bit is
+  // clear, objects are whole variables. If it is set, a closest surrounding
+  // subobject is considered the object a pointer points to. The second bit
+  // determines if maximum or minimum of remaining bytes is computed.
+  unsigned Kind = popToAPSInt(S.Stk, KindT).getZExtValue();
   assert(Kind <= 3 && "unexpected kind");
-
+  bool UseFieldDesc = (Kind & 1u);
+  bool ReportMinimum = (Kind & 2u);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isZero())
+  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
+    // "If there are any side effects in them, it returns (size_t) -1
+    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
+    pushInteger(S, Kind <= 1 ? -1 : 0, Call->getType());
+    return true;
+  }
+
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
     return false;
 
+  // We can't load through pointers.
+  if (Ptr.isDummy() && Ptr.getType()->isPointerType())
+    return false;
+
+  bool DetermineForCompleteObject = Ptr.getFieldDesc() == Ptr.getDeclDesc();
   const Descriptor *DeclDesc = Ptr.getDeclDesc();
-  if (!DeclDesc)
+  assert(DeclDesc);
+
+  if (!UseFieldDesc || DetermineForCompleteObject) {
+    // Lower bound, so we can't fall back to this.
+    if (ReportMinimum && !DetermineForCompleteObject)
+      return false;
+
+    // Can't read beyond the pointer decl desc.
+    if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
+      return false;
+  } else {
+    if (isUserWritingOffTheEnd(ASTCtx, Ptr.expand())) {
+      // If we cannot determine the size of the initial allocation, then we
+      // can't given an accurate upper-bound. However, we are still able to give
+      // conservative lower-bounds for Type=3.
+      if (Kind == 1)
+        return false;
+    }
+  }
+
+  const Descriptor *Desc = UseFieldDesc ? Ptr.getFieldDesc() : DeclDesc;
+  assert(Desc);
+
+  std::optional<unsigned> FullSize = computeFullDescSize(ASTCtx, Desc);
+  if (!FullSize)
     return false;
 
-  const ASTContext &ASTCtx = S.getASTContext();
+  unsigned ByteOffset;
+  if (UseFieldDesc) {
+    if (Ptr.isBaseClass())
+      ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
+                   computePointerOffset(ASTCtx, Ptr);
+    else
+      ByteOffset =
+          computePointerOffset(ASTCtx, Ptr) -
+          computePointerOffset(ASTCtx, Ptr.expand().atIndex(0).narrow());
+  } else
+    ByteOffset = computePointerOffset(ASTCtx, Ptr);
 
-  unsigned ByteOffset = computePointerOffset(ASTCtx, Ptr);
-  unsigned FullSize = computeFullDescSize(ASTCtx, DeclDesc);
+  assert(ByteOffset <= *FullSize);
+  unsigned Result = *FullSize - ByteOffset;
 
-  pushInteger(S, FullSize - ByteOffset, Call->getType());
-
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 

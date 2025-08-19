@@ -355,6 +355,9 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     set(Def, VectorValue);
   } else {
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    assert(isa<VPInstruction>(Def) &&
+           "Explicit BuildVector recipes must have"
+           "handled packing for non-VPInstructions.");
     // Initialize packing with insertelements to start from poison.
     VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)

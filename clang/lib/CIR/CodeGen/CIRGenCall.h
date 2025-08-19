@@ -47,8 +47,9 @@ class CIRGenCallee {
     Invalid,
     Builtin,
     PseudoDestructor,
+    Virtual,
 
-    Last = Builtin,
+    Last = Virtual
   };
 
   struct BuiltinInfoStorage {
@@ -58,6 +59,12 @@ class CIRGenCallee {
   struct PseudoDestructorInfoStorage {
     const clang::CXXPseudoDestructorExpr *expr;
   };
+  struct VirtualInfoStorage {
+    const clang::CallExpr *ce;
+    clang::GlobalDecl md;
+    Address addr;
+    cir::FuncType fTy;
+  };
 
   SpecialKind kindOrFunctionPtr;
 
@@ -65,6 +72,7 @@ class CIRGenCallee {
     CIRGenCalleeInfo abstractInfo;
     BuiltinInfoStorage builtinInfo;
     PseudoDestructorInfoStorage pseudoDestructorInfo;
+    VirtualInfoStorage virtualInfo;
   };
 
   explicit CIRGenCallee(SpecialKind kind) : kindOrFunctionPtr(kind) {}
@@ -128,7 +136,8 @@ public:
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &cgf) const;
 
   CIRGenCalleeInfo getAbstractInfo() const {
-    assert(!cir::MissingFeatures::opCallVirtual());
+    if (isVirtual())
+      return virtualInfo.md;
     assert(isOrdinary());
     return abstractInfo;
   }
@@ -136,6 +145,39 @@ public:
   mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
     return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
+  }
+
+  bool isVirtual() const { return kindOrFunctionPtr == SpecialKind::Virtual; }
+
+  static CIRGenCallee forVirtual(const clang::CallExpr *ce,
+                                 clang::GlobalDecl md, Address addr,
+                                 cir::FuncType fTy) {
+    CIRGenCallee result(SpecialKind::Virtual);
+    result.virtualInfo.ce = ce;
+    result.virtualInfo.md = md;
+    result.virtualInfo.addr = addr;
+    result.virtualInfo.fTy = fTy;
+    return result;
+  }
+
+  const clang::CallExpr *getVirtualCallExpr() const {
+    assert(isVirtual());
+    return virtualInfo.ce;
+  }
+
+  clang::GlobalDecl getVirtualMethodDecl() const {
+    assert(isVirtual());
+    return virtualInfo.md;
+  }
+
+  Address getThisAddress() const {
+    assert(isVirtual());
+    return virtualInfo.addr;
+  }
+
+  cir::FuncType getVirtualFunctionType() const {
+    assert(isVirtual());
+    return virtualInfo.fTy;
   }
 
   void setFunctionPointer(mlir::Operation *functionPtr) {

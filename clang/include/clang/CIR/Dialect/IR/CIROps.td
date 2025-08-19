@@ -1061,6 +1061,62 @@ def CIR_BrOp : CIR_Op<"br",[
 }
 
 //===----------------------------------------------------------------------===//
+// GotoOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
+  let description = [{
+
+  Transfers control to the specified `label`. This requires a corresponding
+  `cir.label` to exist and is used by to represent source level `goto`s
+  that jump across region boundaries. Alternatively, `cir.br` is used to
+  construct goto's that don't violate such boundaries.
+
+  `cir.goto` is completely symbolic (i.e. it "jumps" on a label that isn't
+  yet materialized) and should be taken into account by passes and analysis
+  when deciding if it's safe to make some assumptions about a given region
+  or basic block.
+
+  Example:
+  ```C++
+    int test(int x) {
+      if (x)
+        goto label;
+      {
+        x = 10;
+    label:
+        return x;
+      }
+    }
+  ```
+
+  ```mlir
+    cir.scope {  // REGION #1
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      cir.if %3 {
+        cir.goto "label"
+      }
+      }
+      cir.scope {  // REGION #2
+        %2 = cir.const #cir.int<10> : !s32i
+        cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+        cir.br ^bb1
+      ^bb1:  // pred: ^bb0
+        cir.label "label"
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        cir.store %3, %1 : !s32i, !cir.ptr<!s32i>
+        %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+        cir.return %4 : !s32i
+      }
+      cir.unreachable
+  ```
+  }];
+  let arguments = (ins StrAttr:$label);
+  let assemblyFormat = [{ $label attr-dict }];
+}
+
+//===----------------------------------------------------------------------===//
 // LabelOp
 //===----------------------------------------------------------------------===//
 
@@ -1779,6 +1835,54 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
 
   let assemblyFormat = [{
       $src `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetVirtualFnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
+  Pure
+]> {
+  let summary = "Get a the address of a virtual function pointer";
+  let description = [{
+    The `vtable.get_virtual_fn_addr` operation retrieves the address of a
+    virtual function pointer from an object's vtable (__vptr).
+    This is an abstraction to perform the basic pointer arithmetic to get
+    the address of the virtual function pointer, which can then be loaded and
+    called.
+
+    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
+    have been returned by a previous call to `cir.vatble.get_vptr`. The
+    `index` operand is an index of the virtual function in the vtable.
+
+    The return type is a pointer-to-pointer to the function type.
+
+    Example:
+    ```mlir
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_virtual_fn_addr %4[2] : !cir.vptr
+                  -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>>
+    %6 = cir.load align(8) %5 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>)
+                                                                 -> !s32i>>>,
+                                !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %7 = cir.call %6(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+                            !cir.ptr<!rec_C>) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr,
+    I64Attr:$index);
+
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
   }];
 }
 

@@ -780,8 +780,9 @@ parsed_inst_t ExpressionParser::parseConstInst(
   auto parsedConstant = parser.parseLiteral<valueT>();
   if (failed(parsedConstant))
     return failure();
-  auto constOp = builder.create<ConstOp>(
-      *currentOpLoc, buildLiteralAttr<valueT>(builder, *parsedConstant));
+  auto constOp =
+      ConstOp::create(builder, *currentOpLoc,
+                      buildLiteralAttr<valueT>(builder, *parsedConstant));
   return {{constOp.getResult()}};
 }
 
@@ -929,8 +930,8 @@ private:
              << " type registration.";
     FunctionType type = symbols.moduleFuncTypes[tid.id];
     std::string symbol = symbols.getNewFuncSymbolName();
-    auto funcOp =
-        builder.create<FuncImportOp>(loc, symbol, moduleName, importName, type);
+    auto funcOp = FuncImportOp::create(builder, loc, symbol, moduleName,
+                                       importName, type);
     symbols.funcSymbols.push_back({{FlatSymbolRefAttr::get(funcOp)}, type});
     return funcOp.verify();
   }
@@ -939,8 +940,8 @@ private:
   LogicalResult visitImport(Location loc, StringRef moduleName,
                             StringRef importName, LimitType limitType) {
     std::string symbol = symbols.getNewMemorySymbolName();
-    auto memOp = builder.create<MemImportOp>(loc, symbol, moduleName,
-                                             importName, limitType);
+    auto memOp = MemImportOp::create(builder, loc, symbol, moduleName,
+                                     importName, limitType);
     symbols.memSymbols.push_back({FlatSymbolRefAttr::get(memOp)});
     return memOp.verify();
   }
@@ -949,8 +950,8 @@ private:
   LogicalResult visitImport(Location loc, StringRef moduleName,
                             StringRef importName, TableType tableType) {
     std::string symbol = symbols.getNewTableSymbolName();
-    auto tableOp = builder.create<TableImportOp>(loc, symbol, moduleName,
-                                                 importName, tableType);
+    auto tableOp = TableImportOp::create(builder, loc, symbol, moduleName,
+                                         importName, tableType);
     symbols.tableSymbols.push_back({FlatSymbolRefAttr::get(tableOp)});
     return tableOp.verify();
   }
@@ -960,8 +961,8 @@ private:
                             StringRef importName, GlobalTypeRecord globalType) {
     std::string symbol = symbols.getNewGlobalSymbolName();
     auto giOp =
-        builder.create<GlobalImportOp>(loc, symbol, moduleName, importName,
-                                       globalType.type, globalType.isMutable);
+        GlobalImportOp::create(builder, loc, symbol, moduleName, importName,
+                               globalType.type, globalType.isMutable);
     symbols.globalSymbols.push_back(
         {{FlatSymbolRefAttr::get(giOp)}, giOp.getType()});
     return giOp.verify();
@@ -1012,7 +1013,7 @@ public:
     if (failed(fillRegistry))
       return;
 
-    mOp = builder.create<ModuleOp>(getLocation());
+    mOp = ModuleOp::create(builder, getLocation());
     builder.setInsertionPointToStart(&mOp.getBodyRegion().front());
     LogicalResult parsingTypes = parseSection<WasmSectionType::TYPE>();
     if (failed(parsingTypes))
@@ -1172,7 +1173,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::TABLE>(ParserHead &ph,
   LDBG() << "  Parsed table description: " << *tableType;
   StringAttr symbol = builder.getStringAttr(symbols.getNewTableSymbolName());
   auto tableOp =
-      builder.create<TableOp>(opLocation, symbol.strref(), *tableType);
+      TableOp::create(builder, opLocation, symbol.strref(), *tableType);
   symbols.tableSymbols.push_back({SymbolRefAttr::get(tableOp)});
   return success();
 }
@@ -1190,11 +1191,11 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::FUNCTION>(ParserHead &ph,
     return emitError(getLocation(), "invalid type index: ") << typeIdx;
   std::string symbol = symbols.getNewFuncSymbolName();
   auto funcOp =
-      builder.create<FuncOp>(opLoc, symbol, symbols.moduleFuncTypes[typeIdx]);
+      FuncOp::create(builder, opLoc, symbol, symbols.moduleFuncTypes[typeIdx]);
   Block *block = funcOp.addEntryBlock();
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToEnd(block);
-  builder.create<ReturnOp>(opLoc);
+  ReturnOp::create(builder, opLoc);
   builder.restoreInsertionPoint(ip);
   symbols.funcSymbols.push_back(
       {{FlatSymbolRefAttr::get(funcOp.getSymNameAttr())},
@@ -1225,7 +1226,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::MEMORY>(ParserHead &ph,
 
   LDBG() << "  Registering memory " << *memory;
   std::string symbol = symbols.getNewMemorySymbolName();
-  auto memOp = builder.create<MemOp>(opLocation, symbol, *memory);
+  auto memOp = MemOp::create(builder, opLocation, symbol, *memory);
   symbols.memSymbols.push_back({SymbolRefAttr::get(memOp)});
   return success();
 }

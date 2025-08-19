@@ -392,3 +392,29 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
   }
   return success();
 }
+
+LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
+                                     vector::UnrollVectorOpFn unrollFn) {
+  assert(op->getNumResults() == 1 && "expected single result");
+  assert(isa<VectorType>(op->getResult(0).getType()) && "expected vector type");
+  VectorType resultTy = cast<VectorType>(op->getResult(0).getType());
+  if (resultTy.getRank() < 2)
+    return rewriter.notifyMatchFailure(op, "already 1-D");
+
+  // Unrolling doesn't take vscale into account. Pattern is disabled for
+  // vectors with leading scalable dim(s).
+  if (resultTy.getScalableDims().front())
+    return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
+
+  Location loc = op->getLoc();
+  Value result = ub::PoisonOp::create(rewriter, loc, resultTy);
+  VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
+
+  for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
+    Value subVector = unrollFn(rewriter, loc, subTy, i);
+    result = vector::InsertOp::create(rewriter, loc, subVector, result, i);
+  }
+
+  rewriter.replaceOp(op, result);
+  return success();
+}

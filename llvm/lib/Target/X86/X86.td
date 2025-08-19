@@ -1291,7 +1291,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
                                                 TuningFastImmVectorShift];
-  list<SubtargetFeature> ADLTuning = !listconcat(SKLTuning, ADLAdditionalTuning);
+  list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
+  list<SubtargetFeature> ADLTuning =
+      !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
   list<SubtargetFeature> ADLFeatures =
     !listconcat(TRMFeatures, ADLAdditionalFeatures);
 

@@ -22,6 +22,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
@@ -82,6 +83,111 @@ void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
   RootSignatureValMD->addOperand(MDVals);
+}
+
+// Find array variable declaration from nested array subscript AST nodes
+static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
+  const Expr *E = nullptr;
+  while (ASE != nullptr) {
+    E = ASE->getBase()->IgnoreImpCasts();
+    if (!E)
+      return nullptr;
+    ASE = dyn_cast<ArraySubscriptExpr>(E);
+  }
+  if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(E))
+    return DRE->getDecl();
+  return nullptr;
+}
+
+// Get the total size of the array, or -1 if the array is unbounded.
+static int getTotalArraySize(ASTContext &AST, const clang::Type *Ty) {
+  Ty = Ty->getUnqualifiedDesugaredType();
+  assert(Ty->isArrayType() && "expected array type");
+  if (Ty->isIncompleteArrayType())
+    return -1;
+  return AST.getConstantArrayElementCount(cast<ConstantArrayType>(Ty));
+}
+
+// Find constructor decl for a specific resource record type and binding
+// (implicit vs. explicit). The constructor has 5 parameters.
+// For explicit binding the signature is:
+//   void(unsigned, unsigned, int, unsigned, const char *).
+// For implicit binding the signature is:
+//   void(unsigned, int, unsigned, unsigned, const char *).
+static CXXConstructorDecl *findResourceConstructorDecl(ASTContext &AST,
+                                                       QualType ResTy,
+                                                       bool ExplicitBinding) {
+  std::array<QualType, 5> ExpParmTypes = {
+      AST.UnsignedIntTy, AST.UnsignedIntTy, AST.UnsignedIntTy,
+      AST.UnsignedIntTy, AST.getPointerType(AST.CharTy.withConst())};
+  ExpParmTypes[ExplicitBinding ? 2 : 1] = AST.IntTy;
+
+  CXXRecordDecl *ResDecl = ResTy->getAsCXXRecordDecl();
+  for (auto *Ctor : ResDecl->ctors()) {
+    if (Ctor->getNumParams() != ExpParmTypes.size())
+      continue;
+    auto *ParmIt = Ctor->param_begin();
+    auto ExpTyIt = ExpParmTypes.begin();
+    for (; ParmIt != Ctor->param_end() && ExpTyIt != ExpParmTypes.end();
+         ++ParmIt, ++ExpTyIt) {
+      if ((*ParmIt)->getType() != *ExpTyIt)
+        break;
+    }
+    if (ParmIt == Ctor->param_end())
+      return Ctor;
+  }
+  llvm_unreachable("did not find constructor for resource class");
+}
+
+static Value *buildNameForResource(llvm::StringRef BaseName,
+                                   CodeGenModule &CGM) {
+  llvm::SmallString<64> GlobalName = {BaseName, ".str"};
+  return CGM.GetAddrOfConstantCString(BaseName.str(), GlobalName.c_str())
+      .getPointer();
+}
+
+static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
+                                   llvm::Value *ThisPtr, llvm::Value *Range,
+                                   llvm::Value *Index, StringRef Name,
+                                   HLSLResourceBindingAttr *RBA,
+                                   HLSLVkBindingAttr *VkBinding,
+                                   CallArgList &Args) {
+  assert((VkBinding || RBA) && "at least one a binding attribute expected");
+
+  std::optional<uint32_t> RegisterSlot;
+  uint32_t SpaceNo = 0;
+  if (VkBinding) {
+    RegisterSlot = VkBinding->getBinding();
+    SpaceNo = VkBinding->getSet();
+  } else {
+    if (RBA->hasRegisterSlot())
+      RegisterSlot = RBA->getSlotNumber();
+    SpaceNo = RBA->getSpaceNumber();
+  }
+
+  ASTContext &AST = CD->getASTContext();
+  Value *NameStr = buildNameForResource(Name, CGM);
+  Value *Space = llvm::ConstantInt::get(CGM.IntTy, SpaceNo);
+
+  Args.add(RValue::get(ThisPtr), CD->getThisType());
+  if (RegisterSlot.has_value()) {
+    // explicit binding
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RegisterSlot.value());
+    Args.add(RValue::get(RegSlot), AST.UnsignedIntTy);
+    Args.add(RValue::get(Space), AST.UnsignedIntTy);
+    Args.add(RValue::get(Range), AST.IntTy);
+    Args.add(RValue::get(Index), AST.UnsignedIntTy);
+
+  } else {
+    // implicit binding
+    auto *OrderID =
+        llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+    Args.add(RValue::get(Space), AST.UnsignedIntTy);
+    Args.add(RValue::get(Range), AST.IntTy);
+    Args.add(RValue::get(Index), AST.UnsignedIntTy);
+    Args.add(RValue::get(OrderID), AST.UnsignedIntTy);
+  }
+  Args.add(RValue::get(NameStr), AST.getPointerType(AST.CharTy.withConst()));
 }
 
 } // namespace
@@ -589,13 +695,6 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   CGM.AddCXXGlobalInit(InitResFunc);
 }
 
-static Value *buildNameForResource(llvm::StringRef BaseName,
-                                   CodeGenModule &CGM) {
-  std::string Str(BaseName);
-  std::string GlobalName(Str + ".str");
-  return CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
-}
-
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLVkBindingAttr *VkBinding) {
@@ -623,16 +722,12 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
-  Value *Name = nullptr;
+  Value *Name = buildNameForResource(BufDecl->getName(), CGM);
 
   llvm::Intrinsic::ID IntrinsicID =
       RBA->hasRegisterSlot()
           ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
           : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-
-  std::string Str(BufDecl->getName());
-  std::string GlobalName(Str + ".str");
-  Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
 
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
@@ -699,4 +794,92 @@ void CGHLSLRuntime::emitInitListOpaqueValues(CodeGenFunction &CGF,
       OpaqueValueMappingData::bind(CGF, OVE, RV);
     }
   }
+}
+
+std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
+    const ArraySubscriptExpr *ArraySubsExpr, CodeGenFunction &CGF) {
+  assert(ArraySubsExpr->getType()->isHLSLResourceRecord() ||
+         ArraySubsExpr->getType()->isHLSLResourceRecordArray() &&
+             "expected resource array subscript expression");
+
+  // let clang codegen handle local resource array subscripts
+  const VarDecl *ArrayDecl = dyn_cast<VarDecl>(getArrayDecl(ArraySubsExpr));
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage())
+    return std::nullopt;
+
+  if (ArraySubsExpr->getType()->isArrayType())
+    // FIXME: this is not yet implemented (llvm/llvm-project#145426)
+    llvm_unreachable(
+        "indexing of sub-arrays of multidimensional arrays not supported yet");
+
+  // get the resource array type
+  ASTContext &AST = ArrayDecl->getASTContext();
+  const Type *ResArrayTy = ArrayDecl->getType().getTypePtr();
+  assert(ResArrayTy->isHLSLResourceRecordArray() &&
+         "expected array of resource classes");
+
+  // Iterate through all nested array subscript expressions to calculate
+  // the index in the flattened resource array (if this is a multi-
+  // dimensional array). The index is calculated as a sum of all indices
+  // multiplied by the total size of the array at that level.
+  Value *Index = nullptr;
+  const ArraySubscriptExpr *ASE = ArraySubsExpr;
+  while (ASE != nullptr) {
+    Value *SubIndex = CGF.EmitScalarExpr(ASE->getIdx());
+    if (const auto *ArrayTy =
+            dyn_cast<ConstantArrayType>(ASE->getType().getTypePtr())) {
+      Value *Multiplier = llvm::ConstantInt::get(
+          CGM.IntTy, AST.getConstantArrayElementCount(ArrayTy));
+      SubIndex = CGF.Builder.CreateMul(SubIndex, Multiplier);
+    }
+
+    Index = Index ? CGF.Builder.CreateAdd(Index, SubIndex) : SubIndex;
+    ASE = dyn_cast<ArraySubscriptExpr>(ASE->getBase()->IgnoreParenImpCasts());
+  }
+
+  // find binding info for the resource array (for implicit binding
+  // an HLSLResourceBindingAttr should have been added by SemaHLSL)
+  QualType ResourceTy = ArraySubsExpr->getType();
+  HLSLVkBindingAttr *VkBinding = ArrayDecl->getAttr<HLSLVkBindingAttr>();
+  HLSLResourceBindingAttr *RBA = ArrayDecl->getAttr<HLSLResourceBindingAttr>();
+  assert((VkBinding || RBA) && "resource array must have a binding attribute");
+
+  // lookup the resource class constructor based on the resource type and
+  // binding
+  CXXConstructorDecl *CD = findResourceConstructorDecl(
+      AST, ResourceTy, VkBinding || RBA->hasRegisterSlot());
+
+  // create a temporary variable for the resource class instance (we need to
+  // return an LValue)
+  RawAddress TmpVar = CGF.CreateMemTemp(ResourceTy);
+  if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
+    CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
+        NormalEHLifetimeMarker, TmpVar);
+
+  AggValueSlot ValueSlot = AggValueSlot::forAddr(
+      TmpVar, Qualifiers(), AggValueSlot::IsDestructed_t(true),
+      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+      AggValueSlot::DoesNotOverlap);
+
+  Address ThisAddress = ValueSlot.getAddress();
+  llvm::Value *ThisPtr = CGF.getAsNaturalPointerTo(
+      ThisAddress, CD->getThisType()->getPointeeType());
+
+  // get total array size (= range size)
+  llvm::Value *Range =
+      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
+
+  // assemble the constructor parameters
+  CallArgList Args;
+  createResourceCtorArgs(CGM, CD, ThisPtr, Range, Index, ArrayDecl->getName(),
+                         RBA, VkBinding, Args);
+
+  // call the constructor
+  CGF.EmitCXXConstructorCall(CD, Ctor_Complete, false, false, ThisAddress, Args,
+                             ValueSlot.mayOverlap(),
+                             ArraySubsExpr->getExprLoc(),
+                             ValueSlot.isSanitizerChecked());
+
+  return CGF.MakeAddrLValue(TmpVar, ArraySubsExpr->getType(),
+                            AlignmentSource::Decl);
 }

@@ -5391,7 +5391,7 @@ void llvm::UpgradeNVVMAnnotations(Module &M) {
     return;
 
   SmallVector<MDNode *, 8> NewNodes;
-  SmallSet<const MDNode *, 8> SeenNodes;
+  SmallPtrSet<const MDNode *, 8> SeenNodes;
   for (MDNode *MD : NamedMD->operands()) {
     if (!SeenNodes.insert(MD).second)
       continue;

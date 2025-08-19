@@ -7785,7 +7785,7 @@ bool llvm::mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 
   // The set of all recursive users we've visited (which are assumed to all be
   // poison because of said visit)
-  SmallSet<const Value *, 16> KnownPoison;
+  SmallPtrSet<const Value *, 16> KnownPoison;
   SmallVector<const Instruction*, 16> Worklist;
   Worklist.push_back(Root);
   while (!Worklist.empty()) {
@@ -8140,8 +8140,8 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
   // Set of instructions that we have proved will yield poison if Inst
   // does.
-  SmallSet<const Value *, 16> YieldsPoison;
-  SmallSet<const BasicBlock *, 4> Visited;
+  SmallPtrSet<const Value *, 16> YieldsPoison;
+  SmallPtrSet<const BasicBlock *, 4> Visited;
 
   YieldsPoison.insert(V);
   Visited.insert(BB);

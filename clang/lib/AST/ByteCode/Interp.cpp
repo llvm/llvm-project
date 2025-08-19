@@ -1852,6 +1852,11 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
+
+  // FIXME: We need per-element lifetime information for primitive arrays.
+  if (Ptr.isArrayElement())
+    return true;
+
   endLifetimeRecurse(Ptr.narrow());
   return true;
 }
@@ -1861,6 +1866,11 @@ bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
+
+  // FIXME: We need per-element lifetime information for primitive arrays.
+  if (Ptr.isArrayElement())
+    return true;
+
   endLifetimeRecurse(Ptr.narrow());
   return true;
 }

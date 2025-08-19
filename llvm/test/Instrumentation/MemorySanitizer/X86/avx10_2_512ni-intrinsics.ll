@@ -7,19 +7,7 @@
 ; - llvm.x86.avx10.vdpphps.512
 ; - llvm.x86.avx10.vmpsadbw.512
 ;
-; Handled heuristically:
-; - llvm.x86.avx10.vpdpbssd.512
-; - llvm.x86.avx10.vpdpbssds.512
-; - llvm.x86.avx10.vpdpbsud.512
-; - llvm.x86.avx10.vpdpbsuds.512
-; - llvm.x86.avx10.vpdpbuud.512
-; - llvm.x86.avx10.vpdpbuuds.512
-; - llvm.x86.avx10.vpdpwsud.512
-; - llvm.x86.avx10.vpdpwsuds.512
-; - llvm.x86.avx10.vpdpwusd.512
-; - llvm.x86.avx10.vpdpwusds.512
-; - llvm.x86.avx10.vpdpwuud.512
-; - llvm.x86.avx10.vpdpwuuds.512
+; Handled heuristically: (none)
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -140,8 +128,8 @@ define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 ; CHECK-LABEL: define <16 x i32> @test_mm512_dpbssd_epi32(
 ; CHECK-SAME: <16 x i32> [[__W:%.*]], <16 x i32> [[__A:%.*]], ptr [[PB:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
@@ -154,8 +142,26 @@ define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <16 x i32>, ptr [[TMP8]], align 64
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[_MSPROP]], [[_MSLD]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x i32> [[__A]] to <64 x i8>
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x i32> [[__B]] to <64 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <16 x i32> [[TMP3]] to <64 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <16 x i32> [[_MSLD]] to <64 x i8>
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne <64 x i8> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <64 x i8> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <64 x i8> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne <64 x i8> [[TMP10]], zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = and <64 x i1> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and <64 x i1> [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP19:%.*]] = and <64 x i1> [[TMP13]], [[TMP16]]
+; CHECK-NEXT:    [[TMP20:%.*]] = or <64 x i1> [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP21:%.*]] = or <64 x i1> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sext <64 x i1> [[TMP21]] to <64 x i8>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <64 x i8> [[TMP22]] to <32 x i16>
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <32 x i16> [[TMP23]], zeroinitializer
+; CHECK-NEXT:    [[TMP25:%.*]] = sext <32 x i1> [[TMP24]] to <32 x i16>
+; CHECK-NEXT:    [[TMP26:%.*]] = bitcast <32 x i16> [[TMP25]] to i512
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i512 [[TMP26]] to <16 x i32>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[TMP27]], [[TMP4]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> [[__W]], <16 x i32> [[__A]], <16 x i32> [[__B]])
 ; CHECK-NEXT:    store <16 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i32> [[RES]]
@@ -168,13 +174,31 @@ define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 define <16 x i32> @test_mm512_mask_dpbssds_epi32(<16 x i32> %__W, i16 zeroext %__U, <16 x i32> %__A, <16 x i32> %__B) sanitize_memory {
 ; CHECK-LABEL: define <16 x i32> @test_mm512_mask_dpbssds_epi32(
 ; CHECK-SAME: <16 x i32> [[__W:%.*]], i16 zeroext [[__U:%.*]], <16 x i32> [[__A:%.*]], <16 x i32> [[__B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 72) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 136) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[_MSPROP]], [[TMP3]]
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <16 x i32> [[__A]] to <64 x i8>
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <16 x i32> [[__B]] to <64 x i8>
+; CHECK-NEXT:    [[TMP26:%.*]] = bitcast <16 x i32> [[TMP2]] to <64 x i8>
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast <16 x i32> [[TMP3]] to <64 x i8>
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp ne <64 x i8> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <64 x i8> [[TMP27]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <64 x i8> [[TMP24]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <64 x i8> [[TMP25]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = and <64 x i1> [[TMP28]], [[TMP10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = and <64 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = and <64 x i1> [[TMP28]], [[TMP12]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or <64 x i1> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or <64 x i1> [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sext <64 x i1> [[TMP17]] to <64 x i8>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <64 x i8> [[TMP18]] to <32 x i16>
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <32 x i16> [[TMP19]], zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = sext <32 x i1> [[TMP20]] to <32 x i16>
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast <32 x i16> [[TMP21]] to i512
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i512 [[TMP22]] to <16 x i32>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[TMP23]], [[TMP1]]
 ; CHECK-NEXT:    [[DPI:%.*]] = tail call <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32> [[__W]], <16 x i32> [[__A]], <16 x i32> [[__B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP4]] to <16 x i1>
 ; CHECK-NEXT:    [[BST:%.*]] = bitcast i16 [[__U]] to <16 x i1>
@@ -196,13 +220,31 @@ define <16 x i32> @test_mm512_mask_dpbssds_epi32(<16 x i32> %__W, i16 zeroext %_
 define <16 x i32> @test_mm512_maskz_dpbssd_epi32(i16 zeroext %__U, <16 x i32> %__W, <16 x i32> %__A, <16 x i32> %__B) sanitize_memory {
 ; CHECK-LABEL: define <16 x i32> @test_mm512_maskz_dpbssd_epi32(
 ; CHECK-SAME: i16 zeroext [[__U:%.*]], <16 x i32> [[__W:%.*]], <16 x i32> [[__A:%.*]], <16 x i32> [[__B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 72) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 136) to ptr), align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[_MSPROP]], [[TMP3]]
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <16 x i32> [[__A]] to <64 x i8>
+; CHECK-NEXT:    [[TMP26:%.*]] = bitcast <16 x i32> [[__B]] to <64 x i8>
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast <16 x i32> [[TMP2]] to <64 x i8>
+; CHECK-NEXT:    [[TMP28:%.*]] = bitcast <16 x i32> [[TMP3]] to <64 x i8>
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp ne <64 x i8> [[TMP27]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <64 x i8> [[TMP28]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <64 x i8> [[TMP25]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <64 x i8> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = and <64 x i1> [[TMP29]], [[TMP10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = and <64 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = and <64 x i1> [[TMP29]], [[TMP12]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or <64 x i1> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or <64 x i1> [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sext <64 x i1> [[TMP17]] to <64 x i8>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <64 x i8> [[TMP18]] to <32 x i16>
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <32 x i16> [[TMP19]], zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = sext <32 x i1> [[TMP20]] to <32 x i16>
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast <32 x i16> [[TMP21]] to i512
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i512 [[TMP22]] to <16 x i32>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    [[DPI:%.*]] = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> [[__W]], <16 x i32> [[__A]], <16 x i32> [[__B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP4]] to <16 x i1>
 ; CHECK-NEXT:    [[BST:%.*]] = bitcast i16 [[__U]] to <16 x i1>

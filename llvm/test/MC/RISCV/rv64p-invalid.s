@@ -65,3 +65,8 @@ mulsu.h00 a4, s4, s6 # CHECK: :[[@LINE]]:1: error: instruction requires the foll
 maccsu.h00 s4, s4, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
 mulsu.h11 s8, s4, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
 maccsu.h11 s0, a2, s6 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+
+# FIXME: This error doesn't make sense. Should say that we need RV32I.
+pli.dh a0, 1 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+pli.db s0, 1 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+plui.dh t1, 1 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction

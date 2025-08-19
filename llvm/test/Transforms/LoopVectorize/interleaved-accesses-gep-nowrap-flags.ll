@@ -185,3 +185,151 @@ loop:
 exit:
   ret void
 }
+
+define void @nusw_preservation_2(ptr %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @nusw_preservation_2(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i32 -1
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STRIDED_VEC1]], [[STRIDED_VEC]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr nusw i8, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:                                         ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
+  %or.1 = or disjoint i64 %iv2, 1
+  %gep.src.or.1 = getelementptr nusw i8, ptr %src, i64 %or.1
+  %load.src.1 = load i8, ptr %gep.src.or.1, align 1
+  %gep.src.iv2 = getelementptr nusw i8, ptr %src, i64 %iv2
+  %load.src.2 = load i8, ptr %gep.src.iv2, align 1
+  %add = add i8 %load.src.1, %load.src.2
+  %gep.dst.iv = getelementptr nusw i8, ptr %dst, i64 %iv
+  store i8 %add, ptr %gep.dst.iv, align 1
+  %iv2.next = add i64 %iv2, 2
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, 100
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @inbounds_preservation_2(ptr %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @inbounds_preservation_2(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 -1
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STRIDED_VEC1]], [[STRIDED_VEC]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:                                         ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
+  %or.1 = or disjoint i64 %iv2, 1
+  %gep.src.or.1 = getelementptr inbounds i8, ptr %src, i64 %or.1
+  %load.src.1 = load i8, ptr %gep.src.or.1, align 1
+  %gep.src.iv2 = getelementptr inbounds i8, ptr %src, i64 %iv2
+  %load.src.2 = load i8, ptr %gep.src.iv2, align 1
+  %add = add i8 %load.src.1, %load.src.2
+  %gep.dst.iv = getelementptr inbounds i8, ptr %dst, i64 %iv
+  store i8 %add, ptr %gep.dst.iv, align 1
+  %iv2.next = add i64 %iv2, 2
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, 100
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @nuw_drop_2(ptr %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @nuw_drop_2(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -1
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STRIDED_VEC1]], [[STRIDED_VEC]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr nuw i8, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:                                         ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
+  %or.1 = or disjoint i64 %iv2, 1
+  %gep.src.or.1 = getelementptr nuw i8, ptr %src, i64 %or.1
+  %load.src.1 = load i8, ptr %gep.src.or.1, align 1
+  %gep.src.iv2 = getelementptr nuw i8, ptr %src, i64 %iv2
+  %load.src.2 = load i8, ptr %gep.src.iv2, align 1
+  %add = add i8 %load.src.1, %load.src.2
+  %gep.dst.iv = getelementptr nuw i8, ptr %dst, i64 %iv
+  store i8 %add, ptr %gep.dst.iv, align 1
+  %iv2.next = add i64 %iv2, 2
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, 100
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+

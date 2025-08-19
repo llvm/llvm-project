@@ -157,6 +157,20 @@ public:
     return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
   }
 
+  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
+                         uint64_t alignment = 0) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    assert(!cir::MissingFeatures::opLoadStoreVolatile());
+    assert(!cir::MissingFeatures::opLoadStoreMemOrder());
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+                               alignmentAttr);
+  }
+
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
+                                uint64_t alignment) {
+    return createLoad(loc, ptr, alignment);
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
@@ -504,8 +518,7 @@ public:
   static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          // TODO: Add LabelOp missing feature here
-          return mlir::isa<cir::AllocaOp>(&op);
+          return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);
         });
 
     if (last != block->rend())

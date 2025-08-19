@@ -264,9 +264,8 @@ namespace {
     bool prepareBasesForCommoningChains(Bucket &BucketChain);
 
     /// Rewrite load/store according to the common chains.
-    bool
-    rewriteLoadStoresForCommoningChains(Loop *L, Bucket &Bucket,
-                                        SmallSet<BasicBlock *, 16> &BBChanged);
+    bool rewriteLoadStoresForCommoningChains(
+        Loop *L, Bucket &Bucket, SmallPtrSet<BasicBlock *, 16> &BBChanged);
 
     /// Collect condition matched(\p isValidCandidate() returns true)
     /// candidates in Loop \p L.
@@ -309,7 +308,7 @@ namespace {
     /// Rewrite load/store instructions in \p BucketChain according to
     /// preparation.
     bool rewriteLoadStores(Loop *L, Bucket &BucketChain,
-                           SmallSet<BasicBlock *, 16> &BBChanged,
+                           SmallPtrSet<BasicBlock *, 16> &BBChanged,
                            PrepForm Form);
 
     /// Rewrite for the base load/store of a chain.
@@ -523,7 +522,7 @@ bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
   if (Buckets.empty())
     return MadeChange;
 
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
 
   for (auto &Bucket : Buckets) {
     if (prepareBasesForCommoningChains(Bucket))
@@ -537,7 +536,7 @@ bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
 }
 
 bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
-    Loop *L, Bucket &Bucket, SmallSet<BasicBlock *, 16> &BBChanged) {
+    Loop *L, Bucket &Bucket, SmallPtrSet<BasicBlock *, 16> &BBChanged) {
   bool MadeChange = false;
 
   assert(Bucket.Elements.size() ==
@@ -1006,7 +1005,7 @@ bool PPCLoopInstrFormPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
 }
 
 bool PPCLoopInstrFormPrep::rewriteLoadStores(
-    Loop *L, Bucket &BucketChain, SmallSet<BasicBlock *, 16> &BBChanged,
+    Loop *L, Bucket &BucketChain, SmallPtrSet<BasicBlock *, 16> &BBChanged,
     PrepForm Form) {
   bool MadeChange = false;
 
@@ -1089,7 +1088,7 @@ bool PPCLoopInstrFormPrep::updateFormPrep(Loop *L,
   bool MadeChange = false;
   if (Buckets.empty())
     return MadeChange;
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
   for (auto &Bucket : Buckets)
     // The base address of each bucket is transformed into a phi and the others
     // are rewritten based on new base.
@@ -1110,7 +1109,7 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L,
   if (Buckets.empty())
     return MadeChange;
 
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
   for (auto &Bucket : Buckets) {
     if (Bucket.Elements.size() < DispFormPrepMinThreshold)
       continue;

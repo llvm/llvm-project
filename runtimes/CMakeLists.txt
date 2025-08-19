@@ -36,7 +36,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;libclc;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -44,7 +44,7 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
 endif()
 include(SortSubset)
 sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
-
+set(LLVM_RT_TOOLS_BINARY_DIR ${LLVM_TOOLS_BINARY_DIR} CACHE STRING "runtime path to required test tools")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -267,7 +267,6 @@ foreach(entry ${runtimes})
   # will be included under here.
   set(HAVE_${canon_name} ON)
 endforeach()
-
 if(LLVM_INCLUDE_TESTS)
   # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
   # won't have llvm-lit. If built with the bootstrapping build (rooted at

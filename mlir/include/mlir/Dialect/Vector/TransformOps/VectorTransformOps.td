@@ -254,6 +254,17 @@ def ApplyLowerGatherPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyUnrollFromElementsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_from_elements",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector from_elements operations should be unrolled
+    along the outermost dimension.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerScanPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_scan",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

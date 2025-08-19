@@ -38,6 +38,9 @@ public:
   RT_API_ATTRS bool InError() const {
     return ioStat_ != IostatOk || pendingError_ != IostatOk;
   }
+  RT_API_ATTRS bool HasErrorRecovery() const {
+    return (flags_ & (hasIoStat | hasErr)) != 0;
+  }
 
   // For I/O statements that detect fatal errors in their
   // Begin...() API routines before it is known whether they

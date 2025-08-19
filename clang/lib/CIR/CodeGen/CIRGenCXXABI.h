@@ -63,6 +63,16 @@ public:
   /// parameter.
   virtual bool needsVTTParameter(clang::GlobalDecl gd) { return false; }
 
+  /// Perform ABI-specific "this" argument adjustment required prior to
+  /// a call of a virtual function.
+  /// The "VirtualCall" argument is true iff the call itself is virtual.
+  virtual Address adjustThisArgumentForVirtualFunctionCall(CIRGenFunction &cgf,
+                                                           clang::GlobalDecl gd,
+                                                           Address thisPtr,
+                                                           bool virtualCall) {
+    return thisPtr;
+  }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
 
@@ -99,6 +109,13 @@ public:
   /// used for the vptr at the given offset in RD.
   virtual cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *rd,
                                         CharUnits vptrOffset) = 0;
+
+  /// Build a virtual function pointer in the ABI-specific way.
+  virtual CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &cgf,
+                                                 clang::GlobalDecl gd,
+                                                 Address thisAddr,
+                                                 mlir::Type ty,
+                                                 SourceLocation loc) = 0;
 
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value

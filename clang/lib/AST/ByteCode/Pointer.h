@@ -29,7 +29,7 @@ class DeadBlock;
 class Pointer;
 class Context;
 template <unsigned A, bool B> class Integral;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 class Pointer;
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
@@ -593,7 +593,7 @@ public:
   }
 
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const {
+  UnsignedOrNone getDeclID() const {
     if (isBlockPointer()) {
       assert(asBlockPointer().Pointee);
       return asBlockPointer().Pointee->getDeclID();

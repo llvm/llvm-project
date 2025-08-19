@@ -193,7 +193,7 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
   if (Candidates.empty())
     return false;
 
-  SmallSet<PHINode *, 8> ProcessedPHIs;
+  SmallPtrSet<PHINode *, 8> ProcessedPHIs;
   for (const auto &Info : Candidates) {
     PHINode *PHI = Info.PHI;
     if (!ProcessedPHIs.insert(Info.PHI).second)

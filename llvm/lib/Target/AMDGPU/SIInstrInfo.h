@@ -1066,7 +1066,7 @@ public:
     }
   }
 
-  bool isWaitcnt(unsigned Opcode) const {
+  static bool isWaitcnt(unsigned Opcode) {
     switch (getNonSoftWaitcntOpcode(Opcode)) {
     case AMDGPU::S_WAITCNT:
     case AMDGPU::S_WAITCNT_VSCNT:

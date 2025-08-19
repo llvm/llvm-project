@@ -142,7 +142,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   AddrSpaceMap = &ARM64AddrSpaceMap;
 
   // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HalfArgsAndReturns = true;
   HasFloat16 = true;
   HasStrictFP = true;
