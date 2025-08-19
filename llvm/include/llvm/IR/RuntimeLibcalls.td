@@ -2094,6 +2094,9 @@ def MSP430SystemLibrary
       __mspabi_remul,
       LibcallsWithCC<(add __mspabi_remull), MSP430_BUILTIN>,
 
+      // May not be used depending on subtarget
+      LibcallsWithCC<(add __mspabi_mpyll), MSP430_BUILTIN>,
+
       // Bitwise Operations - EABI Table 10
       // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
       __mspabi_srll,
