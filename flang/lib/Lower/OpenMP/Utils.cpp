@@ -60,21 +60,14 @@ namespace lower {
 namespace omp {
 
 int64_t getCollapseValue(const List<Clause> &clauses) {
-  int64_t collapseValue = 1;
-  int64_t numTileSizes = 0;
-  for (auto &clause : clauses) {
-    if (clause.id == llvm::omp::Clause::OMPC_collapse) {
-      const auto &collapse = std::get<clause::Collapse>(clause.u);
-      collapseValue = evaluate::ToInt64(collapse.v).value();
-    } else if (clause.id == llvm::omp::Clause::OMPC_sizes) {
-      const auto &sizes = std::get<clause::Sizes>(clause.u);
-      numTileSizes = sizes.v.size();
-    }
+  auto iter = llvm::find_if(clauses, [](const Clause &clause) {
+    return clause.id == llvm::omp::Clause::OMPC_collapse;
+  });
+  if (iter != clauses.end()) {
+    const auto &collapse = std::get<clause::Collapse>(iter->u);
+    return evaluate::ToInt64(collapse.v).value();
   }
-
-  collapseValue = collapseValue - numTileSizes;
-  int64_t result = collapseValue > numTileSizes ? collapseValue : numTileSizes;
-  return result;
+  return 1;
 }
 
 void genObjectList(const ObjectList &objects,
@@ -650,7 +643,6 @@ bool collectLoopRelatedInfo(
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
-
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 

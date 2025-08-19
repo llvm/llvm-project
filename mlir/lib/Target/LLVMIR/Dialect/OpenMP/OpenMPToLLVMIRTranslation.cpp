@@ -3043,8 +3043,6 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy afterIP =
       loopInfos.front()->getAfterIP();
 
-  // Initialize the new loop info to the current one, in case there
-  // are no loop transformations done.
   llvm::CanonicalLoopInfo *NewTopLoopInfo = nullptr;
 
   // Do tiling
