@@ -2583,6 +2583,50 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call,
+                                      unsigned BuiltinID) {
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned SourceLen = VT->getNumElements();
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(SourceLen / 2);
+
+  for (unsigned I = 0; I != SourceLen; I += 2) {
+    APSInt Elem1;
+    APSInt Elem2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Elem1 = LHS.elem<T>(I).toAPSInt();
+      Elem2 = RHS.elem<T>(I).toAPSInt();
+    });
+
+    APSInt Result;
+    switch (BuiltinID) {
+    case clang::X86::BI__builtin_ia32_pmuludq128:
+    case clang::X86::BI__builtin_ia32_pmuludq256:
+    case clang::X86::BI__builtin_ia32_pmuludq512:
+      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2), true);
+      break;
+    case clang::X86::BI__builtin_ia32_pmuldq128:
+    case clang::X86::BI__builtin_ia32_pmuldq256:
+    case clang::X86::BI__builtin_ia32_pmuldq512:
+      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2), false);
+      break;
+    }
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3002,6 +3046,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
     return interp__builtin_elementwise_maxmin(S, OpPC, Call, BuiltinID);
+
+  case clang::X86::BI__builtin_ia32_pmuldq128:
+  case clang::X86::BI__builtin_ia32_pmuldq256:
+  case clang::X86::BI__builtin_ia32_pmuldq512:
+  case clang::X86::BI__builtin_ia32_pmuludq128:
+  case clang::X86::BI__builtin_ia32_pmuludq256:
+    return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
