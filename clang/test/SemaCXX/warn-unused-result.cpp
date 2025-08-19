@@ -481,9 +481,9 @@ void test() {
   p_return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
 
   // Function pointer expression return values
-  pp_return_nodiscard()(); // no warning: TODO
+  pp_return_nodiscard()(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
   pp_return_warnunused()(); // no warning
-  pp_return_warnunusedresult()(); // no warning: TODO
+  pp_return_warnunusedresult()(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
 
   // From a template
   from_a_template<NoDiscard>(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
