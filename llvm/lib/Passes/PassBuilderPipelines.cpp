@@ -80,7 +80,6 @@
 #include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
-#include "llvm/Transforms/Instrumentation/PGOEstimateTripCounts.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -1240,7 +1239,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse) {
       MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));
-      MPM.addPass(PGOEstimateTripCountsPass());
       return MPM;
     }
     // Block further inlining in the instrumented ctxprof case. This avoids
@@ -1270,10 +1268,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
 
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
-                 PGOOpt->Action == PGOOptions::SampleUse)) {
+                 PGOOpt->Action == PGOOptions::SampleUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
-  }
-  MPM.addPass(PGOEstimateTripCountsPass());
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 

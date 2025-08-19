@@ -118,7 +118,7 @@ define i32 @interfering_lifetime(ptr %data, i64 %indvars.iv) {
   %min = alloca i32, align 4
   %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv
   %i1 = load i32, ptr %arrayidx, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %min)
+  call void @llvm.lifetime.start.p0(ptr %min)
   store i32 0, ptr %min, align 4
   %cmp.i.i = icmp slt i32 %i1, 0
   %__b.__a.i.i = select i1 %cmp.i.i, ptr %min, ptr %arrayidx
@@ -132,9 +132,9 @@ define i32 @clamp_load_to_constant_range(ptr %data, i64 %indvars.iv) {
 ; CHECK-PRESERVE-CFG-NEXT:    [[MIN:%.*]] = alloca i32, align 4
 ; CHECK-PRESERVE-CFG-NEXT:    [[MAX:%.*]] = alloca i32, align 4
 ; CHECK-PRESERVE-CFG-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV:%.*]]
-; CHECK-PRESERVE-CFG-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[MIN]])
+; CHECK-PRESERVE-CFG-NEXT:    call void @llvm.lifetime.start.p0(ptr [[MIN]])
 ; CHECK-PRESERVE-CFG-NEXT:    store i32 0, ptr [[MIN]], align 4
-; CHECK-PRESERVE-CFG-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[MAX]])
+; CHECK-PRESERVE-CFG-NEXT:    call void @llvm.lifetime.start.p0(ptr [[MAX]])
 ; CHECK-PRESERVE-CFG-NEXT:    store i32 4095, ptr [[MAX]], align 4
 ; CHECK-PRESERVE-CFG-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-PRESERVE-CFG-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[I1]], 0
@@ -167,9 +167,9 @@ define i32 @clamp_load_to_constant_range(ptr %data, i64 %indvars.iv) {
   %min = alloca i32, align 4
   %max = alloca i32, align 4
   %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv
-  call void @llvm.lifetime.start.p0(i64 4, ptr %min)
+  call void @llvm.lifetime.start.p0(ptr %min)
   store i32 0, ptr %min, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %max)
+  call void @llvm.lifetime.start.p0(ptr %max)
   store i32 4095, ptr %max, align 4
   %i1 = load i32, ptr %arrayidx, align 4
   %cmp.i.i = icmp slt i32 %i1, 0
@@ -482,6 +482,6 @@ define void @load_of_select_with_noundef_nonnull(ptr %buffer, i1 %b) {
 
 ; Ensure that the branch metadata is reversed to match the reversals above.
 
-declare void @llvm.lifetime.start.p0(i64, ptr )
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr )
+declare void @llvm.lifetime.end.p0(ptr)
 declare i32 @llvm.smax.i32(i32, i32)

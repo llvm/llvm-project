@@ -1532,6 +1532,14 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -1674,6 +1682,13 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -2396,6 +2411,10 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     // This first checks if the mode is set for the device_type requested.
     // And if not, it returns the non-device_type mode.
     LoopParMode getDefaultOrDeviceTypeParallelism(DeviceType);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
   }];
 
   let hasCustomAssemblyFormat = 1;

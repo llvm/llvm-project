@@ -18,10 +18,6 @@ using namespace clang::interp;
 
 void Block::addPointer(Pointer *P) {
   assert(P);
-  if (IsStatic) {
-    assert(!Pointers);
-    return;
-  }
 
 #ifndef NDEBUG
   assert(!hasPointer(P));
@@ -39,10 +35,6 @@ void Block::addPointer(Pointer *P) {
 void Block::removePointer(Pointer *P) {
   assert(P->isBlockPointer());
   assert(P);
-  if (IsStatic) {
-    assert(!Pointers);
-    return;
-  }
 
 #ifndef NDEBUG
   assert(hasPointer(P));
@@ -64,7 +56,7 @@ void Block::removePointer(Pointer *P) {
 }
 
 void Block::cleanup() {
-  if (Pointers == nullptr && IsDead)
+  if (Pointers == nullptr && !isDynamic() && isDead())
     (reinterpret_cast<DeadBlock *>(this + 1) - 1)->free();
 }
 
@@ -74,10 +66,6 @@ void Block::replacePointer(Pointer *Old, Pointer *New) {
   assert(New);
   assert(New->isBlockPointer());
   assert(Old != New);
-  if (IsStatic) {
-    assert(!Pointers);
-    return;
-  }
 #ifndef NDEBUG
   assert(hasPointer(Old));
 #endif
@@ -113,8 +101,8 @@ bool Block::hasPointer(const Pointer *P) const {
 #endif
 
 DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
-    : Root(Root), B(~0u, Blk->Desc, Blk->IsStatic, Blk->IsExtern, Blk->IsWeak,
-                    /*isDead=*/true) {
+    : Root(Root), B(~0u, Blk->Desc, Blk->isExtern(), Blk->IsStatic,
+                    Blk->isWeak(), Blk->isDummy(), /*IsDead=*/true) {
   // Add the block to the chain of dead blocks.
   if (Root)
     Root->Prev = this;
@@ -123,7 +111,7 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   Prev = nullptr;
   Root = this;
 
-  B.IsDynamic = Blk->IsDynamic;
+  B.DynAllocId = Blk->DynAllocId;
 
   // Transfer pointers.
   B.Pointers = Blk->Pointers;
@@ -133,8 +121,7 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
 }
 
 void DeadBlock::free() {
-  if (B.IsInitialized)
-    B.invokeDtor();
+  assert(!B.isInitialized());
 
   if (Prev)
     Prev->Next = Next;

@@ -291,6 +291,7 @@ class SimplifyCFGOpt {
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
   bool simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder);
+  bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI);
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
@@ -564,6 +565,9 @@ struct ConstantComparesGatherer {
   /// Number of comparisons matched in the and/or chain
   unsigned UsedICmps = 0;
 
+  /// If the elements in Vals matches the comparisons
+  bool IsEq = false;
+
   /// Construct and compute the result for the comparison instruction Cond
   ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL) : DL(DL) {
     gather(Cond);
@@ -735,23 +739,23 @@ private:
   /// vector.
   /// One "Extra" case is allowed to differ from the other.
   void gather(Value *V) {
-    bool isEQ = match(V, m_LogicalOr(m_Value(), m_Value()));
-
+    Value *Op0, *Op1;
+    if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
+      IsEq = true;
+    else if (match(V, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
+      IsEq = false;
+    else
+      return;
     // Keep a stack (SmallVector for efficiency) for depth-first traversal
-    SmallVector<Value *, 8> DFT;
-    SmallPtrSet<Value *, 8> Visited;
-
-    // Initialize
-    Visited.insert(V);
-    DFT.push_back(V);
+    SmallVector<Value *, 8> DFT{Op0, Op1};
+    SmallPtrSet<Value *, 8> Visited{V, Op0, Op1};
 
     while (!DFT.empty()) {
       V = DFT.pop_back_val();
 
       if (Instruction *I = dyn_cast<Instruction>(V)) {
         // If it is a || (or && depending on isEQ), process the operands.
-        Value *Op0, *Op1;
-        if (isEQ ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
+        if (IsEq ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
                  : match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
           if (Visited.insert(Op1).second)
             DFT.push_back(Op1);
@@ -762,7 +766,7 @@ private:
         }
 
         // Try to match the current instruction
-        if (matchInstruction(I, isEQ))
+        if (matchInstruction(I, IsEq))
           // Match succeed, continue the loop
           continue;
       }
@@ -810,11 +814,15 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
     if (!SI->getParent()->hasNPredecessorsOrMore(128 / SI->getNumSuccessors()))
       CV = SI->getCondition();
   } else if (BranchInst *BI = dyn_cast<BranchInst>(TI))
-    if (BI->isConditional() && BI->getCondition()->hasOneUse())
+    if (BI->isConditional() && BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
         if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
           CV = ICI->getOperand(0);
+      } else if (auto *Trunc = dyn_cast<TruncInst>(BI->getCondition())) {
+        if (Trunc->hasNoUnsignedWrap())
+          CV = Trunc->getOperand(0);
       }
+    }
 
   // Unwrap any lossless ptrtoint cast.
   if (CV) {
@@ -840,11 +848,20 @@ BasicBlock *SimplifyCFGOpt::getValueEqualityComparisonCases(
   }
 
   BranchInst *BI = cast<BranchInst>(TI);
-  ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
-  BasicBlock *Succ = BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_NE);
-  Cases.push_back(ValueEqualityComparisonCase(
-      getConstantInt(ICI->getOperand(1), DL), Succ));
-  return BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_EQ);
+  Value *Cond = BI->getCondition();
+  ICmpInst::Predicate Pred;
+  ConstantInt *C;
+  if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
+    Pred = ICI->getPredicate();
+    C = getConstantInt(ICI->getOperand(1), DL);
+  } else {
+    Pred = ICmpInst::ICMP_NE;
+    auto *Trunc = cast<TruncInst>(Cond);
+    C = ConstantInt::get(cast<IntegerType>(Trunc->getOperand(0)->getType()), 0);
+  }
+  BasicBlock *Succ = BI->getSuccessor(Pred == ICmpInst::ICMP_NE);
+  Cases.push_back(ValueEqualityComparisonCase(C, Succ));
+  return BI->getSuccessor(Pred == ICmpInst::ICMP_EQ);
 }
 
 /// Given a vector of bb/value pairs, remove any entries
@@ -1106,7 +1123,10 @@ static void getBranchWeights(Instruction *TI,
   // default weight to be the first entry.
   if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
     assert(Weights.size() == 2);
-    ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
+    auto *ICI = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!ICI)
+      return;
+
     if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
       std::swap(Weights.front(), Weights.back());
   }
@@ -3321,12 +3341,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign :
+         at::getDVRAssignmentMarkers(SpeculatedStore))
       if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
         DbgAssign->replaceVariableLocationOp(OrigV, S);
-    };
-    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
-    for_each(at::getDVRAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3655,15 +3673,19 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(BranchInst *BI) {
+  // Note: If BB is a loop header then there is a risk that threading introduces
+  // a non-canonical loop by moving a back edge. So we avoid this optimization
+  // for loop headers if NeedCanonicalLoop is set.
+  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent()))
+    return false;
+
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result =
+        foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, Options.AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -5084,6 +5106,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   Value *CompVal = ConstantCompare.CompValue;
   unsigned UsedICmps = ConstantCompare.UsedICmps;
   Value *ExtraCase = ConstantCompare.Extra;
+  bool TrueWhenEqual = ConstantCompare.IsEq;
 
   // If we didn't have a multiply compared value, fail.
   if (!CompVal)
@@ -5092,8 +5115,6 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   // Avoid turning single icmps into a switch.
   if (UsedICmps <= 1)
     return false;
-
-  bool TrueWhenEqual = match(Cond, m_LogicalOr(m_Value(), m_Value()));
 
   // There might be duplicate constants in the list, which the switch
   // instruction can't handle, remove them now.
@@ -6641,16 +6662,20 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
   }
   case ArrayKind: {
     Type *IndexTy = DL.getIndexType(Array->getType());
+    auto *ArrayTy = cast<ArrayType>(Array->getValueType());
 
-    if (Index->getType() != IndexTy)
+    if (Index->getType() != IndexTy) {
+      unsigned OldBitWidth = Index->getType()->getIntegerBitWidth();
       Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+      if (auto *Zext = dyn_cast<ZExtInst>(Index))
+        Zext->setNonNeg(
+            isUIntN(OldBitWidth - 1, ArrayTy->getNumElements() - 1));
+    }
 
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
-    Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
-                                           GEPIndices, "switch.gep");
-    return Builder.CreateLoad(
-        cast<ArrayType>(Array->getValueType())->getElementType(), GEP,
-        "switch.load");
+    Value *GEP =
+        Builder.CreateInBoundsGEP(ArrayTy, Array, GEPIndices, "switch.gep");
+    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
   }
   }
   llvm_unreachable("Unknown lookup table kind!");
@@ -8081,7 +8106,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
+  if (foldCondBranchOnValueKnownInPredecessor(BI))
     return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.

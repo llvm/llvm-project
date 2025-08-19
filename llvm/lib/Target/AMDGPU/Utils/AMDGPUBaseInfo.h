@@ -35,6 +35,7 @@ class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MDNode;
 class StringRef;
 class Triple;
 class raw_ostream;
@@ -1012,6 +1013,12 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register constraint. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class.
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint);
+
 /// \returns Integer value requested using \p F's \p Name attribute.
 ///
 /// \returns \p Default if attribute is not present.
@@ -1057,6 +1064,9 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 /// Similar to the function above, but returns std::nullopt if any error occurs.
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
+
+/// Checks if \p Val is inside \p MD, a !range-like metadata.
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1543,6 +1553,7 @@ bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250(const MCSubtargetInfo &STI);
+bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
@@ -1703,6 +1714,8 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
+LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset);
@@ -1742,15 +1755,22 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegalDPALU_DPPControl(unsigned DC) {
-  return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
+  if (isGFX12(ST))
+    return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
+  if (isGFX90A(ST))
+    return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+  return false;
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
 
+/// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
+bool isDPALU_DPP32BitOpc(unsigned Opc);
+
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

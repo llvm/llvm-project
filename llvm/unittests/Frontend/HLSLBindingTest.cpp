@@ -155,8 +155,10 @@ TEST(HLSLBindingTest, TestExactOverlap) {
 
   // Since the bindings overlap exactly we need sigil values to differentiate
   // them.
-  char ID1;
-  char ID2;
+  // Note: We initialize these to 0 to suppress a -Wuninitialized-const-pointer,
+  // but we really are just using the stack addresses here.
+  char ID1 = 0;
+  char ID2 = 0;
 
   // StructuredBuffer<float> A  : register(t5);
   // StructuredBuffer<float> B  : register(t5);
@@ -270,4 +272,22 @@ TEST(HLSLBindingTest, TestFindAvailable) {
                                 /*Size=*/~0u);
   // In an empty space we find the slot at the beginning.
   EXPECT_THAT(V, HasSpecificValue(0u));
+}
+
+// Test that add duplicate bindings are correctly de-duplicated
+TEST(HLSLBindingTest, TestNoOverlapWithDuplicates) {
+  hlsl::BindingInfoBuilder Builder;
+
+  // We add the same binding three times, and just use `nullptr` for the cookie
+  // so that they should all be uniqued away.
+  Builder.trackBinding(ResourceClass::SRV, /*Space=*/0, /*LowerBound=*/5,
+                       /*UpperBound=*/5, /*Cookie=*/nullptr);
+  Builder.trackBinding(ResourceClass::SRV, /*Space=*/0, /*LowerBound=*/5,
+                       /*UpperBound=*/5, /*Cookie=*/nullptr);
+  Builder.trackBinding(ResourceClass::SRV, /*Space=*/0, /*LowerBound=*/5,
+                       /*UpperBound=*/5, /*Cookie=*/nullptr);
+  bool HasOverlap;
+  hlsl::BindingInfo Info = Builder.calculateBindingInfo(HasOverlap);
+
+  EXPECT_FALSE(HasOverlap);
 }

@@ -22,11 +22,10 @@ bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
          !Definition->enumerators().empty() &&
-         std::none_of(Definition->enumerator_begin(),
-                      Definition->enumerator_end(),
-                      [](const EnumConstantDecl *Value) {
-                        return Value->getInitVal().isZero();
-                      });
+         llvm::none_of(Definition->enumerators(),
+                       [](const EnumConstantDecl *Value) {
+                         return Value->getInitVal().isZero();
+                       });
 }
 
 AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
@@ -68,15 +67,15 @@ public:
     return Visit(T->getElementType().getTypePtr());
   }
   bool VisitEnumType(const EnumType *T) {
-    if (isCompleteAndHasNoZeroValue(T->getDecl())) {
+    if (isCompleteAndHasNoZeroValue(T->getOriginalDecl())) {
       FoundEnum = T;
       return true;
     }
     return false;
   }
   bool VisitRecordType(const RecordType *T) {
-    const RecordDecl *RD = T->getDecl();
-    if (RD->isUnion())
+    const RecordDecl *RD = T->getOriginalDecl()->getDefinition();
+    if (!RD || RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
       return Visit(F->getType().getTypePtr());
@@ -126,7 +125,7 @@ void InvalidEnumDefaultInitializationCheck::check(
     if (!Finder.Visit(InitList->getArrayFiller()->getType().getTypePtr()))
       return;
     InitExpr = InitList;
-    Enum = Finder.FoundEnum->getDecl();
+    Enum = Finder.FoundEnum->getOriginalDecl();
   }
 
   if (!InitExpr || !Enum)
