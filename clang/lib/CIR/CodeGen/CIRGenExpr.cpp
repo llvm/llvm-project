@@ -1170,28 +1170,33 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     return;
   }
 
-  CXXDestructorDecl *referenceTemporaryDtor = nullptr;
-  if (const clang::RecordType *rt = e->getType()
-                                        ->getBaseElementTypeUnsafe()
-                                        ->getAs<clang::RecordType>()) {
-    // Get the destructor for the reference temporary.
-    auto *classDecl =
-        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
-    if (!classDecl->hasTrivialDestructor())
-      referenceTemporaryDtor =
-          classDecl->getDefinitionOrSelf()->getDestructor();
-  }
-
-  if (!referenceTemporaryDtor)
+  const QualType::DestructionKind dk = e->getType().isDestructedType();
+  if (dk == QualType::DK_none)
     return;
 
-  // Call the destructor for the temporary.
   switch (m->getStorageDuration()) {
   case SD_Static:
-  case SD_Thread:
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "pushTemporaryCleanup: static/thread storage duration");
-    return;
+  case SD_Thread: {
+    CXXDestructorDecl *referenceTemporaryDtor = nullptr;
+    if (const clang::RecordType *rt = e->getType()
+                                          ->getBaseElementTypeUnsafe()
+                                          ->getAs<clang::RecordType>()) {
+      // Get the destructor for the reference temporary.
+      if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+              rt->getOriginalDecl()->getDefinitionOrSelf())) {
+        if (!classDecl->hasTrivialDestructor())
+          referenceTemporaryDtor =
+              classDecl->getDefinitionOrSelf()->getDestructor();
+      }
+    }
+
+    if (!referenceTemporaryDtor)
+      return;
+
+    cgf.cgm.errorNYI(e->getSourceRange(), "pushTemporaryCleanup: static/thread "
+                                          "storage duration with destructors");
+    break;
+  }
 
   case SD_FullExpression:
     cgf.pushDestroy(NormalAndEHCleanup, referenceTemporary, e->getType(),
