@@ -17,9 +17,13 @@ gpu.module @test_1_1_assignment {
     //CHECK: [[UY:%.+]] = arith.addi [[LY]], [[C0]] : index
     //CHECK: [[UX:%.+]] = arith.addi [[LX]], [[C0_1]] : index
     //CHECK: [[C256:%.+]] = arith.constant 256 : index
-    //CHECK: [[Y:%.+]] = index.remu [[UY]], [[C256]]
+    //CHECK: [[MODY:%.+]] = index.remu [[UY]], [[C256]]
     //CHECK: [[C128:%.+]] = arith.constant 128 : index
-    //CHECK: [[X:%.+]] = index.remu [[UX]], [[C128]]
+    //CHECK: [[MODX:%.+]] = index.remu [[UX]], [[C128]]
+    //CHECK: [[C0_3:%.+]] = arith.constant 0 : index
+    //CHECK: [[X:%.+]] = index.add [[MODX]], [[C0_3]]
+    //CHECK: [[C0_4:%.+]] = arith.constant 0 : index
+    //CHECK: [[Y:%.+]] = index.add [[MODY]], [[C0_4]]
     //CHECK: [[TDESC:%.+]] = xegpu.create_nd_tdesc [[ARG_0]][[[Y]], [[X]]] : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -396,9 +400,9 @@ gpu.func @dpas_no_sg_data(%a: memref<128x128xf16>, %b: memref<128x128xf16>) {
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
     //CHECK: [[mod_x:%.+]] = index.remu [[l_off_x_0]], [[c128]]
     //CHECK: [[c0_2:%.+]] = arith.constant 0 : index
-    //CHECK: [[off_y:%.+]] = index.add [[c0_2]], [[mod_y]]
+    //CHECK: [[off_x:%.+]] = index.add [[mod_x]], [[c0_2]]
     //CHECK: [[c0_3:%.+]] = arith.constant 0 : index
-    //CHECK: [[off_x:%.+]] = index.add [[c0_3]], [[mod_x]]
+    //CHECK: [[off_y:%.+]] = index.add [[mod_y]], [[c0_3]]
     //CHECK: xegpu.load_matrix [[mdesc]][[[off_y]], [[off_x]]] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
     %0 = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
     %1 = xegpu.load_matrix %0[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32], lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32> -> vector<64x128xf32>
@@ -429,9 +433,9 @@ gpu.func @dpas_no_sg_data(%a: memref<128x128xf16>, %b: memref<128x128xf16>) {
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
     //CHECK: [[mod_x:%.+]] = index.remu [[l_off_x]], [[c128]]
     //CHECK: [[c0_3:%.+]] = arith.constant 0 : index
-    //CHECK: [[off_y:%.+]] = index.add [[c0_3]], [[mod_y]]
+    //CHECK: [[off_x:%.+]] = index.add [[mod_x]], [[c0_3]]
     //CHECK: [[c0_4:%.+]] = arith.constant 0 : index
-    //CHECK: [[off_x:%.+]] = index.add [[c0_4]], [[mod_x]]
+    //CHECK: [[off_y:%.+]] = index.add [[mod_y]], [[c0_4]]
     //CHECK: xegpu.store_matrix [[cst]], [[mdesc]][[[off_y]], [[off_x]]] : vector<32x32xf32>, !xegpu.mem_desc<64x128xf32>, index, index
     %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32]>} dense<1.0> : vector<64x128xf32>
     %mdesc = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>

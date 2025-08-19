@@ -175,7 +175,7 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def DistributLayoutAttrInterface: AttrInterface<"DistributLayoutAttrInterface"> {
+def DistributeLayoutAttrInterface: AttrInterface<"DistributeLayoutAttrInterface"> {
   let cppNamespace = "::mlir::xegpu";
   let description = [{
     Common trait for all XeGPU layouts.
@@ -198,7 +198,7 @@ def DistributLayoutAttrInterface: AttrInterface<"DistributLayoutAttrInterface"> 
                     "std::optional<SmallVector<int64_t>>",
                     "getSgDataAsInt">,
     InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
-                    "xegpu::DistributLayoutAttrInterface",
+                    "xegpu::DistributeLayoutAttrInterface",
                     "dropSgLayoutAndData">,
     InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
                       indices based on the effective subgroup layout.}],
@@ -215,7 +215,7 @@ def DistributLayoutAttrInterface: AttrInterface<"DistributLayoutAttrInterface"> 
   ];
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributLayoutAttrInterface]> {
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttrInterface]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -409,7 +409,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributLayoutAttrInterfa
 }
 
 
-def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributLayoutAttrInterface]> {
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttrInterface]> {
   let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
 
   let description = [{
@@ -436,7 +436,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributLayoutAttrInterface]
   }];
 
   let parameters = (ins
-    "xegpu::DistributLayoutAttrInterface": $parent,
+    "xegpu::DistributeLayoutAttrInterface": $parent,
     "DenseI64ArrayAttr": $dims
   );
 

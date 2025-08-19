@@ -30,9 +30,13 @@ gpu.module @test_round_robin_assignment {
     //CHECK: [[ADDY:%.+]] = arith.addi [[LY]], [[C0]] : index
     //CHECK: [[ADDX:%.+]] = arith.addi [[LX]], [[C0_1]] : index
     //CHECK: [[C128:%.+]] = arith.constant 128 : index
-    //CHECK: [[offY:%.+]] = index.remu [[ADDY]], [[C128]]
+    //CHECK: [[modY:%.+]] = index.remu [[ADDY]], [[C128]]
     //CHECK: [[C64_2:%.+]] = arith.constant 64 : index
-    //CHECK: [[offX:%.+]] = index.remu [[ADDX]], [[C64_2]]
+    //CHECK: [[modX:%.+]] = index.remu [[ADDX]], [[C64_2]]
+    //CHECK: [[C0_3:%.+]] = arith.constant 0 : index
+    //CHECK: [[offX:%.+]] = index.add [[modX]], [[C0_3]]
+    //CHECK: [[C0_4:%.+]] = arith.constant 0 : index
+    //CHECK: [[offY:%.+]] = index.add [[modY]], [[C0_4]]
     //CHECK: xegpu.create_nd_tdesc [[ARG_0]][[[offY]], [[offX]]] : memref<256x128xf32> -> !xegpu.tensor_desc<16x64xf32>
     %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
       -> !xegpu.tensor_desc<128x64xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64]>>
