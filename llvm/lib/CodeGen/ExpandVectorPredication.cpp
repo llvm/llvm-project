@@ -465,6 +465,21 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
         VPI.getName());
     break;
   }
+  case Intrinsic::vp_load_ff: {
+    // Mask out all but the first lane.
+    Value *NewMask = ConstantInt::getFalse(MaskParam->getType());
+    NewMask = Builder.CreateInsertElement(
+        NewMask, ConstantInt::getTrue(MaskParam->getType()->getScalarType()),
+        (uint64_t)0);
+    NewMask = Builder.CreateAnd(MaskParam, NewMask);
+    Value *MaskedLoad = Builder.CreateMaskedLoad(
+        VPI.getType()->subtypes()[0], PtrParam, AlignOpt.valueOrOne(), NewMask);
+    Value *EVLResult = Builder.getInt32(1);
+    Value *InsertValue = Builder.CreateInsertValue(
+        PoisonValue::get(VPI.getType()), MaskedLoad, 0);
+    NewMemoryInst = Builder.CreateInsertValue(InsertValue, EVLResult, 1);
+    break;
+  }
   }
 
   assert(NewMemoryInst);
@@ -609,6 +624,7 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_store:
   case Intrinsic::vp_gather:
   case Intrinsic::vp_scatter:
+  case Intrinsic::vp_load_ff:
     return expandPredicationInMemoryIntrinsic(Builder, VPI);
   }
 
