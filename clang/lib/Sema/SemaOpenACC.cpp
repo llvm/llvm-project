@@ -690,9 +690,9 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
       }
     }
   } else if (CK == OpenACCClauseKind::Reduction) {
-    // TODO: OpenACC:
-    // Reduction must have copyctor + dtor + operation in InnerTy I think?
-    // Need to confirm when implementing this part.
+    // TODO: Reduction needs to be an aggregate, which gets checked later, so
+    // construction here isn't a problem.  However, we need to make sure that we
+    // can compare it correctly still.
   }
 
   // All 3 things need to make sure they have a dtor.
