@@ -40,7 +40,7 @@ static cl::opt<bool> BPFExpandMemcpyInOrder("bpf-expand-memcpy-in-order",
   cl::desc("Expand memcpy into load/store pairs in order"));
 
 static cl::opt<unsigned> BPFMinimumJumpTableEntries(
-    "bpf-min-jump-table-entries", cl::init(5), cl::Hidden,
+    "bpf-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on BPF"));
 
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
