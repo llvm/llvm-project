@@ -1981,18 +1981,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "expxf16",
-    hdrs = ["src/math/generic/expxf16.h"],
-    deps = [
-        ":__support_fputil_cast",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_nearest_integer",
-        ":__support_math_exp10_float16_constants",
-        ":__support_math_expf16_utils",
-    ],
-)
-
-libc_support_library(
     name = "__support_math_acos",
     hdrs = ["src/__support/math/acos.h"],
     deps = [
@@ -2391,6 +2379,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_coshf16",
+    hdrs = ["src/__support/math/coshf16.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_expxf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -2458,6 +2460,18 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_math_expf16_utils",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_expxf16_utils",
+    hdrs = ["src/__support/math/expxf16_utils.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_nearest_integer",
+        ":__support_math_exp10_float16_constants",
+        ":__support_math_expf16_utils",
     ],
 )
 
@@ -3199,7 +3213,7 @@ libc_math_function(
 libc_math_function(
     name = "coshf16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_coshf16",
     ],
 )
 
@@ -3297,7 +3311,7 @@ libc_math_function(
     name = "expf16",
     additional_deps = [
         ":__support_math_expf16",
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -3366,7 +3380,7 @@ libc_math_function(
 libc_math_function(
     name = "exp2f16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -3381,7 +3395,7 @@ libc_math_function(
 libc_math_function(
     name = "exp2m1f16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -3417,7 +3431,7 @@ libc_math_function(
 libc_math_function(
     name = "expm1f16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -3923,7 +3937,7 @@ libc_math_function(
 libc_math_function(
     name = "logf16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -3958,7 +3972,7 @@ libc_math_function(
 libc_math_function(
     name = "log10f16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -4019,7 +4033,7 @@ libc_math_function(
 libc_math_function(
     name = "log2f16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -4341,7 +4355,7 @@ libc_math_function(
 libc_math_function(
     name = "sinhf16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
@@ -4448,7 +4462,7 @@ libc_math_function(
 libc_math_function(
     name = "tanhf16",
     additional_deps = [
-        ":expxf16",
+        ":__support_math_expxf16_utils",
     ],
 )
 
