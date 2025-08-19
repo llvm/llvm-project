@@ -16,16 +16,15 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
-#include "mlir/Support/LLVM.h"
 #include "mlir/Target/Wasm/WasmBinaryEncoding.h"
 #include "mlir/Target/Wasm/WasmImporter.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/LogicalResult.h"
 
-#include <cstddef>
+#include <climits>
 #include <cstdint>
 #include <variant>
 
@@ -149,22 +148,22 @@ struct WasmModuleSymbolTables {
   }
 
   std::string getNewFuncSymbolName() const {
-    size_t id = funcSymbols.size();
+    auto id = funcSymbols.size();
     return getNewSymbolName("func_", id);
   }
 
   std::string getNewGlobalSymbolName() const {
-    size_t id = globalSymbols.size();
+    auto id = globalSymbols.size();
     return getNewSymbolName("global_", id);
   }
 
   std::string getNewMemorySymbolName() const {
-    size_t id = memSymbols.size();
+    auto id = memSymbols.size();
     return getNewSymbolName("mem_", id);
   }
 
   std::string getNewTableSymbolName() const {
-    size_t id = tableSymbols.size();
+    auto id = tableSymbols.size();
     return getNewSymbolName("table_", id);
   }
 };
@@ -233,20 +232,6 @@ private:
   parseConstInst(OpBuilder &builder,
                  std::enable_if_t<std::is_arithmetic_v<valueT>> * = nullptr);
 
-  /// Construct an operation with \p numOperands operands and a single result.
-  /// Each operand must have the same type. Suitable for e.g. binops, unary
-  /// ops, etc.
-  ///
-  /// \p opcode - The WASM opcode to build.
-  /// \p valueType - The operand and result type for the built instruction.
-  /// \p numOperands - The number of operands for the built operation.
-  ///
-  /// \returns The parsed instruction result, or failure.
-  template <typename opcode, typename valueType, unsigned int numOperands>
-  inline parsed_inst_t
-  buildNumericOp(OpBuilder &builder,
-                 std::enable_if_t<std::is_arithmetic_v<valueType>> * = nullptr);
-
   /// This function generates a dispatch tree to associate an opcode with a
   /// parser. Parsers are registered by specialising the
   /// `parseSpecificInstruction` function for the op code to handle.
@@ -301,16 +286,10 @@ public:
     return valueStack.pushResults(results, &currentOpLoc.value());
   }
 
-  /// The local.set and local.tee operations behave similarly and only differ
-  /// on their return value. This function factorizes the behavior of the two
-  /// operations in one place.
-  template <typename OpToCreate>
-  parsed_inst_t parseSetOrTee(OpBuilder &);
-
 private:
   std::optional<Location> currentOpLoc;
   ParserHead &parser;
-  WasmModuleSymbolTables const &symbols;
+  [[maybe_unused]] WasmModuleSymbolTables const &symbols;
   locals_t locals;
   ValueStack valueStack;
 };
@@ -343,7 +322,7 @@ public:
   }
 
   FailureOr<std::byte> consumeByte() {
-    FailureOr<StringRef> res = consumeNBytes(1);
+    auto res = consumeNBytes(1);
     if (failed(res))
       return failure();
     return std::byte{*res->bytes_begin()};
@@ -503,7 +482,7 @@ public:
     FileLineColLoc importLoc = getLocation();
     FailureOr<std::byte> importType = consumeByte();
     auto packager = [](auto parseResult) -> FailureOr<ImportDesc> {
-      if (failed(parseResult))
+      if (llvm::failed(parseResult))
         return failure();
       return {*parseResult};
     };
@@ -531,60 +510,6 @@ public:
     return eParser.parse(builder);
   }
 
-  LogicalResult parseCodeFor(FuncOp func,
-                             WasmModuleSymbolTables const &symbols) {
-    SmallVector<local_val_t> locals{};
-    // Populating locals with function argument
-    Block &block = func.getBody().front();
-    // Delete temporary return argument which was only created for IR validity
-    assert(func.getBody().getBlocks().size() == 1 &&
-           "Function should only have its default created block at this point");
-    assert(block.getOperations().size() == 1 &&
-           "Only the placeholder return op should be present at this point");
-    auto returnOp = cast<ReturnOp>(&block.back());
-    assert(returnOp);
-
-    FailureOr<uint32_t> codeSizeInBytes = parseUI32();
-    if (failed(codeSizeInBytes))
-      return failure();
-    FailureOr<StringRef> codeContent = consumeNBytes(*codeSizeInBytes);
-    if (failed(codeContent))
-      return failure();
-    auto name = StringAttr::get(func->getContext(),
-                                locName.str() + "::" + func.getSymName());
-    auto cParser = ParserHead{*codeContent, name};
-    FailureOr<uint32_t> localVecSize = cParser.parseVectorSize();
-    if (failed(localVecSize))
-      return failure();
-    OpBuilder builder{&func.getBody().front().back()};
-    for (auto arg : block.getArguments())
-      locals.push_back(cast<TypedValue<LocalRefType>>(arg));
-    // Declare the local ops
-    uint32_t nVarVec = *localVecSize;
-    for (size_t i = 0; i < nVarVec; ++i) {
-      FileLineColLoc varLoc = cParser.getLocation();
-      FailureOr<uint32_t> nSubVar = cParser.parseUI32();
-      if (failed(nSubVar))
-        return failure();
-      FailureOr<Type> varT = cParser.parseValueType(func->getContext());
-      if (failed(varT))
-        return failure();
-      for (size_t j = 0; j < *nSubVar; ++j) {
-        auto local = builder.create<LocalOp>(varLoc, *varT);
-        locals.push_back(local.getResult());
-      }
-    }
-    parsed_inst_t res = cParser.parseExpression(builder, symbols, locals);
-    if (failed(res))
-      return failure();
-    if (!cParser.end())
-      return emitError(cParser.getLocation(),
-                       "unparsed garbage remaining at end of code block");
-    builder.create<ReturnOp>(func->getLoc(), *res);
-    returnOp->erase();
-    return success();
-  }
-
   bool end() const { return curHead().empty(); }
 
   ParserHead copy() const { return *this; }
@@ -610,7 +535,7 @@ private:
 
 template <>
 FailureOr<float> ParserHead::parseLiteral<float>() {
-  FailureOr<StringRef> bytes = consumeNBytes(4);
+  auto bytes = consumeNBytes(4);
   if (failed(bytes))
     return failure();
   float result;
@@ -620,7 +545,7 @@ FailureOr<float> ParserHead::parseLiteral<float>() {
 
 template <>
 FailureOr<double> ParserHead::parseLiteral<double>() {
-  FailureOr<StringRef> bytes = consumeNBytes(8);
+  auto bytes = consumeNBytes(8);
   if (failed(bytes))
     return failure();
   double result;
@@ -725,7 +650,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
          << "  Current stack size: " << values.size();
   if (operandTypes.size() > values.size())
     return emitError(*opLoc,
-                     "stack doesn't contain enough values. trying to get ")
+                     "stack doesn't contain enough values. Trying to get ")
            << operandTypes.size() << " operands on a stack containing only "
            << values.size() << " values.";
   size_t stackIdxOffset = values.size() - operandTypes.size();
@@ -735,7 +660,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
     Value operand = values[i + stackIdxOffset];
     Type stackType = operand.getType();
     if (stackType != operandTypes[i])
-      return emitError(*opLoc, "invalid operand type on stack. expecting ")
+      return emitError(*opLoc, "invalid operand type on stack. Expecting ")
              << operandTypes[i] << ", value on stack is of type " << stackType
              << ".";
     LDBG() << "    POP: " << operand;
@@ -791,70 +716,6 @@ ExpressionParser::parse(OpBuilder &builder,
     if (failed(pushResults(res)))
       return failure();
   }
-}
-
-template <>
-inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
-    WasmBinaryEncoding::OpCode::localGet>(OpBuilder &builder) {
-  FailureOr<uint32_t> id = parser.parseLiteral<uint32_t>();
-  Location instLoc = *currentOpLoc;
-  if (failed(id))
-    return failure();
-  if (*id >= locals.size())
-    return emitError(instLoc, "invalid local index. function has ")
-           << locals.size() << " accessible locals, received index " << *id;
-  return {{builder.create<LocalGetOp>(instLoc, locals[*id]).getResult()}};
-}
-
-template <>
-inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
-    WasmBinaryEncoding::OpCode::globalGet>(OpBuilder &builder) {
-  FailureOr<uint32_t> id = parser.parseLiteral<uint32_t>();
-  Location instLoc = *currentOpLoc;
-  if (failed(id))
-    return failure();
-  if (*id >= symbols.globalSymbols.size())
-    return emitError(instLoc, "invalid global index. function has ")
-           << symbols.globalSymbols.size()
-           << " accessible globals, received index " << *id;
-  GlobalSymbolRefContainer globalVar = symbols.globalSymbols[*id];
-  auto globalOp = builder.create<GlobalGetOp>(instLoc, globalVar.globalType,
-                                              globalVar.symbol);
-
-  return {{globalOp.getResult()}};
-}
-
-template <typename OpToCreate>
-parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
-  FailureOr<uint32_t> id = parser.parseLiteral<uint32_t>();
-  if (failed(id))
-    return failure();
-  if (*id >= locals.size())
-    return emitError(*currentOpLoc, "invalid local index. function has ")
-           << locals.size() << " accessible locals, received index " << *id;
-  if (valueStack.empty())
-    return emitError(
-        *currentOpLoc,
-        "invalid stack access, trying to access a value on an empty stack.");
-
-  parsed_inst_t poppedOp = popOperands(locals[*id].getType().getElementType());
-  if (failed(poppedOp))
-    return failure();
-  return {
-      builder.create<OpToCreate>(*currentOpLoc, locals[*id], poppedOp->front())
-          ->getResults()};
-}
-
-template <>
-inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
-    WasmBinaryEncoding::OpCode::localSet>(OpBuilder &builder) {
-  return parseSetOrTee<LocalSetOp>(builder);
-}
-
-template <>
-inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
-    WasmBinaryEncoding::OpCode::localTee>(OpBuilder &builder) {
-  return parseSetOrTee<LocalTeeOp>(builder);
 }
 
 template <typename T>
@@ -948,94 +809,6 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
     WasmBinaryEncoding::OpCode::constFP64>(OpBuilder &builder) {
   return parseConstInst<double>(builder);
 }
-
-template <typename opcode, typename valueType, unsigned int numOperands>
-inline parsed_inst_t ExpressionParser::buildNumericOp(
-    OpBuilder &builder, std::enable_if_t<std::is_arithmetic_v<valueType>> *) {
-  auto ty = buildLiteralType<valueType>(builder);
-  LDBG() << "*** buildNumericOp: numOperands = " << numOperands
-         << ", type = " << ty << " ***";
-  auto tysToPop = SmallVector<Type, numOperands>();
-  tysToPop.resize(numOperands);
-  std::fill(tysToPop.begin(), tysToPop.end(), ty);
-  auto operands = popOperands(tysToPop);
-  if (failed(operands))
-    return failure();
-  auto op = builder.create<opcode>(*currentOpLoc, *operands).getResult();
-  LDBG() << "Built operation: " << op;
-  return {{op}};
-}
-
-// Convenience macro for generating numerical operations.
-#define BUILD_NUMERIC_OP(OP_NAME, N_ARGS, PREFIX, SUFFIX, TYPE)                \
-  template <>                                                                  \
-  inline parsed_inst_t ExpressionParser::parseSpecificInstruction<             \
-      WasmBinaryEncoding::OpCode::PREFIX##SUFFIX>(OpBuilder & builder) {       \
-    return buildNumericOp<OP_NAME, TYPE, N_ARGS>(builder);                     \
-  }
-
-// Macro to define binops that only support integer types.
-#define BUILD_NUMERIC_BINOP_INT(OP_NAME, PREFIX)                               \
-  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, I32, int32_t)                           \
-  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, I64, int64_t)
-
-// Macro to define binops that only support floating point types.
-#define BUILD_NUMERIC_BINOP_FP(OP_NAME, PREFIX)                                \
-  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, F32, float)                             \
-  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, F64, double)
-
-// Macro to define binops that support both floating point and integer types.
-#define BUILD_NUMERIC_BINOP_INTFP(OP_NAME, PREFIX)                             \
-  BUILD_NUMERIC_BINOP_INT(OP_NAME, PREFIX)                                     \
-  BUILD_NUMERIC_BINOP_FP(OP_NAME, PREFIX)
-
-// Macro to implement unary ops that only support integers.
-#define BUILD_NUMERIC_UNARY_OP_INT(OP_NAME, PREFIX)                            \
-  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, I32, int32_t)                           \
-  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, I64, int64_t)
-
-// Macro to implement unary ops that support integer and floating point types.
-#define BUILD_NUMERIC_UNARY_OP_FP(OP_NAME, PREFIX)                             \
-  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, F32, float)                             \
-  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, F64, double)
-
-BUILD_NUMERIC_BINOP_FP(CopySignOp, copysign)
-BUILD_NUMERIC_BINOP_FP(DivOp, div)
-BUILD_NUMERIC_BINOP_FP(MaxOp, max)
-BUILD_NUMERIC_BINOP_FP(MinOp, min)
-BUILD_NUMERIC_BINOP_INT(AndOp, and)
-BUILD_NUMERIC_BINOP_INT(DivSIOp, divS)
-BUILD_NUMERIC_BINOP_INT(DivUIOp, divU)
-BUILD_NUMERIC_BINOP_INT(OrOp, or)
-BUILD_NUMERIC_BINOP_INT(RemSIOp, remS)
-BUILD_NUMERIC_BINOP_INT(RemUIOp, remU)
-BUILD_NUMERIC_BINOP_INT(RotlOp, rotl)
-BUILD_NUMERIC_BINOP_INT(RotrOp, rotr)
-BUILD_NUMERIC_BINOP_INT(ShLOp, shl)
-BUILD_NUMERIC_BINOP_INT(ShRSOp, shrS)
-BUILD_NUMERIC_BINOP_INT(ShRUOp, shrU)
-BUILD_NUMERIC_BINOP_INT(XOrOp, xor)
-BUILD_NUMERIC_BINOP_INTFP(AddOp, add)
-BUILD_NUMERIC_BINOP_INTFP(MulOp, mul)
-BUILD_NUMERIC_BINOP_INTFP(SubOp, sub)
-BUILD_NUMERIC_UNARY_OP_FP(AbsOp, abs)
-BUILD_NUMERIC_UNARY_OP_FP(CeilOp, ceil)
-BUILD_NUMERIC_UNARY_OP_FP(FloorOp, floor)
-BUILD_NUMERIC_UNARY_OP_FP(NegOp, neg)
-BUILD_NUMERIC_UNARY_OP_FP(SqrtOp, sqrt)
-BUILD_NUMERIC_UNARY_OP_FP(TruncOp, trunc)
-BUILD_NUMERIC_UNARY_OP_INT(ClzOp, clz)
-BUILD_NUMERIC_UNARY_OP_INT(CtzOp, ctz)
-BUILD_NUMERIC_UNARY_OP_INT(PopCntOp, popcnt)
-
-// Don't need these anymore so let's undef them.
-#undef BUILD_NUMERIC_BINOP_FP
-#undef BUILD_NUMERIC_BINOP_INT
-#undef BUILD_NUMERIC_BINOP_INTFP
-#undef BUILD_NUMERIC_UNARY_OP_FP
-#undef BUILD_NUMERIC_UNARY_OP_INT
-#undef BUILD_NUMERIC_OP
-#undef BUILD_NUMERIC_CAST_OP
 
 class WasmBinaryParser {
 private:
@@ -1134,7 +907,7 @@ private:
     if (failed(nElemsParsed))
       return failure();
     uint32_t nElems = *nElemsParsed;
-    LDBG() << "starting to parse " << nElems << " items for section "
+    LDBG() << "Starting to parse " << nElems << " items for section "
            << secName;
     for (size_t i = 0; i < nElems; ++i) {
       if (failed(parseSectionItem<section>(ph, i)))
@@ -1233,7 +1006,7 @@ public:
       return;
     if (version->compare(expectedVersionString)) {
       emitError(versionLoc,
-                "unsupported Wasm version. only version 1 is supported");
+                "unsupported Wasm version. Only version 1 is supported.");
       return;
     }
     LogicalResult fillRegistry = registry.populateFromBody(parser.copy());
@@ -1262,14 +1035,6 @@ public:
 
     LogicalResult parsingMems = parseSection<WasmSectionType::MEMORY>();
     if (failed(parsingMems))
-      return;
-
-    LogicalResult parsingGlobals = parseSection<WasmSectionType::GLOBAL>();
-    if (failed(parsingGlobals))
-      return;
-
-    LogicalResult parsingCode = parseSection<WasmSectionType::CODE>();
-    if (failed(parsingCode))
       return;
 
     LogicalResult parsingExports = parseSection<WasmSectionType::EXPORT>();
@@ -1428,9 +1193,10 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::FUNCTION>(ParserHead &ph,
   auto funcOp =
       FuncOp::create(builder, opLoc, symbol, symbols.moduleFuncTypes[typeIdx]);
   Block *block = funcOp.addEntryBlock();
-  OpBuilder::InsertionGuard guard{builder};
+  auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToEnd(block);
   ReturnOp::create(builder, opLoc);
+  builder.restoreInsertionPoint(ip);
   symbols.funcSymbols.push_back(
       {{FlatSymbolRefAttr::get(funcOp.getSymNameAttr())},
        symbols.moduleFuncTypes[typeIdx]});
@@ -1462,50 +1228,6 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::MEMORY>(ParserHead &ph,
   std::string symbol = symbols.getNewMemorySymbolName();
   auto memOp = MemOp::create(builder, opLocation, symbol, *memory);
   symbols.memSymbols.push_back({SymbolRefAttr::get(memOp)});
-  return success();
-}
-
-template <>
-LogicalResult
-WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
-                                                            size_t) {
-  FileLineColLoc globalLocation = ph.getLocation();
-  auto globalTypeParsed = ph.parseGlobalType(ctx);
-  if (failed(globalTypeParsed))
-    return failure();
-
-  GlobalTypeRecord globalType = *globalTypeParsed;
-  auto symbol = builder.getStringAttr(symbols.getNewGlobalSymbolName());
-  auto globalOp = builder.create<wasmssa::GlobalOp>(
-      globalLocation, symbol, globalType.type, globalType.isMutable);
-  symbols.globalSymbols.push_back(
-      {{FlatSymbolRefAttr::get(globalOp)}, globalOp.getType()});
-  OpBuilder::InsertionGuard guard{builder};
-  Block *block = builder.createBlock(&globalOp.getInitializer());
-  builder.setInsertionPointToStart(block);
-  parsed_inst_t expr = ph.parseExpression(builder, symbols);
-  if (failed(expr))
-    return failure();
-  if (block->empty())
-    return emitError(globalLocation, "global with empty initializer");
-  if (expr->size() != 1 && (*expr)[0].getType() != globalType.type)
-    return emitError(
-        globalLocation,
-        "initializer result type does not match global declaration type");
-  builder.create<ReturnOp>(globalLocation, *expr);
-  return success();
-}
-
-template <>
-LogicalResult WasmBinaryParser::parseSectionItem<WasmSectionType::CODE>(
-    ParserHead &ph, size_t innerFunctionId) {
-  unsigned long funcId = innerFunctionId + firstInternalFuncID;
-  FunctionSymbolRefContainer symRef = symbols.funcSymbols[funcId];
-  auto funcOp =
-      dyn_cast<FuncOp>(SymbolTable::lookupSymbolIn(mOp, symRef.symbol));
-  assert(funcOp);
-  if (failed(ph.parseCodeFor(funcOp, symbols)))
-    return failure();
   return success();
 }
 } // namespace
