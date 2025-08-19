@@ -166,23 +166,23 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-LABEL: test_distributed_shared_cluster_cmpxchg(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
-; CHECK-NEXT:    .reg .b32 %r<53>;
+; CHECK-NEXT:    .reg .b32 %r<43>;
 ; CHECK-NEXT:    .reg .b64 %rd<12>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_distributed_shared_cluster_cmpxchg_param_0];
-; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r24, [%rd2], 1, 0;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r25, [%rd2], 1, 0;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r26, [%rd2], 1, 0;
-; CHECK-NEXT:    atom.release.sys.shared::cluster.cas.b32 %r27, [%rd2], 1, 0;
-; CHECK-NEXT:    atom.acq_rel.sys.shared::cluster.cas.b32 %r28, [%rd2], 1, 0;
-; CHECK-NEXT:    atom.acq_rel.sys.shared::cluster.cas.b32 %r29, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r14, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r15, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r16, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.release.sys.shared::cluster.cas.b32 %r17, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acq_rel.sys.shared::cluster.cas.b32 %r18, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acq_rel.sys.shared::cluster.cas.b32 %r19, [%rd2], 1, 0;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r30, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r20, [%rd2], 1, 0;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r31, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r21, [%rd2], 1, 0;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r32, [%rd2], 1, 0;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b32 %r22, [%rd2], 1, 0;
 ; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b64 %rd3, [%rd2], 1, 0;
 ; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b64 %rd4, [%rd2], 1, 0;
 ; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b64 %rd5, [%rd2], 1, 0;
@@ -196,92 +196,92 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    atom.acquire.sys.shared::cluster.cas.b64 %rd11, [%rd2], 1, 0;
 ; CHECK-NEXT:    and.b64 %rd1, %rd2, -4;
-; CHECK-NEXT:    cvt.u32.u64 %r33, %rd2;
-; CHECK-NEXT:    and.b32 %r34, %r33, 3;
-; CHECK-NEXT:    shl.b32 %r1, %r34, 3;
-; CHECK-NEXT:    mov.b32 %r35, 65535;
-; CHECK-NEXT:    shl.b32 %r36, %r35, %r1;
-; CHECK-NEXT:    not.b32 %r2, %r36;
-; CHECK-NEXT:    mov.b32 %r37, 1;
-; CHECK-NEXT:    shl.b32 %r3, %r37, %r1;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r38, [%rd1];
-; CHECK-NEXT:    and.b32 %r48, %r38, %r2;
+; CHECK-NEXT:    cvt.u32.u64 %r23, %rd2;
+; CHECK-NEXT:    and.b32 %r24, %r23, 3;
+; CHECK-NEXT:    shl.b32 %r1, %r24, 3;
+; CHECK-NEXT:    mov.b32 %r25, 65535;
+; CHECK-NEXT:    shl.b32 %r26, %r25, %r1;
+; CHECK-NEXT:    not.b32 %r2, %r26;
+; CHECK-NEXT:    mov.b32 %r27, 1;
+; CHECK-NEXT:    shl.b32 %r3, %r27, %r1;
+; CHECK-NEXT:    ld.shared::cluster.b32 %r28, [%rd1];
+; CHECK-NEXT:    and.b32 %r38, %r28, %r2;
 ; CHECK-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop33
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or.b32 %r39, %r48, %r3;
-; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r6, [%rd1], %r39, %r48;
-; CHECK-NEXT:    setp.eq.b32 %p1, %r6, %r39;
+; CHECK-NEXT:    or.b32 %r29, %r38, %r3;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r4, [%rd1], %r29, %r38;
+; CHECK-NEXT:    setp.eq.b32 %p1, %r4, %r29;
 ; CHECK-NEXT:    @%p1 bra $L__BB4_3;
 ; CHECK-NEXT:  // %bb.2: // %partword.cmpxchg.failure32
 ; CHECK-NEXT:    // in Loop: Header=BB4_1 Depth=1
-; CHECK-NEXT:    and.b32 %r7, %r6, %r2;
-; CHECK-NEXT:    setp.ne.b32 %p2, %r48, %r7;
-; CHECK-NEXT:    mov.b32 %r48, %r7;
+; CHECK-NEXT:    and.b32 %r5, %r4, %r2;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r38, %r5;
+; CHECK-NEXT:    mov.b32 %r38, %r5;
 ; CHECK-NEXT:    @%p2 bra $L__BB4_1;
 ; CHECK-NEXT:  $L__BB4_3: // %partword.cmpxchg.end31
-; CHECK-NEXT:    ld.shared::cluster.b32 %r40, [%rd1];
-; CHECK-NEXT:    and.b32 %r49, %r40, %r2;
+; CHECK-NEXT:    ld.shared::cluster.b32 %r30, [%rd1];
+; CHECK-NEXT:    and.b32 %r39, %r30, %r2;
 ; CHECK-NEXT:  $L__BB4_4: // %partword.cmpxchg.loop23
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or.b32 %r41, %r49, %r3;
-; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r10, [%rd1], %r41, %r49;
-; CHECK-NEXT:    setp.eq.b32 %p3, %r10, %r41;
+; CHECK-NEXT:    or.b32 %r31, %r39, %r3;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r6, [%rd1], %r31, %r39;
+; CHECK-NEXT:    setp.eq.b32 %p3, %r6, %r31;
 ; CHECK-NEXT:    @%p3 bra $L__BB4_6;
 ; CHECK-NEXT:  // %bb.5: // %partword.cmpxchg.failure22
 ; CHECK-NEXT:    // in Loop: Header=BB4_4 Depth=1
-; CHECK-NEXT:    and.b32 %r11, %r10, %r2;
-; CHECK-NEXT:    setp.ne.b32 %p4, %r49, %r11;
-; CHECK-NEXT:    mov.b32 %r49, %r11;
+; CHECK-NEXT:    and.b32 %r7, %r6, %r2;
+; CHECK-NEXT:    setp.ne.b32 %p4, %r39, %r7;
+; CHECK-NEXT:    mov.b32 %r39, %r7;
 ; CHECK-NEXT:    @%p4 bra $L__BB4_4;
 ; CHECK-NEXT:  $L__BB4_6: // %partword.cmpxchg.end21
 ; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r42, [%rd1];
-; CHECK-NEXT:    and.b32 %r50, %r42, %r2;
+; CHECK-NEXT:    ld.shared::cluster.b32 %r32, [%rd1];
+; CHECK-NEXT:    and.b32 %r40, %r32, %r2;
 ; CHECK-NEXT:  $L__BB4_7: // %partword.cmpxchg.loop13
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or.b32 %r43, %r50, %r3;
-; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r14, [%rd1], %r43, %r50;
-; CHECK-NEXT:    setp.eq.b32 %p5, %r14, %r43;
+; CHECK-NEXT:    or.b32 %r33, %r40, %r3;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r8, [%rd1], %r33, %r40;
+; CHECK-NEXT:    setp.eq.b32 %p5, %r8, %r33;
 ; CHECK-NEXT:    @%p5 bra $L__BB4_9;
 ; CHECK-NEXT:  // %bb.8: // %partword.cmpxchg.failure12
 ; CHECK-NEXT:    // in Loop: Header=BB4_7 Depth=1
-; CHECK-NEXT:    and.b32 %r15, %r14, %r2;
-; CHECK-NEXT:    setp.ne.b32 %p6, %r50, %r15;
-; CHECK-NEXT:    mov.b32 %r50, %r15;
+; CHECK-NEXT:    and.b32 %r9, %r8, %r2;
+; CHECK-NEXT:    setp.ne.b32 %p6, %r40, %r9;
+; CHECK-NEXT:    mov.b32 %r40, %r9;
 ; CHECK-NEXT:    @%p6 bra $L__BB4_7;
 ; CHECK-NEXT:  $L__BB4_9: // %partword.cmpxchg.end11
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r44, [%rd1];
-; CHECK-NEXT:    and.b32 %r51, %r44, %r2;
+; CHECK-NEXT:    ld.shared::cluster.b32 %r34, [%rd1];
+; CHECK-NEXT:    and.b32 %r41, %r34, %r2;
 ; CHECK-NEXT:  $L__BB4_10: // %partword.cmpxchg.loop3
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or.b32 %r45, %r51, %r3;
-; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r18, [%rd1], %r45, %r51;
-; CHECK-NEXT:    setp.eq.b32 %p7, %r18, %r45;
+; CHECK-NEXT:    or.b32 %r35, %r41, %r3;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r10, [%rd1], %r35, %r41;
+; CHECK-NEXT:    setp.eq.b32 %p7, %r10, %r35;
 ; CHECK-NEXT:    @%p7 bra $L__BB4_12;
 ; CHECK-NEXT:  // %bb.11: // %partword.cmpxchg.failure2
 ; CHECK-NEXT:    // in Loop: Header=BB4_10 Depth=1
-; CHECK-NEXT:    and.b32 %r19, %r18, %r2;
-; CHECK-NEXT:    setp.ne.b32 %p8, %r51, %r19;
-; CHECK-NEXT:    mov.b32 %r51, %r19;
+; CHECK-NEXT:    and.b32 %r11, %r10, %r2;
+; CHECK-NEXT:    setp.ne.b32 %p8, %r41, %r11;
+; CHECK-NEXT:    mov.b32 %r41, %r11;
 ; CHECK-NEXT:    @%p8 bra $L__BB4_10;
 ; CHECK-NEXT:  $L__BB4_12: // %partword.cmpxchg.end1
 ; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r46, [%rd1];
-; CHECK-NEXT:    and.b32 %r52, %r46, %r2;
+; CHECK-NEXT:    ld.shared::cluster.b32 %r36, [%rd1];
+; CHECK-NEXT:    and.b32 %r42, %r36, %r2;
 ; CHECK-NEXT:  $L__BB4_13: // %partword.cmpxchg.loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or.b32 %r47, %r52, %r3;
-; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r22, [%rd1], %r47, %r52;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r22, %r47;
+; CHECK-NEXT:    or.b32 %r37, %r42, %r3;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r12, [%rd1], %r37, %r42;
+; CHECK-NEXT:    setp.eq.b32 %p9, %r12, %r37;
 ; CHECK-NEXT:    @%p9 bra $L__BB4_15;
 ; CHECK-NEXT:  // %bb.14: // %partword.cmpxchg.failure
 ; CHECK-NEXT:    // in Loop: Header=BB4_13 Depth=1
-; CHECK-NEXT:    and.b32 %r23, %r22, %r2;
-; CHECK-NEXT:    setp.ne.b32 %p10, %r52, %r23;
-; CHECK-NEXT:    mov.b32 %r52, %r23;
+; CHECK-NEXT:    and.b32 %r13, %r12, %r2;
+; CHECK-NEXT:    setp.ne.b32 %p10, %r42, %r13;
+; CHECK-NEXT:    mov.b32 %r42, %r13;
 ; CHECK-NEXT:    @%p10 bra $L__BB4_13;
 ; CHECK-NEXT:  $L__BB4_15: // %partword.cmpxchg.end
 ; CHECK-NEXT:    fence.acq_rel.sys;

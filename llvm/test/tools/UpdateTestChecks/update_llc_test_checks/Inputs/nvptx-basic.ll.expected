@@ -6,8 +6,8 @@
 define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct.St8x4) align 8 %in, ptr nocapture noundef writeonly %ret) {
 ; CHECK-LABEL: caller_St8x4(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 0, 0
@@ -23,11 +23,11 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [retval0];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd7, %rd8}, [retval0+16];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    ld.param.b32 %r2, [caller_St8x4_param_1];
-; CHECK-NEXT:    st.b64 [%r2], %rd5;
-; CHECK-NEXT:    st.b64 [%r2+8], %rd6;
-; CHECK-NEXT:    st.b64 [%r2+16], %rd7;
-; CHECK-NEXT:    st.b64 [%r2+24], %rd8;
+; CHECK-NEXT:    ld.param.b32 %r1, [caller_St8x4_param_1];
+; CHECK-NEXT:    st.b64 [%r1], %rd5;
+; CHECK-NEXT:    st.b64 [%r1+8], %rd6;
+; CHECK-NEXT:    st.b64 [%r1+16], %rd7;
+; CHECK-NEXT:    st.b64 [%r1+24], %rd8;
 ; CHECK-NEXT:    ret;
   %call = tail call fastcc [4 x i64] @callee_St8x4(ptr noundef nonnull byval(%struct.St8x4) align 8 %in) #2
   %.fca.0.extract = extractvalue [4 x i64] %call, 0
@@ -48,7 +48,6 @@ define internal fastcc [4 x i64] @callee_St8x4(ptr nocapture noundef readonly by
 ; CHECK-LABEL: callee_St8x4(
 ; CHECK:         // @callee_St8x4
 ; CHECK-NEXT:  {
-; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

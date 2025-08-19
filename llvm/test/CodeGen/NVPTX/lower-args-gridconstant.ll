@@ -340,19 +340,19 @@ define ptx_kernel void @grid_const_phi(ptr byval(%struct.s) align 4 %input1, ptr
 ; PTX:       {
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<7>;
+; PTX-NEXT:    .reg .b64 %rd<4>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    mov.b64 %rd6, grid_const_phi_param_0;
-; PTX-NEXT:    ld.param.b64 %rd5, [grid_const_phi_param_1];
-; PTX-NEXT:    cvta.to.global.u64 %rd1, %rd5;
+; PTX-NEXT:    mov.b64 %rd3, grid_const_phi_param_0;
+; PTX-NEXT:    ld.param.b64 %rd2, [grid_const_phi_param_1];
+; PTX-NEXT:    cvta.to.global.u64 %rd1, %rd2;
 ; PTX-NEXT:    ld.global.b32 %r1, [%rd1];
 ; PTX-NEXT:    setp.lt.s32 %p1, %r1, 0;
 ; PTX-NEXT:    @%p1 bra $L__BB9_2;
 ; PTX-NEXT:  // %bb.1: // %second
-; PTX-NEXT:    add.s64 %rd6, %rd6, 4;
+; PTX-NEXT:    add.s64 %rd3, %rd3, 4;
 ; PTX-NEXT:  $L__BB9_2: // %merge
-; PTX-NEXT:    ld.param.b32 %r2, [%rd6];
+; PTX-NEXT:    ld.param.b32 %r2, [%rd3];
 ; PTX-NEXT:    st.global.b32 [%rd1], %r2;
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_phi(
@@ -396,20 +396,20 @@ define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 %input1,
 ; PTX:       {
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<8>;
+; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    mov.b64 %rd7, grid_const_phi_ngc_param_0;
-; PTX-NEXT:    ld.param.b64 %rd6, [grid_const_phi_ngc_param_2];
-; PTX-NEXT:    cvta.to.global.u64 %rd1, %rd6;
+; PTX-NEXT:    mov.b64 %rd4, grid_const_phi_ngc_param_0;
+; PTX-NEXT:    ld.param.b64 %rd3, [grid_const_phi_ngc_param_2];
+; PTX-NEXT:    cvta.to.global.u64 %rd1, %rd3;
 ; PTX-NEXT:    ld.global.b32 %r1, [%rd1];
 ; PTX-NEXT:    setp.lt.s32 %p1, %r1, 0;
 ; PTX-NEXT:    @%p1 bra $L__BB10_2;
 ; PTX-NEXT:  // %bb.1: // %second
 ; PTX-NEXT:    mov.b64 %rd2, grid_const_phi_ngc_param_1;
-; PTX-NEXT:    add.s64 %rd7, %rd2, 4;
+; PTX-NEXT:    add.s64 %rd4, %rd2, 4;
 ; PTX-NEXT:  $L__BB10_2: // %merge
-; PTX-NEXT:    ld.param.b32 %r2, [%rd7];
+; PTX-NEXT:    ld.param.b32 %r2, [%rd4];
 ; PTX-NEXT:    st.global.b32 [%rd1], %r2;
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_phi_ngc(
