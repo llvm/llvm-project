@@ -20759,12 +20759,22 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         isNullConstant(Src.getOperand(1)) &&
         Src.getOperand(0).getValueType().isScalableVector()) {
       EVT VT = N->getValueType(0);
-      EVT SrcVT = Src.getOperand(0).getValueType();
-      assert(SrcVT.getVectorElementType() == VT.getVectorElementType());
+      SDValue EVSrc = Src.getOperand(0);
+      EVT EVSrcVT = EVSrc.getValueType();
+      assert(EVSrcVT.getVectorElementType() == VT.getVectorElementType());
       // Widths match, just return the original vector.
-      if (SrcVT == VT)
-        return Src.getOperand(0);
-      // TODO: Use insert_subvector/extract_subvector to change widen/narrow?
+      if (EVSrcVT == VT)
+        return EVSrc;
+      SDLoc DL(N);
+      // Width is narrower, using insert_subvector.
+      if (EVSrcVT.getVectorMinNumElements() < VT.getVectorMinNumElements()) {
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                           EVSrc,
+                           DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+      }
+      // Width is wider, using extract_subvector.
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, EVSrc,
+                         DAG.getConstant(0, DL, Subtarget.getXLenVT()));
     }
     [[fallthrough]];
   }
@@ -22356,20 +22366,12 @@ void RISCVTargetLowering::analyzeInputArgs(
     MachineFunction &MF, CCState &CCInfo,
     const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
     RISCVCCAssignFn Fn) const {
-  FunctionType *FType = MF.getFunction().getFunctionType();
-
   for (const auto &[Idx, In] : enumerate(Ins)) {
     MVT ArgVT = In.VT;
     ISD::ArgFlagsTy ArgFlags = In.Flags;
 
-    Type *ArgTy = nullptr;
-    if (IsRet)
-      ArgTy = FType->getReturnType();
-    else if (In.isOrigArg())
-      ArgTy = FType->getParamType(In.getOrigArgIndex());
-
     if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, IsRet,
-           ArgTy)) {
+           In.OrigTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << Idx << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -22384,10 +22386,9 @@ void RISCVTargetLowering::analyzeOutputArgs(
   for (const auto &[Idx, Out] : enumerate(Outs)) {
     MVT ArgVT = Out.VT;
     ISD::ArgFlagsTy ArgFlags = Out.Flags;
-    Type *OrigTy = CLI ? CLI->getArgs()[Out.OrigArgIndex].Ty : nullptr;
 
     if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, IsRet,
-           OrigTy)) {
+           Out.OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << Idx << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -23169,7 +23170,7 @@ bool RISCVTargetLowering::CanLowerReturn(
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
     if (CC_RISCV(i, VT, VT, CCValAssign::Full, ArgFlags, CCInfo,
-                 /*IsRet=*/true, nullptr))
+                 /*IsRet=*/true, Outs[i].OrigTy))
       return false;
   }
   return true;

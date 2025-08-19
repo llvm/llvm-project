@@ -208,22 +208,26 @@ struct DecoderTableInfo {
 struct EncodingAndInst {
   const Record *EncodingDef;
   const CodeGenInstruction *Inst;
-  unsigned HwModeID;
 
-  EncodingAndInst(const Record *EncodingDef, const CodeGenInstruction *Inst,
-                  unsigned HwModeID = DefaultMode)
-      : EncodingDef(EncodingDef), Inst(Inst), HwModeID(HwModeID) {}
+  EncodingAndInst(const Record *EncodingDef, const CodeGenInstruction *Inst)
+      : EncodingDef(EncodingDef), Inst(Inst) {}
 };
 
 using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
+  CodeGenTarget Target;
+  const CodeGenHwModes &CGH;
+
+  /// All parsed encodings.
   std::vector<EncodingAndInst> Encodings;
 
+  /// Encodings IDs for each HwMode. An ID is an index into Encodings.
+  SmallDenseMap<unsigned, std::vector<unsigned>> EncodingIDsByHwMode;
+
 public:
-  DecoderEmitter(const RecordKeeper &R, StringRef PredicateNamespace)
-      : RK(R), Target(R), PredicateNamespace(PredicateNamespace) {}
+  DecoderEmitter(const RecordKeeper &RK, StringRef PredicateNamespace);
 
   const CodeGenTarget &getTarget() const { return Target; }
 
@@ -240,10 +244,19 @@ public:
                            DecoderSet &Decoders) const;
 
   // run - Output the code emitter
-  void run(raw_ostream &o);
+  void run(raw_ostream &o) const;
 
 private:
-  CodeGenTarget Target;
+  void collectHwModesReferencedForEncodings(
+      std::vector<unsigned> &HwModeIDs,
+      NamespacesHwModesMap &NamespacesWithHwModes) const;
+
+  void
+  handleHwModesUnrelatedEncodings(unsigned EncodingID,
+                                  ArrayRef<unsigned> HwModeIDs,
+                                  NamespacesHwModesMap &NamespacesWithHwModes);
+
+  void parseInstructionEncodings();
 
 public:
   StringRef PredicateNamespace;
@@ -2393,12 +2406,12 @@ static bool Check(DecodeStatus &Out, DecodeStatus In) {
 )";
 }
 
-// Collect all HwModes referenced by the target for encoding purposes.
-static void collectHwModesReferencedForEncodings(
-    const CodeGenHwModes &HWM, std::vector<unsigned> &HwModeIDs,
-    NamespacesHwModesMap &NamespacesWithHwModes) {
-  SmallBitVector BV(HWM.getNumModeIds());
-  for (const auto &MS : HWM.getHwModeSelects()) {
+/// Collects all HwModes referenced by the target for encoding purposes.
+void DecoderEmitter::collectHwModesReferencedForEncodings(
+    std::vector<unsigned> &HwModeIDs,
+    NamespacesHwModesMap &NamespacesWithHwModes) const {
+  SmallBitVector BV(CGH.getNumModeIds());
+  for (const auto &MS : CGH.getHwModeSelects()) {
     for (auto [HwModeID, EncodingDef] : MS.second.Items) {
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
         std::string DecoderNamespace =
@@ -2414,41 +2427,89 @@ static void collectHwModesReferencedForEncodings(
   llvm::copy(BV.set_bits(), std::back_inserter(HwModeIDs));
 }
 
-static void
-handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
-                                ArrayRef<unsigned> HwModeIDs,
-                                NamespacesHwModesMap &NamespacesWithHwModes,
-                                std::vector<EncodingAndInst> &GlobalEncodings) {
-  const Record *InstDef = Instr->TheDef;
-
+void DecoderEmitter::handleHwModesUnrelatedEncodings(
+    unsigned EncodingID, ArrayRef<unsigned> HwModeIDs,
+    NamespacesHwModesMap &NamespacesWithHwModes) {
   switch (DecoderEmitterSuppressDuplicates) {
   case SUPPRESSION_DISABLE: {
     for (unsigned HwModeID : HwModeIDs)
-      GlobalEncodings.emplace_back(InstDef, Instr, HwModeID);
+      EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
     break;
   }
   case SUPPRESSION_LEVEL1: {
+    const Record *InstDef = Encodings[EncodingID].Inst->TheDef;
     std::string DecoderNamespace =
         InstDef->getValueAsString("DecoderNamespace").str();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
-        GlobalEncodings.emplace_back(InstDef, Instr, HwModeID);
+        EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
     } else {
       // Only emit the encoding once, as it's DecoderNamespace doesn't
       // contain any HwModes.
-      GlobalEncodings.emplace_back(InstDef, Instr, DefaultMode);
+      EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
     }
     break;
   }
   case SUPPRESSION_LEVEL2:
-    GlobalEncodings.emplace_back(InstDef, Instr, DefaultMode);
+    EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
     break;
   }
 }
 
+/// Parses all InstructionEncoding instances and fills internal data structures.
+void DecoderEmitter::parseInstructionEncodings() {
+  // First, collect all encoding-related HwModes referenced by the target.
+  // And establish a mapping table between DecoderNamespace and HwMode.
+  // If HwModeNames is empty, add the default mode so we always have one HwMode.
+  std::vector<unsigned> HwModeIDs;
+  NamespacesHwModesMap NamespacesWithHwModes;
+  collectHwModesReferencedForEncodings(HwModeIDs, NamespacesWithHwModes);
+  if (HwModeIDs.empty())
+    HwModeIDs.push_back(DefaultMode);
+
+  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
+  Encodings.reserve(Instructions.size());
+  NumInstructions = Instructions.size();
+
+  for (const CodeGenInstruction *Inst : Instructions) {
+    const Record *InstDef = Inst->TheDef;
+    if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
+      EncodingInfoByHwMode EBM(RV, CGH);
+      for (auto [HwModeID, EncodingDef] : EBM) {
+        unsigned EncodingID = Encodings.size();
+        Encodings.emplace_back(EncodingDef, Inst);
+        EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
+      }
+      continue;
+    }
+
+    unsigned EncodingID = Encodings.size();
+    Encodings.emplace_back(InstDef, Inst);
+
+    // This instruction is encoded the same on all HwModes.
+    // According to user needs, add it to all, some, or only the default HwMode.
+    handleHwModesUnrelatedEncodings(EncodingID, HwModeIDs,
+                                    NamespacesWithHwModes);
+  }
+
+  for (const Record *EncodingDef :
+       RK.getAllDerivedDefinitions("AdditionalEncoding")) {
+    const Record *InstDef = EncodingDef->getValueAsDef("AliasOf");
+    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+  }
+}
+
+DecoderEmitter::DecoderEmitter(const RecordKeeper &RK,
+                               StringRef PredicateNamespace)
+    : RK(RK), Target(RK), CGH(Target.getHwModes()),
+      PredicateNamespace(PredicateNamespace) {
+  Target.reverseBitsForLittleEndianEncoding();
+  parseInstructionEncodings();
+}
+
 // Emits disassembler code for instruction decoding.
-void DecoderEmitter::run(raw_ostream &o) {
+void DecoderEmitter::run(raw_ostream &o) const {
   formatted_raw_ostream OS(o);
   OS << R"(
 #include "llvm/MC/MCInst.h"
@@ -2467,44 +2528,6 @@ namespace {
   emitInsertBits(OS);
   emitCheck(OS);
 
-  Target.reverseBitsForLittleEndianEncoding();
-
-  // Parameterize the decoders based on namespace and instruction width.
-
-  // First, collect all encoding-related HwModes referenced by the target.
-  // And establish a mapping table between DecoderNamespace and HwMode.
-  // If HwModeNames is empty, add the default mode so we always have one HwMode.
-  const CodeGenHwModes &HWM = Target.getHwModes();
-  std::vector<unsigned> HwModeIDs;
-  NamespacesHwModesMap NamespacesWithHwModes;
-  collectHwModesReferencedForEncodings(HWM, HwModeIDs, NamespacesWithHwModes);
-  if (HwModeIDs.empty())
-    HwModeIDs.push_back(DefaultMode);
-
-  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
-  Encodings.reserve(Instructions.size());
-  NumInstructions = Instructions.size();
-
-  for (const CodeGenInstruction *Inst : Instructions) {
-    const Record *InstDef = Inst->TheDef;
-    if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
-      EncodingInfoByHwMode EBM(RV, HWM);
-      for (auto [HwModeID, EncodingDef] : EBM)
-        Encodings.emplace_back(EncodingDef, Inst, HwModeID);
-      continue;
-    }
-    // This instruction is encoded the same on all HwModes.
-    // According to user needs, provide varying degrees of suppression.
-    handleHwModesUnrelatedEncodings(Inst, HwModeIDs, NamespacesWithHwModes,
-                                    Encodings);
-  }
-
-  for (const Record *EncodingDef :
-       RK.getAllDerivedDefinitions("AdditionalEncoding")) {
-    const Record *InstDef = EncodingDef->getValueAsDef("AliasOf");
-    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
-  }
-
   // Map of (namespace, hwmode, size) tuple to encoding IDs.
   std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
       EncMap;
@@ -2512,38 +2535,42 @@ namespace {
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
   if (IsVarLenInst)
-    InstrLen.resize(Instructions.size(), 0);
+    InstrLen.resize(Target.getInstructions().size(), 0);
   unsigned MaxInstLen = 0;
 
-  for (const auto &[EncodingID, Encoding] : enumerate(Encodings)) {
-    const Record *EncodingDef = Encoding.EncodingDef;
-    const CodeGenInstruction *Inst = Encoding.Inst;
-    const Record *Def = Inst->TheDef;
-    unsigned Size = EncodingDef->getValueAsInt("Size");
-    if (Def->getValueAsString("Namespace") == "TargetOpcode" ||
-        Def->getValueAsBit("isPseudo") ||
-        Def->getValueAsBit("isAsmParserOnly") ||
-        Def->getValueAsBit("isCodeGenOnly")) {
-      NumEncodingsLackingDisasm++;
-      continue;
-    }
-
-    NumEncodings++;
-
-    if (!Size && !IsVarLenInst)
-      continue;
-
-    if (unsigned Len = populateInstruction(
-            Target, *EncodingDef, *Inst, EncodingID, Operands, IsVarLenInst)) {
-      if (IsVarLenInst) {
-        MaxInstLen = std::max(MaxInstLen, Len);
-        InstrLen[EncodingID] = Len;
+  for (const auto &[HwModeID, EncodingIDs] : EncodingIDsByHwMode) {
+    for (unsigned EncodingID : EncodingIDs) {
+      const EncodingAndInst &Encoding = Encodings[EncodingID];
+      const Record *EncodingDef = Encoding.EncodingDef;
+      const CodeGenInstruction *Inst = Encoding.Inst;
+      const Record *Def = Inst->TheDef;
+      unsigned Size = EncodingDef->getValueAsInt("Size");
+      if (Def->getValueAsString("Namespace") == "TargetOpcode" ||
+          Def->getValueAsBit("isPseudo") ||
+          Def->getValueAsBit("isAsmParserOnly") ||
+          Def->getValueAsBit("isCodeGenOnly")) {
+        NumEncodingsLackingDisasm++;
+        continue;
       }
-      StringRef DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
-      EncMap[{DecoderNamespace, Encoding.HwModeID, Size}].push_back(EncodingID);
-    } else {
-      NumEncodingsOmitted++;
+
+      NumEncodings++;
+
+      if (!Size && !IsVarLenInst)
+        continue;
+
+      if (unsigned Len =
+              populateInstruction(Target, *EncodingDef, *Inst, EncodingID,
+                                  Operands, IsVarLenInst)) {
+        if (IsVarLenInst) {
+          MaxInstLen = std::max(MaxInstLen, Len);
+          InstrLen[EncodingID] = Len;
+        }
+        StringRef DecoderNamespace =
+            EncodingDef->getValueAsString("DecoderNamespace");
+        EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
+      } else {
+        NumEncodingsOmitted++;
+      }
     }
   }
 

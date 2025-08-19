@@ -392,12 +392,29 @@ class OpenACCClauseCIREmitter final
       CIRGenFunction::AutoVarEmission tempDeclEmission,
       mlir::acc::FirstprivateRecipeOp recipe, const VarDecl *varRecipe,
       const VarDecl *temporary) {
-    builder.createBlock(&recipe.getCopyRegion(), recipe.getCopyRegion().end(),
-                        {mainOp.getType(), mainOp.getType()}, {loc, loc});
+    mlir::Block *block = builder.createBlock(
+        &recipe.getCopyRegion(), recipe.getCopyRegion().end(),
+        {mainOp.getType(), mainOp.getType()}, {loc, loc});
     builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
 
-    // TODO: OpenACC: Implement this copy to actually do something.
+    mlir::BlockArgument fromArg = block->getArgument(0);
+    mlir::BlockArgument toArg = block->getArgument(1);
 
+    mlir::Type elementTy =
+        mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
+
+    // Set the address of the emission to be the argument, so that we initialize
+    // that instead of the variable in the other block.
+    tempDeclEmission.setAllocatedAddress(
+        Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
+    tempDeclEmission.EmittedAsOffload = true;
+
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
+    cgf.setAddrOfLocalVar(
+        temporary,
+        Address{fromArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
+
+    cgf.emitAutoVarInit(tempDeclEmission);
     mlir::acc::YieldOp::create(builder, locEnd);
   }
 
@@ -417,6 +434,7 @@ class OpenACCClauseCIREmitter final
 
     CIRGenFunction::AutoVarEmission tempDeclEmission{
         CIRGenFunction::AutoVarEmission::invalid()};
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, varRecipe};
 
     // Do the 'init' section of the recipe IR, which does an alloca, then the
     // initialization (except for firstprivate).
@@ -425,6 +443,7 @@ class OpenACCClauseCIREmitter final
     builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
     tempDeclEmission =
         cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
+
     // 'firstprivate' doesn't do its initialization in the 'init' section,
     // instead does it in the 'copy' section.  SO only do init here.
     // 'reduction' appears to use it too (rather than a 'copy' section), so
@@ -450,16 +469,19 @@ class OpenACCClauseCIREmitter final
     mlir::acc::YieldOp::create(builder, locEnd);
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp>) {
-      // TODO: OpenACC: we should have a errorNYI call here if
-      // !varRecipe->getInit(), but as that generation isn't currently
-      // implemented, it ends up being too noisy. So when we implement copy-init
-      // generation both in Sema and here, we should have a diagnostic here.
+      if (!varRecipe->getInit()) {
+        // If we don't have any initialization recipe, we failed during Sema to
+        // initialize this correctly. If we disable the
+        // Sema::TentativeAnalysisScopes in SemaOpenACC::CreateInitRecipe, it'll
+        // emit an error to tell us.  However, emitting those errors during
+        // production is a violation of the standard, so we cannot do them.
+        cgf.cgm.errorNYI(
+            exprRange, "firstprivate copy-init recipe not properly generated");
+      }
+
       createFirstprivateRecipeCopy(loc, locEnd, mainOp, tempDeclEmission,
                                    recipe, varRecipe, temporary);
     }
-
-    // Make sure we cleanup after ourselves here.
-    cgf.removeAddrOfLocalVar(varRecipe);
   }
 
   void createRecipeDestroySection(mlir::Location loc, mlir::Location locEnd,
