@@ -9384,14 +9384,14 @@ Each annotated ``await_suspend`` member must contain a compatibility stub:
   }
 
 An awaiter type may provide both annotated and non-annotated overloads of
-`await_suspend()`, as long as each invocation of an annotated overload has a
-corresponding `await_suspend_destroy(Promise&)` overload.
+``await_suspend()``, as long as each invocation of an annotated overload has a
+corresponding ``await_suspend_destroy(Promise&)`` overload.
 
 Instead of calling the annotated ``await_suspend()``, the coroutine calls
 ``await_suspend_destroy(Promise&)`` and immediately destroys the coroutine
 ``await_suspend_destroy()`` must return ``void`` (Note: if desired, it
 would be straightforward to also support the "symmetric transfer"
-`std::coroutine_handle` return type.)
+``std::coroutine_handle`` return type.)
 
 This optimization improves code speed and size for "short-circuiting"
 coroutines — those that use coroutine syntax **exclusively** for early returns
@@ -9433,7 +9433,7 @@ the coroutine.  User code can only access the handle via suspend intrinsics,
 and annotated short-circuiting awaiters simply don't use any.
 
 Note that a short-circuiting coroutine differs in one important way from a
-function that replaced each `co_await awaiter` with explicit control flow:
+function that replaced each ``co_await awaiter`` with explicit control flow:
 
 .. code-block:: c++
 
@@ -9445,13 +9445,14 @@ function that replaced each `co_await awaiter` with explicit control flow:
     return /* early-termination return object */;
   }
 
-That key difference is that `unhandled_exception()` lets the promise type wrap
-the function body in an implicit try-catch.  This automatic exception boundary
-behavior can be desirable in robust, return-value-oriented programs that
-benefit from short-circuiting coroutines.  If not, the promise can re-throw.
+That key difference is that ``unhandled_exception()`` lets the promise type
+wrap the function body in an implicit try-catch.  This automatic exception
+boundary behavior can be desirable in robust, return-value-oriented programs
+that benefit from short-circuiting coroutines.  If not, the promise can
+re-throw.
 
 Here is an example of a short-circuiting awaiter for a hypothetical
-`std::optional` coroutine:
+``std::optional`` coroutine:
 
 .. code-block:: c++
 
