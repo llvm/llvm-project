@@ -6,44 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-def immFloat0 : PatLeaf<(fpimm), [{
-    float f = (float)N->getValueAPF().convertToFloat();
-    return (f==0.0f);
-}]>;
-
-def immFloat1 : PatLeaf<(fpimm), [{
-    float f = (float)N->getValueAPF().convertToFloat();
-    return (f==1.0f);
-}]>;
-
-def immDouble0 : PatLeaf<(fpimm), [{
-    double d = (double)N->getValueAPF().convertToDouble();
-    return (d==0.0);
-}]>;
-
-def immDouble1 : PatLeaf<(fpimm), [{
-    double d = (double)N->getValueAPF().convertToDouble();
-    return (d==1.0);
-}]>;
-
 def AS_match {
   code generic = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GENERIC);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC;
   }];
   code shared = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED;
   }];
   code shared_cluster = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED_CLUSTER);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED_CLUSTER;
   }];
   code global = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GLOBAL;
   }];
   code const = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_CONST);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_PARAM);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
   }];
 }
 
@@ -659,22 +639,22 @@ multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> 
 
   def "" : NVPTXInst<(outs),
             !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag, (ins CTAGroupFlags:$cg)),
-            !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
+            !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";")>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _MC : NVPTXInst<(outs),
                   !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
                        (ins B16:$mc, CTAGroupFlags:$cg)),
-                  !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
+                  !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;")>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
                   !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
                        (ins B64:$ch, CTAGroupFlags:$cg)),
-                  !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;")>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
   def _MC_CH : NVPTXInst<(outs),
                      !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
                           (ins B16:$mc, B64:$ch, CTAGroupFlags:$cg)),
-                     !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
+                     !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;")>,
                      Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
@@ -876,11 +856,11 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> 
 
   def "" : NVPTXInst<(outs),
             !con((ins rc:$src, B64:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
-            !strconcat(prefix, "${red_op}", suffix, asm_str, ";"), []>,
+            !strconcat(prefix, "${red_op}", suffix, asm_str, ";")>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
                   !con((ins rc:$src, B64:$tmap), dims_dag, (ins B64:$ch, TMAReductionFlags:$red_op)),
-                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;"), []>,
+                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;")>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
@@ -1112,30 +1092,30 @@ let Predicates = [hasPTX<70>, hasSM<80>] in {
 // max(0.0, min(x, 1.0)) is 1.0 while sat(x) is 0.
 // Same story for fmax, fmin.
 
-def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f immFloat0, f32:$a)),
+def : Pat<(int_nvvm_fmin_f fpimm_1,
+            (int_nvvm_fmax_f fpimm_0, f32:$a)),
           (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f f32:$a, immFloat0)),
-          (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f immFloat0, f32:$a), immFloat1),
+def : Pat<(int_nvvm_fmin_f fpimm_1,
+            (int_nvvm_fmax_f f32:$a, fpimm_0)),
           (CVT_f32_f32 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f f32:$a, immFloat0), immFloat1),
+            (int_nvvm_fmax_f fpimm_0, f32:$a), fpimm_1),
+          (CVT_f32_f32 $a, CvtSAT)>;
+def : Pat<(int_nvvm_fmin_f
+            (int_nvvm_fmax_f f32:$a, fpimm_0), fpimm_1),
           (CVT_f32_f32 $a, CvtSAT)>;
 
-def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d immDouble0, f64:$a)),
+def : Pat<(int_nvvm_fmin_d fpimm_1,
+            (int_nvvm_fmax_d fpimm_0, f64:$a)),
           (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d f64:$a, immDouble0)),
-          (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d immDouble0, f64:$a), immDouble1),
+def : Pat<(int_nvvm_fmin_d fpimm_1,
+            (int_nvvm_fmax_d f64:$a, fpimm_0)),
           (CVT_f64_f64 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d f64:$a, immDouble0), immDouble1),
+            (int_nvvm_fmax_d fpimm_0, f64:$a), fpimm_1),
+          (CVT_f64_f64 $a, CvtSAT)>;
+def : Pat<(int_nvvm_fmin_d
+            (int_nvvm_fmax_d f64:$a, fpimm_0), fpimm_1),
           (CVT_f64_f64 $a, CvtSAT)>;
 
 
@@ -1329,12 +1309,12 @@ defm INT_NVVM_FMAN : MIN_MAX<"max">;
 // Multiplication
 //
 
-def INT_NVVM_MULHI_S : F_MATH_2<"mul.hi.s16", B16, B16, B16, int_nvvm_mulhi_s>;
-def INT_NVVM_MULHI_US : F_MATH_2<"mul.hi.u16", B16, B16, B16, int_nvvm_mulhi_us>;
-def INT_NVVM_MULHI_I : F_MATH_2<"mul.hi.s32", B32, B32, B32, int_nvvm_mulhi_i>;
-def INT_NVVM_MULHI_UI : F_MATH_2<"mul.hi.u32", B32, B32, B32, int_nvvm_mulhi_ui>;
-def INT_NVVM_MULHI_LL : F_MATH_2<"mul.hi.s64", B64, B64, B64, int_nvvm_mulhi_ll>;
-def INT_NVVM_MULHI_ULL : F_MATH_2<"mul.hi.u64", B64, B64, B64, int_nvvm_mulhi_ull>;
+def : Pat<(int_nvvm_mulhi_s i16:$a, i16:$b), (MUL_HI_S16rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_us i16:$a, i16:$b), (MUL_HI_U16rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_i i32:$a, i32:$b), (MUL_HI_S32rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_ui i32:$a, i32:$b), (MUL_HI_U32rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_ll i64:$a, i64:$b), (MUL_HI_S64rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_ull i64:$a, i64:$b), (MUL_HI_U64rr $a, $b)>;
 
 def INT_NVVM_MUL_RN_FTZ_F : F_MATH_2<"mul.rn.ftz.f32", B32, B32, B32, int_nvvm_mul_rn_ftz_f>;
 def INT_NVVM_MUL_RN_F : F_MATH_2<"mul.rn.f32", B32, B32, B32, int_nvvm_mul_rn_f>;
@@ -1357,8 +1337,8 @@ def INT_NVVM_MUL24_UI : F_MATH_2<"mul24.lo.u32", B32, B32, B32, int_nvvm_mul24_u
 // Div
 //
 
-def INT_NVVM_DIV_APPROX_FTZ_F : F_MATH_2<"div.approx.ftz.f32", B32, B32, B32, int_nvvm_div_approx_ftz_f>;
-def INT_NVVM_DIV_APPROX_F : F_MATH_2<"div.approx.f32", B32, B32, B32, int_nvvm_div_approx_f>;
+def : Pat<(int_nvvm_div_approx_ftz_f f32:$a, f32:$b), (DIV_APPROX_F32_rr $a, $b, FTZ)>;
+def : Pat<(int_nvvm_div_approx_f f32:$a, f32:$b), (DIV_APPROX_F32_rr $a, $b, NoFTZ)>;
 
 def INT_NVVM_DIV_RN_FTZ_F : F_MATH_2<"div.rn.ftz.f32", B32, B32, B32, int_nvvm_div_rn_ftz_f>;
 def INT_NVVM_DIV_RN_F     : F_MATH_2<"div.rn.f32", B32, B32, B32, int_nvvm_div_rn_f>;
@@ -1663,13 +1643,13 @@ def : Pat<(int_nvvm_rsqrt_approx_d f64:$a), (RSQRT_APPROX_f64 $a, NoFTZ)>;
 
 // 1.0f / sqrt_approx -> rsqrt_approx
 let Predicates = [doRsqrtOpt] in {
-  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
+  def : Pat<(fdiv fpimm_1, (int_nvvm_sqrt_approx_f f32:$a)),
           (RSQRT_APPROX_f32 $a, NoFTZ)>;
-  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
+  def : Pat<(fdiv fpimm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
           (RSQRT_APPROX_f32 $a, FTZ)>;
 
   // same for int_nvvm_sqrt_f when non-precision sqrt is requested
-  def : Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
+  def : Pat<(fdiv fpimm_1, (fsqrt_approx f32:$a)),
           (RSQRT_APPROX_f32 $a)>;
 }
 //
@@ -2231,7 +2211,7 @@ defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
 
 class LDU_G<NVPTXRegClass regclass>
   :  NVPTXInst<(outs regclass:$result), (ins i32imm:$fromWidth, ADDR:$src),
-               "ldu.global.b$fromWidth \t$result, [$src];", []>;
+               "ldu.global.b$fromWidth \t$result, [$src];">;
 
 def LDU_GLOBAL_i16 : LDU_G<B16>;
 def LDU_GLOBAL_i32 : LDU_G<B32>;
@@ -2243,13 +2223,13 @@ def LDU_GLOBAL_i64 : LDU_G<B64>;
 class VLDU_G_ELE_V2<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
               (ins i32imm:$fromWidth, ADDR:$src),
-              "ldu.global.v2.b$fromWidth \t{{$dst1, $dst2}}, [$src];", []>;
+              "ldu.global.v2.b$fromWidth \t{{$dst1, $dst2}}, [$src];">;
 
 
 class VLDU_G_ELE_V4<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
               (ins i32imm:$fromWidth, ADDR:$src),
-               "ldu.global.v4.b$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+               "ldu.global.v4.b$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
 
 
 def LDU_GLOBAL_v2i16 : VLDU_G_ELE_V2<B16>;
@@ -2270,9 +2250,8 @@ def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<B32>;
 
 class LDG_G<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$result), (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-               "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];", []>;
+               "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];">;
 
-def LD_GLOBAL_NC_i8  : LDG_G<B16>;
 def LD_GLOBAL_NC_i16 : LDG_G<B16>;
 def LD_GLOBAL_NC_i32 : LDG_G<B32>;
 def LD_GLOBAL_NC_i64 : LDG_G<B64>;
@@ -2283,19 +2262,19 @@ def LD_GLOBAL_NC_i64 : LDG_G<B64>;
 class VLDG_G_ELE_V2<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-            "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];", []>;
+            "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];">;
 
 
 class VLDG_G_ELE_V4<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-            "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+            "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
 
 class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
                   regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
              (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-             "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];", []>;
+             "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];">;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
 def LD_GLOBAL_NC_v2i16 : VLDG_G_ELE_V2<B16>;
@@ -3540,20 +3519,13 @@ multiclass SULD_1D<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_I8_CLAMP : SULD_1D<"suld.b.1d.b8.clamp", B16>;
-defm SULD_1D_I16_CLAMP : SULD_1D<"suld.b.1d.b16.clamp", B16>;
-defm SULD_1D_I32_CLAMP : SULD_1D<"suld.b.1d.b32.clamp", B32>;
-defm SULD_1D_I64_CLAMP : SULD_1D<"suld.b.1d.b64.clamp", B64>;
-
-defm SULD_1D_I8_TRAP : SULD_1D<"suld.b.1d.b8.trap", B16>;
-defm SULD_1D_I16_TRAP : SULD_1D<"suld.b.1d.b16.trap", B16>;
-defm SULD_1D_I32_TRAP : SULD_1D<"suld.b.1d.b32.trap", B32>;
-defm SULD_1D_I64_TRAP : SULD_1D<"suld.b.1d.b64.trap", B64>;
-
-defm SULD_1D_I8_ZERO : SULD_1D<"suld.b.1d.b8.zero", B16>;
-defm SULD_1D_I16_ZERO : SULD_1D<"suld.b.1d.b16.zero", B16>;
-defm SULD_1D_I32_ZERO : SULD_1D<"suld.b.1d.b32.zero", B32>;
-defm SULD_1D_I64_ZERO : SULD_1D<"suld.b.1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_I8_ # op_upper : SULD_1D<"suld.b.1d.b8." # op, B16>;
+  defm SULD_1D_I16_ # op_upper : SULD_1D<"suld.b.1d.b16." # op, B16>;
+  defm SULD_1D_I32_ # op_upper : SULD_1D<"suld.b.1d.b32." # op, B32>;
+  defm SULD_1D_I64_ # op_upper : SULD_1D<"suld.b.1d.b64." # op, B64>;
+}
 
 class SULD_1D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
                          list<dag> pattern = []>
@@ -3570,20 +3542,13 @@ multiclass SULD_1D_ARRAY<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_ARRAY_I8_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b8.clamp", B16>;
-defm SULD_1D_ARRAY_I16_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b16.clamp", B16>;
-defm SULD_1D_ARRAY_I32_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b32.clamp", B32>;
-defm SULD_1D_ARRAY_I64_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b64.clamp", B64>;
-
-defm SULD_1D_ARRAY_I8_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b8.trap", B16>;
-defm SULD_1D_ARRAY_I16_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b16.trap", B16>;
-defm SULD_1D_ARRAY_I32_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b32.trap", B32>;
-defm SULD_1D_ARRAY_I64_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b64.trap", B64>;
-
-defm SULD_1D_ARRAY_I8_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b8.zero", B16>;
-defm SULD_1D_ARRAY_I16_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b16.zero", B16>;
-defm SULD_1D_ARRAY_I32_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b32.zero", B32>;
-defm SULD_1D_ARRAY_I64_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_ARRAY_I8_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b8." # op, B16>;
+  defm SULD_1D_ARRAY_I16_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b16." # op, B16>;
+  defm SULD_1D_ARRAY_I32_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b32." # op, B32>;
+  defm SULD_1D_ARRAY_I64_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b64." # op, B64>;
+}
 
 class SULD_2D_base<string inst, NVPTXRegClass outtype, dag surf,
                    list<dag> pattern = []>
@@ -3599,20 +3564,13 @@ multiclass SULD_2D<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_I8_CLAMP : SULD_2D<"suld.b.2d.b8.clamp", B16>;
-defm SULD_2D_I16_CLAMP : SULD_2D<"suld.b.2d.b16.clamp", B16>;
-defm SULD_2D_I32_CLAMP : SULD_2D<"suld.b.2d.b32.clamp", B32>;
-defm SULD_2D_I64_CLAMP : SULD_2D<"suld.b.2d.b64.clamp", B64>;
-
-defm SULD_2D_I8_TRAP : SULD_2D<"suld.b.2d.b8.trap", B16>;
-defm SULD_2D_I16_TRAP : SULD_2D<"suld.b.2d.b16.trap", B16>;
-defm SULD_2D_I32_TRAP : SULD_2D<"suld.b.2d.b32.trap", B32>;
-defm SULD_2D_I64_TRAP : SULD_2D<"suld.b.2d.b64.trap", B64>;
-
-defm SULD_2D_I8_ZERO : SULD_2D<"suld.b.2d.b8.zero", B16>;
-defm SULD_2D_I16_ZERO : SULD_2D<"suld.b.2d.b16.zero", B16>;
-defm SULD_2D_I32_ZERO : SULD_2D<"suld.b.2d.b32.zero", B32>;
-defm SULD_2D_I64_ZERO : SULD_2D<"suld.b.2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_I8_ # op_upper : SULD_2D<"suld.b.2d.b8." # op, B16>;
+  defm SULD_2D_I16_ # op_upper : SULD_2D<"suld.b.2d.b16." # op, B16>;
+  defm SULD_2D_I32_ # op_upper : SULD_2D<"suld.b.2d.b32." # op, B32>;
+  defm SULD_2D_I64_ # op_upper : SULD_2D<"suld.b.2d.b64." # op, B64>;
+}
 
 class SULD_2D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
                          list<dag> pattern = []>
@@ -3629,20 +3587,13 @@ multiclass SULD_2D_ARRAY<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_ARRAY_I8_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b8.clamp", B16>;
-defm SULD_2D_ARRAY_I16_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b16.clamp", B16>;
-defm SULD_2D_ARRAY_I32_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b32.clamp", B32>;
-defm SULD_2D_ARRAY_I64_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b64.clamp", B64>;
-
-defm SULD_2D_ARRAY_I8_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b8.trap", B16>;
-defm SULD_2D_ARRAY_I16_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b16.trap", B16>;
-defm SULD_2D_ARRAY_I32_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b32.trap", B32>;
-defm SULD_2D_ARRAY_I64_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b64.trap", B64>;
-
-defm SULD_2D_ARRAY_I8_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b8.zero", B16>;
-defm SULD_2D_ARRAY_I16_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b16.zero", B16>;
-defm SULD_2D_ARRAY_I32_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b32.zero", B32>;
-defm SULD_2D_ARRAY_I64_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_ARRAY_I8_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b8." # op, B16>;
+  defm SULD_2D_ARRAY_I16_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b16." # op, B16>;
+  defm SULD_2D_ARRAY_I32_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b32." # op, B32>;
+  defm SULD_2D_ARRAY_I64_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b64." # op, B64>;
+}
 
 class SULD_3D_base<string inst, NVPTXRegClass outtype, dag surf,
                    list<dag> pattern = []>
@@ -3659,20 +3610,13 @@ multiclass SULD_3D<string inst, NVPTXRegClass outtype> {
   def _I : SULD_3D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_3D_I8_CLAMP : SULD_3D<"suld.b.3d.b8.clamp", B16>;
-defm SULD_3D_I16_CLAMP : SULD_3D<"suld.b.3d.b16.clamp", B16>;
-defm SULD_3D_I32_CLAMP : SULD_3D<"suld.b.3d.b32.clamp", B32>;
-defm SULD_3D_I64_CLAMP : SULD_3D<"suld.b.3d.b64.clamp", B64>;
-
-defm SULD_3D_I8_TRAP : SULD_3D<"suld.b.3d.b8.trap", B16>;
-defm SULD_3D_I16_TRAP : SULD_3D<"suld.b.3d.b16.trap", B16>;
-defm SULD_3D_I32_TRAP : SULD_3D<"suld.b.3d.b32.trap", B32>;
-defm SULD_3D_I64_TRAP : SULD_3D<"suld.b.3d.b64.trap", B64>;
-
-defm SULD_3D_I8_ZERO : SULD_3D<"suld.b.3d.b8.zero", B16>;
-defm SULD_3D_I16_ZERO : SULD_3D<"suld.b.3d.b16.zero", B16>;
-defm SULD_3D_I32_ZERO : SULD_3D<"suld.b.3d.b32.zero", B32>;
-defm SULD_3D_I64_ZERO : SULD_3D<"suld.b.3d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_3D_I8_ # op_upper : SULD_3D<"suld.b.3d.b8." # op, B16>;
+  defm SULD_3D_I16_ # op_upper : SULD_3D<"suld.b.3d.b16." # op, B16>;
+  defm SULD_3D_I32_ # op_upper : SULD_3D<"suld.b.3d.b32." # op, B32>;
+  defm SULD_3D_I64_ # op_upper : SULD_3D<"suld.b.3d.b64." # op, B64>;
+}
 }
 
 let IsSuld = 2 in {
@@ -3692,20 +3636,13 @@ multiclass SULD_1D_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_V2I8_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b8.clamp", B16>;
-defm SULD_1D_V2I16_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b16.clamp", B16>;
-defm SULD_1D_V2I32_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b32.clamp", B32>;
-defm SULD_1D_V2I64_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b64.clamp", B64>;
-
-defm SULD_1D_V2I8_TRAP : SULD_1D_V2<"suld.b.1d.v2.b8.trap", B16>;
-defm SULD_1D_V2I16_TRAP : SULD_1D_V2<"suld.b.1d.v2.b16.trap", B16>;
-defm SULD_1D_V2I32_TRAP : SULD_1D_V2<"suld.b.1d.v2.b32.trap", B32>;
-defm SULD_1D_V2I64_TRAP : SULD_1D_V2<"suld.b.1d.v2.b64.trap", B64>;
-
-defm SULD_1D_V2I8_ZERO : SULD_1D_V2<"suld.b.1d.v2.b8.zero", B16>;
-defm SULD_1D_V2I16_ZERO : SULD_1D_V2<"suld.b.1d.v2.b16.zero", B16>;
-defm SULD_1D_V2I32_ZERO : SULD_1D_V2<"suld.b.1d.v2.b32.zero", B32>;
-defm SULD_1D_V2I64_ZERO : SULD_1D_V2<"suld.b.1d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_V2I8_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b8." # op, B16>;
+  defm SULD_1D_V2I16_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b16." # op, B16>;
+  defm SULD_1D_V2I32_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b32." # op, B32>;
+  defm SULD_1D_V2I64_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b64." # op, B64>;
+}
 
 class SULD_1D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3722,20 +3659,13 @@ multiclass SULD_1D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_ARRAY_V2I8_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8.clamp", B16>;
-defm SULD_1D_ARRAY_V2I16_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16.clamp", B16>;
-defm SULD_1D_ARRAY_V2I32_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32.clamp", B32>;
-defm SULD_1D_ARRAY_V2I64_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.clamp", B64>;
-
-defm SULD_1D_ARRAY_V2I8_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8.trap", B16>;
-defm SULD_1D_ARRAY_V2I16_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16.trap", B16>;
-defm SULD_1D_ARRAY_V2I32_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32.trap", B32>;
-defm SULD_1D_ARRAY_V2I64_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.trap", B64>;
-
-defm SULD_1D_ARRAY_V2I8_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8.zero", B16>;
-defm SULD_1D_ARRAY_V2I16_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16.zero", B16>;
-defm SULD_1D_ARRAY_V2I32_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32.zero", B32>;
-defm SULD_1D_ARRAY_V2I64_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_ARRAY_V2I8_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8." # op, B16>;
+  defm SULD_1D_ARRAY_V2I16_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16." # op, B16>;
+  defm SULD_1D_ARRAY_V2I32_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32." # op, B32>;
+  defm SULD_1D_ARRAY_V2I64_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64." # op, B64>;
+}
 
 class SULD_2D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3752,20 +3682,13 @@ multiclass SULD_2D_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_V2I8_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b8.clamp", B16>;
-defm SULD_2D_V2I16_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b16.clamp", B16>;
-defm SULD_2D_V2I32_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b32.clamp", B32>;
-defm SULD_2D_V2I64_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b64.clamp", B64>;
-
-defm SULD_2D_V2I8_TRAP : SULD_2D_V2<"suld.b.2d.v2.b8.trap", B16>;
-defm SULD_2D_V2I16_TRAP : SULD_2D_V2<"suld.b.2d.v2.b16.trap", B16>;
-defm SULD_2D_V2I32_TRAP : SULD_2D_V2<"suld.b.2d.v2.b32.trap", B32>;
-defm SULD_2D_V2I64_TRAP : SULD_2D_V2<"suld.b.2d.v2.b64.trap", B64>;
-
-defm SULD_2D_V2I8_ZERO : SULD_2D_V2<"suld.b.2d.v2.b8.zero", B16>;
-defm SULD_2D_V2I16_ZERO : SULD_2D_V2<"suld.b.2d.v2.b16.zero", B16>;
-defm SULD_2D_V2I32_ZERO : SULD_2D_V2<"suld.b.2d.v2.b32.zero", B32>;
-defm SULD_2D_V2I64_ZERO : SULD_2D_V2<"suld.b.2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_V2I8_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b8." # op, B16>;
+  defm SULD_2D_V2I16_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b16." # op, B16>;
+  defm SULD_2D_V2I32_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b32." # op, B32>;
+  defm SULD_2D_V2I64_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b64." # op, B64>;
+}
 
 class SULD_2D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3782,20 +3705,13 @@ multiclass SULD_2D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_ARRAY_V2I8_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8.clamp", B16>;
-defm SULD_2D_ARRAY_V2I16_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16.clamp", B16>;
-defm SULD_2D_ARRAY_V2I32_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32.clamp", B32>;
-defm SULD_2D_ARRAY_V2I64_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.clamp", B64>;
-
-defm SULD_2D_ARRAY_V2I8_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8.trap", B16>;
-defm SULD_2D_ARRAY_V2I16_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16.trap", B16>;
-defm SULD_2D_ARRAY_V2I32_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32.trap", B32>;
-defm SULD_2D_ARRAY_V2I64_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.trap", B64>;
-
-defm SULD_2D_ARRAY_V2I8_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8.zero", B16>;
-defm SULD_2D_ARRAY_V2I16_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16.zero", B16>;
-defm SULD_2D_ARRAY_V2I32_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32.zero", B32>;
-defm SULD_2D_ARRAY_V2I64_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_ARRAY_V2I8_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8." # op, B16>;
+  defm SULD_2D_ARRAY_V2I16_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16." # op, B16>;
+  defm SULD_2D_ARRAY_V2I32_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32." # op, B32>;
+  defm SULD_2D_ARRAY_V2I64_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64." # op, B64>;
+}
 
 class SULD_3D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3812,20 +3728,13 @@ multiclass SULD_3D_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_3D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_3D_V2I8_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b8.clamp", B16>;
-defm SULD_3D_V2I16_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b16.clamp", B16>;
-defm SULD_3D_V2I32_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b32.clamp", B32>;
-defm SULD_3D_V2I64_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b64.clamp", B64>;
-
-defm SULD_3D_V2I8_TRAP : SULD_3D_V2<"suld.b.3d.v2.b8.trap", B16>;
-defm SULD_3D_V2I16_TRAP : SULD_3D_V2<"suld.b.3d.v2.b16.trap", B16>;
-defm SULD_3D_V2I32_TRAP : SULD_3D_V2<"suld.b.3d.v2.b32.trap", B32>;
-defm SULD_3D_V2I64_TRAP : SULD_3D_V2<"suld.b.3d.v2.b64.trap", B64>;
-
-defm SULD_3D_V2I8_ZERO : SULD_3D_V2<"suld.b.3d.v2.b8.zero", B16>;
-defm SULD_3D_V2I16_ZERO : SULD_3D_V2<"suld.b.3d.v2.b16.zero", B16>;
-defm SULD_3D_V2I32_ZERO : SULD_3D_V2<"suld.b.3d.v2.b32.zero", B32>;
-defm SULD_3D_V2I64_ZERO : SULD_3D_V2<"suld.b.3d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_3D_V2I8_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b8." # op, B16>;
+  defm SULD_3D_V2I16_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b16." # op, B16>;
+  defm SULD_3D_V2I32_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b32." # op, B32>;
+  defm SULD_3D_V2I64_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b64." # op, B64>;
+}
 
 }
 
@@ -3846,17 +3755,12 @@ multiclass SULD_1D_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_V4I8_CLAMP : SULD_1D_V4<"suld.b.1d.v4.b8.clamp", B16>;
-defm SULD_1D_V4I16_CLAMP : SULD_1D_V4<"suld.b.1d.v4.b16.clamp", B16>;
-defm SULD_1D_V4I32_CLAMP : SULD_1D_V4<"suld.b.1d.v4.b32.clamp", B32>;
-
-defm SULD_1D_V4I8_TRAP : SULD_1D_V4<"suld.b.1d.v4.b8.trap", B16>;
-defm SULD_1D_V4I16_TRAP : SULD_1D_V4<"suld.b.1d.v4.b16.trap", B16>;
-defm SULD_1D_V4I32_TRAP : SULD_1D_V4<"suld.b.1d.v4.b32.trap", B32>;
-
-defm SULD_1D_V4I8_ZERO : SULD_1D_V4<"suld.b.1d.v4.b8.zero", B16>;
-defm SULD_1D_V4I16_ZERO : SULD_1D_V4<"suld.b.1d.v4.b16.zero", B16>;
-defm SULD_1D_V4I32_ZERO : SULD_1D_V4<"suld.b.1d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_V4I8_ # op_upper : SULD_1D_V4<"suld.b.1d.v4.b8." # op, B16>;
+  defm SULD_1D_V4I16_ # op_upper : SULD_1D_V4<"suld.b.1d.v4.b16." # op, B16>;
+  defm SULD_1D_V4I32_ # op_upper : SULD_1D_V4<"suld.b.1d.v4.b32." # op, B32>;
+}
 
 class SULD_1D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3874,17 +3778,12 @@ multiclass SULD_1D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_ARRAY_V4I8_CLAMP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8.clamp", B16>;
-defm SULD_1D_ARRAY_V4I16_CLAMP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16.clamp", B16>;
-defm SULD_1D_ARRAY_V4I32_CLAMP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.clamp", B32>;
-
-defm SULD_1D_ARRAY_V4I8_TRAP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8.trap", B16>;
-defm SULD_1D_ARRAY_V4I16_TRAP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16.trap", B16>;
-defm SULD_1D_ARRAY_V4I32_TRAP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.trap", B32>;
-
-defm SULD_1D_ARRAY_V4I8_ZERO : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8.zero", B16>;
-defm SULD_1D_ARRAY_V4I16_ZERO : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16.zero", B16>;
-defm SULD_1D_ARRAY_V4I32_ZERO : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_ARRAY_V4I8_ # op_upper : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8." # op, B16>;
+  defm SULD_1D_ARRAY_V4I16_ # op_upper : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16." # op, B16>;
+  defm SULD_1D_ARRAY_V4I32_ # op_upper : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32." # op, B32>;
+}
 
 class SULD_2D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3901,17 +3800,12 @@ multiclass SULD_2D_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_V4I8_CLAMP : SULD_2D_V4<"suld.b.2d.v4.b8.clamp", B16>;
-defm SULD_2D_V4I16_CLAMP : SULD_2D_V4<"suld.b.2d.v4.b16.clamp", B16>;
-defm SULD_2D_V4I32_CLAMP : SULD_2D_V4<"suld.b.2d.v4.b32.clamp", B32>;
-
-defm SULD_2D_V4I8_TRAP : SULD_2D_V4<"suld.b.2d.v4.b8.trap", B16>;
-defm SULD_2D_V4I16_TRAP : SULD_2D_V4<"suld.b.2d.v4.b16.trap", B16>;
-defm SULD_2D_V4I32_TRAP : SULD_2D_V4<"suld.b.2d.v4.b32.trap", B32>;
-
-defm SULD_2D_V4I8_ZERO : SULD_2D_V4<"suld.b.2d.v4.b8.zero", B16>;
-defm SULD_2D_V4I16_ZERO : SULD_2D_V4<"suld.b.2d.v4.b16.zero", B16>;
-defm SULD_2D_V4I32_ZERO : SULD_2D_V4<"suld.b.2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_V4I8_ # op_upper : SULD_2D_V4<"suld.b.2d.v4.b8." # op, B16>;
+  defm SULD_2D_V4I16_ # op_upper : SULD_2D_V4<"suld.b.2d.v4.b16." # op, B16>;
+  defm SULD_2D_V4I32_ # op_upper : SULD_2D_V4<"suld.b.2d.v4.b32." # op, B32>;
+}
 
 class SULD_2D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3929,17 +3823,12 @@ multiclass SULD_2D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_ARRAY_V4I8_CLAMP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8.clamp", B16>;
-defm SULD_2D_ARRAY_V4I16_CLAMP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16.clamp", B16>;
-defm SULD_2D_ARRAY_V4I32_CLAMP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.clamp", B32>;
-
-defm SULD_2D_ARRAY_V4I8_TRAP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8.trap", B16>;
-defm SULD_2D_ARRAY_V4I16_TRAP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16.trap", B16>;
-defm SULD_2D_ARRAY_V4I32_TRAP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.trap", B32>;
-
-defm SULD_2D_ARRAY_V4I8_ZERO : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8.zero", B16>;
-defm SULD_2D_ARRAY_V4I16_ZERO : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16.zero", B16>;
-defm SULD_2D_ARRAY_V4I32_ZERO : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_ARRAY_V4I8_ # op_upper : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8." # op, B16>;
+  defm SULD_2D_ARRAY_V4I16_ # op_upper : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16." # op, B16>;
+  defm SULD_2D_ARRAY_V4I32_ # op_upper : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32." # op, B32>;
+}
 
 class SULD_3D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3956,17 +3845,12 @@ multiclass SULD_3D_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_3D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_3D_V4I8_CLAMP : SULD_3D_V4<"suld.b.3d.v4.b8.clamp", B16>;
-defm SULD_3D_V4I16_CLAMP : SULD_3D_V4<"suld.b.3d.v4.b16.clamp", B16>;
-defm SULD_3D_V4I32_CLAMP : SULD_3D_V4<"suld.b.3d.v4.b32.clamp", B32>;
-
-defm SULD_3D_V4I8_TRAP : SULD_3D_V4<"suld.b.3d.v4.b8.trap", B16>;
-defm SULD_3D_V4I16_TRAP : SULD_3D_V4<"suld.b.3d.v4.b16.trap", B16>;
-defm SULD_3D_V4I32_TRAP : SULD_3D_V4<"suld.b.3d.v4.b32.trap", B32>;
-
-defm SULD_3D_V4I8_ZERO : SULD_3D_V4<"suld.b.3d.v4.b8.zero", B16>;
-defm SULD_3D_V4I16_ZERO : SULD_3D_V4<"suld.b.3d.v4.b16.zero", B16>;
-defm SULD_3D_V4I32_ZERO : SULD_3D_V4<"suld.b.3d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_3D_V4I8_ # op_upper : SULD_3D_V4<"suld.b.3d.v4.b8." # op, B16>;
+  defm SULD_3D_V4I16_ # op_upper : SULD_3D_V4<"suld.b.3d.v4.b16." # op, B16>;
+  defm SULD_3D_V4I32_ # op_upper : SULD_3D_V4<"suld.b.3d.v4.b32." # op, B32>;
+}
 
 }
 
@@ -4037,20 +3921,13 @@ multiclass SUST_1D<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_I8_CLAMP : SUST_1D<"sust.b.1d.b8.clamp", B16>;
-defm SUST_B_1D_I16_CLAMP : SUST_1D<"sust.b.1d.b16.clamp", B16>;
-defm SUST_B_1D_I32_CLAMP : SUST_1D<"sust.b.1d.b32.clamp", B32>;
-defm SUST_B_1D_I64_CLAMP : SUST_1D<"sust.b.1d.b64.clamp", B64>;
-
-defm SUST_B_1D_I8_TRAP : SUST_1D<"sust.b.1d.b8.trap", B16>;
-defm SUST_B_1D_I16_TRAP : SUST_1D<"sust.b.1d.b16.trap", B16>;
-defm SUST_B_1D_I32_TRAP : SUST_1D<"sust.b.1d.b32.trap", B32>;
-defm SUST_B_1D_I64_TRAP : SUST_1D<"sust.b.1d.b64.trap", B64>;
-
-defm SUST_B_1D_I8_ZERO : SUST_1D<"sust.b.1d.b8.zero", B16>;
-defm SUST_B_1D_I16_ZERO : SUST_1D<"sust.b.1d.b16.zero", B16>;
-defm SUST_B_1D_I32_ZERO : SUST_1D<"sust.b.1d.b32.zero", B32>;
-defm SUST_B_1D_I64_ZERO : SUST_1D<"sust.b.1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_I8_ # op_upper : SUST_1D<"sust.b.1d.b8." # op, B16>;
+  defm SUST_B_1D_I16_ # op_upper : SUST_1D<"sust.b.1d.b16." # op, B16>;
+  defm SUST_B_1D_I32_ # op_upper : SUST_1D<"sust.b.1d.b32." # op, B32>;
+  defm SUST_B_1D_I64_ # op_upper : SUST_1D<"sust.b.1d.b64." # op, B64>;
+}
 
 defm SUST_P_1D_I8_TRAP : SUST_1D<"sust.p.1d.b8.trap", B16>;
 defm SUST_P_1D_I16_TRAP : SUST_1D<"sust.p.1d.b16.trap", B16>;
@@ -4068,23 +3945,13 @@ multiclass SUST_1D_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-// int_nvvm_sust_b_1d_v2i8_clamp
-
-defm SUST_B_1D_V2I8_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b8.clamp", B16>;
-defm SUST_B_1D_V2I16_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b16.clamp", B16>;
-defm SUST_B_1D_V2I32_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b32.clamp", B32>;
-defm SUST_B_1D_V2I64_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b64.clamp", B64>;
-
-defm SUST_B_1D_V2I8_TRAP : SUST_1D_V2<"sust.b.1d.v2.b8.trap", B16>;
-defm SUST_B_1D_V2I16_TRAP : SUST_1D_V2<"sust.b.1d.v2.b16.trap", B16>;
-defm SUST_B_1D_V2I32_TRAP : SUST_1D_V2<"sust.b.1d.v2.b32.trap", B32>;
-defm SUST_B_1D_V2I64_TRAP : SUST_1D_V2<"sust.b.1d.v2.b64.trap", B64>;
-
-defm SUST_B_1D_V2I8_ZERO : SUST_1D_V2<"sust.b.1d.v2.b8.zero", B16>;
-defm SUST_B_1D_V2I16_ZERO : SUST_1D_V2<"sust.b.1d.v2.b16.zero", B16>;
-defm SUST_B_1D_V2I32_ZERO : SUST_1D_V2<"sust.b.1d.v2.b32.zero", B32>;
-defm SUST_B_1D_V2I64_ZERO : SUST_1D_V2<"sust.b.1d.v2.b64.zero", B64>;
-
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_V2I8_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b8." # op, B16>;
+  defm SUST_B_1D_V2I16_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b16." # op, B16>;
+  defm SUST_B_1D_V2I32_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b32." # op, B32>;
+  defm SUST_B_1D_V2I64_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b64." # op, B64>;
+}
 defm SUST_P_1D_V2I8_TRAP : SUST_1D_V2<"sust.p.1d.v2.b8.trap", B16>;
 defm SUST_P_1D_V2I16_TRAP : SUST_1D_V2<"sust.p.1d.v2.b16.trap", B16>;
 defm SUST_P_1D_V2I32_TRAP : SUST_1D_V2<"sust.p.1d.v2.b32.trap", B32>;
@@ -4103,17 +3970,12 @@ multiclass SUST_1D_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_V4I8_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b8.clamp", B16>;
-defm SUST_B_1D_V4I16_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b16.clamp", B16>;
-defm SUST_B_1D_V4I32_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b32.clamp", B32>;
-
-defm SUST_B_1D_V4I8_TRAP : SUST_1D_V4<"sust.b.1d.v4.b8.trap", B16>;
-defm SUST_B_1D_V4I16_TRAP : SUST_1D_V4<"sust.b.1d.v4.b16.trap", B16>;
-defm SUST_B_1D_V4I32_TRAP : SUST_1D_V4<"sust.b.1d.v4.b32.trap", B32>;
-
-defm SUST_B_1D_V4I8_ZERO : SUST_1D_V4<"sust.b.1d.v4.b8.zero", B16>;
-defm SUST_B_1D_V4I16_ZERO : SUST_1D_V4<"sust.b.1d.v4.b16.zero", B16>;
-defm SUST_B_1D_V4I32_ZERO : SUST_1D_V4<"sust.b.1d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_V4I8_ # op_upper : SUST_1D_V4<"sust.b.1d.v4.b8." # op, B16>;
+  defm SUST_B_1D_V4I16_ # op_upper : SUST_1D_V4<"sust.b.1d.v4.b16." # op, B16>;
+  defm SUST_B_1D_V4I32_ # op_upper : SUST_1D_V4<"sust.b.1d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_1D_V4I8_TRAP : SUST_1D_V4<"sust.p.1d.v4.b8.trap", B16>;
 defm SUST_P_1D_V4I16_TRAP : SUST_1D_V4<"sust.p.1d.v4.b16.trap", B16>;
@@ -4131,20 +3993,13 @@ multiclass SUST_1D_ARRAY<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_ARRAY_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_I8_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b8.clamp", B16>;
-defm SUST_B_1D_ARRAY_I16_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b16.clamp", B16>;
-defm SUST_B_1D_ARRAY_I32_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b32.clamp", B32>;
-defm SUST_B_1D_ARRAY_I64_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b64.clamp", B64>;
-
-defm SUST_B_1D_ARRAY_I8_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b8.trap", B16>;
-defm SUST_B_1D_ARRAY_I16_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b16.trap", B16>;
-defm SUST_B_1D_ARRAY_I32_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b32.trap", B32>;
-defm SUST_B_1D_ARRAY_I64_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b64.trap", B64>;
-
-defm SUST_B_1D_ARRAY_I8_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b8.zero", B16>;
-defm SUST_B_1D_ARRAY_I16_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b16.zero", B16>;
-defm SUST_B_1D_ARRAY_I32_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b32.zero", B32>;
-defm SUST_B_1D_ARRAY_I64_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_ARRAY_I8_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b8." # op, B16>;
+  defm SUST_B_1D_ARRAY_I16_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b16." # op, B16>;
+  defm SUST_B_1D_ARRAY_I32_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b32." # op, B32>;
+  defm SUST_B_1D_ARRAY_I64_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b64." # op, B64>;
+}
 
 defm SUST_P_1D_ARRAY_I8_TRAP : SUST_1D_ARRAY<"sust.p.a1d.b8.trap", B16>;
 defm SUST_P_1D_ARRAY_I16_TRAP : SUST_1D_ARRAY<"sust.p.a1d.b16.trap", B16>;
@@ -4164,20 +4019,13 @@ multiclass SUST_1D_ARRAY_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_ARRAY_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_V2I8_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.clamp", B16>;
-defm SUST_B_1D_ARRAY_V2I16_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.clamp", B16>;
-defm SUST_B_1D_ARRAY_V2I32_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.clamp", B32>;
-defm SUST_B_1D_ARRAY_V2I64_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.clamp", B64>;
-
-defm SUST_B_1D_ARRAY_V2I8_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.trap", B16>;
-defm SUST_B_1D_ARRAY_V2I16_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.trap", B16>;
-defm SUST_B_1D_ARRAY_V2I32_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.trap", B32>;
-defm SUST_B_1D_ARRAY_V2I64_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.trap", B64>;
-
-defm SUST_B_1D_ARRAY_V2I8_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.zero", B16>;
-defm SUST_B_1D_ARRAY_V2I16_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.zero", B16>;
-defm SUST_B_1D_ARRAY_V2I32_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.zero", B32>;
-defm SUST_B_1D_ARRAY_V2I64_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_ARRAY_V2I8_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8." # op, B16>;
+  defm SUST_B_1D_ARRAY_V2I16_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16." # op, B16>;
+  defm SUST_B_1D_ARRAY_V2I32_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32." # op, B32>;
+  defm SUST_B_1D_ARRAY_V2I64_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64." # op, B64>;
+}
 
 defm SUST_P_1D_ARRAY_V2I8_TRAP : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b8.trap", B16>;
 defm SUST_P_1D_ARRAY_V2I16_TRAP : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b16.trap", B16>;
@@ -4197,33 +4045,16 @@ multiclass SUST_1D_ARRAY_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_ARRAY_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_V4I8_CLAMP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.clamp", B16>;
-defm SUST_B_1D_ARRAY_V4I16_CLAMP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.clamp", B16>;
-defm SUST_B_1D_ARRAY_V4I32_CLAMP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.clamp", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_ARRAY_V4I8_ # op_upper : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8." # op, B16>;
+  defm SUST_B_1D_ARRAY_V4I16_ # op_upper : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16." # op, B16>;
+  defm SUST_B_1D_ARRAY_V4I32_ # op_upper : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32." # op, B32>;
+}
 
-defm SUST_B_1D_ARRAY_V4I8_TRAP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.trap", B16>;
-defm SUST_B_1D_ARRAY_V4I16_TRAP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.trap", B16>;
-defm SUST_B_1D_ARRAY_V4I32_TRAP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.trap", B32>;
-
-defm SUST_B_1D_ARRAY_V4I8_ZERO
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.zero", B16>;
-defm SUST_B_1D_ARRAY_V4I16_ZERO
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.zero", B16>;
-defm SUST_B_1D_ARRAY_V4I32_ZERO
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.zero", B32>;
-
-defm SUST_P_1D_ARRAY_V4I8_TRAP
-  : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b8.trap", B16>;
-defm SUST_P_1D_ARRAY_V4I16_TRAP
-  : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b16.trap", B16>;
-defm SUST_P_1D_ARRAY_V4I32_TRAP
-  : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b32.trap", B32>;
+defm SUST_P_1D_ARRAY_V4I8_TRAP : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b8.trap", B16>;
+defm SUST_P_1D_ARRAY_V4I16_TRAP : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b16.trap", B16>;
+defm SUST_P_1D_ARRAY_V4I32_TRAP : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b32.trap", B32>;
 
 class SUST_2D_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
@@ -4237,20 +4068,13 @@ multiclass SUST_2D<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_I8_CLAMP : SUST_2D<"sust.b.2d.b8.clamp", B16>;
-defm SUST_B_2D_I16_CLAMP : SUST_2D<"sust.b.2d.b16.clamp", B16>;
-defm SUST_B_2D_I32_CLAMP : SUST_2D<"sust.b.2d.b32.clamp", B32>;
-defm SUST_B_2D_I64_CLAMP : SUST_2D<"sust.b.2d.b64.clamp", B64>;
-
-defm SUST_B_2D_I8_TRAP : SUST_2D<"sust.b.2d.b8.trap", B16>;
-defm SUST_B_2D_I16_TRAP : SUST_2D<"sust.b.2d.b16.trap", B16>;
-defm SUST_B_2D_I32_TRAP : SUST_2D<"sust.b.2d.b32.trap", B32>;
-defm SUST_B_2D_I64_TRAP : SUST_2D<"sust.b.2d.b64.trap", B64>;
-
-defm SUST_B_2D_I8_ZERO : SUST_2D<"sust.b.2d.b8.zero", B16>;
-defm SUST_B_2D_I16_ZERO : SUST_2D<"sust.b.2d.b16.zero", B16>;
-defm SUST_B_2D_I32_ZERO : SUST_2D<"sust.b.2d.b32.zero", B32>;
-defm SUST_B_2D_I64_ZERO : SUST_2D<"sust.b.2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_I8_ # op_upper : SUST_2D<"sust.b.2d.b8." # op, B16>;
+  defm SUST_B_2D_I16_ # op_upper : SUST_2D<"sust.b.2d.b16." # op, B16>;
+  defm SUST_B_2D_I32_ # op_upper : SUST_2D<"sust.b.2d.b32." # op, B32>;
+  defm SUST_B_2D_I64_ # op_upper : SUST_2D<"sust.b.2d.b64." # op, B64>;
+}
 
 defm SUST_P_2D_I8_TRAP : SUST_2D<"sust.p.2d.b8.trap", B16>;
 defm SUST_P_2D_I16_TRAP : SUST_2D<"sust.p.2d.b16.trap", B16>;
@@ -4270,20 +4094,13 @@ multiclass SUST_2D_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_V2I8_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b8.clamp", B16>;
-defm SUST_B_2D_V2I16_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b16.clamp", B16>;
-defm SUST_B_2D_V2I32_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b32.clamp", B32>;
-defm SUST_B_2D_V2I64_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b64.clamp", B64>;
-
-defm SUST_B_2D_V2I8_TRAP : SUST_2D_V2<"sust.b.2d.v2.b8.trap", B16>;
-defm SUST_B_2D_V2I16_TRAP : SUST_2D_V2<"sust.b.2d.v2.b16.trap", B16>;
-defm SUST_B_2D_V2I32_TRAP : SUST_2D_V2<"sust.b.2d.v2.b32.trap", B32>;
-defm SUST_B_2D_V2I64_TRAP : SUST_2D_V2<"sust.b.2d.v2.b64.trap", B64>;
-
-defm SUST_B_2D_V2I8_ZERO : SUST_2D_V2<"sust.b.2d.v2.b8.zero", B16>;
-defm SUST_B_2D_V2I16_ZERO : SUST_2D_V2<"sust.b.2d.v2.b16.zero", B16>;
-defm SUST_B_2D_V2I32_ZERO : SUST_2D_V2<"sust.b.2d.v2.b32.zero", B32>;
-defm SUST_B_2D_V2I64_ZERO : SUST_2D_V2<"sust.b.2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_V2I8_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b8." # op, B16>;
+  defm SUST_B_2D_V2I16_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b16." # op, B16>;
+  defm SUST_B_2D_V2I32_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b32." # op, B32>;
+  defm SUST_B_2D_V2I64_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b64." # op, B64>;
+}
 
 defm SUST_P_2D_V2I8_TRAP : SUST_2D_V2<"sust.p.2d.v2.b8.trap", B16>;
 defm SUST_P_2D_V2I16_TRAP : SUST_2D_V2<"sust.p.2d.v2.b16.trap", B16>;
@@ -4303,17 +4120,12 @@ multiclass SUST_2D_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_V4I8_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b8.clamp", B16>;
-defm SUST_B_2D_V4I16_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b16.clamp", B16>;
-defm SUST_B_2D_V4I32_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b32.clamp", B32>;
-
-defm SUST_B_2D_V4I8_TRAP : SUST_2D_V4<"sust.b.2d.v4.b8.trap", B16>;
-defm SUST_B_2D_V4I16_TRAP : SUST_2D_V4<"sust.b.2d.v4.b16.trap", B16>;
-defm SUST_B_2D_V4I32_TRAP : SUST_2D_V4<"sust.b.2d.v4.b32.trap", B32>;
-
-defm SUST_B_2D_V4I8_ZERO : SUST_2D_V4<"sust.b.2d.v4.b8.zero", B16>;
-defm SUST_B_2D_V4I16_ZERO : SUST_2D_V4<"sust.b.2d.v4.b16.zero", B16>;
-defm SUST_B_2D_V4I32_ZERO : SUST_2D_V4<"sust.b.2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_V4I8_ # op_upper : SUST_2D_V4<"sust.b.2d.v4.b8." # op, B16>;
+  defm SUST_B_2D_V4I16_ # op_upper : SUST_2D_V4<"sust.b.2d.v4.b16." # op, B16>;
+  defm SUST_B_2D_V4I32_ # op_upper : SUST_2D_V4<"sust.b.2d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_2D_V4I8_TRAP : SUST_2D_V4<"sust.p.2d.v4.b8.trap", B16>;
 defm SUST_P_2D_V4I16_TRAP : SUST_2D_V4<"sust.p.2d.v4.b16.trap", B16>;
@@ -4333,20 +4145,13 @@ multiclass SUST_2D_ARRAY<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_ARRAY_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_I8_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b8.clamp", B16>;
-defm SUST_B_2D_ARRAY_I16_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b16.clamp", B16>;
-defm SUST_B_2D_ARRAY_I32_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b32.clamp", B32>;
-defm SUST_B_2D_ARRAY_I64_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b64.clamp", B64>;
-
-defm SUST_B_2D_ARRAY_I8_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b8.trap", B16>;
-defm SUST_B_2D_ARRAY_I16_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b16.trap", B16>;
-defm SUST_B_2D_ARRAY_I32_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b32.trap", B32>;
-defm SUST_B_2D_ARRAY_I64_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b64.trap", B64>;
-
-defm SUST_B_2D_ARRAY_I8_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b8.zero", B16>;
-defm SUST_B_2D_ARRAY_I16_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b16.zero", B16>;
-defm SUST_B_2D_ARRAY_I32_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b32.zero", B32>;
-defm SUST_B_2D_ARRAY_I64_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_ARRAY_I8_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b8." # op, B16>;
+  defm SUST_B_2D_ARRAY_I16_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b16." # op, B16>;
+  defm SUST_B_2D_ARRAY_I32_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b32." # op, B32>;
+  defm SUST_B_2D_ARRAY_I64_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b64." # op, B64>;
+}
 
 defm SUST_P_2D_ARRAY_I8_TRAP : SUST_2D_ARRAY<"sust.p.a2d.b8.trap", B16>;
 defm SUST_P_2D_ARRAY_I16_TRAP : SUST_2D_ARRAY<"sust.p.a2d.b16.trap", B16>;
@@ -4366,20 +4171,13 @@ multiclass SUST_2D_ARRAY_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_ARRAY_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_V2I8_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.clamp", B16>;
-defm SUST_B_2D_ARRAY_V2I16_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.clamp", B16>;
-defm SUST_B_2D_ARRAY_V2I32_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.clamp", B32>;
-defm SUST_B_2D_ARRAY_V2I64_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.clamp", B64>;
-
-defm SUST_B_2D_ARRAY_V2I8_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.trap", B16>;
-defm SUST_B_2D_ARRAY_V2I16_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.trap", B16>;
-defm SUST_B_2D_ARRAY_V2I32_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.trap", B32>;
-defm SUST_B_2D_ARRAY_V2I64_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.trap", B64>;
-
-defm SUST_B_2D_ARRAY_V2I8_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.zero", B16>;
-defm SUST_B_2D_ARRAY_V2I16_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.zero", B16>;
-defm SUST_B_2D_ARRAY_V2I32_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.zero", B32>;
-defm SUST_B_2D_ARRAY_V2I64_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_ARRAY_V2I8_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8." # op, B16>;
+  defm SUST_B_2D_ARRAY_V2I16_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16." # op, B16>;
+  defm SUST_B_2D_ARRAY_V2I32_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32." # op, B32>;
+  defm SUST_B_2D_ARRAY_V2I64_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64." # op, B64>;
+}
 
 defm SUST_P_2D_ARRAY_V2I8_TRAP : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b8.trap", B16>;
 defm SUST_P_2D_ARRAY_V2I16_TRAP : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b16.trap", B16>;
@@ -4399,17 +4197,12 @@ multiclass SUST_2D_ARRAY_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_ARRAY_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_V4I8_CLAMP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.clamp", B16>;
-defm SUST_B_2D_ARRAY_V4I16_CLAMP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.clamp", B16>;
-defm SUST_B_2D_ARRAY_V4I32_CLAMP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.clamp", B32>;
-
-defm SUST_B_2D_ARRAY_V4I8_TRAP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.trap", B16>;
-defm SUST_B_2D_ARRAY_V4I16_TRAP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.trap", B16>;
-defm SUST_B_2D_ARRAY_V4I32_TRAP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.trap", B32>;
-
-defm SUST_B_2D_ARRAY_V4I8_ZERO : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.zero", B16>;
-defm SUST_B_2D_ARRAY_V4I16_ZERO : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.zero", B16>;
-defm SUST_B_2D_ARRAY_V4I32_ZERO : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_ARRAY_V4I8_ # op_upper : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8." # op, B16>;
+  defm SUST_B_2D_ARRAY_V4I16_ # op_upper : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16." # op, B16>;
+  defm SUST_B_2D_ARRAY_V4I32_ # op_upper : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_2D_ARRAY_V4I8_TRAP : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b8.trap", B16>;
 defm SUST_P_2D_ARRAY_V4I16_TRAP : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b16.trap", B16>;
@@ -4429,21 +4222,13 @@ multiclass SUST_3D<string inst, NVPTXRegClass intype> {
   def _I : SUST_3D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_I8_CLAMP : SUST_3D<"sust.b.3d.b8.clamp", B16>;
-defm SUST_B_3D_I16_CLAMP : SUST_3D<"sust.b.3d.b16.clamp", B16>;
-defm SUST_B_3D_I32_CLAMP : SUST_3D<"sust.b.3d.b32.clamp", B32>;
-defm SUST_B_3D_I64_CLAMP : SUST_3D<"sust.b.3d.b64.clamp", B64>;
-
-defm SUST_B_3D_I8_TRAP : SUST_3D<"sust.b.3d.b8.trap", B16>;
-defm SUST_B_3D_I16_TRAP : SUST_3D<"sust.b.3d.b16.trap", B16>;
-defm SUST_B_3D_I32_TRAP : SUST_3D<"sust.b.3d.b32.trap", B32>;
-defm SUST_B_3D_I64_TRAP : SUST_3D<"sust.b.3d.b64.trap", B64>;
-
-defm SUST_B_3D_I8_ZERO : SUST_3D<"sust.b.3d.b8.zero", B16>;
-defm SUST_B_3D_I16_ZERO : SUST_3D<"sust.b.3d.b16.zero", B16>;
-defm SUST_B_3D_I32_ZERO : SUST_3D<"sust.b.3d.b32.zero", B32>;
-defm SUST_B_3D_I64_ZERO : SUST_3D<"sust.b.3d.b64.zero", B64>;
-
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_3D_I8_ # op_upper : SUST_3D<"sust.b.3d.b8." # op, B16>;
+  defm SUST_B_3D_I16_ # op_upper : SUST_3D<"sust.b.3d.b16." # op, B16>;
+  defm SUST_B_3D_I32_ # op_upper : SUST_3D<"sust.b.3d.b32." # op, B32>;
+  defm SUST_B_3D_I64_ # op_upper : SUST_3D<"sust.b.3d.b64." # op, B64>;
+}
 defm SUST_P_3D_I8_TRAP : SUST_3D<"sust.p.3d.b8.trap", B16>;
 defm SUST_P_3D_I16_TRAP : SUST_3D<"sust.p.3d.b16.trap", B16>;
 defm SUST_P_3D_I32_TRAP : SUST_3D<"sust.p.3d.b32.trap", B32>;
@@ -4462,21 +4247,13 @@ multiclass SUST_3D_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_3D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_V2I8_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b8.clamp", B16>;
-defm SUST_B_3D_V2I16_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b16.clamp", B16>;
-defm SUST_B_3D_V2I32_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b32.clamp", B32>;
-defm SUST_B_3D_V2I64_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b64.clamp", B64>;
-
-defm SUST_B_3D_V2I8_TRAP : SUST_3D_V2<"sust.b.3d.v2.b8.trap", B16>;
-defm SUST_B_3D_V2I16_TRAP : SUST_3D_V2<"sust.b.3d.v2.b16.trap", B16>;
-defm SUST_B_3D_V2I32_TRAP : SUST_3D_V2<"sust.b.3d.v2.b32.trap", B32>;
-defm SUST_B_3D_V2I64_TRAP : SUST_3D_V2<"sust.b.3d.v2.b64.trap", B64>;
-
-defm SUST_B_3D_V2I8_ZERO : SUST_3D_V2<"sust.b.3d.v2.b8.zero", B16>;
-defm SUST_B_3D_V2I16_ZERO : SUST_3D_V2<"sust.b.3d.v2.b16.zero", B16>;
-defm SUST_B_3D_V2I32_ZERO : SUST_3D_V2<"sust.b.3d.v2.b32.zero", B32>;
-defm SUST_B_3D_V2I64_ZERO : SUST_3D_V2<"sust.b.3d.v2.b64.zero", B64>;
-
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_3D_V2I8_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b8." # op, B16>;
+  defm SUST_B_3D_V2I16_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b16." # op, B16>;
+  defm SUST_B_3D_V2I32_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b32." # op, B32>;
+  defm SUST_B_3D_V2I64_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b64." # op, B64>;
+}
 defm SUST_P_3D_V2I8_TRAP : SUST_3D_V2<"sust.p.3d.v2.b8.trap", B16>;
 defm SUST_P_3D_V2I16_TRAP : SUST_3D_V2<"sust.p.3d.v2.b16.trap", B16>;
 defm SUST_P_3D_V2I32_TRAP : SUST_3D_V2<"sust.p.3d.v2.b32.trap", B32>;
@@ -4495,17 +4272,12 @@ multiclass SUST_3D_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_3D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_V4I8_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b8.clamp", B16>;
-defm SUST_B_3D_V4I16_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b16.clamp", B16>;
-defm SUST_B_3D_V4I32_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b32.clamp", B32>;
-
-defm SUST_B_3D_V4I8_TRAP : SUST_3D_V4<"sust.b.3d.v4.b8.trap", B16>;
-defm SUST_B_3D_V4I16_TRAP : SUST_3D_V4<"sust.b.3d.v4.b16.trap", B16>;
-defm SUST_B_3D_V4I32_TRAP : SUST_3D_V4<"sust.b.3d.v4.b32.trap", B32>;
-
-defm SUST_B_3D_V4I8_ZERO : SUST_3D_V4<"sust.b.3d.v4.b8.zero", B16>;
-defm SUST_B_3D_V4I16_ZERO : SUST_3D_V4<"sust.b.3d.v4.b16.zero", B16>;
-defm SUST_B_3D_V4I32_ZERO : SUST_3D_V4<"sust.b.3d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_3D_V4I8_ # op_upper : SUST_3D_V4<"sust.b.3d.v4.b8." # op, B16>;
+  defm SUST_B_3D_V4I16_ # op_upper : SUST_3D_V4<"sust.b.3d.v4.b16." # op, B16>;
+  defm SUST_B_3D_V4I32_ # op_upper : SUST_3D_V4<"sust.b.3d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_3D_V4I8_TRAP : SUST_3D_V4<"sust.p.3d.v4.b8.trap", B16>;
 defm SUST_P_3D_V4I16_TRAP : SUST_3D_V4<"sust.p.3d.v4.b16.trap", B16>;
@@ -5122,27 +4894,23 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 //
 // WGMMA fence instructions
 //
-let isConvergent = true in {
-def INT_NVVM_WGMMA_FENCE_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins), "wgmma.fence.sync.aligned",
-                             [(int_nvvm_wgmma_fence_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+let isConvergent = true, Predicates = [hasSM90a, hasPTX<80>] in {
+  def WGMMA_FENCE_SYNC_ALIGNED : NullaryInst<"wgmma.fence.sync.aligned", int_nvvm_wgmma_fence_sync_aligned>;
 
-def INT_NVVM_WGMMA_COMMIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins), "wgmma.commit_group.sync.aligned",
-                             [(int_nvvm_wgmma_commit_group_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+  def WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NullaryInst<"wgmma.commit_group.sync.aligned", int_nvvm_wgmma_commit_group_sync_aligned>;
 
-def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
-                             [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
-} // isConvergent = true
+  def WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
+                              [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>;
+}
 
 let Predicates = [hasSM<90>, hasPTX<78>] in {
   def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
-        BasicNVPTXInst<(outs), (ins), "griddepcontrol.launch_dependents",
-                  [(int_nvvm_griddepcontrol_launch_dependents)]>;
+        NullaryInst<"griddepcontrol.launch_dependents", int_nvvm_griddepcontrol_launch_dependents>;
   def GRIDDEPCONTROL_WAIT :
-        BasicNVPTXInst<(outs), (ins), "griddepcontrol.wait",
-                  [(int_nvvm_griddepcontrol_wait)]>;
+        NullaryInst<"griddepcontrol.wait", int_nvvm_griddepcontrol_wait>;
 }
 
-def INT_EXIT : BasicNVPTXInst<(outs), (ins), "exit", [(int_nvvm_exit)]>;
+def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
 let isConvergent = true, Predicates = [hasTcgen05Instructions] in {
@@ -5170,9 +4938,7 @@ defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1
 defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
 
 multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs), (ins),
-             "tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned",
-             [(Intr)]>;
+  def "" : NullaryInst<"tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned", Intr>;
 }
 defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
 defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
