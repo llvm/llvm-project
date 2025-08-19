@@ -1,4 +1,4 @@
-; REUIRES: amdgpu-registered-target
+; REQUIRES: amdgpu-registered-target
 
 ; Regression test for:
 ;  - DW_AT_ranges not being read properly
