@@ -55,17 +55,16 @@ static bool isSgIdRangeSpecified(Operation *op, int64_t &startOfRange,
 }
 
 static std::pair<SmallVector<int64_t>, int>
-getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
+getSgShapeAndCount(ArrayRef<int64_t> shape,
+                   xegpu::DistributLayoutAttrInterface layout) {
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
-
   if (layout && layout.isWgLayout()) {
-    DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout();
-    auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
-    if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
-      sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-    else
-      sgShape = computeShapeRatio(shape, sgLayout).value_or(sgShape);
+    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt().value();
+    if (auto maybeSgData = layout.getSgDataAsInt())
+      sgShape = *maybeSgData;
+    else if (auto maybeDerivedSgData = computeShapeRatio(shape, sgLayout))
+      sgShape = *maybeDerivedSgData;
     SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
     // Clamp distUnit to the original shape to handle cases where data is
     // shared among subgroups, which may cause distUnit to exceed the original
@@ -723,8 +722,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 // is lowered to:
 //   #a = #xegpu.layout<inst_data = [16, 16]>
 //   #b = #xegpu.layout<inst_data = [8, 16]>
-//   store_matrix %1, %slm <{layout_input_0 = #a}> : vector<32x16>, mem_desc<32x64xf32>
-//   %d = load_matrix %slm <{layout_result_0 = #a}> : mem_desc<32x64xf32> -> vector<16x32xf32>
+//   store_matrix %1, %slm <{layout_input_0 = #a}> : vector<32x16>, matrix_desc<32x64xf32>
+//   %d = load_matrix %slm <{layout_result_0 = #a}> : matrix_desc<32x64xf32> -> vector<16x32xf32>
 //   xegpu.convert_layout %d <{input_layout = #a, target_layout = #b}> : vector<16x32xf32>
 // clang-format on
 struct WgToSgConvertLayoutOp
@@ -884,6 +883,123 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
   }
 };
 
+// A callback funtion type used to create new load/store_matrix ops
+using CreatorFuncType =
+    llvm::function_ref<void(ArrayRef<OpFoldResult> baseOffsets,
+                            SmallVector<SmallVector<Value>> &descOffsets)>;
+
+/// Utility helper for distributing logic shared by load_matrix and store_matrix
+/// operations.
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
+LogicalResult distributeMatrixOp(
+    ConversionPatternRewriter &rewriter,
+    typename OpConversionPattern<OpType>::OneToNOpAdaptor adaptor, OpType op,
+    ArrayRef<int64_t> wgShape, CreatorFuncType callback) {
+  Location loc = op.getLoc();
+  auto layout = op.getLayoutAttr();
+  if (!layout || !layout.isWgLayout())
+    return failure();
+
+  Value sgId = rewriter.create<gpu::SubgroupIdOp>(loc, /*upper_bound=*/nullptr);
+
+  // adjust the linearId if the range specifier is present
+  int64_t startOfRange = -1, endOfRange = -1;
+  bool sgIdRangeSpecified = isSgIdRangeSpecified(op, startOfRange, endOfRange);
+  if (sgIdRangeSpecified) {
+    if (layout.getNumSubgroups() != endOfRange - startOfRange)
+      return rewriter.notifyMatchFailure(
+          op, "sg_layout size must match the sg_id_range");
+    Value startOfRangeVal =
+        rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+    sgId = rewriter.create<index::SubOp>(loc, startOfRangeVal, sgId);
+  }
+
+  auto maybeMdescOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+  if (failed(maybeMdescOffsets))
+    return failure();
+
+  SmallVector<OpFoldResult> wgOffsets = op.getMixedOffsets();
+  callback(wgOffsets, *maybeMdescOffsets);
+  return success();
+}
+
+static SmallVector<OpFoldResult> add(ConversionPatternRewriter &rewriter,
+                                     Location loc, ArrayRef<OpFoldResult> lhs,
+                                     ArrayRef<OpFoldResult> rhs) {
+  return llvm::map_to_vector(
+      llvm::zip_equal(lhs, rhs), [&](auto p) -> OpFoldResult {
+        auto l = getValueOrCreateConstantIndexOp(rewriter, loc, std::get<0>(p));
+        auto r = getValueOrCreateConstantIndexOp(rewriter, loc, std::get<1>(p));
+        return rewriter.create<index::AddOp>(loc, l, r).getResult();
+      });
+}
+
+struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
+  using OpConversionPattern<xegpu::LoadMatrixOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::LoadMatrixOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    VectorType valueTy = op.getRes().getType();
+    ArrayRef<int64_t> wgShape = valueTy.getShape();
+    Type elemTy = valueTy.getElementType();
+
+    // the call back function for creating new LoadMatrixOps,
+    // the baseOffsets is the origial offsets of the op, and
+    // descOffsets is the relative offsets to the mem_desc accessed
+    // by each subgroup op.
+    auto callback = [&](ArrayRef<OpFoldResult> baseOffsets,
+                        SmallVector<SmallVector<Value>> descOffsets) {
+      auto layout = op.getLayoutAttr();
+      SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+      VectorType newResTy = VectorType::get(sgShape, elemTy);
+
+      SmallVector<Value> newOps;
+      for (auto offsets : descOffsets) {
+        SmallVector<OpFoldResult> sgOffsets =
+            add(rewriter, loc, baseOffsets, getAsOpFoldResult(offsets));
+        auto newOp = rewriter.create<xegpu::LoadMatrixOp>(
+            loc, newResTy, op.getMemDesc(), sgOffsets,
+            layout.dropSgLayoutAndData());
+        newOps.push_back(newOp);
+      }
+      rewriter.replaceOpWithMultiple(op, {newOps});
+    };
+
+    return distributeMatrixOp(rewriter, adaptor, op, wgShape, callback);
+  }
+};
+
+struct WgToSgStoreMatrixOp : public OpConversionPattern<xegpu::StoreMatrixOp> {
+  using OpConversionPattern<xegpu::StoreMatrixOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::StoreMatrixOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    VectorType valueTy = op.getData().getType();
+    ArrayRef<int64_t> wgShape = valueTy.getShape();
+
+    // the call back function for creating new StoreMatrixOps,
+    // the baseOffsets is the origial offsets of the op, and
+    // descOffsets is the relative offsets to the mem_desc accessed
+    // by each subgroup op.
+    auto callback = [&](ArrayRef<OpFoldResult> baseOffsets,
+                        SmallVector<SmallVector<Value>> descOffsets) {
+      auto layout = op.getLayoutAttr();
+      for (auto [v, descOffsets] : llvm::zip(adaptor.getData(), descOffsets)) {
+        SmallVector<OpFoldResult> sgOffsets =
+            add(rewriter, loc, baseOffsets, getAsOpFoldResult(descOffsets));
+        rewriter.create<xegpu::StoreMatrixOp>(
+            loc, v, op.getMemDesc(), sgOffsets, layout.dropSgLayoutAndData());
+      }
+      rewriter.eraseOp(op);
+    };
+    return distributeMatrixOp(rewriter, adaptor, op, wgShape, callback);
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -895,7 +1011,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
            WgToSgPrefetchNdOpWithOffset, UnrealizedConversionCastOpPattern,
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
-           WgToSgArithConstantOp>(patterns.getContext());
+           WgToSgArithConstantOp, WgToSgLoadMatrixOp, WgToSgStoreMatrixOp>(
+          patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -985,7 +1102,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return xegpu::TensorDescType();
   };
 
-  auto isLegal = [&](xegpu::LayoutAttr layout) -> bool {
+  auto isLegal = [&](xegpu::DistributLayoutAttrInterface layout) -> bool {
     return !layout || !layout.isWgLayout();
   };
 
@@ -1002,9 +1119,14 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return isLegal(layout);
   });
 
-  target.addDynamicallyLegalOp<vector::BroadcastOp>(
-      [=](vector::BroadcastOp op) -> bool {
-        return isLegal(xegpu::getLayoutAttr(op.getResult()));
+  target.addDynamicallyLegalOp<xegpu::LoadMatrixOp>(
+      [=](xegpu::LoadMatrixOp op) -> bool {
+        return isLegal(op.getLayoutAttr());
+      });
+
+  target.addDynamicallyLegalOp<xegpu::StoreMatrixOp>(
+      [=](xegpu::StoreMatrixOp op) -> bool {
+        return isLegal(op.getLayoutAttr());
       });
 
   target.addDynamicallyLegalOp<arith::ConstantOp>(
@@ -1012,6 +1134,11 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         auto vecType = dyn_cast<VectorType>(op.getType());
         if (!vecType)
           return true;
+        return isLegal(xegpu::getLayoutAttr(op.getResult()));
+      });
+
+  target.addDynamicallyLegalOp<vector::BroadcastOp>(
+      [=](vector::BroadcastOp op) -> bool {
         return isLegal(xegpu::getLayoutAttr(op.getResult()));
       });
 

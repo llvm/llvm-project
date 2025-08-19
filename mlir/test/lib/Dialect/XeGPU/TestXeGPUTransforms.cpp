@@ -156,8 +156,8 @@ struct TestXeGPUUnrollingPatterns
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 // Test pattern for distributing vector::StepOp from workgroup to subgroup.
-// Validates LayoutTrait interfaces for offset computation abstraction between
-// LayoutAttr and SliceAttr.
+// Validates DistributLayoutAttrInterface interfaces for offset computation
+// abstraction between LayoutAttr and SliceAttr.
 class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   using OpConversionPattern<vector::StepOp>::OpConversionPattern;
 
