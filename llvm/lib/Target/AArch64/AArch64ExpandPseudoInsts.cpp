@@ -1039,7 +1039,8 @@ MachineBasicBlock *AArch64ExpandPseudo::expandCommitOrRestoreZASave(
     // Mark the TPIDR2 block pointer (X0) as an implicit use.
     MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
   } else /*CommitZA*/ {
-    auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+    [[maybe_unused]] auto *TRI =
+        MBB.getParent()->getSubtarget().getRegisterInfo();
     // Clear TPIDR2_EL0.
     BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::MSR))
         .addImm(AArch64SysReg::TPIDR2_EL0)
