@@ -235,9 +235,9 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("RootConstants Element");
 
-  Expected<dxbc::ShaderVisibility> VisibilityOrErr =
+  Expected<dxbc::ShaderVisibility> Visibility =
       extractShaderVisibility(RootConstantNode, 1);
-  if (auto E = VisibilityOrErr.takeError())
+  if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
   dxbc::RTS0::v1::RootConstants Constants;
@@ -257,7 +257,7 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
     return make_error<InvalidRSMetadataValue>("Num32BitValues");
 
   RSD.ParametersContainer.addParameter(dxbc::RootParameterType::Constants32Bit,
-                                       *VisibilityOrErr, Constants);
+                                       *Visibility, Constants);
 
   return Error::success();
 }
@@ -289,9 +289,9 @@ Error MetadataParser::parseRootDescriptors(
     break;
   }
 
-  Expected<dxbc::ShaderVisibility> VisibilityOrErr =
+  Expected<dxbc::ShaderVisibility> Visibility =
       extractShaderVisibility(RootDescriptorNode, 1);
-  if (auto E = VisibilityOrErr.takeError())
+  if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
   dxbc::RTS0::v2::RootDescriptor Descriptor;
@@ -306,7 +306,7 @@ Error MetadataParser::parseRootDescriptors(
     return make_error<InvalidRSMetadataValue>("RegisterSpace");
 
   if (RSD.Version == 1) {
-    RSD.ParametersContainer.addParameter(Type, *VisibilityOrErr, Descriptor);
+    RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
     return Error::success();
   }
   assert(RSD.Version > 1);
@@ -316,7 +316,7 @@ Error MetadataParser::parseRootDescriptors(
   else
     return make_error<InvalidRSMetadataValue>("Root Descriptor Flags");
 
-  RSD.ParametersContainer.addParameter(Type, *VisibilityOrErr, Descriptor);
+  RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
   return Error::success();
 }
 
@@ -382,11 +382,9 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
   if (NumOperands < 2)
     return make_error<InvalidRSMetadataFormat>("Descriptor Table");
 
-  mcdxbc::RootParameterHeader Header;
-
-  Expected<dxbc::ShaderVisibility> VisibilityOrErr =
+  Expected<dxbc::ShaderVisibility> Visibility =
       extractShaderVisibility(DescriptorTableNode, 1);
-  if (auto E = VisibilityOrErr.takeError())
+  if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
   mcdxbc::DescriptorTable Table;
@@ -402,7 +400,7 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
   }
 
   RSD.ParametersContainer.addParameter(dxbc::RootParameterType::DescriptorTable,
-                                       *VisibilityOrErr, Table);
+                                       *Visibility, Table);
   return Error::success();
 }
 
