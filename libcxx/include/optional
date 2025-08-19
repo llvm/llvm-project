@@ -264,7 +264,6 @@ namespace std {
 #  include <__compare/three_way_comparable.h>
 #  include <__concepts/invocable.h>
 #  include <__config>
-#  include <__cstddef/ptrdiff_t.h>
 #  include <__exception/exception.h>
 #  include <__format/range_format.h>
 #  include <__functional/hash.h>
@@ -272,6 +271,7 @@ namespace std {
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
+#  include <__iterator/upper_bounded_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
@@ -717,13 +717,17 @@ private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
+#    if _LIBCPP_STD_VER >= 26
+  template <typename _Underlying>
+  using __iter _LIBCPP_NODEBUG = __upper_bounded_iterator<_Underlying, __optional_iterator, 1>;
+
 public:
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-  using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
-  using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
+  using iterator       = __iter<__bounded_iter<__wrap_iter<__pointer>>>;
+  using const_iterator = __iter<__bounded_iter<__wrap_iter<__const_pointer>>>;
 #      else
-  using iterator       = __wrap_iter<__pointer>;
-  using const_iterator = __wrap_iter<__const_pointer>;
+  using iterator       = __iter<__wrap_iter<__pointer>>;
+  using const_iterator = __iter<__wrap_iter<__const_pointer>>;
 #      endif
 
   // [optional.iterators], iterator support
@@ -732,12 +736,12 @@ public:
     auto* __ptr          = std::addressof(__derived_self.__get());
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(
+    return iterator(std::__make_bounded_iter(
         __wrap_iter<__pointer>(__ptr),
         __wrap_iter<__pointer>(__ptr),
-        __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
+        __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0)));
 #      else
-    return iterator(__ptr);
+    return iterator(__wrap_iter<__pointer>(__ptr));
 #      endif
   }
 
@@ -746,12 +750,12 @@ public:
     auto* __ptr          = std::addressof(__derived_self.__get());
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(
+    return const_iterator(std::__make_bounded_iter(
         __wrap_iter<__const_pointer>(__ptr),
         __wrap_iter<__const_pointer>(__ptr),
-        __wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
+        __wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0)));
 #      else
-    return const_iterator(__ptr);
+    return const_iterator(__wrap_iter<__const_pointer>(__ptr));
 #      endif
   }
 
