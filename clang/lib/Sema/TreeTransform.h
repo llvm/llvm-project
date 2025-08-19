@@ -4073,7 +4073,7 @@ public:
             PVD->getUninstantiatedDefaultArg()
                 ->containsUnexpandedParameterPack();
     }
-    return getSema().BuildLambdaExpr(StartLoc, EndLoc, LSI);
+    return getSema().BuildLambdaExpr(StartLoc, EndLoc);
   }
 
   /// Build an empty C++1z fold-expression with the given operator.

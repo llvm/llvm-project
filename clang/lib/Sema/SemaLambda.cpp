@@ -1976,7 +1976,7 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   ActOnFinishFunctionBody(LSI.CallOperator, Body, /*IsInstantiation=*/false,
                           /*RetainFunctionScopeInfo=*/true);
 
-  return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
+  return BuildLambdaExpr(StartLoc, Body->getEndLoc());
 }
 
 static LambdaCaptureDefault
@@ -2133,13 +2133,9 @@ ConstructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
   return SourceRange(FixItStart, FixItEnd);
 }
 
-ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
-                                 LambdaScopeInfo *LSI) {
-  // Copy the LSI before PopFunctionScopeInfo removes it.
-  // FIXME: This is dumb. Store the lambda information somewhere that outlives
-  // the call operator.
-  LambdaScopeInfo LSICopy = *LSI;
-  LSI = &LSICopy;
+ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
+                                 SourceLocation EndLoc) {
+  LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(FunctionScopes.back());
   // Collect information from the lambda scope.
   SmallVector<LambdaCapture, 4> Captures;
   SmallVector<Expr *, 4> CaptureInits;
@@ -2178,7 +2174,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
     sema::AnalysisBasedWarnings::Policy WP =
         AnalysisWarnings.getPolicyInEffectAt(EndLoc);
-    PopFunctionScopeInfo(&WP, LSI->CallOperator);
+    // We cannot release LSI until we finish computing captures, which
+    // requires the scope to be popped.
+    PoppedFunctionScopePtr _ = PopFunctionScopeInfo(&WP, LSI->CallOperator);
 
     // True if the current capture has a used capture or default before it.
     bool CurHasPreviousCapture = CaptureDefault != LCD_None;
