@@ -65,7 +65,9 @@ public:
     PlatformMinVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
     resetDataLayout("e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:"
-                    "32-f64:64-n8:16:32:64");
+                    "32-f64:64-n8:16:32:64"
+                    // HACK: 3-element vectors
+                    "-v48:16:16-v96:32:32-v192:64:64");
     TheCXXABI.set(TargetCXXABI::GenericItanium);
   }
   bool useFP16ConversionIntrinsics() const override { return false; }
