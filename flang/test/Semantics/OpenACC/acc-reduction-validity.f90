@@ -175,3 +175,15 @@ program openacc_reduction_validity
 
 
 end program
+
+subroutine sum()
+  ! ERROR: 'sum' is already declared in this scoping unit
+  integer :: i,sum 
+  sum = 0
+  !$acc parallel 
+  !$acc loop independent gang reduction(+:sum)
+  do i=1,10
+     sum = sum + i
+  enddo
+  !$acc end parallel
+end subroutine
