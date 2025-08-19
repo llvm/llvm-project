@@ -1322,6 +1322,17 @@ def OMP_EndWorkshare : Directive<[Spelling<"end workshare">]> {
   let category = OMP_Workshare.category;
   let languages = [L_Fortran];
 }
+def OMP_Workdistribute : Directive<[Spelling<"workdistribute">]> {
+  let association = AS_Block;
+  let category = CA_Executable;
+  let languages = [L_Fortran];
+}
+def OMP_EndWorkdistribute : Directive<[Spelling<"end workdistribute">]> {
+  let leafConstructs = OMP_Workdistribute.leafConstructs;
+  let association = OMP_Workdistribute.association;
+  let category = OMP_Workdistribute.category;
+  let languages = [L_Fortran];
+}
 
 //===----------------------------------------------------------------------===//
 // Definitions of OpenMP compound directives
