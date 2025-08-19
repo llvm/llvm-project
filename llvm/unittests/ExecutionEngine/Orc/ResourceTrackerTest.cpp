@@ -141,6 +141,7 @@ TEST_F(ResourceTrackerStandardTest,
       LookupKind::Static,
       {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
       SymbolLookupSet(Foo, SymbolLookupFlags::WeaklyReferencedSymbol)));
+  getDispatcher().run_to_complete();
 
   EXPECT_EQ(SymFlags.size(), 0U)
       << "Symbols should have been removed from the symbol table";
@@ -181,6 +182,7 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
       LookupKind::Static,
       {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
       SymbolLookupSet(Foo, SymbolLookupFlags::WeaklyReferencedSymbol)));
+  getDispatcher().run_to_complete();
 
   EXPECT_EQ(SymFlags.size(), 0U)
       << "Symbols should have been removed from the symbol table";
@@ -218,6 +220,7 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllWhileMaterializing) {
             << "Lookup failed unexpectedly";
       },
       NoDependenciesToRegister);
+  getDispatcher().run_to_complete();
 
   cantFail(RT->remove());
   auto SymFlags = cantFail(ES.lookupFlags(
@@ -240,6 +243,7 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllWhileMaterializing) {
       << "notifyResolved on MR with removed tracker should have failed";
 
   MR->failMaterialization();
+  getDispatcher().run_to_complete();
 }
 
 TEST_F(ResourceTrackerStandardTest, JITDylibClear) {
@@ -270,6 +274,7 @@ TEST_F(ResourceTrackerStandardTest, JITDylibClear) {
 
   cantFail(
       ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo, Bar})));
+  getDispatcher().run_to_complete();
 
   auto JDResourceKey = JD.getDefaultResourceTracker()->getKeyUnsafe();
   EXPECT_EQ(SRM.getRecordedResources().size(), 1U)
@@ -323,6 +328,7 @@ TEST_F(ResourceTrackerStandardTest,
 
   cantFail(
       ES.lookup(makeJITDylibSearchOrder({&JD}), SymbolLookupSet({Foo, Bar})));
+  getDispatcher().run_to_complete();
 
   EXPECT_EQ(SRM.getRecordedResources().size(), 1U)
       << "Expected exactly one entry (for FooRT's Key)";
@@ -370,6 +376,7 @@ TEST_F(ResourceTrackerStandardTest,
 
   cantFail(
       ES.lookup(makeJITDylibSearchOrder({&JD}), SymbolLookupSet({Foo, Bar})));
+  getDispatcher().run_to_complete();
 
   EXPECT_EQ(SRM.getRecordedResources().size(), 2U)
       << "Expected recorded resources for both Foo and Bar";
@@ -415,6 +422,7 @@ TEST_F(ResourceTrackerStandardTest,
       SymbolState::Ready,
       [](Expected<SymbolMap> Result) { cantFail(Result.takeError()); },
       NoDependenciesToRegister);
+  getDispatcher().run_to_complete();
 
   cantFail(FooMR->withResourceKeyDo([&](ResourceKey K) {
     EXPECT_EQ(FooRT->getKeyUnsafe(), K)
@@ -447,6 +455,7 @@ TEST_F(ResourceTrackerStandardTest,
 
   cantFail(FooMR->notifyResolved({{Foo, FooSym}}));
   cantFail(FooMR->notifyEmitted({}));
+  getDispatcher().run_to_complete();
 }
 
 } // namespace

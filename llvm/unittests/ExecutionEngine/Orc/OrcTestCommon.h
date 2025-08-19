@@ -57,6 +57,9 @@ protected:
   public:
     OverridableDispatcher(CoreAPIsBasedStandardTest &Parent) : Parent(Parent) {}
     void dispatch(std::unique_ptr<Task> T) override;
+    void dispatch_super(std::unique_ptr<Task> T) {
+      InPlaceTaskDispatcher::dispatch(std::move(T));
+    }
 
   private:
     CoreAPIsBasedStandardTest &Parent;
@@ -64,6 +67,11 @@ protected:
 
   std::unique_ptr<llvm::orc::ExecutorProcessControl>
   makeEPC(std::shared_ptr<SymbolStringPool> SSP);
+
+  OverridableDispatcher &getDispatcher() {
+    return static_cast<OverridableDispatcher &>(
+        ES.getExecutorProcessControl().getDispatcher());
+  }
 
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
   ExecutionSession ES{makeEPC(SSP)};
