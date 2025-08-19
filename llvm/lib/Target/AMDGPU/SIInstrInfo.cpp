@@ -4267,12 +4267,15 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
   if (MI.memoperands_empty())
     return true;
 
-  // TODO (?): Does this need to be taught how to read noalias.addrspace ?
-
   // See if any memory operand specifies an address space that involves scratch.
   return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
     unsigned AS = Memop->getAddrSpace();
-    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+    if (AS == AMDGPUAS::FLAT_ADDRESS) {
+      const MDNode *MD = Memop->getAAInfo().NoAliasAddrSpace;
+      return !MD || !AMDGPU::hasValueInRangeLikeMetadata(
+                        *MD, AMDGPUAS::PRIVATE_ADDRESS);
+    }
+    return AS == AMDGPUAS::PRIVATE_ADDRESS;
   });
 }
 
