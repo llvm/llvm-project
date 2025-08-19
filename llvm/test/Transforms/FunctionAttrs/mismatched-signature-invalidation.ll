@@ -14,7 +14,7 @@ declare void @fn2(i16)
 ; CHECK-NEXT: %call = call i16 @fn(i32 0)
 
 ; CHECK-LABEL: MemorySSA for function: test
-; CHECK: 1 = MemoryDef(3)
+; CHECK: MemoryUse(2)
 ; CHECK-NEXT: %call = call i16 @fn(i32 0)
 
 define void @test() {
