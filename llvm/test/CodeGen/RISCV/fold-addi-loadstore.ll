@@ -909,7 +909,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-NEXT:    mv s2, a2
 ; RV32I-NEXT:    beqz a3, .LBB20_3
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    slti a1, s1, 0
+; RV32I-NEXT:    srli a1, s1, 31
 ; RV32I-NEXT:    beqz a1, .LBB20_4
 ; RV32I-NEXT:  .LBB20_2:
 ; RV32I-NEXT:    li s3, 0
@@ -974,7 +974,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-MEDIUM-NEXT:    mv s2, a2
 ; RV32I-MEDIUM-NEXT:    beqz a3, .LBB20_3
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %entry
-; RV32I-MEDIUM-NEXT:    slti a1, s1, 0
+; RV32I-MEDIUM-NEXT:    srli a1, s1, 31
 ; RV32I-MEDIUM-NEXT:    beqz a1, .LBB20_4
 ; RV32I-MEDIUM-NEXT:  .LBB20_2:
 ; RV32I-MEDIUM-NEXT:    li s3, 0

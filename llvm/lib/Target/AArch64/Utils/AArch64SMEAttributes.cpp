@@ -7,19 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64SMEAttributes.h"
-#include "llvm/CodeGen/TargetLowering.h"
+#include "AArch64ISelLowering.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include <cassert>
 
 using namespace llvm;
 
-void SMEAttrs::set(unsigned M, bool Enable) {
-  if (Enable)
-    Bitmask |= M;
-  else
-    Bitmask &= ~M;
-
+void SMEAttrs::validate() const {
   // Streaming Mode Attrs
   assert(!(hasStreamingInterface() && hasStreamingCompatibleInterface()) &&
          "SM_Enabled and SM_Compatible are mutually exclusive");
@@ -80,12 +75,12 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 }
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
-                                     const TargetLowering &TLI) {
+                                     const AArch64TargetLowering &TLI) {
   RTLIB::LibcallImpl Impl = TLI.getSupportedLibcallImpl(FuncName);
   if (Impl == RTLIB::Unsupported)
     return;
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
   unsigned KnownAttrs = SMEAttrs::Normal;
+  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
   switch (LC) {
   case RTLIB::SMEABI_SME_STATE:
   case RTLIB::SMEABI_TPIDR2_SAVE:
@@ -129,7 +124,7 @@ bool SMECallAttrs::requiresSMChange() const {
   return true;
 }
 
-SMECallAttrs::SMECallAttrs(const CallBase &CB, const TargetLowering *TLI)
+SMECallAttrs::SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI)
     : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
       Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
   if (auto *CalledFunction = CB.getCalledFunction())

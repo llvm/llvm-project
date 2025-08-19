@@ -17,7 +17,6 @@
 #include "IntegralAP.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
-#include <vector>
 
 namespace clang {
 namespace interp {
@@ -33,18 +32,14 @@ public:
   /// Constructs a value in place on the top of the stack.
   template <typename T, typename... Tys> void push(Tys &&...Args) {
     new (grow(aligned_size<T>())) T(std::forward<Tys>(Args)...);
-#ifndef NDEBUG
     ItemTypes.push_back(toPrimType<T>());
-#endif
   }
 
   /// Returns the value from the top of the stack and removes it.
   template <typename T> T pop() {
-#ifndef NDEBUG
     assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
-#endif
     T *Ptr = &peekInternal<T>();
     T Value = std::move(*Ptr);
     shrink(aligned_size<T>());
@@ -53,22 +48,20 @@ public:
 
   /// Discards the top value from the stack.
   template <typename T> void discard() {
-#ifndef NDEBUG
     assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
-#endif
     T *Ptr = &peekInternal<T>();
-    Ptr->~T();
+    if constexpr (!std::is_trivially_destructible_v<T>) {
+      Ptr->~T();
+    }
     shrink(aligned_size<T>());
   }
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
-#ifndef NDEBUG
     assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
-#endif
     return peekInternal<T>();
   }
 
@@ -83,7 +76,7 @@ public:
   /// Returns the size of the stack in bytes.
   size_t size() const { return StackSize; }
 
-  /// Clears the stack without calling any destructors.
+  /// Clears the stack.
   void clear();
   void clearTo(size_t NewSize);
 
@@ -146,9 +139,11 @@ private:
   /// Total size of the stack.
   size_t StackSize = 0;
 
-#ifndef NDEBUG
-  /// vector recording the type of data we pushed into the stack.
-  std::vector<PrimType> ItemTypes;
+  /// SmallVector recording the type of data we pushed into the stack.
+  /// We don't usually need this during normal code interpretation but
+  /// when aborting, we need type information to call the destructors
+  /// for what's left on the stack.
+  llvm::SmallVector<PrimType> ItemTypes;
 
   template <typename T> static constexpr PrimType toPrimType() {
     if constexpr (std::is_same_v<T, Pointer>)
@@ -192,7 +187,6 @@ private:
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }
-#endif
 };
 
 } // namespace interp
