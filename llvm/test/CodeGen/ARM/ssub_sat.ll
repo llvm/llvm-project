@@ -64,56 +64,48 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-T1-NEXT:    push {r4, r5, r7, lr}
-; CHECK-T1-NEXT:    mov r4, r1
-; CHECK-T1-NEXT:    eors r1, r3
-; CHECK-T1-NEXT:    subs r5, r0, r2
-; CHECK-T1-NEXT:    mov r2, r4
-; CHECK-T1-NEXT:    sbcs r2, r3
-; CHECK-T1-NEXT:    eors r4, r2
-; CHECK-T1-NEXT:    ands r4, r1
-; CHECK-T1-NEXT:    asrs r0, r2, #31
-; CHECK-T1-NEXT:    movs r1, #1
-; CHECK-T1-NEXT:    lsls r1, r1, #31
-; CHECK-T1-NEXT:    eors r1, r0
-; CHECK-T1-NEXT:    cmp r4, #0
-; CHECK-T1-NEXT:    bpl .LBB1_3
+; CHECK-T1-NEXT:    mov r5, r0
+; CHECK-T1-NEXT:    subs r0, r0, r2
+; CHECK-T1-NEXT:    mov r0, r1
+; CHECK-T1-NEXT:    sbcs r0, r3
+; CHECK-T1-NEXT:    asrs r0, r0, #31
+; CHECK-T1-NEXT:    movs r4, #1
+; CHECK-T1-NEXT:    lsls r4, r4, #31
+; CHECK-T1-NEXT:    eors r4, r0
+; CHECK-T1-NEXT:    subs r2, r5, r2
+; CHECK-T1-NEXT:    sbcs r1, r3
+; CHECK-T1-NEXT:    bvc .LBB1_3
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    bpl .LBB1_4
+; CHECK-T1-NEXT:    bvc .LBB1_4
 ; CHECK-T1-NEXT:  .LBB1_2:
+; CHECK-T1-NEXT:    mov r1, r4
 ; CHECK-T1-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-T1-NEXT:  .LBB1_3:
-; CHECK-T1-NEXT:    mov r0, r5
-; CHECK-T1-NEXT:    bmi .LBB1_2
+; CHECK-T1-NEXT:    mov r0, r2
+; CHECK-T1-NEXT:    bvs .LBB1_2
 ; CHECK-T1-NEXT:  .LBB1_4:
-; CHECK-T1-NEXT:    mov r1, r2
+; CHECK-T1-NEXT:    mov r4, r1
+; CHECK-T1-NEXT:    mov r1, r4
 ; CHECK-T1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECK-T2-LABEL: func2:
 ; CHECK-T2:       @ %bb.0:
 ; CHECK-T2-NEXT:    subs r0, r0, r2
-; CHECK-T2-NEXT:    eor.w r12, r1, r3
-; CHECK-T2-NEXT:    sbc.w r2, r1, r3
-; CHECK-T2-NEXT:    eors r1, r2
-; CHECK-T2-NEXT:    ands.w r1, r1, r12
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    asrmi r0, r2, #31
-; CHECK-T2-NEXT:    mov.w r1, #-2147483648
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    eormi.w r2, r1, r2, asr #31
-; CHECK-T2-NEXT:    mov r1, r2
+; CHECK-T2-NEXT:    mov.w r2, #-2147483648
+; CHECK-T2-NEXT:    sbcs r1, r3
+; CHECK-T2-NEXT:    it vs
+; CHECK-T2-NEXT:    asrvs r0, r1, #31
+; CHECK-T2-NEXT:    it vs
+; CHECK-T2-NEXT:    eorvs.w r1, r2, r1, asr #31
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func2:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    subs r0, r0, r2
-; CHECK-ARM-NEXT:    eor r12, r1, r3
-; CHECK-ARM-NEXT:    sbc r2, r1, r3
-; CHECK-ARM-NEXT:    eor r1, r1, r2
-; CHECK-ARM-NEXT:    ands r1, r12, r1
-; CHECK-ARM-NEXT:    asrmi r0, r2, #31
-; CHECK-ARM-NEXT:    mov r1, #-2147483648
-; CHECK-ARM-NEXT:    eormi r2, r1, r2, asr #31
-; CHECK-ARM-NEXT:    mov r1, r2
+; CHECK-ARM-NEXT:    mov r2, #-2147483648
+; CHECK-ARM-NEXT:    sbcs r1, r1, r3
+; CHECK-ARM-NEXT:    asrvs r0, r1, #31
+; CHECK-ARM-NEXT:    eorvs r1, r2, r1, asr #31
 ; CHECK-ARM-NEXT:    bx lr
   %tmp = call i64 @llvm.ssub.sat.i64(i64 %x, i64 %y)
   ret i64 %tmp
