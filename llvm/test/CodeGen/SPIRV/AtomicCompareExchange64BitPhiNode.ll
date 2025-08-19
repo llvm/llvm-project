@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spv -filetype=obj
-; RUN: spirv-val %t.spv
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Regression test for issue https://github.com/llvm/llvm-project/issues/152863
 ; Ensure OpAtomicCompareExchange returns the correct i64 type when used in phi nodes.
