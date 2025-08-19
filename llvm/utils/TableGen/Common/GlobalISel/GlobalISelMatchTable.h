@@ -404,7 +404,7 @@ class SwitchMatcher : public Matcher {
 
   /// The representative condition, with a type and a path (InsnVarID and OpIdx
   /// in most cases)  shared by all the matchers contained.
-  std::unique_ptr<PredicateMatcher> Condition = nullptr;
+  std::unique_ptr<PredicateMatcher> Condition;
 
   /// Temporary set used to check that the case values don't repeat within the
   /// same switch.
