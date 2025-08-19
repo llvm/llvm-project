@@ -571,6 +571,10 @@ template <typename Checker> struct DirectiveSpellingVisitor {
         Directive::OMPD_declare_variant);
     return false;
   }
+  bool Pre(const parser::OpenMPGroupprivate &x) {
+    checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
+    return false;
+  }
   bool Pre(const parser::OpenMPThreadprivate &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_threadprivate);
@@ -1173,6 +1177,15 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     common::visit([&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
         ompObject.u);
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
+  PushContextAndClauseSets(
+      x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
+  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &c) {
