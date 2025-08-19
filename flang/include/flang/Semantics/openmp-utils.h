@@ -65,7 +65,6 @@ std::optional<parser::CharBlock> GetObjectSource(
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
-bool IsNamedConstant(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);

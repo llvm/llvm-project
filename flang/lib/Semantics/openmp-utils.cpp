@@ -130,10 +130,6 @@ bool IsVariableListItem(const Symbol &sym) {
   return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
 }
 
-bool IsNamedConstant(const Symbol &sym) {
-  return sym.attrs().test(Attr::PARAMETER);
-}
-
 bool IsExtendedListItem(const Symbol &sym) {
   return IsVariableListItem(sym) || sym.IsSubprogram();
 }
