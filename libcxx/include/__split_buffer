@@ -598,11 +598,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(__split_buffer&& __c, const __alloc_rr& __a)
     : __base_type(__a) {
   if (__a == __c.__alloc_) {
-    __set_first(__first());
-    __set_begin(begin());
-    __set_sentinel(end());
-    __set_capacity(capacity());
-    __reset();
+    __set_first(__c.__first());
+    __set_begin(__c.begin());
+    __set_sentinel(__c.end());
+    __set_capacity(__c.capacity());
+    __c.__reset();
   } else {
     auto __allocation = std::__allocate_at_least(this->__alloc_, __c.size());
     __set_first(__allocation.ptr);
