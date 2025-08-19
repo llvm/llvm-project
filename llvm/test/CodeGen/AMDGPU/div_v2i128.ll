@@ -2,6 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -o - %s | FileCheck -check-prefix=SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -o - %s | FileCheck -check-prefix=GISEL %s
 
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -o - %s | FileCheck -check-prefix=GFX942-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -o - %s | FileCheck -check-prefix=GFX942-GISEL %s
+
 define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-LABEL: v_sdiv_v2i128_vv:
 ; SDAG:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
@@ -826,6 +829,920 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_subb_u32_e64 v6, vcc, v8, v7, s[4:5]
 ; GISEL-NEXT:    v_subb_u32_e32 v7, vcc, v9, v7, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: v_sdiv_v2i128_vv:
+; GFX942-SDAG:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v20, vcc, 0, v0
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v16, 31, v3
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v21, vcc, 0, v1, vcc
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v18, 31, v11
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v22, vcc, 0, v2, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v23, vcc, 0, v3, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[2:3]
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v16
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v21, v1, v21, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v20, v0, v20, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v23, v3, v23, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v22, v2, v22, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, 0, v8
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v19, v18
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v1, vcc, 0, v9, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v2, vcc, 0, v10, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v3, vcc, 0, v11, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v9, v9, v1, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v8, v8, v0, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v11, v11, v3, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v10, v10, v2, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v1, v9, v11
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v0, v8, v10
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v1, v21, v23
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v0, v20, v22
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[0:1]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v10
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v1, v11
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v2, v0, v1
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v8
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v1, v9
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v0, v1
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[24:25], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v22
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v3, v1, 0, vcc
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v1, v23
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v26, v0, v1
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v20
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v1, v21
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v0, v1
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[24:25], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v26, vcc, v2, v0
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, v3, v1, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v25, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[26:27]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v3, v27, v25
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v0, 0x7f, v26
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v2, v0, v24
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v1, v23, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v0, v22, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v3, v21, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v2, v20, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB0_6
+; GFX942-SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v26
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[30:31], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v27, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v27, 0x7f, v26
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v24, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v0, v2
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v1, v3
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v28, 64, v27
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[24:25]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], v27, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v28, v[20:21]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v28, v24, v28
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v24, 63, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v29, v25, v29
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], v24, v[20:21]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v27
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v27
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], v27, v[20:21]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v25, v29, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v24, v28, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v25, v23, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v24, v22, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v27, 0, v27, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v26, 0, v26, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB0_5
+; GFX942-SDAG-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v30, 64, v0
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v0, v[20:21]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], v30, v[22:23]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v28, v30
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v28, 64, v0
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v31, v29, v31
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v28, v[22:23]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v0
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[36:37], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v29, v29, v31, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v33, v29, v21, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v21, v28, v30, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v32, v21, v20, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[20:21], v0, v[22:23]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v35, 0, v21, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v34, 0, v20, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v20, vcc, -1, v8
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[30:31], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v9, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v22, vcc, -1, v10, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v29, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v23, vcc, -1, v11, vcc
+; GFX942-SDAG-NEXT:  .LBB0_3: ; %udiv-do-while3
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v28, 31, v33
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[32:33], 1, v[32:33]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v48, 31, v25
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[34:35], 1, v[34:35]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v32, v32, v48
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v34, v34, v28
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v28, vcc, v20, v32
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[38:39], 1, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v21, v33, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v26, 31, v27
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v22, v34, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v23, v35, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v24, v24, v26, v30
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v36, v38
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v36, 31, v28
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v37, v39
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v28, 1, v36
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v37, v36, v11
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v38, v36, v10
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v39, v36, v9
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v36, v36, v8
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v32, vcc, v32, v36
+; GFX942-SDAG-NEXT:    v_or3_b32 v25, v25, 0, v31
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v33, vcc, v33, v39, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v34, vcc, v34, v38, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v35, vcc, v35, v37, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, -1, v0
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v2, vcc, -1, v2, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v36, v0, v2
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v37, v1, v3
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[36:37]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[36:37], v[28:29]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB0_3
+; GFX942-SDAG-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB0_5: ; %Flow14
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[2:3], 1, v[26:27]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v8, 31, v27
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[0:1], 1, v[24:25]
+; GFX942-SDAG-NEXT:    v_or3_b32 v1, v1, 0, v31
+; GFX942-SDAG-NEXT:    v_or3_b32 v0, v0, v8, v30
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v3, v29, v3
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v2, v28, v2
+; GFX942-SDAG-NEXT:  .LBB0_6: ; %Flow16
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v20, vcc, 0, v4
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v21, vcc, 0, v5, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v22, vcc, 0, v6, vcc
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v10, 31, v15
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v23, vcc, 0, v7, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, v8
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v21, v5, v21, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v20, v4, v20, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v23, v7, v23, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v22, v6, v22, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v4, vcc, 0, v12
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, v10
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v5, vcc, 0, v13, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v6, vcc, 0, v14, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v7, vcc, 0, v15, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v5, v13, v5, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v4, v12, v4, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v7, v15, v7, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v6, v14, v6, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v13, v5, v7
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v12, v4, v6
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[12:13]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v13, v21, v23
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v12, v20, v22
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[12:13]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v12, v6
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v12, 32, v12
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v13, v7
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v14, v12, v13
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v12, v4
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v12, 32, v12
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v13, v5
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v12, v13
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[12:13], v[24:25], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v14, v12, v14, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v12, v22
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v15, v13, 0, vcc
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v12, 32, v12
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v13, v23
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v26, v12, v13
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v12, v20
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v12, 32, v12
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v13, v21
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v12, v13
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[12:13], v[24:25], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v12, v12, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v13, v13, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v26, vcc, v14, v12
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, v15, v13, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v14, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v15, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[26:27]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v27, v15
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v12, v13, v12, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v12, 1, v12
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v12
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v12, 0x7f, v26
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v12, v14
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[24:25]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v13, v23, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v12, v22, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v21, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v20, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB0_12
+; GFX942-SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v12, vcc, 1, v26
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[30:31], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v13, vcc, 0, v27, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v27, 0x7f, v26
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v14, vcc, 0, v14, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v12, v14
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v15, vcc, 0, v15, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v13, v15
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v28, 64, v27
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[24:25]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], v27, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v28, v[20:21]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v28, v24, v28
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v24, 63, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v29, v25, v29
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], v24, v[20:21]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v27
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v27
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], v27, v[20:21]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v25, v29, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v24, v28, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v25, v23, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v24, v22, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v27, 0, v27, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v26, 0, v26, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB0_11
+; GFX942-SDAG-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v30, 64, v12
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v12, v[20:21]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], v30, v[22:23]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v28, v30
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v28, 64, v12
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v31, v29, v31
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v28, v[22:23]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v12
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v12
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[36:37], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v29, v29, v31, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v33, v29, v21, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v21, v28, v30, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v32, v21, v20, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[20:21], v12, v[22:23]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v35, 0, v21, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v34, 0, v20, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v20, vcc, -1, v4
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[30:31], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v5, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v22, vcc, -1, v6, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v29, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v23, vcc, -1, v7, vcc
+; GFX942-SDAG-NEXT:  .LBB0_9: ; %udiv-do-while
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v28, 31, v33
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[32:33], 1, v[32:33]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v48, 31, v25
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[34:35], 1, v[34:35]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v32, v32, v48
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v34, v34, v28
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v28, vcc, v20, v32
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[38:39], 1, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v21, v33, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v26, 31, v27
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v22, v34, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v23, v35, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v24, v24, v26, v30
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v36, v38
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v36, 31, v28
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v37, v39
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v28, 1, v36
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v37, v36, v7
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v38, v36, v6
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v39, v36, v5
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v36, v36, v4
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v32, vcc, v32, v36
+; GFX942-SDAG-NEXT:    v_or3_b32 v25, v25, 0, v31
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v33, vcc, v33, v39, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v34, vcc, v34, v38, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v35, vcc, v35, v37, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v12, vcc, -1, v12
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v13, vcc, -1, v13, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v14, vcc, -1, v14, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v36, v12, v14
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v15, vcc, -1, v15, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v37, v13, v15
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[36:37]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[36:37], v[28:29]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB0_9
+; GFX942-SDAG-NEXT:  ; %bb.10: ; %Flow
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB0_11: ; %Flow11
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[4:5], 1, v[26:27]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v12, 31, v27
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[6:7], 1, v[24:25]
+; GFX942-SDAG-NEXT:    v_or3_b32 v13, v7, 0, v31
+; GFX942-SDAG-NEXT:    v_or3_b32 v12, v6, v12, v30
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v29, v5
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v28, v4
+; GFX942-SDAG-NEXT:  .LBB0_12: ; %Flow12
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v5, v18, v16
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v4, v19, v17
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v7, v0, v5
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v0, v2, v5
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v6, v1, v4
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v1, v3, v4
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v5
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v4, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v2, vcc, v7, v5, vcc
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v7, v11, v9
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v3, vcc, v6, v4, vcc
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v6, v10, v8
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v4, v24, v6
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v5, v25, v7
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v4, vcc, v4, v6
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v9, v12, v6
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v7, vcc
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v8, v13, v7
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v6, vcc, v9, v6, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v7, vcc, v8, v7, vcc
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: v_sdiv_v2i128_vv:
+; GFX942-GISEL:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v28, 31, v3
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, v28, v0
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v1, v28, v1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v18, vcc, v0, v28
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v28, v2
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v19, vcc, v1, v28, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v29, 31, v11
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v28, v3
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v20, vcc, v2, v28, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, v29, v8
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v21, vcc, v3, v28, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v1, v29, v9
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v30, vcc, v0, v29
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v29, v10
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v31, vcc, v1, v29, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v29, v11
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v16, vcc, v2, v29, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v30, v16
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v17, vcc, v3, v29, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v31, v17
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v18, v20
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v19, v21
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[0:1]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v30
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v0, v31
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 32, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v16
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v0, v0, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v17
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 32, v2
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, 64, v0
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[16:17]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v18
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 32, v2
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v19
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v20
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v21
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 32, v3
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 64, v1
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v2, v2, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[20:21]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v8, s[2:3], v0, v1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v9, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v2, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v3, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[8:9], v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v9, v3
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v1, v0
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, 0x7f, v8
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v0, v2
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v0, 1, v24
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v18, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, v19, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v10, v20, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v11, v21, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[22:23]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v24, v22
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v22, 1, v22
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v22
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB0_6
+; GFX942-GISEL-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v8
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v9, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v24, vcc, 0x7f, v8
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v10, 64, v24
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v25, 0xffffffc0, v24
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[10:11], v10, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], v24, v[20:21]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], v24, v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v10, v22
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v27, v11, v23
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], v25, v[18:19]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v24
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, 0, v8, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, 0, v9, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v8, v10, v26, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v9, v11, v27, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v24
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v24, v8, v20, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v25, v9, v21, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB0_5
+; GFX942-GISEL-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v26, 64, v0
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v32, 0xffffffc0, v0
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[10:11], v0, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], v26, v[20:21]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v0, v[20:21]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v10, v26
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v27, v11, v27
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[10:11], v32, v[20:21]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v10, v10, v26, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v11, v11, v27, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v26, 0, v8, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v27, 0, v9, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v32, vcc, -1, v30
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v33, vcc, -1, v31, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v20, v10, v18, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v21, v11, v19, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v34, vcc, -1, v16, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v35, vcc, -1, v17, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v19, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB0_3: ; %udiv-do-while3
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], 1, v[26:27]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 31, v21
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], 1, v[20:21]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v26, v18
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 31, v25
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v10, v18
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v8, v20
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v8, vcc, v32, v10
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v8, vcc, v33, v11, vcc
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 31, v23
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v8, vcc, v34, v26, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v0, s[0:1], -1, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v8, vcc, v35, v27, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v20, 31, v8
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v24, v18
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v18, 1, v20
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v1, s[0:1], -1, v1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v9, v21
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], v[18:19]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v18, v20, v30
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v2, s[0:1], -1, v2, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v21, v20, v31
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v36, v20, v16
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v37, v20, v17
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v20, vcc, v10, v18
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v3, s[0:1], -1, v3, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v21, vcc, v11, v21, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v0, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v11, v1, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[10:11]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v26, vcc, v26, v36, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v27, vcc, v27, v37, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB0_3
+; GFX942-GISEL-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB0_5: ; %Flow14
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[0:1], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 31, v23
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v10, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v8, v0
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v9, v1
+; GFX942-GISEL-NEXT:  .LBB0_6: ; %Flow16
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v24, 31, v7
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v24, v4
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v24, v5
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v16, vcc, v2, v24
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v4, v24, v6
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v17, vcc, v3, v24, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v25, 31, v15
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v5, v24, v7
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v18, vcc, v4, v24, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v25, v12
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v19, vcc, v5, v24, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v25, v13
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v26, vcc, v2, v25
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v4, v25, v14
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v27, vcc, v3, v25, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v5, v25, v15
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v12, vcc, v4, v25, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v26, v12
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v13, vcc, v5, v25, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v3, v27, v13
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v16, v18
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v3, v17, v19
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v26
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v27
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 32, v3
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v12
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v2, v2, v3
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v13
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 64, v2
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v3, v3, v4
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[12:13]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v16
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v17
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v5, v18
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v3, v3, v4
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v19
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v5, 32, v5
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 64, v3
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v4, v4, v5
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[18:19]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, v4, v3, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v6, s[2:3], v2, v3
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v7, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v14, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v15, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[6:7], v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[14:15]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[14:15]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v3, v2
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, 0x7f, v6
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 1, v20
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v2, v14
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v3, v7, v15
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v5, v17, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v8, v18, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v9, v19, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v20, v2
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB0_12
+; GFX942-GISEL-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 1, v6
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v7, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v14, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v15, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v20, vcc, 0x7f, v6
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v8, 64, v20
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v21, 0xffffffc0, v20
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v8, v[16:17]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[14:15], v20, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[6:7], v20, v[16:17]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v8, v14
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v9, v15
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], v21, v[16:17]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v20
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v14, 0, v6, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v15, 0, v7, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v6, v8, v22, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v7, v9, v23, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v20
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v20, v6, v18, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v21, v7, v19, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB0_11
+; GFX942-GISEL-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v22, 64, v2
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v30, 0xffffffc0, v2
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v2, v[16:17]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], v22, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[6:7], v2, v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v8, v22
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v9, v23
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v30, v[18:19]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v2
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v8, v8, v22, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v9, v9, v23, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, 0, v6, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, 0, v7, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v30, vcc, -1, v26
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v31, vcc, -1, v27, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v18, v8, v16, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v19, v9, v17, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v32, vcc, -1, v12, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v33, vcc, -1, v13, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v17, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB0_9: ; %udiv-do-while
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v16, 31, v19
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v22, v16
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v16, 31, v21
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v8, v16
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[18:19], 1, v[14:15]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], 1, v[20:21]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v14, 31, v15
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v20, v14
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v14, v6, v18
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v6, vcc, v30, v8
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v2, s[0:1], -1, v2
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v31, v9, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v3, s[0:1], -1, v3, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v32, v22, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v15, v7, v19
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v33, v23, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v18, 31, v6
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v16, 1, v18
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[16:17]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v16, v18, v26
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v4, s[0:1], -1, v4, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v19, v18, v27
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v34, v18, v12
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v35, v18, v13
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v18, vcc, v8, v16
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v5, s[0:1], -1, v5, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v19, vcc, v9, v19, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v2, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v9, v3, v5
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[8:9]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v22, vcc, v22, v34, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v23, vcc, v23, v35, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB0_9
+; GFX942-GISEL-NEXT:  ; %bb.10: ; %Flow
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB0_11: ; %Flow11
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[2:3], 1, v[14:15]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[20:21]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 31, v15
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v8, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v4, v6, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v5, v7, v3
+; GFX942-GISEL-NEXT:  .LBB0_12: ; %Flow12
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v29, v28
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v3
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v3
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v10, v3
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v3, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v6, v11, v3
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v3, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v7, v25, v24
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v3, vcc, v6, v3, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v4, v4, v7
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v5, v5, v7
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v4, vcc, v4, v7
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v6, v8, v7
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v7, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v8, v9, v7
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v6, v7, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v7, vcc, v8, v7, vcc
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %shl = sdiv <2 x i128> %lhs, %rhs
   ret <2 x i128> %shl
 }
@@ -1552,6 +2469,781 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v6, v8
 ; GISEL-NEXT:    v_mov_b32_e32 v7, v9
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: v_udiv_v2i128_vv:
+; GFX942-SDAG:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v3
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, v2
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v19, v1
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v18, v0
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v1, v9, v11
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v0, v8, v10
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v1, v19, v17
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v0, v18, v16
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[0:1]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v10
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v1, v11
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v20, v0, v1
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v8
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v2, v9
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v0, v0, v2
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v16
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v20, v2, v20, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v2, v17
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v22, v0, v2
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v0, v18
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v2, v19
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v0, v0, v2
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v3, 0, vcc
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[16:17]
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v2, v2, v22, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v0, v3, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v20, vcc, v20, v2
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v21, vcc, v21, v0, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v22, vcc, 0, v1, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v23, vcc, 0, v1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[20:21]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v0, 0x7f, v20
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v1, v21, v23
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v0, v0, v22
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v3, v17, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v2, v16, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v1, v19, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v0, v18, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB1_6
+; GFX942-SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v20
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v26, 0x7f, v20
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v21, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v21, 64, v26
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v22, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v0, v2
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v23, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v1, v3
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v26, v[16:17]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v21, v[18:19]
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v20, 63, v20
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v23, v25
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v22, v24
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[20:21], v20, v[18:19]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v26
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v26
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[24:25], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v21, v23, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v20, v22, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v26, v[18:19]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v21, v17, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v20, v16, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, 0, v23, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v22, 0, v22, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[26:27], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB1_5
+; GFX942-SDAG-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v26, 64, v0
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v0, v[18:19]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], v26, v[16:17]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v24, v26
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v24, 64, v0
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v25, v27
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v24, v[16:17]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v0
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[16:17], v0, v[16:17]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v25, v25, v27, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v29, v25, v19, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v19, v24, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v31, 0, v17, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v30, 0, v16, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v16, vcc, -1, v8
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v28, v19, v18, s[0:1]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v17, vcc, -1, v9, vcc
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[26:27], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v18, vcc, -1, v10, vcc
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[32:33], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v19, vcc, -1, v11, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, 0
+; GFX942-SDAG-NEXT:  .LBB1_3: ; %udiv-do-while3
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v24, 31, v29
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[28:29], 1, v[28:29]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v36, 31, v21
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], 1, v[30:31]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v28, v28, v36
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v30, v24
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, v16, v28
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[34:35], 1, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, v17, v29, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v22, 31, v23
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, v18, v30, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[20:21], 1, v[20:21]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, v19, v31, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v20, v20, v22, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v32, v34
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v32, 31, v24
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v33, v35
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v24, 1, v32
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v33, v32, v11
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v34, v32, v10
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v35, v32, v9
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v32, v32, v8
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v28, vcc, v28, v32
+; GFX942-SDAG-NEXT:    v_or3_b32 v21, v21, 0, v27
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v29, vcc, v29, v35, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v30, vcc, v30, v34, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v31, vcc, v31, v33, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, -1, v0
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v2, vcc, -1, v2, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v32, v0, v2
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v33, v1, v3
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[32:33]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[32:33], v[24:25]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB1_3
+; GFX942-SDAG-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB1_5: ; %Flow14
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[0:1], 1, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v8, 31, v23
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[2:3], 1, v[20:21]
+; GFX942-SDAG-NEXT:    v_or3_b32 v3, v3, 0, v27
+; GFX942-SDAG-NEXT:    v_or3_b32 v2, v2, v8, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v1, v25, v1
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v0, v24, v0
+; GFX942-SDAG-NEXT:  .LBB1_6: ; %Flow16
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v9, v13, v15
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v8, v12, v14
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v9, v5, v7
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v8, v4, v6
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[8:9]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v8, v14
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v8, 32, v8
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v9, v15
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v16, v8, v9
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v8, v12
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v8, 32, v8
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v10, v13
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, 0
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v8, v8, v10
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[10:11], v[8:9], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v8, v6
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v8, 32, v8
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v16, v10, v16, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v10, v7
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v18, v8, v10
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v8, v4
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v8, 32, v8
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v10, v5
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v8, v8, v10
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v17, v11, 0, vcc
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[10:11], v[8:9], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v10, v10, v18, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v8, v11, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v16, vcc, v16, v10
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v17, vcc, v17, v8, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v18, vcc, 0, v9, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v19, vcc, 0, v9, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[16:17]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v11, v17, v19
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[18:19]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v8, 1, v8
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v8
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v8, 0x7f, v16
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v10, v8, v18
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v9, v7, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v8, v6, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v11, v5, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v10, v4, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB1_12
+; GFX942-SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v8, vcc, 1, v16
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v22, 0x7f, v16
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v17, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v17, 64, v22
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v10, vcc, 0, v18, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v18, v8, v10
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v11, vcc, 0, v19, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v19, v9, v11
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[18:19], v22, v[6:7]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[20:21], v17, v[4:5]
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v16, 63, v16
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v19, v19, v21
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v18, v18, v20
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[16:17], v16, v[4:5]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v22
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v22
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[20:21], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v17, v17, v19, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v16, v16, v18, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[18:19], v22, v[4:5]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v17, v17, v7, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v16, v16, v6, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, v19, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, v18, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[22:23], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB1_11
+; GFX942-SDAG-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v22, 64, v8
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[20:21], v8, v[4:5]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v22, v[6:7]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v20, v22
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v20, 64, v8
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v21, v23
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[20:21], v20, v[6:7]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v8
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v8
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v21, v21, v23, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v21, v5, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v5, v20, v22, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v5, v4, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[4:5], v8, v[6:7]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v27, 0, v5, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v26, 0, v4, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, -1, v12
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[22:23], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v13, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v6, vcc, -1, v14, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v21, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v7, vcc, -1, v15, vcc
+; GFX942-SDAG-NEXT:  .LBB1_9: ; %udiv-do-while
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v20, 31, v25
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v32, 31, v17
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], 1, v[26:27]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v24, v32
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v26, v20
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v20, vcc, v4, v24
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], 1, v[18:19]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v20, vcc, v5, v25, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v18, 31, v19
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v20, vcc, v6, v26, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[16:17], 1, v[16:17]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v20, vcc, v7, v27, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v16, v16, v18, v22
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v18, v28, v30
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v28, 31, v20
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v19, v29, v31
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v20, 1, v28
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v29, v28, v15
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v30, v28, v14
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v31, v28, v13
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v28, v28, v12
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, v24, v28
+; GFX942-SDAG-NEXT:    v_or3_b32 v17, v17, 0, v23
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v25, vcc, v25, v31, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, v26, v30, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, v27, v29, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v8, vcc, -1, v8
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v9, vcc, -1, v9, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v10, vcc, -1, v10, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v28, v8, v10
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v11, vcc, -1, v11, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v29, v9, v11
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[28:29]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], v[20:21]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB1_9
+; GFX942-SDAG-NEXT:  ; %bb.10: ; %Flow
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB1_11: ; %Flow11
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[4:5], 1, v[18:19]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v8, 31, v19
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[6:7], 1, v[16:17]
+; GFX942-SDAG-NEXT:    v_or3_b32 v9, v7, 0, v23
+; GFX942-SDAG-NEXT:    v_or3_b32 v8, v6, v8, v22
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v11, v21, v5
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v10, v20, v4
+; GFX942-SDAG-NEXT:  .LBB1_12: ; %Flow12
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v10
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v11
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v8
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v9
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: v_udiv_v2i128_vv:
+; GFX942-GISEL:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v18, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v19, v1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v20, v2
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v21, v3
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v8, v10
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v9, v11
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v18, v20
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v19, v21
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[0:1]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v8
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v0, v9
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 32, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v10
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v0, v0, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v11
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 32, v2
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, 64, v0
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[10:11]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v18
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 32, v2
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v19
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v20
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v21
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 32, v3
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 64, v1
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v2, v2, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[20:21]
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v16, v4
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v17, v5
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v4, s[2:3], v0, v1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v5, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v22, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v23, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[4:5], v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v5, v23
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[22:23]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[22:23]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v1, v0
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, 0x7f, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v0, v22
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v0, 1, v26
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v18, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, v19, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, v20, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, v21, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v24, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v26, v24
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v24, 1, v24
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v24
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB1_6
+; GFX942-GISEL-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v4
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v5, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v22, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v23, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v26, vcc, 0x7f, v4
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v22, 64, v26
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v27, 0xffffffc0, v26
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[22:23], v22, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], v26, v[20:21]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[4:5], v26, v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v22, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v23, v25
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], v27, v[18:19]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v26
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, v22, v24, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, v23, v25, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v26
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v26, v22, v20, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v27, v23, v21, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB1_5
+; GFX942-GISEL-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v28, 64, v0
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v30, 0xffffffc0, v0
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[24:25], v0, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[28:29], v28, v[20:21]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[22:23], v0, v[20:21]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v24, v28
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v25, v29
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[20:21], v30, v[20:21]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v20, v20, v24, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v21, v21, v25, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v28, 0, v22, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v29, 0, v23, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v30, vcc, -1, v8
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v31, vcc, -1, v9, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v32, vcc, -1, v10, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v20, v20, v18, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v21, v21, v19, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v33, vcc, -1, v11, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v19, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB1_3: ; %udiv-do-while3
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[28:29], 1, v[28:29]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 31, v21
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], 1, v[20:21]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v28, v18
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 31, v27
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v24, v18
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v18, vcc, v30, v24
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], 1, v[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v18, vcc, v31, v25, vcc
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], 1, v[26:27]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v18, vcc, v32, v28, vcc
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 31, v5
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v18, vcc, v33, v29, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v26, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v4, v22, v20
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v20, 31, v18
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v0, s[0:1], -1, v0
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v18, 1, v20
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v1, s[0:1], -1, v1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v5, v23, v21
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], v[18:19]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v18, v20, v8
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v2, s[0:1], -1, v2, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v21, v20, v9
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v34, v20, v10
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v35, v20, v11
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v20, vcc, v24, v18
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v3, s[0:1], -1, v3, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v21, vcc, v25, v21, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v0, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v1, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[24:25]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v28, vcc, v28, v34, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v29, vcc, v29, v35, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB1_3
+; GFX942-GISEL-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB1_5: ; %Flow14
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[0:1], 1, v[4:5]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[2:3], 1, v[26:27]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 31, v5
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v2, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v22, v0
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v23, v1
+; GFX942-GISEL-NEXT:  .LBB1_6: ; %Flow16
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v4, v12, v14
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v5, v13, v15
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[4:5]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v4, v16, v6
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v5, v17, v7
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[4:5]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v5, v12
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v13
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v5, 32, v5
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v8, v14
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v4, v4, v5
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v5, v15
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v8, 32, v8
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v4, 64, v4
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v5, v5, v8
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[14:15]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v8, v16
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v8, 32, v8
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v4, v5, v4, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v5, v17
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v9, v6
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v5, v5, v8
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v8, v7
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v9, 32, v9
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v5, 64, v5
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v8, v8, v9
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[6:7]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v5, v8, v5, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v10, s[2:3], v4, v5
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v11, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v18, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v19, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[10:11], v[4:5]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v21, v11, v19
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[18:19]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[18:19]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v4, v5, v4, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v5, v4
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v4, 0x7f, v10
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v4, v18
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 1, v22
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v5, v17, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v8, v6, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v9, v7, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[20:21]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v22, v20
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v20, 1, v20
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v20
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB1_12
+; GFX942-GISEL-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v10
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v11, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v8, vcc, 0, v18, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v19, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v22, vcc, 0x7f, v10
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v18, 64, v22
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v23, 0xffffffc0, v22
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[18:19], v18, v[16:17]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], v22, v[6:7]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], v22, v[16:17]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v18, v20
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v21, v19, v21
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[18:19], v23, v[16:17]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v22
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v18, v18, v20, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v19, v19, v21, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v22
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, v18, v6, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, v19, v7, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB1_11
+; GFX942-GISEL-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v24, 64, v4
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v26, 0xffffffc0, v4
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[20:21], v4, v[16:17]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], v24, v[6:7]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[18:19], v4, v[6:7]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v20, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v21, v21, v25
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[6:7], v26, v[6:7]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v6, v6, v20, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v7, v7, v21, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v24, 0, v18, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v25, 0, v19, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v26, vcc, -1, v12
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v4
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v27, vcc, -1, v13, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v28, vcc, -1, v14, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v16, v6, v16, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v17, v7, v17, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v29, vcc, -1, v15, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB1_9: ; %udiv-do-while
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 31, v17
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], 1, v[16:17]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v24, v6
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 31, v23
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v20, v6
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 31, v11
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v22, v6
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v6, vcc, v26, v20
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[16:17], 1, v[10:11]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v27, v21, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v18, v16
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v28, v24, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v4, s[0:1], -1, v4
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v29, v25, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v16, 31, v6
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v6, 1, v16
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v5, s[0:1], -1, v5, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v11, v19, v17
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], v[6:7]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v6, v16, v12
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v8, s[0:1], -1, v8, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v17, v16, v13
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v30, v16, v14
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v31, v16, v15
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v16, vcc, v20, v6
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v9, s[0:1], -1, v9, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v17, vcc, v21, v17, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v4, v8
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v21, v5, v9
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[20:21]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v24, vcc, v24, v30, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v25, vcc, v25, v31, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB1_9
+; GFX942-GISEL-NEXT:  ; %bb.10: ; %Flow
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB1_11: ; %Flow11
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[4:5], 1, v[10:11]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 31, v11
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v8, v6
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v4, v18, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v5, v19, v5
+; GFX942-GISEL-NEXT:  .LBB1_12: ; %Flow12
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v6, v8
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, v9
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %shl = udiv <2 x i128> %lhs, %rhs
   ret <2 x i128> %shl
 }
@@ -2456,6 +4148,1005 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_subb_u32_e64 v6, vcc, v6, v33, s[8:9]
 ; GISEL-NEXT:    v_subb_u32_e32 v7, vcc, v8, v33, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: v_srem_v2i128_vv:
+; GFX942-SDAG:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v18, vcc, 0, v0
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v16, 31, v3
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v20, vcc, 0, v1, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v19, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v21, vcc, 0, v2, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v22, vcc, 0, v3, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[2:3]
+; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v16
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v20, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v18, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v3, v3, v22, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v2, v2, v21, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v18, vcc, 0, v8
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v20, vcc, 0, v9, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v21, vcc, 0, v10, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v22, vcc, 0, v11, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v9, v9, v20, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v8, v8, v18, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v11, v11, v22, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v10, v10, v21, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v9, v11
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v8, v10
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[20:21]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v1, v3
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v0, v2
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v10
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[20:21]
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v18, 32, v18
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v11
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v22, v18, v20
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v8
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v18, 32, v18
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v9
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v18, v18, v20
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[20:21], v[18:19], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v2
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v18, 32, v18
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v22, v20, v22, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v3
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v18, v20
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v0
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v18, 32, v18
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v1
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v18, v18, v20
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, v21, 0, vcc
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[20:21], v[18:19], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v20, v20, v24, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v18, v21, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, v22, v20
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v25, vcc, v23, v18, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, 0, v19, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, 0, v19, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v18, v19, v18, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v18, 1, v18
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v18
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v18, 0x7f, v24
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v19, v25, v27
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v18, v18, v26
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, v3, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v22, v2, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v1, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v0, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB2_6
+; GFX942-SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v18, vcc, 1, v24
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v19, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v25, 0x7f, v24
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v20, vcc, 0, v26, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v18, v20
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, 0, v27, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v19, v21
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v26, 64, v25
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v25, v[2:3]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[26:27], v26, v[0:1]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v22, v26
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v22, 63, v24
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v23, v27
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v22, v[0:1]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v25
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v25
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], v25, v[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, v23, v27, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v22, v22, v26, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, v23, v3, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v22, v22, v2, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, 0, v25, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, 0, v24, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[26:27], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB2_5
+; GFX942-SDAG-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v28, 64, v18
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[26:27], v18, v[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[28:29], v28, v[2:3]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v28, v26, v28
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v26, 64, v18
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v29, v27, v29
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[26:27], v26, v[2:3]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v18
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v18
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[38:39], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v27, v27, v29, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v26, v26, v28, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v35, v27, v1, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v34, v26, v0, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[26:27], v18, v[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v37, 0, v27, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v36, 0, v26, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v30, vcc, -1, v8
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v31, vcc, -1, v9, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v32, vcc, -1, v10, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v27, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v33, vcc, -1, v11, vcc
+; GFX942-SDAG-NEXT:  .LBB2_3: ; %udiv-do-while3
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v26, 31, v35
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[34:35], 1, v[34:35]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v50, 31, v23
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[36:37], 1, v[36:37]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v34, v34, v50
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v36, v36, v26
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v26, vcc, v30, v34
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[48:49], 1, v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, v31, v35, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v24, 31, v25
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, v32, v36, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], 1, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, v33, v37, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v22, v22, v24, v28
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v38, v48
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v38, 31, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v39, v49
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v26, 1, v38
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v39, v38, v11
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v48, v38, v10
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v49, v38, v9
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v38, v38, v8
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v34, vcc, v34, v38
+; GFX942-SDAG-NEXT:    v_or3_b32 v23, v23, 0, v29
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v35, vcc, v35, v49, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v36, vcc, v36, v48, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v37, vcc, v37, v39, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v18, vcc, -1, v18
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v19, vcc, -1, v19, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v20, vcc, -1, v20, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v38, v18, v20
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v21, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v39, v19, v21
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[38:39]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[38:39], v[26:27]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB2_3
+; GFX942-SDAG-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB2_5: ; %Flow14
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[18:19], 1, v[24:25]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v24, 31, v25
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[20:21], 1, v[22:23]
+; GFX942-SDAG-NEXT:    v_or3_b32 v23, v21, 0, v29
+; GFX942-SDAG-NEXT:    v_or3_b32 v22, v20, v24, v28
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v27, v19
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v26, v18
+; GFX942-SDAG-NEXT:  .LBB2_6: ; %Flow16
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, 0, v4
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v18, 31, v7
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, 0, v5, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, 0, v6, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, 0, v7, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v19, v18
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v5, v5, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v4, v4, v24, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v7, v7, v28, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v27, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, 0, v12
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, 0, v13, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, 0, v14, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, 0, v15, vcc
+; GFX942-SDAG-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v13, v13, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v12, v12, v24, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v15, v15, v28, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v14, v14, v27, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v13, v15
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v12, v14
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[26:27]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v5, v7
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v4, v6
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v24, v14
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[26:27]
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v24, 32, v24
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v26, v15
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v28, v24, v26
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v24, v12
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v24, 32, v24
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v26, v13
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v24, v26
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[26:27], v[24:25], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v24, v6
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v24, 32, v24
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v28, v26, v28, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v26, v7
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v30, v24, v26
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v24, v4
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v24, 32, v24
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v26, v5
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v24, v26
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v29, v27, 0, vcc
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[26:27], v[24:25], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v26, v26, v30, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v27, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v28, vcc, v28, v26
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v29, vcc, v29, v24, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v30, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v31, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[28:29]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[30:31]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[30:31]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v24, v25, v24, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v24, 1, v24
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v24
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v24, 0x7f, v28
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v29, v31
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v24, v30
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[24:25]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v27, v7, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v26, v6, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v5, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v4, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB2_12
+; GFX942-SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v24, vcc, 1, v28
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v34, 0x7f, v28
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v25, vcc, 0, v29, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v29, 64, v34
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v26, vcc, 0, v30, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v24, v26
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v27, vcc, 0, v31, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v31, v25, v27
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[30:31]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], v34, v[6:7]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[32:33], v29, v[4:5]
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v28, 63, v28
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v31, v31, v33
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v30, v32
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[28:29], v28, v[4:5]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v34
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v34
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[32:33], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v29, v29, v31, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v28, v28, v30, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], v34, v[4:5]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v29, v29, v7, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v28, v28, v6, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v31, 0, v31, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v30, 0, v30, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[34:35], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB2_11
+; GFX942-SDAG-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v34, 64, v24
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[32:33], v24, v[4:5]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[34:35], v34, v[6:7]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v34, v32, v34
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v32, 64, v24
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v35, v33, v35
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[32:33], v32, v[6:7]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v24
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v24
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[52:53], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v33, v33, v35, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v32, v32, v34, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v49, v33, v5, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v48, v32, v4, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[32:33], v24, v[6:7]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v51, 0, v33, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v50, 0, v32, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v36, vcc, -1, v12
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[34:35], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v37, vcc, -1, v13, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v38, vcc, -1, v14, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v33, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v39, vcc, -1, v15, vcc
+; GFX942-SDAG-NEXT:  .LBB2_9: ; %udiv-do-while
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v32, 31, v49
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[48:49], 1, v[48:49]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v40, 31, v29
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[50:51], 1, v[50:51]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v48, v48, v40
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v50, v50, v32
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v32, vcc, v36, v48
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[54:55], 1, v[30:31]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v32, vcc, v37, v49, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v30, 31, v31
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v32, vcc, v38, v50, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[28:29], 1, v[28:29]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v32, vcc, v39, v51, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v28, v28, v30, v34
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v52, v54
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v52, 31, v32
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v31, v53, v55
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v32, 1, v52
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v53, v52, v15
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v54, v52, v14
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v55, v52, v13
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v52, v52, v12
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v48, vcc, v48, v52
+; GFX942-SDAG-NEXT:    v_or3_b32 v29, v29, 0, v35
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v49, vcc, v49, v55, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v50, vcc, v50, v54, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v51, vcc, v51, v53, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v24, vcc, -1, v24
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v25, vcc, -1, v25, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v26, vcc, -1, v26, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v52, v24, v26
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v27, vcc, -1, v27, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v53, v25, v27
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[52:53]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[52:53], v[32:33]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB2_9
+; GFX942-SDAG-NEXT:  ; %bb.10: ; %Flow
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB2_11: ; %Flow11
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], 1, v[30:31]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v30, 31, v31
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], 1, v[28:29]
+; GFX942-SDAG-NEXT:    v_or3_b32 v27, v27, 0, v35
+; GFX942-SDAG-NEXT:    v_or3_b32 v26, v26, v30, v34
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v25, v33, v25
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v24, v32, v24
+; GFX942-SDAG-NEXT:  .LBB2_12: ; %Flow12
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v28, v21, v10
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v29, v20, v11
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v20, v10, 0
+; GFX942-SDAG-NEXT:    v_add3_u32 v11, v11, v29, v28
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v22, v8, v[10:11]
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v22, v22, v9
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v23, v23, v8
+; GFX942-SDAG-NEXT:    v_add3_u32 v11, v23, v11, v22
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[22:23], s[0:1], v8, v20, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v29, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v28, v23
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[30:31], s[0:1], v9, v20, v[28:29]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v28, v31
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v31, v29
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[30:31], s[0:1], v8, v21, v[30:31]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v32, v31
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v33, v29
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[32:33], v[28:29], 0, v[32:33]
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v9, v21, v[32:33]
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v22
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[8:9], v[8:9], 0, v[10:11]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v30, vcc
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v10, v25, v14
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v8, vcc
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v11, v24, v15
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v3, vcc, v3, v9, vcc
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v24, v14, 0
+; GFX942-SDAG-NEXT:    v_add3_u32 v9, v9, v11, v10
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v26, v12, v[8:9]
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v10, v26, v13
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v11, v27, v12
+; GFX942-SDAG-NEXT:    v_add3_u32 v9, v11, v9, v10
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v12, v24, 0
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v16
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v28, v11
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v1, v1, v17
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v16
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v13, v24, v[28:29]
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v2, v2, v16
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v17, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v28, v15
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v15, v29
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v3, v3, v17
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v16, vcc
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v12, v25, v[14:15]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v3, vcc, v3, v17, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, v15
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v29
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[16:17], v[28:29], 0, v[16:17]
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[12:13], s[0:1], v13, v25, v[16:17]
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v4, vcc, v4, v10
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[8:9], v[12:13], 0, v[8:9]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v14, vcc
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v4, v4, v18
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v6, vcc, v6, v8, vcc
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v5, v5, v19
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v7, vcc, v7, v9, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v4, vcc, v4, v18
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v6, v6, v18
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v19, vcc
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v7, v7, v19
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v6, vcc, v6, v18, vcc
+; GFX942-SDAG-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v7, vcc, v7, v19, vcc
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: v_srem_v2i128_vv:
+; GFX942-GISEL:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v34, 31, v3
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v34
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v34
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v18, vcc, v0, v34
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v2, v34
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v19, vcc, v1, v34, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v21, 31, v11
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v3, v34
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v16, vcc, v2, v34, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v8, v8, v21
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v17, vcc, v3, v34, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v9, v9, v21
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v36, vcc, v8, v21
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v10, v10, v21
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v35, vcc, v9, v21, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v11, v11, v21
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v20, vcc, v10, v21, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v36, v20
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v21, vcc, v11, v21, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v35, v21
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v18, v16
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v19, v17
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[0:1]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v36
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v0, v35
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 32, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v20
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v0, v0, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v21
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 32, v2
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, 64, v0
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[20:21]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v18
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 32, v2
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v1, v19
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v16
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v17
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 32, v3
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 64, v1
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v2, v2, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[16:17]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v8, s[2:3], v0, v1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v9, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v2, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v3, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[8:9], v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v9, v3
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v1, v0
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v0, 0x7f, v8
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v0, v2
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v0, 1, v24
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v0, v18, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v1, v19, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v10, v16, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v11, v17, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[22:23]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v24, v22
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v22, 1, v22
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v22
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB2_6
+; GFX942-GISEL-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v8
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v9, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v24, vcc, 0x7f, v8
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v10, 64, v24
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v25, 0xffffffc0, v24
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[10:11], v10, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], v24, v[16:17]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], v24, v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v10, v22
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v27, v11, v23
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], v25, v[18:19]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v24
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, 0, v8, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, 0, v9, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v8, v10, v26, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v9, v11, v27, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v24
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v24, v8, v16, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v25, v9, v17, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB2_5
+; GFX942-GISEL-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v26, 64, v0
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v28, 0xffffffc0, v0
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[10:11], v0, v[18:19]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], v26, v[16:17]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v0, v[16:17]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v10, v26
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v27, v11, v27
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[10:11], v28, v[16:17]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v10, v10, v26, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v11, v11, v27, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v30, 0, v8, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v31, 0, v9, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v32, vcc, -1, v36
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v33, vcc, -1, v35, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v28, v10, v18, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v29, v11, v19, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v37, vcc, -1, v20, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v38, vcc, -1, v21, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v27, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB2_3: ; %udiv-do-while3
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[30:31], 1, v[30:31]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v26, 31, v29
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], 1, v[28:29]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v30, v30, v26
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v26, 31, v25
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v10, v26
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[28:29], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v22, 31, v23
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v24, v22
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v8, v28
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v8, vcc, v32, v10
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v0, s[0:1], -1, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v8, vcc, v33, v11, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v1, s[0:1], -1, v1, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v8, vcc, v37, v30, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v9, v29
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v8, vcc, v38, v31, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v28, 31, v8
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v26, 1, v28
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], v[26:27]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v26, v28, v36
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v2, s[0:1], -1, v2, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v29, v28, v35
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v39, v28, v20
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v48, v28, v21
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v28, vcc, v10, v26
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v3, s[0:1], -1, v3, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v29, vcc, v11, v29, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v0, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v11, v1, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[10:11]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v30, vcc, v30, v39, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v31, vcc, v31, v48, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB2_3
+; GFX942-GISEL-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB2_5: ; %Flow14
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[0:1], 1, v[22:23]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[10:11], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 31, v23
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v10, v10, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v0, v8, v0
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v1, v9, v1
+; GFX942-GISEL-NEXT:  .LBB2_6: ; %Flow16
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v37, 31, v7
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v15
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v4, v37
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v4, v5, v37
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v9, v14, v2
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v14, vcc, v3, v37
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v5, v6, v37
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v23, v15, v2
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v15, vcc, v4, v37, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v6, v7, v37
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v7, v12, v2
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v12, vcc, v5, v37, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v8, v13, v2
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v13, vcc, v6, v37, vcc
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v39, vcc, v7, v2
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v5, v12
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v38, vcc, v8, v2, vcc
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v5, 32, v5
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v22, vcc, v9, v2, vcc
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v22
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v23, vcc, v23, v2, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v39, v22
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v3, v38, v23
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v14, v12
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v3, v15, v13
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v39
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v2, v38
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 32, v3
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v2, v2, v3
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v23
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 64, v2
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v3, v3, v4
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[22:23]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v14
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v3, v15
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v3, v3, v4
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v4, v13
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 64, v3
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v4, v4, v5
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[12:13]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, v4, v3, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v6, s[2:3], v2, v3
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v7, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v24, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v25, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[6:7], v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v3, v2
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, 0x7f, v6
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 1, v26
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v2, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v3, v7, v25
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v4, v14, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v5, v15, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v8, v12, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v9, v13, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v2, v26, v2
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB2_12
+; GFX942-GISEL-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 1, v6
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v7, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v24, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v25, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v26, vcc, 0x7f, v6
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v8, 64, v26
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v27, 0xffffffc0, v26
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v8, v[14:15]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], v26, v[12:13]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[6:7], v26, v[14:15]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v8, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v29, v9, v25
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], v27, v[14:15]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v26
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v24, 0, v6, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v25, 0, v7, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v6, v8, v28, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v7, v9, v29, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v26
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v26, v6, v12, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v27, v7, v13, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB2_11
+; GFX942-GISEL-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v28, 64, v2
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v30, 0xffffffc0, v2
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v2, v[14:15]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[28:29], v28, v[12:13]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[6:7], v2, v[12:13]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v8, v28
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v29, v9, v29
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[8:9], v30, v[12:13]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v2
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v8, v8, v28, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v9, v9, v29, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v32, 0, v6, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v33, 0, v7, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v48, vcc, -1, v39
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v49, vcc, -1, v38, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v30, v8, v14, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v31, v9, v15, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v50, vcc, -1, v22, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v51, vcc, -1, v23, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v29, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB2_9: ; %udiv-do-while
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[32:33], 1, v[32:33]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v28, 31, v31
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[30:31]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v32, v32, v28
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v28, 31, v27
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v8, v28
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[30:31], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], 1, v[26:27]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v24, 31, v25
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v26, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v6, v30
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v6, vcc, v48, v8
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v2, s[0:1], -1, v2
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v49, v9, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v3, s[0:1], -1, v3, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v50, v32, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v7, v31
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v51, v33, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v30, 31, v6
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v28, 1, v30
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[28:29]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v28, v30, v39
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v4, s[0:1], -1, v4, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v31, v30, v38
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v52, v30, v22
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v53, v30, v23
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v30, vcc, v8, v28
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v5, s[0:1], -1, v5, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v31, vcc, v9, v31, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v2, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v9, v3, v5
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[8:9]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v32, vcc, v32, v52, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v33, vcc, v33, v53, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB2_9
+; GFX942-GISEL-NEXT:  ; %bb.10: ; %Flow
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB2_11: ; %Flow11
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[2:3], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[26:27]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 31, v25
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v8, v8, v4
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v4, v6, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v5, v7, v3
+; GFX942-GISEL-NEXT:  .LBB2_12: ; %Flow12
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[24:25], s[0:1], v36, v1, 0
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[0:1], v36, v10, 0
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v26, v36, v11
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v27, v35, v10
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], vcc, v35, v0, v[24:25]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v36, v0, 0
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[0:1], v35, v1, v[6:7]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v24, vcc, v26, v27, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[0:1], v20, v0, v[6:7]
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, v3, v10
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v6, vcc, v6, v11, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v20, v1, v[24:25]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v21, v0, v[10:11]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v0, vcc, v7, v0, vcc
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v1, vcc, v18, v2
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v34
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v2, vcc, v19, v3, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v2, v2, v34
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v3, vcc, v16, v6, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v3, v3, v34
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v0, vcc, v17, v0, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v6, v0, v34
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v1, v34
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[16:17], s[0:1], v39, v5, 0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v2, v34, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v39, v8, 0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v2, vcc, v3, v34, vcc
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v18, v39, v9
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v3, vcc, v6, v34, vcc
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v19, v38, v8
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[8:9], vcc, v38, v4, v[16:17]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[0:1], v39, v4, 0
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v38, v5, v[10:11]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v16, vcc, v18, v19, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v22, v4, v[10:11]
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v7, vcc, v7, v8
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v10, vcc, v10, v9, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v22, v5, v[16:17]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v23, v4, v[8:9]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v4, vcc, v11, v4, vcc
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v5, vcc, v14, v6
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v5, v5, v37
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v15, v7, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v6, v6, v37
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v7, vcc, v12, v10, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v7, v7, v37
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v4, vcc, v13, v4, vcc
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v8, v4, v37
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v4, vcc, v5, v37
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v5, vcc, v6, v37, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v7, v37, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v7, vcc, v8, v37, vcc
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %shl = srem <2 x i128> %lhs, %rhs
   ret <2 x i128> %shl
 }
@@ -3247,6 +5938,863 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_subb_u32_e64 v6, vcc, v6, v13, s[4:5]
 ; GISEL-NEXT:    v_subb_u32_e32 v7, vcc, v7, v11, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-SDAG-LABEL: v_urem_v2i128_vv:
+; GFX942-SDAG:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v17, v9, v11
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v16, v8, v10
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[16:17]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v17, v1, v3
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v16, v0, v2
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[16:17]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v16, v10
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v16, 32, v16
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v17, v11
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v20, v16, v17
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v16, v8
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v16, 32, v16
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v9
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, 0
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v16, v16, v18
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[18:19], v[16:17], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v16, v2
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v16, 32, v16
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v20, v18, v20, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v3
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v22, v16, v18
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v16, v0
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v16, 32, v16
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v18, v1
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v16, v16, v18
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v19, 0, vcc
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[18:19], v[16:17], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v18, v18, v22, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v16, v19, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v20, vcc, v20, v18
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v21, vcc, v21, v16, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v22, vcc, 0, v17, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v23, vcc, 0, v17, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[20:21]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v16, v17, v16, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v16, 1, v16
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v16
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v16, 0x7f, v20
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v17, v21, v23
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v16, v16, v22
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[16:17]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v19, v3, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v18, v2, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v17, v1, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v16, v0, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB3_6
+; GFX942-SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v16, vcc, 1, v20
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v26, 0x7f, v20
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v17, vcc, 0, v21, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v21, 64, v26
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v18, vcc, 0, v22, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v16, v18
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v19, vcc, 0, v23, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v17, v19
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v26, v[2:3]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v21, v[0:1]
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v20, 63, v20
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v23, v25
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v22, v24
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[20:21], v20, v[0:1]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v26
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v26
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[24:25], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v21, v23, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v20, v22, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], v26, v[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v21, v3, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v20, v2, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, 0, v23, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v22, 0, v22, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[26:27], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB3_5
+; GFX942-SDAG-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v26, 64, v16
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v16, v[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], v26, v[2:3]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v24, v26
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v24, 64, v16
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v25, v27
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v24, v[2:3]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v16
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v16
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[36:37], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v25, v25, v27, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v24, v24, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v33, v25, v1, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v32, v24, v0, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[24:25], v16, v[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v35, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v34, 0, v24, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v28, vcc, -1, v8
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[26:27], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v29, vcc, -1, v9, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v30, vcc, -1, v10, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v31, vcc, -1, v11, vcc
+; GFX942-SDAG-NEXT:  .LBB3_3: ; %udiv-do-while3
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v24, 31, v33
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[32:33], 1, v[32:33]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v48, 31, v21
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[34:35], 1, v[34:35]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v32, v32, v48
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v34, v34, v24
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, v28, v32
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[38:39], 1, v[22:23]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, v29, v33, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v22, 31, v23
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, v30, v34, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[20:21], 1, v[20:21]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v24, vcc, v31, v35, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v20, v20, v22, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v22, v36, v38
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v36, 31, v24
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v23, v37, v39
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v24, 1, v36
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v37, v36, v11
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v38, v36, v10
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v39, v36, v9
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v36, v36, v8
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v32, vcc, v32, v36
+; GFX942-SDAG-NEXT:    v_or3_b32 v21, v21, 0, v27
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v33, vcc, v33, v39, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v34, vcc, v34, v38, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v35, vcc, v35, v37, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v16, vcc, -1, v16
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v17, vcc, -1, v17, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v18, vcc, -1, v18, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v36, v16, v18
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v19, vcc, -1, v19, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v37, v17, v19
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[36:37]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[36:37], v[24:25]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB3_3
+; GFX942-SDAG-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB3_5: ; %Flow14
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[16:17], 1, v[22:23]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v22, 31, v23
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[18:19], 1, v[20:21]
+; GFX942-SDAG-NEXT:    v_or3_b32 v19, v19, 0, v27
+; GFX942-SDAG-NEXT:    v_or3_b32 v18, v18, v22, v26
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v17, v25, v17
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v16, v24, v16
+; GFX942-SDAG-NEXT:  .LBB3_6: ; %Flow16
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v13, v15
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v12, v14
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[20:21]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v5, v7
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v4, v6
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[20:21]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v14
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v20, 32, v20
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v21, v15
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v24, v20, v21
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v12
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v20, 32, v20
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v22, v13
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v21, 0
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v20, v20, v22
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[22:23], v[20:21], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v6
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v20, 32, v20
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v24, v22, v24, vcc
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v22, v7
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v26, v20, v22
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v20, v4
+; GFX942-SDAG-NEXT:    v_add_u32_e32 v20, 32, v20
+; GFX942-SDAG-NEXT:    v_ffbh_u32_e32 v22, v5
+; GFX942-SDAG-NEXT:    v_min_u32_e32 v20, v20, v22
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v23, 0, vcc
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[22:23], v[20:21], 0, 64
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
+; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x7f
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v22, v22, v26, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v23, 0, vcc
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v24, vcc, v24, v22
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v25, vcc, v25, v20, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v26, vcc, 0, v21, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v27, vcc, 0, v21, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v20, v21, v20, vcc
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v20, 1, v20
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v20
+; GFX942-SDAG-NEXT:    v_xor_b32_e32 v20, 0x7f, v24
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v25, v27
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v20, v26
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[20:21]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v23, v7, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v22, v6, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v21, v5, 0, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v20, v4, 0, s[0:1]
+; GFX942-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB3_12
+; GFX942-SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v20, vcc, 1, v24
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v30, 0x7f, v24
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, 0, v25, vcc
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v25, 64, v30
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v22, vcc, 0, v26, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v20, v22
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v23, vcc, 0, v27, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v21, v23
+; GFX942-SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[26:27]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], v30, v[6:7]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v25, v[4:5]
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v24, 63, v24
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v27, v29
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v26, v28
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], v24, v[4:5]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e64 s[0:1], 64, v30
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v30
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[28:29], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v25, v27, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v24, v26, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[26:27], v30, v[4:5]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v25, v25, v7, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v24, v24, v6, s[2:3]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v27, 0, v27, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v26, 0, v26, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[30:31], 0
+; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-SDAG-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB3_11
+; GFX942-SDAG-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-SDAG-NEXT:    v_sub_u32_e32 v30, 64, v20
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v20, v[4:5]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[30:31], v30, v[6:7]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v30, v28, v30
+; GFX942-SDAG-NEXT:    v_subrev_u32_e32 v28, 64, v20
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v31, v29, v31
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v28, v[6:7]
+; GFX942-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v20
+; GFX942-SDAG-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v20
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[48:49], 0
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v29, v29, v31, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v28, v28, v30, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v37, v29, v5, s[0:1]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e64 v36, v28, v4, s[0:1]
+; GFX942-SDAG-NEXT:    v_lshrrev_b64 v[28:29], v20, v[6:7]
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v39, 0, v29, vcc
+; GFX942-SDAG-NEXT:    v_cndmask_b32_e32 v38, 0, v28, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v32, vcc, -1, v12
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[30:31], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v33, vcc, -1, v13, vcc
+; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v34, vcc, -1, v14, vcc
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v29, 0
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v35, vcc, -1, v15, vcc
+; GFX942-SDAG-NEXT:  .LBB3_9: ; %udiv-do-while
+; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v28, 31, v37
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[36:37], 1, v[36:37]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v52, 31, v25
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[38:39], 1, v[38:39]
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v36, v36, v52
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v38, v38, v28
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v28, vcc, v32, v36
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[50:51], 1, v[26:27]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v33, v37, vcc
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v26, 31, v27
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v34, v38, vcc
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[24:25], 1, v[24:25]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v28, vcc, v35, v39, vcc
+; GFX942-SDAG-NEXT:    v_or3_b32 v24, v24, v26, v30
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v26, v48, v50
+; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v48, 31, v28
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v27, v49, v51
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v28, 1, v48
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v49, v48, v15
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v50, v48, v14
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v51, v48, v13
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v48, v48, v12
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v36, vcc, v36, v48
+; GFX942-SDAG-NEXT:    v_or3_b32 v25, v25, 0, v31
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v37, vcc, v37, v51, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v38, vcc, v38, v50, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v39, vcc, v39, v49, vcc
+; GFX942-SDAG-NEXT:    v_add_co_u32_e32 v20, vcc, -1, v20
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v21, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v22, vcc, -1, v22, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v48, v20, v22
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_addc_co_u32_e32 v23, vcc, -1, v23, vcc
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v49, v21, v23
+; GFX942-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[48:49]
+; GFX942-SDAG-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[48:49], v[28:29]
+; GFX942-SDAG-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:    s_cbranch_execnz .LBB3_9
+; GFX942-SDAG-NEXT:  ; %bb.10: ; %Flow
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-SDAG-NEXT:  .LBB3_11: ; %Flow11
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[20:21], 1, v[26:27]
+; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v26, 31, v27
+; GFX942-SDAG-NEXT:    v_lshlrev_b64 v[22:23], 1, v[24:25]
+; GFX942-SDAG-NEXT:    v_or3_b32 v23, v23, 0, v31
+; GFX942-SDAG-NEXT:    v_or3_b32 v22, v22, v26, v30
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v21, v29, v21
+; GFX942-SDAG-NEXT:    v_or_b32_e32 v20, v28, v20
+; GFX942-SDAG-NEXT:  .LBB3_12: ; %Flow12
+; GFX942-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v24, v17, v10
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v25, v16, v11
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v16, v10, 0
+; GFX942-SDAG-NEXT:    v_add3_u32 v11, v11, v25, v24
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v18, v8, v[10:11]
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v18, v18, v9
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v19, v19, v8
+; GFX942-SDAG-NEXT:    v_add3_u32 v11, v19, v11, v18
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v8, v16, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v24, v19
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[26:27], s[0:1], v9, v16, v[24:25]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v24, v27
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v27, v25
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[26:27], s[0:1], v8, v17, v[26:27]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v28, v27
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v29, v25
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[28:29], v[24:25], 0, v[28:29]
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v9, v17, v[28:29]
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v18
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[8:9], v[8:9], 0, v[10:11]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v26, vcc
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v10, v21, v14
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v8, vcc
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v11, v20, v15
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v3, vcc, v3, v9, vcc
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v20, v14, 0
+; GFX942-SDAG-NEXT:    v_add3_u32 v9, v9, v11, v10
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v22, v12, v[8:9]
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v10, v22, v13
+; GFX942-SDAG-NEXT:    v_mul_lo_u32 v11, v23, v12
+; GFX942-SDAG-NEXT:    v_add3_u32 v9, v11, v9, v10
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v12, v20, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v24, v11
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v13, v20, v[24:25]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v24, v15
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v15, v25
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v12, v21, v[14:15]
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, v15
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v25
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[16:17], v[24:25], 0, v[16:17]
+; GFX942-SDAG-NEXT:    v_mad_u64_u32 v[12:13], s[0:1], v13, v21, v[16:17]
+; GFX942-SDAG-NEXT:    v_sub_co_u32_e32 v4, vcc, v4, v10
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[8:9], v[12:13], 0, v[8:9]
+; GFX942-SDAG-NEXT:    s_nop 0
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v14, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v6, vcc, v6, v8, vcc
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_subb_co_u32_e32 v7, vcc, v7, v9, vcc
+; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GISEL-LABEL: v_urem_v2i128_vv:
+; GFX942-GISEL:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
+; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v16, v8, v10
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v17, v9, v11
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[16:17]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v16, v0, v2
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v17, v1, v3
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[16:17]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v17, v8
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v16, v9
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v17, 32, v17
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v18, v10
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v16, v16, v17
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v17, v11
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v18, 32, v18
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v16, 64, v16
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v17, v17, v18
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[10:11]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v18, v0
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v18, 32, v18
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v16, v17, v16, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v17, v1
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v19, v2
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v17, v17, v18
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v18, v3
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v19, 32, v19
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v17, 64, v17
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v18, v18, v19
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[2:3]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v17, v18, v17, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v20, s[2:3], v16, v17
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[16:17], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v21, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v18, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v19, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[20:21], v[16:17]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v21, v19
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v16, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[18:19]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v17, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[18:19]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v16, v17, v16, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v17, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v17, v16
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v16, 0x7f, v20
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v16, v18
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v16, 1, v24
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v16
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v16, v0, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v17, v1, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v26, v2, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v27, v3, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[22:23]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v24, v22
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v22, 1, v22
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v22
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB3_6
+; GFX942-GISEL-NEXT:  ; %bb.1: ; %udiv-bb15
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v16, vcc, 1, v20
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v17, vcc, 0, v21, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v18, vcc, 0, v18, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v19, vcc, 0, v19, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v26, vcc, 0x7f, v20
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v22, 64, v26
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v27, 0xffffffc0, v26
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[22:23], v22, v[0:1]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], v26, v[2:3]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], v26, v[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v22, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v29, v23, v25
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], v27, v[0:1]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v26
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v24, 0, v20, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v25, 0, v21, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v20, v22, v28, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v21, v23, v29, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v26
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v26, v20, v2, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v27, v21, v3, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB3_5
+; GFX942-GISEL-NEXT:  ; %bb.2: ; %udiv-preheader4
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v28, 64, v16
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v30, 0xffffffc0, v16
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[22:23], v16, v[0:1]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[28:29], v28, v[2:3]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[20:21], v16, v[2:3]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v22, v28
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v29, v23, v29
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[22:23], v30, v[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v16
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v16
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, v22, v28, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, v23, v29, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v32, 0, v20, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v33, 0, v21, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v34, vcc, -1, v8
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v35, vcc, -1, v9, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v30, v22, v0, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v31, v23, v1, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v36, vcc, -1, v10, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v37, vcc, -1, v11, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v29, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB3_3: ; %udiv-do-while3
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[32:33], 1, v[32:33]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v28, 31, v31
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], 1, v[30:31]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v32, v32, v28
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v28, 31, v27
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v22, v28
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[30:31], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], 1, v[26:27]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v24, 31, v25
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v26, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v20, v30
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v20, vcc, v34, v22
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v16, s[0:1], -1, v16
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v20, vcc, v35, v23, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v17, s[0:1], -1, v17, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v20, vcc, v36, v32, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v21, v31
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v20, vcc, v37, v33, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v30, 31, v20
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v28, 1, v30
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[20:21], v[28:29]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v28, v30, v8
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v18, s[0:1], -1, v18, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v31, v30, v9
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v38, v30, v10
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v39, v30, v11
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v30, vcc, v22, v28
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v19, s[0:1], -1, v19, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v31, vcc, v23, v31, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v22, v16, v18
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v23, v17, v19
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[22:23]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v32, vcc, v32, v38, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v33, vcc, v33, v39, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB3_3
+; GFX942-GISEL-NEXT:  ; %bb.4: ; %Flow13
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB3_5: ; %Flow14
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[16:17], 1, v[24:25]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[26:27], 1, v[26:27]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 31, v25
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v26, v26, v18
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v16, v20, v16
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v17, v21, v17
+; GFX942-GISEL-NEXT:  .LBB3_6: ; %Flow16
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v18, v12, v14
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v19, v13, v15
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v18, v4, v6
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v19, v5, v7
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[18:19]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v19, v12
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v18, v13
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v19, 32, v19
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v20, v14
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v18, v18, v19
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v19, v15
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v20, 32, v20
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v18, 64, v18
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v19, v19, v20
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[14:15]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v20, v4
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v20, 32, v20
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v18, v19, v18, s[2:3]
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v19, v5
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v21, v6
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v19, v19, v20
+; GFX942-GISEL-NEXT:    v_ffbh_u32_e32 v20, v7
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v21, 32, v21
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v19, 64, v19
+; GFX942-GISEL-NEXT:    v_min_u32_e32 v20, v20, v21
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[6:7]
+; GFX942-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v19, v20, v19, s[2:3]
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e64 v22, s[2:3], v18, v19
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], 0x7f
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v23, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v24, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e64 v25, s[2:3], 0, 0, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u64_e64 s[2:3], v[22:23], v[18:19]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v29, v23, v25
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v18, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e64 s[2:3], 0, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v19, 0, 1, s[2:3]
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[2:3], 0, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v18, v19, v18, s[2:3]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v19, 0, 1, s[0:1]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v30, v19, v18
+; GFX942-GISEL-NEXT:    v_xor_b32_e32 v18, 0x7f, v22
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v18, v24
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v18, 1, v30
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v18, v4, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v19, v5, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v20, v6, 0, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v21, v7, 0, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[28:29]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v28, 0, 1, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v30, v28
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v28, 1, v28
+; GFX942-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v28
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB3_12
+; GFX942-GISEL-NEXT:  ; %bb.7: ; %udiv-bb1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v18, vcc, 1, v22
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v19, vcc, 0, v23, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v20, vcc, 0, v24, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v21, vcc, 0, v25, vcc
+; GFX942-GISEL-NEXT:    s_xor_b64 s[0:1], vcc, -1
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v30, vcc, 0x7f, v22
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v24, 64, v30
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v31, 0xffffffc0, v30
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[24:25], v24, v[4:5]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[28:29], v30, v[6:7]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[22:23], v30, v[4:5]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v32, v24, v28
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v33, v25, v29
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], v31, v[4:5]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v30
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v28, 0, v22, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v29, 0, v23, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v22, v24, v32, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v23, v25, v33, vcc
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v30
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v30, v22, v6, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v31, v23, v7, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[4:5]
+; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB3_11
+; GFX942-GISEL-NEXT:  ; %bb.8: ; %udiv-preheader
+; GFX942-GISEL-NEXT:    v_sub_u32_e32 v32, 64, v18
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v34, 0xffffffc0, v18
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[24:25], v18, v[4:5]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[32:33], v32, v[6:7]
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[22:23], v18, v[6:7]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v32, v24, v32
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v33, v25, v33
+; GFX942-GISEL-NEXT:    v_lshrrev_b64 v[24:25], v34, v[6:7]
+; GFX942-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v18
+; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v18
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v24, v24, v32, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v25, v25, v33, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v36, 0, v22, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e32 v37, 0, v23, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v38, vcc, -1, v12
+; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v39, vcc, -1, v13, vcc
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v34, v24, v4, s[0:1]
+; GFX942-GISEL-NEXT:    v_cndmask_b32_e64 v35, v25, v5, s[0:1]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v48, vcc, -1, v14, vcc
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[6:7]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v49, vcc, -1, v15, vcc
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v33, 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[4:5]
+; GFX942-GISEL-NEXT:  .LBB3_9: ; %udiv-do-while
+; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[36:37], 1, v[36:37]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v32, 31, v35
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[24:25], 1, v[34:35]
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v36, v36, v32
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v32, 31, v31
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v24, v32
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[34:35], 1, v[28:29]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[30:31], 1, v[30:31]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v28, 31, v29
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v30, v30, v28
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v28, v22, v34
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v22, vcc, v38, v24
+; GFX942-GISEL-NEXT:    v_add_co_u32_e64 v18, s[0:1], -1, v18
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v22, vcc, v39, v25, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v19, s[0:1], -1, v19, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v22, vcc, v48, v36, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v29, v23, v35
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v22, vcc, v49, v37, vcc
+; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v34, 31, v22
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v32, 1, v34
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[22:23], v[32:33]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v32, v34, v12
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v20, s[0:1], -1, v20, s[0:1]
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v35, v34, v13
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v50, v34, v14
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v51, v34, v15
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v34, vcc, v24, v32
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e64 v21, s[0:1], -1, v21, s[0:1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v35, vcc, v25, v35, vcc
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v24, v18, v20
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v25, v19, v21
+; GFX942-GISEL-NEXT:    v_cmp_eq_u64_e64 s[0:1], 0, v[24:25]
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v36, vcc, v36, v50, vcc
+; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v37, vcc, v37, v51, vcc
+; GFX942-GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB3_9
+; GFX942-GISEL-NEXT:  ; %bb.10: ; %Flow
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX942-GISEL-NEXT:  .LBB3_11: ; %Flow11
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[18:19], 1, v[28:29]
+; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[20:21], 1, v[30:31]
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v24, 31, v29
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v20, v20, v24
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v18, v22, v18
+; GFX942-GISEL-NEXT:    v_or_b32_e32 v19, v23, v19
+; GFX942-GISEL-NEXT:  .LBB3_12: ; %Flow12
+; GFX942-GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[24:25], s[0:1], v8, v26, 0
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[28:29], s[0:1], v8, v17, 0
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[22:23], s[0:1], v8, v16, 0
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[24:25], s[0:1], v9, v17, v[24:25]
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v27, v8, v27
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v26, v9, v26
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[8:9], vcc, v9, v16, v[28:29]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[24:25], s[0:1], v10, v16, v[24:25]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v26, vcc, v27, v26, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v23, vcc, v23, v8
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v21, v12, v21
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v24, vcc, v24, v9, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v10, v17, v[26:27]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v11, v16, v[8:9]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v8, vcc, v25, v8, vcc
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v22
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v12, v20, 0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v23, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[16:17], s[0:1], v12, v19, 0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v24, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v13, v19, v[10:11]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v3, vcc, v3, v8, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v12, v18, 0
+; GFX942-GISEL-NEXT:    v_mul_lo_u32 v20, v13, v20
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[12:13], vcc, v13, v18, v[16:17]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v14, v18, v[10:11]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v16, vcc, v21, v20, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v9, vcc, v9, v12
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v10, vcc, v10, v13, vcc
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[0:1], v14, v19, v[16:17]
+; GFX942-GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[0:1], v15, v18, v[12:13]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v11, vcc, v11, v12, vcc
+; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v4, vcc, v4, v8
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v9, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v6, vcc, v6, v10, vcc
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_subb_co_u32_e32 v7, vcc, v7, v11, vcc
+; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %shl = urem <2 x i128> %lhs, %rhs
   ret <2 x i128> %shl
 }
