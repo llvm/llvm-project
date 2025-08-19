@@ -129,10 +129,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start: {
-    emitVAStart(builtinID == Builtin::BI__va_start
-                    ? emitScalarExpr(e->getArg(0))
-                    : emitVAListRef(e->getArg(0)).getPointer(),
-                emitScalarExpr(e->getArg(1)));
+    mlir::Value vaList = builtinID == Builtin::BI__va_start
+                             ? emitScalarExpr(e->getArg(0))
+                             : emitVAListRef(e->getArg(0)).getPointer();
+    mlir::Value count = emitScalarExpr(e->getArg(1));
+    emitVAStart(vaList, count);
     return {};
   }
 

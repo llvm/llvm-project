@@ -2560,11 +2560,24 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     break;
   }
 
+  // Named constants are OK to be used within 'shared' and 'firstprivate'
+  // clauses.  The check for this happens a few lines below.
+  bool SharedOrFirstprivate = false;
+  switch (x.Id()) {
+  case llvm::omp::Clause::OMPC_shared:
+  case llvm::omp::Clause::OMPC_firstprivate:
+    SharedOrFirstprivate = true;
+    break;
+  default:
+    break;
+  }
+
   if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[symbol, source] : symbols) {
-      if (!IsVariableListItem(*symbol)) {
+      if (!IsVariableListItem(*symbol) &&
+          !(IsNamedConstant(*symbol) && SharedOrFirstprivate)) {
         deferredNonVariables_.insert({symbol, source});
       }
     }

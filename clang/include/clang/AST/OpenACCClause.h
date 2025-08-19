@@ -1250,19 +1250,32 @@ public:
          SourceLocation EndLoc);
 };
 
+// A structure to stand in for the recipe on a reduction.  RecipeDecl is the
+// 'main' declaration used for initializaiton, which is fixed. 
+struct OpenACCReductionRecipe {
+  VarDecl *RecipeDecl;
+  // TODO: OpenACC: this should eventually have the operations here too.
+};
+
 class OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCReductionClause, Expr *,
+                                    OpenACCReductionRecipe> {
   friend TrailingObjects;
   OpenACCReductionOperator Op;
 
   OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          OpenACCReductionOperator Operator,
-                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                         ArrayRef<Expr *> VarList,
+                         ArrayRef<OpenACCReductionRecipe> Recipes,
+                         SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Reduction, BeginLoc,
                                  LParenLoc, EndLoc),
         Op(Operator) {
-    setExprs(getTrailingObjects(VarList.size()), VarList);
+          assert(VarList.size() == Recipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(Recipes, getTrailingObjects<
+                             OpenACCReductionRecipe > ());
   }
 
 public:
@@ -1270,12 +1283,26 @@ public:
     return C->getClauseKind() == OpenACCClauseKind::Reduction;
   }
 
+  ArrayRef<OpenACCReductionRecipe> getRecipes() {
+    return ArrayRef<OpenACCReductionRecipe>{
+        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCReductionRecipe> getRecipes() const {
+    return ArrayRef<OpenACCReductionRecipe>{
+        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
+  }
+
   static OpenACCReductionClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
-         SourceLocation EndLoc);
+         ArrayRef<OpenACCReductionRecipe> Recipes, SourceLocation EndLoc);
 
   OpenACCReductionOperator getReductionOp() const { return Op; }
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
 };
 
 class OpenACCLinkClause final

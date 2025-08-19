@@ -2928,6 +2928,10 @@ void OpenACCClauseEnqueue::VisitDeviceTypeClause(
 void OpenACCClauseEnqueue::VisitReductionClause(
     const OpenACCReductionClause &C) {
   VisitVarList(C);
+  for (const OpenACCReductionRecipe &R : C.getRecipes()) {
+    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+    Visitor.AddDecl(R.RecipeDecl);
+  }
 }
 void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
