@@ -401,7 +401,7 @@ namespace {
     SDValue PromoteExtend(SDValue Op);
     bool PromoteLoad(SDValue Op);
 
-    SDValue foldShiftToAvg(SDNode *N);
+    SDValue foldShiftToAvg(SDNode *N, const SDLoc &DL);
     // Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
     SDValue foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT);
 
@@ -10983,7 +10983,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   if (SDValue NarrowLoad = reduceLoadWidth(N))
     return NarrowLoad;
 
-  if (SDValue AVG = foldShiftToAvg(N))
+  if (SDValue AVG = foldShiftToAvg(N, DL))
     return AVG;
 
   return SDValue();
@@ -11256,7 +11256,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   if (SDValue MULH = combineShiftToMULH(N, DL, DAG, TLI))
     return MULH;
 
-  if (SDValue AVG = foldShiftToAvg(N))
+  if (SDValue AVG = foldShiftToAvg(N, DL))
     return AVG;
 
   return SDValue();
@@ -11772,51 +11772,36 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   }
 }
 
-SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
+// Convert (sr[al] (add n[su]w x, y)) -> (avgfloor[su] x, y)
+SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   const unsigned Opcode = N->getOpcode();
-
-  // Convert (sr[al] (add n[su]w x, y)) -> (avgfloor[su] x, y)
   if (Opcode != ISD::SRA && Opcode != ISD::SRL)
     return SDValue();
 
-  unsigned FloorISD = 0;
-  auto VT = N->getValueType(0);
-  bool IsUnsigned = false;
-
-  // Decide wether signed or unsigned.
-  switch (Opcode) {
-  case ISD::SRA:
-    if (!hasOperation(ISD::AVGFLOORS, VT))
-      return SDValue();
-    FloorISD = ISD::AVGFLOORS;
-    break;
-  case ISD::SRL:
-    IsUnsigned = true;
-    if (!hasOperation(ISD::AVGFLOORU, VT))
-      return SDValue();
-    FloorISD = ISD::AVGFLOORU;
-    break;
-  default:
-    return SDValue();
-  }
+  EVT VT = N->getValueType(0);
+  bool IsUnsigned = Opcode == ISD::SRL;
 
   // Captured values.
   SDValue A, B, Add;
 
   // Match floor average as it is common to both floor/ceil avgs.
-  if (!sd_match(N, m_BinOp(Opcode,
-                           m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
-                           m_One())))
-    return SDValue();
+  if (sd_match(N, m_BinOp(Opcode,
+                          m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
+                          m_One()))) {
+    // Decide whether signed or unsigned.
+    unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
+    if (!hasOperation(FloorISD, VT))
+      return SDValue();
 
-  // Can't optimize adds that may wrap.
-  if (IsUnsigned && !Add->getFlags().hasNoUnsignedWrap())
-    return SDValue();
+    // Can't optimize adds that may wrap.
+    if ((IsUnsigned && !Add->getFlags().hasNoUnsignedWrap()) ||
+        (!IsUnsigned && !Add->getFlags().hasNoSignedWrap()))
+      return SDValue();
 
-  if (!IsUnsigned && !Add->getFlags().hasNoSignedWrap())
-    return SDValue();
+    return DAG.getNode(FloorISD, DL, N->getValueType(0), {A, B});
+  }
 
-  return DAG.getNode(FloorISD, SDLoc(N), N->getValueType(0), {A, B});
+  return SDValue();
 }
 
 SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT) {
@@ -16294,6 +16279,40 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // because targets may prefer a wider type during later combines and invert
   // this transform.
   switch (N0.getOpcode()) {
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORU:
+    if (!LegalOperations && N0.hasOneUse() &&
+        TLI.isOperationLegal(N0.getOpcode(), VT)) {
+      SDValue X = N0.getOperand(0);
+      SDValue Y = N0.getOperand(1);
+      unsigned SrcBits = X.getScalarValueSizeInBits();
+      unsigned DstBits = VT.getScalarSizeInBits();
+      APInt UpperBits = APInt::getBitsSetFrom(SrcBits, DstBits);
+      if (DAG.MaskedValueIsZero(X, UpperBits) &&
+          DAG.MaskedValueIsZero(Y, UpperBits)) {
+        SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
+        SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
+        return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
+      }
+    }
+    break;
+  case ISD::AVGCEILS:
+  case ISD::AVGFLOORS:
+    if (!LegalOperations && N0.hasOneUse() &&
+        TLI.isOperationLegal(N0.getOpcode(), VT)) {
+      SDValue X = N0.getOperand(0);
+      SDValue Y = N0.getOperand(1);
+      unsigned SrcBits = X.getScalarValueSizeInBits();
+      unsigned DstBits = VT.getScalarSizeInBits();
+      unsigned NeededSignBits = SrcBits - DstBits + 1;
+      if (DAG.ComputeNumSignBits(X) >= NeededSignBits &&
+          DAG.ComputeNumSignBits(Y) >= NeededSignBits) {
+        SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
+        SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
+        return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
+      }
+    }
+    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
@@ -16344,30 +16363,28 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   case ISD::ABDU:
   case ISD::ABDS:
-    // (trunc (abdu/abds a, b)) → (abdu/abds (trunc a), (trunc b))
-    if (!LegalOperations || N0.hasOneUse()) {
-      EVT SrcVT = N0.getValueType();
+    // (trunc (abdu/abds a, b)) -> (abdu/abds (trunc a), (trunc b))
+    if ((!LegalOperations || N0.hasOneUse()) &&
+        TLI.isOperationLegal(N0.getOpcode(), VT)) {
       EVT TruncVT = VT;
       unsigned SrcBits = SrcVT.getScalarSizeInBits();
       unsigned TruncBits = TruncVT.getScalarSizeInBits();
-      unsigned NeededBits = SrcBits - TruncBits;
 
       SDValue A = N0.getOperand(0);
       SDValue B = N0.getOperand(1);
       bool CanFold = false;
 
       if (N0.getOpcode() == ISD::ABDU) {
-        KnownBits KnownA = DAG.computeKnownBits(A);
-        KnownBits KnownB = DAG.computeKnownBits(B);
-        CanFold = KnownA.countMinLeadingZeros() >= NeededBits &&
-                  KnownB.countMinLeadingZeros() >= NeededBits;
+        APInt UpperBits = APInt::getBitsSetFrom(SrcBits, TruncBits);
+        CanFold = DAG.MaskedValueIsZero(B, UpperBits) &&
+                  DAG.MaskedValueIsZero(A, UpperBits);
       } else {
-        unsigned SignBitsA = DAG.ComputeNumSignBits(A);
-        unsigned SignBitsB = DAG.ComputeNumSignBits(B);
-        CanFold = SignBitsA > NeededBits && SignBitsB > NeededBits;
+        unsigned NeededBits = SrcBits - TruncBits;
+        CanFold = DAG.ComputeNumSignBits(B) > NeededBits &&
+                  DAG.ComputeNumSignBits(A) > NeededBits;
       }
 
-      if (CanFold && TLI.isOperationLegal(N0.getOpcode(), VT)) {
+      if (CanFold) {
         SDValue NewA = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, A);
         SDValue NewB = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, B);
         return DAG.getNode(N0.getOpcode(), DL, TruncVT, NewA, NewB);
@@ -26018,7 +26035,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C), 0 --> ext X, C
   if (ExtIdx == 0 && V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
-    if (TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
+    // The index has to be a multiple of the new result type's known minimum
+    // vector length.
+    if (V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
+        TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, V.getOperand(0),
