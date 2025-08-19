@@ -45,7 +45,7 @@ export class DebugSessionTracker
   private modulesChanged = new vscode.EventEmitter<
     vscode.DebugSession | undefined
   >();
-  private sessionGotCapabilities =
+  private sessionReceivedCapabilities =
       new vscode.EventEmitter<[ vscode.DebugSession, LLDBDapCapabilities ]>();
   private sessionExited = new vscode.EventEmitter<vscode.DebugSession>();
 
@@ -58,9 +58,9 @@ export class DebugSessionTracker
     this.modulesChanged.event;
 
   /** Fired when a debug session is initialized. */
-  onDidGetSessionCapabilities:
+  onDidReceiveSessionCapabilities:
       vscode.Event<[ vscode.DebugSession, LLDBDapCapabilities ]> =
-      this.sessionGotCapabilities.event;
+      this.sessionReceivedCapabilities.event;
 
   /** Fired when a debug session is exiting. */
   onDidExitSession: vscode.Event<vscode.DebugSession> =
@@ -167,7 +167,7 @@ export class DebugSessionTracker
 
       this.sessionExited.fire(session);
     } else if (isEvent(message, "capabilities")) {
-      this.sessionGotCapabilities.fire([ session, message.body.capabilities ]);
+      this.sessionReceivedCapabilities.fire([ session, message.body.capabilities ]);
     }
   }
 }
