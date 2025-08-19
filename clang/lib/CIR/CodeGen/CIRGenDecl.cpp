@@ -154,15 +154,19 @@ void CIRGenFunction::emitAutoVarInit(
     initializeWhatIsTechnicallyUninitialized(addr);
     LValue lv = makeAddrLValue(addr, type, AlignmentSource::Decl);
     emitExprAsInit(init, &d, lv);
-    // In case lv has uses it means we indeed initialized something
-    // out of it while trying to build the expression, mark it as such.
-    mlir::Value val = lv.getAddress().getPointer();
-    assert(val && "Should have an address");
-    auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
-    assert(allocaOp && "Address should come straight out of the alloca");
 
-    if (!allocaOp.use_empty())
-      allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    if (!emission.wasEmittedAsOffloadClause()) {
+      // In case lv has uses it means we indeed initialized something
+      // out of it while trying to build the expression, mark it as such.
+      mlir::Value val = lv.getAddress().getPointer();
+      assert(val && "Should have an address");
+      auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
+      assert(allocaOp && "Address should come straight out of the alloca");
+
+      if (!allocaOp.use_empty())
+        allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
     return;
   }
 

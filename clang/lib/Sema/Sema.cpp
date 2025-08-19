@@ -1434,7 +1434,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   //   translation unit contains a file scope declaration of that
   //   identifier, with the composite type as of the end of the
   //   translation unit, with an initializer equal to 0.
-  llvm::SmallSet<VarDecl *, 32> Seen;
+  llvm::SmallPtrSet<VarDecl *, 32> Seen;
   for (TentativeDefinitionsType::iterator
            T = TentativeDefinitions.begin(ExternalSource.get()),
            TEnd = TentativeDefinitions.end();

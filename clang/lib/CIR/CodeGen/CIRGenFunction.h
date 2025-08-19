@@ -471,6 +471,10 @@ public:
     /// escaping block.
     bool IsEscapingByRef = false;
 
+    /// True if the variable was emitted as an offload recipe, and thus doesn't
+    /// have the same sort of alloca initialization.
+    bool EmittedAsOffload = false;
+
     mlir::Value NRVOFlag{};
 
     struct Invalid {};
@@ -483,10 +487,17 @@ public:
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
 
+    bool wasEmittedAsOffloadClause() const { return EmittedAsOffload; }
+
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
     /// address space for address space agnostic languages.
     Address getAllocatedAddress() const { return Addr; }
+
+    // Changes the stored address for the emission.  This function should only
+    // be used in extreme cases, and isn't required to model normal AST
+    // initialization/variables.
+    void setAllocatedAddress(Address A) { Addr = A; }
 
     /// Returns the address of the object within this declaration.
     /// Note that this does not chase the forwarding pointer for
@@ -519,12 +530,34 @@ public:
     symbolTable.insert(vd, addr.getPointer());
   }
 
-  /// Removes a declaration from the address-relationship.  This is a function
-  /// that shouldn't need to be used except in cases where we're adding/removing
-  /// things that aren't part of the language-semantics AST.
-  void removeAddrOfLocalVar(const clang::VarDecl *vd) {
-    localDeclMap.erase(vd);
-  }
+  // A class to allow reverting changes to a var-decl's registration to the
+  // localDeclMap. This is used in cases where things are being inserted into
+  // the variable list but don't follow normal lookup/search rules, like in
+  // OpenACC recipe generation.
+  class DeclMapRevertingRAII {
+    CIRGenFunction &cgf;
+    const VarDecl *vd;
+    bool shouldDelete = false;
+    Address oldAddr = Address::invalid();
+
+  public:
+    DeclMapRevertingRAII(CIRGenFunction &cgf, const VarDecl *vd)
+        : cgf(cgf), vd(vd) {
+      auto mapItr = cgf.localDeclMap.find(vd);
+
+      if (mapItr != cgf.localDeclMap.end())
+        oldAddr = mapItr->second;
+      else
+        shouldDelete = true;
+    }
+
+    ~DeclMapRevertingRAII() {
+      if (shouldDelete)
+        cgf.localDeclMap.erase(vd);
+      else
+        cgf.localDeclMap.insert_or_assign(vd, oldAddr);
+    }
+  };
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
@@ -970,6 +1003,11 @@ public:
   void emitAutoVarDecl(const clang::VarDecl &d);
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
+  /// Emit the initializer for an allocated variable.  If this call is not
+  /// associated with the call to emitAutoVarAlloca (as the address of the
+  /// emission is not directly an alloca), the allocatedSeparately parameter can
+  /// be used to suppress the assertions.  However, this should only be used in
+  /// extreme cases, as it doesn't properly reflect the language/AST.
   void emitAutoVarInit(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               clang::QualType::DestructionKind dtorKind);

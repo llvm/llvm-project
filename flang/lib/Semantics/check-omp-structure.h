@@ -126,6 +126,8 @@ public:
   void Leave(const parser::OpenMPAllocatorsConstruct &);
   void Enter(const parser::OpenMPRequiresConstruct &);
   void Leave(const parser::OpenMPRequiresConstruct &);
+  void Enter(const parser::OpenMPGroupprivate &);
+  void Leave(const parser::OpenMPGroupprivate &);
   void Enter(const parser::OpenMPThreadprivate &);
   void Leave(const parser::OpenMPThreadprivate &);
 
@@ -222,8 +224,9 @@ private:
       const parser::OmpObject &obj, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
-  void CheckThreadprivateOrDeclareTargetVar(
-      const parser::OmpObjectList &objList);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);

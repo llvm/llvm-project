@@ -198,7 +198,7 @@ func.func @gather_memref_non_unit_stride_read_more_than_1_element(%base: memref<
 // CANON-NOT:     scf.if
 // CANON:         tensor.extract
 // CANON:         tensor.extract
-// CANON:         [[FINAL:%.+]] = vector.insert %{{.+}}, %{{.+}} [1] : f32 into vector<2xf32>
+// CANON:         [[FINAL:%.+]] = vector.from_elements %{{.+}}, %{{.+}} : vector<2xf32>
 // CANON-NEXT:    return [[FINAL]] : vector<2xf32>
 func.func @gather_tensor_1d_all_set(%base: tensor<?xf32>, %v: vector<2xindex>, %pass_thru: vector<2xf32>) -> vector<2xf32> {
   %mask = arith.constant dense <true> : vector<2xi1>

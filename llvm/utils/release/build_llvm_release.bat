@@ -169,9 +169,9 @@ set common_cmake_flags=^
 
 if "%force-msvc%" == "" (
   where /q clang-cl
-  if errorlevel 0 (
+  if %errorlevel% EQU 0 (
     where /q lld-link
-    if errorlevel 0 (
+    if %errorlevel% EQU 0 (
       set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
       
       set common_cmake_flags=%common_cmake_flags%^

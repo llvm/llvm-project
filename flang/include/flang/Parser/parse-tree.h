@@ -4955,6 +4955,15 @@ struct OpenMPDeclareSimdConstruct {
   std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 
+// ref: [6.0:301-303]
+//
+// groupprivate-directive ->
+//    GROUPPRIVATE (variable-list-item...)          // since 6.0
+struct OpenMPGroupprivate {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPGroupprivate, OmpDirectiveSpecification);
+  CharBlock source;
+};
+
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
 struct OpenMPRequiresConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPRequiresConstruct);
@@ -4982,8 +4991,9 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
       OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OmpDeclareVariantDirective, OpenMPThreadprivate, OpenMPRequiresConstruct,
-      OpenMPUtilityConstruct, OmpMetadirectiveDirective>
+      OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
+      OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+      OmpMetadirectiveDirective>
       u;
 };
 
