@@ -1322,8 +1322,8 @@ def move_vec_shift : Operand<i32> {
   let OperandNamespace = "AArch64";
   let PrintMethod = "printShifter";
   let OperandType = "OPERAND_MSL_SHIFT";
-  let ParserMatchClass = MoveVecShifterOperand;
   let EncoderMethod = "getMoveVecShifterOpValue";
+  let ParserMatchClass = MoveVecShifterOperand;
 }
 
 let DiagnosticType = "AddSubSecondSource" in {
@@ -1562,13 +1562,6 @@ let OperandNamespace = "AArch64" in {
                                 [{ return ((uint64_t)Imm) == 0; }]>;
     defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
                                 [{ return ((uint32_t)Imm) == 0; }]>;
-  }
-  // MSL shift operand type
-  let OperandType = "OPERAND_MSL_SHIFT" in {
-    def msl_shift : Operand<i32> {
-      let PrintMethod = "printImm";
-      let ParserMatchClass = MoveVecShifterOperand;
-    }
   }
 }
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
