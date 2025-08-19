@@ -8616,40 +8616,68 @@ private:
   /// struct S {
   ///   int a;
   ///   int b[10];
+  ///   int c[10][10];
   ///   int *p;
+  ///   int **pp;
   /// }
-  /// S s, *ps, **pps, *(pas[10]);
+  /// S s, *ps, **pps, *(pas[10]), ***ppps;
+  /// int i;
   /// ```
   /// The base-pointers for the following map operands would be:
-  ///   map list-item   | attach base-pointer
-  ///   ----------------|---------------------
-  ///   s               | N/A
-  ///   s.a             | N/A
-  ///   s.p             | N/A
-  ///   ps              | N/A
-  ///   ps->p           | ps
-  ///   ps[1]           | ps
-  ///   *(ps + 1)       | ps
-  ///   (ps + 1)[1]     | ps
-  ///   ps[1:10]        | ps
-  ///   ps->b[10]       | ps
-  ///   ps->p[10]       | ps->p
-  ///   pps[1][2]       | pps[1]
-  ///   pps[1:1][2]     | pps[1:1]
-  ///   pps[1]->p       | pps[1]
-  ///   pps[1]->p[10]   | pps[1]
-  ///   pas[1]          | N/A
-  ///   pas[1][2]       | pas[1]
+  ///   map list-item   | attach base-pointer   | attach base-pointer
+  ///                   | for directives except | target_update (if
+  ///                   | target_update         | different)
+  ///   ----------------|-----------------------|---------------------
+  ///   s               | N/A                   |
+  ///   s.a             | N/A                   |
+  ///   s.p             | N/A                   |
+  ///   ps              | N/A                   |
+  ///   ps->p           | ps                    |
+  ///   ps[1]           | ps                    |
+  ///   *(ps + 1)       | ps                    |
+  ///   (ps + 1)[1]     | ps                    |
+  ///   ps[1:10]        | ps                    |
+  ///   ps->b[10]       | ps                    |
+  ///   ps->p[10]       | ps->p                 |
+  ///   ps->c[1][2]     | ps                    |
+  ///   ps->c[1:2][2]   | (error diagnostic)    | N/A, TODO: ps
+  ///   ps->c[1:1][2]   | ps                    | N/A, TODO: ps
+  ///   pps[1][2]       | pps[1]                |
+  ///   pps[1:1][2]     | pps[1:1]              | N/A, TODO: pps[1:1]
+  ///   pps[1:i][2]     | pps[1:i]              | N/A, TODO: pps[1:i]
+  ///   pps[1:2][2]     | (error diagnostic)    | N/A
+  ///   pps[1]->p       | pps[1]                |
+  ///   pps[1]->p[10]   | pps[1]                |
+  ///   pas[1]          | N/A                   |
+  ///   pas[1][2]       | pas[1]                |
+  ///   ppps[1][2]      | ppps[1]               |
+  ///   ppps[1][2][3]   | ppps[1][2]            |
+  ///   ppps[1][2:1][3] | ppps[1][2:1]          | N/A, TODO: ppps[1][2:1]
+  ///   ppps[1][2:2][3] | (error diagnostic)    | N/A
   /// Returns a pair of the attach pointer expression and its depth in the
   /// component list.
   /// TODO: This may need to be updated to handle ref_ptr/ptee cases for byref
   /// map operands.
+  /// TODO: Handle cases for target-update, where the list-item is a
+  /// non-contiguous array-section that still has a base-pointer.
   static std::pair<const Expr *, std::optional<size_t>> findAttachPtrExpr(
-      OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
+      llvm::PointerUnion<const OMPExecutableDirective *,
+                         const OMPDeclareMapperDecl *>
+          CurDir) {
 
     // If we only have a single component, we have a map like "map(p)", which
     // cannot have a base-pointer.
     if (Components.size() < 2)
+      return {nullptr, std::nullopt};
+
+    // Only check for non-contiguous sections on target_update,
+    // since we can assume array-sections are contiguous on maps on other
+    // constructs.
+    if (Components.back().isNonContiguous() &&
+        isa<const OMPExecutableDirective *>(CurDir) &&
+        isa<OMPTargetUpdateDirective>(
+            cast<const OMPExecutableDirective *>(CurDir)))
       return {nullptr, std::nullopt};
 
     // To find the attach base-pointer, we start with the second component,
@@ -9107,13 +9135,20 @@ private:
           }
         }
 
+        // Unify entries in one list making sure the struct mapping precedes the
+        // individual fields:
+        MapCombinedInfoTy GroupUnionCurInfo;
+        GroupUnionCurInfo.append(GroupStructBaseCurInfo);
+        GroupUnionCurInfo.append(GroupCurInfo);
+
         // If there is an entry in PartialStruct it means we have a struct with
         // individual members mapped. Emit an extra combined entry.
         MapCombinedInfoTy AttachCombinedInfo;
         if (PartialStruct.Base.isValid()) {
-          CurInfo.append(PartialStruct.PreliminaryMapData);
+          GroupUnionCurInfo.NonContigInfo.Dims.push_back(0);
           std::optional<size_t> CombinedEntryIndex = emitCombinedEntry(
-              CurInfo, AttachCombinedInfo, GroupCurInfo.Types, PartialStruct,
+              CurInfo, AttachCombinedInfo, GroupUnionCurInfo.Types,
+              PartialStruct,
               /*IsMapThis*/ !VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
               /*NotTargetParam=*/true);
@@ -9125,10 +9160,8 @@ private:
         }
 
         // Append this group's results to the overall CurInfo in the correct
-        // order: combined-entry -> individual-field-entries -> attach-entry
-        // First append struct base info, then component info
-        CurInfo.append(GroupStructBaseCurInfo);
-        CurInfo.append(GroupCurInfo);
+        // order: combined-entry -> original-field-entries -> attach-entry
+        CurInfo.append(GroupUnionCurInfo);
         CurInfo.append(AttachCombinedInfo);
 
         IsFirstGroup = false;
@@ -9250,7 +9283,7 @@ public:
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
             std::get<1>(L);
         if (!Components.empty()) {
-          auto [AttachPtrExpr, Depth] = findAttachPtrExpr(Components);
+          auto [AttachPtrExpr, Depth] = findAttachPtrExpr(Components, CurDir);
           AttachPtrExprMap[Components] = AttachPtrExpr;
           AttachPtrComponentDepthMap[AttachPtrExpr] = Depth;
         }
