@@ -230,7 +230,7 @@ public:
   // Emit the decoder state machine table. Returns a mask of MCD decoder ops
   // that were emitted.
   unsigned emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
-                     unsigned BitWidth, StringRef Namespace,
+                     StringRef Namespace, unsigned HwModeID, unsigned BitWidth,
                      ArrayRef<unsigned> EncodingIDs) const;
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          ArrayRef<unsigned> InstrLen) const;
@@ -805,8 +805,8 @@ unsigned Filter::usefulness() const {
 // Emit the decoder state machine table. Returns a mask of MCD decoder ops
 // that were emitted.
 unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
-                                   DecoderTable &Table, unsigned BitWidth,
-                                   StringRef Namespace,
+                                   DecoderTable &Table, StringRef Namespace,
+                                   unsigned HwModeID, unsigned BitWidth,
                                    ArrayRef<unsigned> EncodingIDs) const {
   // We'll need to be able to map from a decoded opcode into the corresponding
   // EncodingID for this specific combination of BitWidth and Namespace. This
@@ -818,8 +818,10 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     OpcodeToEncodingID[Target.getInstrIntValue(InstDef)] = EncodingID;
   }
 
-  OS << "static const uint8_t DecoderTable" << Namespace << BitWidth
-     << "[] = {\n";
+  OS << "static const uint8_t DecoderTable" << Namespace;
+  if (HwModeID != DefaultMode)
+    OS << '_' << Target.getHwModes().getModeName(HwModeID);
+  OS << BitWidth << "[] = {\n";
 
   // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
   auto emitULEB128 = [](DecoderTable::const_iterator &I,
@@ -2501,8 +2503,9 @@ namespace {
         NumberedAlias,
         &Target.getInstruction(NumberedAlias->getValueAsDef("AliasOf")));
 
-  // Map of (namespace, size) tuple to encoding IDs.
-  std::map<std::pair<std::string, unsigned>, std::vector<unsigned>> EncMap;
+  // Map of (namespace, hwmode, size) tuple to encoding IDs.
+  std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
+      EncMap;
   std::map<unsigned, std::vector<OperandInfo>> Operands;
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
@@ -2537,14 +2540,10 @@ namespace {
         MaxInstLen = std::max(MaxInstLen, Len);
         InstrLen[NEI] = Len;
       }
-      std::string DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace").str();
-      // DecoderTables with DefaultMode should not have any suffix.
-      if (NumberedEncoding.HwModeID != DefaultMode) {
-        StringRef HwModeName = HWM.getModeName(NumberedEncoding.HwModeID);
-        DecoderNamespace += ("_" + HwModeName).str();
-      }
-      EncMap[{DecoderNamespace, Size}].push_back(NEI);
+      StringRef DecoderNamespace =
+          EncodingDef->getValueAsString("DecoderNamespace");
+      EncMap[{DecoderNamespace, NumberedEncoding.HwModeID, Size}].push_back(
+          NEI);
     } else {
       NumEncodingsOmitted++;
     }
@@ -2552,12 +2551,11 @@ namespace {
 
   DecoderTableInfo TableInfo;
   unsigned OpcodeMask = 0;
-  for (const auto &[NSAndByteSize, EncodingIDs] : EncMap) {
-    const std::string &DecoderNamespace = NSAndByteSize.first;
-    const unsigned BitWidth = 8 * NSAndByteSize.second;
-    // Emit the decoder for this namespace+width combination.
-    FilterChooser FC(NumberedEncodings, EncodingIDs, Operands,
-                     IsVarLenInst ? MaxInstLen : BitWidth, this);
+  for (const auto &[Key, EncodingIDs] : EncMap) {
+    auto [DecoderNamespace, HwModeID, Size] = Key;
+    const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
+    // Emit the decoder for this (namespace, hwmode, width) combination.
+    FilterChooser FC(NumberedEncodings, EncodingIDs, Operands, BitWidth, this);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
@@ -2573,8 +2571,8 @@ namespace {
     TableInfo.Table.push_back(MCD::OPC_Fail);
 
     // Print the table to the output stream.
-    OpcodeMask |= emitTable(OS, TableInfo.Table, FC.getBitWidth(),
-                            DecoderNamespace, EncodingIDs);
+    OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
+                            BitWidth, EncodingIDs);
   }
 
   // For variable instruction, we emit a instruction length table
