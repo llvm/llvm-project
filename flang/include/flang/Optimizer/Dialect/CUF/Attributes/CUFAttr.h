@@ -20,6 +20,10 @@ namespace llvm {
 class StringRef;
 }
 
+namespace mlir {
+class Operation;
+}
+
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFEnumAttr.h.inc"
 
 #define GET_ATTRDEF_CLASSES
@@ -28,6 +32,7 @@ class StringRef;
 namespace cuf {
 
 /// Attribute to mark Fortran entities with the CUDA attribute.
+static constexpr llvm::StringRef dataAttrName = "data_attr";
 static constexpr llvm::StringRef getDataAttrName() { return "cuf.data_attr"; }
 static constexpr llvm::StringRef getProcAttrName() { return "cuf.proc_attr"; }
 
@@ -100,6 +105,9 @@ getProcAttribute(mlir::MLIRContext *mlirContext,
   }
   return {};
 }
+
+/// Returns true if the operation has a data attribute with the given value.
+bool hasDataAttr(mlir::Operation *op);
 
 } // namespace cuf
 
