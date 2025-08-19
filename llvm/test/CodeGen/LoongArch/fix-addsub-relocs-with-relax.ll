@@ -1,13 +1,7 @@
 ; RUN: llc --filetype=obj --mtriple=loongarch64 %s -o %t.o
 ; RUN: llvm-readobj -r %t.o | FileCheck %s
 ; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=+relax %s -o %t.r
-; RUN: llvm-readobj -r %t.r | FileCheck --check-prefixes=CHECK,RELAX %s
-
-;; This test shows the loss of ADD/SUB relocations because relax feature
-;; is not available from SubtargetInfo (LoongArchAsmBackend is instantiated
-;; too early). ie. code generation takes the relax feature from attributes,
-;; but ADD/SUB relocations recording losses the relax feature.
-;; A later commit will fix it.
+; RUN: llvm-readobj -r %t.r | FileCheck %s
 
 ; CHECK:      Relocations [
 ; CHECK-NEXT:   Section ({{.*}}) .rela.text {
@@ -20,17 +14,17 @@
 ; CHECK-NEXT:     0x8 R_LARCH_32 .debug_abbrev 0x0
 ; CHECK-NEXT:     0x11 R_LARCH_32 .L0 0x0
 ; CHECK-NEXT:     0x15 R_LARCH_32 .Lline_table_start0 0x0
-; RELAX-NEXT:     0x1B R_LARCH_ADD32 .L0 0x0
-; RELAX-NEXT:     0x1B R_LARCH_SUB32 .L0 0x0
+; CHECK-NEXT:     0x1B R_LARCH_ADD32 .L0 0x0
+; CHECK-NEXT:     0x1B R_LARCH_SUB32 .L0 0x0
 ; CHECK-NEXT:     0x1F R_LARCH_32 .L0 0x0
-; RELAX-NEXT:     0x25 R_LARCH_ADD32 .L0 0x0
-; RELAX-NEXT:     0x25 R_LARCH_SUB32 .L0 0x0
+; CHECK-NEXT:     0x25 R_LARCH_ADD32 .L0 0x0
+; CHECK-NEXT:     0x25 R_LARCH_SUB32 .L0 0x0
 ; CHECK-NEXT:   }
 ; CHECK:        Section ({{.*}}) .rela.debug_frame {
 ; CHECK-NEXT:     0x1C R_LARCH_32 .L0 0x0
 ; CHECK-NEXT:     0x20 R_LARCH_64 .L0 0x0
-; RELAX-NEXT:     0x28 R_LARCH_ADD64 .L0 0x0
-; RELAX-NEXT:     0x28 R_LARCH_SUB64 .L0 0x0
+; CHECK-NEXT:     0x28 R_LARCH_ADD64 .L0 0x0
+; CHECK-NEXT:     0x28 R_LARCH_SUB64 .L0 0x0
 ; CHECK-NEXT:     0x3F R_LARCH_ADD6 .L0 0x0
 ; CHECK-NEXT:     0x3F R_LARCH_SUB6 .L0 0x0
 ; CHECK-NEXT:   }
@@ -39,8 +33,8 @@
 ; CHECK-NEXT:     0x31 R_LARCH_32 .debug_line_str 0x2
 ; CHECK-NEXT:     0x46 R_LARCH_32 .debug_line_str 0x9
 ; CHECK-NEXT:     0x4F R_LARCH_64 .L0 0x0
-; RELAX-NEXT:     0x5F R_LARCH_ADD16 .L0 0x0
-; RELAX-NEXT:     0x5F R_LARCH_SUB16 .L0 0x0
+; CHECK-NEXT:     0x5F R_LARCH_ADD16 .L0 0x0
+; CHECK-NEXT:     0x5F R_LARCH_SUB16 .L0 0x0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
 
