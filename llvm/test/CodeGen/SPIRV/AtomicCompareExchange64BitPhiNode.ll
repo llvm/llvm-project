@@ -13,7 +13,7 @@
 ; CHECK-SPIRV-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#Zero64:]] = OpConstantNull %[[#Long]]
 ; CHECK-SPIRV-DAG: %[[#Scope:]] = OpConstant %[[#Int]] 2
-; CHECK-SPIRV-DAG: %[[#MemSem:]] = OpConstant %[[#Int]] 0
+; CHECK-SPIRV-DAG: %[[#MemSem:]] = Op{{Constant %[[#Int]] 0|ConstantNull %[[#Int]]}}
 
 ; Verify that both the phi node and atomic operation use the same i64 type
 ; CHECK-SPIRV: %[[#ValuePhi:]] = OpPhi %[[#Long]] %[[#Zero64]] %[[#]] %[[#AtomicResult:]] %[[#]]
