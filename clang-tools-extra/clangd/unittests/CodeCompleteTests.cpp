@@ -4487,6 +4487,11 @@ TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
         mem$c1^;
         // should offer all results
         self.mem$c2^;
+
+        [&]() {
+          // should not offer any results
+          mem$c3^;
+        }();
       }
     };
   )cpp");
@@ -4519,6 +4524,12 @@ TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
                                    snippetSuffix("(${1:int a})")),
                              AllOf(named("memberFnA"), signature("(float a)"),
                                    snippetSuffix("(${1:float a})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c3"),
+                               Preamble.get(), Inputs, Opts);
+
+    EXPECT_THAT(Result.Completions, ElementsAre());
   }
 }
 } // namespace
