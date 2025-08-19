@@ -37,22 +37,6 @@ latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 Potentially Breaking Changes
 ============================
 
-- Clang will now emit a warning if the auto-detected GCC installation
-  directory (i.e. the one with the largest version number) does not
-  contain libstdc++ include directories although a "complete" GCC
-  installation directory containing the include directories is
-  available. It is planned to change the auto-detection to prefer the
-  "complete" directory in the future.  The warning will disappear if
-  the libstdc++ include directories are either installed or removed
-  for all GCC installation directories considered by the
-  auto-detection; see the output of ``clang -v`` for a list of those
-  directories. If the GCC installations cannot be modified and
-  maintaining the current choice of the auto-detection is desired, the
-  GCC installation directory can be selected explicitly using the
-  ``--gcc-install-dir`` command line argument. This will silence the
-  warning. It can also be disabled using the
-  ``-Wno-gcc-install-dir-libstdcxx`` command line flag.
-
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -184,8 +168,6 @@ Improvements to Clang's diagnostics
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
-- ``-Wstring-concatenation`` now diagnoses every missing comma in an initializer list,
-  rather than stopping after the first. (#GH153745)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
@@ -241,7 +223,6 @@ Bug Fixes to C++ Support
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 - Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
-- Fixed a mismatched lambda scope bug when propagating up ``consteval`` within nested lambdas. (#GH145776)
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
@@ -251,6 +232,8 @@ Bug Fixes to C++ Support
   "intializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
+- Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
+  instantiated properly. (#GH154054)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
