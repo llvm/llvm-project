@@ -900,6 +900,8 @@ namespace is_aggregate {
   // expected-note@-1 {{'S6' is not aggregate}} \
   // expected-note@#ag-S6 {{'S6' defined here}}
 
+  static_assert(__is_aggregate(S6[]));
+
   struct B7 {};
 
   struct S7 : virtual B7 { // #ag-S7
@@ -915,4 +917,6 @@ namespace is_aggregate {
   // expected-note@-1 {{because it has a virtual base}} \
   // expected-note@-1 {{'S7' is not aggregate}} \
   // expected-note@#ag-S7 {{'S7' defined here}}
+
+  static_assert(__is_aggregate(S7[10]));
 }
