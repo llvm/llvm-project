@@ -365,7 +365,7 @@ OptPrimType Context::classify(QualType T) const {
   }
 
   if (const auto *ET = T->getAs<EnumType>()) {
-    const auto *D = ET->getDecl();
+    const auto *D = ET->getOriginalDecl()->getDefinitionOrSelf();
     if (!D->isComplete())
       return std::nullopt;
     return classify(D->getIntegerType());
@@ -398,17 +398,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-
-  {
-    InterpState State(Parent, *P, Stk, *this, Func);
-    if (Interpret(State)) {
-      assert(Stk.empty());
-      return true;
-    }
-    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
-    // remove values the State's destructor might access.
+  InterpState State(Parent, *P, Stk, *this, Func);
+  if (Interpret(State)) {
+    assert(Stk.empty());
+    return true;
   }
-
   Stk.clear();
   return false;
 }
@@ -501,7 +495,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // elsewhere in the code.
   QualType Ty = FuncDecl->getReturnType();
   bool HasRVO = false;
-  if (!Ty->isVoidType() && !classify(Ty)) {
+  if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffsets.push_back(ParamOffset);

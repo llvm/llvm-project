@@ -617,7 +617,7 @@ namespace {
       if (!baseType.isNull()) {
         // Get the declaration for a class/struct/union/enum type
         if (const TagType *Tag = baseType->getAs<TagType>())
-          D = Tag->getDecl();
+          D = Tag->getOriginalDecl();
         // Get the @interface declaration for a (possibly-qualified) Objective-C
         // object pointer type, e.g., NSString*
         else if (const ObjCObjectPointerType *ObjPtr = 
@@ -629,7 +629,7 @@ namespace {
         // Get the class for a C++ injected-class-name
         else if (const InjectedClassNameType *Injected =
                  baseType->getAs<InjectedClassNameType>())
-          D = Injected->getDecl();
+          D = Injected->getOriginalDecl();
       }
 
       if (D != nullptr) {
