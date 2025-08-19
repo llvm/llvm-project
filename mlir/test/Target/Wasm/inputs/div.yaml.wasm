@@ -1,0 +1,89 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I64
+      - Index:           2
+        ParamTypes:      []
+        ReturnTypes:
+          - F32
+      - Index:           3
+        ParamTypes:      []
+        ReturnTypes:
+          - F64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0, 0, 0, 1, 1, 1, 1, 2, 3 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            div_u_i32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            div_u_i32_zero
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            div_s_i32
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            div_s_i32_zero
+        Kind:            FUNCTION
+        Index:           3
+      - Name:            div_u_i64
+        Kind:            FUNCTION
+        Index:           4
+      - Name:            div_u_i64_zero
+        Kind:            FUNCTION
+        Index:           5
+      - Name:            div_s_i64
+        Kind:            FUNCTION
+        Index:           6
+      - Name:            div_s_i64_zero
+        Kind:            FUNCTION
+        Index:           7
+      - Name:            div_f32
+        Kind:            FUNCTION
+        Index:           8
+      - Name:            div_f64
+        Kind:            FUNCTION
+        Index:           9
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            410A41026E0B
+      - Index:           1
+        Locals:          []
+        Body:            410A41006E0B
+      - Index:           2
+        Locals:          []
+        Body:            410A41026D0B
+      - Index:           3
+        Locals:          []
+        Body:            410A41006D0B
+      - Index:           4
+        Locals:          []
+        Body:            420A4202800B
+      - Index:           5
+        Locals:          []
+        Body:            420A4200800B
+      - Index:           6
+        Locals:          []
+        Body:            420A42027F0B
+      - Index:           7
+        Locals:          []
+        Body:            420A42007F0B
+      - Index:           8
+        Locals:          []
+        Body:            43000020414300000040950B
+      - Index:           9
+        Locals:          []
+        Body:            440000000000002440440000000000000040A30B
+...
