@@ -281,7 +281,14 @@ ParseFunctions(SectionSP code_section_sp) {
   return functions;
 }
 
-static llvm::Expected<std::vector<AddressRange>>
+struct WasmSegment {
+  WasmSegment(SectionSP section_sp, lldb::offset_t offset, uint32_t size)
+      : address_range(section_sp, offset, size) {};
+  std::string name;
+  AddressRange address_range;
+};
+
+static llvm::Expected<std::vector<WasmSegment>>
 ParseData(SectionSP data_section_sp) {
   DataExtractor data;
   data_section_sp->GetSectionData(data);
@@ -292,7 +299,7 @@ ParseData(SectionSP data_section_sp) {
   if (segment_count > std::numeric_limits<uint32_t>::max())
     return llvm::createStringError("segment count overflows uint32_t");
 
-  std::vector<AddressRange> segments;
+  std::vector<WasmSegment> segments;
   segments.reserve(segment_count);
 
   for (uint32_t i = 0; i < segment_count; ++i) {
@@ -300,8 +307,24 @@ ParseData(SectionSP data_section_sp) {
     if (flags > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("segment flags overflows uint32_t");
 
+    // Data segments have a mode that identifies them as either passive or
+    // active. An active data segment copies its contents into a memory during
+    // instantiation, as specified by a memory index and a constant expression
+    // defining an offset into that memory.
+    if (flags & llvm::wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX) {
+      const uint64_t memidx = data.GetULEB128(&offset);
+      if (memidx > std::numeric_limits<uint32_t>::max())
+        return llvm::createStringError("memidx overflows uint32_t");
+    }
+
+    if ((flags & llvm::wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
+      // Skip over the constant expression.
+      for (uint8_t b = 0; b != llvm::wasm::WASM_OPCODE_END;)
+        b = data.GetU8(&offset);
+    }
+
     const uint64_t segment_size = data.GetULEB128(&offset);
-    if (flags > std::numeric_limits<uint32_t>::max())
+    if (segment_size > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("segment size overflows uint32_t");
 
     segments.emplace_back(data_section_sp, offset, segment_size);
@@ -319,7 +342,7 @@ ParseData(SectionSP data_section_sp) {
 static llvm::Expected<std::vector<Symbol>>
 ParseNames(SectionSP name_section_sp,
            const std::vector<AddressRange> &function_ranges,
-           const std::vector<AddressRange> &segment_ranges) {
+           std::vector<WasmSegment> &segments) {
   DataExtractor name_section_data;
   name_section_sp->GetSectionData(name_section_data);
 
@@ -358,12 +381,14 @@ ParseNames(SectionSP name_section_sp,
       for (uint64_t i = 0; c && i < count; ++i) {
         const uint64_t idx = data.getULEB128(c);
         const std::optional<std::string> name = GetWasmString(data, c);
-        if (!name || idx >= segment_ranges.size())
+        if (!name || idx >= segments.size())
           continue;
+        // Update the segment name.
+        segments[i].name = *name;
         symbols.emplace_back(
             symbols.size(), Mangled(*name), lldb::eSymbolTypeData,
             /*external=*/false, /*is_debug=*/false, /*is_trampoline=*/false,
-            /*is_artificial=*/false, segment_ranges[idx],
+            /*is_artificial=*/false, segments[i].address_range,
             /*size_is_valid=*/true, /*contains_linker_annotations=*/false,
             /*flags=*/0);
       }
@@ -391,33 +416,34 @@ void ObjectFileWasm::ParseSymtab(Symtab &symtab) {
 
   // The name section contains names and indexes. First parse the data from the
   // relevant sections so we can access it by its index.
-  std::vector<AddressRange> function_ranges;
-  std::vector<AddressRange> segment_ranges;
+  std::vector<AddressRange> functions;
+  std::vector<WasmSegment> segments;
 
   // Parse the code section.
   if (SectionSP code_section_sp =
           m_sections_up->FindSectionByType(lldb::eSectionTypeCode, false)) {
-    llvm::Expected<std::vector<AddressRange>> functions =
+    llvm::Expected<std::vector<AddressRange>> maybe_functions =
         ParseFunctions(code_section_sp);
-    if (!functions) {
-      LLDB_LOG_ERROR(log, functions.takeError(),
+    if (!maybe_functions) {
+      LLDB_LOG_ERROR(log, maybe_functions.takeError(),
                      "Failed to parse Wasm code section: {0}");
       return;
     }
-    function_ranges = *functions;
+    functions = *maybe_functions;
   }
 
   // Parse the data section.
-  if (SectionSP data_section_sp =
-          m_sections_up->FindSectionByType(lldb::eSectionTypeData, false)) {
-    llvm::Expected<std::vector<AddressRange>> segments =
+  SectionSP data_section_sp =
+      m_sections_up->FindSectionByType(lldb::eSectionTypeData, false);
+  if (data_section_sp) {
+    llvm::Expected<std::vector<WasmSegment>> maybe_segments =
         ParseData(data_section_sp);
-    if (!segments) {
-      LLDB_LOG_ERROR(log, segments.takeError(),
+    if (!maybe_segments) {
+      LLDB_LOG_ERROR(log, maybe_segments.takeError(),
                      "Failed to parse Wasm data section: {0}");
       return;
     }
-    segment_ranges = *segments;
+    segments = *maybe_segments;
   }
 
   // Parse the name section.
@@ -429,7 +455,7 @@ void ObjectFileWasm::ParseSymtab(Symtab &symtab) {
   }
 
   llvm::Expected<std::vector<Symbol>> symbols =
-      ParseNames(name_section_sp, function_ranges, segment_ranges);
+      ParseNames(name_section_sp, functions, segments);
   if (!symbols) {
     LLDB_LOG_ERROR(log, symbols.takeError(), "Failed to parse Wasm names: {0}");
     return;
@@ -437,6 +463,26 @@ void ObjectFileWasm::ParseSymtab(Symtab &symtab) {
 
   for (const Symbol &symbol : *symbols)
     symtab.AddSymbol(symbol);
+
+  lldb::user_id_t segment_id = 0;
+  for (const WasmSegment &segment : segments) {
+    const lldb::addr_t segment_addr =
+        segment.address_range.GetBaseAddress().GetFileAddress();
+    const size_t segment_size = segment.address_range.GetByteSize();
+    SectionSP segment_sp = std::make_shared<Section>(
+        /*parent_section_sp=*/data_section_sp, GetModule(),
+        /*obj_file=*/this,
+        ++segment_id << 8, // 1-based segment index, shifted by 8 bits to avoid
+                           // collision with section IDs.
+        ConstString(segment.name), eSectionTypeData,
+        /*file_vm_addr=*/segment_addr,
+        /*vm_size=*/segment_size,
+        /*file_offset=*/segment_addr,
+        /*file_size=*/segment_size,
+        /*log2align=*/0, /*flags=*/0);
+    m_sections_up->AddSection(segment_sp);
+    GetModule()->GetSectionList()->AddSection(segment_sp);
+  }
 
   symtab.Finalize();
 }

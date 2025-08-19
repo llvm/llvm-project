@@ -14708,14 +14708,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       isa<InitListExpr>(var->getInit())) {
     const auto *ILE = cast<InitListExpr>(var->getInit());
     unsigned NumInits = ILE->getNumInits();
-    if (NumInits > 2) {
-      auto concatenatedPartsAt = [&](unsigned Index) -> unsigned {
-        if (const Expr *E = ILE->getInit(Index))
-          if (const auto *S = dyn_cast<StringLiteral>(E->IgnoreImpCasts()))
-            return S->getNumConcatenated();
-        return 0;
-      };
-
+    if (NumInits > 2)
       for (unsigned I = 0; I < NumInits; ++I) {
         const auto *Init = ILE->getInit(I);
         if (!Init)
@@ -14728,23 +14721,24 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
         // Diagnose missing comma in string array initialization.
         // Do not warn when all the elements in the initializer are concatenated
         // together. Do not warn for macros too.
-        if (NumConcat == 2) {
-          if (SL->getBeginLoc().isMacroID())
-            continue;
+        if (NumConcat == 2 && !SL->getBeginLoc().isMacroID()) {
+          bool OnlyOneMissingComma = true;
+          for (unsigned J = I + 1; J < NumInits; ++J) {
+            const auto *Init = ILE->getInit(J);
+            if (!Init)
+              break;
+            const auto *SLJ = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
+            if (!SLJ || SLJ->getNumConcatenated() > 1) {
+              OnlyOneMissingComma = false;
+              break;
+            }
+          }
 
-          unsigned L = I > 0 ? concatenatedPartsAt(I - 1) : 0;
-          unsigned R = I + 1 < NumInits ? concatenatedPartsAt(I + 1) : 0;
-
-          // Skip neighbors with multi-part concatenations.
-          if (R > 1)
-            continue;
-
-          // Diagnose when at least one neighbor is a single literal.
-          if (R == 1 || L == 1) {
+          if (OnlyOneMissingComma) {
             SmallVector<FixItHint, 1> Hints;
-            // Insert a comma between the two tokens of this element.
-            Hints.push_back(FixItHint::CreateInsertion(
-                PP.getLocForEndOfToken(SL->getStrTokenLoc(0)), ", "));
+            for (unsigned i = 0; i < NumConcat - 1; ++i)
+              Hints.push_back(FixItHint::CreateInsertion(
+                  PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
 
             Diag(SL->getStrTokenLoc(1),
                  diag::warn_concatenated_literal_array_init)
@@ -14752,9 +14746,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             Diag(SL->getBeginLoc(),
                  diag::note_concatenated_string_literal_silence);
           }
+          // In any case, stop now.
+          break;
         }
       }
-    }
   }
 
 
@@ -16228,6 +16223,10 @@ Decl *Sema::ActOnSkippedFunctionBody(Decl *Decl) {
   return Decl;
 }
 
+Decl *Sema::ActOnFinishFunctionBody(Decl *D, Stmt *BodyArg) {
+  return ActOnFinishFunctionBody(D, BodyArg, /*IsInstantiation=*/false);
+}
+
 /// RAII object that pops an ExpressionEvaluationContext when exiting a function
 /// body.
 class ExitFunctionBodyRAII {
@@ -16298,8 +16297,8 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
 
-Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
-                                    bool RetainFunctionScopeInfo) {
+Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
+                                    bool IsInstantiation) {
   FunctionScopeInfo *FSI = getCurFunction();
   FunctionDecl *FD = dcl ? dcl->getAsFunction() : nullptr;
 
@@ -16756,8 +16755,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   if (!IsInstantiation)
     PopDeclContext();
 
-  if (!RetainFunctionScopeInfo)
-    PopFunctionScopeInfo(ActivePolicy, dcl);
+  PopFunctionScopeInfo(ActivePolicy, dcl);
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for
   // deletion in some later function.

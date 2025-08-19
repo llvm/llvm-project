@@ -30,7 +30,7 @@
 // PCH:    [[Macros]] = !{[[MainMacroFile:![0-9]+]], [[DefineC1:![0-9]+]], [[DefineA:![0-9]+]], [[UndefC1:![0-9]+]]}
 
 // CHECK:  [[MainMacroFile]] = !DIMacroFile(file: [[MainFile:![0-9]+]], nodes: [[N1:![0-9]+]])
-// CHECK:  [[MainFile]] = !DIFile(filename: "{{.*}}debug-info-macro.c"
+// CHECK:  [[MainFile]] = !DIFile(filename: "{{.*}}macro.c"
 // CHECK:  [[N1]] = !{[[CommandLineInclude:![0-9]+]], [[DefineD1:![0-9]+]], [[FileInclude1:![0-9]+]], [[UndefD1:![0-9]+]], [[DefineD2:![0-9]+]], [[FileInclude2:![0-9]+]], [[UndefD2:![0-9]+]]}
 
 // CHECK:  [[CommandLineInclude]] = !DIMacroFile(file: [[HeaderFile:![0-9]+]], nodes: [[N2:![0-9]+]])
