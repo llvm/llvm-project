@@ -1839,6 +1839,54 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetVirtualFnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
+  Pure
+]> {
+  let summary = "Get a the address of a virtual function pointer";
+  let description = [{
+    The `vtable.get_virtual_fn_addr` operation retrieves the address of a
+    virtual function pointer from an object's vtable (__vptr).
+    This is an abstraction to perform the basic pointer arithmetic to get
+    the address of the virtual function pointer, which can then be loaded and
+    called.
+
+    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
+    have been returned by a previous call to `cir.vatble.get_vptr`. The
+    `index` operand is an index of the virtual function in the vtable.
+
+    The return type is a pointer-to-pointer to the function type.
+
+    Example:
+    ```mlir
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_virtual_fn_addr %4[2] : !cir.vptr
+                  -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>>
+    %6 = cir.load align(8) %5 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>)
+                                                                 -> !s32i>>>,
+                                !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %7 = cir.call %6(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+                            !cir.ptr<!rec_C>) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr,
+    I64Attr:$index);
+
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -3563,6 +3611,88 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
     `cir.fabs` computes the absolute value of a floating-point operand
     and returns a result of the same type, ignoring floating-point
     exceptions. It does not set `errno`.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Variadic Operations
+//===----------------------------------------------------------------------===//
+
+def CIR_VAStartOp : CIR_Op<"va_start"> {
+  let summary = "Starts a variable argument list";
+  let description = [{
+    The cir.va_start operation models the C/C++ va_start macro by
+    initializing a variable argument list at the given va_list storage
+    location.
+
+    The first operand must be a pointer to the target's `va_list`
+    representation. This operation has no results and produces its effect by
+    mutating the storage referenced by the pointer operand. The second operand
+    must be an integer value that contains the expected number of arguments in
+    that list.
+
+    Each `cir.va_start` must be paired with a corresponding `cir.va_end`
+    on the same logical `va_list` object along all control-flow paths. After
+    `cir.va_end`, the `va_list` must not be accessed unless reinitialized
+    with another `cir.va_start`.
+
+    Lowering maps this to the LLVM intrinsic `llvm.va_start`, passing the
+    appropriately decayed pointer to the underlying `va_list` storage.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast(array_to_ptrdecay, %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
+        !cir.ptr<!rec___va_list_tag>
+    %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
+    ```
+  }];
+  let arguments = (ins
+    CIR_PointerType:$arg_list,
+    CIR_AnyFundamentalIntType:$count
+  );
+
+  let assemblyFormat = [{
+    $arg_list $count attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VAEndOp : CIR_Op<"va_end"> {
+  let summary = "Ends a variable argument list";
+  let description = [{
+    The `cir.va_end` operation models the C/C++ va_end macro by finalizing
+    and cleaning up a variable argument list previously initialized with
+    `cir.va_start`.
+
+    The operand must be a pointer to the target's `va_list` representation.
+    This operation has no results and produces its effect by mutating the
+    storage referenced by the pointer operand.
+
+    `cir.va_end` must only be called after a matching `cir.va_start` on the
+    same `va_list` along all control-flow paths. After `cir.va_end`, the
+    `va_list` is invalid and must not be accessed unless reinitialized.
+
+    Lowering typically maps this to the LLVM intrinsic `llvm.va_end`,
+    passing the appropriately decayed pointer to the underlying `va_list`
+    storage.
+
+    Example:
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast(array_to_ptrdecay, %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
+        !cir.ptr<!rec___va_list_tag>
+    cir.va_end %p : !cir.ptr<!rec___va_list_tag>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$arg_list);
+
+  let assemblyFormat = [{
+    $arg_list attr-dict `:` type(operands)
   }];
 }
 

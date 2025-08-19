@@ -69,6 +69,10 @@ public:
 
   cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *rd,
                                 CharUnits vptrOffset) override;
+  CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &cgf,
+                                         clang::GlobalDecl gd, Address thisAddr,
+                                         mlir::Type ty,
+                                         SourceLocation loc) override;
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
@@ -347,6 +351,50 @@ cir::GlobalOp CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *rd,
 
   cgm.setGVProperties(vtable, rd);
   return vtable;
+}
+
+CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
+    CIRGenFunction &cgf, clang::GlobalDecl gd, Address thisAddr, mlir::Type ty,
+    SourceLocation srcLoc) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::Location loc = cgf.getLoc(srcLoc);
+  cir::PointerType tyPtr = builder.getPointerTo(ty);
+  auto *methodDecl = cast<CXXMethodDecl>(gd.getDecl());
+  mlir::Value vtable = cgf.getVTablePtr(loc, thisAddr, methodDecl->getParent());
+
+  uint64_t vtableIndex = cgm.getItaniumVTableContext().getMethodVTableIndex(gd);
+  mlir::Value vfunc{};
+  if (cgf.shouldEmitVTableTypeCheckedLoad(methodDecl->getParent())) {
+    cgm.errorNYI(loc, "getVirtualFunctionPointer: emitVTableTypeCheckedLoad");
+  } else {
+    assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
+
+    mlir::Value vfuncLoad;
+    if (cgm.getItaniumVTableContext().isRelativeLayout()) {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
+      cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
+    } else {
+      auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
+          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
+      vfuncLoad = builder.createAlignedLoad(
+          loc, vtableSlotPtr, cgf.getPointerAlign().getQuantity());
+    }
+
+    // Add !invariant.load md to virtual function load to indicate that
+    // function didn't change inside vtable.
+    // It's safe to add it without -fstrict-vtable-pointers, but it would not
+    // help in devirtualization because it will only matter if we will have 2
+    // the same virtual function loads from the same vtable load, which won't
+    // happen without enabled devirtualization with -fstrict-vtable-pointers.
+    if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+        cgm.getCodeGenOpts().StrictVTablePointers) {
+      cgm.errorNYI(loc, "getVirtualFunctionPointer: strictVTablePointers");
+    }
+    vfunc = vfuncLoad;
+  }
+
+  CIRGenCallee callee(gd, vfunc.getDefiningOp());
+  return callee;
 }
 
 mlir::Value

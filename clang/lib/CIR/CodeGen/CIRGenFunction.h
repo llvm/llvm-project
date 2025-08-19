@@ -552,6 +552,11 @@ public:
   mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);
 
+  /// Returns whether we should perform a type checked load when loading a
+  /// virtual function for virtual calls to members of RD. This is generally
+  /// true when both vcall CFI and whole-program-vtables are enabled.
+  bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
+
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -947,7 +952,10 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
-  Address emitArrayToPointerDecay(const Expr *array);
+  Address emitArrayToPointerDecay(const Expr *e,
+                                  LValueBaseInfo *baseInfo = nullptr);
+
+  mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
@@ -1412,6 +1420,24 @@ public:
   mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
                                     const clang::Stmt *thenS,
                                     const clang::Stmt *elseS);
+
+  /// Build a "reference" to a va_list; this is either the address or the value
+  /// of the expression, depending on how va_list is defined.
+  Address emitVAListRef(const Expr *e);
+
+  /// Emits the start of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \param count The number of arguments in \c vaList
+  void emitVAStart(mlir::Value vaList, mlir::Value count);
+
+  /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  void emitVAEnd(mlir::Value vaList);
 
   /// ----------------------
   /// CIR build helpers
