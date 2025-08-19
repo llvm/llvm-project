@@ -236,15 +236,11 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
     return make_error<InvalidRSMetadataFormat>("RootConstants Element");
 
   mcdxbc::RootParameterHeader Header;
-  // The parameter offset doesn't matter here - we recalculate it during
-  // serialization  Header.ParameterOffset = 0;
-  Header.ParameterType = dxbc::RootParameterType::Constants32Bit;
 
   Expected<dxbc::ShaderVisibility> VisibilityOrErr =
       extractShaderVisibility(RootConstantNode, 1);
   if (auto E = VisibilityOrErr.takeError())
     return Error(std::move(E));
-  Header.ShaderVisibility = *VisibilityOrErr;
 
   dxbc::RTS0::v1::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
@@ -262,7 +258,10 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   else
     return make_error<InvalidRSMetadataValue>("Num32BitValues");
 
-  RSD.ParametersContainer.addParameter(Header, Constants);
+  // The parameter offset doesn't matter here - we recalculate it during
+  // serialization  Header.ParameterOffset = 0;
+  RSD.ParametersContainer.addParameter(dxbc::RootParameterType::Constants32Bit,
+                                       *VisibilityOrErr, Constants);
 
   return Error::success();
 }
@@ -278,16 +277,16 @@ Error MetadataParser::parseRootDescriptors(
   if (RootDescriptorNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("Root Descriptor Element");
 
-  mcdxbc::RootParameterHeader Header;
+  dxbc::RootParameterType Type;
   switch (ElementKind) {
   case RootSignatureElementKind::SRV:
-    Header.ParameterType = dxbc::RootParameterType::SRV;
+    Type = dxbc::RootParameterType::SRV;
     break;
   case RootSignatureElementKind::UAV:
-    Header.ParameterType = dxbc::RootParameterType::UAV;
+    Type = dxbc::RootParameterType::UAV;
     break;
   case RootSignatureElementKind::CBV:
-    Header.ParameterType = dxbc::RootParameterType::CBV;
+    Type = dxbc::RootParameterType::CBV;
     break;
   default:
     llvm_unreachable("invalid Root Descriptor kind");
@@ -298,7 +297,6 @@ Error MetadataParser::parseRootDescriptors(
       extractShaderVisibility(RootDescriptorNode, 1);
   if (auto E = VisibilityOrErr.takeError())
     return Error(std::move(E));
-  Header.ShaderVisibility = *VisibilityOrErr;
 
   dxbc::RTS0::v2::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
@@ -312,7 +310,7 @@ Error MetadataParser::parseRootDescriptors(
     return make_error<InvalidRSMetadataValue>("RegisterSpace");
 
   if (RSD.Version == 1) {
-    RSD.ParametersContainer.addParameter(Header, Descriptor);
+    RSD.ParametersContainer.addParameter(Type, *VisibilityOrErr, Descriptor);
     return Error::success();
   }
   assert(RSD.Version > 1);
@@ -322,7 +320,7 @@ Error MetadataParser::parseRootDescriptors(
   else
     return make_error<InvalidRSMetadataValue>("Root Descriptor Flags");
 
-  RSD.ParametersContainer.addParameter(Header, Descriptor);
+  RSD.ParametersContainer.addParameter(Type, *VisibilityOrErr, Descriptor);
   return Error::success();
 }
 
@@ -394,10 +392,8 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
       extractShaderVisibility(DescriptorTableNode, 1);
   if (auto E = VisibilityOrErr.takeError())
     return Error(std::move(E));
-  Header.ShaderVisibility = *VisibilityOrErr;
 
   mcdxbc::DescriptorTable Table;
-  Header.ParameterType = dxbc::RootParameterType::DescriptorTable;
 
   for (unsigned int I = 2; I < NumOperands; I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
@@ -409,7 +405,8 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
       return Err;
   }
 
-  RSD.ParametersContainer.addParameter(Header, Table);
+  RSD.ParametersContainer.addParameter(dxbc::RootParameterType::DescriptorTable,
+                                       *VisibilityOrErr, Table);
   return Error::success();
 }
 
@@ -546,7 +543,7 @@ Error MetadataParser::validateRootSignature(
 
   for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
 
-    switch (Info.Header.ParameterType) {
+    switch (Info.Type) {
     case dxbc::RootParameterType::Constants32Bit:
       break;
 

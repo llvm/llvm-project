@@ -9,6 +9,7 @@
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
@@ -35,7 +36,7 @@ size_t RootSignatureDesc::getSize() const {
       StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
   for (const RootParameterInfo &I : ParametersContainer) {
-    switch (I.Header.ParameterType) {
+    switch (I.Type) {
     case dxbc::RootParameterType::Constants32Bit:
       Size += sizeof(dxbc::RTS0::v1::RootConstants);
       break;
@@ -84,11 +85,9 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const RootParameterInfo &P : ParametersContainer) {
-    support::endian::write(BOS, P.Header.ParameterType,
-                           llvm::endianness::little);
-    support::endian::write(BOS, P.Header.ShaderVisibility,
-                           llvm::endianness::little);
+  for (const RootParameterInfo &I : ParametersContainer) {
+    support::endian::write(BOS, I.Type, llvm::endianness::little);
+    support::endian::write(BOS, I.Visibility, llvm::endianness::little);
 
     ParamsOffsets.push_back(writePlaceholder(BOS));
   }
@@ -96,8 +95,9 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   assert(NumParameters == ParamsOffsets.size());
   for (size_t I = 0; I < NumParameters; ++I) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-    const auto &[Type, Loc] = ParametersContainer.getTypeAndLocForParameter(I);
-    switch (Type) {
+    const auto Info = ParametersContainer.getInfo(I);
+    const uint32_t &Loc = Info.Location;
+    switch (Info.Type) {
     case dxbc::RootParameterType::Constants32Bit: {
       const dxbc::RTS0::v1::RootConstants &Constants =
           ParametersContainer.getConstant(Loc);

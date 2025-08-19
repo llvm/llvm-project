@@ -276,20 +276,24 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
 
-        mcdxbc::RootParameterHeader Header{
-            static_cast<dxbc::RootParameterType>(L.Header.Type),
-            static_cast<dxbc::ShaderVisibility>(L.Header.Visibility),
-            L.Header.Offset};
+        assert(dxbc::isValidParameterType(L.Header.Type) &&
+               "invalid DXContainer YAML");
+        assert(dxbc::isValidShaderVisibility(L.Header.Visibility) &&
+               "invalid DXContainer YAML");
+        dxbc::RootParameterType Type = dxbc::RootParameterType(L.Header.Type);
+        dxbc::ShaderVisibility Visibility =
+            dxbc::ShaderVisibility(L.Header.Visibility);
 
-        switch (Header.ParameterType) {
+        switch (Type) {
         case dxbc::RootParameterType::Constants32Bit: {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);
           dxbc::RTS0::v1::RootConstants Constants;
+
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
           Constants.ShaderRegister = ConstantYaml.ShaderRegister;
-          RS.ParametersContainer.addParameter(Header, Constants);
+          RS.ParametersContainer.addParameter(Type, Visibility, Constants);
           break;
         }
         case dxbc::RootParameterType::CBV:
@@ -303,7 +307,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
-          RS.ParametersContainer.addParameter(Header, Descriptor);
+          RS.ParametersContainer.addParameter(Type, Visibility, Descriptor);
           break;
         }
         case dxbc::RootParameterType::DescriptorTable: {
@@ -323,14 +327,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
               Range.Flags = R.getEncodedFlags();
             Table.Ranges.push_back(Range);
           }
-          RS.ParametersContainer.addParameter(Header, Table);
+          RS.ParametersContainer.addParameter(Type, Visibility, Table);
           break;
         }
-        default:
-          // Handling invalid parameter type edge case. We intentionally let
-          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
-          // for that to be used as a testing tool more effectively.
-          RS.ParametersContainer.addInvalidParameter(Header);
         }
       }
 

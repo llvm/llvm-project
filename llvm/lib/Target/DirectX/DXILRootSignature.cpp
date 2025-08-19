@@ -171,19 +171,15 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
        << "RootParametersOffset: " << RS.RootParameterOffset << "\n"
        << "NumParameters: " << RS.ParametersContainer.size() << "\n";
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
-      const auto &[Type, Loc] =
-          RS.ParametersContainer.getTypeAndLocForParameter(I);
-      const mcdxbc::RootParameterHeader Header =
-          RS.ParametersContainer.getHeader(I);
+      const auto &Info = RS.ParametersContainer.getInfo(I);
 
       OS << "- Parameter Type: "
-         << enumToStringRef(Type, dxbc::getRootParameterTypes()) << "\n"
+         << enumToStringRef(Info.Type, dxbc::getRootParameterTypes()) << "\n"
          << "  Shader Visibility: "
-         << enumToStringRef(Header.ShaderVisibility,
-                            dxbc::getShaderVisibility())
+         << enumToStringRef(Info.Visibility, dxbc::getShaderVisibility())
          << "\n";
-
-      switch (Type) {
+      const uint32_t &Loc = Info.Location;
+      switch (Info.Type) {
       case dxbc::RootParameterType::Constants32Bit: {
         const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
