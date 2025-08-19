@@ -1642,6 +1642,14 @@ def HasVendorXAndesVDot
       AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
                          "'XAndesVDot' (Andes Vector Dot Product Extension)">;
 
+def FeatureVendorXSMTVDot
+    : RISCVExtension<1, 0, "SpacemiT Vector Dot Product Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDot
+    : Predicate<"Subtarget->hasVendorXSMTVDot()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
+                         "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

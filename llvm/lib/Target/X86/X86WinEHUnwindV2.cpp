@@ -190,6 +190,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
         State = FunctionState::FinishedEpilog;
         break;
 
+      case X86::LEA64r:
       case X86::MOV64rr:
       case X86::ADD64ri32:
         if (State == FunctionState::InEpilog) {
@@ -210,7 +211,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
           HasStackDealloc = true;
         } else if (State == FunctionState::FinishedEpilog)
           return rejectCurrentFunctionInternalError(
-              MF, Mode, "Unexpected mov or add instruction after the epilog");
+              MF, Mode,
+              "Unexpected lea, mov or add instruction after the epilog");
         break;
 
       case X86::POP64r:
@@ -235,7 +237,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
                   MF, Mode,
                   "The epilog is popping more registers than the prolog "
                   "pushed");
-            if (PushedRegs[PushedRegs.size() - PoppedRegCount] != Reg)
+            if (PushedRegs[PushedRegs.size() - PoppedRegCount] != Reg.id())
               return rejectCurrentFunctionInternalError(
                   MF, Mode,
                   "The epilog is popping a registers in "
