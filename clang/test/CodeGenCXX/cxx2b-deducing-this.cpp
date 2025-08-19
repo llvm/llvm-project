@@ -274,9 +274,11 @@ struct S {
   }
 };
 
+// CHECK-LABEL: define {{.*}} void @_ZN8GH1540544mainEv
 void main() {
   S s{ 42 };
 
+  // CHECK: call {{.*}} i32 @_ZZN8GH1540541S5byvalEvENHUlT_E_clIS2_EEDaS1_
   if ( s.byval()() != 42)
     __builtin_abort();
 }
@@ -285,7 +287,9 @@ struct s {
   auto f() { return [*this](this auto) { return this; }; }
 };
 
+// CHECK-LABEL: define {{.*}} void @_ZN8GH1540541fEv
 void f() {
+  // CHECK: call {{.*}} ptr @_ZZN8GH1540541s1fEvENHUlT_E_clIS2_EEDaS1_
   s().f()();
 }
 }
