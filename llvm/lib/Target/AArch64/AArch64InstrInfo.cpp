@@ -7498,7 +7498,7 @@ static bool getGatherLanePattern(MachineInstr &Root,
   // limit.
   auto MBBItr = Root.getIterator();
   unsigned RemainingSteps = GatherOptSearchLimit;
-  SmallSet<const MachineInstr *, 16> RemainingLoadInstrs;
+  SmallPtrSet<const MachineInstr *, 16> RemainingLoadInstrs;
   RemainingLoadInstrs.insert(LoadInstrs.begin(), LoadInstrs.end());
   const MachineBasicBlock *MBB = Root.getParent();
 
