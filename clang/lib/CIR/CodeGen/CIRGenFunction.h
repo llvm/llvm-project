@@ -452,7 +452,8 @@ public:
     }
   };
 
-  ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const MemberExpr *me);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
