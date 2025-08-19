@@ -11,9 +11,12 @@ int main(int argc, char **argv) {
   enum Enum { kZero, kOne } enum_one = kOne;
 
   struct BitFieldStruct {
-    uint16_t a : 10;
+    char a : 4;
+    int b : 32;
+    unsigned int c : 32;
+    uint64_t d : 48;
   };
-  BitFieldStruct bf = {7};
+  BitFieldStruct bitfield = {1, 2, 3, 4};
 
   return 0; // Set a breakpoint here
 }

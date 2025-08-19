@@ -57,12 +57,12 @@ ArrayToPointerConversion(lldb::ValueObjectSP valobj,
       /* do_deref */ false);
 }
 
-static llvm::Expected<lldb::ValueObjectSP>
-UnaryConversion(lldb::ValueObjectSP valobj,
-                std::shared_ptr<ExecutionContextScope> ctx) {
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::UnaryConversion(lldb::ValueObjectSP valobj) {
   // Perform usual conversions for unary operators. At the moment this includes
   // array-to-pointer and the integral promotion for eligible types.
-  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU(ctx);
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
   CompilerType in_type = valobj->GetCompilerType();
@@ -79,28 +79,37 @@ UnaryConversion(lldb::ValueObjectSP valobj,
       CompilerType int_type = GetBasicType(*type_system, lldb::eBasicTypeInt);
       CompilerType uint_type =
           GetBasicType(*type_system, lldb::eBasicTypeUnsignedInt);
-      llvm::Expected<uint64_t> int_bit_size = int_type.GetBitSize(ctx.get());
+      llvm::Expected<uint64_t> int_bit_size =
+          int_type.GetBitSize(m_exe_ctx_scope.get());
       if (!int_bit_size)
         return int_bit_size.takeError();
-      llvm::Expected<uint64_t> uint_bit_size = uint_type.GetBitSize(ctx.get());
+      llvm::Expected<uint64_t> uint_bit_size =
+          uint_type.GetBitSize(m_exe_ctx_scope.get());
       if (!uint_bit_size)
         return int_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
           (in_type.IsSigned() && bitfield_size == *int_bit_size))
-        valobj = valobj->CastToBasicType(int_type);
-      else if (bitfield_size <= *uint_bit_size)
-        valobj = valobj->CastToBasicType(uint_type);
+        return valobj->CastToBasicType(int_type);
+      if (bitfield_size <= *uint_bit_size)
+        return valobj->CastToBasicType(uint_type);
+      // Re-create as a const value with the same underlying type
+      Scalar scalar;
+      bool resolved = valobj->ResolveValue(scalar);
+      if (!resolved)
+        return llvm::createStringError("invalid scalar value");
+      return ValueObject::CreateValueObjectFromScalar(m_target, scalar, in_type,
+                                                      "result");
     }
   }
 
   if (in_type.IsArrayType())
-    valobj = ArrayToPointerConversion(valobj, ctx);
+    valobj = ArrayToPointerConversion(valobj, m_exe_ctx_scope);
 
   if (valobj->GetCompilerType().IsInteger() ||
       valobj->GetCompilerType().IsUnscopedEnumerationType()) {
     llvm::Expected<CompilerType> promoted_type =
         type_system.get()->DoIntegralPromotion(valobj->GetCompilerType(),
-                                               ctx.get());
+                                               m_exe_ctx_scope.get());
     if (!promoted_type)
       return promoted_type.takeError();
     if (!promoted_type->CompareTypes(valobj->GetCompilerType()))
@@ -299,8 +308,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
     return value;
   }
   case UnaryOpKind::Minus: {
-    llvm::Expected<lldb::ValueObjectSP> conv_op =
-        UnaryConversion(operand, m_exe_ctx_scope);
+    llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
     if (!conv_op)
       return conv_op;
     operand = *conv_op;
@@ -324,8 +332,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
     break;
   }
   case UnaryOpKind::Plus: {
-    llvm::Expected<lldb::ValueObjectSP> conv_op =
-        UnaryConversion(operand, m_exe_ctx_scope);
+    llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
     if (!conv_op)
       return conv_op;
     operand = *conv_op;

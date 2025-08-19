@@ -35,7 +35,11 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("+array", type="int *")
         self.expect_var_path("+enum_one", value="1")
         self.expect_var_path("-enum_one", value="-1")
-        self.expect_var_path("+bf.a", value="7")
+        self.expect_var_path("-bitfield.a", value="-1", type="int")
+        self.expect_var_path("+bitfield.a", value="1", type="int")
+        self.expect_var_path("+bitfield.b", value="2", type="int")
+        self.expect_var_path("+bitfield.c", value="3", type="unsigned int")
+        self.expect_var_path("+bitfield.d", value="4", type="uint64_t")
         self.expect_var_path("+p", type="int *")
         self.expect(
             "frame var -- '-p'",
