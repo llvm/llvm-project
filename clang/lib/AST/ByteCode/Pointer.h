@@ -804,6 +804,7 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
+  friend class Program;
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {

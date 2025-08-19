@@ -1428,3 +1428,10 @@ namespace OnePastEndCmp {
   constexpr const int *q = &s.a + 1;
   static_assert(p != q, "");
 }
+
+namespace ExternRedecl {
+  extern const int a;
+  constexpr const int *p = &a;
+  constexpr int a = 10;
+  static_assert(*p == 10, "");
+}
