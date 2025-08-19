@@ -61,7 +61,7 @@ struct PtxLowering
 
     op.getAsmValues(rewriter, asmValues);
     for (auto &[asmValue, modifier] : asmValues) {
-      LDBG() << asmValue << "\t Modifier : " << &modifier;
+      LDBG() << asmValue << "\t Modifier : " << modifier;
       generator.insertValue(asmValue, modifier);
     }
 
