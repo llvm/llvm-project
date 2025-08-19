@@ -30,8 +30,13 @@ static std::string getCASPluginPath() {
       sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
   llvm::SmallString<256> PathBuf(sys::path::parent_path(
       sys::path::parent_path(sys::path::parent_path(Executable))));
+#ifndef _WIN32
   std::string LibName = "libCASPluginTest";
   sys::path::append(PathBuf, "lib", LibName + LLVM_PLUGIN_EXT);
+#else
+  std::string LibName = "CASPluginTest";
+  sys::path::append(PathBuf, "bin", LibName + LLVM_PLUGIN_EXT);
+#endif
   return std::string(PathBuf);
 }
 

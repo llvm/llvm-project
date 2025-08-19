@@ -131,7 +131,6 @@ private:
 template <typename T> struct AsyncValue {
   Expected<std::optional<T>> take() { return std::move(Value); }
 
-  AsyncValue() : Value(std::nullopt) {}
   AsyncValue(Error &&E) : Value(std::move(E)) {}
   AsyncValue(T &&V) : Value(std::move(V)) {}
   AsyncValue(std::nullopt_t) : Value(std::nullopt) {}
