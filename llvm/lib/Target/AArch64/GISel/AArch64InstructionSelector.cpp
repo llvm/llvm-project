@@ -2278,6 +2278,23 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     }
     return false;
   }
+  case TargetOpcode::G_INTRINSIC: {
+    unsigned IntrinID = cast<GIntrinsic>(I).getIntrinsicID();
+    switch (IntrinID) {
+    default:
+      break;
+    case Intrinsic::aarch64_neon_fcvtzs: {
+      const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+      if (DstTy != LLT::scalar(16))
+        return false;
+      // Remove the no longer needed intrinsic ID operand
+      I.removeOperand(1);
+      I.setDesc(TII.get(TargetOpcode::G_FPTOSI_SAT));
+      return true;
+    }
+    }
+    return false;
+  }
   default:
     return false;
   }

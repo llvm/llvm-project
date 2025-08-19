@@ -1289,6 +1289,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i16, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i16, Custom);
+
+      // f16 -> i16 conversion intrinsics need custom lowering
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
     } else {
       // when AArch64 doesn't have fullfp16 support, promote the input
       // to i32 first.
@@ -28236,6 +28239,16 @@ void AArch64TargetLowering::ReplaceNodeResults(
       SDLoc DL(N);
       auto V = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, N->ops());
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+      return;
+    }
+    case Intrinsic::aarch64_neon_fcvtzs: {
+      if (VT.getScalarType() != MVT::i16)
+        return;
+
+      SDLoc DL(N);
+      auto CVT = DAG.getNode(ISD::FP_TO_SINT_SAT, DL, VT, N->getOperand(1),
+                             DAG.getValueType(MVT::i16));
+      Results.push_back(CVT);
       return;
     }
     }
