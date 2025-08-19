@@ -101,3 +101,39 @@ void after_unreachable() {
 // OGCG:   unreachable
 // OGCG: label:
 // OGCG:   ret void
+
+void labelWithoutMatch() {
+end:
+  return;
+}
+// CIR:  cir.func no_proto dso_local @labelWithoutMatch
+// CIR:    cir.label "end"
+// CIR:    cir.return
+// CIR:  }
+
+// OGCG: define dso_local void @labelWithoutMatch
+// OGCG:   br label %end
+// OGCG: end:
+// OGCG:   ret void
+
+struct S {};
+struct S get();
+void bar(struct S);
+
+void foo() {
+  {
+    label:
+      bar(get());
+  }
+}
+
+// CIR: cir.func no_proto dso_local @foo
+// CIR:   cir.scope {
+// CIR:     cir.label "label"
+// CIR:     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+
+// OGCG: define dso_local void @foo()
+// OGCG:   %agg.tmp = alloca %struct.S, align 1
+// OGCG:   %undef.agg.tmp = alloca %struct.S, align 1
+// OGCG:   br label %label
+// OGCG: label:

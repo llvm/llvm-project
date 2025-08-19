@@ -824,7 +824,14 @@ namespace llvm {
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step) {
   assert(Ty->isIntegerTy() && "Expected an integer step");
-  return B.CreateElementCount(Ty, VF.multiplyCoefficientBy(Step));
+  ElementCount VFxStep = VF.multiplyCoefficientBy(Step);
+  assert(isPowerOf2_64(VF.getKnownMinValue()) && "must pass power-of-2 VF");
+  if (VF.isScalable() && isPowerOf2_64(Step)) {
+    return B.CreateShl(
+        B.CreateVScale(Ty),
+        ConstantInt::get(Ty, Log2_64(VFxStep.getKnownMinValue())), "", true);
+  }
+  return B.CreateElementCount(Ty, VFxStep);
 }
 
 /// Return the runtime value for VF.
@@ -2298,7 +2305,10 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
   // Reuse existing vector loop preheader for TC checks.
   // Note that new preheader block is generated for vector loop.
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+  IRBuilder<InstSimplifyFolder> Builder(
+      TCCheckBlock->getContext(),
+      InstSimplifyFolder(TCCheckBlock->getDataLayout()));
+  Builder.SetInsertPoint(TCCheckBlock->getTerminator());
 
   // If tail is to be folded, vector loop takes care of all iterations.
   Value *Count = getTripCount();
@@ -2310,7 +2320,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       return createStepForVF(Builder, CountTy, VF, UF);
 
     Value *MinProfTC =
-        createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
+        Builder.CreateElementCount(CountTy, MinProfitableTripCount);
     if (!VF.isScalable())
       return MinProfTC;
     return Builder.CreateBinaryIntrinsic(
@@ -2492,7 +2502,6 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // to the scalar loop.
   emitIterationCountCheck(LoopScalarPreHeader);
 
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
   return LoopVectorPreHeader;
 }
@@ -2624,19 +2633,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
   fixNonInductionPHIs(State);
 
-  // After vectorization, the exit blocks of the original loop will have
-  // additional predecessors. Invalidate SCEVs for the exit phis in case SE
-  // looked through single-entry phis.
-  SmallVector<BasicBlock *> ExitBlocks;
-  OrigLoop->getExitBlocks(ExitBlocks);
-  for (BasicBlock *Exit : ExitBlocks)
-    for (PHINode &PN : Exit->phis())
-      PSE.getSE()->forgetLcssaPhiWithNewPredecessor(OrigLoop, &PN);
-
-  // Forget the original basic block.
-  PSE.getSE()->forgetLoop(OrigLoop);
-  PSE.getSE()->forgetBlockAndLoopDispositions();
-
   // Don't apply optimizations below when no (vector) loop remains, as they all
   // require one at the moment.
   VPBasicBlock *HeaderVPBB =
@@ -2678,11 +2674,8 @@ void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
       PHINode *NewPhi = cast<PHINode>(State.get(VPPhi));
       // Make sure the builder has a valid insert point.
       Builder.SetInsertPoint(NewPhi);
-      for (unsigned Idx = 0; Idx < VPPhi->getNumIncoming(); ++Idx) {
-        VPValue *Inc = VPPhi->getIncomingValue(Idx);
-        const VPBasicBlock *VPBB = VPPhi->getIncomingBlock(Idx);
+      for (const auto &[Inc, VPBB] : VPPhi->incoming_values_and_blocks())
         NewPhi->addIncoming(State.get(Inc), State.CFG.VPBB2IRBB[VPBB]);
-      }
     }
   }
 }
@@ -3100,6 +3093,12 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
          "Masked interleave-groups for predicated accesses are not enabled.");
 
   if (Group->isReverse())
+    return false;
+
+  // TODO: Support interleaved access that requires a gap mask for scalable VFs.
+  bool NeedsMaskForGaps = LoadAccessWithGapsRequiresEpilogMasking ||
+                          StoreAccessWithGapsRequiresMasking;
+  if (VF.isScalable() && NeedsMaskForGaps)
     return false;
 
   auto *Ty = getLoadStoreType(I);
@@ -5304,13 +5303,13 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   // VF.getKnownMinValue() - 1 from a scalable vector. This does not represent
   // the actual generated code, which involves extracting the last element of
   // a scalable vector where the lane to extract is unknown at compile time.
-  return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
-         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
-                             CostKind) +
-         (IsLoopInvariantStoreValue
-              ? 0
-              : TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
-                                       CostKind, VF.getKnownMinValue() - 1));
+  InstructionCost Cost =
+      TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
+      TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS, CostKind);
+  if (!IsLoopInvariantStoreValue)
+    Cost += TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
+                                                 VectorTy, CostKind, 0);
+  return Cost;
 }
 
 InstructionCost
@@ -7261,8 +7260,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, BestVPlan);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
@@ -7299,6 +7299,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
   VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+  VPlanTransforms::simplifyRecipes(BestVPlan);
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7338,10 +7339,27 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BasicBlock *EntryBB =
       cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
+  replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
+                        State.CFG.PrevBB->getSingleSuccessor());
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
          "final VPlan is invalid");
+
+  // After vectorization, the exit blocks of the original loop will have
+  // additional predecessors. Invalidate SCEVs for the exit phis in case SE
+  // looked through single-entry phis.
+  ScalarEvolution &SE = *PSE.getSE();
+  for (VPIRBasicBlock *Exit : BestVPlan.getExitBlocks()) {
+    if (Exit->getNumPredecessors() == 0)
+      continue;
+    for (VPRecipeBase &PhiR : Exit->phis())
+      SE.forgetLcssaPhiWithNewPredecessor(
+          OrigLoop, cast<PHINode>(&cast<VPIRPhi>(PhiR).getInstruction()));
+  }
+  // Forget the original loop and block dispositions.
+  SE.forgetLoop(OrigLoop);
+  SE.forgetBlockAndLoopDispositions();
 
   ILV.printDebugTracesAtStart();
 
@@ -7469,7 +7487,6 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.MainLoopIterationCountCheck =
       emitIterationCountCheck(LoopScalarPreHeader, false);
 
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -7604,7 +7621,6 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
       Phi->removeIncomingValue(MemCheckBlock);
   }
 
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -8102,7 +8118,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // extends are intended to be lowered along with the reduction itself.
 
   // Build up a set of partial reduction ops for efficient use checking.
-  SmallSet<User *, 4> PartialReductionOps;
+  SmallPtrSet<User *, 4> PartialReductionOps;
   for (const auto &[PartialRdx, _] : PartialReductionChains)
     PartialReductionOps.insert(PartialRdx.ExtendUser);
 

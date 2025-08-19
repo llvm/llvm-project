@@ -4692,6 +4692,9 @@ public:
     unsigned NumExceptionType : 10;
 
     LLVM_PREFERRED_TYPE(bool)
+    unsigned HasExtraAttributeInfo : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasArmTypeAttributes : 1;
 
     LLVM_PREFERRED_TYPE(bool)
@@ -4699,14 +4702,26 @@ public:
     unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
-        : NumExceptionType(0), HasArmTypeAttributes(false),
-          EffectsHaveConditions(false), NumFunctionEffects(0) {}
+        : NumExceptionType(0), HasExtraAttributeInfo(false),
+          HasArmTypeAttributes(false), EffectsHaveConditions(false),
+          NumFunctionEffects(0) {}
+  };
+
+  /// A holder for extra information from attributes which aren't part of an
+  /// \p AttributedType.
+  struct alignas(void *) FunctionTypeExtraAttributeInfo {
+    /// A CFI "salt" that differentiates functions with the same prototype.
+    StringRef CFISalt;
+
+    operator bool() const { return !CFISalt.empty(); }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddString(CFISalt); }
   };
 
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
   /// of function type attributes that can be set on function types, including
   /// function pointers.
-  enum AArch64SMETypeAttributes : unsigned {
+  enum AArch64SMETypeAttributes : uint16_t {
     SME_NormalFunction = 0,
     SME_PStateSMEnabledMask = 1 << 0,
     SME_PStateSMCompatibleMask = 1 << 1,
@@ -4736,11 +4751,11 @@ public:
   };
 
   static ArmStateValue getArmZAState(unsigned AttrBits) {
-    return (ArmStateValue)((AttrBits & SME_ZAMask) >> SME_ZAShift);
+    return static_cast<ArmStateValue>((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
   static ArmStateValue getArmZT0State(unsigned AttrBits) {
-    return (ArmStateValue)((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
+    return static_cast<ArmStateValue>((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
   }
 
   /// A holder for Arm type attributes as described in the Arm C/C++
@@ -4749,6 +4764,7 @@ public:
   struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
+    LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
@@ -5230,6 +5246,7 @@ class FunctionProtoType final
       private llvm::TrailingObjects<
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
+          FunctionType::FunctionTypeExtraAttributeInfo,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
           FunctionEffect, EffectConditionExpr> {
@@ -5319,19 +5336,22 @@ public:
   /// the various bits of extra information about a function prototype.
   struct ExtProtoInfo {
     FunctionType::ExtInfo ExtInfo;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Variadic : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasTrailingReturn : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CFIUncheckedCallee : 1;
-    unsigned AArch64SMEAttributes : 9;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
     SourceLocation EllipsisLoc;
     FunctionEffectsRef FunctionEffects;
+    FunctionTypeExtraAttributeInfo ExtraAttributeInfo;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Variadic : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingReturn : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CFIUncheckedCallee : 1;
+    LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
+    unsigned AArch64SMEAttributes : 9;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
@@ -5356,11 +5376,16 @@ public:
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
              requiresFunctionProtoTypeArmAttributes() ||
+             requiresFunctionProtoTypeExtraAttributeInfo() ||
              !FunctionEffects.empty();
     }
 
     bool requiresFunctionProtoTypeArmAttributes() const {
       return AArch64SMEAttributes != SME_NormalFunction;
+    }
+
+    bool requiresFunctionProtoTypeExtraAttributeInfo() const {
+      return static_cast<bool>(ExtraAttributeInfo);
     }
 
     void setArmSMEAttribute(AArch64SMETypeAttributes Kind, bool Enable = true) {
@@ -5386,6 +5411,11 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
     return hasExtraBitfields();
+  }
+
+  unsigned
+  numTrailingObjects(OverloadToken<FunctionTypeExtraAttributeInfo>) const {
+    return hasExtraAttributeInfo();
   }
 
   unsigned numTrailingObjects(OverloadToken<ExceptionType>) const {
@@ -5480,6 +5510,12 @@ private:
 
   }
 
+  bool hasExtraAttributeInfo() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasExtraAttributeInfo;
+  }
+
   bool hasArmTypeAttributes() const {
     return FunctionTypeBits.HasExtraBitfields &&
            getTrailingObjects<FunctionTypeExtraBitfields>()
@@ -5513,6 +5549,7 @@ public:
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
+    EPI.ExtraAttributeInfo = getExtraAttributeInfo();
     EPI.AArch64SMEAttributes = getAArch64SMEAttributes();
     EPI.FunctionEffects = getFunctionEffects();
     return EPI;
@@ -5698,6 +5735,13 @@ public:
     if (!hasExtParameterInfos())
       return nullptr;
     return getTrailingObjects<ExtParameterInfo>();
+  }
+
+  /// Return the extra attribute information.
+  FunctionTypeExtraAttributeInfo getExtraAttributeInfo() const {
+    if (hasExtraAttributeInfo())
+      return *getTrailingObjects<FunctionTypeExtraAttributeInfo>();
+    return FunctionTypeExtraAttributeInfo();
   }
 
   /// Return a bitmask describing the SME attributes on the function type, see

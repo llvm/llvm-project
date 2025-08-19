@@ -108,6 +108,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
+  case PPC::BI__builtin_ppc_bcdsetsign:
   case PPC::BI__builtin_ppc_national2packed:
   case PPC::BI__builtin_ppc_packed2zoned:
   case PPC::BI__builtin_ppc_zoned2packed:
