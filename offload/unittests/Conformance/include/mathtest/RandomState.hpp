@@ -40,7 +40,7 @@ public:
   explicit constexpr RandomState(SeedTy Seed) noexcept
       : State(splitMix64(Seed.Value)) {}
 
-  [[nodiscard]] inline uint64_t next() noexcept {
+  inline uint64_t next() noexcept {
     uint64_t X = State;
     X ^= X >> 12;
     X ^= X << 25;
