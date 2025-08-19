@@ -22592,10 +22592,15 @@ ExprResult SemaOpenMP::ActOnOpenMPDeclareMapperDirectiveVarDecl(
 }
 
 void SemaOpenMP::ActOnOpenMPIteratorVarDecl(VarDecl *VD) {
+  bool IsGlobalVar =
+      !VD->isLocalVarDecl() && VD->getDeclContext()->isTranslationUnit();
   if (DSAStack->getDeclareMapperVarRef()) {
-    if (!VD->isLocalVarDecl() && VD->getDeclContext()->isTranslationUnit())
+    if (IsGlobalVar)
       SemaRef.Consumer.HandleTopLevelDecl(DeclGroupRef(VD));
     DSAStack->addIteratorVarDecl(VD);
+  } else {
+    // Currently, only declare mapper handles global-scope iterator vars; 
+    assert(!IsGlobalVar && "Only declare mapper handles TU-scope iterators.");
   }
 }
 
