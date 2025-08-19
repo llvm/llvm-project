@@ -31,12 +31,12 @@ entry:
 define zeroext i1 @test2(ptr %s_a, ptr %s_b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
-; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
+; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 28
-; CHECK-NEXT:    sub 3, 4, 3
-; CHECK-NEXT:    not 3, 3
+; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
+; CHECK-NEXT:    not 4, 4
+; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    rldicl 3, 3, 1, 63
 ; CHECK-NEXT:    blr
 entry:
@@ -76,8 +76,8 @@ define zeroext i1 @test4(ptr %s_a, ptr %s_b) local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
 ; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 28
-; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    not 3, 3
+; CHECK-NEXT:    add 3, 4, 3
 ; CHECK-NEXT:    rldicl 3, 3, 1, 63
 ; CHECK-NEXT:    blr
 entry:

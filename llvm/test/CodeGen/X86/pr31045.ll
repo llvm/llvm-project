@@ -21,11 +21,11 @@ define void @_Z1av() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movl struct_obj_3+8(%rip), %eax
 ; CHECK-NEXT:    movzbl var_46(%rip), %ecx
 ; CHECK-NEXT:    movzbl var_49(%rip), %edx
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    addl %ecx, %edx
 ; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    addl %eax, %eax
+; CHECK-NEXT:    orl $253, %eax
+; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movw %ax, struct_obj_12+5(%rip)
 ; CHECK-NEXT:    movb $0, var_163(%rip)

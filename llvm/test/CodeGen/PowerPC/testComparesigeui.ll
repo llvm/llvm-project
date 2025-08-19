@@ -12,8 +12,8 @@
 define dso_local signext i32 @test_igeui(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_igeui:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sub r3, r3, r4
 ; CHECK-NEXT:    not r3, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    blr
 entry:
@@ -64,9 +64,9 @@ entry:
 define dso_local void @test_igeui_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_igeui_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    not r3, r3
+; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
