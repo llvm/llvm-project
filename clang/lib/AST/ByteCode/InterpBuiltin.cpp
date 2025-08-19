@@ -2474,15 +2474,30 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
     });
 
     APSInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_elementwise_add_sat:
       Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
                                        : Elem1.uadd_sat(Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
+      break;
+    case Builtin::BI__builtin_elementwise_sub_sat:
       Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
                                        : Elem1.usub_sat(Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else {
+      break;
+    case clang::X86::BI__builtin_ia32_pmulhuw128:
+    case clang::X86::BI__builtin_ia32_pmulhuw256:
+    case clang::X86::BI__builtin_ia32_pmulhuw512:
+      Result = APSInt(llvm::APIntOps::mulhu(Elem1, Elem2),
+                      /*isUnsigned=*/true);
+      break;
+    case clang::X86::BI__builtin_ia32_pmulhw128:
+    case clang::X86::BI__builtin_ia32_pmulhw256:
+    case clang::X86::BI__builtin_ia32_pmulhw512:
+      Result = APSInt(llvm::APIntOps::mulhs(Elem1, Elem2),
+                      /*isUnsigned=*/false);
+      break;
+    default:
       llvm_unreachable("Wrong builtin ID");
     }
 
@@ -2976,6 +2991,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
+  case clang::X86::BI__builtin_ia32_pmulhuw128:
+  case clang::X86::BI__builtin_ia32_pmulhuw256:
+  case clang::X86::BI__builtin_ia32_pmulhuw512:
+  case clang::X86::BI__builtin_ia32_pmulhw128:
+  case clang::X86::BI__builtin_ia32_pmulhw256:
+  case clang::X86::BI__builtin_ia32_pmulhw512:
     return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_max:

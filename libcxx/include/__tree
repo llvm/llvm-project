@@ -582,8 +582,10 @@ class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
+private:
   __node_value_type __value_;
 
+public:
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
 
   ~__tree_node()                             = delete;
@@ -614,7 +616,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__value_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value()));
     if (__p)
       __alloc_traits::deallocate(__na_, __p, 1);
   }
@@ -650,8 +652,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __tree_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__value_; }
-  _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__get_np()->__value_); }
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    return pointer_traits<pointer>::pointer_to(__get_np()->__get_value());
+  }
 
   _LIBCPP_HIDE_FROM_ABI __tree_iterator& operator++() {
     __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
@@ -712,8 +716,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator(__non_const_iterator __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__value_; }
-  _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__get_np()->__value_); }
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    return pointer_traits<pointer>::pointer_to(__get_np()->__get_value());
+  }
 
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator& operator++() {
     __ptr_ = std::__tree_next_iter<__end_node_pointer>(static_cast<__node_base_pointer>(__ptr_));
@@ -1226,7 +1232,7 @@ private:
 
       auto __right = __ptr->__right_;
 
-      __node_traits::destroy(__alloc_, std::addressof(__ptr->__value_));
+      __node_traits::destroy(__alloc_, std::addressof(__ptr->__get_value()));
       __node_traits::deallocate(__alloc_, __ptr, 1);
 
       (*this)(static_cast<__node_pointer>(__right));
@@ -1245,7 +1251,7 @@ private:
     if (!__src)
       return nullptr;
 
-    __node_holder __new_node = __construct_node(__src->__value_);
+    __node_holder __new_node = __construct_node(__src->__get_value());
 
     unique_ptr<__node, __tree_deleter> __left(
         __copy_construct_tree(static_cast<__node_pointer>(__src->__left_)), __node_alloc_);
@@ -1276,7 +1282,7 @@ private:
       return nullptr;
     }
 
-    __assign_value(__dest->__value_, __src->__value_);
+    __assign_value(__dest->__get_value(), __src->__get_value());
     __dest->__is_black_ = __src->__is_black_;
 
     // If we already have a left node in the destination tree, reuse it and copy-assign recursively
@@ -1417,7 +1423,7 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _
   if (__size_ != 0) {
     _DetachedTreeCache __cache(this);
     for (; __cache.__get() && __first != __last; ++__first) {
-      __assign_value(__cache.__get()->__value_, *__first);
+      __assign_value(__cache.__get()->__get_value(), *__first);
       __node_insert_multi(__cache.__get());
       __cache.__advance();
     }
@@ -1509,13 +1515,13 @@ void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, false_type) {
     if (__size_ != 0) {
       _DetachedTreeCache __cache(this);
       while (__cache.__get() != nullptr && __t.__size_ != 0) {
-        __assign_value(__cache.__get()->__value_, std::move(__t.remove(__t.begin())->__value_));
+        __assign_value(__cache.__get()->__get_value(), std::move(__t.remove(__t.begin())->__get_value()));
         __node_insert_multi(__cache.__get());
         __cache.__advance();
       }
     }
     while (__t.__size_ != 0) {
-      __insert_multi_from_orphaned_node(__e, std::move(__t.remove(__t.begin())->__value_));
+      __insert_multi_from_orphaned_node(__e, std::move(__t.remove(__t.begin())->__get_value()));
     }
   }
 }
@@ -1583,7 +1589,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_low(__end_node_pointer& __parent,
   __node_pointer __nd = __root();
   if (__nd != nullptr) {
     while (true) {
-      if (value_comp()(__nd->__value_, __v)) {
+      if (value_comp()(__nd->__get_value(), __v)) {
         if (__nd->__right_ != nullptr)
           __nd = static_cast<__node_pointer>(__nd->__right_);
         else {
@@ -1613,7 +1619,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_high(__end_node_pointer& __parent
   __node_pointer __nd = __root();
   if (__nd != nullptr) {
     while (true) {
-      if (value_comp()(__v, __nd->__value_)) {
+      if (value_comp()(__v, __nd->__get_value())) {
         if (__nd->__left_ != nullptr)
           __nd = static_cast<__node_pointer>(__nd->__left_);
         else {
@@ -1676,7 +1682,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(__end_node_pointer& __parent, co
   __node_base_pointer* __nd_ptr = __root_ptr();
   if (__nd != nullptr) {
     while (true) {
-      if (value_comp()(__v, __nd->__value_)) {
+      if (value_comp()(__v, __nd->__get_value())) {
         if (__nd->__left_ != nullptr) {
           __nd_ptr = std::addressof(__nd->__left_);
           __nd     = static_cast<__node_pointer>(__nd->__left_);
@@ -1684,7 +1690,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(__end_node_pointer& __parent, co
           __parent = static_cast<__end_node_pointer>(__nd);
           return __parent->__left_;
         }
-      } else if (value_comp()(__nd->__value_, __v)) {
+      } else if (value_comp()(__nd->__get_value(), __v)) {
         if (__nd->__right_ != nullptr) {
           __nd_ptr = std::addressof(__nd->__right_);
           __nd     = static_cast<__node_pointer>(__nd->__right_);
@@ -1808,7 +1814,7 @@ typename __tree<_Tp, _Compare, _Allocator>::__node_holder
 __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+  __node_traits::construct(__na, std::addressof(__h->__get_value()), std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
@@ -1819,7 +1825,7 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
 __tree<_Tp, _Compare, _Allocator>::__emplace_unique_impl(_Args&&... __args) {
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_equal(__parent, __h->__value_);
+  __node_base_pointer& __child = __find_equal(__parent, __h->__get_value());
   __node_pointer __r           = static_cast<__node_pointer>(__child);
   bool __inserted              = false;
   if (__child == nullptr) {
@@ -1837,7 +1843,7 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique_impl(const_iterator __p
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
   __node_base_pointer __dummy;
-  __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __h->__value_);
+  __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __h->__get_value());
   __node_pointer __r           = static_cast<__node_pointer>(__child);
   if (__child == nullptr) {
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
@@ -1852,7 +1858,7 @@ typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__emplace_multi(_Args&&... __args) {
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf_high(__parent, __h->__value_);
+  __node_base_pointer& __child = __find_leaf_high(__parent, __h->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
   return iterator(static_cast<__node_pointer>(__h.release()));
 }
@@ -1863,7 +1869,7 @@ typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__emplace_hint_multi(const_iterator __p, _Args&&... __args) {
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__value_);
+  __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
   return iterator(static_cast<__node_pointer>(__h.release()));
 }
@@ -1876,7 +1882,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const value_type& __v, _
   __node_pointer __r           = static_cast<__node_pointer>(__child);
   bool __inserted              = false;
   if (__child == nullptr) {
-    __assign_value(__nd->__value_, __v);
+    __assign_value(__nd->__get_value(), __v);
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
     __r        = __nd;
     __inserted = true;
@@ -1888,7 +1894,7 @@ template <class _Tp, class _Compare, class _Allocator>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(__node_pointer __nd) {
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__value_);
+  __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
   return iterator(__nd);
 }
@@ -1897,7 +1903,7 @@ template <class _Tp, class _Compare, class _Allocator>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(const_iterator __p, __node_pointer __nd) {
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf(__p, __parent, __nd->__value_);
+  __node_base_pointer& __child = __find_leaf(__p, __parent, __nd->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
   return iterator(__nd);
 }
@@ -1924,7 +1930,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(_NodeHandle&& __n
 
   __node_pointer __ptr = __nh.__ptr_;
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_equal(__parent, __ptr->__value_);
+  __node_base_pointer& __child = __find_equal(__parent, __ptr->__get_value());
   if (__child != nullptr)
     return _InsertReturnType{iterator(static_cast<__node_pointer>(__child)), false, std::move(__nh)};
 
@@ -1943,7 +1949,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
   __node_pointer __ptr = __nh.__ptr_;
   __end_node_pointer __parent;
   __node_base_pointer __dummy;
-  __node_base_pointer& __child = __find_equal(__hint, __parent, __dummy, __ptr->__value_);
+  __node_base_pointer& __child = __find_equal(__hint, __parent, __dummy, __ptr->__get_value());
   __node_pointer __r           = static_cast<__node_pointer>(__child);
   if (__child == nullptr) {
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
@@ -1978,7 +1984,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merg
   for (typename _Tree::iterator __i = __source.begin(); __i != __source.end();) {
     __node_pointer __src_ptr = __i.__get_np();
     __end_node_pointer __parent;
-    __node_base_pointer& __child = __find_equal(__parent, __src_ptr->__value_);
+    __node_base_pointer& __child = __find_equal(__parent, __src_ptr->__get_value());
     ++__i;
     if (__child != nullptr)
       continue;
@@ -1995,7 +2001,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_multi(_NodeHandle&& __nh
     return end();
   __node_pointer __ptr = __nh.__ptr_;
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf_high(__parent, __ptr->__value_);
+  __node_base_pointer& __child = __find_leaf_high(__parent, __ptr->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
   __nh.__release_ptr();
   return iterator(__ptr);
@@ -2010,7 +2016,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_multi(const_iterator __h
 
   __node_pointer __ptr = __nh.__ptr_;
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf(__hint, __parent, __ptr->__value_);
+  __node_base_pointer& __child = __find_leaf(__hint, __parent, __ptr->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
   __nh.__release_ptr();
   return iterator(__ptr);
@@ -2024,7 +2030,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merg
   for (typename _Tree::iterator __i = __source.begin(); __i != __source.end();) {
     __node_pointer __src_ptr = __i.__get_np();
     __end_node_pointer __parent;
-    __node_base_pointer& __child = __find_leaf_high(__parent, __src_ptr->__value_);
+    __node_base_pointer& __child = __find_leaf_high(__parent, __src_ptr->__get_value());
     ++__i;
     __source.__remove_node_pointer(__src_ptr);
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__src_ptr));
@@ -2079,9 +2085,9 @@ typename __tree<_Tp, _Compare, _Allocator>::size_type
 __tree<_Tp, _Compare, _Allocator>::__count_unique(const _Key& __k) const {
   __node_pointer __rt = __root();
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__value_)) {
+    if (value_comp()(__k, __rt->__get_value())) {
       __rt = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__value_, __k))
+    } else if (value_comp()(__rt->__get_value(), __k))
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return 1;
@@ -2096,10 +2102,10 @@ __tree<_Tp, _Compare, _Allocator>::__count_multi(const _Key& __k) const {
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__value_)) {
+    if (value_comp()(__k, __rt->__get_value())) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__value_, __k))
+    } else if (value_comp()(__rt->__get_value(), __k))
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return std::distance(
@@ -2114,7 +2120,7 @@ template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__lower_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) {
   while (__root != nullptr) {
-    if (!value_comp()(__root->__value_, __v)) {
+    if (!value_comp()(__root->__get_value(), __v)) {
       __result = static_cast<__end_node_pointer>(__root);
       __root   = static_cast<__node_pointer>(__root->__left_);
     } else
@@ -2128,7 +2134,7 @@ template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare, _Allocator>::__lower_bound(
     const _Key& __v, __node_pointer __root, __end_node_pointer __result) const {
   while (__root != nullptr) {
-    if (!value_comp()(__root->__value_, __v)) {
+    if (!value_comp()(__root->__get_value(), __v)) {
       __result = static_cast<__end_node_pointer>(__root);
       __root   = static_cast<__node_pointer>(__root->__left_);
     } else
@@ -2142,7 +2148,7 @@ template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__upper_bound(const _Key& __v, __node_pointer __root, __end_node_pointer __result) {
   while (__root != nullptr) {
-    if (value_comp()(__v, __root->__value_)) {
+    if (value_comp()(__v, __root->__get_value())) {
       __result = static_cast<__end_node_pointer>(__root);
       __root   = static_cast<__node_pointer>(__root->__left_);
     } else
@@ -2156,7 +2162,7 @@ template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::const_iterator __tree<_Tp, _Compare, _Allocator>::__upper_bound(
     const _Key& __v, __node_pointer __root, __end_node_pointer __result) const {
   while (__root != nullptr) {
-    if (value_comp()(__v, __root->__value_)) {
+    if (value_comp()(__v, __root->__get_value())) {
       __result = static_cast<__end_node_pointer>(__root);
       __root   = static_cast<__node_pointer>(__root->__left_);
     } else
@@ -2173,10 +2179,10 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) {
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__value_)) {
+    if (value_comp()(__k, __rt->__get_value())) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__value_, __k))
+    } else if (value_comp()(__rt->__get_value(), __k))
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(iterator(__rt),
@@ -2195,10 +2201,10 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) const {
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__value_)) {
+    if (value_comp()(__k, __rt->__get_value())) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__value_, __k))
+    } else if (value_comp()(__rt->__get_value(), __k))
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(
@@ -2217,10 +2223,10 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) {
   __end_node_pointer __result = __end_node();
   __node_pointer __rt     = __root();
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__value_)) {
+    if (value_comp()(__k, __rt->__get_value())) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__value_, __k))
+    } else if (value_comp()(__rt->__get_value(), __k))
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(__lower_bound(__k, static_cast<__node_pointer>(__rt->__left_), static_cast<__end_node_pointer>(__rt)),
@@ -2238,10 +2244,10 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) const {
   __end_node_pointer __result = __end_node();
   __node_pointer __rt     = __root();
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__value_)) {
+    if (value_comp()(__k, __rt->__get_value())) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__value_, __k))
+    } else if (value_comp()(__rt->__get_value(), __k))
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(__lower_bound(__k, static_cast<__node_pointer>(__rt->__left_), static_cast<__end_node_pointer>(__rt)),

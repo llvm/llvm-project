@@ -1512,6 +1512,14 @@ public:
                                               TTI::TargetCostKind CostKind,
                                               unsigned Index = -1) const;
 
+  /// \return The expected cost of inserting or extracting a lane that is \p
+  /// Index elements from the end of a vector, i.e. the mathematical expression
+  /// for the lane is (VF - 1 - Index). This is required for scalable vectors
+  /// where the exact lane index is unknown at compile time.
+  LLVM_ABI InstructionCost getIndexedVectorInstrCostFromEnd(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index) const;
+
   /// \return The expected cost of aggregate inserts and extracts. This is
   /// used when the instruction is not available; a typical use case is to
   /// provision the cost of vectorization/scalarization in vectorizer passes.

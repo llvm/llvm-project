@@ -29,7 +29,7 @@ class DeadBlock;
 class Pointer;
 class Context;
 template <unsigned A, bool B> class Integral;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 class Pointer;
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
@@ -804,6 +804,7 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
+  friend class Program;
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
