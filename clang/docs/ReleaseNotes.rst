@@ -184,6 +184,8 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
+- Clang now emits dignostic with correct message in case of assigning to const reference captured in lambda. (#GH105647)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
