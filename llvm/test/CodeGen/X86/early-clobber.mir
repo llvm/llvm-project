@@ -4,6 +4,12 @@
 # Test register live range that is split from rematerializing. The live range should
 # start with Slot_EarlyClobber instead of Slot_Register. Machineverifer can check it.
 
+--- |
+
+  define void @test() nounwind {
+    ret void
+  }
+
 ...
 ---
 name:            test
@@ -16,24 +22,15 @@ fixedStack:
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: test
-  ; CHECK: bb.0.entry:
+  ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $ebp, $ebx, $edi, $esi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-setup PUSH32r killed $ebp, implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup PUSH32r killed $ebx, implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 12
   ; CHECK-NEXT:   frame-setup PUSH32r killed $edi, implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-NEXT:   frame-setup PUSH32r killed $esi, implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
   ; CHECK-NEXT:   $esp = frame-setup SUB32ri $esp, 12, implicit-def dead $eflags
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 32
-  ; CHECK-NEXT:   CFI_INSTRUCTION offset $esi, -20
-  ; CHECK-NEXT:   CFI_INSTRUCTION offset $edi, -16
-  ; CHECK-NEXT:   CFI_INSTRUCTION offset $ebx, -12
-  ; CHECK-NEXT:   CFI_INSTRUCTION offset $ebp, -8
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $ebp, 12 /* clobber */, implicit-def dead early-clobber $eax, 12 /* clobber */, implicit-def dead early-clobber $ebx, 12 /* clobber */, implicit-def dead early-clobber $ecx, 12 /* clobber */, implicit-def dead early-clobber $edx, 12 /* clobber */, implicit-def dead early-clobber $esi, 12 /* clobber */, implicit-def dead early-clobber $edi, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
   ; CHECK-NEXT:   early-clobber renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr renamable $al, renamable $al, implicit-def $eflags
@@ -48,17 +45,12 @@ body:             |
   ; CHECK-NEXT:   liveins: $eax
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $esp = frame-destroy ADD32ri $esp, 12, implicit-def dead $eflags
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 20
   ; CHECK-NEXT:   $esi = frame-destroy POP32r implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-NEXT:   $edi = frame-destroy POP32r implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 12
   ; CHECK-NEXT:   $ebx = frame-destroy POP32r implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 4
   ; CHECK-NEXT:   RET 0, $eax
-  bb.0.entry:
+  bb.0:
     successors: %bb.1, %bb.2
 
     early-clobber %0:gr32_abcd = MOV32r0 implicit-def dead $eflags
