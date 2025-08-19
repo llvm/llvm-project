@@ -137,7 +137,7 @@ struct ol_queue_impl_t {
   size_t Id;
   static std::atomic<size_t> IdCounter;
 };
-std::atomic<size_t> ol_queue_impl_t::IdCounter;
+std::atomic<size_t> ol_queue_impl_t::IdCounter(0);
 
 struct ol_event_impl_t {
   ol_event_impl_t(void *EventInfo, ol_device_handle_t Device,
@@ -663,22 +663,23 @@ Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
 }
 
 Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
+  auto *Device = Queue->Device;
   // This is safe; as soon as olDestroyQueue is called it is not possible to add
   // any more work to the queue, so if it's finished now it will remain finished
   // forever.
-  auto Res = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
+  auto Res = Device->Device->hasPendingWork(Queue->AsyncInfo);
   if (!Res)
     return Res.takeError();
 
   if (!*Res) {
     // The queue is complete, so sync it and throw it back into the pool.
-    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo,
-                                                      /*Release=*/true))
+    if (auto Err = Device->Device->synchronize(Queue->AsyncInfo,
+                                               /*Release=*/true))
       return Err;
   } else {
     // The queue still has outstanding work. Store it so we can check it later.
-    std::lock_guard<std::mutex> Lock(Queue->Device->OutstandingQueuesMutex);
-    Queue->Device->OutstandingQueues.push_back(Queue->AsyncInfo);
+    std::lock_guard<std::mutex> Lock(Device->OutstandingQueuesMutex);
+    Device->OutstandingQueues.push_back(Queue->AsyncInfo);
   }
 
   return olDestroy(Queue);
