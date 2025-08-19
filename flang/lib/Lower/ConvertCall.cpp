@@ -1252,7 +1252,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
     auto [suggestCopyIn, suggestCopyOut] = Fortran::evaluate::MayNeedCopyInOut(
-        *arg.entity, arg.characteristics, foldingContext);
+        arg.entity, arg.characteristics, foldingContext);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
   }
