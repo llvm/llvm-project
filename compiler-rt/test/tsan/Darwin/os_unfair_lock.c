@@ -8,6 +8,7 @@
 
 long global_variable;
 os_unfair_lock lock = OS_UNFAIR_LOCK_INIT;
+char flags_available = 0;
 
 void *Thread(void *a) {
   os_unfair_lock_lock(&lock);
@@ -16,17 +17,21 @@ void *Thread(void *a) {
   return NULL;
 }
 
-#if defined(__MAC_15_0)
 void *ThreadWithFlags(void *a) {
+#if defined(__MAC_15_0) || defined(__IPHONE_18_0) || defined(__TVOS_18_0) ||   \
+    defined(__VISIONOS_2_0) || defined(__WATCHOS_11_0)
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wunguarded-availability-new"
   os_unfair_lock_lock_with_flags(&lock, OS_UNFAIR_LOCK_FLAG_ADAPTIVE_SPIN);
+  flags_available = 1;
 #  pragma clang diagnostic pop
+#else
+  os_unfair_lock_lock(&lock);
+#endif
   global_variable++;
   os_unfair_lock_unlock(&lock);
   return NULL;
 }
-#endif
 
 int main() {
   pthread_t t1, t2;
@@ -39,20 +44,8 @@ int main() {
 
   // CHECK: global_variable = 2
 
-  void *(*func)(void *) = Thread;
-  char flags_available = 0;
-#if defined(__MAC_15_0)
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wunguarded-availability-new"
-  if (&os_unfair_lock_lock_with_flags) {
-#  pragma clang diagnostic pop
-    func = ThreadWithFlags;
-    flags_available = 1;
-  }
-#endif
-
-  pthread_create(&t1, NULL, func, NULL);
-  pthread_create(&t2, NULL, func, NULL);
+  pthread_create(&t1, NULL, ThreadWithFlags, NULL);
+  pthread_create(&t2, NULL, ThreadWithFlags, NULL);
   pthread_join(t1, NULL);
   pthread_join(t2, NULL);
   fprintf(stderr,
