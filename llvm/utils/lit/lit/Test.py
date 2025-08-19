@@ -307,6 +307,12 @@ class Test:
     def getFullName(self):
         return self.suite.config.name + " :: " + "/".join(self.path_in_suite)
 
+    def getFullNameRelPath(self, printRelativePaths):
+        if printRelativePaths:
+            return (self.suite.config.name + " :: " +
+                    os.path.relpath(self.getFilePath()))
+        return self.getFullName()
+
     def getFilePath(self):
         if self.file_path:
             return self.file_path

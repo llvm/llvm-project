@@ -329,12 +329,13 @@ def print_results(tests, elapsed, opts):
             sorted(tests_by_code[code], key=lambda t: t.getFullName()),
             code,
             opts.shown_codes,
+            opts.printRelativePaths
         )
 
     print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
 
 
-def print_group(tests, code, shown_codes):
+def print_group(tests, code, shown_codes, printRelativePaths):
     if not tests:
         return
     if not code.isFailure and code not in shown_codes:
@@ -342,7 +343,7 @@ def print_group(tests, code, shown_codes):
     print("*" * 20)
     print("{} Tests ({}):".format(code.label, len(tests)))
     for test in tests:
-        print("  %s" % test.getFullName())
+        print("  %s" % test.getFullNameRelPath(printRelativePaths))
     sys.stdout.write("\n")
 
 
