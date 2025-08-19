@@ -10,7 +10,14 @@
 #include "AArch64RegisterInfo.h"
 
 #if defined(__aarch64__) && defined(__linux__)
-#include <sys/prctl.h> // For PR_PAC_* constants
+#include <linux/prctl.h> // For PR_PAC_* constants
+#include <sys/prctl.h>
+#ifndef PR_PAC_SET_ENABLED_KEYS
+#define PR_PAC_SET_ENABLED_KEYS 60
+#endif
+#ifndef PR_PAC_GET_ENABLED_KEYS
+#define PR_PAC_GET_ENABLED_KEYS 61
+#endif
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
 #endif
@@ -179,21 +186,29 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   }
   // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
   // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
-  case llvm::AArch64::OPERAND_MSL_SHIFT_2S: {
-    // Type 7: Pattern 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
-    // Creates 2-element 32-bit vector with 8-bit imm at positions [15:8] &
-    // [47:40] Shift value 264 (0x108) for Type 7 pattern encoding Corresponds
-    // to AArch64_AM::encodeAdvSIMDModImmType7()
-    AssignedValue = MCOperand::createImm(264);
-    return Error::success();
-  }
-  case llvm::AArch64::OPERAND_MSL_SHIFT_4S: {
-    // Type 8: Pattern 0x00 abcdefgh 0xFF 0xFF 0x00 abcdefgh 0xFF 0xFF
-    // Creates 4-element 32-bit vector with 8-bit imm at positions [23:16] &
-    // [55:48] Shift value 272 (0x110) for Type 8 pattern encoding Corresponds
-    // to AArch64_AM::encodeAdvSIMDModImmType8()
-    AssignedValue = MCOperand::createImm(272);
-    return Error::success();
+  case llvm::AArch64::OPERAND_MSL_SHIFT: {
+    unsigned Opcode = Instr.getOpcode();
+    switch (Opcode) {
+    case AArch64::MOVIv2s_msl:
+    case AArch64::MVNIv2s_msl:
+      // Type 7: Pattern 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
+      // Creates 2-element 32-bit vector with 8-bit imm at positions [15:8] &
+      // [47:40] Shift value 264 (0x108) for Type 7 pattern encoding Corresponds
+      // to AArch64_AM::encodeAdvSIMDModImmType7()
+      AssignedValue = MCOperand::createImm(264);
+      return Error::success();
+    case AArch64::MOVIv4s_msl:
+    case AArch64::MVNIv4s_msl:
+      // Type 8: Pattern 0x00 abcdefgh 0xFF 0xFF 0x00 abcdefgh 0xFF 0xFF
+      // Creates 4-element 32-bit vector with 8-bit imm at positions [23:16] &
+      // [55:48] Shift value 272 (0x110) for Type 8 pattern encoding Corresponds
+      // to AArch64_AM::encodeAdvSIMDModImmType8()
+      AssignedValue = MCOperand::createImm(272);
+      return Error::success();
+    default:
+      return make_error<Failure>(
+          Twine("Unsupported MSL shift opcode: ").concat(Twine(Opcode)));
+    }
   }
   case MCOI::OperandType::OPERAND_PCREL:
   case MCOI::OperandType::OPERAND_FIRST_TARGET:
