@@ -24126,8 +24126,9 @@ Overview:
 """""""""
 
 Given a vector load from %ptrA, followed by a vector store to %ptrB, this
-intrinsic generates a mask where a true lane indicates that the accesses don't
-overlap for that lane.
+intrinsic generates a mask where an active lane indicates that the accesses can
+be made safely without a lane being stored to before being read from. This can
+occur when the pointers alias within a vectorised loop iteration.
 
 A write-after-read hazard occurs when a write-after-read sequence for a given
 lane in a vector ends up being executed as a read-after-write sequence due to
@@ -24146,13 +24147,12 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
-The element of the result mask is active when no write-after-read hazard occurs,
-meaning that:
+The element of the result mask is active when loading from %ptrA then storing to
+%ptrB is safe and doesn't result in aliasing, meaning that:
 
-* (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores are
-  committed), or
+* (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
 * (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
-  before the store to the same address is committed)
+  before the store to the same address)
 
 Examples:
 """""""""
@@ -24184,18 +24184,10 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Given a scalar store to %ptrA, followed by a scalar load from %ptrB, this
-instruction generates a mask where an active lane indicates that there is no
-read-after-write hazard for this lane and that this lane does not introduce any
-new store-to-load forwarding hazard.
-
-A read-after-write hazard occurs when a read-after-write sequence for a given
-lane in a vector ends up being executed as a write-after-read sequence due to
-the aliasing of pointers.
-
-Note that the case where (ptrB - ptrA) < 0 does not result in any
-read-after-write hazards, but may introduce new store-to-load-forwarding stalls
-where both the store and load partially access the same addresses.
+Given a vector store to %ptrA, followed by a vector load from %ptrB, this
+instruction generates a mask where an active lane indicates that the accesses
+can be made safely without a lane being read from before being stored to.
+This can occur when the pointers alias within a vectorised loop iteration.
 
 Arguments:
 """"""""""
@@ -24210,11 +24202,11 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
-The element of the result mask is active when no read-after-write hazard occurs,
-meaning that:
+The element of the result mask is active when storing to %ptrA then loading from
+%ptrB is safe and doesn't result in aliasing, meaning that:
 
   abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
-  is committed before loading from this address)
+  occurs before loading from this address)
 
 Examples:
 """""""""
