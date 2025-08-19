@@ -510,4 +510,5 @@ TEST(LlvmLibcFileTest, WriteSplit) {
   static constexpr size_t WR_EXPECTED = AVAIL - (sizeof(data) - 1);
   ASSERT_EQ(WR_EXPECTED, f->write(data2, sizeof(data2) - 1).value);
   EXPECT_TRUE(f->error());
+  ASSERT_EQ(f->close(), 0);
 }
