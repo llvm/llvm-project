@@ -176,6 +176,10 @@ class Enum : APIObject {
   // all Etor values must be TaggedEtor records
   bit is_typed = 0;
 
+  // This refers to whether the enumerator is used to name bits of a bit field,
+  // where consecutive values are bit-shifted rather than incremented.
+  bit is_bit_field = 0;
+
   list<Etor> etors = [];
 }
 

@@ -302,10 +302,50 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   };
 
   // These are not implemented by the plugin interface
-  if (PropName == OL_DEVICE_INFO_PLATFORM)
+  switch (PropName) {
+  case OL_DEVICE_INFO_PLATFORM:
     return Info.write<void *>(Device->Platform);
-  if (PropName == OL_DEVICE_INFO_TYPE)
+
+  case OL_DEVICE_INFO_TYPE:
     return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
+
+  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
+  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG: {
+    ol_device_fp_capability_flags_t flags{0};
+    flags |= OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+             OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+             OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
+             OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+    return Info.write(flags);
+  }
+
+  case OL_DEVICE_INFO_HALF_FP_CONFIG:
+    return Info.write<ol_device_fp_capability_flags_t>(0);
+
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE:
+    return Info.write<uint32_t>(1);
+
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF:
+    return Info.write<uint32_t>(0);
+
+  // None of the existing plugins specify a limit on a single allocation,
+  // so return the global memory size instead
+  case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
+    PropName = OL_DEVICE_INFO_GLOBAL_MEM_SIZE;
+    break;
+
+  default:
+    break;
+  }
+
   if (PropName >= OL_DEVICE_INFO_LAST)
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -316,6 +356,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                      "plugin did not provide a response for this information");
   auto Entry = *EntryOpt;
 
+  // Retrieve properties from the plugin interface
   switch (PropName) {
   case OL_DEVICE_INFO_NAME:
   case OL_DEVICE_INFO_VENDOR:
@@ -327,7 +368,20 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.writeString(std::get<std::string>(Entry->Value).c_str());
   }
 
-  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE: {
+  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
+    // Uint64 values
+    if (!std::holds_alternative<uint64_t>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.write(std::get<uint64_t>(Entry->Value));
+  }
+
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+  case OL_DEVICE_INFO_VENDOR_ID:
+  case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
+  case OL_DEVICE_INFO_ADDRESS_BITS:
+  case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
+  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE: {
     // Uint32 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
       return makeError(ErrorCode::BACKEND_FAILURE,
@@ -389,9 +443,40 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return Info.writeString(LLVM_VERSION_STRING);
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
-    return Info.write<uint64_t>(1);
+    return Info.write<uint32_t>(1);
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION:
     return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
+  case OL_DEVICE_INFO_VENDOR_ID:
+    return Info.write<uint32_t>(0);
+  case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
+    return Info.write<uint32_t>(1);
+  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
+  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
+    return Info.write<ol_device_fp_capability_flags_t>(
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA);
+  case OL_DEVICE_INFO_HALF_FP_CONFIG:
+    return Info.write<ol_device_fp_capability_flags_t>(0);
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE:
+    return Info.write<uint32_t>(1);
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF:
+    return Info.write<uint32_t>(0);
+  case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
+  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE:
+  case OL_DEVICE_INFO_ADDRESS_BITS:
+    return Info.write<uint32_t>(std::numeric_limits<uintptr_t>::digits);
+  case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
+  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
+    return Info.write<uint64_t>(0);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
