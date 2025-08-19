@@ -414,3 +414,13 @@ config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 if config.enable_amdclang:
     config.available_features.add("amdclang")
     llvm_config.add_tool_substitutions(["amdclang"], tool_dirs)
+
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)
