@@ -164,8 +164,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
     const auto *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
-    if (const auto *RT = QT->getAs<ReferenceType>())
-      QT = RT->getPointeeType();
+    if (QT->isPointerOrReferenceType())
+      QT = QT->getPointeeType();
   }
   assert(!QT.isNull());
 
