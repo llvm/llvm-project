@@ -793,7 +793,8 @@ public:
                   if (name->symbol) {
                     name->symbol->set(
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
-                    AddToContextObjectWithDSA(*name->symbol, *ompFlag);
+                    AddToContextObjectWithDSA(*name->symbol,
+                        ompFlag.value_or(Symbol::Flag::OmpMapStorage));
                     if (semantics::IsAssumedSizeArray(*name->symbol)) {
                       context_.Say(designator.source,
                           "Assumed-size whole arrays may not appear on the %s "

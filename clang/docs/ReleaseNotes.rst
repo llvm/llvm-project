@@ -168,8 +168,6 @@ Improvements to Clang's diagnostics
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
-- ``-Wstring-concatenation`` now diagnoses every missing comma in an initializer list,
-  rather than stopping after the first. (#GH153745)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
