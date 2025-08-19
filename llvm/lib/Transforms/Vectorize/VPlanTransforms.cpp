@@ -2138,6 +2138,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo,
                                        VPValue &AllOneMask, VPValue &EVL) {
+  // FIXME: Don't transform recipes to EVL recipes if they're not masked by the
+  // header mask.
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
@@ -2147,14 +2149,35 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return HeaderMask == OrigMask ? nullptr : OrigMask;
   };
 
+  /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
+  auto GetNewAddr = [&CurRecipe, &EVL](VPValue *Addr) -> VPValue * {
+    auto *EndPtr = dyn_cast<VPVectorEndPointerRecipe>(Addr);
+    if (!EndPtr)
+      return Addr;
+    assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF() &&
+           "VPVectorEndPointerRecipe with non-VF VF operand?");
+    assert(
+        all_of(EndPtr->users(),
+               [](VPUser *U) {
+                 return cast<VPWidenMemoryRecipe>(U)->isReverse();
+               }) &&
+        "VPVectorEndPointRecipe not used by reversed widened memory recipe?");
+    VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
+    EVLAddr->insertBefore(&CurRecipe);
+    EVLAddr->setOperand(1, &EVL);
+    return EVLAddr;
+  };
+
   return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
       .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
         VPValue *NewMask = GetNewMask(L->getMask());
-        return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
+        VPValue *NewAddr = GetNewAddr(L->getAddr());
+        return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
       })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
-        return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
+        VPValue *NewAddr = GetNewAddr(S->getAddr());
+        return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
       })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
@@ -2189,7 +2212,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
                         VPWidenIntOrFpInductionRecipe>) &&
          "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceAllUsesWith(&EVL);
+  Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+    return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
+  });
 
   assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
