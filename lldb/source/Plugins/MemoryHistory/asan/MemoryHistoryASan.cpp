@@ -91,11 +91,9 @@ const char *memory_history_asan_command_format =
     t;
 )";
 
-static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
-                                               ValueObjectSP return_value_sp,
-                                               const char *type,
-                                               const char *thread_name,
-                                               HistoryThreads &result) {
+static void CreateHistoryThreadFromValueObject(
+    ProcessSP process_sp, ValueObjectSP return_value_sp, HistoryPCType pc_type,
+    const char *type, const char *thread_name, HistoryThreads &result) {
   std::string count_path = "." + std::string(type) + "_count";
   std::string tid_path = "." + std::string(type) + "_tid";
   std::string trace_path = "." + std::string(type) + "_trace";
@@ -128,10 +126,6 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     pcs.push_back(pc);
   }
 
-  // The ASAN runtime already massages the return addresses into call
-  // addresses, we don't want LLDB's unwinder to try to locate the previous
-  // instruction again as this might lead to us reporting a different line.
-  auto pc_type = HistoryPCType::Calls;
   HistoryThread *history_thread =
       new HistoryThread(*process_sp, tid, pcs, pc_type);
   ThreadSP new_thread_sp(history_thread);
@@ -176,10 +170,24 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
+  // The ASan compiler-rt runtime already massages the return addresses into
+  // call addresses, so we don't want LLDB's unwinder to try to locate the
+  // previous instruction again as this might lead to us reporting a different
+  // line.
+  auto pc_type = HistoryPCType::Calls;
+
   if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
     SymbolContextList sc_list;
     sc_list.Append(SymbolContext(std::move(m)));
     options.SetPreferredSymbolContexts(std::move(sc_list));
+  } else if (process_sp->GetTarget()
+                 .GetArchitecture()
+                 .GetTriple()
+                 .isOSDarwin()) {
+    // Darwin, but not ASan compiler-rt implies libsanitizers which collects
+    // return addresses.  It also discards a few non-user frames at the top of
+    // the stack.
+    pc_type = HistoryPCType::ReturnsNoZerothFrame;
   }
 
   ExpressionResults expr_result = UserExpression::Evaluate(
@@ -197,10 +205,10 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   if (!return_value_sp)
     return result;
 
-  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "free",
-                                     "Memory deallocated by", result);
-  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "alloc",
-                                     "Memory allocated by", result);
+  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, pc_type,
+                                     "free", "Memory deallocated by", result);
+  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, pc_type,
+                                     "alloc", "Memory allocated by", result);
 
   return result;
 }
