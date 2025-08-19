@@ -696,9 +696,10 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-Error olCalculateMaxOccupancy_impl(ol_device_handle_t Device,
-                                   ol_symbol_handle_t Kernel,
-                                   size_t DynamicMemSize, size_t *GroupSize) {
+Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
+                                       ol_symbol_handle_t Kernel,
+                                       size_t DynamicMemSize,
+                                       size_t *GroupSize) {
   if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
     return createOffloadError(ErrorCode::SYMBOL_KIND,
                               "provided symbol is not a kernel");

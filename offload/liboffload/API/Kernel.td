@@ -44,9 +44,11 @@ def : Function {
 }
 
 def : Function {
-    let name = "olCalculateMaxOccupancy";
+    let name = "olCalculateOptimalOccupancy";
     let desc = "Given dynamic memory size, query the device for a workgroup size that will result in optimal occupancy.";
-    let details = [];
+    let details = [
+        "For most devices, this will be the largest workgroup size that will result in all work items fitting on the device at once.",
+    ];
     let params = [
         Param<"ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
         Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
