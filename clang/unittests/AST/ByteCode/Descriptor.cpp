@@ -399,7 +399,11 @@ TEST(Descriptor, Primitives) {
     const Pointer &PF5 = GlobalPtr.atField(F5->Offset);
 
     ASSERT_TRUE(PF5.isZeroSizeArray());
-    ASSERT_FALSE(PF5.isOnePastEnd());
+    ASSERT_TRUE(PF5.isOnePastEnd());
+    ASSERT_FALSE(PF5.isElementPastEnd());
+
+    const Pointer &E1 = PF5.atIndex(0);
+    ASSERT_TRUE(PF5.isOnePastEnd());
     ASSERT_FALSE(PF5.isElementPastEnd());
   }
 }
