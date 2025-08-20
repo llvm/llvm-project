@@ -349,7 +349,7 @@ private:
   }
 
   /// Filter out constant and duplicated entries in \p Ops and return a vector
-  /// containing the corresponding types.
+  /// containing the types from \p Tys corresponding to the remaining operands.
   static SmallVector<Type *, 4>
   filterConstantAndDuplicatedOperands(ArrayRef<const Value *> Ops,
                                       ArrayRef<Type *> Tys) {
@@ -951,7 +951,7 @@ public:
                                              CostKind);
   }
 
-  /// Estimate the overhead of scalarizing an instructions
+  /// Estimate the overhead of scalarizing an instruction's
   /// operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
   InstructionCost getOperandsScalarizationOverhead(
