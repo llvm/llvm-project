@@ -250,46 +250,35 @@ void SmallPtrSetImplBase::swap(const void **SmallStorage,
 
   // FIXME: From here on we assume that both sets have the same small size.
 
-  // If only RHS is small, copy the small elements into LHS and move the pointer
-  // from LHS to RHS.
-  if (!this->isSmall() && RHS.isSmall()) {
-    llvm::copy(RHS.small_buckets(), SmallStorage);
-    std::swap(RHS.CurArraySize, this->CurArraySize);
+  // Both a small, just swap the small elements.
+  if (this->isSmall() && RHS.isSmall()) {
+    unsigned MinEntries = std::min(this->NumEntries, RHS.NumEntries);
+    std::swap_ranges(this->CurArray, this->CurArray + MinEntries, RHS.CurArray);
+    if (this->NumEntries > MinEntries) {
+      std::copy(this->CurArray + MinEntries, this->CurArray + this->NumEntries,
+                RHS.CurArray + MinEntries);
+    } else {
+      std::copy(RHS.CurArray + MinEntries, RHS.CurArray + RHS.NumEntries,
+                this->CurArray + MinEntries);
+    }
+    assert(this->CurArraySize == RHS.CurArraySize);
     std::swap(this->NumEntries, RHS.NumEntries);
     std::swap(this->NumTombstones, RHS.NumTombstones);
-    RHS.CurArray = this->CurArray;
-    RHS.IsSmall = false;
-    this->CurArray = SmallStorage;
-    this->IsSmall = true;
     return;
   }
 
-  // If only LHS is small, copy the small elements into RHS and move the pointer
-  // from RHS to LHS.
-  if (this->isSmall() && !RHS.isSmall()) {
-    llvm::copy(this->small_buckets(), RHSSmallStorage);
-    std::swap(RHS.CurArraySize, this->CurArraySize);
-    std::swap(RHS.NumEntries, this->NumEntries);
-    std::swap(RHS.NumTombstones, this->NumTombstones);
-    this->CurArray = RHS.CurArray;
-    this->IsSmall = false;
-    RHS.CurArray = RHSSmallStorage;
-    RHS.IsSmall = true;
-    return;
-  }
-
-  // Both a small, just swap the small elements.
-  assert(this->isSmall() && RHS.isSmall());
-  unsigned MinEntries = std::min(this->NumEntries, RHS.NumEntries);
-  std::swap_ranges(this->CurArray, this->CurArray + MinEntries, RHS.CurArray);
-  if (this->NumEntries > MinEntries) {
-    std::copy(this->CurArray + MinEntries, this->CurArray + this->NumEntries,
-              RHS.CurArray + MinEntries);
-  } else {
-    std::copy(RHS.CurArray + MinEntries, RHS.CurArray + RHS.NumEntries,
-              this->CurArray + MinEntries);
-  }
-  assert(this->CurArraySize == RHS.CurArraySize);
-  std::swap(this->NumEntries, RHS.NumEntries);
-  std::swap(this->NumTombstones, RHS.NumTombstones);
+  // If only one side is small, copy the small elements into the large side and
+  // move the pointer from the large side to the small side.
+  SmallPtrSetImplBase &SmallSide = this->isSmall() ? *this : RHS;
+  SmallPtrSetImplBase &LargeSide = this->isSmall() ? RHS : *this;
+  const void **LargeSideInlineStorage =
+      this->isSmall() ? RHSSmallStorage : SmallStorage;
+  llvm::copy(SmallSide.small_buckets(), LargeSideInlineStorage);
+  std::swap(LargeSide.CurArraySize, SmallSide.CurArraySize);
+  std::swap(LargeSide.NumEntries, SmallSide.NumEntries);
+  std::swap(LargeSide.NumTombstones, SmallSide.NumTombstones);
+  SmallSide.CurArray = LargeSide.CurArray;
+  SmallSide.IsSmall = false;
+  LargeSide.CurArray = LargeSideInlineStorage;
+  LargeSide.IsSmall = true;
 }

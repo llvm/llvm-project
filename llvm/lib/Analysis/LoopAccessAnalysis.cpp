@@ -936,6 +936,12 @@ private:
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
                     Value *Ptr, PredicatedScalarEvolution &PSE) {
+  if (isa<ScalableVectorType>(AccessTy)) {
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
+                      << "\n");
+    return std::nullopt;
+  }
+
   // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
     LLVM_DEBUG({
@@ -1590,11 +1596,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return 0;
 
   assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
-  if (isa<ScalableVectorType>(AccessTy)) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
-                      << "\n");
-    return std::nullopt;
-  }
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
   if (Assume && !AR)

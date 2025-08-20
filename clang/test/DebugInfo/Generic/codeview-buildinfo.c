@@ -17,7 +17,7 @@ int main(void) { return 42; }
 // CHECK:                       Types (.debug$T)
 // CHECK: ============================================================
 // CHECK: 0x[[PWD:.+]] | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: [[PWDVAL:.+]]
-// CHECK: 0x[[FILEPATH:.+]] | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: [[FILEPATHVAL:.+[\\/]debug-info-codeview-buildinfo.c]]
+// CHECK: 0x[[FILEPATH:.+]] | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: [[FILEPATHVAL:.+[\\/]codeview-buildinfo.c]]
 // CHECK: 0x[[ZIPDB:.+]] | LF_STRING_ID [size = {{.+}}] ID: <no type>, String:
 // CHECK: 0x[[TOOL:.+]] | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: [[TOOLVAL:.+[\\/][clang|llvm].*]]
 // CHECK: 0x[[CMDLINE:.+]] | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: "-cc1

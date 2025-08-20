@@ -4913,6 +4913,7 @@ libc_support_library(
         "src/string/memory_utils/aarch64/inline_memcpy.h",
         "src/string/memory_utils/aarch64/inline_memmove.h",
         "src/string/memory_utils/aarch64/inline_memset.h",
+        "src/string/memory_utils/aarch64/inline_strlen.h",
         "src/string/memory_utils/arm/common.h",
         "src/string/memory_utils/arm/inline_memcpy.h",
         "src/string/memory_utils/arm/inline_memset.h",
@@ -4937,6 +4938,7 @@ libc_support_library(
         "src/string/memory_utils/x86_64/inline_memcpy.h",
         "src/string/memory_utils/x86_64/inline_memmove.h",
         "src/string/memory_utils/x86_64/inline_memset.h",
+        "src/string/memory_utils/x86_64/inline_strlen.h",
     ],
     deps = [
         ":__support_common",
@@ -4961,6 +4963,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":hdr_limits_macros",
         ":llvm_libc_types_size_t",
+        ":string_memory_utils",
         ":types_size_t",
     ],
 )

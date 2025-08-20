@@ -508,8 +508,7 @@ bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
     Value *VScale = Builder.CreateVScale(Int32Ty, "vscale");
-    MaxEVL = Builder.CreateMul(VScale, FactorConst, "scalable_size",
-                               /*NUW*/ true, /*NSW*/ false);
+    MaxEVL = Builder.CreateNUWMul(VScale, FactorConst, "scalable_size");
   } else {
     MaxEVL = ConstantInt::get(Int32Ty, StaticElemCount.getFixedValue(), false);
   }

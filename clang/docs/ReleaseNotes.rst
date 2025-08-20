@@ -168,8 +168,6 @@ Improvements to Clang's diagnostics
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
-- ``-Wstring-concatenation`` now diagnoses every missing comma in an initializer list,
-  rather than stopping after the first. (#GH153745)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
@@ -234,6 +232,8 @@ Bug Fixes to C++ Support
   "intializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
+- Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
+  instantiated properly. (#GH154054)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

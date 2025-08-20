@@ -2151,7 +2151,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
 static bool CheckConstexprCtorInitializer(Sema &SemaRef,
                                           const FunctionDecl *Dcl,
                                           FieldDecl *Field,
-                                          llvm::SmallSet<Decl*, 16> &Inits,
+                                          llvm::SmallPtrSet<Decl *, 16> &Inits,
                                           bool &Diagnosed,
                                           Sema::CheckConstexprKind Kind) {
   // In C++20 onwards, there's nothing to check for validity.
@@ -2473,7 +2473,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         // Check initialization of non-static data members. Base classes are
         // always initialized so do not need to be checked. Dependent bases
         // might not have initializers in the member initializer list.
-        llvm::SmallSet<Decl*, 16> Inits;
+        llvm::SmallPtrSet<Decl *, 16> Inits;
         for (const auto *I: Constructor->inits()) {
           if (FieldDecl *FD = I->getMember())
             Inits.insert(FD);

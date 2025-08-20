@@ -720,6 +720,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
                      IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier,
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                      OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
@@ -805,6 +807,16 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
           AdjustedAccum, MCConstantExpr::create(4, Ctx), Ctx);
       OutStreamer->emitRawComment(
           " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
+    }
+
+    if (AMDGPU::isGFX1250(STM)) {
+      const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
+      const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
+          CurrentProgramInfo.NamedBarCnt, BarBlkConst, Ctx);
+      const MCExpr *BarBlks =
+          MCBinaryExpr::createDiv(AlignToBlk, BarBlkConst, Ctx);
+      OutStreamer->emitRawComment(" NamedBarCnt: " + getMCExprStr(BarBlks),
+                                  false);
     }
 
     OutStreamer->emitRawComment(
@@ -1011,6 +1023,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DynamicCallStack =
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
+  ProgInfo.NamedBarCnt = GetSymRefExpr(RIK::RIK_NumNamedBarrier);
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -1252,6 +1265,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
+
+  if (AMDGPU::isGFX1250(STM))
+    ProgInfo.ComputePGMRSrc3 =
+        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
 
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,

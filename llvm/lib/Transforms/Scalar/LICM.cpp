@@ -1241,11 +1241,16 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (Behavior.doesNotAccessMemory())
       return true;
     if (Behavior.onlyReadsMemory()) {
+      // Might have stale MemoryDef for call that was later inferred to be
+      // read-only.
+      auto *MU = dyn_cast<MemoryUse>(MSSA->getMemoryAccess(CI));
+      if (!MU)
+        return false;
+
       // If we can prove there are no writes to the memory read by the call, we
       // can hoist or sink.
       return !pointerInvalidatedByLoop(
-          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I, Flags,
-          /*InvariantGroup=*/false);
+          MSSA, MU, CurLoop, I, Flags, /*InvariantGroup=*/false);
     }
 
     if (Behavior.onlyWritesMemory()) {

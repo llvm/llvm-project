@@ -741,9 +741,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__second_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_.second));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().second));
     if (__first_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_.first));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().first));
     if (__p)
       __alloc_traits::deallocate(__na_, __p, 1);
   }
@@ -1389,7 +1389,8 @@ map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty()) {
-      __tree_.__insert_unique_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+      __tree_.__insert_unique_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
     }
   }
 }
@@ -1419,9 +1420,9 @@ typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
 map<_Key, _Tp, _Compare, _Allocator>::__construct_node_with_key(const key_type& __k) {
   __node_allocator& __na = __tree_.__node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__value_.first), __k);
+  __node_traits::construct(__na, std::addressof(__h->__get_value().first), __k);
   __h.get_deleter().__first_constructed = true;
-  __node_traits::construct(__na, std::addressof(__h->__value_.second));
+  __node_traits::construct(__na, std::addressof(__h->__get_value().second));
   __h.get_deleter().__second_constructed = true;
   return __h;
 }
@@ -1436,7 +1437,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
     __tree_.__insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
     __r = __h.release();
   }
-  return __r->__value_.second;
+  return __r->__get_value().second;
 }
 
 #  endif // _LIBCPP_CXX03_LANG
@@ -1447,7 +1448,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
   __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return static_cast<__node_pointer>(__child)->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1456,7 +1457,7 @@ const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
   __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return static_cast<__node_pointer>(__child)->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1959,7 +1960,8 @@ multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const alloca
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty())
-      __tree_.__insert_multi_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+      __tree_.__insert_multi_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
   }
 }
 #  endif

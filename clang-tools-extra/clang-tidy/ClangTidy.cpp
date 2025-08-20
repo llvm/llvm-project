@@ -544,7 +544,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool ApplyAnyFix, bool EnableCheckProfile,
-             llvm::StringRef StoreCheckProfile) {
+             llvm::StringRef StoreCheckProfile, bool Quiet) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -581,8 +581,9 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
   class ActionFactory : public FrontendActionFactory {
   public:
     ActionFactory(ClangTidyContext &Context,
-                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS)
-        : ConsumerFactory(Context, std::move(BaseFS)) {}
+                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
+                  bool Quiet)
+        : ConsumerFactory(Context, std::move(BaseFS)), Quiet(Quiet) {}
     std::unique_ptr<FrontendAction> create() override {
       return std::make_unique<Action>(&ConsumerFactory);
     }
@@ -593,6 +594,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
                        DiagnosticConsumer *DiagConsumer) override {
       // Explicitly ask to define __clang_analyzer__ macro.
       Invocation->getPreprocessorOpts().SetUpStaticAnalyzer = true;
+      if (Quiet)
+        Invocation->getDiagnosticOpts().ShowCarets = false;
       return FrontendActionFactory::runInvocation(
           Invocation, Files, PCHContainerOps, DiagConsumer);
     }
@@ -611,9 +614,10 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     };
 
     ClangTidyASTConsumerFactory ConsumerFactory;
+    bool Quiet;
   };
 
-  ActionFactory Factory(Context, std::move(BaseFS));
+  ActionFactory Factory(Context, std::move(BaseFS), Quiet);
   Tool.run(&Factory);
   return DiagConsumer.take();
 }

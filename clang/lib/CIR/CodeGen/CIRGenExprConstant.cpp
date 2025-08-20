@@ -285,7 +285,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
                   mlir::Type commonElementType, unsigned arrayBound,
                   SmallVectorImpl<mlir::TypedAttr> &elements,
                   mlir::TypedAttr filler) {
-  const CIRGenBuilderTy &builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   unsigned nonzeroLength = arrayBound;
   if (elements.size() < nonzeroLength && builder.isNullValue(filler))
@@ -306,6 +306,33 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   if (trailingZeroes >= 8) {
     assert(elements.size() >= nonzeroLength &&
            "missing initializer for non-zero element");
+
+    if (commonElementType && nonzeroLength >= 8) {
+      // If all the elements had the same type up to the trailing zeroes and
+      // there are eight or more nonzero elements, emit a struct of two arrays
+      // (the nonzero data and the zeroinitializer).
+      SmallVector<mlir::Attribute, 4> eles;
+      eles.reserve(nonzeroLength);
+      for (const auto &element : elements)
+        eles.push_back(element);
+      auto initial = cir::ConstArrayAttr::get(
+          cir::ArrayType::get(commonElementType, nonzeroLength),
+          mlir::ArrayAttr::get(builder.getContext(), eles));
+      elements.resize(2);
+      elements[0] = initial;
+    } else {
+      // Otherwise, emit a struct with individual elements for each nonzero
+      // initializer, followed by a zeroinitializer array filler.
+      elements.resize(nonzeroLength + 1);
+    }
+
+    mlir::Type fillerType =
+        commonElementType
+            ? commonElementType
+            : mlir::cast<cir::ArrayType>(desiredType).getElementType();
+    fillerType = cir::ArrayType::get(fillerType, trailingZeroes);
+    elements.back() = cir::ZeroAttr::get(fillerType);
+    commonElementType = nullptr;
   } else if (elements.size() != arrayBound) {
     elements.resize(arrayBound, filler);
 
@@ -325,8 +352,13 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
-  cgm.errorNYI("array with different type elements");
-  return {};
+  SmallVector<mlir::Attribute, 4> eles;
+  eles.reserve(elements.size());
+  for (auto const &element : elements)
+    eles.push_back(element);
+
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(), eles);
+  return builder.getAnonConstRecord(arrAttr, /*isPacked=*/true);
 }
 
 //===----------------------------------------------------------------------===//

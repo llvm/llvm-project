@@ -57,7 +57,7 @@ private:
   ASTContext &Ctx;
 
   // Recursion protection sets
-  llvm::SmallSet<const DependentNameType *, 4> SeenDependentNameTypes;
+  llvm::SmallPtrSet<const DependentNameType *, 4> SeenDependentNameTypes;
 
   // Given a tag-decl type and a member name, heuristically resolve the
   // name to one or more declarations.

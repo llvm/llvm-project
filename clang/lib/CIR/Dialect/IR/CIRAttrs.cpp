@@ -16,6 +16,14 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 //===-----------------------------------------------------------------===//
+// RecordMembers
+//===-----------------------------------------------------------------===//
+
+static void printRecordMembers(mlir::AsmPrinter &p, mlir::ArrayAttr members);
+static mlir::ParseResult parseRecordMembers(mlir::AsmParser &parser,
+                                            mlir::ArrayAttr &members);
+
+//===-----------------------------------------------------------------===//
 // IntLiteral
 //===-----------------------------------------------------------------===//
 
@@ -66,6 +74,61 @@ Attribute CIRDialect::parseAttribute(DialectAsmParser &parser,
 void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
   if (failed(generatedAttributePrinter(attr, os)))
     llvm_unreachable("unexpected CIR type kind");
+}
+
+static void printRecordMembers(mlir::AsmPrinter &printer,
+                               mlir::ArrayAttr members) {
+  printer << '{';
+  llvm::interleaveComma(members, printer);
+  printer << '}';
+}
+
+static ParseResult parseRecordMembers(mlir::AsmParser &parser,
+                                      mlir::ArrayAttr &members) {
+  llvm::SmallVector<mlir::Attribute, 4> elts;
+
+  auto delimiter = AsmParser::Delimiter::Braces;
+  auto result = parser.parseCommaSeparatedList(delimiter, [&]() {
+    mlir::TypedAttr attr;
+    if (parser.parseAttribute(attr).failed())
+      return mlir::failure();
+    elts.push_back(attr);
+    return mlir::success();
+  });
+
+  if (result.failed())
+    return mlir::failure();
+
+  members = mlir::ArrayAttr::get(parser.getContext(), elts);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstRecordAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                        mlir::Type type, ArrayAttr members) {
+  auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
+  if (!sTy)
+    return emitError() << "expected !cir.record type";
+
+  if (sTy.getMembers().size() != members.size())
+    return emitError() << "number of elements must match";
+
+  unsigned attrIdx = 0;
+  for (auto &member : sTy.getMembers()) {
+    auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
+    if (member != m.getType())
+      return emitError() << "element at index " << attrIdx << " has type "
+                         << m.getType()
+                         << " but the expected type for this element is "
+                         << member;
+    attrIdx++;
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

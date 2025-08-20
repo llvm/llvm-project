@@ -167,3 +167,18 @@ namespace unresolved_using {
   };
   template struct C<int>;
 } // namespace unresolved_using
+
+#if __cplusplus >= 201703L
+namespace SubstTemplateTypeParmPackType {
+  template <int...> struct A {};
+
+  template <class... Ts> void f() {
+    []<int ... Is>(A<Is...>) { (Ts::g(Is) && ...); }(A<0>{});
+    // expected-warning@-1 {{explicit template parameter list for lambdas is a C++20 extension}}
+  };
+
+  struct B { static void g(int); };
+
+  template void f<B>();
+} // namespace SubstTemplateTypeParmPackType
+#endif

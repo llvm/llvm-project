@@ -242,11 +242,10 @@ _mm_packs_pu16(__m64 __m1, __m64 __m2)
 ///    Bits [63:56] are written to bits [63:56] of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpackhi_pi8(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2,
-                                          4, 12, 5, 13, 6, 14, 7, 15);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpackhi_pi8(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2, 4, 12, 5,
+                                        13, 6, 14, 7, 15);
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of
@@ -266,11 +265,9 @@ _mm_unpackhi_pi8(__m64 __m1, __m64 __m2)
 ///    Bits [63:48] are written to bits [63:48] of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpackhi_pi16(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2,
-                                          2, 6, 3, 7);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpackhi_pi16(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2, 2, 6, 3, 7);
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of
@@ -288,10 +285,9 @@ _mm_unpackhi_pi16(__m64 __m1, __m64 __m2)
 ///    the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [2 x i32] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpackhi_pi32(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 1, 3);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpackhi_pi32(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 1, 3);
 }
 
 /// Unpacks the lower 32 bits from two 64-bit integer vectors of [8 x i8]
@@ -315,11 +311,10 @@ _mm_unpackhi_pi32(__m64 __m1, __m64 __m2)
 ///    Bits [31:24] are written to bits [63:56] of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpacklo_pi8(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2,
-                                          0, 8, 1, 9, 2, 10, 3, 11);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpacklo_pi8(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2, 0, 8, 1, 9,
+                                        2, 10, 3, 11);
 }
 
 /// Unpacks the lower 32 bits from two 64-bit integer vectors of
@@ -339,11 +334,9 @@ _mm_unpacklo_pi8(__m64 __m1, __m64 __m2)
 ///    Bits [31:16] are written to bits [63:48] of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpacklo_pi16(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2,
-                                          0, 4, 1, 5);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpacklo_pi16(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2, 0, 4, 1, 5);
 }
 
 /// Unpacks the lower 32 bits from two 64-bit integer vectors of
@@ -361,10 +354,9 @@ _mm_unpacklo_pi16(__m64 __m1, __m64 __m2)
 ///    the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [2 x i32] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpacklo_pi32(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 0, 2);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpacklo_pi32(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 0, 2);
 }
 
 /// Adds each 8-bit integer element of the first 64-bit integer vector

@@ -490,15 +490,18 @@ public:
         }
         baseEleTy = hlfir::getFortranElementType(componentType);
         shape = designate.getComponentShape();
-      } else {
-        // array%component[(indices) substring|complex part] cases.
-        // Component ref of array bases are dealt with below in embox/rebox.
-        assert(mlir::isa<fir::BaseBoxType>(designateResultType));
       }
     }
 
-    if (mlir::isa<fir::BaseBoxType>(designateResultType)) {
-      // Generate embox or rebox.
+    if (mlir::isa<fir::BaseBoxType>(designateResultType) ||
+        // Convert the component array slices using embox/rebox
+        // even if the result is a contiguous array section, e.g.:
+        //   hlfir.designate %base{"i"} shape %shape :
+        //       (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>>,
+        //        !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
+        // fir.coordinate_of should probably be a better option, though.
+        (fieldIndex && baseEntity.isArray())) {
+      // Generate embox or rebox for slicing.
       mlir::Type eleTy = fir::unwrapPassByRefType(designateResultType);
       bool isScalarDesignator = !mlir::isa<fir::SequenceType>(eleTy);
       mlir::Value sourceBox;
@@ -575,8 +578,13 @@ public:
       else
         assert(sliceFields.empty() && substring.empty());
 
-      llvm::SmallVector<mlir::Type> resultType{
-          fir::updateTypeWithVolatility(designateResultType, isVolatile)};
+      // If the designate's result type is not a box, then create
+      // a box type to be used for the result of the embox/rebox.
+      mlir::Type resultType = designateResultType;
+      if (!mlir::isa<fir::BaseBoxType>(resultType))
+        resultType = fir::wrapInClassOrBoxType(resultType);
+
+      resultType = fir::updateTypeWithVolatility(resultType, isVolatile);
 
       mlir::Value resultBox;
       if (mlir::isa<fir::BaseBoxType>(base.getType())) {
@@ -586,6 +594,13 @@ public:
         resultBox =
             fir::EmboxOp::create(builder, loc, resultType, base, shape, slice,
                                  firBaseTypeParameters, sourceBox);
+      }
+
+      if (!mlir::isa<fir::BaseBoxType>(designateResultType)) {
+        // If the designate's result is not a box, use the raw address
+        // as the new result.
+        resultBox = fir::BoxAddrOp::create(rewriter, loc, resultBox);
+        resultBox = builder.createConvert(loc, designateResultType, resultBox);
       }
       rewriter.replaceOp(designate, resultBox);
       return mlir::success();

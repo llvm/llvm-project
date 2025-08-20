@@ -863,7 +863,7 @@ declare <2 x float> @test_callee(<2 x float> %a, <2 x float> %b) #0
 define <2 x float> @test_call(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_call(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_call_param_1];
@@ -886,7 +886,7 @@ define <2 x float> @test_call(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_call_flipped(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_call_flipped(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_call_flipped_param_1];
@@ -909,7 +909,7 @@ define <2 x float> @test_call_flipped(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_tailcall_flipped(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_tailcall_flipped(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_tailcall_flipped_param_1];

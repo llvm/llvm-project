@@ -88,7 +88,7 @@ public:
       FileOffset, const char *, std::size_t, IoErrorHandler &);
   RT_API_ATTRS void Wait(int id, IoErrorHandler &);
   RT_API_ATTRS void WaitAll(IoErrorHandler &);
-  RT_API_ATTRS Position InquirePosition() const;
+  RT_API_ATTRS Position InquirePosition(FileOffset) const;
 };
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
@@ -198,8 +198,8 @@ public:
   RT_API_ATTRS int GetAsynchronousId(IoErrorHandler &);
   RT_API_ATTRS bool Wait(int);
   RT_API_ATTRS Position InquirePosition() const {
-    return OpenFile::InquirePosition(
-        static_cast<FileOffset>(frameOffsetInFile_ + recordOffsetInFrame_));
+    return OpenFileClass::InquirePosition(
+        static_cast<std::int64_t>(frameOffsetInFile_ + recordOffsetInFrame_));
   }
 
 private:

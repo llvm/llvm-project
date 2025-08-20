@@ -2422,8 +2422,18 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
                                    "must be zero on gfx10 or gfx11");
     }
 
-    // Bits [14-30].
-    CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED4,
+    // Bits [14-16]
+    if (isGFX1250()) {
+      PRINT_DIRECTIVE(".amdhsa_named_barrier_count",
+                      COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT);
+    } else {
+      CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_GFX120_RESERVED4,
+                                   "COMPUTE_PGM_RSRC3",
+                                   "must be zero on gfx10+");
+    }
+
+    // Bits [17-30].
+    CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED5,
                                  "COMPUTE_PGM_RSRC3", "must be zero on gfx10+");
 
     // Bits [31].

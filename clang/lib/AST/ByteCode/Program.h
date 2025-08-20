@@ -176,9 +176,6 @@ private:
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
 
-  /// Function relocation locations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
-
   /// Native pointers referenced by bytecode.
   std::vector<const void *> NativePointers;
   /// Cached native pointer indices.

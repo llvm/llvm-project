@@ -1458,7 +1458,6 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // Map the global virtual register number to a register class specific
   // virtual register number starting from 1 with that class.
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  //unsigned numRegClasses = TRI->getNumRegClasses();
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1479,13 +1478,12 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // global virtual
   // register number and the per class virtual register number.
   // We use the per class virtual register number in the ptx output.
-  unsigned int numVRs = MRI->getNumVirtRegs();
-  for (unsigned i = 0; i < numVRs; i++) {
-    Register vr = Register::index2VirtReg(i);
-    const TargetRegisterClass *RC = MRI->getRegClass(vr);
-    DenseMap<unsigned, unsigned> &regmap = VRegMapping[RC];
-    int n = regmap.size();
-    regmap.insert(std::make_pair(vr, n + 1));
+  for (unsigned I : llvm::seq(MRI->getNumVirtRegs())) {
+    Register VR = Register::index2VirtReg(I);
+    if (MRI->use_empty(VR) && MRI->def_empty(VR))
+      continue;
+    auto &RCRegMap = VRegMapping[MRI->getRegClass(VR)];
+    RCRegMap[VR] = RCRegMap.size() + 1;
   }
 
   // Emit declaration of the virtual registers or 'physical' registers for

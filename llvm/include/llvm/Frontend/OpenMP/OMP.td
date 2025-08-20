@@ -876,6 +876,14 @@ def OMP_For : Directive<[Spelling<"for">]> {
   let category = CA_Executable;
   let languages = [L_C];
 }
+def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_DeviceType>,
+  ];
+  let association = AS_None;
+  let category = CA_Declarative;
+  let languages = [L_C, L_Fortran];
+}
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Permutation>,

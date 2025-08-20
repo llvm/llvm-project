@@ -14,6 +14,8 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Location.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
@@ -23,16 +25,68 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
-void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
-  for (auto *curStmt : s.body()) {
-    if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-      getCIRGenModule().errorNYI(curStmt->getSourceRange(),
-                                 std::string("emitCompoundStmtWithoutScope: ") +
-                                     curStmt->getStmtClassName());
+static mlir::LogicalResult emitStmtWithResult(CIRGenFunction &cgf,
+                                              const Stmt *exprResult,
+                                              AggValueSlot slot,
+                                              Address *lastValue) {
+  // We have to special case labels here. They are statements, but when put
+  // at the end of a statement expression, they yield the value of their
+  // subexpression. Handle this by walking through all labels we encounter,
+  // emitting them before we evaluate the subexpr.
+  // Similar issues arise for attributed statements.
+  while (!isa<Expr>(exprResult)) {
+    if (const auto *ls = dyn_cast<LabelStmt>(exprResult)) {
+      if (cgf.emitLabel(*ls->getDecl()).failed())
+        return mlir::failure();
+      exprResult = ls->getSubStmt();
+    } else if (const auto *as = dyn_cast<AttributedStmt>(exprResult)) {
+      // FIXME: Update this if we ever have attributes that affect the
+      // semantics of an expression.
+      exprResult = as->getSubStmt();
+    } else {
+      llvm_unreachable("Unknown value statement");
+    }
   }
+
+  const Expr *e = cast<Expr>(exprResult);
+  QualType exprTy = e->getType();
+  if (cgf.hasAggregateEvaluationKind(exprTy)) {
+    cgf.emitAggExpr(e, slot);
+  } else {
+    // We can't return an RValue here because there might be cleanups at
+    // the end of the StmtExpr.  Because of that, we have to emit the result
+    // here into a temporary alloca.
+    cgf.emitAnyExprToMem(e, *lastValue, Qualifiers(),
+                         /*IsInit*/ false);
+  }
+
+  return mlir::success();
 }
 
-void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
+mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
+    const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
+  mlir::LogicalResult result = mlir::success();
+  const Stmt *exprResult = s.getStmtExprResult();
+  assert((!lastValue || (lastValue && exprResult)) &&
+         "If lastValue is not null then the CompoundStmt must have a "
+         "StmtExprResult");
+
+  for (const Stmt *curStmt : s.body()) {
+    const bool saveResult = lastValue && exprResult == curStmt;
+    if (saveResult) {
+      if (emitStmtWithResult(*this, exprResult, slot, lastValue).failed())
+        result = mlir::failure();
+    } else {
+      if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
+        result = mlir::failure();
+    }
+  }
+  return result;
+}
+
+mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
+                                                     Address *lastValue,
+                                                     AggValueSlot slot) {
   // Add local scope to track new declared variables.
   SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
@@ -41,12 +95,10 @@ void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
       scopeLoc, [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
         scopeInsPt = b.saveInsertionPoint();
       });
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeInsPt);
-    LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
-    emitCompoundStmtWithoutScope(s);
-  }
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.restoreInsertionPoint(scopeInsPt);
+  LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
+  return emitCompoundStmtWithoutScope(s, lastValue, slot);
 }
 
 void CIRGenFunction::emitStopPoint(const Stmt *s) {
@@ -249,10 +301,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     return emitDeclStmt(cast<DeclStmt>(*s));
   case Stmt::CompoundStmtClass:
     if (useCurrentScope)
-      emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
-    else
-      emitCompoundStmt(cast<CompoundStmt>(*s));
-    break;
+      return emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
+    return emitCompoundStmt(cast<CompoundStmt>(*s));
   case Stmt::GotoStmtClass:
     return emitGotoStmt(cast<GotoStmt>(*s));
   case Stmt::ContinueStmtClass:
