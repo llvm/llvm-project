@@ -143,7 +143,7 @@ macro(opencl_bc_lib)
     # Extra link step with internalize
     COMMAND $<TARGET_FILE:llvm-link> -internalize -only-needed "${name}.link0${LIB_SUFFIX}"
       -o "${OUT_NAME}${LIB_SUFFIX}" ${internal_link_libs}
-    COMMAND $<TARGET_FILE:opt> -passes=amdgpu-unify-metadata,strip
+    COMMAND $<TARGET_FILE:opt>
       -o "${OUT_NAME}${STRIP_SUFFIX}" "${OUT_NAME}${LIB_SUFFIX}"
     COMMAND "${PREPARE_BUILTINS}"
       -o ${OUTPUT_BC_LIB} "${OUT_NAME}${STRIP_SUFFIX}"

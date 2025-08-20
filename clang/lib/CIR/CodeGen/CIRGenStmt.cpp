@@ -33,6 +33,8 @@ void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
 }
 
 void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
+  // Add local scope to track new declared variables.
+  SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
   mlir::OpBuilder::InsertPoint scopeInsPt;
   builder.create<cir::ScopeOp>(
@@ -130,6 +132,9 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*s));
   case Stmt::OpenACCAtomicConstructClass:
     return emitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*s));
+  case Stmt::GCCAsmStmtClass:
+  case Stmt::MSAsmStmtClass:
+    return emitAsmStmt(cast<AsmStmt>(*s));
   case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPErrorDirectiveClass:
   case Stmt::LabelStmtClass:
@@ -143,8 +148,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CoreturnStmtClass:
   case Stmt::CXXTryStmtClass:
   case Stmt::IndirectGotoStmtClass:
-  case Stmt::GCCAsmStmtClass:
-  case Stmt::MSAsmStmtClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:
   case Stmt::OMPTaskyieldDirectiveClass:
@@ -250,6 +253,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     else
       emitCompoundStmt(cast<CompoundStmt>(*s));
     break;
+  case Stmt::GotoStmtClass:
+    return emitGotoStmt(cast<GotoStmt>(*s));
   case Stmt::ContinueStmtClass:
     return emitContinueStmt(cast<ContinueStmt>(*s));
 
@@ -428,6 +433,24 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   builder.create<cir::BrOp>(loc, retBlock);
   if (ehStack.stable_begin() != currentCleanupStackDepth)
     cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
+  // FIXME: LLVM codegen inserts emit a stop point here for debug info
+  // sake when the insertion point is available, but doesn't do
+  // anything special when there isn't. We haven't implemented debug
+  // info support just yet, look at this again once we have it.
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  cir::GotoOp::create(builder, getLoc(s.getSourceRange()),
+                      s.getLabel()->getName());
+
+  // A goto marks the end of a block, create a new one for codegen after
+  // emitGotoStmt can resume building in that block.
+  // Insert the new block to continue codegen after goto.
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();

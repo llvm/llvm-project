@@ -1387,6 +1387,23 @@ public:
   }
 };
 
+/// Pattern that erases 'test.type_consumers' iff the input operand is the
+/// result of a 1:1 type conversion.
+/// Used to test correct skipping of 1:1 patterns in the 1:N case.
+class TestTypeConsumerOpPattern
+    : public OpConversionPattern<TestTypeConsumerOp> {
+public:
+  TestTypeConsumerOpPattern(MLIRContext *ctx, const TypeConverter &converter)
+      : OpConversionPattern<TestTypeConsumerOp>(converter, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(TestTypeConsumerOp op, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Test unambiguous overload resolution of replaceOpWithMultiple. This
 /// function is just to trigger compiler errors. It is never executed.
 [[maybe_unused]] void testReplaceOpWithMultipleOverloads(
@@ -1498,8 +1515,8 @@ struct TestLegalizePatternDriver
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace, TestReplaceWithValidConsumer>(
-        &getContext(), converter);
+                 TestBlockArgReplace, TestReplaceWithValidConsumer,
+                 TestTypeConsumerOpPattern>(&getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1558,15 +1575,19 @@ struct TestLegalizePatternDriver
     target.addDynamicallyLegalOp<ConvertBlockArgsOp>(
         [](ConvertBlockArgsOp op) { return op.getIsLegal(); });
 
+    // Set up configuration.
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
+    config.foldingMode = foldingMode;
+    config.buildMaterializations = buildMaterializations;
+    config.attachDebugMaterializationKind = attachDebugMaterializationKind;
+    DumpNotifications dumpNotifications;
+    config.listener = &dumpNotifications;
+
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      ConversionConfig config;
-      config.allowPatternRollback = allowPatternRollback;
-      DumpNotifications dumpNotifications;
-      config.listener = &dumpNotifications;
       config.unlegalizedOps = &unlegalizedOps;
-      config.foldingMode = foldingMode;
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
@@ -1584,11 +1605,6 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
-      ConversionConfig config;
-      config.allowPatternRollback = allowPatternRollback;
-      DumpNotifications dumpNotifications;
-      config.foldingMode = foldingMode;
-      config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
                                      std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyFullConversion failed";
@@ -1601,9 +1617,6 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
-    ConversionConfig config;
-    config.foldingMode = foldingMode;
-    config.allowPatternRollback = allowPatternRollback;
     config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
                                        std::move(patterns), config)))
@@ -1642,6 +1655,16 @@ struct TestLegalizePatternDriver
   Option<bool> allowPatternRollback{*this, "allow-pattern-rollback",
                                     llvm::cl::desc("Allow pattern rollback"),
                                     llvm::cl::init(true)};
+  Option<bool> attachDebugMaterializationKind{
+      *this, "attach-debug-materialization-kind",
+      llvm::cl::desc(
+          "Attach materialization kind to unrealized_conversion_cast ops"),
+      llvm::cl::init(false)};
+  Option<bool> buildMaterializations{
+      *this, "build-materializations",
+      llvm::cl::desc(
+          "If set to 'false', leave unrealized_conversion_cast ops in place"),
+      llvm::cl::init(true)};
 };
 } // namespace
 

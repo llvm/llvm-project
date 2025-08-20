@@ -31,6 +31,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "llvm/ADT/ScopedHashTable.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -102,6 +103,14 @@ public:
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
+
+  /// The symbol table maps a variable name to a value in the current scope.
+  /// Entering a function creates a new scope, and the function arguments are
+  /// added to the mapping. When the processing of a function is terminated,
+  /// the scope is destroyed and the mappings created in this scope are
+  /// dropped.
+  using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
+  SymTableTy symbolTable;
 
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
@@ -325,6 +334,9 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  using SymTableScopeTy =
+      llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
+
   /// Hold counters for incrementally naming temporaries
   unsigned counterRefTmp = 0;
   unsigned counterAggTmp = 0;
@@ -499,7 +511,18 @@ public:
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
     localDeclMap.insert({vd, addr});
-    // TODO: Add symbol table support
+
+    // Add to the symbol table if not there already.
+    if (symbolTable.count(vd))
+      return;
+    symbolTable.insert(vd, addr.getPointer());
+  }
+
+  /// Removes a declaration from the address-relationship.  This is a function
+  /// that shouldn't need to be used except in cases where we're adding/removing
+  /// things that aren't part of the language-semantics AST.
+  void removeAddrOfLocalVar(const clang::VarDecl *vd) {
+    localDeclMap.erase(vd);
   }
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
@@ -528,6 +551,11 @@ public:
   /// Return the Value of the vtable pointer member pointed to by thisAddr.
   mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);
+
+  /// Returns whether we should perform a type checked load when loading a
+  /// virtual function for virtual calls to members of RD. This is generally
+  /// true when both vcall CFI and whole-program-vtables are enabled.
+  bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
 
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
@@ -924,7 +952,10 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
-  Address emitArrayToPointerDecay(const Expr *array);
+  Address emitArrayToPointerDecay(const Expr *e,
+                                  LValueBaseInfo *baseInfo = nullptr);
+
+  mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
@@ -1096,6 +1127,8 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
+
+  mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
 
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
@@ -1387,6 +1420,24 @@ public:
   mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
                                     const clang::Stmt *thenS,
                                     const clang::Stmt *elseS);
+
+  /// Build a "reference" to a va_list; this is either the address or the value
+  /// of the expression, depending on how va_list is defined.
+  Address emitVAListRef(const Expr *e);
+
+  /// Emits the start of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \param count The number of arguments in \c vaList
+  void emitVAStart(mlir::Value vaList, mlir::Value count);
+
+  /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
+  ///
+  /// \param vaList A reference to the \c va_list as emitted by either
+  /// \c emitVAListRef or \c emitMSVAListRef.
+  void emitVAEnd(mlir::Value vaList);
 
   /// ----------------------
   /// CIR build helpers

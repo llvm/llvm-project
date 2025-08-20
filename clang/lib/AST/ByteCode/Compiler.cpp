@@ -60,16 +60,18 @@ template <class Emitter> class OptionScope final {
 public:
   /// Root constructor, compiling or discarding primitives.
   OptionScope(Compiler<Emitter> *Ctx, bool NewDiscardResult,
-              bool NewInitializing)
+              bool NewInitializing, bool NewToLValue)
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitializing(Ctx->Initializing) {
+        OldInitializing(Ctx->Initializing), OldToLValue(NewToLValue) {
     Ctx->DiscardResult = NewDiscardResult;
     Ctx->Initializing = NewInitializing;
+    Ctx->ToLValue = NewToLValue;
   }
 
   ~OptionScope() {
     Ctx->DiscardResult = OldDiscardResult;
     Ctx->Initializing = OldInitializing;
+    Ctx->ToLValue = OldToLValue;
   }
 
 private:
@@ -78,6 +80,7 @@ private:
   /// Old discard flag to restore.
   bool OldDiscardResult;
   bool OldInitializing;
+  bool OldToLValue;
 };
 
 template <class Emitter>
@@ -222,6 +225,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   switch (CE->getCastKind()) {
   case CK_LValueToRValue: {
+    if (ToLValue && CE->getType()->isPointerType())
+      return this->delegate(SubExpr);
+
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
@@ -2974,20 +2980,25 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     if (T && !E->isLValue())
       return this->delegate(Init);
 
-    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
-      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+    if (!GlobalIndex)
+      return false;
+
+    if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+      return false;
+
+    // Since this is a global variable, we might've already seen,
+    // don't do it again.
+    if (P.isGlobalInitialized(*GlobalIndex))
+      return true;
+
+    if (T) {
+      if (!this->visit(Init))
         return false;
-
-      if (T) {
-        if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*T, *GlobalIndex, E);
-      }
-
-      return this->visitInitializer(Init) && this->emitFinishInit(E);
+      return this->emitInitGlobal(*T, *GlobalIndex, E);
     }
 
-    return false;
+    return this->visitInitializer(Init) && this->emitFinishInit(E);
   }
 
   // Otherwise, use a local variable.
@@ -4140,13 +4151,13 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
 
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
-                             /*NewInitializing=*/false);
+                             /*NewInitializing=*/false, /*ToLValue=*/false);
   return this->Visit(E);
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
   // We're basically doing:
-  // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
+  // OptionScope<Emitter> Scope(this, DicardResult, Initializing, ToLValue);
   // but that's unnecessary of course.
   return this->Visit(E);
 }
@@ -4174,7 +4185,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   //  Otherwise,we have a primitive return value, produce the value directly
   //  and push it on the stack.
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
-                             /*NewInitializing=*/false);
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
   return this->Visit(E);
 }
 
@@ -4183,7 +4194,13 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!canClassify(E->getType()));
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
-                             /*NewInitializing=*/true);
+                             /*NewInitializing=*/true, /*ToLValue=*/false);
+  return this->Visit(E);
+}
+
+template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
   return this->Visit(E);
 }
 
@@ -4944,7 +4961,6 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
-
   if (BuiltinID == Builtin::BI__builtin_constant_p) {
     // Void argument is always invalid and harder to handle later.
     if (E->getArg(0)->getType()->isVoidType()) {
@@ -4989,11 +5005,31 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
   }
 
-  if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
-    // Put arguments on the stack.
-    for (const auto *Arg : E->arguments()) {
-      if (!this->visit(Arg))
+  // Prepare function arguments including special cases.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_object_size:
+  case Builtin::BI__builtin_dynamic_object_size: {
+    assert(E->getNumArgs() == 2);
+    const Expr *Arg0 = E->getArg(0);
+    if (Arg0->isGLValue()) {
+      if (!this->visit(Arg0))
         return false;
+
+    } else {
+      if (!this->visitAsLValue(Arg0))
+        return false;
+    }
+    if (!this->visit(E->getArg(1)))
+      return false;
+
+  } break;
+  default:
+    if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+      // Put arguments on the stack.
+      for (const auto *Arg : E->arguments()) {
+        if (!this->visit(Arg))
+          return false;
+      }
     }
   }
 
@@ -5146,7 +5182,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->emitCheckPseudoDtor(E))
       return false;
     const Expr *Base = PD->getBase();
-    if (!Base->isGLValue())
+    // E.g. `using T = int; 0.~T();`.
+    if (OptPrimType BaseT = classify(Base); !BaseT || BaseT != PT_Ptr)
       return this->discard(Base);
     if (!this->visit(Base))
       return false;
@@ -6745,6 +6782,22 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // value.
   bool IsReference = D->getType()->isReferenceType();
 
+  // Function parameters.
+  // Note that it's important to check them first since we might have a local
+  // variable created for a ParmVarDecl as well.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
+        !D->getType()->isIntegralOrEnumerationType()) {
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
+    }
+    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+      if (IsReference || !It->second.IsPtr)
+        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
+
+      return this->emitGetPtrParam(It->second.Offset, E);
+    }
+  }
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
@@ -6761,20 +6814,6 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
-  }
-  // Function parameters.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
-    if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
-        !D->getType()->isIntegralOrEnumerationType()) {
-      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
-                                      /*InitializerFailed=*/false, E);
-    }
-    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-      if (IsReference || !It->second.IsPtr)
-        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
-
-      return this->emitGetPtrParam(It->second.Offset, E);
-    }
   }
 
   // In case we need to re-visit a declaration.

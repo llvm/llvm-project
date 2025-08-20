@@ -378,6 +378,7 @@ foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
 
 def : SourceOfDivergence<int_amdgcn_dead>;
+def : SourceOfDivergence<int_amdgcn_call_whole_wave>;
 
 class AlwaysUniform<Intrinsic intr> {
   Intrinsic Intr = intr;

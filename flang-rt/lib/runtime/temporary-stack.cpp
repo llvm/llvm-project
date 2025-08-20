@@ -20,6 +20,8 @@ namespace {
 
 using namespace Fortran::runtime;
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 // the number of elements to allocate when first creating the vector
 constexpr size_t INITIAL_ALLOC = 8;
 
@@ -181,8 +183,11 @@ inline static DescriptorStack *getDescriptorStorage(void *opaquePtr) {
   return static_cast<DescriptorStack *>(opaquePtr);
 }
 
+RT_OFFLOAD_API_GROUP_END
+
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 void *RTNAME(CreateValueStack)(const char *sourceFile, int line) {
   return ValueStack::allocate(sourceFile, line);
 }
@@ -223,5 +228,6 @@ void RTNAME(DestroyDescriptorStack)(void *opaquePtr) {
   DescriptorStack::destroy(getDescriptorStorage(opaquePtr));
 }
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime
