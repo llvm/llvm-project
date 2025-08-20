@@ -4280,7 +4280,24 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           switch (VPI->getOpcode()) {
           // Selects are not modelled in the legacy cost model if they are
           // inserted for reductions.
-          case Instruction::Select:
+          case Instruction::Select: {
+            VPValue *V =
+                R.getNumDefinedValues() == 1 ? R.getVPSingleValue() : nullptr;
+            if (V && V->getNumUsers() == 1) {
+              if (auto *UR = dyn_cast<VPWidenRecipe>(*V->user_begin())) {
+                switch (UR->getOpcode()) {
+                case Instruction::UDiv:
+                case Instruction::SDiv:
+                case Instruction::URem:
+                case Instruction::SRem:
+                  continue;
+                default:
+                  break;
+                }
+              }
+            }
+            [[fallthrough]];
+          }
           case VPInstruction::ActiveLaneMask:
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
