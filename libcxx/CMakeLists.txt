@@ -113,7 +113,7 @@ option(LIBCXX_ENABLE_MONOTONIC_CLOCK
 #
 # TODO TZDB make the default always ON when most platforms ship with the IANA
 # database.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT ON)
 else()
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT OFF)
@@ -466,7 +466,7 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
