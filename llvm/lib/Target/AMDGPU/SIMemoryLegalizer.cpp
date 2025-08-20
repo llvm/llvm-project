@@ -268,7 +268,7 @@ public:
   /// \returns DMA to LDS info if \p MI is as a direct-to/from-LDS load/store,
   /// along with an indication of whether this is a load or store. If it is not
   /// a direct-to-LDS operation, returns std::nullopt.
-  std::optional<std::tuple<SIMemOpInfo, SIMemOp>>
+  std::optional<SIMemOpInfo>
   getLdsLoadStoreInfo(const MachineBasicBlock::iterator &MI) const;
 };
 
@@ -671,7 +671,7 @@ private:
                                 MachineBasicBlock::iterator &MI);
   /// Expands LDS load/store operation \p MI. Returns true if instructions are
   /// added/deleted or \p MI is modified, false otherwise.
-  bool expandLdsLoadStore(const SIMemOpInfo &MOI, SIMemOp OpKind,
+  bool expandLdsLoadStore(const SIMemOpInfo &MOI,
                           MachineBasicBlock::iterator &MI);
 
 public:
@@ -951,21 +951,14 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
   return constructFromMIWithMMO(MI);
 }
 
-std::optional<std::tuple<SIMemOpInfo, SIMemOp>>
-SIMemOpAccess::getLdsLoadStoreInfo(
+std::optional<SIMemOpInfo> SIMemOpAccess::getLdsLoadStoreInfo(
     const MachineBasicBlock::iterator &MI) const {
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (!SIInstrInfo::isLDSDMA(*MI))
     return std::nullopt;
 
-  // The volatility or nontemporal-ness of the operation is a
-  // function of the global memory, not the LDS.
-  SIMemOp OpKind = SIInstrInfo::mayWriteLDSThroughDMA(*MI) ? SIMemOp::LOAD : SIMemOp::STORE;
-  if (auto MOI = constructFromMIWithMMO(MI)) {
-    return {{*MOI, OpKind}};
-  }
-  return std::nullopt;
+  return constructFromMIWithMMO(MI);
 }
 
 SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
@@ -2850,9 +2843,13 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
 }
 
 bool SIMemoryLegalizer::expandLdsLoadStore(const SIMemOpInfo &MOI,
-                                           SIMemOp OpKind,
                                            MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
+
+  // The volatility or nontemporal-ness of the operation is a
+  // function of the global memory, not the LDS.
+  SIMemOp OpKind =
+      SIInstrInfo::mayWriteLDSThroughDMA(*MI) ? SIMemOp::LOAD : SIMemOp::STORE;
 
   // Handle volatile and/or nontemporal markers on direct-to-LDS loads and
   // stores. The operation is treated as a volatile/nontemporal store
@@ -2911,9 +2908,8 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         Changed |= expandLoad(*MOI, MI);
       } else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
-      } else if (const auto &MOIAndOpKind = MOA.getLdsLoadStoreInfo(MI)) {
-        const auto &[MOI, OpKind] = *MOIAndOpKind;
-        Changed |= expandLdsLoadStore(MOI, OpKind, MI);
+      } else if (const auto &MOI = MOA.getLdsLoadStoreInfo(MI)) {
+        Changed |= expandLdsLoadStore(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI)) {
         Changed |= expandAtomicFence(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI)) {
