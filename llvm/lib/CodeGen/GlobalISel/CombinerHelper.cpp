@@ -6004,21 +6004,11 @@ bool CombinerHelper::matchTruncUSatU(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+    return false;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
-  if (LI && isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}})) {
-    if (mi_match(Min, MRI, m_SpecificICstOrSplat(UnsignedMax)) &&
-        !mi_match(Val, MRI, m_GSMax(m_Reg(), m_Reg())))
-      return true;
-  }
-  return false;
-}
-
-void CombinerHelper::applyTruncUSatU(MachineInstr &MI,
-                                     MachineInstr &MinMI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MinMI.getOperand(1).getReg();
-  Builder.buildTruncUSatU(Dst, Src);
-  MI.eraseFromParent();
+  return mi_match(Min, MRI, m_SpecificICstOrSplat(UnsignedMax)) &&
+         !mi_match(Val, MRI, m_GSMax(m_Reg(), m_Reg()));
 }
 
 bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
@@ -6026,19 +6016,8 @@ bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   LLT SrcTy = MRI.getType(SrcMI.getOperand(1).getReg());
 
-  if (LI &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_FPTOUI_SAT, {DstTy, SrcTy}})) {
-    return true;
-  }
-  return false;
-}
-
-void CombinerHelper::applyTruncUSatUToFPTOUISat(MachineInstr &MI,
-                                                MachineInstr &SrcMI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = SrcMI.getOperand(1).getReg();
-  Builder.buildFPTOUI_SAT(Dst, Src);
-  MI.eraseFromParent();
+  return LI &&
+         isLegalOrBeforeLegalizer({TargetOpcode::G_FPTOUI_SAT, {DstTy, SrcTy}});
 }
 
 bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,

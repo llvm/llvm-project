@@ -2388,13 +2388,6 @@ define <4 x i16> @test_unsigned_v4f16_v4i16(<4 x half> %f) {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-CVT-LABEL: test_unsigned_v4f16_v4i16:
-; CHECK-GI-CVT:       // %bb.0:
-; CHECK-GI-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-CVT-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-GI-CVT-NEXT:    uqxtn v0.4h, v0.4s
-; CHECK-GI-CVT-NEXT:    ret
     %x = call <4 x i16> @llvm.fptoui.sat.v4f16.v4i16(<4 x half> %f)
     ret <4 x i16> %x
 }

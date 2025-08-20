@@ -740,11 +740,9 @@ public:
 
   // Combine trunc(umin(x, C)) -> truncusat_u(x).
   bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
-  void applyTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
 
   // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
   bool matchTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
-  void applyTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

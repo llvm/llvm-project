@@ -919,30 +919,6 @@ public:
   };
 };
 
-/// Represents a saturated trunc from a signed input to a signed result.
-class GTruncSSatS : public GCastOp {
-public:
-  static bool classof(const MachineInstr *MI) {
-    return MI->getOpcode() == TargetOpcode::G_TRUNC_SSAT_S;
-  };
-};
-
-/// Represents a saturated trunc from a signed input to an unsigned result.
-class GTruncSSatU : public GCastOp {
-public:
-  static bool classof(const MachineInstr *MI) {
-    return MI->getOpcode() == TargetOpcode::G_TRUNC_SSAT_U;
-  };
-};
-
-/// Represents a saturated trunc from an unsigned input to an unsigned result.
-class GTruncUSatU : public GCastOp {
-public:
-  static bool classof(const MachineInstr *MI) {
-    return MI->getOpcode() == TargetOpcode::G_TRUNC_USAT_U;
-  };
-};
-
 /// Represents a vscale.
 class GVScale : public GenericMachineInstr {
 public:
