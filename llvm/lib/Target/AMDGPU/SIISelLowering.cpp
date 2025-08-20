@@ -10798,11 +10798,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     Ops.push_back(Op.getOperand(5));  // Offset
 
-    bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
     unsigned Aux = Op.getConstantOperandVal(6);
-    Ops.push_back(DAG.getTargetConstant(
-        Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12),
-        DL, MVT::i32)); // CPol
+    Ops.push_back(DAG.getTargetConstant(Aux & ~AMDGPU::CPol::VIRTUAL_BITS, DL,
+                                        MVT::i32)); // CPol
 
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue

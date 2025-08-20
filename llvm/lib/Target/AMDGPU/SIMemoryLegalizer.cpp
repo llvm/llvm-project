@@ -971,7 +971,7 @@ SIMemOpAccess::getLdsLoadStoreInfo(
     HasLDS |= AS == AMDGPUAS::LOCAL_ADDRESS;
     if (AS != AMDGPUAS::LOCAL_ADDRESS) {
       HasNonLDS |= true;
-      if (!HasLDS) {
+      if (HasLDS) {
         // If the pointer to LDS was in the first memop, this is a store
         // from that pointer.
         OpKind = SIMemOp::STORE;
@@ -983,7 +983,7 @@ SIMemOpAccess::getLdsLoadStoreInfo(
   }
 
   if (auto MOI = constructFromMIWithMMO(MI)) {
-    return {*MOI, OpKind};
+    return {{*MOI, OpKind}};
   }
   return std::nullopt;
 }

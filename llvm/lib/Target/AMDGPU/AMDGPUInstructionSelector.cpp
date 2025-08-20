@@ -3668,10 +3668,8 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   MIB.add(MI.getOperand(4)); // offset
 
-  bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
   unsigned Aux = MI.getOperand(5).getImm();
-  MIB.addImm(Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL
-                                : AMDGPU::CPol::ALL_pregfx12)); // cpol
+  MIB.addImm(Aux & ~AMDGPU::CPol::VIRTUAL_BITS); // cpol
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();

@@ -223,7 +223,7 @@ define amdgpu_ps void @global_load_lds_dword_volatile(ptr addrspace(1) nocapture
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_mov_b32 m0, s0
 ; GFX90A-NEXT:    s_nop 0
-; GFX90A-NEXT:    global_load_dword v[0:1], off lds
+; GFX90A-NEXT:    global_load_dword v[0:1], off glc lds
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_load_dword v[0:1], off offset:256 lds
 ; GFX90A-NEXT:    global_load_dword v[0:1], off offset:512 lds
@@ -242,7 +242,8 @@ define amdgpu_ps void @global_load_lds_dword_volatile(ptr addrspace(1) nocapture
 ; GFX10-LABEL: global_load_lds_dword_volatile:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 m0, s0
-; GFX10-NEXT:    global_load_dword v[0:1], off lds
+; GFX10-NEXT:    global_load_dword v[0:1], off glc dlc lds
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v[0:1], off offset:256 lds
 ; GFX10-NEXT:    global_load_dword v[0:1], off offset:512 lds
 ; GFX10-NEXT:    s_endpgm
@@ -269,7 +270,7 @@ define amdgpu_ps void @buffer_load_lds_dword_volatile(ptr addrspace(7) nocapture
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX90A-NEXT:    s_mov_b32 m0, s5
 ; GFX90A-NEXT:    s_nop 0
-; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen lds
+; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen glc lds
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:256 lds
 ; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:512 lds
@@ -290,7 +291,8 @@ define amdgpu_ps void @buffer_load_lds_dword_volatile(ptr addrspace(7) nocapture
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, s4, v0
 ; GFX10-NEXT:    s_mov_b32 m0, s5
-; GFX10-NEXT:    buffer_load_dword v0, s[0:3], 0 offen lds
+; GFX10-NEXT:    buffer_load_dword v0, s[0:3], 0 offen glc dlc lds
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:256 lds
 ; GFX10-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:512 lds
 ; GFX10-NEXT:    s_endpgm
@@ -334,7 +336,7 @@ define amdgpu_ps void @global_load_lds_dword_nontemporal(ptr addrspace(1) nocapt
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b32 m0, s2
-; GFX10-NEXT:    global_load_dword v0, s[0:1] glc slc lds
+; GFX10-NEXT:    global_load_dword v0, s[0:1] slc lds
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: global_load_lds_dword_nontemporal:
@@ -370,7 +372,7 @@ define amdgpu_ps void @buffer_load_lds_dword_nontemporal(ptr addrspace(7) nocapt
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, s4, v0
 ; GFX10-NEXT:    s_mov_b32 m0, s5
-; GFX10-NEXT:    buffer_load_dword v0, s[0:3], 0 offen glc slc lds
+; GFX10-NEXT:    buffer_load_dword v0, s[0:3], 0 offen slc lds
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: buffer_load_lds_dword_nontemporal:
