@@ -168,7 +168,7 @@ namespace unresolved_using {
   template struct C<int>;
 } // namespace unresolved_using
 
-#if __cplusplus >= 201703L
+#if (__cplusplus >= 201703L && __cplusplus < 202002L)
 namespace SubstTemplateTypeParmPackType {
   template <int...> struct A {};
 
