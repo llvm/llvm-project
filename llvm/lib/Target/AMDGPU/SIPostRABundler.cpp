@@ -152,12 +152,7 @@ bool SIPostRABundler::run(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     bool HasIGLPInstrs = llvm::any_of(MBB.instrs(), [](MachineInstr &MI) {
       unsigned Opc = MI.getOpcode();
-      // Bypass a MBB with SCHED_BARRIER as well to make it honored.
-      // If SCHED_BARRIER is embedded between memory operations in a bundle,
-      // that SCHED_BARRIER is not picked up by IGLPmutation in post mi
-      // scheduler phase.
-      return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT ||
-             Opc == AMDGPU::SCHED_BARRIER;
+      return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
     });
 
     // Don't cluster with IGLP instructions.
@@ -190,9 +185,11 @@ bool SIPostRABundler::run(MachineFunction &MF) {
           if (I->getNumExplicitDefs() != 0)
             Defs.insert(I->defs().begin()->getReg());
           ++ClauseLength;
-        } else if (!I->isMetaInstruction()) {
-          // Allow meta instructions in between bundle candidates, but do not
-          // start or end a bundle on one.
+        } else if (!I->isMetaInstruction() ||
+                   I->getOpcode() == AMDGPU::SCHED_BARRIER) {
+          // SCHED_BARRIER is not bundled to be honored by scheduler later.
+          // Allow other meta instructions in between bundle candidates, but do
+          // not start or end a bundle on one.
           //
           // TODO: It may be better to move meta instructions like dbg_value
           // after the bundle. We're relying on the memory legalizer to unbundle
