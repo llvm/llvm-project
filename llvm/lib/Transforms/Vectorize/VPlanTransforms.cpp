@@ -1128,7 +1128,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                                      m_VPValue(Y)))) {
             R->setOperand(1, Y);
             R->setOperand(2, X);
-          }
+          } else
+            llvm_unreachable("Unexpected user");
         }
         // If WideCmp doesn't have a debug location, use the one from the
         // negation, to preserve the location.
