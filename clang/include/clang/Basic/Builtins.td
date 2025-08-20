@@ -1498,7 +1498,7 @@ def ElementwiseCopysign : Builtin {
 
 def ElementwiseFma : Builtin {
   let Spellings = ["__builtin_elementwise_fma"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
