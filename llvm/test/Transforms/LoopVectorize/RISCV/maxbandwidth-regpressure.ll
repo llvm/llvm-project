@@ -4,12 +4,11 @@
 define i32 @dotp(ptr %a, ptr %b) {
 ; CHECK-REGS-VP:      LV(REG): VF = vscale x 16
 ; CHECK-REGS-VP-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
-; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::VRRC, 40 registers
+; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::VRRC, 24 registers
 ; CHECK-REGS-VP-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-REGS-VP: LV(REG): Not considering vector loop of width vscale x 16 because it uses too many registers
-; CHECK-REGS-VP: LV: Selecting VF: vscale x 8.
+; CHECK-REGS-VP: LV: Selecting VF: vscale x 16.
 ;
 ; CHECK-NOREGS-VP: LV(REG): Not considering vector loop of width vscale x 8 because it uses too many registers
 ; CHECK-NOREGS-VP: LV(REG): Not considering vector loop of width vscale x 16 because it uses too many registers

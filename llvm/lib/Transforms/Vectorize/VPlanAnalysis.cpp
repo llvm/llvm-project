@@ -555,7 +555,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPScalarIVStepsRecipe>(R) ||
+                VPEVLBasedIVPHIRecipe, VPScalarIVStepsRecipe>(R) ||
             (isa<VPInstruction>(R) &&
              all_of(cast<VPSingleDefRecipe>(R)->users(),
                     [&](VPUser *U) {
