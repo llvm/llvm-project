@@ -847,8 +847,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
 
     // Use 2-byte element size if the tbuffer format is 16-bit.
     // Use 1-byte element size if the tbuffer format is 8-bit.
-    if (Info)
-      EltSize = Info->BitsPerComp / 8;
+    EltSize = Info->BitsPerComp / 8;
   }
 
   Width = getOpcodeWidth(*I, *LSO.TII);
@@ -1076,14 +1075,13 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     unsigned NumCombinedComponents = CI.Width + Paired.Width;
     unsigned CombinedBufferFormat =
         getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI);
-    if (CombinedBufferFormat == 0 && NumCombinedComponents == 3) {
-      if (Info0->BitsPerComp == 8 || Info0->BitsPerComp == 16) {
-        unsigned TryFormat = getBufferFormatWithCompCount(CI.Format, 4, STI);
-        if (!TryFormat)
-          return false;
-        CombinedBufferFormat = TryFormat;
-        NumCombinedComponents = 4;
-      }
+    if (CombinedBufferFormat == 0 && NumCombinedComponents == 3 &&
+        CI.EltSize <= 2) {
+      unsigned TryFormat = getBufferFormatWithCompCount(CI.Format, 4, STI);
+      if (!TryFormat)
+        return false;
+      CombinedBufferFormat = TryFormat;
+      NumCombinedComponents = 4;
     }
 
     if (CombinedBufferFormat == 0)
@@ -1091,9 +1089,8 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
 
     // Merge only when the two access ranges are strictly back-to-back,
     // any gap or overlap can over-write data or leave holes.
-    unsigned BytePerComp = Info0->BitsPerComp / 8;
-    unsigned ElemIndex0 = CI.Offset / BytePerComp;
-    unsigned ElemIndex1 = Paired.Offset / BytePerComp;
+    unsigned ElemIndex0 = CI.Offset / CI.EltSize;
+    unsigned ElemIndex1 = Paired.Offset / Paired.EltSize;
     if (ElemIndex0 + CI.Width != ElemIndex1 &&
         ElemIndex1 + Paired.Width != ElemIndex0)
       return false;
@@ -1101,7 +1098,7 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     // 1-byte formats require 1-byte alignment.
     // 2-byte formats require 2-byte alignment.
     // 4-byte and larger formats require 4-byte alignment.
-    unsigned MergedBytes = BytePerComp * NumCombinedComponents;
+    unsigned MergedBytes = CI.EltSize * NumCombinedComponents;
     unsigned RequiredAlign = std::min(MergedBytes, 4u);
     unsigned MinOff = std::min(CI.Offset, Paired.Offset);
     if (MinOff % RequiredAlign != 0)
@@ -1641,7 +1638,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
   // and use XYZ of XYZW to enable the merge.
   unsigned NumCombinedComponents = CI.Width + Paired.Width;
-  if (NumCombinedComponents == 3 && (CI.EltSize == 1 || CI.EltSize == 2))
+  if (NumCombinedComponents == 3 && CI.EltSize <= 2)
     NumCombinedComponents = 4;
   unsigned JoinedFormat =
       getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, *STM);
@@ -1690,7 +1687,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
   // and use XYZ of XYZW to enable the merge.
   unsigned NumCombinedComponents = CI.Width + Paired.Width;
-  if (NumCombinedComponents == 3 && (CI.EltSize == 1 || CI.EltSize == 2))
+  if (NumCombinedComponents == 3 && CI.EltSize <= 2)
     NumCombinedComponents = 4;
   unsigned JoinedFormat =
       getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, *STM);
