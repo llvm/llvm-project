@@ -16073,13 +16073,12 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   SDValue Base, Inserted;
   APInt CMask;
   if (!sd_match(N, m_Xor(m_Value(Base),
-                         m_OneUse(m_And(m_OneUse(m_Xor(m_Deferred(Base),
-                                                       m_Value(Inserted))),
-                                        m_ConstInt(CMask))))))
+                         m_OneUse(m_Xor(m_OneUse(m_And(m_Deferred(Base),
+                                                       m_ConstInt(CMask))),
+                                        m_Value(Inserted))))))
     return SDValue();
 
-  if (N->getValueType(0) != MVT::i32 || Base.getValueType() != MVT::i32 ||
-      Inserted.getValueType() != MVT::i32)
+  if (N->getValueType(0) != MVT::i32)
     return SDValue();
 
   unsigned Width, ShAmt;
