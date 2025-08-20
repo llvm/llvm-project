@@ -6762,7 +6762,7 @@ InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
   InstructionCost Cost = CM.getInstructionCost(UI, VF);
   if (Cost.isValid() && ForceTargetInstructionCost.getNumOccurrences())
-    return InstructionCost(ForceTargetInstructionCost.getNumOccurrences());
+    return InstructionCost(ForceTargetInstructionCost);
   return Cost;
 }
 
