@@ -3783,10 +3783,9 @@ MaybeExpr NumericBinaryHelper(
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
-      constexpr bool canBeUnsigned{opr != NumericOperator::Power};
-      return NumericOperation<OPR, canBeUnsigned>(
-          context.GetContextualMessages(), analyzer.MoveExpr(0),
-          analyzer.MoveExpr(1), context.GetDefaultKind(TypeCategory::Real));
+      return NumericOperation<OPR>(context.GetContextualMessages(),
+          analyzer.MoveExpr(0), analyzer.MoveExpr(1),
+          context.GetDefaultKind(TypeCategory::Real));
     } else {
       return analyzer.TryDefinedOp(AsFortran(opr),
           "Operands of %s must be numeric; have %s and %s"_err_en_US);
