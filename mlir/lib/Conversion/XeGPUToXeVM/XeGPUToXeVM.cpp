@@ -380,8 +380,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
-    // auto elemBitSizeAttr = rewriter.getIntegerAttr(rewriter.getI32Type(),
-    // elemBitSize);
     Value elemByteSize = arith::ConstantIntOp::create(
         rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
     Value surfaceW =
@@ -695,8 +693,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
     };
     xevm::ElemType precATy = encodePrecision(aTy.getElementType());
     xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
-    // auto precA = xevm::ElemTypeAttr::get(ctxt, precATy);
-    // auto precB = xevm::ElemTypeAttr::get(ctxt, precBTy);
     Value c = op.getAcc();
     if (!c) {
       auto elementTy = resultType.getElementType();
@@ -714,8 +710,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
     auto cvecty = cast<VectorType>(c.getType());
     xevm::ElemType precCTy = encodePrecision(cvecty.getElementType());
     xevm::ElemType precDTy = encodePrecision(resultType.getElementType());
-    // auto precC = xevm::ElemTypeAttr::get(ctxt, precCTy);
-    // auto precD = xevm::ElemTypeAttr::get(ctxt, precDTy);
     VectorType cNty =
         VectorType::get(cvecty.getNumElements(), cvecty.getElementType());
     if (cvecty != cNty)
