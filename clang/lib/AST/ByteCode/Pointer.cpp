@@ -375,6 +375,8 @@ size_t Pointer::computeOffsetForComparison() const {
     }
 
     if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
+      if (P.isOnePastEnd())
+        ++Result;
       // Direct child of a union - all have offset 0.
       P = P.getBase();
       continue;
