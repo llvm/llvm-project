@@ -5843,6 +5843,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       } else {
         // There is no point attempting to calculate the scalar cost for a
         // scalable VF as we know it will be Invalid.
+        assert(!getScalarizationOverhead(CI, VF).isValid() &&
+               "Unexpected valid cost for scalarizing scalable vectors");
         ScalarCost = InstructionCost::getInvalid();
       }
 
