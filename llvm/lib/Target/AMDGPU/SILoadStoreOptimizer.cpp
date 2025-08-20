@@ -844,9 +844,6 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     Format = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm();
     const AMDGPU::GcnBufferFormatInfo *Info =
         AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
-
-    // Use 2-byte element size if the tbuffer format is 16-bit.
-    // Use 1-byte element size if the tbuffer format is 8-bit.
     EltSize = Info->BitsPerComp / 8;
   }
 
@@ -1069,16 +1066,10 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     //   tbuffer_load_format_x + tbuffer_load_format_x + tbuffer_load_format_x
     //   ==> tbuffer_load_format_xyz with format:[BUF_FMT_16_16_16_16_SNORM]
     unsigned NumCombinedComponents = CI.Width + Paired.Width;
+    if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+      NumCombinedComponents = 4;
     unsigned CombinedBufferFormat =
         getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI);
-    if (CombinedBufferFormat == 0 && NumCombinedComponents == 3 &&
-        CI.EltSize <= 2) {
-      unsigned TryFormat = getBufferFormatWithCompCount(CI.Format, 4, STI);
-      if (!TryFormat)
-        return false;
-      CombinedBufferFormat = TryFormat;
-      NumCombinedComponents = 4;
-    }
 
     if (CombinedBufferFormat == 0)
       return false;
@@ -2402,10 +2393,6 @@ SILoadStoreOptimizer::collectMergeableInsts(
     if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
       const MachineOperand *Fmt =
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
-      if (!Fmt) {
-        LLVM_DEBUG(dbgs() << "Skip tbuffer without format operand: " << MI);
-        continue;
-      }
       if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
         continue;
