@@ -956,32 +956,12 @@ SIMemOpAccess::getLdsLoadStoreInfo(
     const MachineBasicBlock::iterator &MI) const {
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
-  if (!MI->mayLoad() || !MI->mayStore())
+  if (!SIInstrInfo::isLDSDMA(*MI))
     return std::nullopt;
 
-  // An LDS DMA will have exactly two memory operands.
-  if (MI->getNumMemOperands() != 2)
-    return std::nullopt;
-
-  bool HasLDS = false;
-  bool HasNonLDS = false;
-  SIMemOp OpKind = SIMemOp::LOAD;
-  for (const auto &MMO : MI->memoperands()) {
-    unsigned AS = MMO->getAddrSpace();
-    HasLDS |= AS == AMDGPUAS::LOCAL_ADDRESS;
-    if (AS != AMDGPUAS::LOCAL_ADDRESS) {
-      HasNonLDS |= true;
-      if (HasLDS) {
-        // If the pointer to LDS was in the first memop, this is a store
-        // from that pointer.
-        OpKind = SIMemOp::STORE;
-      }
-    }
-  }
-  if (!HasLDS || !HasNonLDS) {
-    return std::nullopt;
-  }
-
+  // The volatility or nontemporal-ness of the operation is a
+  // function of the global memory, not the LDS.
+  SIMemOp OpKind = SIInstrInfo::mayWriteLDSThroughDMA(*MI) ? SIMemOp::LOAD : SIMemOp::STORE;
   if (auto MOI = constructFromMIWithMMO(MI)) {
     return {{*MOI, OpKind}};
   }
@@ -1090,8 +1070,8 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control. There used to be a load ^ store assert here,
-  // but it was removed to allow handling direct-to-LDS copies.
+  // be used for cache control.
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1452,8 +1432,8 @@ bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control. There used to be a load ^ store assert here,
-  // but it was removed to allow handling direct-to-LDS copies.
+  // be used for cache control.
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1754,8 +1734,8 @@ bool SIGfx940CacheControl::enableVolatileAndOrNonTemporal(
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control. There used to be a load ^ store assert here,
-  // but it was removed to allow handling direct-to-LDS copies.
+  // be used for cache control.
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1987,8 +1967,8 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
 
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control. There used to be a load ^ store assert here,
-  // but it was removed to allow handling direct-to-LDS copies.
+  // be used for cache control.
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -2267,9 +2247,8 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
 
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control. There used to be a load ^ store assert here,
-  // but it was removed to allow handling direct-to-LDS
-  // copies.assert(MI->mayLoad() ^ MI->mayStore());
+  // be used for cache control.
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -2587,8 +2566,7 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
   // Only handle load and store, not atomic read-modify-write instructions.
-  // There used to be a load ^ store assert here, but it was removed to
-  // allow handling direct-to-LDS copies.
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly

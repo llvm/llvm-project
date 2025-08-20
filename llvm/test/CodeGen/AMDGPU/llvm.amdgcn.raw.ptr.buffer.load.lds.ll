@@ -116,7 +116,7 @@ define amdgpu_ps float @buffer_load_lds_dword_volatile(ptr addrspace(8) inreg %r
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b32 m0, s4
 ; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 glc lds
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 offset:256 lds
 ; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 offset:512 lds
