@@ -942,9 +942,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
 }
 
-std::optional<InstructionCost>
-VPRecipeWithIRFlags::getCommonCost(unsigned Opcode, ElementCount VF,
-                                   VPCostContext &Ctx) const {
+std::optional<InstructionCost> VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
+    unsigned Opcode, ElementCount VF, VPCostContext &Ctx) const {
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
   Type *ResultTy = VF.isVector() ? toVectorTy(ScalarTy, VF) : ScalarTy;
   switch (Opcode) {
@@ -1024,7 +1023,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
-    return *getCommonCost(
+    return *getCostForRecipeWithOpcode(
         getOpcode(),
         vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   }
@@ -2121,7 +2120,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::ExtractValue:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return *getCommonCost(getOpcode(), VF, Ctx);
+    return *getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -3018,6 +3017,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     SmallVector<Type *, 4> Tys;
     for (VPValue *ArgOp : drop_end(operands()))
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
+    Type *ResultTy = Ctx.Types.inferScalarType(this);
     return Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
   }
   case Instruction::Add:
@@ -3034,7 +3034,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    return *getCommonCost(getOpcode(), ElementCount::getFixed(1), Ctx) *
+    return *getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   }
