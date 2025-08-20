@@ -158,6 +158,8 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
 
+const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
+
 } // namespace Fortran::parser::omp
 
 #endif // FORTRAN_PARSER_OPENMP_UTILS_H
