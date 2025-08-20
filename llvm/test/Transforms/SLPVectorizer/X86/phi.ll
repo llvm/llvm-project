@@ -157,9 +157,10 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP7]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i32 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> [[TMP12]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 4>
-; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP18]], <2 x float> [[TMP4]], i64 0)
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul <4 x float> [[TMP13]], <float 7.000000e+00, float 8.000000e+00, float 9.000000e+00, float 1.000000e+01>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> [[TMP12]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 4>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> [[TMP13]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul <4 x float> [[TMP19]], <float 7.000000e+00, float 8.000000e+00, float 9.000000e+00, float 1.000000e+01>
 ; CHECK-NEXT:    [[TMP15]] = fadd <4 x float> [[TMP3]], [[TMP14]]
 ; CHECK-NEXT:    [[MUL25:%.*]] = fmul float [[TMP8]], 1.100000e+01
 ; CHECK-NEXT:    [[ADD6]] = fadd float [[R_052]], [[MUL25]]
@@ -167,8 +168,8 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP16]], 121
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP17:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP15]])
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[TMP17]], [[ADD6]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP15]])
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[TMP18]], [[ADD6]]
 ; CHECK-NEXT:    ret float [[ADD31]]
 ;
 entry:
