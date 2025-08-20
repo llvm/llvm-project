@@ -1504,6 +1504,17 @@ public:
   /// \c emitVAListRef or \c emitMSVAListRef.
   void emitVAEnd(mlir::Value vaList);
 
+  /// Generate code to get an argument from the passed in pointer
+  /// and update it accordingly.
+  ///
+  /// \param ve The \c VAArgExpr for which to generate code.
+  ///
+  /// \param vaListAddr Receives a reference to the \c va_list as emitted by
+  /// either \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \returns SSA value with the argument.
+  mlir::Value emitVAArg(VAArgExpr *ve);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
