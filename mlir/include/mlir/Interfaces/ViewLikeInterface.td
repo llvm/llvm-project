@@ -26,7 +26,17 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
   let methods = [
     InterfaceMethod<
       "Returns the source buffer from which the view is created.",
-      "::mlir::Value", "getViewSource">
+      "::mlir::Value", "getViewSource">,
+    InterfaceMethod<
+      /*desc=*/[{ Returns the buffer which the view created. }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"getViewDest",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op->getResult(0);
+      }]
+    >
   ];
 }
 

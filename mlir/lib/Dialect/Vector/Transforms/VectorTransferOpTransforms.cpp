@@ -98,8 +98,9 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (isa<ViewLikeOpInterface>(user)) {
-      users.append(user->getUsers().begin(), user->getUsers().end());
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user))
@@ -182,8 +183,9 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (isa<ViewLikeOpInterface>(user)) {
-      users.append(user->getUsers().begin(), user->getUsers().end());
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
