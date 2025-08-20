@@ -2037,6 +2037,19 @@ static char FindArmAarch64MappingSymbol(const char *symbol_name) {
   return '\0';
 }
 
+static char FindRISCVMappingSymbol(const char *symbol_name) {
+  if (!symbol_name)
+    return '\0';
+
+  if (symbol_name.size() == 2 && symbol_name[0] == '$'){
+    char c = symbol_name[1];
+    if (c == 'd' || c == 'x'){
+      return c;
+    }
+  return '\0';
+  }
+}
+
 #define STO_MIPS_ISA (3 << 6)
 #define STO_MICROMIPS (2 << 6)
 #define IS_MICROMIPS(ST_OTHER) (((ST_OTHER)&STO_MIPS_ISA) == STO_MICROMIPS)
