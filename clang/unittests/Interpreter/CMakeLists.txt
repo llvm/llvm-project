@@ -60,6 +60,11 @@ target_link_options(ClangReplInterpreterTests
   PUBLIC "SHELL: -s STACK_SIZE=32mb"
   PUBLIC "SHELL: -s INITIAL_MEMORY=128mb"
   PUBLIC "SHELL: --emrun"
+  PUBLIC "SHELL: -Wl,--export=__clang_Interpreter_SetValueWithAlloc"
+  PUBLIC "SHELL: -Wl,--export=__clang_Interpreter_SetValueNoAlloc"
+  PUBLIC "SHELL: -Wl,--export=_ZnwmPv26__clang_Interpreter_NewTag"
+  PUBLIC "SHELL: -Wl,--export=_Z9getGlobalv"
+  PUBLIC "SHELL: -Wl,--export=_Z9setGlobali"
 )
 set_target_properties(ClangReplInterpreterTests PROPERTIES
   SUFFIX ".html"
