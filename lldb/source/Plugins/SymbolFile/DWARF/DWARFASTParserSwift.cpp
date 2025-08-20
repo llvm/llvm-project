@@ -103,7 +103,12 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
           break;
         case llvm::dwarf::DW_AT_linkage_name:
         case llvm::dwarf::DW_AT_MIPS_linkage_name: {
-          mangled_name.SetCString(form_value.AsCString());
+          // This could be a type with DW_AT_specification, in which case,
+          // don't overwrite the mangled name if it's already set (the 
+          // order of the attributes is deterministic, and the "specifier" 
+          // attributes will always come before the specified).
+          if (mangled_name.IsEmpty())
+            mangled_name.SetCString(form_value.AsCString());
           auto HasSpecificationOf = [&](){
             if (has_specification_of)
               return true;
