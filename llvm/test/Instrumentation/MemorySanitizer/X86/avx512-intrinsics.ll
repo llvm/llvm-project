@@ -24,7 +24,6 @@
 ; - llvm.x86.avx512.mask.rndscale.pd.512, llvm.x86.avx512.mask.rndscale.ps.512, llvm.x86.avx512.mask.rndscale.sd, llvm.x86.avx512.mask.rndscale.ss
 ; - llvm.x86.avx512.mask.scalef.pd.512, llvm.x86.avx512.mask.scalef.ps.512
 ; - llvm.x86.avx512.mask.sqrt.sd, llvm.x86.avx512.mask.sqrt.ss
-; - llvm.x86.avx512.mask.vcvtps2ph.512
 ; - llvm.x86.avx512.maskz.fixupimm.pd.512, llvm.x86.avx512.maskz.fixupimm.ps.512, llvm.x86.avx512.maskz.fixupimm.sd, llvm.x86.avx512.maskz.fixupimm.ss
 ; - llvm.x86.avx512.mul.pd.512, llvm.x86.avx512.mul.ps.512
 ; - llvm.x86.avx512.permvar.df.512, llvm.x86.avx512.permvar.sf.512
