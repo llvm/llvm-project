@@ -41,8 +41,8 @@ static_assert(sizeof(Barrier) <= sizeof(pthread_barrier_t),
               "internal barrier type.");
 
 static_assert(alignof(Barrier) <= alignof(pthread_barrier_t),
-              "The public pthread_barrier_t type has a different alignment "
-              "than the internal barrier type.");
+              "The public pthread_barrier_t type has insufficient alignment "
+              "for the internal barrier type.");
 
 static_assert(sizeof(CndVar) <= 24,
               "CndVar size exceeds the size in __barrier_type.h");
