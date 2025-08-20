@@ -175,6 +175,24 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   endif()
 endif()
 
+CHECK_CXX_SOURCE_COMPILES("
+#include <iosfwd>
+#if !defined(__GLIBCXX__)
+#error Not libstdc++
+#endif
+int main() { return 0; }
+" LLVM_USES_LIBSTDCXX)
+
+option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" OFF)
+
+if (LLVM_USES_LIBSTDCXX)
+  if (GLIBCXX_USE_CXX11_ABI)
+    add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
+  else()
+    add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+  endif()
+endif()
+
 if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)
   add_compile_definitions(STRICT_FIXED_SIZE_VECTORS)
 endif()
