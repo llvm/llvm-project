@@ -795,4 +795,8 @@ namespace ZeroSizeArrayRead {
   constexpr const char *p1 = &str[0];
   constexpr const char *p2 = &str[1]; // both-error {{must be initialized by a constant expression}} \
                                       // both-note {{cannot refer to element 1 of array of 0 elements in a constant expression}}
+
+  constexpr char s[] = {};
+  static_assert(s[0] == '0', ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of dereferenced one-past-the-end pointer}}
 }

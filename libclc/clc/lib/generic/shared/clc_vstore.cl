@@ -17,7 +17,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
-#define VSTORE_VECTORIZE(PRIM_TYPE, ADDR_SPACE)                                \
+#define __CLC_VSTORE_VECTORIZE(PRIM_TYPE, ADDR_SPACE)                          \
   typedef PRIM_TYPE##2 less_aligned_##ADDR_SPACE##PRIM_TYPE##2                 \
       __attribute__((aligned(sizeof(PRIM_TYPE))));                             \
   _CLC_OVERLOAD _CLC_DEF void __clc_vstore2(PRIM_TYPE##2 vec, size_t offset,   \
@@ -58,67 +58,68 @@
   }
 
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
-#define VSTORE_VECTORIZE_GENERIC VSTORE_VECTORIZE
+#define __CLC_VSTORE_VECTORIZE_GENERIC __CLC_VSTORE_VECTORIZE
 #else
 // The generic address space isn't available, so make the macro do nothing
-#define VSTORE_VECTORIZE_GENERIC(X, Y)
+#define __CLC_VSTORE_VECTORIZE_GENERIC(X, Y)
 #endif
 
-#define VSTORE_ADDR_SPACES(__CLC_SCALAR___CLC_GENTYPE)                         \
-  VSTORE_VECTORIZE(__CLC_SCALAR___CLC_GENTYPE, __private)                      \
-  VSTORE_VECTORIZE(__CLC_SCALAR___CLC_GENTYPE, __local)                        \
-  VSTORE_VECTORIZE(__CLC_SCALAR___CLC_GENTYPE, __global)                       \
-  VSTORE_VECTORIZE_GENERIC(__CLC_SCALAR___CLC_GENTYPE, __generic)
+#define __CLC_VSTORE_ADDR_SPACES(__CLC_SCALAR___CLC_GENTYPE)                   \
+  __CLC_VSTORE_VECTORIZE(__CLC_SCALAR___CLC_GENTYPE, __private)                \
+  __CLC_VSTORE_VECTORIZE(__CLC_SCALAR___CLC_GENTYPE, __local)                  \
+  __CLC_VSTORE_VECTORIZE(__CLC_SCALAR___CLC_GENTYPE, __global)                 \
+  __CLC_VSTORE_VECTORIZE_GENERIC(__CLC_SCALAR___CLC_GENTYPE, __generic)
 
-VSTORE_ADDR_SPACES(char)
-VSTORE_ADDR_SPACES(uchar)
-VSTORE_ADDR_SPACES(short)
-VSTORE_ADDR_SPACES(ushort)
-VSTORE_ADDR_SPACES(int)
-VSTORE_ADDR_SPACES(uint)
-VSTORE_ADDR_SPACES(long)
-VSTORE_ADDR_SPACES(ulong)
-VSTORE_ADDR_SPACES(float)
+__CLC_VSTORE_ADDR_SPACES(char)
+__CLC_VSTORE_ADDR_SPACES(uchar)
+__CLC_VSTORE_ADDR_SPACES(short)
+__CLC_VSTORE_ADDR_SPACES(ushort)
+__CLC_VSTORE_ADDR_SPACES(int)
+__CLC_VSTORE_ADDR_SPACES(uint)
+__CLC_VSTORE_ADDR_SPACES(long)
+__CLC_VSTORE_ADDR_SPACES(ulong)
+__CLC_VSTORE_ADDR_SPACES(float)
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-VSTORE_ADDR_SPACES(double)
+__CLC_VSTORE_ADDR_SPACES(double)
 #endif
 
 #ifdef cl_khr_fp16
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-VSTORE_ADDR_SPACES(half)
+__CLC_VSTORE_ADDR_SPACES(half)
 #endif
 
-#define VEC_STORE1(val, ROUNDF, BUILTIN) BUILTIN(ROUNDF(val), &mem[offset++]);
+#define __CLC_VEC_STORE1(val, ROUNDF, BUILTIN)                                 \
+  BUILTIN(ROUNDF(val), &mem[offset++]);
 
-#define VEC_STORE2(val, ROUNDF, BUILTIN)                                       \
-  VEC_STORE1(val.lo, ROUNDF, BUILTIN)                                          \
-  VEC_STORE1(val.hi, ROUNDF, BUILTIN)
-#define VEC_STORE3(val, ROUNDF, BUILTIN)                                       \
-  VEC_STORE1(val.s0, ROUNDF, BUILTIN)                                          \
-  VEC_STORE1(val.s1, ROUNDF, BUILTIN)                                          \
-  VEC_STORE1(val.s2, ROUNDF, BUILTIN)
-#define VEC_STORE4(val, ROUNDF, BUILTIN)                                       \
-  VEC_STORE2(val.lo, ROUNDF, BUILTIN)                                          \
-  VEC_STORE2(val.hi, ROUNDF, BUILTIN)
-#define VEC_STORE8(val, ROUNDF, BUILTIN)                                       \
-  VEC_STORE4(val.lo, ROUNDF, BUILTIN)                                          \
-  VEC_STORE4(val.hi, ROUNDF, BUILTIN)
-#define VEC_STORE16(val, ROUNDF, BUILTIN)                                      \
-  VEC_STORE8(val.lo, ROUNDF, BUILTIN)                                          \
-  VEC_STORE8(val.hi, ROUNDF, BUILTIN)
+#define __CLC_VEC_STORE2(val, ROUNDF, BUILTIN)                                 \
+  __CLC_VEC_STORE1(val.lo, ROUNDF, BUILTIN)                                    \
+  __CLC_VEC_STORE1(val.hi, ROUNDF, BUILTIN)
+#define __CLC_VEC_STORE3(val, ROUNDF, BUILTIN)                                 \
+  __CLC_VEC_STORE1(val.s0, ROUNDF, BUILTIN)                                    \
+  __CLC_VEC_STORE1(val.s1, ROUNDF, BUILTIN)                                    \
+  __CLC_VEC_STORE1(val.s2, ROUNDF, BUILTIN)
+#define __CLC_VEC_STORE4(val, ROUNDF, BUILTIN)                                 \
+  __CLC_VEC_STORE2(val.lo, ROUNDF, BUILTIN)                                    \
+  __CLC_VEC_STORE2(val.hi, ROUNDF, BUILTIN)
+#define __CLC_VEC_STORE8(val, ROUNDF, BUILTIN)                                 \
+  __CLC_VEC_STORE4(val.lo, ROUNDF, BUILTIN)                                    \
+  __CLC_VEC_STORE4(val.hi, ROUNDF, BUILTIN)
+#define __CLC_VEC_STORE16(val, ROUNDF, BUILTIN)                                \
+  __CLC_VEC_STORE8(val.lo, ROUNDF, BUILTIN)                                    \
+  __CLC_VEC_STORE8(val.hi, ROUNDF, BUILTIN)
 
-#define __FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, ROUNDF, BUILTIN)            \
+#define __CLC_XFUNC_IMPL(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, ROUNDF, BUILTIN)  \
   _CLC_OVERLOAD _CLC_DEF void __clc_vstore_half##SUFFIX(                       \
       TYPE vec, size_t offset, AS half *mem) {                                 \
     offset *= VEC_SIZE;                                                        \
-    VEC_STORE##VEC_SIZE(vec, ROUNDF, BUILTIN)                                  \
+    __CLC_VEC_STORE##VEC_SIZE(vec, ROUNDF, BUILTIN)                            \
   }                                                                            \
   _CLC_OVERLOAD _CLC_DEF void __clc_vstorea_half##SUFFIX(                      \
       TYPE vec, size_t offset, AS half *mem) {                                 \
     offset *= OFFSET;                                                          \
-    VEC_STORE##VEC_SIZE(vec, ROUNDF, BUILTIN)                                  \
+    __CLC_VEC_STORE##VEC_SIZE(vec, ROUNDF, BUILTIN)                            \
   }
 
 _CLC_DEF _CLC_OVERLOAD float __clc_noop(float x) { return x; }
@@ -241,28 +242,30 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rte(double x) {
 }
 #endif
 
-#define __XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)                   \
-  __FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, __clc_noop, BUILTIN)              \
-  __FUNC(SUFFIX##_rtz, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtz, BUILTIN)         \
-  __FUNC(SUFFIX##_rtn, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtn, BUILTIN)         \
-  __FUNC(SUFFIX##_rtp, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtp, BUILTIN)         \
-  __FUNC(SUFFIX##_rte, VEC_SIZE, OFFSET, TYPE, AS, __clc_rte, BUILTIN)
+#define __CLC_XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)               \
+  __CLC_XFUNC_IMPL(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, __clc_noop, BUILTIN)    \
+  __CLC_XFUNC_IMPL(SUFFIX##_rtz, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtz,        \
+                   BUILTIN)                                                    \
+  __CLC_XFUNC_IMPL(SUFFIX##_rtn, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtn,        \
+                   BUILTIN)                                                    \
+  __CLC_XFUNC_IMPL(SUFFIX##_rtp, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtp,        \
+                   BUILTIN)                                                    \
+  __CLC_XFUNC_IMPL(SUFFIX##_rte, VEC_SIZE, OFFSET, TYPE, AS, __clc_rte, BUILTIN)
 
-#define FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)                      \
-  __XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)
+#define __CLC_FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)                \
+  __CLC_XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)
 
 #define __CLC_BODY "clc_vstore_half.inc"
 #include <clc/math/gentype.inc>
-#undef FUNC
-#undef __XFUNC
-#undef __FUNC
-#undef VEC_LOAD16
-#undef VEC_LOAD8
-#undef VEC_LOAD4
-#undef VEC_LOAD3
-#undef VEC_LOAD2
-#undef VEC_LOAD1
-#undef DECLARE_HELPER
-#undef VSTORE_ADDR_SPACES
-#undef VSTORE_VECTORIZE
-#undef VSTORE_VECTORIZE_GENERIC
+#undef __CLC_FUNC
+#undef __CLC_XFUNC
+#undef __CLC_XFUNC_IMPL
+#undef __CLC_VEC_STORE16
+#undef __CLC_VEC_STORE8
+#undef __CLC_VEC_STORE4
+#undef __CLC_VEC_STORE3
+#undef __CLC_VEC_STORE2
+#undef __CLC_VEC_STORE1
+#undef __CLC_VSTORE_ADDR_SPACES
+#undef __CLC_VSTORE_VECTORIZE
+#undef __CLC_VSTORE_VECTORIZE_GENERIC

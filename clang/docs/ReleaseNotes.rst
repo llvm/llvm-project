@@ -137,9 +137,19 @@ Non-comprehensive list of changes in this release
 - ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
   now be used in constant expressions.
 
+- Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
+  features has been deprecated, and is restricted to the arm64e target only. The
+  correct method to check for these features is to test for the ``__PTRAUTH__``
+  macro.
+
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+
+Lanai Support
+^^^^^^^^^^^^^^
+- The option ``-mcmodel={small,medium,large}`` is supported again.
 
 Deprecated Compiler Flags
 -------------------------
@@ -193,6 +203,8 @@ Bug Fixes in This Version
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
+- Fixed a crash with incompatible pointer to integer conversions in designated
+  initializers involving string literals. (#GH154046)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -224,12 +236,15 @@ Bug Fixes to C++ Support
   "intializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
+- Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
+  instantiated properly. (#GH154054)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
 - Fixed ElaboratedTypes appearing within NestedNameSpecifier, which was not a
   legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
+- Fix unrecognized html tag causing undesirable comment lexing (#GH152944)
 - Fix comment lexing of special command names (#GH152943)
 
 Miscellaneous Bug Fixes
@@ -308,8 +323,12 @@ AST Matchers
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
 
+- Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
+  allows it to ignore nodes in system headers when traversing the AST.
+
 clang-format
 ------------
+- Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
 
 libclang
 --------
