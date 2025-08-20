@@ -2464,6 +2464,8 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
 
 void Sema::PoppedFunctionScopeDeleter::
 operator()(sema::FunctionScopeInfo *Scope) const {
+  if (!Scope)
+    return;
   if (!Scope->isPlainFunction())
     Self->CapturingFunctionScopes--;
   // Stash the function scope for later reuse if it's for a normal function.

@@ -2150,6 +2150,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   CleanupInfo LambdaCleanup;
   bool ContainsUnexpandedParameterPack;
   bool IsGenericLambda;
+  PoppedFunctionScopePtr KeepLSI(nullptr, PoppedFunctionScopeDeleter(this));
   {
     CallOperator = LSI->CallOperator;
     Class = LSI->Lambda;
@@ -2176,7 +2177,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
         AnalysisWarnings.getPolicyInEffectAt(EndLoc);
     // We cannot release LSI until we finish computing captures, which
     // requires the scope to be popped.
-    PoppedFunctionScopePtr _ = PopFunctionScopeInfo(&WP, LSI->CallOperator);
+    KeepLSI = PopFunctionScopeInfo(&WP, LSI->CallOperator);
 
     // True if the current capture has a used capture or default before it.
     bool CurHasPreviousCapture = CaptureDefault != LCD_None;
