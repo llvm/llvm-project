@@ -820,6 +820,26 @@ private:
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
   }
+
+  template <template <class, class, class> class _Layout>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_layouts(__split_buffer<_Tp, allocator_type&, _Layout>& __v) {
+    auto __begin    = __begin_;
+    auto __sentinel = __end_;
+    auto __cap      = __cap_;
+
+    auto __v_begin    = __v.begin();
+    auto __v_sentinel = __v.__sentinel();
+    auto __v_cap      = __v.__raw_capacity();
+
+    // TODO: replace with __set_valid_range and __set_capacity when vector supports it.
+    __begin_ = __v_begin;
+    __end_   = __v_sentinel;
+    __cap_   = __v_cap;
+
+    __v.__set_valid_range(__begin, __sentinel);
+    __v.__set_capacity(__cap);
+  }
 };
 
 #if _LIBCPP_STD_VER >= 17
@@ -856,9 +876,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   __v.__set_valid_range(__new_begin, __v.end());
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
 
-  std::swap(this->__begin_, __v.__begin_);
-  std::swap(this->__end_, __v.__end_);
-  std::swap(this->__cap_, __v.__cap_);
+  __swap_layouts(__v);
   __v.__set_data(__v.begin());
   __annotate_new(size());
 }
@@ -886,9 +904,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__p), std::__to_address(__new_begin));
   __v.__set_valid_range(__new_begin, __v.end());
   __end_ = __begin_; // All the objects have been destroyed by relocating them.
-  std::swap(this->__begin_, __v.__begin_);
-  std::swap(this->__end_, __v.__end_);
-  std::swap(this->__cap_, __v.__cap_);
+  __swap_layouts(__v);
   __v.__set_data(__v.begin());
   __annotate_new(size());
   return __ret;
