@@ -10,9 +10,7 @@ define <4 x i32> @test_fshl_constants() {
 ;
 ; CHECK-UNEXPAND-LABEL: test_fshl_constants:
 ; CHECK-UNEXPAND:       # %bb.0:
-; CHECK-UNEXPAND-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4,5,6,7]
-; CHECK-UNEXPAND-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,1,2,3]
-; CHECK-UNEXPAND-NEXT:    vpshldvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; CHECK-UNEXPAND-NEXT:    vpmovsxwd {{.*#+}} xmm0 = [0,512,2048,6144]
 ; CHECK-UNEXPAND-NEXT:    retq
   %res = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 4, i32 5, i32 6, i32 7>, <4 x i32> <i32 8, i32 9, i32 10, i32 11>)
   ret <4 x i32> %res
@@ -79,17 +77,10 @@ define <4 x i32> @test_fshl_none_constant(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 }
 
 define <4 x i32> @test_fshr_constants() {
-; CHECK-EXPAND-LABEL: test_fshr_constants:
-; CHECK-EXPAND:       # %bb.0:
-; CHECK-EXPAND-NEXT:    vmovaps {{.*#+}} xmm0 = [0,8388608,8388608,6291456]
-; CHECK-EXPAND-NEXT:    retq
-;
-; CHECK-UNEXPAND-LABEL: test_fshr_constants:
-; CHECK-UNEXPAND:       # %bb.0:
-; CHECK-UNEXPAND-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,1,2,3]
-; CHECK-UNEXPAND-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4,5,6,7]
-; CHECK-UNEXPAND-NEXT:    vpshrdvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
-; CHECK-UNEXPAND-NEXT:    retq
+; CHECK-LABEL: test_fshr_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [0,8388608,8388608,6291456]
+; CHECK-NEXT:    retq
   %res = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 4, i32 5, i32 6, i32 7>, <4 x i32> <i32 8, i32 9, i32 10, i32 11>)
   ret <4 x i32> %res
 }
