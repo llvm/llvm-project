@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
-; RUN: llc %t -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc %t -mtriple=x86_64-- -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; For ELF.
 ; RUN: llc %t -function-sections -mtriple=x86_64-unknown-linux-gnu -filetype=asm -o %t1
 ; RUN: FileCheck %s < %t1 --check-prefixes=CHECK-ASM,CHECK-ASM-ELF

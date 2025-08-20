@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -function-sections <%t -filetype=asm | FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=x86_64-unknown-windows-msvc -function-sections <%t -filetype=asm | FileCheck %s --check-prefix=ASM
 ; RUN: opt < %s -passes='pseudo-probe' -S -o %t1
-; RUN: llc -stop-after=tailduplication <%t1 | FileCheck %s --check-prefix=MIR-tail
+; RUN: llc -mtriple=x86_64-- -stop-after=tailduplication <%t1 | FileCheck %s --check-prefix=MIR-tail
 ; RUN: opt < %s -passes='pseudo-probe,simplifycfg' -S | FileCheck %s --check-prefix=SC
 
 declare i32 @f1()
