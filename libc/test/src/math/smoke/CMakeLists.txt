@@ -2094,6 +2094,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexp
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2109,6 +2110,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2124,6 +2126,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpl
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2139,6 +2142,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2154,6 +2158,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2169,6 +2174,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpbf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
