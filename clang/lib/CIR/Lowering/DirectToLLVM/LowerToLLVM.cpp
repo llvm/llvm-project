@@ -1165,12 +1165,33 @@ mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+static mlir::LLVM::AtomicOrdering
+getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
+  if (!memorder)
+    return mlir::LLVM::AtomicOrdering::not_atomic;
+  switch (*memorder) {
+  case cir::MemOrder::Relaxed:
+    return mlir::LLVM::AtomicOrdering::monotonic;
+  case cir::MemOrder::Consume:
+  case cir::MemOrder::Acquire:
+    return mlir::LLVM::AtomicOrdering::acquire;
+  case cir::MemOrder::Release:
+    return mlir::LLVM::AtomicOrdering::release;
+  case cir::MemOrder::AcquireRelease:
+    return mlir::LLVM::AtomicOrdering::acq_rel;
+  case cir::MemOrder::SequentiallyConsistent:
+    return mlir::LLVM::AtomicOrdering::seq_cst;
+  default:
+    llvm_unreachable("unknown memory order");
+  }
+}
+
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
-  assert(!cir::MissingFeatures::opLoadStoreMemOrder());
+  mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment =
       (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
@@ -1179,11 +1200,10 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   // TODO: nontemporal, syncscope.
   assert(!cir::MissingFeatures::opLoadStoreVolatile());
-  mlir::LLVM::LoadOp newLoad = rewriter.create<mlir::LLVM::LoadOp>(
-      op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
-      /*volatile=*/false, /*nontemporal=*/false,
-      /*invariant=*/false, /*invariantGroup=*/false,
-      mlir::LLVM::AtomicOrdering::not_atomic);
+  mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
+      rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
+      /*isVolatile=*/false, /*isNonTemporal=*/false,
+      /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering);
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1196,7 +1216,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     cir::StoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(!cir::MissingFeatures::opLoadStoreMemOrder());
+  mlir::LLVM::AtomicOrdering memorder = getLLVMMemOrder(op.getMemOrder());
   const mlir::Type llvmTy =
       getTypeConverter()->convertType(op.getValue().getType());
   std::optional<size_t> opAlign = op.getAlignment();
@@ -1210,10 +1230,10 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
                                    op.getValue().getType(), adaptor.getValue());
   // TODO: nontemporal, syncscope.
   assert(!cir::MissingFeatures::opLoadStoreVolatile());
-  mlir::LLVM::StoreOp storeOp = rewriter.create<mlir::LLVM::StoreOp>(
-      op->getLoc(), value, adaptor.getAddr(), alignment, /*volatile=*/false,
-      /*nontemporal=*/false, /*invariantGroup=*/false,
-      mlir::LLVM::AtomicOrdering::not_atomic);
+  mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
+      rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
+      /*isVolatile=*/false,
+      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder);
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
