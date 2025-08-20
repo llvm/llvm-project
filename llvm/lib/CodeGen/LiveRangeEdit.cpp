@@ -190,9 +190,12 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
   Rematted.insert(RM.ParentVNI);
   ++NumReMaterialization;
 
+  bool EarlyClobber = MI->getOperand(0).isEarlyClobber();
   if (ReplaceIndexMI)
-    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI).getRegSlot();
-  return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot();
+    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI)
+        .getRegSlot(EarlyClobber);
+  return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot(
+      EarlyClobber);
 }
 
 void LiveRangeEdit::eraseVirtReg(Register Reg) {
