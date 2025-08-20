@@ -401,3 +401,15 @@ void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
 void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
   cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
 }
+
+// FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. By
+// default this lowers to llvm.va_arg which is incomplete and not ABI-compliant
+// on most targets so cir.va_arg will need some ABI handling in LoweringPrepare
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
+  assert(!cir::MissingFeatures::msabi());
+  assert(!cir::MissingFeatures::vlas());
+  mlir::Location loc = cgm.getLoc(ve->getExprLoc());
+  mlir::Type type = convertType(ve->getType());
+  mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
+  return cir::VAArgOp::create(builder, loc, type, vaList);
+}

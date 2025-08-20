@@ -1702,12 +1702,14 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
+                       UnitAttr:$constant,
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
     (`` $global_visibility^)?
+    (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
     (`dso_local` $dso_local^)?
@@ -1726,6 +1728,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
   let builders = [OpBuilder<(ins
     "llvm::StringRef":$sym_name,
     "mlir::Type":$sym_type,
+    CArg<"bool", "false">:$isConstant,
     // CIR defaults to external linkage.
     CArg<"cir::GlobalLinkageKind",
     "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
@@ -3693,6 +3696,47 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
 
   let assemblyFormat = [{
     $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VAArgOp : CIR_Op<"va_arg"> {
+  let summary = "Fetches next variadic element as a given type";
+  let description = [{
+    The `cir.va_arg` operation models the C/C++ `va_arg` macro by reading the
+    next argument from an active variable argument list and producing it as a
+    value of a specified result type.
+
+    The operand must be a pointer to the target's `va_list` representation.
+    The operation advances the `va_list` state as a side effect and returns
+    the fetched value as the result, whose type is chosen by the user of the
+    operation.
+
+    A `cir.va_arg` must only be used on a `va_list` that has been initialized
+    with `cir.va.start` and not yet finalized by `cir.va.end`. The semantics
+    (including alignment and promotion rules) follow the platform ABI; the
+    frontend is responsible for providing a `va_list` pointer that matches the
+    target representation.
+
+    Example:
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast(array_to_ptrdecay, %args
+            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
+          !cir.ptr<!rec___va_list_tag>
+    cir.va.start %p : !cir.ptr<!rec___va_list_tag>
+
+    // Fetch an `int` from the vararg list.
+    %v = cir.va_arg %p : (!cir.ptr<!rec___va_list_tag>) -> !s32i
+
+    cir.va.end %p : !cir.ptr<!rec___va_list_tag>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$arg_list);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $arg_list attr-dict `:` functional-type(operands, $result)
   }];
 }
 

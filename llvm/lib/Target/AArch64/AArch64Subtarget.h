@@ -212,6 +212,13 @@ public:
     return hasSVE() || isStreamingSVEAvailable();
   }
 
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions
+  /// available to SME2.
+  bool isNonStreamingSVEorSME2Available() const {
+    return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust

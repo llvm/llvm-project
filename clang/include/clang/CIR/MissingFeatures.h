@@ -279,6 +279,7 @@ struct MissingFeatures {
   static bool vtableInitialization() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool msvcBuiltins() { return false; }
+  static bool vaArgABILowering() { return false; }
   static bool vlas() { return false; }
 
   // Missing types

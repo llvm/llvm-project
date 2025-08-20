@@ -1523,7 +1523,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
   assert(!cir::MissingFeatures::opGlobalConstant());
-  const bool isConst = false;
+  const bool isConst = op.getConstant();
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
   const bool isDsoLocal = op.getDsoLocal();
@@ -2400,6 +2400,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering,
                CIRToLLVMUnreachableOpLowering,
+               CIRToLLVMVAArgOpLowering,
                CIRToLLVMVAEndOpLowering,
                CIRToLLVMVAStartOpLowering,
                CIRToLLVMVecCmpOpLowering,
@@ -3145,6 +3146,23 @@ mlir::LogicalResult CIRToLLVMVAEndOpLowering::matchAndRewrite(
   auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
                                               adaptor.getArgList());
   rewriter.replaceOpWithNewOp<mlir::LLVM::VaEndOp>(op, vaList);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
+    cir::VAArgOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vaArgABILowering());
+  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
+  auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                              adaptor.getArgList());
+
+  mlir::Type llvmType =
+      getTypeConverter()->convertType(op->getResultTypes().front());
+  if (!llvmType)
+    return mlir::failure();
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaArgOp>(op, llvmType, vaList);
   return mlir::success();
 }
 

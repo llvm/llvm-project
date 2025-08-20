@@ -7153,6 +7153,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":Support",
         ":TranslateLib",
         ":WasmSSADialect",
         "//llvm:Support",
