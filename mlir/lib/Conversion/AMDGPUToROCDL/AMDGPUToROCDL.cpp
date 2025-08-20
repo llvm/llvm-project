@@ -1891,8 +1891,8 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneOp> {
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
     auto kind = op.getKind();
-    auto fi = op.getFi();
-    auto boundctrl = op.getBoundCtrl();
+    bool fi = op.getFetchInactive();
+    bool boundctrl = op.getBoundCtrl();
 
     if (chipset < kGfx950)
       return op->emitOpError("permlane_swap is only supported on gfx950+");
