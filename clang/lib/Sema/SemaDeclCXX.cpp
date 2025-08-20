@@ -4568,6 +4568,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
       MarkAnyDeclReferenced(TyD->getLocation(), TyD, /*OdrUse=*/false);
 
       TypeLocBuilder TLB;
+      // FIXME: This is missing building the UsingType for TyD, if any.
       if (const auto *TD = dyn_cast<TagDecl>(TyD)) {
         BaseType = Context.getTagType(ElaboratedTypeKeyword::None,
                                       SS.getScopeRep(), TD, /*OwnsTag=*/false);
@@ -4579,6 +4580,12 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
         BaseType = Context.getTypedefType(ElaboratedTypeKeyword::None,
                                           SS.getScopeRep(), TN);
         TLB.push<TypedefTypeLoc>(BaseType).set(
+            /*ElaboratedKeywordLoc=*/SourceLocation(),
+            SS.getWithLocInContext(Context), IdLoc);
+      } else if (auto *UD = dyn_cast<UnresolvedUsingTypenameDecl>(TyD)) {
+        BaseType = Context.getUnresolvedUsingType(ElaboratedTypeKeyword::None,
+                                                  SS.getScopeRep(), UD);
+        TLB.push<UnresolvedUsingTypeLoc>(BaseType).set(
             /*ElaboratedKeywordLoc=*/SourceLocation(),
             SS.getWithLocInContext(Context), IdLoc);
       } else {
