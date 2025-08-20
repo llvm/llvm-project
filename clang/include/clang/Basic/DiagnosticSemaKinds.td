@@ -12958,6 +12958,17 @@ def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
 
+// SYCL external attribute diagnostics
+def err_sycl_external_invalid_linkage : Error<
+  "%0 can only be applied to functions with external linkage">;
+def err_sycl_external_invalid_main : Error<
+  "%0 cannot be applied to the 'main' function">;
+def err_sycl_external_invalid_deleted_function : Error<
+  "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_missing_on_first_decl : Warning<
+  "%0 attribute does not appear on the first declaration">,
+  InGroup<NonPortableSYCL>;
+
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a"
@@ -12972,7 +12983,7 @@ def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
   "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
-  InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
+  InGroup<NonPortableSYCL>, DefaultError;
 def warn_sycl_entry_point_redundant_declaration : Warning<
   "redundant %0 attribute">, InGroup<RedundantAttribute>;
 def err_sycl_entry_point_after_definition : Error<
