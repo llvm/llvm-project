@@ -5661,8 +5661,8 @@ AST_POLYMORPHIC_MATCHER_P(hasInitStatement,
   return Init != nullptr && InnerMatcher.matches(*Init, Finder, Builder);
 }
 
-/// Matches the condition expression of an if statement, for loop,
-/// switch statement or conditional operator.
+/// Matches the condition expression of an if statement, for loop, while loop,
+/// do-while loop, switch statement or conditional operator.
 ///
 /// Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
 /// \code
@@ -5747,16 +5747,21 @@ AST_MATCHER_P(Decl, declaresSameEntityAsBoundNode, std::string, ID) {
   });
 }
 
-/// Matches the condition variable statement in an if statement.
+/// Matches the condition variable statement in an if statement, for loop,
+/// while loop or switch statement.
 ///
 /// Given
 /// \code
 ///   if (A* a = GetAPointer()) {}
+///   for (; A* a = GetAPointer(); ) {}
 /// \endcode
 /// hasConditionVariableStatement(...)
-///   matches 'A* a = GetAPointer()'.
-AST_MATCHER_P(IfStmt, hasConditionVariableStatement,
-              internal::Matcher<DeclStmt>, InnerMatcher) {
+///   matches both 'A* a = GetAPointer()'.
+AST_POLYMORPHIC_MATCHER_P(hasConditionVariableStatement,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(IfStmt, ForStmt,
+                                                          WhileStmt,
+                                                          SwitchStmt),
+                          internal::Matcher<DeclStmt>, InnerMatcher) {
   const DeclStmt* const DeclarationStatement =
     Node.getConditionVariableDeclStmt();
   return DeclarationStatement != nullptr &&
