@@ -123,6 +123,8 @@ C++ Language Changes
   a perfect match (all conversion sequences are identity conversions) template candidates are not instantiated.
   Diagnostics that would have resulted from the instantiation of these template candidates are no longer
   produced. This aligns Clang closer to the behavior of GCC, and fixes (#GH62096), (#GH74581), and (#GH74581).
+- Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
+  as an extension in all C++ language modes.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -383,6 +385,11 @@ New Compiler Flags
 - New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
 
 - New options ``-fthinlto-distributor=`` and ``-Xthinlto-distributor=`` added for Integrated Distributed ThinLTO (DTLTO). DTLTO enables the distribution of backend ThinLTO compilations via external distribution systems, such as Incredibuild, during the traditional link step. (#GH147265, `ThinLTODocs <https://clang.llvm.org/docs/ThinLTO.html#integrated-distributed-thinlto-dtlto>`_).
+
+- A new flag - `-static-libclosure` was introduced to support statically linking
+  the runtime for the Blocks extension on Windows. This flag currently only
+  changes the code generation, and even then, only on Windows. This does not
+  impact the linker behaviour like the other `-static-*` flags.
 
 Deprecated Compiler Flags
 -------------------------
@@ -682,7 +689,7 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
-  
+
 - Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
   iterating over an element of a temporary container in a range-based
   for loop.(#GH109793, #GH145164)
@@ -1232,14 +1239,6 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
-
-- A new flag - `-static-libclosure` was introduced to support statically linking
-  the runtime for the Blocks extension on Windows. This flag currently only
-  changes the code generation, and even then, only on Windows. This does not
-  impact the linker behaviour like the other `-static-*` flags.
-- Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
-  as an extension in all C++ language modes.
-
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
