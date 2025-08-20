@@ -1,7 +1,7 @@
 add_mlir_interface(SymbolInterfaces)
 add_mlir_interface(RegionKindInterface)
 
-add_mlir_type_interface(QuantizationInterface)
+add_mlir_type_interface(QuantStorageTypeInterface)
 
 set(LLVM_TARGET_DEFINITIONS OpAsmInterface.td)
 mlir_tablegen(OpAsmAttrInterface.h.inc -gen-attr-interface-decls)
