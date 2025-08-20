@@ -1,5 +1,6 @@
 set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
+    orc-rt/span.h
 )
 
 # TODO: Switch to filesets when we move to cmake-3.23.
