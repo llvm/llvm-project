@@ -26,7 +26,6 @@ namespace llvm {
 
 class MachineInstr;
 class MachineBasicBlock;
-class TargetLowering;
 
 /// A set of register units used to track register liveness.
 class LiveRegUnits {
