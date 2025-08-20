@@ -2117,11 +2117,12 @@ void COFFDumper::printCOFFPseudoReloc() {
     return;
   }
 
-  if (Data.size() <= RelocBegin.getValue() ||
-      Data.size() <= RelocEnd.getValue()) {
+  if (const uint32_t Begin = RelocBegin.getValue(), End = RelocEnd.getValue();
+      Data.size() <= Begin || Data.size() <= End) {
     reportWarning(
         createStringError("the marker symbol of runtime pseudo-relocation "
-                          "points past the end of the section"),
+                          "points past the end of the section: 0x%x",
+                          Data.size() <= Begin ? Begin : End),
         Obj->getFileName());
     return;
   }

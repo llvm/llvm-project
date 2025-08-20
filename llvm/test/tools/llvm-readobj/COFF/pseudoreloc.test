@@ -145,7 +145,7 @@ RUN: yaml2obj  -o %t.outofrange-both.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -D
 RUN: llvm-readobj %t.outofrange-both.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE --match-full-lines
 
-RUN: yaml2obj  -o %t.outofrange-end.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=9999
+RUN: yaml2obj  -o %t.outofrange-end.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=8888
 RUN: llvm-readobj %t.outofrange-end.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE --match-full-lines
 
@@ -161,7 +161,7 @@ EMPTY-NEXT: PseudoReloc [
 WARN-MISSINGMARKER-NEXT:  {{.*}}warning: {{.*}}: the marker symbols for runtime pseudo-relocation were not found
 WARN-INVALIDHEADER-NEXT:  {{.*}}warning: {{.*}}: invalid runtime pseudo-relocation records
 WARN-LOWEREND-NEXT:       {{.*}}warning: {{.*}}: the end marker symbol for runtime pseudo-relocation must point to a higher address than where the begin marker points to: expected >=0x[[#%x,BEGIN]], but got 0x[[#%x,END]]
-WARN-OUTOFRANGE-NEXT:     {{.*}}warning: {{.*}}: the marker symbol of runtime pseudo-relocation points past the end of the section
+WARN-OUTOFRANGE-NEXT:     {{.*}}warning: {{.*}}: the marker symbol of runtime pseudo-relocation points past the end of the section: 0x[[#%x,8888]]
 WARN-SECTIONDIFFERS-NEXT: {{.*}}warning: {{.*}}: the end marker symbol for runtime pseudo-relocation must point to the same section where the begin marker points to: expected 1, but got {{[2-9]}}
 EMPTY-NEXT: ]
 
