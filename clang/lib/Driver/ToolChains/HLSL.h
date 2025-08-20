@@ -42,6 +42,19 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY LLVMObjcopy : public Tool {
+public:
+  LLVMObjcopy(const ToolChain &TC)
+      : Tool("hlsl::LLVMObjcopy", "llvm-objcopy", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 } // namespace hlsl
 } // namespace tools
 
@@ -65,6 +78,7 @@ public:
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
   bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
   bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
+  bool requiresObjcopy(llvm::opt::DerivedArgList &Args) const;
   bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
 
   // Set default DWARF version to 4 for DXIL uses version 4.
@@ -73,6 +87,7 @@ public:
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
   mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
+  mutable std::unique_ptr<tools::hlsl::LLVMObjcopy> LLVMObjcopy;
 };
 
 } // end namespace toolchains

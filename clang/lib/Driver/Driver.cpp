@@ -4662,6 +4662,16 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
         Actions.push_back(C.MakeAction<BinaryTranslatorJobAction>(
             LastAction, types::TY_DX_CONTAINER));
     }
+    if (TC.requiresObjcopy(Args)) {
+      Action *LastAction = Actions.back();
+      // llvm-objcopy expects a DXIL container, which can either be
+      // validated (in which case they are TY_DX_CONTAINER), or unvalidated
+      // (TY_OBJECT).
+      if (LastAction->getType() == types::TY_DX_CONTAINER ||
+          LastAction->getType() == types::TY_Object)
+        Actions.push_back(C.MakeAction<BinaryModifyJobAction>(
+            LastAction, types::TY_DX_CONTAINER));
+    }
   }
 
   // Claim ignored clang-cl options.
