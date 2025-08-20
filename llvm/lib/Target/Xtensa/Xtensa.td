@@ -44,7 +44,10 @@ include "XtensaCallingConv.td"
 
 include "XtensaInstrInfo.td"
 
-def XtensaInstrInfo : InstrInfo;
+def XtensaInstrInfo : InstrInfo {
+  // FIXME: Migrate XTensa disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
+}
 
 //===----------------------------------------------------------------------===//
 // Target Declaration
