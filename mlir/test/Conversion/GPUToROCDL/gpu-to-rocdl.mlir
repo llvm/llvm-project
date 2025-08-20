@@ -735,13 +735,18 @@ gpu.module @test_module {
   }
 
   // CHECK-LABEL: func @gpu_shuffle_promote()
-  func.func @gpu_shuffle_promote() -> (f32, f32, f32) {
+  func.func @gpu_shuffle_promote() -> (f32, f32, f32, f32, f32) {
+    // CHECK: %[[#POISON:]] = llvm.mlir.poison : f32
+    // CHECK: %[[#NEGWIDTH:]] = llvm.mlir.constant(-64 : i32) : i32
     // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %arg0 = arith.constant 1.0 : f32
     %arg1 = arith.constant 4 : i32
     %arg2 = arith.constant 16 : i32
     %arg3 = arith.constant 32 : i32
+    // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(64 : i32) : i32
     %arg4 = arith.constant 64 : i32
+    // CHECK: %[[#C1:]] = llvm.mlir.constant(1 : i32) : i32
+    %arg5 = arith.constant 1 : i32
     // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
     // CHECK: %[[#MASK:]] = llvm.mlir.constant(4127 : i32) : i32
     // CHECK: %[[#PERMUTE:]] = rocdl.ds_swizzle %[[#CAST_VALUE]], %[[#MASK]] : (i32, i32) -> i32
@@ -763,7 +768,84 @@ gpu.module @test_module {
     // CHECK: %[[#SEL:]] = llvm.select %[[#CMP]], %[[#EXTRACT1]], %[[#EXTRACT0]] : i1, i32
     // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#SEL]] : i32 to f32
     %shfl3, %pred3 = gpu.shuffle xor  %arg0, %arg3, %arg4 : f32
-    func.return %shfl1, %shfl2, %shfl3 : f32, f32, f32
+    // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
+    // CHECK: %[[#SUB:]] = llvm.sub %[[#LANE_ID]], %[[#C1]] : i32
+    // CHECK: %[[#ADD:]] = llvm.add %[[#LANE_ID]], %[[#WIDTH]] : i32
+    // CHECK: %[[#AND:]] = llvm.and %[[#ADD]], %[[#NEGWIDTH]] : i32
+    // CHECK: %[[#VALID:]] = llvm.icmp "slt" %[[#SUB]], %[[#AND]] : i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.update.dpp %[[#VALUE]], %[[#VALUE]] with 312, 15, 15, false : f32
+    // CHECK: %[[#SELECT:]] = llvm.select %[[#VALID]], %[[#PERMUTE]], %[[#POISON]] : i1, f32
+    %shflu, %predu = gpu.shuffle up  %arg0, %arg5, %arg4 : f32
+    // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
+    // CHECK: %[[#OP:]] = llvm.add %[[#LANE_ID]], %[[#C1]] : i32
+    // CHECK: %[[#ADD:]] = llvm.add %[[#LANE_ID]], %[[#WIDTH]] : i32
+    // CHECK: %[[#AND:]] = llvm.and %[[#ADD]], %[[#NEGWIDTH]] : i32
+    // CHECK: %[[#VALID:]] = llvm.icmp "slt" %[[#OP]], %[[#AND]] : i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.update.dpp %[[#VALUE]], %[[#VALUE]] with 304, 15, 15, false : f32
+    // CHECK: %[[#SELECT:]] = llvm.select %[[#VALID]], %[[#PERMUTE]], %[[#POISON]] : i1, f32
+    %shfld, %predd = gpu.shuffle down %arg0, %arg5, %arg4 : f32
+    func.return %shfl1, %shfl2, %shfl3, %shflu, %shfld : f32, f32, f32, f32, f32
+  }
+
+  // CHECK-LABEL: func @gpu_butterfly_shuffle()
+  func.func @gpu_butterfly_shuffle() -> (f32, f32, f32, f32, f32, f32) {
+    // CHECK: %[[#POISON:]] = llvm.mlir.poison : f32
+    // CHECK: %[[#NEGWIDTH:]] = llvm.mlir.constant(-64 : i32) : i32
+    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %arg0 = arith.constant 1.0 : f32
+    // CHECK: %[[#C1:]] = llvm.mlir.constant(1 : i32) : i32
+    %c1 = arith.constant 1 : i32
+    // CHECK: %[[#C2:]] = llvm.mlir.constant(2 : i32) : i32
+    %c2 = arith.constant 2 : i32
+    %c4 = arith.constant 4 : i32
+    %c8 = arith.constant 8 : i32
+    %c16 = arith.constant 16 : i32
+    %c32 = arith.constant 32 : i32
+    // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(64 : i32) : i32
+    %c64 = arith.constant 64 : i32
+    // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
+    // CHECK: %[[#XOR:]] = llvm.xor %[[#LANE_ID]], %[[#C1]] : i32
+    // CHECK: %[[#ADD:]] = llvm.add %[[#LANE_ID]], %[[#WIDTH]] : i32
+    // CHECK: %[[#AND:]] = llvm.and %[[#ADD]], %[[#NEGWIDTH]] : i32
+    // CHECK: %[[#VALID:]] = llvm.icmp "slt" %[[#XOR]], %[[#AND]] : i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.update.dpp %[[#VALUE]], %[[#VALUE]] with 177, 15, 15, false : f32
+    // CHECK: %[[#SELECT:]] = llvm.select %[[#VALID]], %[[#PERMUTE]], %[[#POISON]] : i1, f32
+    %shfl1, %pred1 = gpu.shuffle xor %arg0, %c1, %c64 : f32
+    // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
+    // CHECK: %[[#XOR:]] = llvm.xor %[[#LANE_ID]], %[[#C2]] : i32
+    // CHECK: %[[#ADD:]] = llvm.add %[[#LANE_ID]], %[[#WIDTH]] : i32
+    // CHECK: %[[#AND:]] = llvm.and %[[#ADD]], %[[#NEGWIDTH]] : i32
+    // CHECK: %[[#VALID:]] = llvm.icmp "slt" %[[#XOR]], %[[#AND]] : i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.update.dpp %[[#VALUE]], %[[#VALUE]] with 78, 15, 15, false : f32
+    // CHECK: %[[#SELECT:]] = llvm.select %[[#VALID]], %[[#PERMUTE]], %[[#POISON]] : i1, f32
+    %shfl2, %pred2 = gpu.shuffle xor %arg0, %c2, %c64 : f32
+    // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
+    // CHECK: %[[#MASK:]] = llvm.mlir.constant(4127 : i32) : i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.ds_swizzle %[[#CAST_VALUE]], %[[#MASK]] : (i32, i32) -> i32
+    // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#PERMUTE]] : i32 to f32
+    %shfl3, %pred3 = gpu.shuffle xor %arg0, %c4, %c64 : f32
+    // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
+    // CHECK: %[[#MASK:]] = llvm.mlir.constant(8223 : i32) : i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.ds_swizzle %[[#CAST_VALUE]], %[[#MASK]] : (i32, i32) -> i32
+    // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#PERMUTE]] : i32 to f32
+    %shfl4, %pred4 = gpu.shuffle xor %arg0, %c8, %c64 : f32
+    // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.permlane16.swap %[[#CAST_VALUE]], %[[#CAST_VALUE]], false, false : (i32, i32) -> <(i32, i32)>
+    // CHECK: %[[#EXTRACT0:]] = llvm.extractvalue %[[#PERMUTE:]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[#EXTRACT1:]] = llvm.extractvalue %[[#PERMUTE:]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[#CMP:]] = llvm.icmp "eq" %[[#EXTRACT0]], %[[#CAST_VALUE]] : i32
+    // CHECK: %[[#SEL:]] = llvm.select %[[#CMP]], %[[#EXTRACT1]], %[[#EXTRACT0]] : i1, i32
+    // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#SEL]] : i32 to f32
+    %shfl5, %pred5 = gpu.shuffle xor %arg0, %c16, %c64 : f32
+    // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.permlane32.swap %[[#CAST_VALUE]], %[[#CAST_VALUE]], false, false : (i32, i32) -> <(i32, i32)>
+    // CHECK: %[[#EXTRACT0:]] = llvm.extractvalue %[[#PERMUTE:]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[#EXTRACT1:]] = llvm.extractvalue %[[#PERMUTE:]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[#CMP:]] = llvm.icmp "eq" %[[#EXTRACT0]], %[[#CAST_VALUE]] : i32
+    // CHECK: %[[#SEL:]] = llvm.select %[[#CMP]], %[[#EXTRACT1]], %[[#EXTRACT0]] : i1, i32
+    // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#SEL]] : i32 to f32
+    %shfl6, %pred6 = gpu.shuffle xor %arg0, %c32, %c64 : f32
+    func.return %shfl1, %shfl2, %shfl3, %shfl4, %shfl5, %shfl6 : f32, f32, f32, f32, f32, f32
   }
 
   // CHECK-LABEL: func @gpu_shuffle_vec
