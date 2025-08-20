@@ -4556,8 +4556,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       EVec = DAG.getExtractSubvector(DL, ContainerVT, EVec, 0);
 
     // Reverse the elements as we're going to slide up from the last element.
-    for (unsigned i = 0U, N = Operands.size(), H = divideCeil(N, 2); i < H; ++i)
-      std::swap(Operands[i], Operands[N - 1 - i]);
+    std::reverse(Operands.begin(), Operands.end());
   }
 
   SDValue Vec;
