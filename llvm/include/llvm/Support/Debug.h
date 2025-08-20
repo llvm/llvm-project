@@ -40,19 +40,19 @@ class raw_ostream;
 /// specified on the command line, or if none was specified on the command line
 /// with the -debug-only=X option.
 ///
-bool isCurrentDebugType(const char *Type);
+LLVM_ABI bool isCurrentDebugType(const char *Type);
 
 /// setCurrentDebugType - Set the current debug type, as if the -debug-only=X
 /// option were specified.  Note that DebugFlag also needs to be set to true for
 /// debug output to be produced.
 ///
-void setCurrentDebugType(const char *Type);
+LLVM_ABI void setCurrentDebugType(const char *Type);
 
 /// setCurrentDebugTypes - Set the current debug type, as if the
 /// -debug-only=X,Y,Z option were specified. Note that DebugFlag
 /// also needs to be set to true for debug output to be produced.
 ///
-void setCurrentDebugTypes(const char **Types, unsigned Count);
+LLVM_ABI void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 /// DEBUG_WITH_TYPE macro - This macro should be used by passes to emit debug
 /// information.  If the '-debug' option is specified on the commandline, and if
