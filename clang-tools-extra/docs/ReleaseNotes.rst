@@ -119,6 +119,9 @@ Improvements to clang-tidy
 - Improved documentation of the `-line-filter` command-line flag of
   :program:`clang-tidy` and :program:`run-clang-tidy.py`.
 
+- Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
+  count messages.
+
 New checks
 ^^^^^^^^^^
 
@@ -133,6 +136,12 @@ New checks
 
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
+
+- New :doc:`misc-override-with-different-visibility
+  <clang-tidy/checks/misc/override-with-different-visibility>` check.
+
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

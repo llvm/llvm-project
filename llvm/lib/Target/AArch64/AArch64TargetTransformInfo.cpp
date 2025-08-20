@@ -220,20 +220,17 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
-static bool isSMEABIRoutineCall(const CallInst &CI) {
+static bool isSMEABIRoutineCall(const CallInst &CI,
+                                const AArch64TargetLowering &TLI) {
   const auto *F = CI.getCalledFunction();
-  return F && StringSwitch<bool>(F->getName())
-                  .Case("__arm_sme_state", true)
-                  .Case("__arm_tpidr2_save", true)
-                  .Case("__arm_tpidr2_restore", true)
-                  .Case("__arm_za_disable", true)
-                  .Default(false);
+  return F && SMEAttrs(F->getName(), TLI).isSMEABIRoutine();
 }
 
 /// Returns true if the function has explicit operations that can only be
 /// lowered using incompatible instructions for the selected mode. This also
 /// returns true if the function F may use or modify ZA state.
-static bool hasPossibleIncompatibleOps(const Function *F) {
+static bool hasPossibleIncompatibleOps(const Function *F,
+                                       const AArch64TargetLowering &TLI) {
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       // Be conservative for now and assume that any call to inline asm or to
@@ -242,7 +239,7 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
       // all native LLVM instructions can be lowered to compatible instructions.
       if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
           (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
-           isSMEABIRoutineCall(cast<CallInst>(I))))
+           isSMEABIRoutineCall(cast<CallInst>(I), TLI)))
         return true;
     }
   }
@@ -290,7 +287,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.requiresPreservingAllZAState()) {
-    if (hasPossibleIncompatibleOps(Callee))
+    if (hasPossibleIncompatibleOps(Callee, *getTLI()))
       return false;
   }
 
@@ -357,7 +354,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   // change only once and avoid inlining of G into F.
 
   SMEAttrs FAttrs(*F);
-  SMECallAttrs CallAttrs(Call);
+  SMECallAttrs CallAttrs(Call, getTLI());
 
   if (SMECallAttrs(FAttrs, CallAttrs.callee()).requiresSMChange()) {
     if (F == Call.getCaller()) // (1)
@@ -2097,6 +2094,20 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
              : std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineSMECntsElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts,
+                       const AArch64Subtarget *ST) {
+  if (!ST->isStreaming())
+    return std::nullopt;
+
+  // In streaming-mode, aarch64_sme_cnts is equivalent to aarch64_sve_cnt
+  // with SVEPredPattern::all
+  Value *Cnt = IC.Builder.CreateElementCount(
+      II.getType(), ElementCount::getScalable(NumElts));
+  Cnt->takeName(&II);
+  return IC.replaceInstUsesWith(II, Cnt);
+}
+
 static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   Value *PgVal = II.getArgOperand(0);
@@ -2806,6 +2817,14 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVECntElts(IC, II, 8);
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
+  case Intrinsic::aarch64_sme_cntsd:
+    return instCombineSMECntsElts(IC, II, 2, ST);
+  case Intrinsic::aarch64_sme_cntsw:
+    return instCombineSMECntsElts(IC, II, 4, ST);
+  case Intrinsic::aarch64_sme_cntsh:
+    return instCombineSMECntsElts(IC, II, 8, ST);
+  case Intrinsic::aarch64_sme_cntsb:
+    return instCombineSMECntsElts(IC, II, 16, ST);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
@@ -3984,6 +4003,24 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index) const {
   return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I);
+}
+
+InstructionCost
+AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                                 TTI::TargetCostKind CostKind,
+                                                 unsigned Index) const {
+  if (isa<FixedVectorType>(Val))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
+                                                   Index);
+
+  // This typically requires both while and lastb instructions in order
+  // to extract the last element. If this is in a loop the while
+  // instruction can at least be hoisted out, although it will consume a
+  // predicate register. The cost should be more expensive than the base
+  // extract cost, which is 2 for most CPUs.
+  return CostKind == TTI::TCK_CodeSize
+             ? 2
+             : ST->getVectorInsertExtractBaseCost() + 1;
 }
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(

@@ -760,8 +760,9 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
-``__builtin_elementwise_min``, and ``__builtin_elementwise_abs`` 
-can be called in a ``constexpr`` context.
+``__builtin_elementwise_min``, ``__builtin_elementwise_abs``,
+``__builtin_elementwise_ctlz``, and ``__builtin_elementwise_cttz`` can be
+called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -870,6 +871,14 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 significant bits of the wide value), the combined value is shifted
                                                 right by z, and the least significant bits are extracted to produce
                                                 a result that is the same size as the original arguments.
+ T __builtin_elementwise_ctlz(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
+ T __builtin_elementwise_cttz(T x[, T y])       return the number of trailing 0 bits in the first argument. If         integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
 ============================================== ====================================================================== =========================================
 
 

@@ -60,6 +60,23 @@ public:
         trailingZerosNum);
   }
 
+  cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
+                                          bool packed = false,
+                                          bool padded = false,
+                                          mlir::Type ty = {}) {
+    llvm::SmallVector<mlir::Type, 4> members;
+    for (auto &f : arrayAttr) {
+      auto ta = mlir::cast<mlir::TypedAttr>(f);
+      members.push_back(ta.getType());
+    }
+
+    if (!ty)
+      ty = getAnonRecordTy(members, packed, padded);
+
+    auto sTy = mlir::cast<cir::RecordType>(ty);
+    return cir::ConstRecordAttr::get(sTy, arrayAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {
@@ -422,7 +439,7 @@ public:
   /// for its name so it can be referenced correctly.
   [[nodiscard]] cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
-                        mlir::StringRef name, mlir::Type type,
+                        mlir::StringRef name, mlir::Type type, bool isConstant,
                         cir::GlobalLinkageKind linkage) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
@@ -431,7 +448,7 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,

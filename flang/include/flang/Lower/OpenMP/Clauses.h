@@ -219,6 +219,7 @@ using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdTy, ExprTy>;
 using Doacross = tomp::clause::DoacrossT<TypeTy, IdTy, ExprTy>;
 using DynamicAllocators =
     tomp::clause::DynamicAllocatorsT<TypeTy, IdTy, ExprTy>;
+using DynGroupprivate = tomp::clause::DynGroupprivateT<TypeTy, IdTy, ExprTy>;
 using Enter = tomp::clause::EnterT<TypeTy, IdTy, ExprTy>;
 using Exclusive = tomp::clause::ExclusiveT<TypeTy, IdTy, ExprTy>;
 using Fail = tomp::clause::FailT<TypeTy, IdTy, ExprTy>;

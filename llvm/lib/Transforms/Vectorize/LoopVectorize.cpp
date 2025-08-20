@@ -3095,6 +3095,12 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (Group->isReverse())
     return false;
 
+  // TODO: Support interleaved access that requires a gap mask for scalable VFs.
+  bool NeedsMaskForGaps = LoadAccessWithGapsRequiresEpilogMasking ||
+                          StoreAccessWithGapsRequiresMasking;
+  if (VF.isScalable() && NeedsMaskForGaps)
+    return false;
+
   auto *Ty = getLoadStoreType(I);
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
@@ -5297,13 +5303,13 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   // VF.getKnownMinValue() - 1 from a scalable vector. This does not represent
   // the actual generated code, which involves extracting the last element of
   // a scalable vector where the lane to extract is unknown at compile time.
-  return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
-         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
-                             CostKind) +
-         (IsLoopInvariantStoreValue
-              ? 0
-              : TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
-                                       CostKind, VF.getKnownMinValue() - 1));
+  InstructionCost Cost =
+      TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
+      TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS, CostKind);
+  if (!IsLoopInvariantStoreValue)
+    Cost += TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
+                                                 VectorTy, CostKind, 0);
+  return Cost;
 }
 
 InstructionCost
@@ -7254,8 +7260,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, BestVPlan);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
@@ -8111,7 +8118,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // extends are intended to be lowered along with the reduction itself.
 
   // Build up a set of partial reduction ops for efficient use checking.
-  SmallSet<User *, 4> PartialReductionOps;
+  SmallPtrSet<User *, 4> PartialReductionOps;
   for (const auto &[PartialRdx, _] : PartialReductionChains)
     PartialReductionOps.insert(PartialRdx.ExtendUser);
 
@@ -9788,6 +9795,19 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         assert(!EPI.VectorTripCount &&
                "Must only have a single non-zero incoming value");
         EPI.VectorTripCount = Inc;
+      }
+      // If we didn't find a non-zero vector trip count, all incoming values
+      // must be zero, which also means the vector trip count is zero. Pick the
+      // first zero as vector trip count.
+      // TODO: We should not choose VF * UF so the main vector loop is known to
+      // be dead.
+      if (!EPI.VectorTripCount) {
+        assert(
+            EPResumeVal->getNumIncomingValues() > 0 &&
+            all_of(EPResumeVal->incoming_values(),
+                   [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+            "all incoming values must be 0");
+        EPI.VectorTripCount = EPResumeVal->getOperand(0);
       }
       VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
       assert(all_of(IV->users(),

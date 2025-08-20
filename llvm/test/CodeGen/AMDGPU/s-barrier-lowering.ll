@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -verify-machineinstrs -o - %s | FileCheck -check-prefixes=SOUT %s
 
 @bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
 @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
@@ -9,6 +10,7 @@
 ; CHECK-NEXT: @bar1 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !2
 ; CHECK-NEXT: @bar1.kernel1 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !2
 
+; SOUT:        .set func1.num_named_barrier, 3
 define void @func1() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
@@ -16,6 +18,7 @@ define void @func1() {
     ret void
 }
 
+; SOUT:        .set func2.num_named_barrier, 1
 define void @func2() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
@@ -23,12 +26,12 @@ define void @func2() {
     ret void
 }
 
+; SOUT:        .set kernel1.num_named_barrier, max(2, func1.num_named_barrier, func2.num_named_barrier)
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1.kernel1, i32 11)
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) @bar1)
     %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1)
     call void @llvm.amdgcn.s.barrier()
     call void @func1()
@@ -36,6 +39,7 @@ define amdgpu_kernel void @kernel1() #0 {
     ret void
 }
 
+; SOUT:        .set kernel2.num_named_barrier, max(2, func2.num_named_barrier)
 define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
