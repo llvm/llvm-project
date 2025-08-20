@@ -1346,21 +1346,21 @@ template <typename LHS_t, unsigned Opcode> struct ShiftLike_match {
   }
 };
 
-/// Matches shl L, ConstShAmt or L itself.
+/// Matches shl L, ConstShAmt or L itself (R will be set to zero in this case).
 template <typename LHS>
 inline ShiftLike_match<LHS, Instruction::Shl> m_ShlOrSelf(const LHS &L,
                                                           uint64_t &R) {
   return ShiftLike_match<LHS, Instruction::Shl>(L, R);
 }
 
-/// Matches lshr L, ConstShAmt or L itself.
+/// Matches lshr L, ConstShAmt or L itself (R will be set to zero in this case).
 template <typename LHS>
 inline ShiftLike_match<LHS, Instruction::LShr> m_LShrOrSelf(const LHS &L,
                                                             uint64_t &R) {
   return ShiftLike_match<LHS, Instruction::LShr>(L, R);
 }
 
-/// Matches ashr L, ConstShAmt or L itself.
+/// Matches ashr L, ConstShAmt or L itself (R will be set to zero in this case).
 template <typename LHS>
 inline ShiftLike_match<LHS, Instruction::AShr> m_AShrOrSelf(const LHS &L,
                                                             uint64_t &R) {
