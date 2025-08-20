@@ -2116,6 +2116,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     // predication, then the only way we can even create a vplan is to insert
     // a select on the second input operand to ensure we use the value of 1
     // for the inactive lanes. The select will be costed separately.
+  case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:
