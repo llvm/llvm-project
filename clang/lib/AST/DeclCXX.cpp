@@ -1438,6 +1438,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().StructuralIfLiteral = false;
     }
 
+    if (!data().HasTrivialSpecialMembers &&
+        T.hasAddressDiscriminatedPointerAuth())
+      data().HasTrivialSpecialMembers = true;
+
     // C++14 [meta.unary.prop]p4:
     //   T is a class type [...] with [...] no non-static data members other
     //   than subobjects of zero size
