@@ -119,6 +119,11 @@ __gpu_kernel void expm1fKernel(const float *X, float *Out,
   runKernelBody<__ocml_expm1_f32>(NumElements, Out, X);
 }
 
+__gpu_kernel void logKernel(const double *X, double *Out,
+                            size_t NumElements) noexcept {
+  runKernelBody<__ocml_log_f64>(NumElements, Out, X);
+}
+
 __gpu_kernel void logfKernel(const float *X, float *Out,
                              size_t NumElements) noexcept {
   runKernelBody<__ocml_log_f32>(NumElements, Out, X);
