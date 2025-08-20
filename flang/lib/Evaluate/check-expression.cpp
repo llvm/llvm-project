@@ -1506,9 +1506,8 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
   bool dummyIsAssumedRank{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedRank)};
   bool dummyIsArray{dummyIsAssumedRank || dummyObj->type.Rank() > 0};
-  bool treatDummyScalarAsArray{dummyObj->type.Rank() == 0 &&
-      dummyObj->ignoreTKR.test(common::IgnoreTKR::Rank)};
-  if (!actualIsArray || !(dummyIsArray || treatDummyScalarAsArray)) {
+  bool dummyTreatAsArray{dummyObj->ignoreTKR.test(common::IgnoreTKR::Rank)};
+  if (!actualIsArray || !(dummyIsArray || dummyTreatAsArray)) {
     return {mayNeedCopyIn, mayNeedCopyOut};
   }
 
@@ -1536,16 +1535,16 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
   bool dummyIsAssumedSize{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyIsPolymorphic{dummyObj->type.type().IsPolymorphic()};
-  bool dummyIsAssumedType{dummyObj->type.type().IsAssumedType()};
+  // type(*) with IGNORE_TKR(tkr) is often used to interface with C "void*".
+  // Since the other languages don't know about Fortran's discontiguity
+  // handling, such cases need to require contiguity.
+  bool dummyIsVoidStar{dummyObj->type.type().IsAssumedType() &&
+    dummyObj->ignoreTKR.test(common::IgnoreTKR::Type) &&
+    dummyObj->ignoreTKR.test(common::IgnoreTKR::Rank) &&
+    dummyObj->ignoreTKR.test(common::IgnoreTKR::Kind)};
   // Explicit shape and assumed size arrays must be contiguous
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
-      // We cannot make assumptions about assumed type dummy args, especially
-      // if they are used as stand-ins for C "void*", thus assume that need
-      // contiguity.
-      //
-      // Polymorphic dummy is descriptor based, so should be able to handle
-      // discontigunity.
-      dummyIsAssumedType || (treatDummyScalarAsArray && !dummyIsPolymorphic) ||
+      (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
       dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
