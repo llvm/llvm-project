@@ -1885,9 +1885,7 @@ static void parseVarLenInstOperand(const Record &Def,
     }
 
     if (!OpName.empty()) {
-      auto OpSubOpPair =
-          const_cast<CodeGenInstruction &>(CGI).Operands.ParseOperandName(
-              OpName);
+      auto OpSubOpPair = CGI.Operands.parseOperandName(OpName);
       unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(OpSubOpPair);
       Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
       if (!EncodingSegment.CustomDecoder.empty())
