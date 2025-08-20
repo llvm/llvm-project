@@ -528,6 +528,6 @@ bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
   if (!isShiftedMask_64(Val, MaskIdx, MaskLen))
     return false;
 
-  // Check if high 32 bits or low 32 bits are all ones.
-  return (MaskLen == 64 - MaskIdx) || (MaskIdx == 0 && MaskLen >= 32);
+  // Check if low 32 bits or high 32 bits are all ones.
+  return MaskLen >= 32 && ((MaskIdx == 0) || (MaskIdx == 64 - MaskLen));
 }
