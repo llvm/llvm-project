@@ -428,7 +428,8 @@ define i64 @smear_set_bit_different_dest_type_wider_dst(i32 %x) {
 
 define i1 @sext_square_bit30(i8 %x) {
 ; CHECK-LABEL: @sext_square_bit30(
-; CHECK:  ret i1 false
+; CHECK-NEXT:    ret i1 false
+;
   %sx = sext i8 %x to i32
   %mul = mul nsw i32 %sx, %sx
   %and = and i32 %mul, 1073741824 ; 1 << 30
@@ -438,7 +439,8 @@ define i1 @sext_square_bit30(i8 %x) {
 
 define i1 @sext_square_bit15(i8 %x) {
 ; CHECK-LABEL: @sext_square_bit15(
-; CHECK:  ret i1 false
+; CHECK-NEXT:    ret i1 false
+;
   %sx = sext i8 %x to i32
   %mul = mul nsw i32 %sx, %sx
   %and = and i32 %mul, 32768 ; 1 << 15
@@ -448,7 +450,11 @@ define i1 @sext_square_bit15(i8 %x) {
 
 define i1 @sext_square_bit14(i8 %x) {
 ; CHECK-LABEL: @sext_square_bit14(
-; CHECK-NOT: ret i1 false
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[SX]], [[SX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[MUL]], 16383
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
   %sx = sext i8 %x to i32
   %mul = mul nsw i32 %sx, %sx
   %and = and i32 %mul, 16384 ; 1 << 14
