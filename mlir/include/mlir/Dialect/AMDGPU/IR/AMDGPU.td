@@ -672,14 +672,37 @@ def AMDGPU_PermlanePermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_PermlanePerm,
 def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]>,
 Arguments<(ins AnyIntegerOrFloatOr1DVector:$src, 
                AMDGPU_PermlanePermAttr:$kind,
-               DefaultValuedAttr<BoolAttr, "false">:$fi,
+               DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
                DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU permlane op";
   let description = [{
-    High-level wrapper on `rocdl.permlane` variants.
+    High-level wrapper on `rocdl.permlane.*` variants.
 
     Supports arbitrary int/float/vector types, which will be repacked to i32 and
-    one or more `rocdl.permlane` ops during lowering.
+    one or more `rocdl.permlane.*` ops during lowering.
+    The following lane permutations are supported:
+    - Swap the data between odd and even rows of 16 lanes (`swap_16`)
+    - Swap the data between the first 32 lanes and the last 32 lanes (`swap_32`)
+
+    Format example:
+    ```
+    %0 = amdgpu.permlane %src swap_16 : f16
+    %1 = amdgpu.permlane %src swap_32 { fetch_inactive = true, bound_ctrl = true } : f16
+    ```
+
+    Operands:
+    * `$src`: Vector register to permute across lanes
+    * `$kind`: The kind of permutation operation.
+    * `$fetch_inactive`: Optional. Used to dertermine behavior of invalid lanes (disabled thread or out-of-range).
+      `fetch_inactive = false`: If source lane is invalid, use `bound_ctrl` to determine the source value.
+      `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway
+      (ignoring `bound_ctrl`). If the source lane is out-of-range, behavior is decided by `bound_ctrl`.
+    * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from 
+      a disabled thread or invalid input: use the value zero, or disable the write.
+      `bound_ctrl = false`: Do not write when source is invalid or out-of-range.
+      `bound_ctrl = true`: Use zero as input if source is invalid or out-of-range
+
+    Note: Lowering is only supported on gfx950 and up.
   }];
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
   let assemblyFormat = [{
