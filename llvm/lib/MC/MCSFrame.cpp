@@ -141,76 +141,50 @@ class SFrameEmitterImpl {
   // Add the effects of CFI to the current FDE, creating a new FRE when
   // necessary.
   void handleCFI(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &CFI) {
-    // Return on error or uninteresting CFI.
     switch (CFI.getOperation()) {
     case MCCFIInstruction::OpDefCfaRegister:
-      if (!setCfaRegister(FDE, FRE, CFI))
-        return;
-      break;
+      setCfaRegister(FDE, FRE, CFI);
+      return;
     case MCCFIInstruction::OpDefCfa:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
       if (!setCfaRegister(FDE, FRE, CFI))
         return;
       FRE.CfaOffset = CFI.getOffset();
-      break;
+      return;
     case MCCFIInstruction::OpOffset:
       if (CFI.getRegister() == FPReg)
         FRE.FPOffset = CFI.getOffset();
       else if (CFI.getRegister() == RAReg)
         FRE.RAOffset = CFI.getOffset();
-      else
-        return; // uninteresting register.
-      break;
+      return;
     case MCCFIInstruction::OpRelOffset:
       if (CFI.getRegister() == FPReg)
         FRE.FPOffset += CFI.getOffset();
       else if (CFI.getRegister() == RAReg)
         FRE.RAOffset += CFI.getOffset();
-      else
-        return; // uninteresting register.
-      break;
+      return;
     case MCCFIInstruction::OpDefCfaOffset:
       if (!isCfaRegisterSet(FDE, FRE, CFI))
         return;
       FRE.CfaOffset = CFI.getOffset();
-      break;
+      return;
     case MCCFIInstruction::OpAdjustCfaOffset:
       if (!isCfaRegisterSet(FDE, FRE, CFI))
         return;
       FRE.CfaOffset += CFI.getOffset();
-      break;
-    case MCCFIInstruction::OpRememberState:
-      if (FDE.FREs.size() == 1) {
-        // Error for gas compatibility: If the initial FRE isn't complete,
-        // then any state is incomplete.  FIXME: Dwarf doesn't error here.
-        // Why should sframe?
-        Streamer.getContext().reportWarning(
-            CFI.getLoc(), "skipping SFrame FDE; .cfi_remember_state without "
-                          "prior SFrame FRE state");
-        FDE.Invalid = true;
-        return;
-      }
-      FDE.SaveState.push_back(FRE);
       return;
-      break;
+    case MCCFIInstruction::OpRememberState:
+      // TODO: Implement
+      return;
     case MCCFIInstruction::OpRestore:
-      // The first FRE generated has the original state.
-      if (CFI.getRegister() == FPReg)
-        FRE.FPOffset = FDE.FREs.front().FPOffset;
-      else if (CFI.getRegister() == RAReg)
-        FRE.RAOffset = FDE.FREs.front().RAOffset;
-      return; // Any other register is uninteresting.
+      // TODO: Implement
+      return;
     case MCCFIInstruction::OpRestoreState:
-      // The cfi parser will have caught unbalanced directives earlier, so a
-      // mismatch here is an implementation error.
-      assert(!FDE.SaveState.empty() &&
-             "cfi_restore_state without cfi_save_state");
-      FRE = FDE.SaveState.back();
-      FDE.SaveState.pop_back();
+      // TODO: Implement
       return;
     case MCCFIInstruction::OpEscape:
       // TODO: Implement
-      break;
+      return;
     default:
       // Instructions that don't affect the Cfa, RA, and SP can be safely
       // ignored.
@@ -261,7 +235,7 @@ public:
   }
 
   void buildSFDE(const MCDwarfFrameInfo &DF) {
-    FDEs.emplace_back(DF, Streamer.getContext().createTempSymbol());
+    auto &FDE = FDEs.emplace_back(DF, Streamer.getContext().createTempSymbol());
     // This would have been set via ".cfi_return_column", but
     // MCObjectStreamer doesn't emit an MCCFIInstruction for that. It just
     // sets the DF.RAReg.
@@ -281,7 +255,7 @@ public:
     if (!DF.IsSimple) {
       for (const auto &CFI :
            Streamer.getContext().getAsmInfo()->getInitialFrameState())
-        HandleCFI(FDE, BaseFRE, CFI);
+        handleCFI(FDE, BaseFRE, CFI);
     }
     FDE.FREs.push_back(BaseFRE);
 
@@ -294,10 +268,10 @@ public:
         continue;
 
       SFrameFRE FRE = FDE.FREs.back();
-      HandleCFI(FDE, FRE, CFI);
+      handleCFI(FDE, FRE, CFI);
 
       // If nothing relevant but the location changed, don't add the FRE.
-      if (EqualIgnoringLocation(FRE, FDE.FREs.back()))
+      if (equalIgnoringLocation(FRE, FDE.FREs.back()))
         continue;
 
       // If the location stayed the same, then update the current
@@ -382,7 +356,7 @@ void MCSFrameEmitter::emit(MCObjectStreamer &Streamer) {
   // Both the header itself and the FDEs include various offsets and counts.
   // Therefore, all of this must be precomputed.
   for (const auto &DFrame : FrameArray)
-    Emitter.BuildSFDE(DFrame);
+    Emitter.buildSFDE(DFrame);
 
   MCSection *Section = Context.getObjectFileInfo()->getSFrameSection();
   // Not strictly necessary, but gas always aligns to 8, so match that.
