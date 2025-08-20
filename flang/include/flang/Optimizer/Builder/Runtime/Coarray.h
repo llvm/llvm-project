@@ -37,5 +37,17 @@ namespace fir::runtime {
 /// Generate Call to runtime prif_init
 mlir::Value genInitCoarray(fir::FirOpBuilder &builder, mlir::Location loc);
 
+/// Generate Call to runtime prif_num_images
+mlir::Value getNumImages(fir::FirOpBuilder &builder, mlir::Location loc);
+
+/// Generate Call to runtime prif_num_images_with_team or
+/// prif_num_images_with_team_number
+mlir::Value getNumImagesWithTeam(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value team);
+
+/// Generate Call to runtime prif_this_image_no_coarray
+mlir::Value getThisImage(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value team = {});
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COARRAY_H

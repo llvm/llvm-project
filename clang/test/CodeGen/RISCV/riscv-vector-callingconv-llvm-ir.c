@@ -143,34 +143,34 @@ void __attribute__((riscv_vls_cc)) test_too_large(int32x64_t arg) {}
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_too_large_256(<vscale x 16 x i32> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc(256))) test_too_large_256(int32x64_t arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4(<vscale x 2 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4(<vscale x 2 x i32> %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4(struct st_i32x4 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_256(<vscale x 1 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_256(<vscale x 1 x i32> %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_256(struct st_i32x4 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr1(<vscale x 2 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr1(<vscale x 2 x i32> %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr1(struct st_i32x4_arr1 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr1_256(<vscale x 1 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr1_256(<vscale x 1 x i32> %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr1_256(struct st_i32x4_arr1 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr4(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr4(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr4(struct st_i32x4_arr4 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr4_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr4_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr4_256(struct st_i32x4_arr4 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr8(struct st_i32x4_arr8 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr8_256(struct st_i32x4_arr8 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x2(struct st_i32x4x2 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x2_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x2_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x2_256(struct st_i32x4x2 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x8x2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x8x2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x8x2(struct st_i32x8x2 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x8x2_256(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x8x2_256(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x8x2_256(struct st_i32x8x2 arg) {}
 
 // CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x64x2(ptr dead_on_return noundef %arg)
@@ -178,17 +178,78 @@ void __attribute__((riscv_vls_cc)) test_st_i32x64x2(struct st_i32x64x2 arg) {}
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x64x2_256(ptr dead_on_return noundef %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x64x2_256(struct st_i32x64x2 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x3(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x3(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x3(struct st_i32x4x3 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x3_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x3_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x3_256(struct st_i32x4x3 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg.target_coerce)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x8(struct st_i32x4x8 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg.target_coerce)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x8_256(struct st_i32x4x8 arg) {}
 
 // CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x9(ptr dead_on_return noundef %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x9(struct st_i32x4x9 arg) {}
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x9_256(ptr dead_on_return noundef %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x9_256(struct st_i32x4x9 arg) {}
+
+// CHECK-LLVM-LABEL: define dso_local riscv_vls_cc(128) target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_function_prolog_epilog(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg.target_coerce) #0 {
+// CHECK-LLVM-NEXT: entry:
+// CHECK-LLVM-NEXT:   %retval = alloca %struct.st_i32x4_arr4, align 16
+// CHECK-LLVM-NEXT:   %arg = alloca %struct.st_i32x4_arr4, align 16
+// CHECK-LLVM-NEXT:   %0 = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg.target_coerce, i32 0)
+// CHECK-LLVM-NEXT:   %1 = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %0, i64 0)
+// CHECK-LLVM-NEXT:   %2 = getelementptr inbounds [4 x <4 x i32>], ptr %arg, i64 0, i64 0
+// CHECK-LLVM-NEXT:   store <4 x i32> %1, ptr %2, align 16
+// CHECK-LLVM-NEXT:   %3 = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg.target_coerce, i32 1)
+// CHECK-LLVM-NEXT:   %4 = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %3, i64 0)
+// CHECK-LLVM-NEXT:   %5 = getelementptr inbounds [4 x <4 x i32>], ptr %arg, i64 0, i64 1
+// CHECK-LLVM-NEXT:   store <4 x i32> %4, ptr %5, align 16
+// CHECK-LLVM-NEXT:   %6 = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg.target_coerce, i32 2)
+// CHECK-LLVM-NEXT:   %7 = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %6, i64 0)
+// CHECK-LLVM-NEXT:   %8 = getelementptr inbounds [4 x <4 x i32>], ptr %arg, i64 0, i64 2
+// CHECK-LLVM-NEXT:   store <4 x i32> %7, ptr %8, align 16
+// CHECK-LLVM-NEXT:   %9 = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg.target_coerce, i32 3)
+// CHECK-LLVM-NEXT:   %10 = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %9, i64 0)
+// CHECK-LLVM-NEXT:   %11 = getelementptr inbounds [4 x <4 x i32>], ptr %arg, i64 0, i64 3
+// CHECK-LLVM-NEXT:   store <4 x i32> %10, ptr %11, align 16
+// CHECK-LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %retval, ptr align 16 %arg, i64 64, i1 false)
+// CHECK-LLVM-NEXT:   %12 = load [4 x <4 x i32>], ptr %retval, align 16
+// CHECK-LLVM-NEXT:   %13 = extractvalue [4 x <4 x i32>] %12, 0
+// CHECK-LLVM-NEXT:   %cast.scalable = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> poison, <4 x i32> %13, i64 0)
+// CHECK-LLVM-NEXT:   %14 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.tuple.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x i32> %cast.scalable, i32 0)
+// CHECK-LLVM-NEXT:   %15 = extractvalue [4 x <4 x i32>] %12, 1
+// CHECK-LLVM-NEXT:   %cast.scalable1 = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> poison, <4 x i32> %15, i64 0)
+// CHECK-LLVM-NEXT:   %16 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.tuple.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %14, <vscale x 2 x i32> %cast.scalable1, i32 1)
+// CHECK-LLVM-NEXT:   %17 = extractvalue [4 x <4 x i32>] %12, 2
+// CHECK-LLVM-NEXT:   %cast.scalable2 = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> poison, <4 x i32> %17, i64 0)
+// CHECK-LLVM-NEXT:   %18 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.tuple.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %16, <vscale x 2 x i32> %cast.scalable2, i32 2)
+// CHECK-LLVM-NEXT:   %19 = extractvalue [4 x <4 x i32>] %12, 3
+// CHECK-LLVM-NEXT:   %cast.scalable3 = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> poison, <4 x i32> %19, i64 0)
+// CHECK-LLVM-NEXT:   %20 = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.tuple.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %18, <vscale x 2 x i32> %cast.scalable3, i32 3)
+// CHECK-LLVM-NEXT:   ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %20
+// CHECK-LLVM-NEXT: }
+struct st_i32x4_arr4 __attribute__((riscv_vls_cc)) test_function_prolog_epilog(struct st_i32x4_arr4 arg) {
+  return arg;
+}
+
+struct st_i32x4 __attribute__((riscv_vls_cc)) dummy(struct st_i32x4);
+// CHECK-LLVM-LABEL: define dso_local riscv_vls_cc(128) <vscale x 2 x i32> @test_call(<vscale x 2 x i32> %arg.target_coerce) #0 {
+// CHECK-LLVM-NEXT: entry:
+// CHECK-LLVM-NEXT:   %retval = alloca %struct.st_i32x4, align 16
+// CHECK-LLVM-NEXT:   %arg = alloca %struct.st_i32x4, align 16
+// CHECK-LLVM-NEXT:   %0 = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %arg.target_coerce, i64 0)
+// CHECK-LLVM-NEXT:   store <4 x i32> %0, ptr %arg, align 16
+// CHECK-LLVM-NEXT:   %1 = load <4 x i32>, ptr %arg, align 16
+// CHECK-LLVM-NEXT:   %cast.scalable = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> poison, <4 x i32> %1, i64 0)
+// CHECK-LLVM-NEXT:   %call = call riscv_vls_cc(128) <vscale x 2 x i32> @dummy(<vscale x 2 x i32> %cast.scalable)
+// CHECK-LLVM-NEXT:   %2 = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %call, i64 0)
+// CHECK-LLVM-NEXT:   store <4 x i32> %2, ptr %retval, align 16
+// CHECK-LLVM-NEXT:   %3 = load <4 x i32>, ptr %retval, align 16
+// CHECK-LLVM-NEXT:   %cast.scalable1 = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> poison, <4 x i32> %3, i64 0)
+// CHECK-LLVM-NEXT:   ret <vscale x 2 x i32> %cast.scalable1
+// CHECK-LLVM-NEXT: }
+struct st_i32x4 __attribute__((riscv_vls_cc)) test_call(struct st_i32x4 arg) {
+  struct st_i32x4 abc = dummy(arg);
+  return abc;
+}

@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Coarray.h"
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Exceptions.h"
@@ -778,6 +779,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
+    {"num_images",
+     &I::genNumImages,
+     {{{"team", asAddr}, {"team_number", asAddr}}},
+     /*isElemental*/ false},
     {"pack",
      &I::genPack,
      {{{"array", asBox},
@@ -947,6 +952,12 @@ static constexpr IntrinsicHandler handlers[]{
     {"tand", &I::genTand},
     {"tanpi", &I::genTanpi},
     {"this_grid", &I::genThisGrid, {}, /*isElemental=*/false},
+    {"this_image",
+     &I::genThisImage,
+     {{{"coarray", asBox},
+       {"dim", asAddr},
+       {"team", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"this_thread_block", &I::genThisThreadBlock, {}, /*isElemental=*/false},
     {"this_warp", &I::genThisWarp, {}, /*isElemental=*/false},
     {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
@@ -7279,6 +7290,19 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
 }
 
+// NUM_IMAGES
+fir::ExtendedValue
+IntrinsicLibrary::genNumImages(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled();
+  assert(args.size() == 0 || args.size() == 1);
+
+  if (args.size())
+    return fir::runtime::getNumImagesWithTeam(builder, loc,
+                                              fir::getBase(args[0]));
+  return fir::runtime::getNumImages(builder, loc);
+}
+
 // CLOCK, CLOCK64, GLOBALTIMER
 template <typename OpTy>
 mlir::Value IntrinsicLibrary::genNVVMTime(mlir::Type resultType,
@@ -8327,6 +8351,27 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
       builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
   fir::StoreOp::create(builder, loc, rank, rankCoord);
   return res;
+}
+
+// THIS_IMAGE
+fir::ExtendedValue
+IntrinsicLibrary::genThisImage(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled();
+  assert(args.size() >= 1 && args.size() <= 3);
+  const bool coarrayIsAbsent = args.size() == 1;
+  mlir::Value team =
+      !isStaticallyAbsent(args, args.size() - 1)
+          ? fir::getBase(args[args.size() - 1])
+          : builder
+                .create<fir::AbsentOp>(loc,
+                                       fir::BoxType::get(builder.getNoneType()))
+                .getResult();
+
+  if (!coarrayIsAbsent)
+    TODO(loc, "this_image with coarray argument.");
+  mlir::Value res = fir::runtime::getThisImage(builder, loc, team);
+  return builder.createConvert(loc, resultType, res);
 }
 
 // THIS_THREAD_BLOCK

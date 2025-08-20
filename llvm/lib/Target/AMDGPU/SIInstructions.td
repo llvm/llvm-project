@@ -155,7 +155,8 @@ def AV_MOV_B32_IMM_PSEUDO
   let VOP3 = 1;
   let isMoveImm = 1;
   let SchedRW = [Write32Bit];
-  let Size = 4;
+  let Size = 8;
+  let FixedSize = true;
   let UseNamedOperandTable = 1;
 }
 
