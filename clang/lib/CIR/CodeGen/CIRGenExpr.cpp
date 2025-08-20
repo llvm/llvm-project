@@ -369,9 +369,10 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
                                                  unsigned index) {
   mlir::Location loc = getLoc(field->getLocation());
   cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
-  cir::GetMemberOp sea = getBuilder().createGetMember(
-      loc, fieldPtr, base.getPointer(), field->getName(), index);
   auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
+  cir::GetMemberOp sea = getBuilder().createGetMember(
+      loc, fieldPtr, base.getPointer(), field->getName(),
+      rec.isUnion() ? field->getFieldIndex() : index);
   CharUnits offset = CharUnits::fromQuantity(
       rec.getElementOffset(cgm.getDataLayout().layout, index));
   return Address(sea, base.getAlignment().alignmentAtOffset(offset));
@@ -1045,10 +1046,22 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   llvm_unreachable("Invalid cast kind");
 }
 
+static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CIRGenFunction &cgf,
+                                                        const MemberExpr *me) {
+  if (auto *vd = dyn_cast<VarDecl>(me->getMemberDecl())) {
+    // Try to emit static variable member expressions as DREs.
+    return DeclRefExpr::Create(
+        cgf.getContext(), NestedNameSpecifierLoc(), SourceLocation(), vd,
+        /*RefersToEnclosingVariableOrCapture=*/false, me->getExprLoc(),
+        me->getType(), me->getValueKind(), nullptr, nullptr, me->isNonOdrUse());
+  }
+  return nullptr;
+}
+
 LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
-  if (isa<VarDecl>(e->getMemberDecl())) {
-    cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: VarDecl");
-    return LValue();
+  if (DeclRefExpr *dre = tryToConvertMemberExprToDeclRefExpr(*this, e)) {
+    emitIgnoredExpr(e->getBase());
+    return emitDeclRefLValue(dre);
   }
 
   Expr *baseExpr = e->getBase();
@@ -2099,18 +2112,6 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 
   return ConstantEmission::forValue(cstToEmit);
-}
-
-static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CIRGenFunction &cgf,
-                                                        const MemberExpr *me) {
-  if (auto *vd = dyn_cast<VarDecl>(me->getMemberDecl())) {
-    // Try to emit static variable member expressions as DREs.
-    return DeclRefExpr::Create(
-        cgf.getContext(), NestedNameSpecifierLoc(), SourceLocation(), vd,
-        /*RefersToEnclosingVariableOrCapture=*/false, me->getExprLoc(),
-        me->getType(), me->getValueKind(), nullptr, nullptr, me->isNonOdrUse());
-  }
-  return nullptr;
 }
 
 CIRGenFunction::ConstantEmission

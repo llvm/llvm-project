@@ -1417,20 +1417,21 @@ public:
     size_type __sz  = size();
     size_type __cap = capacity();
     size_type __n   = static_cast<size_type>(std::distance(__first, __last));
-    if (__n) {
-      if (__string_is_trivial_iterator_v<_ForwardIterator> && !__addr_in_range(*__first)) {
-        if (__cap - __sz < __n)
-          __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-        __annotate_increase(__n);
-        auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__get_pointer() + __sz));
-        traits_type::assign(*__end, value_type());
-        __set_size(__sz + __n);
-      } else {
-        const basic_string __temp(__first, __last, __alloc_);
-        append(__temp.data(), __temp.size());
-      }
+    if (__n == 0)
+      return *this;
+
+    if (__string_is_trivial_iterator_v<_ForwardIterator> && !__addr_in_range(*__first)) {
+      if (__cap - __sz < __n)
+        __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
+      __annotate_increase(__n);
+      auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__get_pointer() + __sz));
+      traits_type::assign(*__end, value_type());
+      __set_size(__sz + __n);
+      return *this;
+    } else {
+      const basic_string __temp(__first, __last, __alloc_);
+      return append(__temp.data(), __temp.size());
     }
-    return *this;
   }
 
 #  if _LIBCPP_STD_VER >= 23
@@ -2790,24 +2791,23 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Al
 basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* __s, size_type __n) {
   const auto __cap  = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
   const auto __size = __is_short ? __get_short_size() : __get_long_size();
-  if (__n < __cap) {
-    if (__n > __size)
-      __annotate_increase(__n - __size);
-    pointer __p;
-    if (__is_short) {
-      __p = __get_short_pointer();
-      __set_short_size(__n);
-    } else {
-      __p = __get_long_pointer();
-      __set_long_size(__n);
-    }
-    traits_type::copy(std::__to_address(__p), __s, __n);
-    traits_type::assign(__p[__n], value_type());
-    if (__size > __n)
-      __annotate_shrink(__size);
-  } else {
+  if (__n >= __cap) {
     __grow_by_and_replace(__cap - 1, __n - __cap + 1, __size, 0, __size, __n, __s);
+    return *this;
   }
+
+  __annotate_delete();
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+  pointer __p;
+  if (__is_short) {
+    __p = __get_short_pointer();
+    __set_short_size(__n);
+  } else {
+    __p = __get_long_pointer();
+    __set_long_size(__n);
+  }
+  traits_type::copy(std::__to_address(__p), __s, __n);
+  traits_type::assign(__p[__n], value_type());
   return *this;
 }
 
@@ -3021,52 +3021,56 @@ basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_ty
   _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::append received nullptr");
   size_type __cap = capacity();
   size_type __sz  = size();
-  if (__cap - __sz >= __n) {
-    if (__n) {
-      __annotate_increase(__n);
-      value_type* __p = std::__to_address(__get_pointer());
-      traits_type::copy(__p + __sz, __s, __n);
-      __sz += __n;
-      __set_size(__sz);
-      traits_type::assign(__p[__sz], value_type());
-    }
-  } else
+  if (__cap - __sz < __n) {
     __grow_by_and_replace(__cap, __sz + __n - __cap, __sz, __sz, 0, __n, __s);
+    return *this;
+  }
+
+  if (__n == 0)
+    return *this;
+
+  __annotate_increase(__n);
+  value_type* __p = std::__to_address(__get_pointer());
+  traits_type::copy(__p + __sz, __s, __n);
+  __sz += __n;
+  __set_size(__sz);
+  traits_type::assign(__p[__sz], value_type());
   return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(size_type __n, value_type __c) {
-  if (__n) {
-    size_type __cap = capacity();
-    size_type __sz  = size();
-    if (__cap - __sz < __n)
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-    __annotate_increase(__n);
-    pointer __p = __get_pointer();
-    traits_type::assign(std::__to_address(__p) + __sz, __n, __c);
-    __sz += __n;
-    __set_size(__sz);
-    traits_type::assign(__p[__sz], value_type());
-  }
+  if (__n == 0)
+    return *this;
+
+  size_type __cap = capacity();
+  size_type __sz  = size();
+  if (__cap - __sz < __n)
+    __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
+  __annotate_increase(__n);
+  pointer __p = __get_pointer();
+  traits_type::assign(std::__to_address(__p) + __sz, __n, __c);
+  __sz += __n;
+  __set_size(__sz);
+  traits_type::assign(__p[__sz], value_type());
   return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 basic_string<_CharT, _Traits, _Allocator>::__append_default_init(size_type __n) {
-  if (__n) {
-    size_type __cap = capacity();
-    size_type __sz  = size();
-    if (__cap - __sz < __n)
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-    __annotate_increase(__n);
-    pointer __p = __get_pointer();
-    __sz += __n;
-    __set_size(__sz);
-    traits_type::assign(__p[__sz], value_type());
-  }
+  if (__n == 0)
+    return;
+  size_type __cap = capacity();
+  size_type __sz  = size();
+  if (__cap - __sz < __n)
+    __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
+  __annotate_increase(__n);
+  pointer __p = __get_pointer();
+  __sz += __n;
+  __set_size(__sz);
+  traits_type::assign(__p[__sz], value_type());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3124,23 +3128,27 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_t
   if (__pos > __sz)
     this->__throw_out_of_range();
   size_type __cap = capacity();
-  if (__cap - __sz >= __n) {
-    if (__n) {
-      __annotate_increase(__n);
-      value_type* __p    = std::__to_address(__get_pointer());
-      size_type __n_move = __sz - __pos;
-      if (__n_move != 0) {
-        if (std::__is_pointer_in_range(__p + __pos, __p + __sz, __s))
-          __s += __n;
-        traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
-      }
-      traits_type::move(__p + __pos, __s, __n);
-      __sz += __n;
-      __set_size(__sz);
-      traits_type::assign(__p[__sz], value_type());
-    }
-  } else
+
+  if (__cap - __sz < __n) {
     __grow_by_and_replace(__cap, __sz + __n - __cap, __sz, __pos, 0, __n, __s);
+    return *this;
+  }
+
+  if (__n == 0)
+    return *this;
+
+  __annotate_increase(__n);
+  value_type* __p    = std::__to_address(__get_pointer());
+  size_type __n_move = __sz - __pos;
+  if (__n_move != 0) {
+    if (std::__is_pointer_in_range(__p + __pos, __p + __sz, __s))
+      __s += __n;
+    traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
+  }
+  traits_type::move(__p + __pos, __s, __n);
+  __sz += __n;
+  __set_size(__sz);
+  traits_type::assign(__p[__sz], value_type());
   return *this;
 }
 
@@ -3150,24 +3158,26 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
   size_type __sz = size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  if (__n) {
-    size_type __cap = capacity();
-    value_type* __p;
-    if (__cap - __sz >= __n) {
-      __annotate_increase(__n);
-      __p                = std::__to_address(__get_pointer());
-      size_type __n_move = __sz - __pos;
-      if (__n_move != 0)
-        traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
-    } else {
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __pos, 0, __n);
-      __p = std::__to_address(__get_long_pointer());
-    }
-    traits_type::assign(__p + __pos, __n, __c);
-    __sz += __n;
-    __set_size(__sz);
-    traits_type::assign(__p[__sz], value_type());
+
+  if (__n == 0)
+    return *this;
+
+  size_type __cap = capacity();
+  value_type* __p;
+  if (__cap - __sz >= __n) {
+    __annotate_increase(__n);
+    __p                = std::__to_address(__get_pointer());
+    size_type __n_move = __sz - __pos;
+    if (__n_move != 0)
+      traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
+  } else {
+    __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __pos, 0, __n);
+    __p = std::__to_address(__get_long_pointer());
   }
+  traits_type::assign(__p + __pos, __n, __c);
+  __sz += __n;
+  __set_size(__sz);
+  traits_type::assign(__p[__sz], value_type());
   return *this;
 }
 
@@ -3241,38 +3251,38 @@ basic_string<_CharT, _Traits, _Allocator>::replace(
     this->__throw_out_of_range();
   __n1            = std::min(__n1, __sz - __pos);
   size_type __cap = capacity();
-  if (__cap - __sz + __n1 >= __n2) {
-    value_type* __p = std::__to_address(__get_pointer());
-    if (__n1 != __n2) {
-      if (__n2 > __n1)
-        __annotate_increase(__n2 - __n1);
-      size_type __n_move = __sz - __pos - __n1;
-      if (__n_move != 0) {
-        if (__n1 > __n2) {
-          traits_type::move(__p + __pos, __s, __n2);
-          traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
-          return __null_terminate_at(__p, __sz + (__n2 - __n1));
-        }
-        if (std::__is_pointer_in_range(__p + __pos + 1, __p + __sz, __s)) {
-          if (__p + __pos + __n1 <= __s)
-            __s += __n2 - __n1;
-          else // __p + __pos < __s < __p + __pos + __n1
-          {
-            traits_type::move(__p + __pos, __s, __n1);
-            __pos += __n1;
-            __s += __n2;
-            __n2 -= __n1;
-            __n1 = 0;
-          }
-        }
-        traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
-      }
-    }
-    traits_type::move(__p + __pos, __s, __n2);
-    return __null_terminate_at(__p, __sz + (__n2 - __n1));
-  } else
+  if (__cap - __sz + __n1 < __n2) {
     __grow_by_and_replace(__cap, __sz - __n1 + __n2 - __cap, __sz, __pos, __n1, __n2, __s);
-  return *this;
+    return *this;
+  }
+
+  value_type* __p = std::__to_address(__get_pointer());
+  if (__n1 != __n2) {
+    if (__n2 > __n1)
+      __annotate_increase(__n2 - __n1);
+    size_type __n_move = __sz - __pos - __n1;
+    if (__n_move != 0) {
+      if (__n1 > __n2) {
+        traits_type::move(__p + __pos, __s, __n2);
+        traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
+        return __null_terminate_at(__p, __sz + (__n2 - __n1));
+      }
+      if (std::__is_pointer_in_range(__p + __pos + 1, __p + __sz, __s)) {
+        if (__p + __pos + __n1 <= __s) {
+          __s += __n2 - __n1;
+        } else { // __p + __pos < __s < __p + __pos + __n1
+          traits_type::move(__p + __pos, __s, __n1);
+          __pos += __n1;
+          __s += __n2;
+          __n2 -= __n1;
+          __n1 = 0;
+        }
+      }
+      traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
+    }
+  }
+  traits_type::move(__p + __pos, __s, __n2);
+  return __null_terminate_at(__p, __sz + (__n2 - __n1));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3325,15 +3335,16 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void
 basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(size_type __pos, size_type __n) {
-  if (__n) {
-    size_type __sz     = size();
-    value_type* __p    = std::__to_address(__get_pointer());
-    __n                = std::min(__n, __sz - __pos);
-    size_type __n_move = __sz - __pos - __n;
-    if (__n_move != 0)
-      traits_type::move(__p + __pos, __p + __pos + __n, __n_move);
-    __null_terminate_at(__p, __sz - __n);
-  }
+  if (__n == 0)
+    return;
+
+  size_type __sz     = size();
+  value_type* __p    = std::__to_address(__get_pointer());
+  __n                = std::min(__n, __sz - __pos);
+  size_type __n_move = __sz - __pos - __n;
+  if (__n_move != 0)
+    traits_type::move(__p + __pos, __p + __pos + __n, __n_move);
+  __null_terminate_at(__p, __sz - __n);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
