@@ -6538,7 +6538,7 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
   }
 }
 
-static void computeKnownBitsForVLoad(const SDValue Op, KnownBits &Known) {
+static void computeKnownBitsForLoadV(const SDValue Op, KnownBits &Known) {
   MemSDNode *LD = cast<MemSDNode>(Op);
 
   // We can't do anything without knowing the sign bit.
@@ -6568,7 +6568,7 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4:
   case NVPTXISD::LoadV8:
-    computeKnownBitsForVLoad(Op, Known);
+    computeKnownBitsForLoadV(Op, Known);
     break;
   default:
     break;
