@@ -96,4 +96,15 @@ def MultiResultOpEnum: I64EnumAttr<
     MultiResultOpKind4, MultiResultOpKind5, MultiResultOpKind6
   ]>;
 
+//===----------------------------------------------------------------------===//
+// Test Enum with Default Value
+//===----------------------------------------------------------------------===//
+
+def TestDefaultCase : I32EnumAttrCase<"Default", 0, "default">;
+def NonDefaultCase : I32EnumAttrCase<"NonDefault", 1, "non_default">;
+
+def TestDefaultValuedEnum : I32Enum<"TestDefaultValuedEnum", "", [
+    TestDefaultCase, NonDefaultCase
+]>;
+
 #endif // TEST_ENUMDEFS

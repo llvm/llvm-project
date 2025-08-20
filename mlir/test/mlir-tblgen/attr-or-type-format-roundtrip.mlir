@@ -77,6 +77,8 @@ attributes {
 // CHECK: !test.optional_type_string
 // CHECK: !test.optional_type_string<"non default">
 // CHECK: !test.optional_type_string<"containing\0A \22escape\22 characters\0F">
+// CHECK: !test.default_enum_parameter
+// CHECK: !test.default_enum_parameter<"non_default">
 
 func.func private @test_roundtrip_default_parsers_struct(
   !test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>
@@ -120,4 +122,6 @@ func.func private @test_roundtrip_default_parsers_struct(
   !test.optional_type_string<"default">,
   !test.optional_type_string<"non default">,
   !test.optional_type_string<"containing\n \"escape\" characters\0f">
+  !test.default_enum_parameter,
+  !test.default_enum_parameter<"non_default">,
 )
