@@ -374,7 +374,7 @@ define i32 @shl_i16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v1.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: shl_i16_zext_i32:
@@ -412,7 +412,7 @@ define i32 @lshr_i16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v0.l, v1.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: lshr_i16_zext_i32:
@@ -450,7 +450,7 @@ define i32 @ashr_i16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v1.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: ashr_i16_zext_i32:
@@ -488,7 +488,7 @@ define i32 @add_u16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: add_u16_zext_i32:
@@ -526,7 +526,7 @@ define i32 @sub_u16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: sub_u16_zext_i32:
@@ -564,7 +564,7 @@ define i32 @mul_lo_u16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: mul_lo_u16_zext_i32:
@@ -602,7 +602,7 @@ define i32 @min_u16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: min_u16_zext_i32:
@@ -641,7 +641,7 @@ define i32 @min_i16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_min_i16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: min_i16_zext_i32:
@@ -680,7 +680,7 @@ define i32 @max_u16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_u16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: max_u16_zext_i32:
@@ -719,7 +719,7 @@ define i32 @max_i16_zext_i32(i16 %x, i16 %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_i16 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: max_i16_zext_i32:
@@ -758,7 +758,7 @@ define i32 @zext_fadd_f16(half %x, half %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: zext_fadd_f16:
@@ -797,10 +797,8 @@ define i32 @zext_fma_f16(half %x, half %y, half %z) {
 ; GFX11-TRUE16-LABEL: zext_fma_f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v0.l, v0.h, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: zext_fma_f16:
@@ -840,7 +838,7 @@ define i32 @zext_div_fixup_f16(half %x, half %y, half %z) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, v2.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: zext_div_fixup_f16:
@@ -882,7 +880,7 @@ define i32 @zext_fptrunc_f16(float %x) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: zext_fptrunc_f16:
@@ -926,20 +924,12 @@ define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: zext_fptrunc_fma_f16:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v0, v1, v2
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: zext_fptrunc_fma_f16:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: zext_fptrunc_fma_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.fma.f32(float %x, float %y, float %z)
   %fptrunc = fptrunc float %fma to half
   %cast = bitcast half %fptrunc to i16
@@ -950,5 +940,3 @@ define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
 declare half @llvm.amdgcn.div.fixup.f16(half, half, half)
 declare half @llvm.fma.f16(half, half, half)
 declare float @llvm.fma.f32(float, float, float)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX11: {{.*}}
