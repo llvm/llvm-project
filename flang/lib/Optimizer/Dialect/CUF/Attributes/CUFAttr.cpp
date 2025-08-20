@@ -34,13 +34,15 @@ cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
   if (!op)
     return {};
 
-  if (auto dataAttr = op->getAttrOfType<cuf::DataAttributeAttr>(cuf::getDataAttrName()))
+  if (auto dataAttr =
+          op->getAttrOfType<cuf::DataAttributeAttr>(cuf::getDataAttrName()))
     return dataAttr;
 
   // When the attribute is declared on the operation, it doesn't have a prefix.
-  if (auto dataAttr = op->getAttrOfType<cuf::DataAttributeAttr>(cuf::dataAttrName))
+  if (auto dataAttr =
+          op->getAttrOfType<cuf::DataAttributeAttr>(cuf::dataAttrName))
     return dataAttr;
-    
+
   return {};
 }
 
