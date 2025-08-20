@@ -14,6 +14,7 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXISelDAGToDAG.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
@@ -6537,25 +6538,24 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
   }
 }
 
-static void computeKnownBitsFori8VLoad(const SDValue Op, KnownBits &Known) {
-  MemSDNode *Mem = dyn_cast<MemSDNode>(Op);
-  if (!Mem) {
-    return;
-  }
+static void computeKnownBitsForVLoad(const SDValue Op, KnownBits &Known) {
+  MemSDNode *LD = cast<MemSDNode>(Op);
 
-  EVT MemVT = Mem->getMemoryVT();
-  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8) {
+  // We can't do anything without knowing the sign bit.
+  auto ExtType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
+  if (ExtType == ISD::SEXTLOAD)
     return;
-  }
 
-  unsigned ExtType = Mem->getConstantOperandVal(Mem->getNumOperands() - 1);
-  if (ExtType == ISD::SEXTLOAD) {
-    Known = Known.sext(Known.getBitWidth());
+  // ExtLoading to vector types is weird and may not work well with known bits.
+  auto DestVT = LD->getValueType(0);
+  if (DestVT.isVector())
     return;
-  }
-  KnownBits HighZeros(Known.getBitWidth() - 8);
+
+  assert(Known.getBitWidth() == DestVT.getSizeInBits());
+  auto ElementBitWidth = NVPTXDAGToDAGISel::getFromTypeWidthForLoad(LD);
+  KnownBits HighZeros(Known.getBitWidth() - ElementBitWidth);
   HighZeros.setAllZero();
-  Known.insertBits(HighZeros, 8);
+  Known.insertBits(HighZeros, ElementBitWidth);
 }
 
 void NVPTXTargetLowering::computeKnownBitsForTargetNode(
@@ -6569,7 +6569,8 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
     break;
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4:
-    computeKnownBitsFori8VLoad(Op, Known);
+  case NVPTXISD::LoadV8:
+    computeKnownBitsForVLoad(Op, Known);
     break;
   default:
     break;

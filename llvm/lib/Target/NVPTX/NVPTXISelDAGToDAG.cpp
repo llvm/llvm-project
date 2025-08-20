@@ -1309,26 +1309,17 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   return true;
 }
 
+unsigned NVPTXDAGToDAGISel::getFromTypeWidthForLoad(const MemSDNode *Mem) {
+  EVT MemVT = Mem->getMemoryVT();
+  auto ElementBitWidth = MemVT.getSizeInBits() / (Mem->getNumValues() - 1);
+  return ElementBitWidth;
+}
+
 bool NVPTXDAGToDAGISel::tryLDU(SDNode *N) {
   auto *LD = cast<MemSDNode>(N);
 
-  unsigned NumElts;
-  switch (N->getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case ISD::INTRINSIC_W_CHAIN:
-    NumElts = 1;
-    break;
-  case NVPTXISD::LDUV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::LDUV4:
-    NumElts = 4;
-    break;
-  }
-
   SDLoc DL(N);
-  const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits() / NumElts;
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
 
   // If this is an LDU intrinsic, the address is the third operand. If its an
