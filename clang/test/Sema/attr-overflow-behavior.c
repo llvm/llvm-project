@@ -53,3 +53,12 @@ void constant_conversion() {
   unsigned short __no_wrap ux4 = (unsigned int __no_wrap)100000; // expected-warning {{implicit conversion from '__no_wrap unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
   unsigned short __no_wrap ux5 = (unsigned int __wrap)100000; // expected-warning {{implicit conversion from '__wrap unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
 }
+
+typedef long s64_typedef1;
+typedef s64_typedef1 __attribute__((overflow_behavior(no_wrap))) nw_s64_typedef2;
+nw_s64_typedef2 global_var;
+void test_nested_typedef_control_flow() {
+  // We had a crash during Sema with nested typedefs and control flow, make
+  // sure we don't crash and just warn.
+  if (global_var) {} // expected-warning {{implicit conversion from 'nw_s64_typedef2'}}
+}
