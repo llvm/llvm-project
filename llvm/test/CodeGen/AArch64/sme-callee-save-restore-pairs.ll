@@ -9,9 +9,8 @@ declare void @my_func2(<vscale x 16 x i8> %v)
 define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-LABEL: fbyte:
 ; NOPAIR:       // %bb.0:
-; NOPAIR-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; NOPAIR-NEXT:    cntd x9
-; NOPAIR-NEXT:    stp x9, x19, [sp, #16] // 16-byte Folded Spill
+; NOPAIR-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
+; NOPAIR-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    addvl sp, sp, #-18
 ; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
@@ -85,15 +84,14 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; NOPAIR-NEXT:    addvl sp, sp, #18
-; NOPAIR-NEXT:    ldr x19, [sp, #24] // 8-byte Folded Reload
-; NOPAIR-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; NOPAIR-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; NOPAIR-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
 ; NOPAIR-NEXT:    ret
 ;
 ; PAIR-LABEL: fbyte:
 ; PAIR:       // %bb.0:
-; PAIR-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; PAIR-NEXT:    cntd x9
-; PAIR-NEXT:    stp x9, x19, [sp, #16] // 16-byte Folded Spill
+; PAIR-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
+; PAIR-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; PAIR-NEXT:    addvl sp, sp, #-18
 ; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
@@ -167,8 +165,8 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    addvl sp, sp, #18
-; PAIR-NEXT:    ldr x19, [sp, #24] // 8-byte Folded Reload
-; PAIR-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; PAIR-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
 ; PAIR-NEXT:    ret
   call void @my_func2(<vscale x 16 x i8> %v)
   ret void
@@ -177,9 +175,7 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 define void @fhalf(<vscale x 8 x half> %v) #1{
 ; NOPAIR-LABEL: fhalf:
 ; NOPAIR:       // %bb.0:
-; NOPAIR-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; NOPAIR-NEXT:    cntd x9
-; NOPAIR-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; NOPAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; NOPAIR-NEXT:    addvl sp, sp, #-18
 ; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
@@ -241,14 +237,12 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; NOPAIR-NEXT:    addvl sp, sp, #18
-; NOPAIR-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; NOPAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ret
 ;
 ; PAIR-LABEL: fhalf:
 ; PAIR:       // %bb.0:
-; PAIR-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; PAIR-NEXT:    cntd x9
-; PAIR-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; PAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; PAIR-NEXT:    addvl sp, sp, #-18
 ; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    ptrue pn8.b
@@ -298,7 +292,7 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    addvl sp, sp, #18
-; PAIR-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; PAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; PAIR-NEXT:    ret
   call void @my_func()
   ret void
@@ -307,12 +301,7 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; NOPAIR-LABEL: ffloat:
 ; NOPAIR:       // %bb.0:
-; NOPAIR-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; NOPAIR-NEXT:    rdsvl x9, #1
-; NOPAIR-NEXT:    lsr x9, x9, #3
-; NOPAIR-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
-; NOPAIR-NEXT:    cntd x9
-; NOPAIR-NEXT:    str x9, [sp, #24] // 8-byte Folded Spill
+; NOPAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; NOPAIR-NEXT:    addsvl sp, sp, #-18
 ; NOPAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; NOPAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
@@ -374,17 +363,12 @@ define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; NOPAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; NOPAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; NOPAIR-NEXT:    addsvl sp, sp, #18
-; NOPAIR-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; NOPAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; NOPAIR-NEXT:    ret
 ;
 ; PAIR-LABEL: ffloat:
 ; PAIR:       // %bb.0:
-; PAIR-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; PAIR-NEXT:    rdsvl x9, #1
-; PAIR-NEXT:    lsr x9, x9, #3
-; PAIR-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
-; PAIR-NEXT:    cntd x9
-; PAIR-NEXT:    str x9, [sp, #24] // 8-byte Folded Spill
+; PAIR-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; PAIR-NEXT:    addsvl sp, sp, #-18
 ; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
@@ -446,7 +430,7 @@ define void @ffloat(<vscale x 4 x i32> %v) #2 {
 ; PAIR-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    addsvl sp, sp, #18
-; PAIR-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; PAIR-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; PAIR-NEXT:    ret
   call void @my_func()
   ret void
