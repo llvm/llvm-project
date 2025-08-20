@@ -983,7 +983,7 @@ SIMemOpAccess::getLdsLoadStoreInfo(
   }
 
   if (auto MOI = constructFromMIWithMMO(MI)) {
-    return std::make_tuple(*MOI, OpKind);
+    return {*MOI, OpKind};
   }
   return std::nullopt;
 }
@@ -2876,16 +2876,12 @@ bool SIMemoryLegalizer::expandLdsLoadStore(const SIMemOpInfo &MOI,
                                            MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
-  bool Changed = false;
-
   // Handle volatile and/or nontemporal markers on direct-to-LDS loads and
   // stores. The operation is treated as a volatile/nontemporal store
   // to its second argument.
-  Changed |= CC->enableVolatileAndOrNonTemporal(
+  return CC->enableVolatileAndOrNonTemporal(
       MI, MOI.getInstrAddrSpace(), OpKind, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
-
-  return Changed;
 }
 
 bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
