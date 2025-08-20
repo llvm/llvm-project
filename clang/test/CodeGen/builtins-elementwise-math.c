@@ -1265,3 +1265,99 @@ void test_builtin_elementwise_fshl(long long int i1, long long int i2,
   u4 tmp_vu_l = __builtin_elementwise_fshl(vu1, vu2, vu3);
   u4 tmp_vu_r = __builtin_elementwise_fshr(vu1, vu2, vu3);
 }
+
+void test_builtin_elementwise_ctlz(si8 vs1, si8 vs2, u4 vu1,
+                                   long long int lli, short si,
+                                   _BitInt(31) bi, int i,
+                                   char ci) {
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  vs1 = __builtin_elementwise_ctlz(vs1);
+
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: [[CLZ:%.+]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq <8 x i16> [[V8S1]], zeroinitializer
+  // CHECK-NEXT: [[V8S2:%.+]] = load <8 x i16>, ptr %vs2.addr
+  // select <8 x i1> [[ISZERO]], <8 x i16> [[CLZ]], <8 x i16> [[V8S2]]
+  vs1 = __builtin_elementwise_ctlz(vs1, vs2);
+
+  // CHECK:      [[V4U1:%.+]] = load <4 x i32>, ptr %vu1.addr
+  // CHECK-NEXT: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[V4U1]], i1 true)
+  vu1 = __builtin_elementwise_ctlz(vu1);
+
+  // CHECK:      [[LLI:%.+]] = load i64, ptr %lli.addr
+  // CHECK-NEXT: call i64 @llvm.ctlz.i64(i64 [[LLI]], i1 true)
+  lli = __builtin_elementwise_ctlz(lli);
+
+  // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr
+  // CHECK-NEXT: call i16 @llvm.ctlz.i16(i16 [[SI]], i1 true)
+  si = __builtin_elementwise_ctlz(si);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: call i31 @llvm.ctlz.i31(i31 [[BI2]], i1 true)
+  bi = __builtin_elementwise_ctlz(bi);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[CLZ:%.+]] = call i31 @llvm.ctlz.i31(i31 [[BI2]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq i31 [[BI2]], 0
+  // CHECK-NEXT: select i1 [[ISZERO]], i31 1, i31 [[CLZ]]
+  bi = __builtin_elementwise_ctlz(bi, (_BitInt(31))1);
+
+  // CHECK:      [[I:%.+]] = load i32, ptr %i.addr
+  // CHECK-NEXT: call i32 @llvm.ctlz.i32(i32 [[I]], i1 true)
+  i = __builtin_elementwise_ctlz(i);
+
+  // CHECK:      [[CI:%.+]] = load i8, ptr %ci.addr
+  // CHECK-NEXT: call i8 @llvm.ctlz.i8(i8 [[CI]], i1 true)
+  ci = __builtin_elementwise_ctlz(ci);
+}
+
+void test_builtin_elementwise_cttz(si8 vs1, si8 vs2, u4 vu1,
+                                   long long int lli, short si,
+                                   _BitInt(31) bi, int i,
+                                   char ci) {
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  vs1 = __builtin_elementwise_cttz(vs1);
+
+  // CHECK:      [[V8S1:%.+]] = load <8 x i16>, ptr %vs1.addr
+  // CHECK-NEXT: [[ctz:%.+]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[V8S1]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq <8 x i16> [[V8S1]], zeroinitializer
+  // CHECK-NEXT: [[V8S2:%.+]] = load <8 x i16>, ptr %vs2.addr
+  // select <8 x i1> [[ISZERO]], <8 x i16> [[ctz]], <8 x i16> [[V8S2]]
+  vs1 = __builtin_elementwise_cttz(vs1, vs2);
+
+  // CHECK:      [[V4U1:%.+]] = load <4 x i32>, ptr %vu1.addr
+  // CHECK-NEXT: call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[V4U1]], i1 true)
+  vu1 = __builtin_elementwise_cttz(vu1);
+
+  // CHECK:      [[LLI:%.+]] = load i64, ptr %lli.addr
+  // CHECK-NEXT: call i64 @llvm.cttz.i64(i64 [[LLI]], i1 true)
+  lli = __builtin_elementwise_cttz(lli);
+
+  // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr
+  // CHECK-NEXT: call i16 @llvm.cttz.i16(i16 [[SI]], i1 true)
+  si = __builtin_elementwise_cttz(si);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: call i31 @llvm.cttz.i31(i31 [[BI2]], i1 true)
+  bi = __builtin_elementwise_cttz(bi);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi.addr
+  // CHECK-NEXT: [[BI2:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[ctz:%.+]] = call i31 @llvm.cttz.i31(i31 [[BI2]], i1 true)
+  // CHECK-NEXT: [[ISZERO:%.+]] = icmp eq i31 [[BI2]], 0
+  // CHECK-NEXT: select i1 [[ISZERO]], i31 1, i31 [[ctz]]
+  bi = __builtin_elementwise_cttz(bi, (_BitInt(31))1);
+
+  // CHECK:      [[I:%.+]] = load i32, ptr %i.addr
+  // CHECK-NEXT: call i32 @llvm.cttz.i32(i32 [[I]], i1 true)
+  i = __builtin_elementwise_cttz(i);
+
+  // CHECK:      [[CI:%.+]] = load i8, ptr %ci.addr
+  // CHECK-NEXT: call i8 @llvm.cttz.i8(i8 [[CI]], i1 true)
+  ci = __builtin_elementwise_cttz(ci);
+}

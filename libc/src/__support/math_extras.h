@@ -66,7 +66,7 @@ template <typename T>
 
 #define RETURN_IF(TYPE, BUILTIN)                                               \
   if constexpr (cpp::is_same_v<T, TYPE>)                                       \
-    return BUILTIN(a, b, carry_in, carry_out);
+    return BUILTIN(a, b, carry_in, &carry_out);
 
 // Returns the result of 'a + b' taking into account 'carry_in'.
 // The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
@@ -74,7 +74,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 add_with_carry(T a, T b, T carry_in, T &carry_out) {
-  if constexpr (!cpp::is_constant_evaluated()) {
+  if (!cpp::is_constant_evaluated()) {
 #if __has_builtin(__builtin_addcb)
     RETURN_IF(unsigned char, __builtin_addcb)
 #elif __has_builtin(__builtin_addcs)
@@ -100,7 +100,7 @@ add_with_carry(T a, T b, T carry_in, T &carry_out) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 sub_with_borrow(T a, T b, T carry_in, T &carry_out) {
-  if constexpr (!cpp::is_constant_evaluated()) {
+  if (!cpp::is_constant_evaluated()) {
 #if __has_builtin(__builtin_subcb)
     RETURN_IF(unsigned char, __builtin_subcb)
 #elif __has_builtin(__builtin_subcs)
