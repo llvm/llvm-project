@@ -103,6 +103,13 @@ set(SOURCES
    )
 
 add_library(cxx-tidy MODULE ${SOURCES})
+if(LIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB)
+  if(LIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB STREQUAL "libc++" OR LIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB STREQUAL "libstdc++")
+    target_compile_options(cxx-tidy PUBLIC -stdlib=${LIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB})
+  else()
+    message(ERROR "${LIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB} must either be empty, 'libc++', or 'libstdc++'.")
+  endif()
+endif()
 target_link_libraries(cxx-tidy clangTidy)
 
 set_target_properties(cxx-tidy PROPERTIES
