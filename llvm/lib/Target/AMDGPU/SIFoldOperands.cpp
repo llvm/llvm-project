@@ -1248,6 +1248,7 @@ void SIFoldOperandsImpl::foldOperand(
   if (FoldingImmLike && UseMI->isCopy()) {
     Register DestReg = UseMI->getOperand(0).getReg();
     Register SrcReg = UseMI->getOperand(1).getReg();
+    unsigned UseSubReg = UseMI->getOperand(1).getSubReg();
     assert(SrcReg.isVirtual());
 
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
@@ -1278,44 +1279,60 @@ void SIFoldOperandsImpl::foldOperand(
       DestRC = &AMDGPU::SGPR_32RegClass;
     }
 
-    // In order to fold immediates into copies, we need to change the
-    // copy to a MOV.
+    // In order to fold immediates into copies, we need to change the copy to a
+    // MOV. Find a compatible mov instruction with the value.
+    for (unsigned MovOp :
+         {AMDGPU::S_MOV_B32, AMDGPU::V_MOV_B32_e32, AMDGPU::S_MOV_B64,
+          AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_MOV_B16_t16_e64}) {
+      const MCInstrDesc &MovDesc = TII->get(MovOp);
+      assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
 
-    unsigned MovOp = TII->getMovOpcode(DestRC);
-    if (MovOp == AMDGPU::COPY)
+      const TargetRegisterClass *MovDstRC =
+          TRI->getRegClass(MovDesc.operands()[0].RegClass);
+
+      // Fold if the destination register class of the MOV instruction (ResRC)
+      // is a superclass of (or equal to) the destination register class of the
+      // COPY (DestRC). If this condition fails, folding would be illegal.
+      if (!DestRC->hasSuperClassEq(MovDstRC))
+        continue;
+
+      const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
+      const TargetRegisterClass *MovSrcRC =
+          TRI->getRegClass(MovDesc.operands()[SrcIdx].RegClass);
+
+      if (UseSubReg)
+        MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+      if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
+        break;
+
+      MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
+      MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
+      while (ImpOpI != ImpOpE) {
+        MachineInstr::mop_iterator Tmp = ImpOpI;
+        ImpOpI++;
+        UseMI->removeOperand(UseMI->getOperandNo(Tmp));
+      }
+      UseMI->setDesc(MovDesc);
+
+      if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
+        const auto &SrcOp = UseMI->getOperand(UseOpIdx);
+        MachineOperand NewSrcOp(SrcOp);
+        MachineFunction *MF = UseMI->getParent()->getParent();
+        UseMI->removeOperand(1);
+        UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
+        UseMI->addOperand(NewSrcOp);                          // src0
+        UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // op_sel
+        UseOpIdx = SrcIdx;
+        UseOp = &UseMI->getOperand(UseOpIdx);
+      }
+      CopiesToReplace.push_back(UseMI);
+      break;
+    }
+
+    // We failed to replace the copy, so give up.
+    if (UseMI->getOpcode() == AMDGPU::COPY)
       return;
 
-    // Fold if the destination register class of the MOV instruction (ResRC)
-    // is a superclass of (or equal to) the destination register class of the
-    // COPY (DestRC). If this condition fails, folding would be illegal.
-    const MCInstrDesc &MovDesc = TII->get(MovOp);
-    assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
-    const TargetRegisterClass *ResRC =
-        TRI->getRegClass(MovDesc.operands()[0].RegClass);
-    if (!DestRC->hasSuperClassEq(ResRC))
-      return;
-
-    MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
-    MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
-    while (ImpOpI != ImpOpE) {
-      MachineInstr::mop_iterator Tmp = ImpOpI;
-      ImpOpI++;
-      UseMI->removeOperand(UseMI->getOperandNo(Tmp));
-    }
-    UseMI->setDesc(TII->get(MovOp));
-
-    if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
-      const auto &SrcOp = UseMI->getOperand(UseOpIdx);
-      MachineOperand NewSrcOp(SrcOp);
-      MachineFunction *MF = UseMI->getParent()->getParent();
-      UseMI->removeOperand(1);
-      UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
-      UseMI->addOperand(NewSrcOp);                          // src0
-      UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // op_sel
-      UseOpIdx = 2;
-      UseOp = &UseMI->getOperand(UseOpIdx);
-    }
-    CopiesToReplace.push_back(UseMI);
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         UseMI->getOperand(0).getReg().isVirtual() &&
