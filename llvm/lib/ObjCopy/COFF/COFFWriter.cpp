@@ -126,7 +126,7 @@ Error COFFWriter::finalizeSymIdxContents() {
   if (!NeedUpdate)
     return Error::success();
 
-  for (auto &Sec : Obj.getMutableSections()) {
+  for (Section &Sec : Obj.getMutableSections()) {
     if (!IsSymIdxSection(Sec.Name))
       continue;
 
@@ -136,7 +136,8 @@ Error COFFWriter::finalizeSymIdxContents() {
     if (RawIds.size() == 0)
       continue;
 
-    if (!SecIdMap.contains(Sec.UniqueId))
+    auto SecDefIt = SecIdMap.find(Sec.UniqueId);
+    if (SecDefIt == SecIdMap.end())
       return createStringError(object_error::invalid_symbol_index,
                                "section '%s' does not have the corresponding "
                                "symbol or the symbol has unexpected format",
@@ -147,21 +148,22 @@ Error COFFWriter::finalizeSymIdxContents() {
         reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
         RawIds.size() / 4);
     std::vector<support::ulittle32_t> NewIds;
-    for (auto Id : Ids) {
-      if (!SymIdMap.contains(Id))
+    for (support::ulittle32_t Id : Ids) {
+      auto SymIdIt = SymIdMap.find(Id);
+      if (SymIdIt == SymIdMap.end())
         return createStringError(object_error::invalid_symbol_index,
                                  "section '%s' contains a .symidx (%d) that is "
                                  "incorrect or was stripped",
                                  Sec.Name.str().c_str(), Id.value());
-      NewIds.push_back(support::ulittle32_t(SymIdMap[Id]));
+      NewIds.push_back(support::ulittle32_t(SymIdIt->getSecond()));
     }
     ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
                                 RawIds.size());
     // Update check sum
     JamCRC JC(/*Init=*/0);
     JC.update(NewRawIds);
-    SecIdMap[Sec.UniqueId]->CheckSum = JC.getCRC();
-    // Set new content
+    SecDefIt->getSecond()->CheckSum = JC.getCRC();
+    // Set new content.
     Sec.setOwnedContents(NewRawIds.vec());
   }
   return Error::success();
