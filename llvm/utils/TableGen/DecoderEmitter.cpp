@@ -1849,15 +1849,14 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
 }
 
-static void parseVarLenInstOperand(const Record &Def,
+static void parseVarLenInstOperand(const Record *EncodingDef,
                                    std::vector<OperandInfo> &Operands,
-                                   const CodeGenInstruction &CGI) {
-
-  const RecordVal *RV = Def.getValue("Inst");
+                                   const CodeGenInstruction *Inst) {
+  const RecordVal *RV = EncodingDef->getValue("Inst");
   VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);
   SmallVector<int> TiedTo;
 
-  for (const auto &[Idx, Op] : enumerate(CGI.Operands)) {
+  for (const auto &[Idx, Op] : enumerate(Inst->Operands)) {
     if (Op.MIOperandInfo && Op.MIOperandInfo->getNumArgs() > 0)
       for (auto *Arg : Op.MIOperandInfo->getArgs())
         Operands.push_back(getOpInfo(cast<DefInit>(Arg)->getDef()));
@@ -1885,15 +1884,15 @@ static void parseVarLenInstOperand(const Record &Def,
     }
 
     if (!OpName.empty()) {
-      auto OpSubOpPair = CGI.Operands.parseOperandName(OpName);
-      unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(OpSubOpPair);
+      auto OpSubOpPair = Inst->Operands.parseOperandName(OpName);
+      unsigned OpIdx = Inst->Operands.getFlattenedOperandNumber(OpSubOpPair);
       Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
       if (!EncodingSegment.CustomDecoder.empty())
         Operands[OpIdx].Decoder = EncodingSegment.CustomDecoder.str();
 
       int TiedReg = TiedTo[OpSubOpPair.first];
       if (TiedReg != -1) {
-        unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(
+        unsigned OpIdx = Inst->Operands.getFlattenedOperandNumber(
             {TiedReg, OpSubOpPair.second});
         Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
       }
@@ -1914,12 +1913,12 @@ static void debugDumpRecord(const Record &Rec) {
 /// For an operand field named OpName: populate OpInfo.InitValue with the
 /// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
 /// insert from the decoded instruction.
-static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
+static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
                                 std::map<StringRef, StringRef> &TiedNames,
                                 StringRef OpName, OperandInfo &OpInfo) {
   // Some bits of the operand may be required to be 1 depending on the
   // instruction's encoding. Collect those bits.
-  if (const RecordVal *EncodedValue = EncodingDef.getValue(OpName))
+  if (const RecordVal *EncodedValue = EncodingDef->getValue(OpName))
     if (const BitsInit *OpBits = dyn_cast<BitsInit>(EncodedValue->getValue()))
       for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
         if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
@@ -1951,31 +1950,30 @@ static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
   }
 }
 
-static unsigned
-populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
-                    const CodeGenInstruction &CGI, unsigned EncodingID,
-                    std::map<unsigned, std::vector<OperandInfo>> &Operands,
-                    bool IsVarLenInst) {
-  const Record &Def = *CGI.TheDef;
+static unsigned populateInstruction(
+    const CodeGenTarget &Target, const Record *EncodingDef,
+    const CodeGenInstruction *Inst, unsigned EncodingID,
+    std::map<unsigned, std::vector<OperandInfo>> &EncodingOperands,
+    bool IsVarLenInst) {
+  const Record &Def = *Inst->TheDef;
   // If all the bit positions are not specified; do not decode this instruction.
   // We are bound to fail!  For proper disassembly, the well-known encoding bits
   // of the instruction must be fully specified.
 
-  const BitsInit &Bits = getBitsField(EncodingDef, "Inst");
+  const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
   if (Bits.allInComplete())
     return 0;
 
-  std::vector<OperandInfo> InsnOperands;
+  std::vector<OperandInfo> Operands;
 
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
-  StringRef InstDecoder = EncodingDef.getValueAsString("DecoderMethod");
+  StringRef InstDecoder = EncodingDef->getValueAsString("DecoderMethod");
   if (!InstDecoder.empty()) {
     bool HasCompleteInstDecoder =
-        EncodingDef.getValueAsBit("hasCompleteDecoder");
-    InsnOperands.push_back(
-        OperandInfo(InstDecoder.str(), HasCompleteInstDecoder));
-    Operands[EncodingID] = std::move(InsnOperands);
+        EncodingDef->getValueAsBit("hasCompleteDecoder");
+    Operands.push_back(OperandInfo(InstDecoder.str(), HasCompleteInstDecoder));
+    EncodingOperands[EncodingID] = std::move(Operands);
     return Bits.getNumBits();
   }
 
@@ -1997,15 +1995,15 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
   std::map<StringRef, StringRef> TiedNames;
-  for (const auto &Op : CGI.Operands) {
+  for (const auto &Op : Inst->Operands) {
     for (const auto &[J, CI] : enumerate(Op.Constraints)) {
       if (!CI.isTied())
         continue;
       std::pair<unsigned, unsigned> SO =
-          CGI.Operands.getSubOperandNumber(CI.getTiedOperand());
-      StringRef TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
+          Inst->Operands.getSubOperandNumber(CI.getTiedOperand());
+      StringRef TiedName = Inst->Operands[SO.first].SubOpNames[SO.second];
       if (TiedName.empty())
-        TiedName = CGI.Operands[SO.first].Name;
+        TiedName = Inst->Operands[SO.first].Name;
       StringRef MyName = Op.SubOpNames[J];
       if (MyName.empty())
         MyName = Op.Name;
@@ -2016,7 +2014,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   }
 
   if (IsVarLenInst) {
-    parseVarLenInstOperand(EncodingDef, InsnOperands, CGI);
+    parseVarLenInstOperand(EncodingDef, Operands, Inst);
   } else {
     // For each operand, see if we can figure out where it is encoded.
     for (const auto &Op : InOutOperands) {
@@ -2047,7 +2045,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         // Then there should not be a custom decoder specified on the top-level
         // type.
         if (!OpInfo.Decoder.empty()) {
-          PrintError(EncodingDef.getLoc(),
+          PrintError(EncodingDef,
                      "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
                          OpInit->getAsString() +
                          "\" with a custom DecoderMethod, but also named "
@@ -2063,7 +2061,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
 
           addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName,
                               SubOpInfo);
-          InsnOperands.push_back(std::move(SubOpInfo));
+          Operands.push_back(std::move(SubOpInfo));
         }
         continue;
       }
@@ -2079,11 +2077,11 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         // If we have multiple sub-ops, there'd better have a custom
         // decoder. (Otherwise we don't know how to populate them properly...)
         if (SubOps->getNumArgs() > 1) {
-          PrintError(EncodingDef.getLoc(),
+          PrintError(EncodingDef,
                      "DecoderEmitter: operand \"" + OpName +
                          "\" uses MIOperandInfo with multiple ops, but doesn't "
                          "have a custom decoder!");
-          debugDumpRecord(EncodingDef);
+          debugDumpRecord(*EncodingDef);
           continue;
         }
       }
@@ -2094,10 +2092,10 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
       // instruction! (This is a longstanding bug, which will be addressed in an
       // upcoming change.)
       if (OpInfo.numFields() > 0)
-        InsnOperands.push_back(std::move(OpInfo));
+        Operands.push_back(std::move(OpInfo));
     }
   }
-  Operands[EncodingID] = std::move(InsnOperands);
+  EncodingOperands[EncodingID] = std::move(Operands);
 
 #if 0
   LLVM_DEBUG({
@@ -2107,8 +2105,8 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
       errs() << '\n';
 
       // Dumps the list of operand info.
-      for (unsigned i = 0, e = CGI.Operands.size(); i != e; ++i) {
-        const CGIOperandList::OperandInfo &Info = CGI.Operands[i];
+      for (unsigned i = 0, e = Inst->Operands.size(); i != e; ++i) {
+        const CGIOperandList::OperandInfo &Info = Inst->Operands[i];
         const std::string &OperandName = Info.Name;
         const Record &OperandDef = *Info.Rec;
 
@@ -2618,7 +2616,7 @@ namespace {
   for (auto [EncodingID, Encoding] : enumerate(Encodings)) {
     const Record *EncodingDef = Encoding.getRecord();
     const CodeGenInstruction *Inst = Encoding.getInstruction();
-    unsigned BitWidth = populateInstruction(Target, *EncodingDef, *Inst,
+    unsigned BitWidth = populateInstruction(Target, EncodingDef, Inst,
                                             EncodingID, Operands, IsVarLenInst);
     assert(BitWidth && "Invalid encodings should have been filtered out");
     if (IsVarLenInst) {
