@@ -303,23 +303,35 @@ try {
             }
         }
         stage ('downstream-tasks') {
-            build(
-                propagate: true,
-                wait: true,
-                job: 'AOCC-Workloads/TestSuites/NAGLLVM',
-                parameters: [
-                    // Use the name of build tar as defined in the run script:
-                    string(
-                        name: 'CUT',
-                        value: (
-                            env.BUILD_URL + 'artifact/' +
-                                jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+            Map allTasks = [
+                failFast: false,
+            ]
+            List<String> downstreamSuites = ['GFortran', 'NAGLLVM']
+            for (suite in downstreamSuites) {
+                String suiteName = suite
+                allTasks[suiteName] = {
+                    stage ('downstream-suite-' + suiteName) {
+                        build(
+                            propagate: true,
+                            wait: true,
+                            job: 'AOCC-Workloads/TestSuites/' + suiteName,
+                            parameters: [
+                                // Use the name of build tar as defined in the run script:
+                                string(
+                                    name: 'CUT',
+                                    value: (
+                                        env.BUILD_URL + 'artifact/' +
+                                            jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+                                    )
+                                ),
+                                string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                                string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
+                            ]
                         )
-                    ),
-                    string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
-                    string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
-                ]
-            )
+                    }
+                }
+            }
+            parallel(allTasks)
         }
     }
 } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
