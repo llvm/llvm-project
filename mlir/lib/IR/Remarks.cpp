@@ -77,15 +77,15 @@ std::string Remark::getMsg() const {
 
 std::string Remark::getRemarkTypeString() const {
   switch (remarkKind) {
-  case RemarkKind::OptimizationRemarkUnknown:
+  case RemarkKind::RemarkUnknown:
     return "Unknown";
-  case RemarkKind::OptimizationRemarkPassed:
+  case RemarkKind::RemarkPassed:
     return "Passed";
-  case RemarkKind::OptimizationRemarkMissed:
+  case RemarkKind::RemarkMissed:
     return "Missed";
-  case RemarkKind::OptimizationRemarkFailure:
+  case RemarkKind::RemarkFailure:
     return "Failure";
-  case RemarkKind::OptimizationRemarkAnalysis:
+  case RemarkKind::RemarkAnalysis:
     return "Analysis";
   }
   llvm_unreachable("Unknown remark kind");
@@ -93,15 +93,15 @@ std::string Remark::getRemarkTypeString() const {
 
 llvm::remarks::Type Remark::getRemarkType() const {
   switch (remarkKind) {
-  case RemarkKind::OptimizationRemarkUnknown:
+  case RemarkKind::RemarkUnknown:
     return llvm::remarks::Type::Unknown;
-  case RemarkKind::OptimizationRemarkPassed:
+  case RemarkKind::RemarkPassed:
     return llvm::remarks::Type::Passed;
-  case RemarkKind::OptimizationRemarkMissed:
+  case RemarkKind::RemarkMissed:
     return llvm::remarks::Type::Missed;
-  case RemarkKind::OptimizationRemarkFailure:
+  case RemarkKind::RemarkFailure:
     return llvm::remarks::Type::Failure;
-  case RemarkKind::OptimizationRemarkAnalysis:
+  case RemarkKind::RemarkAnalysis:
     return llvm::remarks::Type::Analysis;
   }
   llvm_unreachable("Unknown remark kind");

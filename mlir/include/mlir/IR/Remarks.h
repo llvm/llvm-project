@@ -31,24 +31,24 @@ struct RemarkCategories {
   std::optional<std::string> passed, missed, analysis, failed;
 };
 
-/// Categories describe the outcome of an optimization, not the mechanics of
+/// Categories describe the outcome of an transformation, not the mechanics of
 /// emitting/serializing remarks.
 enum class RemarkKind {
-  OptimizationRemarkUnknown = 0,
+  RemarkUnknown = 0,
 
   /// An optimization was applied.
-  OptimizationRemarkPassed,
+  RemarkPassed,
 
   /// A profitable optimization opportunity was found but not applied.
-  OptimizationRemarkMissed,
+  RemarkMissed,
 
   /// The compiler attempted the optimization but failed (e.g., legality
   /// checks, or better opportunites).
-  OptimizationRemarkFailure,
+  RemarkFailure,
 
   /// Informational context (e.g., analysis numbers) without a pass/fail
   /// outcome.
-  OptimizationRemarkAnalysis,
+  RemarkAnalysis,
 };
 } // namespace mlir::remark
 
@@ -153,15 +153,15 @@ private:
   /// Convert the MLIR remark kind to LLVM diagnostic kind.
   static llvm::DiagnosticKind makeLLVMKind(RemarkKind remarkKind) {
     switch (remarkKind) {
-    case RemarkKind::OptimizationRemarkUnknown:
+    case RemarkKind::RemarkUnknown:
       return llvm::DiagnosticKind::DK_Generic;
-    case RemarkKind::OptimizationRemarkPassed:
+    case RemarkKind::RemarkPassed:
       return llvm::DiagnosticKind::DK_OptimizationRemark;
-    case RemarkKind::OptimizationRemarkMissed:
+    case RemarkKind::RemarkMissed:
       return llvm::DiagnosticKind::DK_OptimizationRemarkMissed;
-    case RemarkKind::OptimizationRemarkFailure:
+    case RemarkKind::RemarkFailure:
       return llvm::DiagnosticKind::DK_OptimizationFailure;
-    case RemarkKind::OptimizationRemarkAnalysis:
+    case RemarkKind::RemarkAnalysis:
       return llvm::DiagnosticKind::DK_OptimizationRemarkAnalysis;
     }
     llvm_unreachable("Unknown diagnostic kind");
@@ -193,17 +193,17 @@ public:
       : Remark(K, S, passName.data(), categoryName, loc) {}
 };
 
-using OptRemarkAnalysis = OptRemarkBase<RemarkKind::OptimizationRemarkAnalysis,
-                                        DiagnosticSeverity::Remark>;
+using OptRemarkAnalysis =
+    OptRemarkBase<RemarkKind::RemarkAnalysis, DiagnosticSeverity::Remark>;
 
-using OptRemarkPass = OptRemarkBase<RemarkKind::OptimizationRemarkPassed,
-                                    DiagnosticSeverity::Remark>;
+using OptRemarkPass =
+    OptRemarkBase<RemarkKind::RemarkPassed, DiagnosticSeverity::Remark>;
 
-using OptRemarkMissed = OptRemarkBase<RemarkKind::OptimizationRemarkMissed,
-                                      DiagnosticSeverity::Remark>;
+using OptRemarkMissed =
+    OptRemarkBase<RemarkKind::RemarkMissed, DiagnosticSeverity::Remark>;
 
-using OptRemarkFailure = OptRemarkBase<RemarkKind::OptimizationRemarkFailure,
-                                       DiagnosticSeverity::Remark>;
+using OptRemarkFailure =
+    OptRemarkBase<RemarkKind::RemarkFailure, DiagnosticSeverity::Remark>;
 
 class RemarkEngine;
 
