@@ -426,6 +426,32 @@ define i1 @widenable_condition() {
   ret i1 %freeze
 }
 
+define i32 @freeze_scmp(i32 %a0) {
+; CHECK-LABEL: @freeze_scmp(
+; CHECK-NEXT:    [[A0_FR:%.*]] = freeze i32 [[A0:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.scmp.i32.i32(i32 2, i32 [[A0_FR]])
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.scmp.i32.i32(i32 0, i32 [[X]])
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %x = call i32 @llvm.scmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.scmp.i32(i32 0, i32 %y)
+  ret i32 %z
+}
+
+define i32 @freeze_ucmp(i32 %a0) {
+; CHECK-LABEL: @freeze_ucmp(
+; CHECK-NEXT:    [[A0_FR:%.*]] = freeze i32 [[A0:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 2, i32 [[A0_FR]])
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[X]], i32 1)
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %x = call i32 @llvm.ucmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
+  ret i32 %z
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare i32 @llvm.abs.i32(i32, i1 immarg)

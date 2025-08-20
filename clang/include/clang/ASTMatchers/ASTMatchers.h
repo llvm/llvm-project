@@ -5739,6 +5739,14 @@ AST_POLYMORPHIC_MATCHER_P(equalsBoundNode,
   return Builder->removeBindings(Predicate);
 }
 
+/// Matches a declaration if it declares the same entity as the node previously
+/// bound to \p ID.
+AST_MATCHER_P(Decl, declaresSameEntityAsBoundNode, std::string, ID) {
+  return Builder->removeBindings([&](const internal::BoundNodesMap &Nodes) {
+    return !clang::declaresSameEntity(&Node, Nodes.getNodeAs<Decl>(ID));
+  });
+}
+
 /// Matches the condition variable statement in an if statement.
 ///
 /// Given

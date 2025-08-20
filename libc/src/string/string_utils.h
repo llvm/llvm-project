@@ -22,6 +22,16 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/inline_strlen.h"
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#include "src/string/memory_utils/aarch64/inline_strlen.h"
+#else
+namespace string_length_impl = LIBC_NAMESPACE::wide_read;
+#endif
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
@@ -53,7 +63,7 @@ template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
 template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
-  constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
+  constexpr unsigned int LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;
   Word inverted = ~block;
@@ -81,16 +91,23 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   return static_cast<size_t>(char_ptr - src);
 }
 
-// Returns the length of a string, denoted by the first occurrence
-// of a null terminator.
-template <typename T> LIBC_INLINE size_t string_length(const T *src) {
-#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
+namespace wide_read {
+LIBC_INLINE size_t string_length(const char *src) {
   // Unsigned int is the default size for most processors, and on x86-64 it
   // performs better than larger sizes when the src pointer can't be assumed to
   // be aligned to a word boundary, so it's the size we use for reading the
   // string a block at a time.
+  return string_length_wide_read<unsigned int>(src);
+}
+
+} // namespace wide_read
+
+// Returns the length of a string, denoted by the first occurrence
+// of a null terminator.
+template <typename T> LIBC_INLINE size_t string_length(const T *src) {
+#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   if constexpr (cpp::is_same_v<T, char>)
-    return string_length_wide_read<unsigned int>(src);
+    return string_length_impl::string_length(src);
 #endif
   size_t length;
   for (length = 0; *src; ++src, ++length)

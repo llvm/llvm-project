@@ -369,9 +369,10 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
                                                  unsigned index) {
   mlir::Location loc = getLoc(field->getLocation());
   cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
-  cir::GetMemberOp sea = getBuilder().createGetMember(
-      loc, fieldPtr, base.getPointer(), field->getName(), index);
   auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
+  cir::GetMemberOp sea = getBuilder().createGetMember(
+      loc, fieldPtr, base.getPointer(), field->getName(),
+      rec.isUnion() ? field->getFieldIndex() : index);
   CharUnits offset = CharUnits::fromQuantity(
       rec.getElementOffset(cgm.getDataLayout().layout, index));
   return Address(sea, base.getAlignment().alignmentAtOffset(offset));

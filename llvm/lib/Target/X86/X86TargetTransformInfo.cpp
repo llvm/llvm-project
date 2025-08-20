@@ -161,19 +161,26 @@ std::optional<unsigned> X86TTIImpl::getCacheAssociativity(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
+enum ClassIDEnum { GPRClass = 0, VectorClass = 1, ScalarFPClass = 2 };
+
+unsigned X86TTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
+  return Vector                          ? VectorClass
+         : Ty && Ty->isFloatingPointTy() ? ScalarFPClass
+                                         : GPRClass;
+}
+
 unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
-  bool Vector = (ClassID == 1);
-  if (Vector && !ST->hasSSE1())
+  if (ClassID == VectorClass && !ST->hasSSE1())
     return 0;
 
-  if (ST->is64Bit()) {
-    if (Vector && ST->hasAVX512())
-      return 32;
-    if (!Vector && ST->hasEGPR())
-      return 32;
-    return 16;
-  }
-  return 8;
+  if (!ST->is64Bit())
+    return 8;
+
+  if ((ClassID == GPRClass && ST->hasEGPR()) ||
+      (ClassID != GPRClass && ST->hasAVX512()))
+    return 32;
+
+  return 16;
 }
 
 bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {

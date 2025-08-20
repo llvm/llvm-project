@@ -29,11 +29,13 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
   const auto HasGoodReturnType =
       cxxMethodDecl(returns(hasCanonicalType(lValueReferenceType(pointee(
           unless(isConstQualified()),
-          anyOf(autoType(), hasDeclaration(equalsBoundNode("class"))))))));
+          anyOf(autoType(),
+                hasDeclaration(declaresSameEntityAsBoundNode("class"))))))));
 
   const auto IsSelf = qualType(hasCanonicalType(
-      anyOf(hasDeclaration(equalsBoundNode("class")),
-            referenceType(pointee(hasDeclaration(equalsBoundNode("class")))))));
+      anyOf(hasDeclaration(declaresSameEntityAsBoundNode("class")),
+            referenceType(pointee(
+                hasDeclaration(declaresSameEntityAsBoundNode("class")))))));
   const auto IsAssign =
       cxxMethodDecl(unless(anyOf(isDeleted(), isPrivate(), isImplicit())),
                     hasName("operator="), ofClass(recordDecl().bind("class")))

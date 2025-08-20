@@ -176,3 +176,11 @@ struct TemplateAssignment {
   }
 };
 }
+
+namespace GH153770 {
+  struct A;
+  struct A {
+    A() = default;
+    A& operator=(const A&) = default;
+  };
+} // namespace GH153770
