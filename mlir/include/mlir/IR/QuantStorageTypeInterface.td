@@ -1,9 +1,9 @@
-#ifndef MLIR_IR_QUANTIZATIONINTERFACE
-#define MLIR_IR_QUANTIZATIONINTERFACE
+#ifndef MLIR_IR_QUANTSTORAGETYPEINTERFACE
+#define MLIR_IR_QUANTSTORAGETYPEINTERFACE
 
 include "mlir/IR/OpBase.td"
 
-def QuantizationInterface : TypeInterface<"QuantizationInterface"> {
+def QuantStorageTypeInterface : TypeInterface<"QuantStorageTypeInterface"> {
   let description = [{
     Interface for types that can be used as storage types in Quant dialect.
     This interface provides methods to determine storage characteristics for quantization purposes.
@@ -41,4 +41,4 @@ def QuantizationInterface : TypeInterface<"QuantizationInterface"> {
 
 }
 
-#endif // MLIR_IR_QUANTIZATIONINTERFACE
+#endif // MLIR_IR_QUANTSTORAGETYPEINTERFACE

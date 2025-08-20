@@ -1,4 +1,4 @@
-//===- QuantizationInterface.h - Quantzation Interfaces --------*- C++
+//===- QuantStorageTypeInterface.h - Quantzation Interfaces --------*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_QuantizationInterface_H
-#define MLIR_IR_QuantizationInterface_H
+#ifndef MLIR_IR_QuantStorageTypeInterface_H
+#define MLIR_IR_QuantStorageTypeInterface_H
 
 #include "mlir/IR/Types.h"
 
@@ -17,6 +17,6 @@ namespace mlir {
 class IntegerType;
 } // namespace mlir
 
-#include "mlir/IR/QuantizationInterface.h.inc"
+#include "mlir/IR/QuantStorageTypeInterface.h.inc"
 
-#endif // MLIR_IR_QuantizationInterface_H
+#endif // MLIR_IR_QuantStorageTypeInterface_H
