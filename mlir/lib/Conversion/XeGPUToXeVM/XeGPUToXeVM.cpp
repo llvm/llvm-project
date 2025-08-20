@@ -558,10 +558,10 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       Value loaded =
           LLVM::LoadOp::create(rewriter, loc, srcOrDstFlatVecTy, basePtrLLVM);
-      loaded.getDefiningOp()->setAttr("cache_control",
-                                      xevm::LoadCacheControlAttr::get(
-                                          ctxt, translateLoadXeGPUCacheHint(
-                                                     op.getL1Hint(), op.getL3Hint())));
+      loaded.getDefiningOp()->setAttr(
+          "cache_control", xevm::LoadCacheControlAttr::get(
+                               ctxt, translateLoadXeGPUCacheHint(
+                                         op.getL1Hint(), op.getL3Hint())));
       if (srcOrDstVecTy != srcOrDstFlatVecTy) {
         loaded =
             vector::ShapeCastOp::create(rewriter, loc, srcOrDstVecTy, loaded);
@@ -588,12 +588,12 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
         srcFlatVec = vector::ShapeCastOp::create(rewriter, loc,
                                                  srcOrDstFlatVecTy, srcFlatVec);
       }
-      auto storeOp = LLVM::StoreOp::create(rewriter, loc, srcFlatVec, basePtrLLVM);
+      auto storeOp =
+          LLVM::StoreOp::create(rewriter, loc, srcFlatVec, basePtrLLVM);
       storeOp.getOperation()->setAttr(
-          "cache_control",
-          xevm::StoreCacheControlAttr::get(ctxt,
-                                          translateStoreXeGPUCacheHint(
-                                              op.getL1Hint(), op.getL3Hint())));
+          "cache_control", xevm::StoreCacheControlAttr::get(
+                               ctxt, translateStoreXeGPUCacheHint(
+                                         op.getL1Hint(), op.getL3Hint())));
       rewriter.eraseOp(op);
     }
     return success();
