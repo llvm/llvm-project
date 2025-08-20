@@ -40,6 +40,55 @@ define i64 @sme_cntsd() {
   ret i64 %v
 }
 
+define i64 @sme_cntsb_mul() {
+; CHECK-LABEL: sme_cntsb_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    lsl x0, x8, #1
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsb()
+  %res = mul i64 %v, 2
+  ret i64 %res
+}
+
+define i64 @sme_cntsh_mul() {
+; CHECK-LABEL: sme_cntsh_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #1
+; CHECK-NEXT:    add x0, x8, x8, lsl #2
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsh()
+  %res = mul i64 %v, 5
+  ret i64 %res
+}
+
+define i64 @sme_cntsw_mul() {
+; CHECK-LABEL: sme_cntsw_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    lsl x9, x8, #3
+; CHECK-NEXT:    sub x0, x9, x8
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsw()
+  %res = mul i64 %v, 7
+  ret i64 %res
+}
+
+define i64 @sme_cntsd_mul() {
+; CHECK-LABEL: sme_cntsd_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #3
+; CHECK-NEXT:    add x8, x8, x8, lsl #1
+; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %res = mul i64 %v, 12
+  ret i64 %res
+}
+
 declare i64 @llvm.aarch64.sme.cntsb()
 declare i64 @llvm.aarch64.sme.cntsh()
 declare i64 @llvm.aarch64.sme.cntsw()
