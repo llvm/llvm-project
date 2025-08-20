@@ -1828,3 +1828,114 @@ define <8 x double> @buildvec_v8f64_zvl512(double %e0, double %e1, double %e2, d
   %v7 = insertelement <8 x double> %v6, double %e7, i64 7
   ret <8 x double> %v7
 }
+
+define <8 x double> @buildvec_slideup(<4 x double> %v, double %e0, double %e1, double %e2, double %e3, double %e4, double %e5, double %e6) vscale_range(4, 128) {
+; CHECK-LABEL: buildvec_slideup:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x double> poison, double %e0, i64 0
+  %v1 = insertelement <8 x double> %v0, double %e1, i64 1
+  %v2 = insertelement <8 x double> %v1, double %e2, i64 2
+  %v3 = insertelement <8 x double> %v2, double %e3, i64 3
+  %v4 = insertelement <8 x double> %v3, double %e4, i64 4
+  %v5 = insertelement <8 x double> %v4, double %e5, i64 5
+  %v6 = insertelement <8 x double> %v5, double %e6, i64 6
+  %e7 = extractelement <4 x double> %v, i64 0
+  %v7 = insertelement <8 x double> %v6, double %e7, i64 7
+  ret <8 x double> %v7
+}
+
+; Negative test for slideup lowering where the extract_element was not build_vector's last operand.
+define <8 x double> @buildvec_slideup_not_last_element(<4 x double> %v, double %e0, double %e1, double %e2, double %e3, double %e4, double %e5, double %e7) vscale_range(4, 128) {
+; CHECK-LABEL: buildvec_slideup_not_last_element:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x double> poison, double %e0, i64 0
+  %v1 = insertelement <8 x double> %v0, double %e1, i64 1
+  %v2 = insertelement <8 x double> %v1, double %e2, i64 2
+  %v3 = insertelement <8 x double> %v2, double %e3, i64 3
+  %v4 = insertelement <8 x double> %v3, double %e4, i64 4
+  %v5 = insertelement <8 x double> %v4, double %e5, i64 5
+  %e6 = extractelement <4 x double> %v, i64 0
+  %v6 = insertelement <8 x double> %v5, double %e6, i64 6
+  %v7 = insertelement <8 x double> %v6, double %e7, i64 7
+  ret <8 x double> %v7
+}
+
+define <4 x float> @buildvec_vfredusum(float %start, <8 x float> %arg1, <8 x float> %arg2, <8 x float> %arg3, <8 x float> %arg4) nounwind {
+; CHECK-LABEL: buildvec_vfredusum:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfmv.s.f v16, fa0
+; CHECK-NEXT:    vfredusum.vs v8, v8, v16
+; CHECK-NEXT:    vfredusum.vs v9, v10, v16
+; CHECK-NEXT:    vfredusum.vs v10, v12, v16
+; CHECK-NEXT:    vfredusum.vs v11, v14, v16
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfmv.f.s fa4, v10
+; CHECK-NEXT:    vfmv.f.s fa3, v11
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vfslide1down.vf v8, v9, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    ret
+  %247 = tail call reassoc float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg1)
+  %248 = insertelement <4 x float> poison, float %247, i64 0
+  %250 = tail call reassoc float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg2)
+  %251 = insertelement <4 x float> %248, float %250, i64 1
+  %252 = tail call reassoc float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg3)
+  %253 = insertelement <4 x float> %251, float %252, i64 2
+  %254 = tail call reassoc float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg4)
+  %255 = insertelement <4 x float> %253, float %254, i64 3
+  ret <4 x float> %255
+}
+
+define <4 x float> @buildvec_vfredosum(float %start, <8 x float> %arg1, <8 x float> %arg2, <8 x float> %arg3, <8 x float> %arg4) nounwind {
+; CHECK-LABEL: buildvec_vfredosum:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfmv.s.f v16, fa0
+; CHECK-NEXT:    vfredosum.vs v8, v8, v16
+; CHECK-NEXT:    vfredosum.vs v9, v10, v16
+; CHECK-NEXT:    vfredosum.vs v10, v12, v16
+; CHECK-NEXT:    vfredosum.vs v11, v14, v16
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfmv.f.s fa4, v10
+; CHECK-NEXT:    vfmv.f.s fa3, v11
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vfslide1down.vf v8, v9, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    ret
+  %247 = tail call float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg1)
+  %248 = insertelement <4 x float> poison, float %247, i64 0
+  %250 = tail call float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg2)
+  %251 = insertelement <4 x float> %248, float %250, i64 1
+  %252 = tail call float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg3)
+  %253 = insertelement <4 x float> %251, float %252, i64 2
+  %254 = tail call float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg4)
+  %255 = insertelement <4 x float> %253, float %254, i64 3
+  ret <4 x float> %255
+}
