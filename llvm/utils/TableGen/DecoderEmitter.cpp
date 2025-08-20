@@ -1282,22 +1282,9 @@ bool FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
   }
 
   bool HasCompleteDecoder = true;
-  for (const OperandInfo &Op : Encoding.getOperands()) {
-    // FIXME: This is broken. If there is an operand that doesn't contribute
-    //   to the encoding, we generate the same code as if the decoder method
-    //   was specified on the encoding. And then we stop, ignoring the rest
-    //   of the operands. M68k disassembler experiences this.
-    if (Op.numFields() == 0 && !Op.Decoder.empty()) {
-      HasCompleteDecoder = Op.HasCompleteDecoder;
-      OS << Indent << "if (!Check(S, " << Op.Decoder
-         << "(MI, insn, Address, Decoder))) { "
-         << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
-         << "return MCDisassembler::Fail; }\n";
-      break;
-    }
-
-    HasCompleteDecoder &= emitBinaryParser(OS, Indent, Op);
-  }
+  for (const OperandInfo &Op : Encoding.getOperands())
+    if (Op.numFields())
+      HasCompleteDecoder &= emitBinaryParser(OS, Indent, Op);
   return HasCompleteDecoder;
 }
 
