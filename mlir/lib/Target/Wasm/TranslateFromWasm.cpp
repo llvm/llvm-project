@@ -21,6 +21,7 @@
 #include "mlir/Target/Wasm/WasmImporter.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/LogicalResult.h"
@@ -613,9 +614,8 @@ FailureOr<float> ParserHead::parseLiteral<float>() {
   FailureOr<StringRef> bytes = consumeNBytes(4);
   if (failed(bytes))
     return failure();
-  float result;
-  std::memcpy(&result, bytes->bytes_begin(), 4);
-  return result;
+  return llvm::support::endian::read<float>(bytes->bytes_begin(),
+                                            llvm::endianness::little);
 }
 
 template <>
@@ -623,9 +623,8 @@ FailureOr<double> ParserHead::parseLiteral<double>() {
   FailureOr<StringRef> bytes = consumeNBytes(8);
   if (failed(bytes))
     return failure();
-  double result;
-  std::memcpy(&result, bytes->bytes_begin(), 8);
-  return result;
+  return llvm::support::endian::read<double>(bytes->bytes_begin(),
+                                             llvm::endianness::little);
 }
 
 template <>
