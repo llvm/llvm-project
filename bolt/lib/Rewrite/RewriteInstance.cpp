@@ -881,14 +881,9 @@ void RewriteInstance::discoverFileObjects() {
   // code section (see IHI0056B). $d identifies data contents.
   // Compilers usually merge multiple data objects in a single $d-$x interval,
   // but we need every data object to be marked with $d. Because of that we
-  // create a vector of MarkerSyms with all locations of data objects.
+  // keep track of marker symbols with all locations of data objects.
 
-  struct MarkerSym {
-    uint64_t Address;
-    MarkerSymType Type;
-  };
-
-  std::vector<MarkerSym> SortedMarkerSymbols;
+  DenseMap<uint64_t, MarkerSymType> MarkerSymbols;
   auto addExtraDataMarkerPerSymbol = [&]() {
     bool IsData = false;
     uint64_t LastAddr = 0;
@@ -912,14 +907,14 @@ void RewriteInstance::discoverFileObjects() {
       }
 
       if (MarkerType != MarkerSymType::NONE) {
-        SortedMarkerSymbols.push_back(MarkerSym{SymInfo.Address, MarkerType});
+        MarkerSymbols[SymInfo.Address] = MarkerType;
         LastAddr = SymInfo.Address;
         IsData = MarkerType == MarkerSymType::DATA;
         continue;
       }
 
       if (IsData) {
-        SortedMarkerSymbols.push_back({SymInfo.Address, MarkerSymType::DATA});
+        MarkerSymbols[SymInfo.Address] = MarkerSymType::DATA;
         LastAddr = SymInfo.Address;
       }
     }
@@ -1284,27 +1279,24 @@ void RewriteInstance::discoverFileObjects() {
   BC->setHasSymbolsWithFileName(FileSymbols.size());
 
   // Now that all the functions were created - adjust their boundaries.
-  adjustFunctionBoundaries();
+  adjustFunctionBoundaries(MarkerSymbols);
 
   // Annotate functions with code/data markers in AArch64
-  for (auto ISym = SortedMarkerSymbols.begin();
-       ISym != SortedMarkerSymbols.end(); ++ISym) {
-
-    auto *BF =
-        BC->getBinaryFunctionContainingAddress(ISym->Address, true, true);
+  for (auto &[Address, Type] : MarkerSymbols) {
+    auto *BF = BC->getBinaryFunctionContainingAddress(Address, true, true);
 
     if (!BF) {
       // Stray marker
       continue;
     }
-    const auto EntryOffset = ISym->Address - BF->getAddress();
-    if (ISym->Type == MarkerSymType::CODE) {
+    const auto EntryOffset = Address - BF->getAddress();
+    if (Type == MarkerSymType::CODE) {
       BF->markCodeAtOffset(EntryOffset);
       continue;
     }
-    if (ISym->Type == MarkerSymType::DATA) {
+    if (Type == MarkerSymType::DATA) {
       BF->markDataAtOffset(EntryOffset);
-      BC->AddressToConstantIslandMap[ISym->Address] = BF;
+      BC->AddressToConstantIslandMap[Address] = BF;
       continue;
     }
     llvm_unreachable("Unknown marker");
@@ -1833,7 +1825,8 @@ void RewriteInstance::disassemblePLT() {
   }
 }
 
-void RewriteInstance::adjustFunctionBoundaries() {
+void RewriteInstance::adjustFunctionBoundaries(
+    DenseMap<uint64_t, MarkerSymType> &MarkerSyms) {
   for (auto BFI = BC->getBinaryFunctions().begin(),
             BFE = BC->getBinaryFunctions().end();
        BFI != BFE; ++BFI) {
@@ -1871,12 +1864,15 @@ void RewriteInstance::adjustFunctionBoundaries() {
         continue;
       }
 
-      // This is potentially another entry point into the function.
-      uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
-                        << Function << " at offset 0x"
-                        << Twine::utohexstr(EntryOffset) << '\n');
-      Function.addEntryPointAtOffset(EntryOffset);
+      auto It = MarkerSyms.find(NextSymRefI->first);
+      if (It == MarkerSyms.end() || It->second != MarkerSymType::DATA) {
+        // This is potentially another entry point into the function.
+        uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
+                          << Function << " at offset 0x"
+                          << Twine::utohexstr(EntryOffset) << '\n');
+        Function.addEntryPointAtOffset(EntryOffset);
+      }
 
       ++NextSymRefI;
     }
