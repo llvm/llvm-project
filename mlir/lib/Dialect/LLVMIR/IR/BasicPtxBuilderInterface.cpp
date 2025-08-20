@@ -62,7 +62,7 @@ static char getRegisterType(Value v) {
   return getRegisterType(v.getType());
 }
 
-/// Extract every elements of a struct value.
+/// Extract every element of a struct value.
 static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
                                                 Location loc, Value agg) {
   auto structTy = cast<LLVM::LLVMStructType>(agg.getType());
