@@ -5345,6 +5345,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_sse_ldmxcsr:
       handleLdmxcsr(I);
       break;
+
+    // Convert Scalar Double Precision Floating-Point Value
+    //   to Unsigned DoublewordInteger
+    // etc.
     case Intrinsic::x86_avx512_vcvtsd2usi64:
     case Intrinsic::x86_avx512_vcvtsd2usi32:
     case Intrinsic::x86_avx512_vcvtss2usi64:
@@ -5386,7 +5390,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     // Convert Packed Double Precision Floating-Point Values
-    //   to Packed Single PrecisionFloating-Point Values
+    //   to Packed Single Precision Floating-Point Values
     case Intrinsic::x86_sse2_cvtpd2ps:
     case Intrinsic::x86_sse2_cvtps2dq:
     case Intrinsic::x86_sse2_cvtpd2dq:
@@ -5400,6 +5404,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/false);
       break;
     }
+
+    // Convert Packed Single Precision Floating-Point Values
+    //   to Packed Signed Doubleword Integer Values
+    //
+    // <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+    //                (<16 x float>, <16 x i32>, i16, i32)
+    case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/false);
+      break;
+    }
+
+    // Convert Single-Precision FP Value to 16-bit FP Value
+    // <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
+    //                (<16 x float>, i32, <16 x i16>, i16)
+    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.128
+    //                (<4 x float>, i32, <8 x i16>, i8)
+    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.256
+    //                (<8 x float>, i32, <8 x i16>, i8)
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_512:
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_256:
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_128:
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/true);
+      break;
 
     // Shift Packed Data (Left Logical, Right Arithmetic, Right Logical)
     case Intrinsic::x86_avx512_psll_w_512:
@@ -5966,29 +5993,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_pshuf_b_512:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
                                         /*trailingVerbatimArgs=*/1);
-      break;
-
-    // Convert Packed Single Precision Floating-Point Values
-    //   to Packed Signed Doubleword Integer Values
-    //
-    // <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
-    //                (<16 x float>, <16 x i32>, i16, i32)
-    case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
-      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/false);
-      break;
-    }
-
-    // Convert Single-Precision FP Value to 16-bit FP Value
-    // <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
-    //                (<16 x float>, i32, <16 x i16>, i16)
-    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.128
-    //                (<4 x float>, i32, <8 x i16>, i8)
-    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.256
-    //                (<8 x float>, i32, <8 x i16>, i8)
-    case Intrinsic::x86_avx512_mask_vcvtps2ph_512:
-    case Intrinsic::x86_avx512_mask_vcvtps2ph_256:
-    case Intrinsic::x86_avx512_mask_vcvtps2ph_128:
-      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/true);
       break;
 
     // AVX512 PMOV: Packed MOV, with truncation
