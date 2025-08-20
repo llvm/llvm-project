@@ -176,25 +176,20 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
       Register SourceReg = SecondPair->Source->getReg();
       Register DestReg = SecondPair->Destination->getReg();
 
-      if (MoveFromSToA && isCandidateToMergeMVA01S(*SecondPair)) {
-        // If register pair is valid and destination registers are different.
-        if ((RegPair.Destination->getReg() == DestReg))
+      bool IsCandidate = MoveFromSToA ? isCandidateToMergeMVA01S(*SecondPair)
+                                      : isCandidateToMergeMVSA01(*SecondPair);
+      if (IsCandidate) {
+        // Second destination must be different.
+        if (RegPair.Destination->getReg() == DestReg)
           return E;
 
-        //  If paired destination register was modified or used, the source reg
-        //  was modified, there is no possibility of finding matching
-        //  instruction so exit early.
-        if (!ModifiedRegUnits.available(DestReg) ||
-            !UsedRegUnits.available(DestReg) ||
-            !ModifiedRegUnits.available(SourceReg))
+        // For AtoS the source must also be different.
+        if (!MoveFromSToA && RegPair.Source->getReg() == SourceReg)
           return E;
 
-        return I;
-      } else if (!MoveFromSToA && isCandidateToMergeMVSA01(*SecondPair)) {
-        if ((RegPair.Source->getReg() == SourceReg) ||
-            (RegPair.Destination->getReg() == DestReg))
-          return E;
-
+        // If paired destination register was modified or used, the source reg
+        // was modified, there is no possibility of finding matching
+        // instruction so exit early.
         if (!ModifiedRegUnits.available(DestReg) ||
             !UsedRegUnits.available(DestReg) ||
             !ModifiedRegUnits.available(SourceReg))
