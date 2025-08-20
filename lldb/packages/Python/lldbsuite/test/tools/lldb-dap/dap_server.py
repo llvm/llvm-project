@@ -1207,7 +1207,7 @@ class DebugCommunication(object):
         count: int = 0,
     ):
         command_dict = {
-            "command": "moduleSymbols",
+            "command": "__lldb_moduleSymbols",
             "type": "request",
             "arguments": {
                 "moduleId": moduleId,
