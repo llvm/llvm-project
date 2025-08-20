@@ -23185,43 +23185,51 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
 
 // Check whether an AND/OR'd reduction tree is PTEST-able, or if we can fallback
 // to CMP(MOVMSK(PCMPEQB(X,Y))).
-static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
+static SDValue MatchVectorAllEqualTest(SDValue OrigLHS, SDValue OrigRHS,
                                        ISD::CondCode CC, const SDLoc &DL,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG,
                                        X86::CondCode &X86CC) {
-  assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
+  SDValue Op = OrigLHS;
 
-  bool CmpNull = isNullConstant(RHS);
-  bool CmpAllOnes = isAllOnesConstant(RHS);
-  if (!CmpNull && !CmpAllOnes)
-    return SDValue();
+  bool CmpNull;
+  APInt Mask;
+  if (CC == ISD::SETEQ || CC == ISD::SETNE) {
+    CmpNull = isNullConstant(OrigRHS);
+    if (!CmpNull && !isAllOnesConstant(OrigRHS))
+      return SDValue();
 
-  SDValue Op = LHS;
-  if (!Subtarget.hasSSE2() || !Op->hasOneUse())
-    return SDValue();
+    if (!Subtarget.hasSSE2() || !Op->hasOneUse())
+      return SDValue();
 
-  // Check whether we're masking/truncating an OR-reduction result, in which
-  // case track the masked bits.
-  // TODO: Add CmpAllOnes support.
-  APInt Mask = APInt::getAllOnes(Op.getScalarValueSizeInBits());
-  if (CmpNull) {
-    switch (Op.getOpcode()) {
-    case ISD::TRUNCATE: {
-      SDValue Src = Op.getOperand(0);
-      Mask = APInt::getLowBitsSet(Src.getScalarValueSizeInBits(),
-                                  Op.getScalarValueSizeInBits());
-      Op = Src;
-      break;
-    }
-    case ISD::AND: {
-      if (auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-        Mask = Cst->getAPIntValue();
-        Op = Op.getOperand(0);
+    // Check whether we're masking/truncating an OR-reduction result, in which
+    // case track the masked bits.
+    // TODO: Add CmpAllOnes support.
+    Mask = APInt::getAllOnes(Op.getScalarValueSizeInBits());
+    if (CmpNull) {
+      switch (Op.getOpcode()) {
+      case ISD::TRUNCATE: {
+        SDValue Src = Op.getOperand(0);
+        Mask = APInt::getLowBitsSet(Src.getScalarValueSizeInBits(),
+                                    Op.getScalarValueSizeInBits());
+        Op = Src;
+        break;
       }
-      break;
+      case ISD::AND: {
+        if (auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+          Mask = Cst->getAPIntValue();
+          Op = Op.getOperand(0);
+        }
+        break;
+      }
+      }
     }
-    }
+  } else if (CC == ISD::SETGT && isAllOnesConstant(OrigRHS)) {
+    CC = ISD::SETEQ;
+    CmpNull = true;
+    Mask = APInt::getSignMask(Op.getScalarValueSizeInBits());
+  } else {
+    return SDValue();
   }
 
   ISD::NodeType LogicOp = CmpNull ? ISD::OR : ISD::AND;
@@ -56274,14 +56282,16 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
                                                     Subtarget))
       return V;
+  }
 
-    if (VT == MVT::i1) {
-      X86::CondCode X86CC;
-      if (SDValue V =
-              MatchVectorAllEqualTest(LHS, RHS, CC, DL, Subtarget, DAG, X86CC))
-        return DAG.getNode(ISD::TRUNCATE, DL, VT, getSETCC(X86CC, V, DL, DAG));
-    }
+  if (VT == MVT::i1) {
+    X86::CondCode X86CC;
+    if (SDValue V =
+            MatchVectorAllEqualTest(LHS, RHS, CC, DL, Subtarget, DAG, X86CC))
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, getSETCC(X86CC, V, DL, DAG));
+  }
 
+  if (CC == ISD::SETNE || CC == ISD::SETEQ) {
     if (OpVT.isScalarInteger()) {
       // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
       // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
