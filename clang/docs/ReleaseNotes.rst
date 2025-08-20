@@ -140,6 +140,9 @@ Non-comprehensive list of changes in this release
 - A vector of booleans is now a valid condition for the ternary ``?:`` operator.
   This binds to a simple vector select operation.
 
+- Added ``__builtin_masked_load`` and ``__builtin_masked_store`` for conditional
+  memory loads from vectors. Binds to the LLVM intrinsic of the same name.
+
 - Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
   features has been deprecated, and is restricted to the arm64e target only. The
   correct method to check for these features is to test for the ``__PTRAUTH__``
