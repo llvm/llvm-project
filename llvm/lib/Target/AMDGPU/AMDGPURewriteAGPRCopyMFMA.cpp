@@ -263,7 +263,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
         if (Src2Reg) {
           Register Src2PhysReg = VRM.getPhys(Src2Reg);
-          dbgs() << ", Src2=[" << printReg(Src2Reg, &TRI) << " => "
+          dbgs() << "], Src2=[" << printReg(Src2Reg, &TRI) << " => "
                  << printReg(Src2PhysReg, &TRI);
         }
 
