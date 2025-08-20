@@ -1527,6 +1527,11 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
           if (!CurrI || !TheLoop->contains(CurrI)) {
             // If operands from outside the loop may be poison then Ptr may also
             // be poison.
+            assert((TheLoop->getLoopPredecessor() &&
+                    TheLoop->getLoopPredecessor()->getTerminator()) &&
+                   "No loop predecessor/pred terminator found while checking "
+                   "out of loop instruction for poison");
+
             if (!isGuaranteedNotToBePoison(CurrV, AC,
                                            TheLoop->getLoopPredecessor()
                                                ->getTerminator()
