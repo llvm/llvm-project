@@ -1702,12 +1702,14 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
+                       UnitAttr:$constant,
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
     (`` $global_visibility^)?
+    (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
     (`dso_local` $dso_local^)?
@@ -1726,6 +1728,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
   let builders = [OpBuilder<(ins
     "llvm::StringRef":$sym_name,
     "mlir::Type":$sym_type,
+    CArg<"bool", "false">:$isConstant,
     // CIR defaults to external linkage.
     CArg<"cir::GlobalLinkageKind",
     "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
