@@ -236,6 +236,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return dyn_cast_if_present<xegpu::DistributeLayoutAttrInterface>(getType().getLayout());
     }
 
+    ArrayRef<int64_t> getDistributeShape() {
+      return getTensorDescShape();
+    }
+
   }];
 }
 
@@ -266,6 +270,23 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
+
+   SmallVector<OpFoldResult> getMixedOffsets() {
+      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
+      auto dynamics = getOffsets();
+      if (statics.size() == 0 && dynamics.size() == 0)
+        return {};
+      return getMixedValues(statics, dynamics, getContext());
+    }
+
+    xegpu::DistributeLayoutAttrInterface getLayoutAttr() {
+      return dyn_cast_if_present<xegpu::DistributeLayoutAttrInterface>(getTensorDescType().getLayout());
+    }
+
+    ArrayRef<int64_t> getDistributeShape() {
+      return getTensorDescType().getShape();
+    }
+
   }];
 
   let assemblyFormat = [{
@@ -347,6 +368,24 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
+      auto dynamics = getOffsets();
+      if (statics.size() == 0 && dynamics.size() == 0)
+        return {};
+      return getMixedValues(statics, dynamics, getContext());
+    }
+
+    xegpu::DistributeLayoutAttrInterface getLayoutAttr() {
+      return dyn_cast_if_present<xegpu::DistributeLayoutAttrInterface>(getTensorDescType().getLayout());
+    }
+
+    ArrayRef<int64_t> getDistributeShape() {
+      return getTensorDescType().getShape();
+    }
+
+
   }];
 
   let assemblyFormat = [{
@@ -421,6 +460,23 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
+      auto dynamics = getOffsets();
+      if (statics.size() == 0 && dynamics.size() == 0)
+        return {};
+      return getMixedValues(statics, dynamics, getContext());
+    }
+
+    xegpu::DistributeLayoutAttrInterface getLayoutAttr() {
+      return dyn_cast_if_present<xegpu::DistributeLayoutAttrInterface>(getTensorDescType().getLayout());
+    }
+
+    ArrayRef<int64_t> getDistributeShape() {
+      return getTensorDescType().getShape();
+    }
+
   }];
 
    let assemblyFormat = [{
@@ -644,6 +700,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     xegpu::TensorDescType getTensorDescType() {
       return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
+
   }];
 
   let assemblyFormat = [{
@@ -1185,6 +1242,10 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     SmallVector<OpFoldResult> getMixedOffsets() {
       return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
+
+    ArrayRef<int64_t> getDistributeShape() {
+      return getRes().getType().getShape();
+    }
   }];
 
   let hasVerifier = 1;
@@ -1223,6 +1284,11 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     SmallVector<OpFoldResult> getMixedOffsets() {
       return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
+
+    ArrayRef<int64_t> getDistributeShape() {
+      return getData().getType().getShape();
+    }
+
   }];
 
   let hasVerifier = 1;
