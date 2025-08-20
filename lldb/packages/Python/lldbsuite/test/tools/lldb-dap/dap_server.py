@@ -57,9 +57,44 @@ class Response(TypedDict):
 ProtocolMessage = Union[Event, Request, Response]
 
 
+class Source(TypedDict, total=False):
+    name: str
+    path: str
+    sourceReference: int
+
+    @staticmethod
+    def build(
+        *,
+        name: Optional[str] = None,
+        path: Optional[str] = None,
+        source_reference: Optional[int] = None,
+    ) -> "Source":
+        """Builds a source from the given name, path or source_reference."""
+        if not name and not path and not source_reference:
+            raise ValueError(
+                "Source.build requires either name, path, or source_reference"
+            )
+
+        s = Source()
+        if name:
+            s["name"] = name
+        if path:
+            if not name:
+                s["name"] = os.path.basename(path)
+            s["path"] = path
+        if source_reference is not None:
+            s["sourceReference"] = source_reference
+        return s
+
+
 class Breakpoint(TypedDict, total=False):
     id: int
     verified: bool
+    source: Source
+
+    @staticmethod
+    def is_verified(src: "Breakpoint") -> bool:
+        return src.get("verified", False)
 
 
 def dump_memory(base_addr, data, num_per_line, outfile):
@@ -142,58 +177,6 @@ def dump_dap_log(log_file: Optional[str]) -> None:
     print("========= END =========", file=sys.stderr)
 
 
-class Source(object):
-    def __init__(
-        self,
-        path: Optional[str] = None,
-        source_reference: Optional[int] = None,
-        raw_dict: Optional[dict[str, Any]] = None,
-    ):
-        self._name = None
-        self._path = None
-        self._source_reference = None
-        self._raw_dict = None
-
-        if path is not None:
-            self._name = os.path.basename(path)
-            self._path = path
-        elif source_reference is not None:
-            self._source_reference = source_reference
-        elif raw_dict is not None:
-            self._raw_dict = raw_dict
-        else:
-            raise ValueError("Either path or source_reference must be provided")
-
-    def __str__(self):
-        return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
-
-    def as_dict(self):
-        if self._raw_dict is not None:
-            return self._raw_dict
-
-        source_dict = {}
-        if self._name is not None:
-            source_dict["name"] = self._name
-        if self._path is not None:
-            source_dict["path"] = self._path
-        if self._source_reference is not None:
-            source_dict["sourceReference"] = self._source_reference
-        return source_dict
-
-
-class Breakpoint(object):
-    def __init__(self, obj):
-        self._breakpoint = obj
-
-    def is_verified(self):
-        """Check if the breakpoint is verified."""
-        return self._breakpoint.get("verified", False)
-
-    def source(self):
-        """Get the source of the breakpoint."""
-        return self._breakpoint.get("source", {})
-
-
 class NotSupportedError(KeyError):
     """Raised if a feature is not supported due to its capabilities."""
 
@@ -225,7 +208,7 @@ class DebugCommunication(object):
         # session state
         self.init_commands = init_commands
         self.exit_status: Optional[int] = None
-        self.capabilities: Optional[Dict] = None
+        self.capabilities: Dict = {}
         self.initialized: bool = False
         self.configuration_done_sent: bool = False
         self.process_event_body: Optional[Dict] = None
@@ -455,8 +438,6 @@ class DebugCommunication(object):
             # Breakpoint events are sent when a breakpoint is resolved
             self._update_verified_breakpoints([body["breakpoint"]])
         elif event == "capabilities" and body:
-            if self.capabilities is None:
-                self.capabilities = {}
             # Update the capabilities with new ones from the event.
             self.capabilities.update(body["capabilities"])
 
@@ -467,13 +448,14 @@ class DebugCommunication(object):
         arguments = request.get("arguments")
         if request["command"] == "runInTerminal" and arguments is not None:
             in_shell = arguments.get("argsCanBeInterpretedByShell", False)
+            print("spawning...", arguments["args"])
             proc = subprocess.Popen(
                 arguments["args"],
                 env=arguments.get("env", {}),
                 cwd=arguments.get("cwd", None),
                 stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=sys.stderr,
+                stderr=sys.stderr,
                 shell=in_shell,
             )
             body = {}
@@ -488,7 +470,6 @@ class DebugCommunication(object):
                     "request_seq": request["seq"],
                     "success": True,
                     "command": "runInTerminal",
-                    "message": None,
                     "body": body,
                 }
             )
@@ -520,9 +501,7 @@ class DebugCommunication(object):
             if "id" not in bp:
                 continue
 
-            self.resolved_breakpoints[str(breakpoint["id"])] = Breakpoint(
-                    breakpoint
-                )
+            self.resolved_breakpoints[str(bp["id"])] = bp
 
     def send_packet(self, packet: ProtocolMessage) -> int:
         """Takes a dictionary representation of a DAP request and send the request to the debug adapter.
@@ -563,7 +542,7 @@ class DebugCommunication(object):
         return response
 
     def receive_response(self, seq: int) -> Optional[Response]:
-        """Waits for the a response with the associated request_sec."""
+        """Waits for a response with the associated request_sec."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "response" and p["request_seq"] == seq
@@ -605,7 +584,7 @@ class DebugCommunication(object):
     def wait_for_breakpoint_events(self, timeout: Optional[float] = None):
         breakpoint_events: list[Event] = []
         while True:
-            event = self.wait_for_event("breakpoint", timeout=timeout)
+            event = self.wait_for_event(["breakpoint"], timeout=timeout)
             if not event:
                 break
             breakpoint_events.append(event)
@@ -616,7 +595,7 @@ class DebugCommunication(object):
     ):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
         while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
-            breakpoint_event = self.wait_for_event("breakpoint", timeout=timeout)
+            breakpoint_event = self.wait_for_event(["breakpoint"], timeout=timeout)
             if breakpoint_event is None:
                 break
 
@@ -625,18 +604,18 @@ class DebugCommunication(object):
             for id in breakpoint_ids
             if (
                 id not in self.resolved_breakpoints
-                or not self.resolved_breakpoints[id].is_verified()
+                or not Breakpoint.is_verified(self.resolved_breakpoints[id])
             )
         ]
 
     def wait_for_exited(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event("exited", timeout=timeout)
+        event_dict = self.wait_for_event(["exited"], timeout=timeout)
         if event_dict is None:
             raise ValueError("didn't get exited event")
         return event_dict
 
     def wait_for_terminated(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event("terminated", timeout)
+        event_dict = self.wait_for_event(["terminated"], timeout)
         if event_dict is None:
             raise ValueError("didn't get terminated event")
         return event_dict
@@ -990,7 +969,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
@@ -1041,7 +1020,7 @@ class DebugCommunication(object):
         response = self._send_recv(command_dict)
         if response:
             if "body" in response:
-                self.capabilities = response["body"]
+                self.capabilities.update(response.get("body", {}))
         return response
 
     def request_launch(
@@ -1182,7 +1161,7 @@ class DebugCommunication(object):
         It contains optional location/hitCondition/logMessage parameters.
         """
         args_dict = {
-            "source": source.as_dict(),
+            "source": source,
             "sourceModified": False,
         }
         if line_array is not None:
@@ -1311,9 +1290,9 @@ class DebugCommunication(object):
     ):
         args_dict = {}
 
-        if start_module:
+        if start_module is not None:
             args_dict["startModule"] = start_module
-        if module_count:
+        if module_count is not None:
             args_dict["moduleCount"] = module_count
 
         return self._send_recv(
@@ -1352,13 +1331,25 @@ class DebugCommunication(object):
                 print("[%3u] %s" % (idx, name))
         return response
 
-    def request_source(self, sourceReference):
+    def request_source(
+        self, *, source: Optional[Source] = None, sourceReference: Optional[int] = None
+    ):
         """Request a source from a 'Source' reference."""
+        if (
+            source is None
+            and sourceReference is None
+            or (source is not None and sourceReference is not None)
+        ):
+            raise ValueError("request_source requires either source or sourceReference")
+        elif source:
+            sourceReference = source["sourceReference"]
+        elif sourceReference:
+            source = {"sourceReference": sourceReference}
         command_dict = {
             "command": "source",
             "type": "request",
             "arguments": {
-                "source": {"sourceReference": sourceReference},
+                "source": source,
                 # legacy version of the request
                 "sourceReference": sourceReference,
             },

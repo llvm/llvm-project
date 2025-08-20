@@ -67,7 +67,10 @@ class DAPTestCaseBase(TestBase):
         self, source_reference, lines, data=None, wait_for_resolve=True
     ):
         return self.set_source_breakpoints_from_source(
-            Source(source_reference=source_reference), lines, data, wait_for_resolve
+            Source.build(source_reference=source_reference),
+            lines,
+            data,
+            wait_for_resolve,
         )
 
     def set_source_breakpoints_from_source(
