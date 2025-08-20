@@ -74,6 +74,12 @@ struct EntryBlockArgs {
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
 
+/// Create an `omp.map.info` op. Parameters other than the ones documented below
+/// correspond to operation arguments in the OpenMPOps.td file, see op docs for
+/// more details.
+///
+/// \param [in] builder - MLIR operation builder.
+/// \param [in] loc     - Source location of the created op.
 mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
