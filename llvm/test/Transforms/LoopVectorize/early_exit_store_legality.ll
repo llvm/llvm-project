@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NRMDEPS
-; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 -max-dependences=1 | FileCheck %s --check-prefixes=CHECK,MAXDEP1
+; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
 
 define i64 @loop_contains_store(ptr %dest) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'
@@ -107,8 +106,7 @@ exit:
 
 define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_safe_dependency'
-; NRMDEPS:     LV: Not vectorizing: No dependencies allowed for critical early exit condition load in a loop with side effects.
-; MAXDEP1:     LV: Not vectorizing: Invalid memory dependencies result.
+; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
 entry:
   %pred.plus.8 = getelementptr inbounds nuw i16, ptr %pred, i64 8
   br label %for.body
@@ -329,7 +327,7 @@ exit:
 
 define void @loop_contains_store_requiring_alias_check(ptr dereferenceable(40) %array, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_requiring_alias_check'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
 entry:
   br label %for.body
 
@@ -480,6 +478,29 @@ for.body:
 ee.block:
   %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
   %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @test_nodep(ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'test_nodep'
+; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  store i16 0, ptr %st.addr, align 2
+  %ee.val = load i16, ptr %st.addr, align 2
   %ee.cond = icmp sgt i16 %ee.val, 500
   br i1 %ee.cond, label %exit, label %for.inc
 
