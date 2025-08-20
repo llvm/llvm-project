@@ -1539,9 +1539,9 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
   // Since the other languages don't know about Fortran's discontiguity
   // handling, such cases need to require contiguity.
   bool dummyIsVoidStar{dummyObj->type.type().IsAssumedType() &&
-    dummyObj->ignoreTKR.test(common::IgnoreTKR::Type) &&
-    dummyObj->ignoreTKR.test(common::IgnoreTKR::Rank) &&
-    dummyObj->ignoreTKR.test(common::IgnoreTKR::Kind)};
+      dummyObj->ignoreTKR.test(common::IgnoreTKR::Type) &&
+      dummyObj->ignoreTKR.test(common::IgnoreTKR::Rank) &&
+      dummyObj->ignoreTKR.test(common::IgnoreTKR::Kind)};
   // Explicit shape and assumed size arrays must be contiguous
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
       (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
