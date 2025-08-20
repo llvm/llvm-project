@@ -141,7 +141,9 @@ extractThreeVariablesAndInstructions(
     }
   }
 
-  if (Variables.size() == 3) {
+  if (Variables.size() != 3) {
+    return {nullptr, nullptr, nullptr};
+  }
     // Check that all instruction variables are in the same BB
     SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
     BasicBlock *FirstBB = nullptr;
@@ -189,7 +191,7 @@ extractThreeVariablesAndInstructions(
     });
 
     return {SortedVars[0], SortedVars[1], SortedVars[2]};
-  }
+
   return {nullptr, nullptr, nullptr};
 }
 
