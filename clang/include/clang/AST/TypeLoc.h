@@ -1072,6 +1072,34 @@ public:
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
+struct OverflowBehaviorLocInfo {
+  SourceLocation AttrLoc;
+};
+
+class OverflowBehaviorTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, OverflowBehaviorTypeLoc,
+                             OverflowBehaviorType, OverflowBehaviorLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+
+  /// The no_sanitize type attribute.
+  OverflowBehaviorType::OverflowBehaviorKind getBehaviorKind() const {
+    return getTypePtr()->getBehaviorKind();
+  }
+
+  SourceRange getLocalSourceRange() const;
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrLoc(loc);
+  }
+
+  SourceLocation getAttrLoc() const { return getLocalData()->AttrLoc; }
+
+  void setAttrLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
+
+  QualType getInnerType() const { return getTypePtr()->getUnderlyingType(); }
+};
+
 struct HLSLAttributedResourceLocInfo {
   SourceRange Range;
   TypeSourceInfo *ContainedTyInfo;
@@ -2844,6 +2872,8 @@ inline T TypeLoc::getAsAdjusted() const {
       Cur = ATL.getModifiedLoc();
     else if (auto ATL = Cur.getAs<BTFTagAttributedTypeLoc>())
       Cur = ATL.getWrappedLoc();
+    // else if (auto ATL = Cur.getAs<OverflowBehaviorTypeLoc>())
+    //   Cur = ATL.getWrappedLoc();
     else if (auto ATL = Cur.getAs<HLSLAttributedResourceTypeLoc>())
       Cur = ATL.getWrappedLoc();
     else if (auto ATL = Cur.getAs<AdjustedTypeLoc>())
