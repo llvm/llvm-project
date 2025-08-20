@@ -999,8 +999,10 @@ static void createOptionalSymbols() {
   }
 
   ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
-  if (ctx.sym.firstPageEnd)
+  if (ctx.sym.firstPageEnd) {
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
+    ctx.sym.firstPageEnd->noReloc = true;
+  }
 
   // For non-shared memory programs we still need to define __tls_base since we
   // allow object files built with TLS to be linked into single threaded
