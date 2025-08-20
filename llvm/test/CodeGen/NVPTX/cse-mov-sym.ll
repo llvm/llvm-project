@@ -13,33 +13,33 @@ define i32 @test_mov_sym(i32 %offset1, i32 %offset2, i1 %cond) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<4>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b8 %rs1, [test_mov_sym_param_2];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_mov_sym_param_0];
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r4;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_mov_sym_param_0];
+; CHECK-NEXT:    cvt.s64.s32 %rd1, %r1;
 ; CHECK-NEXT:    mov.b64 %rd2, global_smem;
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, %rd1;
-; CHECK-NEXT:    ld.shared.b32 %r7, [%rd3];
+; CHECK-NEXT:    ld.shared.b32 %r4, [%rd3];
 ; CHECK-NEXT:    not.pred %p2, %p1;
 ; CHECK-NEXT:    @%p2 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.1: // %if1.preheader
-; CHECK-NEXT:    ld.param.b32 %r5, [test_mov_sym_param_1];
-; CHECK-NEXT:    setp.ne.b32 %p3, %r4, %r5;
+; CHECK-NEXT:    ld.param.b32 %r2, [test_mov_sym_param_1];
+; CHECK-NEXT:    setp.ne.b32 %p3, %r1, %r2;
 ; CHECK-NEXT:  $L__BB0_2: // %if1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    @%p3 bra $L__BB0_2;
 ; CHECK-NEXT:  // %bb.3: // %if2
-; CHECK-NEXT:    cvt.s64.s32 %rd4, %r5;
-; CHECK-NEXT:    add.s64 %rd6, %rd2, %rd4;
-; CHECK-NEXT:    ld.shared.b32 %r6, [%rd6];
-; CHECK-NEXT:    add.s32 %r7, %r7, %r6;
+; CHECK-NEXT:    cvt.s64.s32 %rd4, %r2;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, %rd4;
+; CHECK-NEXT:    ld.shared.b32 %r3, [%rd5];
+; CHECK-NEXT:    add.s32 %r4, %r4, %r3;
 ; CHECK-NEXT:  $L__BB0_4: // %end
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
 entry:
     %gep = getelementptr inbounds i8, ptr addrspace(3) @global_smem, i32 %offset1
