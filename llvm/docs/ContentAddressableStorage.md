@@ -83,6 +83,19 @@ Expected<ObjectProxy> Loaded = ObjectStore.getProxy(C);
 It also provides APIs to convert between `ObjectRef`, `ObjectProxy` and
 `CASID`.
 
+### ActionCache
+
+`ActionCache` is a key value storage can be used to associate two CASIDs. It is
+usually used with an `ObjectStore` to map an input CASObject to an output CASObject
+with their CASIDs.
+
+`ActionCache` has APIs like following:
+
+```
+CASID A, B;
+Error E = ActionCache.put(A, B);
+Expected<std::optional<CASID>> Result = ActionCache.get(A);
+```
 
 
 ## CAS Library Implementation Guide
