@@ -76,9 +76,15 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
   return std::make_pair(sgShape, count);
 }
 
-// An util helper to generate elementwise addition ops for index computing.
-// lhs and rhs are vectors of Values. If the rank of lhs and rhs doesn't match.
-// left-alignment is performed.
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is right-aligned
+/// with the longer array, and the unmatched leading elements from the longer array
+/// are preserved unchanged. This is commonly used for offset computation where
+/// higher-dimensional offsets need to be added to lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [10, 20, 30], rhs = [5, 7]
+///   Result: [10, 25, 37] (20+5, 30+7, with 10 preserved)
 static SmallVector<OpFoldResult>
 genIndexAdds(ConversionPatternRewriter &rewriter, Location loc,
              ArrayRef<OpFoldResult> lhs, ArrayRef<OpFoldResult> rhs) {
