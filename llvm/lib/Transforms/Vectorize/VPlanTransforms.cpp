@@ -1902,6 +1902,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           PH->appendRecipe(NewOp);
         }
       }
+
     }
   }
 }
@@ -2670,9 +2671,8 @@ void VPlanTransforms::createInterleaveGroups(
       ReversePtr->insertBefore(InsertPos);
       Addr = ReversePtr;
     }
-    auto *VPIG =
-        new VPInterleaveRecipe(IG, Addr, StoredValues, InsertPos->getMask(),
-                               NeedsMaskForGaps, InsertPos->getDebugLoc());
+    auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
+                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;
