@@ -1770,7 +1770,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
-      if (Subtarget->hasSVEB16B16()) {
+      if (Subtarget->hasSVEB16B16() &&
+          Subtarget->isNonStreamingSVEorSME2Available()) {
         setOperationAction(ISD::FADD, VT, Legal);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -1792,7 +1793,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
     }
 
-    if (!Subtarget->hasSVEB16B16()) {
+    if (!Subtarget->hasSVEB16B16() ||
+        !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
                           ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
         setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
@@ -9515,17 +9517,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
-      Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
-                          DAG.getVTList(MVT::Other, MVT::Glue), Chain);
-      InGlue = Chain.getValue(1);
-    }
-
-    SDValue NewChain =
+    Chain =
         changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
                             Chain, InGlue, getSMToggleCondition(CallAttrs));
-    Chain = NewChain.getValue(0);
-    InGlue = NewChain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
@@ -9710,13 +9705,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = changeStreamingMode(
         DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
         getSMToggleCondition(CallAttrs));
-
-    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
-      InGlue = Result.getValue(1);
-      Result =
-          DAG.getNode(AArch64ISD::VG_RESTORE, DL,
-                      DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
-    }
   }
 
   if (RequiresLazySave || CallAttrs.requiresEnablingZAAfterCall())
@@ -18161,7 +18149,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return true;
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasSVEB16B16();
+    return VT.isScalableVector() && Subtarget->hasSVEB16B16() &&
+           Subtarget->isNonStreamingSVEorSME2Available();
   default:
     break;
   }

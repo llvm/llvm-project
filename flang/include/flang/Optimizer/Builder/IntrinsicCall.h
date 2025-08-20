@@ -378,6 +378,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genNumImages(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   template <typename OpTy>
   mlir::Value genNVVMTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -449,6 +451,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genTranspose(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genThisImage(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
@@ -562,6 +566,15 @@ struct IntrinsicLibrary {
                                        llvm::StringRef errMsg);
 
   void setResultMustBeFreed() { resultMustBeFreed = true; }
+
+  // Check support of coarray features
+  void checkCoarrayEnabled() {
+    if (converter &&
+        !converter->getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::Coarray))
+      fir::emitFatalError(loc, "Coarrays disabled, use '-fcoarray' to enable.",
+                          false);
+  }
 
   fir::FirOpBuilder &builder;
   mlir::Location loc;

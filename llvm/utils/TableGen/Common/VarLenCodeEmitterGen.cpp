@@ -447,7 +447,7 @@ VarLenCodeEmitterGen::getInstructionCases(const Record *R,
 std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
     const Record *R, AltEncodingTy Mode, const VarLenInst &VLI,
     const CodeGenTarget &Target, int Indent) {
-  CodeGenInstruction &CGI = Target.getInstruction(R);
+  const CodeGenInstruction &CGI = Target.getInstruction(R);
 
   std::string Case;
   raw_string_ostream SS(Case);
@@ -474,7 +474,7 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
         LoBit = static_cast<unsigned>(cast<IntInit>(DV->getArg(2))->getValue());
       }
 
-      auto OpIdx = CGI.Operands.ParseOperandName(OperandName);
+      auto OpIdx = CGI.Operands.parseOperandName(OperandName);
       unsigned FlatOpIdx = CGI.Operands.getFlattenedOperandNumber(OpIdx);
       StringRef CustomEncoder =
           CGI.Operands[OpIdx.first].EncoderMethodNames[OpIdx.second];

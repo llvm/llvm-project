@@ -36,7 +36,6 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -246,32 +245,6 @@ uint32_t File::GetPermissions(Status &error) const {
   }
   error.Clear();
   return file_stats.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
-}
-
-NativeFile::NativeFile() = default;
-
-NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
-    : m_stream(fh), m_own_stream(transfer_ownership) {
-#ifdef _WIN32
-  // In order to properly display non ASCII characters in Windows, we need to
-  // use Windows APIs to print to the console. This is only required if the
-  // stream outputs to a console.
-  int fd = _fileno(fh);
-  is_windows_console =
-      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
-#endif
-}
-
-NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
-    : m_descriptor(fd), m_own_descriptor(transfer_ownership),
-      m_options(options) {
-#ifdef _WIN32
-  // In order to properly display non ASCII characters in Windows, we need to
-  // use Windows APIs to print to the console. This is only required if the
-  // file outputs to a console.
-  is_windows_console =
-      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
-#endif
 }
 
 bool NativeFile::IsValid() const {
@@ -645,12 +618,6 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
 
   ssize_t bytes_written = -1;
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
-#ifdef _WIN32
-    if (is_windows_console) {
-      llvm::raw_fd_ostream(m_descriptor, false).write((char *)buf, num_bytes);
-      return error;
-    }
-#endif
     bytes_written =
         llvm::sys::RetryAfterSignal(-1, ::write, m_descriptor, buf, num_bytes);
     if (bytes_written == -1) {
@@ -662,13 +629,6 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   }
 
   if (ValueGuard stream_guard = StreamIsValid()) {
-#ifdef _WIN32
-    if (is_windows_console) {
-      llvm::raw_fd_ostream(_fileno(m_stream), false)
-          .write((char *)buf, num_bytes);
-      return error;
-    }
-#endif
     bytes_written = ::fwrite(buf, 1, num_bytes, m_stream);
 
     if (bytes_written == 0) {
