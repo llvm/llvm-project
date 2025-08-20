@@ -212,6 +212,15 @@ static cl::opt<float>
                               "OR because of the hot percentile cutoff, if "
                               "both are supplied."));
 
+static cl::opt<bool> ClStaticLinking(
+    "hwasan-static-linking",
+    cl::desc("Don't use .note.hwasan.globals section to instrument globals "
+             "from loadable libraries. "
+             "Note: in static binaries, the global variables section can be "
+             "accessed directly via linker-provided "
+             "__start_hwasan_globals and __stop_hwasan_globals symbols"),
+    cl::Hidden, cl::init(false));
+
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
 STATISTIC(NumNoProfileSummaryFuncs, "Number of funcs without PS");
@@ -335,6 +344,7 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
+  void createHwasanNote();
 
   void initializeCallbacks(Module &M);
 
@@ -533,20 +543,7 @@ void HWAddressSanitizerPass::printPipeline(
   OS << '>';
 }
 
-void HWAddressSanitizer::createHwasanCtorComdat() {
-  std::tie(HwasanCtorFunction, std::ignore) =
-      getOrCreateSanitizerCtorAndInitFunctions(
-          M, kHwasanModuleCtorName, kHwasanInitName,
-          /*InitArgTypes=*/{},
-          /*InitArgs=*/{},
-          // This callback is invoked when the functions are created the first
-          // time. Hook them into the global ctors list in that case:
-          [&](Function *Ctor, FunctionCallee) {
-            Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
-            Ctor->setComdat(CtorComdat);
-            appendToGlobalCtors(M, Ctor, 0, Ctor);
-          });
-
+void HWAddressSanitizer::createHwasanNote() {
   // Create a note that contains pointers to the list of global
   // descriptors. Adding a note to the output file will cause the linker to
   // create a PT_NOTE program header pointing to the note that we can use to
@@ -628,6 +625,29 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   Dummy->setMetadata(LLVMContext::MD_associated,
                      MDNode::get(*C, ValueAsMetadata::get(Note)));
   appendToCompilerUsed(M, Dummy);
+}
+
+void HWAddressSanitizer::createHwasanCtorComdat() {
+  std::tie(HwasanCtorFunction, std::ignore) =
+      getOrCreateSanitizerCtorAndInitFunctions(
+          M, kHwasanModuleCtorName, kHwasanInitName,
+          /*InitArgTypes=*/{},
+          /*InitArgs=*/{},
+          // This callback is invoked when the functions are created the first
+          // time. Hook them into the global ctors list in that case:
+          [&](Function *Ctor, FunctionCallee) {
+            Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
+            Ctor->setComdat(CtorComdat);
+            appendToGlobalCtors(M, Ctor, 0, Ctor);
+          });
+
+  // Do not create .note.hwasan.globals for static binaries, as it is only
+  // needed for instrumenting globals from dynamic libraries. In static
+  // binaries, the global variables section can be accessed directly via the
+  // __start_hwasan_globals and __stop_hwasan_globals symbols inserted by the
+  // linker.
+  if (!ClStaticLinking)
+    createHwasanNote();
 }
 
 /// Module-level initialization.
