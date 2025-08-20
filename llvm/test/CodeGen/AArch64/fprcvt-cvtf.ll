@@ -435,3 +435,26 @@ define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
  %conv = uitofp <1 x i64> %x to <1 x float>
  ret <1 x float> %conv
 }
+
+define <1 x double> @uitofp_sext_v2i32_extract_lane0(<2 x i32> %x) {
+; CHECK-LABEL: uitofp_sext_v2i32_extract_lane0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NOT:     ucvtf d0, s0
+; CHECK-NOT:     scvtf d0, s0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: uitofp_sext_v2i32_extract_lane0:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NO-FPRCVT-NEXT:    ret
+  %wide  = sext <2 x i32> %x to <2 x i64>
+  %fpv2  = uitofp <2 x i64> %wide to <2 x double>
+  %lane0 = shufflevector <2 x double> %fpv2, <2 x double> poison, <1 x i32> zeroinitializer
+  ret <1 x double> %lane0
+}
+
