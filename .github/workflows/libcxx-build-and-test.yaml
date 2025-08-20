@@ -35,7 +35,6 @@ concurrency:
 
 jobs:
   stage1:
-    name: libc++ Stage1 Testing
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-libcxx-runners
     continue-on-error: false
@@ -73,7 +72,6 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
-    name: libc++ Stage2 Testing
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-libcxx-runners
     needs: [ stage1 ]
@@ -119,7 +117,6 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage3:
-    name: libc++ Stage3 Testing
     if: github.repository_owner == 'llvm'
     needs: [ stage2 ]
     continue-on-error: false
