@@ -635,11 +635,12 @@ C and C++.  For example:
     return v;
   }
 
+
 Boolean vectors are a Clang extension of the ext vector type.  Boolean vectors
 are intended, though not guaranteed, to map to vector mask registers.  The size
 parameter of a boolean vector type is the number of bits in the vector.  The
 boolean vector is dense and each bit in the boolean vector is one vector
-element.
+element. Query for this feature with ``__has_feature(ext_vector_type_boolean)``.
 
 The semantics of boolean vectors borrows from C bit-fields with the following
 differences:
