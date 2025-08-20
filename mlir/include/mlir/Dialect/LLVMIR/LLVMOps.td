@@ -1313,7 +1313,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<SymbolRefAttr>:$comdat,
     OptionalAttr<DIGlobalVariableExpressionArrayAttr>:$dbg_exprs,
-    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
+    OptionalAttr<ArrayAttr>:$target_specific_attrs
   );
   let summary = "LLVM dialect global.";
   let description = [{
@@ -1411,6 +1412,21 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     llvm.mlir.global private constant @y(dense<1.0> : tensor<8xf32>) { alignment = 32 : i64 } : !llvm.array<8 x f32>
     ```
 
+    The `target_specific_attrs` attribute provides a mechanism to preserve
+    target-specific LLVM IR attributes that are not explicitly modeled in the
+    LLVM dialect.
+
+    The attribute is an array containing either string attributes or
+    two-element array attributes of strings. The value of a standalone string
+    attribute is interpreted as the name of an LLVM IR attribute on the global.
+    A two-element array is interpreted as a key-value pair.
+
+    Example:
+
+    ```mlir
+    llvm.mlir.global external @example() {
+      target_specific_attrs = ["value-less-attr", ["int-attr", "4"], ["string-attr", "string"]]} : f64
+    ```
   }];
   let regions = (region AnyRegion:$initializer);
 
