@@ -150,7 +150,7 @@ def AV_MOV_B32_IMM_PSEUDO
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
 
-  // Imprecise, technically if AGPR it's VOP3 and VOP1 for AGPR. But
+  // Imprecise, technically if AGPR it's VOP3 and VOP1 for VGPR. But
   // this tricks the rematerialize logic into working for it.
   let VOP3 = 1;
   let isMoveImm = 1;
@@ -171,8 +171,9 @@ def AV_MOV_B64_IMM_PSEUDO
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
 
-  // Imprecise, technically if AGPR it's VOP3 and VOP1 for AGPR. But
-  // this tricks the rematerialize logic into working for it.
+  // Imprecise, technically if AGPR it's 2 x VOP3 and 2 x VOP1 for
+  // VGPR. But this tricks the rematerialize logic into working for
+  // it.
   let VOP3 = 1;
   let isMoveImm = 1;
   let SchedRW = [Write32Bit, Write32Bit];
