@@ -99,22 +99,20 @@ void GCNRegPressure::inc(unsigned Reg,
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
   const auto SGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(getSGPRNum()));
   const auto VGPROcc = std::min(
-      MaxOccupancy, ST.getOccupancyWithNumVGPRs(
-                        getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold),
-                        DynamicVGPRBlockSize));
+      MaxOccupancy, ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
+                                                DynamicVGPRBlockSize));
   const auto OtherSGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(O.getSGPRNum()));
-  const auto OtherVGPROcc = std::min(
-      MaxOccupancy, ST.getOccupancyWithNumVGPRs(
-                        O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold),
-                        DynamicVGPRBlockSize));
+  const auto OtherVGPROcc =
+      std::min(MaxOccupancy,
+               ST.getOccupancyWithNumVGPRs(O.getVGPRNum(ST.hasGFX90AInsts()),
+                                           DynamicVGPRBlockSize));
 
   const auto Occ = std::min(SGPROcc, VGPROcc);
   const auto OtherOcc = std::min(OtherSGPROcc, OtherVGPROcc);
@@ -139,38 +137,36 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 
   // Unified excess pressure conditions, accounting for VGPRs used for SGPR
   // spills
-  unsigned ExcessVGPR = std::max(
-      static_cast<int>(getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) +
-                       VGPRForSGPRSpills - MaxVGPRs),
-      0);
-  unsigned OtherExcessVGPR = std::max(
-      static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) +
-                       OtherVGPRForSGPRSpills - MaxVGPRs),
-      0);
+  unsigned ExcessVGPR =
+      std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) +
+                                VGPRForSGPRSpills - MaxVGPRs),
+               0);
+  unsigned OtherExcessVGPR =
+      std::max(static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) +
+                                OtherVGPRForSGPRSpills - MaxVGPRs),
+               0);
   // Arch VGPR excess pressure conditions, accounting for VGPRs used for SGPR
   // spills
   unsigned AddressableArchVGPRs = ST.getAddressableNumArchVGPRs();
   unsigned ExcessArchVGPR =
-      std::max(static_cast<int>(getVGPRNum(false, ArchVGPRThreshold) +
-                                VGPRForSGPRSpills - AddressableArchVGPRs),
+      std::max(static_cast<int>(getVGPRNum(false) + VGPRForSGPRSpills -
+                                AddressableArchVGPRs),
                0);
   unsigned OtherExcessArchVGPR =
-      std::max(static_cast<int>(O.getVGPRNum(false, ArchVGPRThreshold) +
-                                OtherVGPRForSGPRSpills - AddressableArchVGPRs),
+      std::max(static_cast<int>(O.getVGPRNum(false) + OtherVGPRForSGPRSpills -
+                                AddressableArchVGPRs),
                0);
   // AGPR excess pressure conditions
   unsigned ExcessAGPR =
-      std::max(static_cast<int>(
-                   ST.hasGFX90AInsts()
-                       ? (getAGPRNum(ArchVGPRThreshold) - AddressableArchVGPRs)
-                       : (getAGPRNum(ArchVGPRThreshold) - MaxVGPRs)),
+      std::max(static_cast<int>(ST.hasGFX90AInsts()
+                                    ? (getAGPRNum() - AddressableArchVGPRs)
+                                    : (getAGPRNum() - MaxVGPRs)),
                0);
-  unsigned OtherExcessAGPR = std::max(
-      static_cast<int>(
-          ST.hasGFX90AInsts()
-              ? (O.getAGPRNum(ArchVGPRThreshold) - AddressableArchVGPRs)
-              : (O.getAGPRNum(ArchVGPRThreshold) - MaxVGPRs)),
-      0);
+  unsigned OtherExcessAGPR =
+      std::max(static_cast<int>(ST.hasGFX90AInsts()
+                                    ? (O.getAGPRNum() - AddressableArchVGPRs)
+                                    : (O.getAGPRNum() - MaxVGPRs)),
+               0);
 
   bool ExcessRP = ExcessSGPR || ExcessVGPR || ExcessArchVGPR || ExcessAGPR;
   bool OtherExcessRP = OtherExcessSGPR || OtherExcessVGPR ||
@@ -190,20 +186,15 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
       return VGPRDiff > 0;
     if (SGPRDiff != 0) {
       unsigned PureExcessVGPR =
-          std::max(static_cast<int>(
-                       getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) -
-                       MaxVGPRs),
+          std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) - MaxVGPRs),
                    0) +
-          std::max(static_cast<int>(getVGPRNum(false, ArchVGPRThreshold) -
-                                    AddressableArchVGPRs),
+          std::max(static_cast<int>(getVGPRNum(false) - AddressableArchVGPRs),
                    0);
       unsigned OtherPureExcessVGPR =
-          std::max(static_cast<int>(
-                       O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) -
-                       MaxVGPRs),
-                   0) +
-          std::max(static_cast<int>(O.getVGPRNum(false, ArchVGPRThreshold) -
-                                    AddressableArchVGPRs),
+          std::max(
+              static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) - MaxVGPRs),
+              0) +
+          std::max(static_cast<int>(O.getVGPRNum(false) - AddressableArchVGPRs),
                    0);
 
       // If we have a special case where there is a tie in excess VGPR, but one
@@ -234,8 +225,8 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
       if (SW != OtherSW)
         return SW < OtherSW;
     } else {
-      auto VW = getVGPRTuplesWeight(ArchVGPRThreshold);
-      auto OtherVW = O.getVGPRTuplesWeight(ArchVGPRThreshold);
+      auto VW = getVGPRTuplesWeight();
+      auto OtherVW = O.getVGPRTuplesWeight();
       if (VW != OtherVW)
         return VW < OtherVW;
     }
@@ -243,36 +234,30 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 
   // Give final precedence to lower general RP.
   return SGPRImportant ? (getSGPRNum() < O.getSGPRNum())
-                       : (getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) <
-                          O.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold));
+                       : (getVGPRNum(ST.hasGFX90AInsts()) <
+                          O.getVGPRNum(ST.hasGFX90AInsts()));
 }
 
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
                       unsigned DynamicVGPRBlockSize,
                       const MachineFunction *MF) {
-  unsigned ArchVGPRThreshold = std::numeric_limits<unsigned int>::max();
-  if (ST && MF)
-    ArchVGPRThreshold = ST->getMaxNumVectorRegs(MF->getFunction()).first;
-
-  return Printable(
-      [&RP, ST, DynamicVGPRBlockSize, ArchVGPRThreshold, MF](raw_ostream &OS) {
-        OS << "VGPRs: " << RP.getArchVGPRNum(ArchVGPRThreshold) << ' '
-           << "AGPRs: " << RP.getAGPRNum(ArchVGPRThreshold);
-        if (ST)
-          OS << "(O"
-             << ST->getOccupancyWithNumVGPRs(
-                    RP.getVGPRNum(ST->hasGFX90AInsts(), ArchVGPRThreshold),
-                    DynamicVGPRBlockSize)
-             << ')';
-        OS << ", SGPRs: " << RP.getSGPRNum();
-        if (ST)
-          OS << "(O" << ST->getOccupancyWithNumSGPRs(RP.getSGPRNum()) << ')';
-        OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight(ArchVGPRThreshold)
-           << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
-        if (ST)
-          OS << " -> Occ: " << RP.getOccupancy(*MF);
-        OS << '\n';
-      });
+  return Printable([&RP, ST, DynamicVGPRBlockSize, MF](raw_ostream &OS) {
+    OS << "VGPRs: " << RP.getArchVGPRNum() << ' '
+       << "AGPRs: " << RP.getAGPRNum();
+    if (ST)
+      OS << "(O"
+         << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()),
+                                         DynamicVGPRBlockSize)
+         << ')';
+    OS << ", SGPRs: " << RP.getSGPRNum();
+    if (ST)
+      OS << "(O" << ST->getOccupancyWithNumSGPRs(RP.getSGPRNum()) << ')';
+    OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight()
+       << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
+    if (ST)
+      OS << " -> Occ: " << RP.getOccupancy(*MF);
+    OS << '\n';
+  });
 }
 
 static LaneBitmask getDefRegMask(const MachineOperand &MO,
@@ -418,9 +403,8 @@ void GCNRPTarget::setRegLimits(unsigned NumSGPRs, unsigned NumVGPRs,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
-  AddressableNumArchVGPRs = ST.getAddressableNumArchVGPRs();
   MaxSGPRs = std::min(ST.getAddressableNumSGPRs(), NumSGPRs);
-  MaxVGPRs = std::min(AddressableNumArchVGPRs, NumVGPRs);
+  MaxVGPRs = std::min(ST.getAddressableNumArchVGPRs(), NumVGPRs);
   MaxUnifiedVGPRs =
       ST.hasGFX90AInsts()
           ? std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs)
@@ -435,21 +419,15 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg,
 
   if (SRI->isSGPRClass(RC))
     return RP.getSGPRNum() > MaxSGPRs;
-
-  bool ShouldUseAGPR =
-      SRI->isAGPRClass(RC) ||
-      (SRI->isVectorSuperClass(RC) &&
-       RP.getArchVGPRNum(AddressableNumArchVGPRs) >= AddressableNumArchVGPRs);
-  unsigned NumVGPRs = ShouldUseAGPR
-                          ? RP.getAGPRNum(AddressableNumArchVGPRs)
-                          : RP.getArchVGPRNum(AddressableNumArchVGPRs);
+  unsigned NumVGPRs =
+      SRI->isAGPRClass(RC) ? RP.getAGPRNum() : RP.getArchVGPRNum();
   return isVGPRBankSaveBeneficial(NumVGPRs);
 }
 
 bool GCNRPTarget::satisfied() const {
   if (RP.getSGPRNum() > MaxSGPRs)
     return false;
-  if (RP.getVGPRNum(false, AddressableNumArchVGPRs) > MaxVGPRs &&
+  if (RP.getVGPRNum(false) > MaxVGPRs &&
       (!CombineVGPRSavings || !satisifiesVGPRBanksTarget()))
     return false;
   return satisfiesUnifiedTarget();
@@ -500,8 +478,7 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
 void GCNRPTracker::reset(const MachineInstr &MI,
                          const LiveRegSet *LiveRegsCopy,
                          bool After) {
-  const MachineFunction &MF = *MI.getMF();
-  MRI = &MF.getRegInfo();
+  MRI = &MF->getRegInfo();
   if (LiveRegsCopy) {
     if (&LiveRegs != LiveRegsCopy)
       LiveRegs = *LiveRegsCopy;
@@ -510,7 +487,7 @@ void GCNRPTracker::reset(const MachineInstr &MI,
                      : getLiveRegsBefore(MI, LIS);
   }
 
-  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs, MF);
 }
 
 void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
@@ -518,7 +495,7 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
   MRI = &MRI_;
   LiveRegs = LiveRegs_;
   LastTrackedMI = nullptr;
-  MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_);
+  MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_, MF);
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
@@ -544,7 +521,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
     return;
 
   // Kill all defs.
-  GCNRegPressure DefPressure, ECDefPressure;
+  GCNRegPressure DefPressure(MF), ECDefPressure(MF);
   bool HasECDefs = false;
   for (const MachineOperand &MO : MI.all_defs()) {
     if (!MO.getReg().isVirtual())
@@ -592,7 +569,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   MaxPressure = HasECDefs ? max(CurPressure + ECDefPressure, MaxPressure)
                           : max(CurPressure, MaxPressure);
 
-  assert(CurPressure == getRegPressure(*MRI, LiveRegs));
+  assert(CurPressure == getRegPressure(*MRI, LiveRegs, MF));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -827,7 +804,7 @@ bool GCNUpwardRPTracker::isValid() const {
     return false;
   }
 
-  auto LISPressure = getRegPressure(*MRI, LISLR);
+  auto LISPressure = getRegPressure(*MRI, LISLR, MF);
   if (LISPressure != CurPressure) {
     dbgs() << "GCNUpwardRPTracker error: Pressure sets different\nTracked: "
            << print(CurPressure) << "LIS rpt: " << print(LISPressure);
@@ -906,10 +883,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   auto printRP = [&MF](const GCNRegPressure &RP) {
     return Printable([&RP, &MF](raw_ostream &OS) {
       OS << format(PFX "  %-5d", RP.getSGPRNum())
-         << format(" %-5d", RP.getVGPRNum(false, MF.getSubtarget<GCNSubtarget>()
-                                                     .getMaxNumVectorRegs(
-                                                         MF.getFunction())
-                                                     .first));
+         << format(" %-5d", RP.getVGPRNum(false));
     });
   };
 
@@ -936,14 +910,14 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
 
     GCNRPTracker::LiveRegSet LiveIn, LiveOut;
-    GCNRegPressure RPAtMBBEnd;
+    GCNRegPressure RPAtMBBEnd(&MF);
 
     if (UseDownwardTracker) {
       if (MBB.empty()) {
         LiveIn = LiveOut = getLiveRegs(MBBStartSlot, LIS, MRI);
-        RPAtMBBEnd = getRegPressure(MRI, LiveIn);
+        RPAtMBBEnd = getRegPressure(MRI, LiveIn, &MF);
       } else {
-        GCNDownwardRPTracker RPT(LIS);
+        GCNDownwardRPTracker RPT(LIS, &MF);
         RPT.reset(MBB.front());
 
         LiveIn = RPT.getLiveRegs();
@@ -958,7 +932,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
         RPAtMBBEnd = RPT.getPressure();
       }
     } else {
-      GCNUpwardRPTracker RPT(LIS);
+      GCNUpwardRPTracker RPT(LIS, &MF);
       RPT.reset(MRI, MBBEndSlot);
 
       LiveOut = RPT.getLiveRegs();
@@ -1007,7 +981,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       }
     }
     OS << PFX "  Live-thr:" << llvm::print(LiveThrough, MRI);
-    OS << printRP(getRegPressure(MRI, LiveThrough)) << '\n';
+    OS << printRP(getRegPressure(MRI, LiveThrough, &MF)) << '\n';
   }
   OS << "...\n";
   return false;

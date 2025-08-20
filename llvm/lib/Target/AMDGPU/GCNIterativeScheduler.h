@@ -94,9 +94,8 @@ protected:
   }
 
   void swapIGLPMutations(const Region &R, bool IsReentry);
-  void setBestSchedule(Region &R,
-                       ScheduleRef Schedule,
-                       const GCNRegPressure &MaxRP = GCNRegPressure());
+  void setBestSchedule(Region &R, ScheduleRef Schedule,
+                       const GCNRegPressure &MaxRP);
 
   void scheduleBest(Region &R);
 
@@ -105,8 +104,7 @@ protected:
   void sortRegionsByPressure(unsigned TargetOcc);
 
   template <typename Range>
-  void scheduleRegion(Region &R, Range &&Schedule,
-                      const GCNRegPressure &MaxRP = GCNRegPressure());
+  void scheduleRegion(Region &R, Range &&Schedule, const GCNRegPressure &MaxRP);
 
   unsigned tryMaximizeOccupancy(unsigned TargetOcc =
                                 std::numeric_limits<unsigned>::max());

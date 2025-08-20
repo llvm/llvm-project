@@ -209,10 +209,7 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // tracking does not account for the alignment requirements for SGPRs, or the
   // fragmentation of registers the allocator will need to satisfy.
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      MaxPressure.getVGPRNum(
-          ST->hasGFX90AInsts(),
-          ST->getMaxNumVectorRegs(MI.getMF()->getFunction()).first) <=
-          MaxVGPRs / 2 &&
+      MaxPressure.getVGPRNum(ST->hasGFX90AInsts()) <= MaxVGPRs / 2 &&
       MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
     return true;
@@ -278,7 +275,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
-    GCNDownwardRPTracker RPT(*LIS);
+    GCNDownwardRPTracker RPT(*LIS, &MF);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;

@@ -72,8 +72,8 @@ const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
-      DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
-}
+      DownwardTracker(*C->LIS, C->MF), UpwardTracker(*C->LIS, C->MF),
+      HasHighPressure(false) {}
 
 void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
@@ -181,7 +181,7 @@ static void getRegisterPressures(
   // GCNTrackers
   Pressure.resize(4, 0);
   MachineInstr *MI = SU->getInstr();
-  GCNRegPressure NewPressure;
+  GCNRegPressure NewPressure(MI->getMF());
   if (AtTop) {
     GCNDownwardRPTracker TempDownwardTracker(DownwardTracker);
     NewPressure = TempDownwardTracker.bumpDownwardPressure(MI, SRI);
@@ -190,14 +190,11 @@ static void getRegisterPressures(
     TempUpwardTracker.recede(*MI);
     NewPressure = TempUpwardTracker.getPressure();
   }
-  unsigned ArchVGPRThreshold = DAG->MF.getSubtarget<GCNSubtarget>()
-                                   .getMaxNumVectorRegs(DAG->MF.getFunction())
-                                   .first;
+
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
-      NewPressure.getArchVGPRNum(ArchVGPRThreshold);
-  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] =
-      NewPressure.getAGPRNum(ArchVGPRThreshold);
+      NewPressure.getArchVGPRNum();
+  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -343,10 +340,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
       SGPRPressure = T->getPressure().getSGPRNum();
-      VGPRPressure = T->getPressure().getArchVGPRNum(
-          DAG->MF.getSubtarget<GCNSubtarget>()
-              .getMaxNumVectorRegs(DAG->MF.getFunction())
-              .first);
+      VGPRPressure = T->getPressure().getArchVGPRNum();
     }
   }
   ReadyQueue &Q = Zone.Available;
@@ -809,7 +803,7 @@ void GCNScheduleDAGMILive::schedule() {
 
 GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
-  GCNDownwardRPTracker RPTracker(*LIS);
+  GCNDownwardRPTracker RPTracker(*LIS, &MF);
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
                     &LiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
@@ -825,7 +819,7 @@ static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
                                                 const MachineBasicBlock *MBB) {
-  GCNDownwardRPTracker RPTracker(*LIS);
+  GCNDownwardRPTracker RPTracker(*LIS, &MF);
 
   // If the block has the only successor then live-ins of that successor are
   // live-outs of the current block. We can reuse calculated live set if the
@@ -1033,7 +1027,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
 
 GCNSchedStage::GCNSchedStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
     : DAG(DAG), S(static_cast<GCNSchedStrategy &>(*DAG.SchedImpl)), MF(DAG.MF),
-      MFI(DAG.MFI), ST(DAG.ST), StageID(StageID) {}
+      MFI(DAG.MFI), ST(DAG.ST), StageID(StageID), PressureBefore(&DAG.MF),
+      PressureAfter(&DAG.MF) {}
 
 bool GCNSchedStage::initGCNSchedStage() {
   if (!DAG.LIS)
@@ -1195,14 +1190,14 @@ bool GCNSchedStage::initGCNRegion() {
 
   PressureBefore = DAG.Pressure[RegionIdx];
 
-  LLVM_DEBUG(
-      dbgs() << "Pressure before scheduling:\nRegion live-ins:"
-             << print(DAG.LiveIns[RegionIdx], DAG.MRI)
-             << "Region live-in pressure:  "
-             << print(llvm::getRegPressure(DAG.MRI, DAG.LiveIns[RegionIdx]),
-                      &ST, 0, &MF)
-             << "Region register pressure: "
-             << print(PressureBefore, &ST, 0, &MF));
+  LLVM_DEBUG(dbgs() << "Pressure before scheduling:\nRegion live-ins:"
+                    << print(DAG.LiveIns[RegionIdx], DAG.MRI)
+                    << "Region live-in pressure:  "
+                    << print(llvm::getRegPressure(
+                                 DAG.MRI, DAG.LiveIns[RegionIdx], &DAG.MF),
+                             &ST, 0, &MF)
+                    << "Region register pressure: "
+                    << print(PressureBefore, &ST, 0, &MF));
 
   S.HasHighPressure = false;
   S.KnownExcessRP = isRegionWithExcessRP();
@@ -1289,8 +1284,7 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
-      PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) <=
-          S.VGPRCriticalLimit) {
+      PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
     DAG.RegionsWithMinOcc[RegionIdx] =
         PressureAfter.getOccupancy(DAG.MF) == DAG.MinOccupancy;
@@ -1339,10 +1333,9 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), ArchVGPRThreshold) >
-          MaxVGPRs ||
-      PressureAfter.getArchVGPRNum(ArchVGPRThreshold) > MaxArchVGPRs ||
-      PressureAfter.getAGPRNum(ArchVGPRThreshold) > MaxArchVGPRs ||
+  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
+      PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
+      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
@@ -1479,13 +1472,12 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
 
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
-    unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
         &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureBefore.getVGPRNum(false, ArchVGPRThreshold));
+        PressureBefore.getVGPRNum(false));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
         &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureAfter.getVGPRNum(false, ArchVGPRThreshold));
+        PressureAfter.getVGPRNum(false));
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -2006,16 +1998,16 @@ void PreRARematStage::rematerialize() {
     if (!RecomputeRP.contains(I))
       continue;
 
-    GCNRegPressure RP;
+    GCNRegPressure RP(&DAG.MF);
     if (IsEmptyRegion) {
-      RP = getRegPressure(DAG.MRI, DAG.LiveIns[I]);
+      RP = getRegPressure(DAG.MRI, DAG.LiveIns[I], &DAG.MF);
     } else {
-      GCNDownwardRPTracker RPT(*DAG.LIS);
+      GCNDownwardRPTracker RPT(*DAG.LIS, &DAG.MF);
       auto *NonDbgMI = &*skipDebugInstructionsForward(DAG.Regions[I].first,
                                                       DAG.Regions[I].second);
       if (NonDbgMI == DAG.Regions[I].second) {
         // Region is non-empty but contains only debug instructions.
-        RP = getRegPressure(DAG.MRI, DAG.LiveIns[I]);
+        RP = getRegPressure(DAG.MRI, DAG.LiveIns[I], &DAG.MF);
       } else {
         RPT.reset(*NonDbgMI, &DAG.LiveIns[I]);
         RPT.advance(DAG.Regions[I].second);

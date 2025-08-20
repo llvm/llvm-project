@@ -81,11 +81,11 @@ static void printLivenessInfo(raw_ostream &OS,
   const auto &MRI = BB->getParent()->getRegInfo();
 
   const auto LiveIns = getLiveRegsBefore(*Begin, *LIS);
-  OS << "LIn RP: " << print(getRegPressure(MRI, LiveIns));
+  OS << "LIn RP: " << print(getRegPressure(MRI, LiveIns, Begin->getMF()));
 
   const auto BottomMI = End == BB->end() ? std::prev(End) : End;
   const auto LiveOuts = getLiveRegsAfter(*BottomMI, *LIS);
-  OS << "LOt RP: " << print(getRegPressure(MRI, LiveOuts));
+  OS << "LOt RP: " << print(getRegPressure(MRI, LiveOuts, Begin->getMF()));
 }
 
 LLVM_DUMP_METHOD
@@ -238,11 +238,8 @@ public:
 
 GCNIterativeScheduler::GCNIterativeScheduler(MachineSchedContext *C,
                                              StrategyKind S)
-  : BaseClass(C, std::make_unique<SchedStrategyStub>())
-  , Context(C)
-  , Strategy(S)
-  , UPTracker(*LIS) {
-}
+    : BaseClass(C, std::make_unique<SchedStrategyStub>()), Context(C),
+      Strategy(S), UPTracker(*LIS, C->MF) {}
 
 // returns max pressure for a region
 GCNRegPressure
@@ -281,7 +278,7 @@ template <typename Range> GCNRegPressure
 GCNIterativeScheduler::getSchedulePressure(const Region &R,
                                            Range &&Schedule) const {
   auto const BBEnd = R.Begin->getParent()->end();
-  GCNUpwardRPTracker RPTracker(*LIS);
+  GCNUpwardRPTracker RPTracker(*LIS, &MF);
   if (R.End != BBEnd) {
     // R.End points to the boundary instruction but the
     // schedule doesn't include it
