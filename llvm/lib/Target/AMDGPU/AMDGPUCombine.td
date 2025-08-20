@@ -151,6 +151,25 @@ def zext_of_shift_amount_combines : GICombineGroup<[
   canonicalize_zext_lshr, canonicalize_zext_ashr, canonicalize_zext_shl
 ]>;
 
+// (and/or i64:x, i64:y) -> i64:(merge (and/or lo_32(x), lo_32(y)), (and/or hi_32(x), hi_32(y)))
+// when either x or y is all ones in low or high parts
+class combine_binop_s64_with_s32_mask<Instruction opcode> : GICombineRule<
+  (defs root:$dst),
+  (match (opcode $dst, i64:$x, i64:$y):$dst,
+         [{ return Helper.matchConstantIs32BitMask(${x}.getReg()) ||
+                   Helper.matchConstantIs32BitMask(${y}.getReg()); }]),
+  (apply (G_UNMERGE_VALUES i32:$x_lo, i32:$x_hi, $x),
+         (G_UNMERGE_VALUES i32:$y_lo, i32:$y_hi, $y),
+         (opcode i32:$lo, $x_lo, $y_lo),
+         (opcode i32:$hi, $x_hi, $y_hi),
+         (G_MERGE_VALUES $dst, $lo, $hi))>;
+
+def combine_or_s64_with_s32_mask : combine_binop_s64_with_s32_mask<G_OR>;
+def combine_and_s64_with_s32_mask : combine_binop_s64_with_s32_mask<G_AND>;
+def binop_s64_with_s32_mask_combines : GICombineGroup<[
+  combine_or_s64_with_s32_mask, combine_and_s64_with_s32_mask
+]>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -180,7 +199,8 @@ def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
-   foldable_fneg, combine_shuffle_vector_to_build_vector]> {
+   foldable_fneg, combine_shuffle_vector_to_build_vector,
+   binop_s64_with_s32_mask_combines]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -188,7 +208,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
-   rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64]> {
+   rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64,
+   binop_s64_with_s32_mask_combines]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
