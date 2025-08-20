@@ -3059,6 +3059,13 @@ protected:
     setKwLoc(Loc);
   }
 
+  LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
+                  LabelDecl *Target)
+      : LoopControlStmt(Class, Loc) {
+    setLabelLoc(LabelLoc);
+    setLabelDecl(Target);
+  }
+
   LoopControlStmt(StmtClass Class, EmptyShell ES) : Stmt(Class, ES) {}
 
 public:
@@ -3070,7 +3077,7 @@ public:
     return isLabeled() ? getLabelLoc() : getKwLoc();
   }
 
-  bool isLabeled() const { return TargetLabel; }
+  bool isLabeled() const { return TargetLabel != nullptr; }
 
   SourceLocation getLabelLoc() const { return Label; }
   void setLabelLoc(SourceLocation L) { Label = L; }
@@ -3102,10 +3109,7 @@ class ContinueStmt : public LoopControlStmt {
 public:
   ContinueStmt(SourceLocation CL) : LoopControlStmt(ContinueStmtClass, CL) {}
   ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
-      : LoopControlStmt(ContinueStmtClass, CL) {
-    setLabelLoc(LabelLoc);
-    setLabelDecl(Target);
-  }
+      : LoopControlStmt(ContinueStmtClass, CL, LabelLoc, Target) {}
 
   /// Build an empty continue statement.
   explicit ContinueStmt(EmptyShell Empty)
@@ -3121,10 +3125,7 @@ class BreakStmt : public LoopControlStmt {
 public:
   BreakStmt(SourceLocation BL) : LoopControlStmt(BreakStmtClass, BL) {}
   BreakStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
-      : LoopControlStmt(BreakStmtClass, CL) {
-    setLabelLoc(LabelLoc);
-    setLabelDecl(Target);
-  }
+      : LoopControlStmt(BreakStmtClass, CL, LabelLoc, Target) {}
 
   /// Build an empty break statement.
   explicit BreakStmt(EmptyShell Empty)

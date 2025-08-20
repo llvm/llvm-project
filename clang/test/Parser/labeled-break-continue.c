@@ -8,5 +8,6 @@
 // expected-no-diagnostics
 
 void f() {
-  x: while (1) break x; // disabled-error {{labeled 'break' is only supported in C2y}}
+  x1: while (1) break x1; // disabled-error {{labeled 'break' is only supported in C2y}}
+  x2: while (1) continue x2; // disabled-error {{labeled 'continue' is only supported in C2y}}
 }
