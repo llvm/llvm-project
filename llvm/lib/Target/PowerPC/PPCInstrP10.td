@@ -2055,6 +2055,9 @@ let Predicates = [IsISA3_1, HasFPU] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
+  // Exploit vsrq instruction to optimize VSR(VSRO (input, vsro_byte_shift), vsr_bit_shift)
+  // to VSRQ(input, vsrq_bit_shift)
+  def : Pat<(VSRVSRO v4i32:$vA, v4i32:$vB), (VSRQ $vA, $vB)>;
   // Exploit the vector multiply high instructions using intrinsics.
   def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$vA, v4i32:$vB)),
             (v4i32 (VMULHSW $vA, $vB))>;

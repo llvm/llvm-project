@@ -212,7 +212,7 @@ entry:
   ret <8 x i16> %4
 }
 
-; Test case with different vectors (should not optimize - different shift amounts)
+; Test case with different vectors (should not optimize - different shift amount registers)
 define <16 x i8> @no_optimization_different_shifts(<16 x i8> %in, i8 zeroext %sh1, i8 zeroext %sh2)  {
 ; POWER10-LE-LABEL: no_optimization_different_shifts:
 ; POWER10-LE:       # %bb.0: # %entry
