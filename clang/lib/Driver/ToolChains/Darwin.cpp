@@ -3330,9 +3330,9 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
   ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
 
-  // On arm64e, enable pointer authentication (for the return address and
-  // indirect calls), as well as usage of the intrinsics.
-  if (getArchName() == "arm64e") {
+  // On arm64e, we enable all the features required for the Darwin userspace
+  // ABI
+  if (getTriple().isArm64e()) {
     // The ptrauth ABI version is 0 by default, but can be overridden.
     static const constexpr unsigned DefaultPtrauthABIVersion = 0;
 
@@ -3345,7 +3345,7 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
       unsigned PtrAuthABIVersionArg;
       if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
         getDriver().Diag(diag::err_drv_invalid_value)
-          << A->getAsString(DriverArgs) << A->getValue();
+            << A->getAsString(DriverArgs) << A->getValue();
       else
         PtrAuthABIVersion = PtrAuthABIVersionArg;
     }
@@ -3365,25 +3365,43 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
         CC1Args.push_back("-fptrauth-kernel-abi-version");
     }
 
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
-                           options::OPT_fno_ptrauth_returns))
-      CC1Args.push_back("-fptrauth-returns");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
-                           options::OPT_fno_ptrauth_intrinsics))
-      CC1Args.push_back("-fptrauth-intrinsics");
-
+    // Core platform ABI
     if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
                            options::OPT_fno_ptrauth_calls))
       CC1Args.push_back("-fptrauth-calls");
-
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
     if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
                            options::OPT_fno_ptrauth_indirect_gotos))
       CC1Args.push_back("-fptrauth-indirect-gotos");
-
     if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
                            options::OPT_fno_ptrauth_auth_traps))
       CC1Args.push_back("-fptrauth-auth-traps");
+
+    // C++ v-table ABI
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_address_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_type_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+    // Objective-C ABI
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_isa,
+                           options::OPT_fno_ptrauth_objc_isa))
+      CC1Args.push_back("-fptrauth-objc-isa");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_class_ro,
+                           options::OPT_fno_ptrauth_objc_class_ro))
+      CC1Args.push_back("-fptrauth-objc-class-ro");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_interface_sel,
+                           options::OPT_fno_ptrauth_objc_interface_sel))
+      CC1Args.push_back("-fptrauth-objc-interface-sel");
   }
 }
 
