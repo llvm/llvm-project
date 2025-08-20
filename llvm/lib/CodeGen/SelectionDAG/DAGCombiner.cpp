@@ -6070,7 +6070,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (N0 == N1)
     return N0;
 
-  // fold operation with vscale operands.
+  // Fold operation with vscale operands.
   if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
     uint64_t C0 = N0->getConstantOperandVal(0);
     uint64_t C1 = N1->getConstantOperandVal(0);
