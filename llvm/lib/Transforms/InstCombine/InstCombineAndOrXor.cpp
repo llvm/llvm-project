@@ -149,59 +149,56 @@ extractThreeVariablesAndInstructions(
   if (Variables.size() != 3) {
     return {nullptr, nullptr, nullptr};
   }
-    // Check that all instruction variables are in the same BB
-    SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
-    BasicBlock *FirstBB = nullptr;
-    for (Value *V : SortedVars) {
-      if (auto *I = dyn_cast<Instruction>(V)) {
-        if (!FirstBB) {
-          FirstBB = I->getParent();
-        } else if (I->getParent() != FirstBB) {
-          return {nullptr, nullptr, nullptr};
-        }
+  // Check that all instruction variables are in the same BB
+  SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
+  BasicBlock *FirstBB = nullptr;
+  for (Value *V : SortedVars) {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (!FirstBB) {
+        FirstBB = I->getParent();
+      } else if (I->getParent() != FirstBB) {
+        return {nullptr, nullptr, nullptr};
       }
     }
+  }
 
-    // Validation that all collected instructions have operands that will be in
-    // Computed map
-    SmallPtrSet<Value *, 32> ValidOperands(Variables.begin(), Variables.end());
-    ValidOperands.insert(Instructions.begin(), Instructions.end());
+  // Validation that all collected instructions have operands that will be in
+  // Computed map
+  SmallPtrSet<Value *, 32> ValidOperands(Variables.begin(), Variables.end());
+  ValidOperands.insert(Instructions.begin(), Instructions.end());
 
-    for (Instruction *I : Instructions) {
-      Value *NotV;
-      if (match(I, m_Not(m_Value(NotV)))) {
-        // For NOT operations, only check the variable operand (constant -1 is
-        // handled by pattern matcher)
-        if (!ValidOperands.count(NotV))
+  for (Instruction *I : Instructions) {
+    Value *NotV;
+    if (match(I, m_Not(m_Value(NotV)))) {
+      // For NOT operations, only check the variable operand (constant -1 is
+      // handled by pattern matcher)
+      if (!ValidOperands.count(NotV))
+        return {nullptr, nullptr, nullptr};
+    } else {
+      for (Use &U : I->operands()) {
+        if (!ValidOperands.count(U.get()))
           return {nullptr, nullptr, nullptr};
-      } else {
-        for (Use &U : I->operands()) {
-          if (!ValidOperands.count(U.get()))
-            return {nullptr, nullptr, nullptr};
-        }
       }
     }
+  }
 
-    // Sort variables by argNo if both are arguments, otherwise args before
-    // instructions
-    llvm::sort(SortedVars, [](Value *A, Value *B) {
-      if (isa<Argument>(A) != isa<Argument>(B))
-        return isa<Argument>(A);
+  // Sort variables by argNo if both are arguments, otherwise args before
+  // instructions
+  llvm::sort(SortedVars, [](Value *A, Value *B) {
+    if (isa<Argument>(A) != isa<Argument>(B))
+      return isa<Argument>(A);
 
-      if (isa<Argument>(A))
-        return cast<Argument>(A)->getArgNo() < cast<Argument>(B)->getArgNo();
+    if (isa<Argument>(A))
+      return cast<Argument>(A)->getArgNo() < cast<Argument>(B)->getArgNo();
 
-      return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
-    });
+    return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
+  });
 
-    // Sort instructions within the same BB
-    llvm::sort(Instructions, [](Instruction *A, Instruction *B) {
-      return A->comesBefore(B);
-    });
+  // Sort instructions within the same BB
+  llvm::sort(Instructions,
+             [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
 
-    return {SortedVars[0], SortedVars[1], SortedVars[2]};
-
-    return {nullptr, nullptr, nullptr};
+  return {SortedVars[0], SortedVars[1], SortedVars[2]};
 }
 
 /// Evaluate a boolean expression with bit-vector inputs for all 8 combinations.
