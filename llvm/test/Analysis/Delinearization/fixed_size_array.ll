@@ -163,7 +163,7 @@ exit:
 ; CHECK:      Delinearization on function a_i_2j1_k:
 ; CHECK:      Base offset: %a
 ; CHECK-NEXT: ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
-; CHECK-NEXT: ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><%for.j.header>][{32,+,1}<nw><%for.k>]
+; CHECK-NEXT: ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<%for.j.header>][{32,+,1}<%for.k>]
 define void @a_i_2j1_k(ptr %a) {
 entry:
   br label %for.i.header

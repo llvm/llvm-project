@@ -479,14 +479,16 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 1; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k - 1] =
+;;
+;; FIXME: Currently fails to infer nsw for the SCEV `{0,+,1}<for.body8>`
 define void @t8(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't8'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - consistent anti [0 0 1]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
