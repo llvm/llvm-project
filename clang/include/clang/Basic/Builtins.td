@@ -1526,6 +1526,18 @@ def ElementwiseFshr : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseCtlz : Builtin {
+  let Spellings = ["__builtin_elementwise_ctlz"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCttz : Builtin {
+  let Spellings = ["__builtin_elementwise_cttz"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
