@@ -4522,7 +4522,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                          Mask, VL, Policy);
   };
 
-  // General case: splat the first operand and sliding other operands down one
+  // General case: splat the first operand and slide other operands down one
   // by one to form a vector. Alternatively, if the last operand is an
   // extraction from element 0 of a vector, we can use the original vector
   // reduction result as the start value and slide up instead of slide down.
