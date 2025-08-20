@@ -5198,7 +5198,8 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA = A.getAAFor<AAAlign>(
         QueryingAA, IRPosition::value(*(II)), DepClassTy::NONE);
     if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
-      if (ConstVals->getMinAlignment() >= AlignAA->getKnownAlign())
+      Align ConstAlign(1 << ConstVals->getAssumedMinTrailingZeros());
+      if (ConstAlign >= AlignAA->getKnownAlign())
         return Align(1);
       return AlignAA->getKnownAlign();
     } else if (AlignAA) {
@@ -5223,19 +5224,16 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA =
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II->getOperand(0))),
                             DepClassTy::REQUIRED);
-    bool NeedRet = false;
     if (ConstVals && ConstVals->isValidState()) {
-      Alignment = ConstVals->getMinAlignment();
-      NeedRet = true;
+      Alignment = Align(1 << ConstVals->getAssumedMinTrailingZeros());
     }
     if (AlignAA && AlignAA->isValidState()) {
-      NeedRet = true;
       if (Alignment < AlignAA->getAssumedAlign())
         Alignment = AlignAA->getAssumedAlign();
     }
 
-    if (NeedRet)
-      return Align(Alignment);
+    if (Alignment < QueryingAA.getAssumedAlign())
+      return Alignment;
     return QueryingAA.getAssumedAlign();
   }
   default:

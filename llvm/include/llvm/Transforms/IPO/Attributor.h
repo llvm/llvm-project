@@ -5347,7 +5347,14 @@ struct AAPotentialConstantValues
         TrailingZeros = It.countTrailingZeros();
     return Align(1 << TrailingZeros);
   }
-
+  /// Return the minimum alignment of potential constants
+  unsigned getAssumedMinTrailingZeros() const {
+    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth();
+    for (const APInt &It : getAssumedSet())
+      if (It.countTrailingZeros() < TrailingZeros)
+        TrailingZeros = It.countTrailingZeros();
+    return TrailingZeros;
+  }
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPotentialConstantValues"; }
 
