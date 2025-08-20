@@ -3383,6 +3383,11 @@ void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
   Error(Range.getBegin(), "substituted parameter pack") << Range;
 }
 
+void MicrosoftCXXNameMangler::mangleType(const SubstBuiltinTemplatePackType *T,
+                                         Qualifiers, SourceRange Range) {
+  Error(Range.getBegin(), "substituted builtin template pack") << Range;
+}
+
 // <type> ::= <pointer-type>
 // <pointer-type> ::= E? <pointer-cvr-qualifiers> <cvr-qualifiers> <type>
 //                       # the E is required for 64-bit non-static pointers
