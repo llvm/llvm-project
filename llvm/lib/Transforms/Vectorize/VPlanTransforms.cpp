@@ -1107,13 +1107,29 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       return Def->replaceAllUsesWith(A);
 
     // Try to fold Not into compares by adjusting the predicate in-place.
-    if (isa<VPWidenRecipe>(A) && A->getNumUsers() == 1) {
+    auto CanFold = [&A](VPUser *U) {
+      return match(
+          U, m_CombineOr(m_Not(m_Specific(A)),
+                         m_Select(m_Specific(A), m_VPValue(), m_VPValue())));
+    };
+    if (isa<VPWidenRecipe>(A) && all_of(A->users(), CanFold)) {
       auto *WideCmp = cast<VPWidenRecipe>(A);
       if (WideCmp->getOpcode() == Instruction::ICmp ||
           WideCmp->getOpcode() == Instruction::FCmp) {
         WideCmp->setPredicate(
             CmpInst::getInversePredicate(WideCmp->getPredicate()));
-        Def->replaceAllUsesWith(WideCmp);
+        for (VPUser *U : WideCmp->users()) {
+          auto *R = cast<VPSingleDefRecipe>(U);
+          // not (icmp eq) -> icmp ne
+          if (match(R, m_Not(m_Specific(WideCmp))))
+            R->replaceAllUsesWith(WideCmp);
+          // select (icmp eq), x, y -> select (icmp ne), y, x
+          else if (match(R, m_Select(m_Specific(WideCmp), m_VPValue(X),
+                                     m_VPValue(Y)))) {
+            R->setOperand(1, Y);
+            R->setOperand(2, X);
+          }
+        }
         // If WideCmp doesn't have a debug location, use the one from the
         // negation, to preserve the location.
         if (!WideCmp->getDebugLoc() && R.getDebugLoc())
@@ -1885,7 +1901,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           PH->appendRecipe(NewOp);
         }
       }
-
     }
   }
 }
@@ -2654,8 +2669,9 @@ void VPlanTransforms::createInterleaveGroups(
       ReversePtr->insertBefore(InsertPos);
       Addr = ReversePtr;
     }
-    auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
-                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
+    auto *VPIG =
+        new VPInterleaveRecipe(IG, Addr, StoredValues, InsertPos->getMask(),
+                               NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;
