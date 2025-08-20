@@ -500,7 +500,8 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     (scattered) subviews, allowing each work-item in a subgroup specifying their own offset.
     It accepts the following parameters:
 
-    * source: a 1D memref or pointer (uint64_t) represents the flattened memory object.
+    * source: a 1D memref or pointer (i64, i32, ui64, ui32) represents the flattened
+      memory object.
     * offsets: a vector containing offsets of each access point. Its size
       is fixed to the hardware supportted subgroup size, e.g., 16 on PVC,
       implying each element in the vector corresponds to a work-item (SIMT lane)
@@ -536,7 +537,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     ```
   }];
 
-  let arguments = (ins XeGPU_BaseAddrType: $source,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType: $source,
                        XeGPU_OffsetType: $offsets);
   let results = (outs XeGPU_TensorDesc:$TensorDesc);
 

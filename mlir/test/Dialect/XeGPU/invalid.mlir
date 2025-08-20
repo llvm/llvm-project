@@ -387,7 +387,7 @@ func.func @load_gather_vc_3(%src: ui64) {
 // -----
 func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{Expecting the source is a 1D memref or pointer}}
+  // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
   xegpu.prefetch %src[%offsets]: memref<4x4xf32>, vector<1xindex>
   return
 }
@@ -428,7 +428,7 @@ func.func @store_scatter_offset_wi_2(%src: memref<4x4xf16>) {
   %val = arith.constant dense<2.9>: vector<4xf16>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   %mask = arith.constant dense<1>: vector<1xi1>
-  // expected-error@+1 {{Expecting the dest is a 1D memref or pointer}}
+  // expected-error@+1 {{op operand #1 must be TensorDesc describing regions of interested data}}
   xegpu.store %val, %src[%offsets], %mask
         : vector<4xf16>, memref<4x4xf16>, vector<1xindex>, vector<1xi1>
   return
@@ -447,7 +447,7 @@ func.func @load_gather_offset_wi_2(%src: ui64) {
 func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{Expecting the source is a 1D memref or pointer}}
+  // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
   %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
   return
 }
