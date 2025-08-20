@@ -31,10 +31,10 @@ using namespace mlir;
 
 static FailureOr<std::unique_ptr<llvm::TargetMachine>>
 getTargetMachine(LLVM::TargetAttrInterface attr) {
-  StringRef triple = attr.getTripleAttr();
-  StringRef chipAKAcpu = attr.getChipAttr();
+  StringRef triple = attr.getTriple();
+  StringRef chipAKAcpu = attr.getChip();
   StringRef features =
-      attr.getFeaturesAttr() ? attr.getFeaturesAttr().getValue() : "";
+      attr.getFeatures() ? attr.getFeatures().getValue() : "";
 
   std::string error;
   const llvm::Target *target =

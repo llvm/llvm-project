@@ -550,19 +550,19 @@ def LLVM_TargetAttrInterface
     InterfaceMethod<
       /*description=*/"Returns the target triple identifier.",
       /*retTy=*/"StringAttr",
-      /*methodName=*/"getTripleAttr",
+      /*methodName=*/"getTriple",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
       /*retTy=*/"StringAttr",
-      /*methodName=*/"getChipAttr",
+      /*methodName=*/"getChip",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target features as a string.",
       /*retTy=*/"StringAttr",
-      /*methodName=*/"getFeaturesAttr",
+      /*methodName=*/"getFeatures",
       /*args=*/(ins)
     >
   ];
