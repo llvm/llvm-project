@@ -1630,6 +1630,9 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX1132GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 ;
 ; GFX12DAGISEL-LABEL: uniform_value_i64:
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
@@ -1651,8 +1654,11 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
 ; GFX12DAGISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12DAGISEL-NEXT:    s_endpgm
+<<<<<<< HEAD
 =======
 >>>>>>> 3fdf40e85be4 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 2)
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 entry:
   %result = call i64 @llvm.amdgcn.wave.reduce.sub.i64(i64 %in, i32 1)
   store i64 %result, ptr addrspace(1) %out
@@ -1906,6 +1912,9 @@ define amdgpu_kernel void @const_value_i64(ptr addrspace(1) %out) {
 ; GFX1132GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 ;
 ; GFX12DAGISEL-LABEL: const_value_i64:
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
@@ -1927,8 +1936,11 @@ define amdgpu_kernel void @const_value_i64(ptr addrspace(1) %out) {
 ; GFX12DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12DAGISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12DAGISEL-NEXT:    s_endpgm
+<<<<<<< HEAD
 =======
 >>>>>>> 3fdf40e85be4 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 2)
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 entry:
   %result = call i64 @llvm.amdgcn.wave.reduce.sub.i64(i64 123, i32 1)
   store i64 %result, ptr addrspace(1) %out
@@ -2182,6 +2194,9 @@ define amdgpu_kernel void @poison_value_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX1132GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 ;
 ; GFX12DAGISEL-LABEL: poison_value_i64:
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
@@ -2203,8 +2218,11 @@ define amdgpu_kernel void @poison_value_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
 ; GFX12DAGISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12DAGISEL-NEXT:    s_endpgm
+<<<<<<< HEAD
 =======
 >>>>>>> 3fdf40e85be4 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 2)
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 entry:
   %result = call i64 @llvm.amdgcn.wave.reduce.sub.i64(i64 poison, i32 1)
   store i64 %result, ptr addrspace(1) %out
@@ -2610,6 +2628,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1132GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1132GISEL-NEXT:    s_setpc_b64 s[30:31]
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 ;
 ; GFX12DAGISEL-LABEL: divergent_value_i64:
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
@@ -2636,8 +2657,11 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12DAGISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+<<<<<<< HEAD
 =======
 >>>>>>> 3fdf40e85be4 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 2)
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 entry:
   %result = call i64 @llvm.amdgcn.wave.reduce.sub.i64(i64 %id.x, i32 1)
   store i64 %result, ptr addrspace(1) %out
@@ -3221,6 +3245,9 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1132GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 ;
 ; GFX12DAGISEL-LABEL: divergent_cfg_i64:
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
@@ -3275,8 +3302,11 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX12DAGISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12DAGISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12DAGISEL-NEXT:    s_endpgm
+<<<<<<< HEAD
 =======
 >>>>>>> 3fdf40e85be4 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 2)
+=======
+>>>>>>> 26c19f76cbd0 (Checking for targets with native 64-bit `add`/`sub` support)
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %d_cmp = icmp ult i32 %tid, 16
