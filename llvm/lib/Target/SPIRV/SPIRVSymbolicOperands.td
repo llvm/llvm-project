@@ -389,6 +389,7 @@ defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
 defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
 defm SPV_INTEL_bfloat16_arithmetic
     : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_arbitrary_precision_floating_point: ExtensionOperand<130>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -612,6 +613,7 @@ defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
+defm ArbitraryPrecisionFloatingPointINTEL : CapabilityOperand<5845, 0, 0,[SPV_INTEL_arbitrary_precision_floating_point], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
