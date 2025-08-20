@@ -402,3 +402,20 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         "supported for unknown key '"
                      << key << "'";
 }
+
+//===----------------------------------------------------------------------===//
+// LLVM_TargetAttr
+//===----------------------------------------------------------------------===//
+
+FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
+    if (stringAttrKey.getValue() == "triple")
+      return getTriple();
+    if (stringAttrKey.getValue() == "chip")
+      return getChip();
+    if (stringAttrKey.getValue() == "features" && getFeatures())
+      return getFeatures();
+  }
+
+  return failure();
+}

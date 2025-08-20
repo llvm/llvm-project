@@ -26,6 +26,7 @@ define void @func2() {
     ret void
 }
 
+; SOUT:                .amdhsa_named_barrier_count 1
 ; SOUT:        .set kernel1.num_named_barrier, max(2, func1.num_named_barrier, func2.num_named_barrier)
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1.kernel1, i32 11)
@@ -39,6 +40,7 @@ define amdgpu_kernel void @kernel1() #0 {
     ret void
 }
 
+; SOUT:                .amdhsa_named_barrier_count 1
 ; SOUT:        .set kernel2.num_named_barrier, max(2, func2.num_named_barrier)
 define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)

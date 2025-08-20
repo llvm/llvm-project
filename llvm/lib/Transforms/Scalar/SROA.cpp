@@ -3411,8 +3411,7 @@ private:
 
       // Rewrite the size as needed.
       if (NewEndOffset != EndOffset)
-        II.setLength(ConstantInt::get(II.getLength()->getType(),
-                                      NewEndOffset - NewBeginOffset));
+        II.setLength(NewEndOffset - NewBeginOffset);
       return false;
     }
     // Record this instruction for deletion.

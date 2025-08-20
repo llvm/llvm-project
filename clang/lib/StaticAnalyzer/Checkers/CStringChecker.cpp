@@ -1129,9 +1129,9 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
   if (!ER)
     return true; // cf top comment.
 
-  // FIXME: Does this crash when a non-standard definition
-  // of a library function is encountered?
-  assert(ER->getValueType() == C.getASTContext().CharTy &&
+  // Support library functions defined with non-default address spaces
+  assert(ER->getValueType()->getCanonicalTypeUnqualified() ==
+             C.getASTContext().CharTy &&
          "isFirstBufInBound should only be called with char* ElementRegions");
 
   // Get the size of the array.
