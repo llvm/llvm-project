@@ -463,18 +463,16 @@ private:
       }
     }
 
-    auto ShouldMergeShortRecords = [this, &I, &NextLine, PreviousLine,
-                                    TheLine]() {
-      if (Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_All)
+    const bool MergeShortRecord = [this, &NextLine]() {
+      switch (Style.AllowShortRecordsOnASingleLine) {
+      case FormatStyle::SRS_All:
         return true;
-      if (Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_Empty &&
-          NextLine.First->is(tok::r_brace)) {
-        return true;
+      case FormatStyle::SRS_Empty:
+        return NextLine.First->is(tok::r_brace);
+      case FormatStyle::SRS_Never:
+        return false;
       }
-      return false;
-    };
-
-    bool MergeShortRecord = ShouldMergeShortRecords();
+    }();
 
     // Don't merge an empty template class or struct if SplitEmptyRecords
     // is defined.
