@@ -2094,6 +2094,20 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
              : std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineSMECntsElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts,
+                       const AArch64Subtarget *ST) {
+  if (!ST->isStreaming())
+    return std::nullopt;
+
+  // In streaming-mode, aarch64_sme_cnts is equivalent to aarch64_sve_cnt
+  // with SVEPredPattern::all
+  Value *Cnt = IC.Builder.CreateElementCount(
+      II.getType(), ElementCount::getScalable(NumElts));
+  Cnt->takeName(&II);
+  return IC.replaceInstUsesWith(II, Cnt);
+}
+
 static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   Value *PgVal = II.getArgOperand(0);
@@ -2803,6 +2817,14 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVECntElts(IC, II, 8);
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
+  case Intrinsic::aarch64_sme_cntsd:
+    return instCombineSMECntsElts(IC, II, 2, ST);
+  case Intrinsic::aarch64_sme_cntsw:
+    return instCombineSMECntsElts(IC, II, 4, ST);
+  case Intrinsic::aarch64_sme_cntsh:
+    return instCombineSMECntsElts(IC, II, 8, ST);
+  case Intrinsic::aarch64_sme_cntsb:
+    return instCombineSMECntsElts(IC, II, 16, ST);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
