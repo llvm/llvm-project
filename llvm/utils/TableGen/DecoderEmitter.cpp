@@ -140,6 +140,12 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
+  /// The size of this encoding, in bits.
+  unsigned BitWidth;
+
+  /// Information about the operands' contribution to this encoding.
+  SmallVector<OperandInfo, 16> Operands;
+
 public:
   InstructionEncoding(const Record *EncodingDef, const CodeGenInstruction *Inst)
       : EncodingDef(EncodingDef), Inst(Inst) {
@@ -149,6 +155,8 @@ public:
     if (EncodingDef != InstDef)
       Name = (EncodingDef->getName() + Twine(':')).str();
     Name.append(InstDef->getName());
+
+    BitWidth = populateEncoding();
   }
 
   /// Returns the Record this encoding originates from.
@@ -159,6 +167,17 @@ public:
 
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
+
+  /// Returns the size of this encoding, in bits.
+  unsigned getBitWidth() const { return BitWidth; }
+
+  /// Returns information about the operands' contribution to this encoding.
+  ArrayRef<OperandInfo> getOperands() const { return Operands; }
+
+private:
+  void populateVarLenEncoding();
+
+  unsigned populateEncoding();
 };
 
 typedef std::vector<uint32_t> FixupList;
@@ -522,9 +541,6 @@ protected:
   // Vector of encoding IDs for this filter chooser to work on.
   ArrayRef<unsigned> EncodingIDs;
 
-  // Lookup table for the operand decoding of instructions.
-  const std::map<unsigned, std::vector<OperandInfo>> &Operands;
-
   // The selected filter, if any.
   std::unique_ptr<Filter> BestFilter;
 
@@ -549,10 +565,9 @@ protected:
 
 public:
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs,
-                const std::map<unsigned, std::vector<OperandInfo>> &Ops,
-                unsigned BW, const DecoderEmitter *E)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Operands(Ops),
+                ArrayRef<unsigned> EncodingIDs, unsigned BW,
+                const DecoderEmitter *E)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs),
         FilterBitValues(BW, BitValue::BIT_UNFILTERED), Parent(nullptr),
         BitWidth(BW), Emitter(E) {
     doFilter();
@@ -560,10 +575,9 @@ public:
 
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs,
-                const std::map<unsigned, std::vector<OperandInfo>> &Ops,
                 const std::vector<BitValue> &ParentFilterBitValues,
                 const FilterChooser &parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Operands(Ops),
+      : Encodings(Encodings), EncodingIDs(EncodingIDs),
         FilterBitValues(ParentFilterBitValues), Parent(&parent),
         BitWidth(parent.BitWidth), Emitter(parent.Emitter) {
     doFilter();
@@ -728,8 +742,8 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    VariableFC = std::make_unique<FilterChooser>(
-        Owner.Encodings, VariableIDs, Owner.Operands, BitValueArray, Owner);
+    VariableFC = std::make_unique<FilterChooser>(Owner.Encodings, VariableIDs,
+                                                 BitValueArray, Owner);
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -750,9 +764,8 @@ void Filter::recurse() {
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
     FilterChooserMap.try_emplace(
-        FilterVal,
-        std::make_unique<FilterChooser>(Owner.Encodings, EncodingIDs,
-                                        Owner.Operands, BitValueArray, Owner));
+        FilterVal, std::make_unique<FilterChooser>(Owner.Encodings, EncodingIDs,
+                                                   BitValueArray, Owner));
   }
 }
 
@@ -1235,7 +1248,7 @@ bool FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
                                 unsigned EncodingID) const {
   bool HasCompleteDecoder = true;
 
-  for (const OperandInfo &Op : Operands.find(EncodingID)->second) {
+  for (const OperandInfo &Op : Encodings[EncodingID].getOperands()) {
     // If a custom instruction decoder was specified, use that.
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
@@ -1849,9 +1862,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
 }
 
-static void parseVarLenInstOperand(const Record *EncodingDef,
-                                   std::vector<OperandInfo> &Operands,
-                                   const CodeGenInstruction *Inst) {
+void InstructionEncoding::populateVarLenEncoding() {
   const RecordVal *RV = EncodingDef->getValue("Inst");
   VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);
   SmallVector<int> TiedTo;
@@ -1950,21 +1961,13 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
   }
 }
 
-static unsigned populateInstruction(
-    const CodeGenTarget &Target, const Record *EncodingDef,
-    const CodeGenInstruction *Inst, unsigned EncodingID,
-    std::map<unsigned, std::vector<OperandInfo>> &EncodingOperands,
-    bool IsVarLenInst) {
+unsigned InstructionEncoding::populateEncoding() {
+  bool IsVarLenInst = isa<DagInit>(EncodingDef->getValueInit("Inst"));
   const Record &Def = *Inst->TheDef;
-  // If all the bit positions are not specified; do not decode this instruction.
-  // We are bound to fail!  For proper disassembly, the well-known encoding bits
-  // of the instruction must be fully specified.
 
   const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
-  if (Bits.allInComplete())
-    return 0;
-
-  std::vector<OperandInfo> Operands;
+  assert(!Bits.allInComplete() &&
+         "Invalid encodings should have been filtered out");
 
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
@@ -1973,7 +1976,6 @@ static unsigned populateInstruction(
     bool HasCompleteInstDecoder =
         EncodingDef->getValueAsBit("hasCompleteDecoder");
     Operands.push_back(OperandInfo(InstDecoder.str(), HasCompleteInstDecoder));
-    EncodingOperands[EncodingID] = std::move(Operands);
     return Bits.getNumBits();
   }
 
@@ -2014,7 +2016,7 @@ static unsigned populateInstruction(
   }
 
   if (IsVarLenInst) {
-    parseVarLenInstOperand(EncodingDef, Operands, Inst);
+    populateVarLenEncoding();
   } else {
     // For each operand, see if we can figure out where it is encoded.
     for (const auto &Op : InOutOperands) {
@@ -2095,7 +2097,6 @@ static unsigned populateInstruction(
         Operands.push_back(std::move(OpInfo));
     }
   }
-  EncodingOperands[EncodingID] = std::move(Operands);
 
 #if 0
   LLVM_DEBUG({
@@ -2606,22 +2607,16 @@ namespace {
   emitInsertBits(OS);
   emitCheck(OS);
 
-  std::map<unsigned, std::vector<OperandInfo>> Operands;
+  // Do extra bookkeeping for variable-length encodings.
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
-  if (IsVarLenInst)
-    InstrLen.resize(Target.getInstructions().size(), 0);
   unsigned MaxInstLen = 0;
-
-  for (auto [EncodingID, Encoding] : enumerate(Encodings)) {
-    const Record *EncodingDef = Encoding.getRecord();
-    const CodeGenInstruction *Inst = Encoding.getInstruction();
-    unsigned BitWidth = populateInstruction(Target, EncodingDef, Inst,
-                                            EncodingID, Operands, IsVarLenInst);
-    assert(BitWidth && "Invalid encodings should have been filtered out");
-    if (IsVarLenInst) {
-      MaxInstLen = std::max(MaxInstLen, BitWidth);
-      InstrLen[Target.getInstrIntValue(Inst->TheDef)] = BitWidth;
+  if (IsVarLenInst) {
+    InstrLen.resize(Target.getInstructions().size(), 0);
+    for (const InstructionEncoding &Encoding : Encodings) {
+      MaxInstLen = std::max(MaxInstLen, Encoding.getBitWidth());
+      InstrLen[Target.getInstrIntValue(Encoding.getInstruction()->TheDef)] =
+          Encoding.getBitWidth();
     }
   }
 
@@ -2645,7 +2640,7 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs, Operands, BitWidth, this);
+    FilterChooser FC(Encodings, EncodingIDs, BitWidth, this);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
