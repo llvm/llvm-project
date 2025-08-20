@@ -1335,16 +1335,16 @@ class DebugCommunication(object):
         self, *, source: Optional[Source] = None, sourceReference: Optional[int] = None
     ):
         """Request a source from a 'Source' reference."""
-        if (
-            source is None
-            and sourceReference is None
-            or (source is not None and sourceReference is not None)
-        ):
+        if source is None and sourceReference is None:
             raise ValueError("request_source requires either source or sourceReference")
-        elif source:
+        elif source is not None:
             sourceReference = source["sourceReference"]
-        elif sourceReference:
+        elif sourceReference is not None:
             source = {"sourceReference": sourceReference}
+        else:
+            raise ValueError(
+                "request_source requires either source or sourceReference not both"
+            )
         command_dict = {
             "command": "source",
             "type": "request",
