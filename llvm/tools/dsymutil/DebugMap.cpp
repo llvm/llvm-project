@@ -136,7 +136,7 @@ struct YAMLContext {
 } // end anonymous namespace
 
 DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
-         ArrayRef<uint8_t> BinaryUUID)
+                   ArrayRef<uint8_t> BinaryUUID)
     : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
       BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
 

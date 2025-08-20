@@ -34,11 +34,12 @@ using namespace llvm;
 namespace llvm {
 
 RecordsEntry::RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
-RecordsEntry::RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
+RecordsEntry::RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
+    : Loop(std::move(Loop)) {}
 RecordsEntry::RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
-      : Assertion(std::move(Assertion)) {}
+    : Assertion(std::move(Assertion)) {}
 RecordsEntry::RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
-      : Dump(std::move(Dump)) {}
+    : Dump(std::move(Dump)) {}
 
 struct SubClassReference {
   SMRange RefRange;

@@ -51,4 +51,3 @@ llvm::MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCCodeEmitter> Emitter)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                        std::move(Emitter)) {}
-
