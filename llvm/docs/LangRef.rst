@@ -30991,14 +30991,14 @@ that purpose.
 Arguments:
 """"""""""
 
-The ``llvm.reloc.none`` intrinsic takes the symbol as a metadata string
-argument.
+The ``llvm.reloc.none`` intrinsic takes one argument, which may be any global
+value.
 
 Semantics:
 """"""""""
 
-This intrinsic emits a no-op relocation for the symbol the location of the
-intrinsic call.
+This intrinsic emits a no-op relocation at the location of the intrinsic call
+for the symbol that corresponds to the global value argument.
 
 
 Stack Map Intrinsics
