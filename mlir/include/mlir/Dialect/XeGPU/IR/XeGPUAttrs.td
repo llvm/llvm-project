@@ -190,7 +190,12 @@ def DistributeLayoutAttrInterface: AttrInterface<"DistributeLayoutAttrInterface"
                     "getRank">,
     InterfaceMethod<"Get the num of effective subgroups",
                     "int64_t",
-                    "getNumSubgroups">,
+                    "getNumSubgroups", (ins), [{
+                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getSgLayoutAsInt();
+                        if (sgLayout.has_value())
+                          return computeProduct(*sgLayout);
+                        return 0;
+                    }], [{}]>,
     InterfaceMethod<"Get the SgLayout field of the attribute as integer array",
                     "std::optional<SmallVector<int64_t>>",
                     "getSgLayoutAsInt">,
@@ -355,13 +360,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttrInterf
       return 0;
     }
 
-    int64_t getNumSubgroups() {
-      std::optional<SmallVector<int64_t>> sgLayout = getSgLayoutAsInt();
-      if (sgLayout.has_value())
-        return computeProduct(*sgLayout);
-      return 0;
-    }
-
     LayoutAttr dropSgLayoutAndData() {
       // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getInstData() && !getLaneLayout())
@@ -464,13 +462,6 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttrInterface
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       return parent.isForSubgroup();
-    }
-
-    int64_t getNumSubgroups() {
-      std::optional<SmallVector<int64_t>> sgLayout = getSgLayoutAsInt();
-      if (sgLayout.has_value())
-        return computeProduct(*sgLayout);
-      return 0;
     }
 
     /// Returns the SgLayout of the attribute, computed by applying
