@@ -399,6 +399,19 @@ public:
     return Visit(e->getReplacement());
   }
 
+  mlir::Value VisitVAArgExpr(VAArgExpr *ve) {
+    QualType Ty = ve->getType();
+
+    if (Ty->isVariablyModifiedType()) {
+      cgf.cgm.errorNYI(ve->getSourceRange(), "variably modified types in varargs");
+    }
+
+    Address argValue = Address::invalid();
+    mlir::Value val = cgf.emitVAArg(ve, argValue);
+
+    return val;
+  }
+
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
