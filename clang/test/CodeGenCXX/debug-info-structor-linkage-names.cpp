@@ -85,4 +85,5 @@ struct Derived : public Base {
 // ITANIUM-SAME:          spFlags: DISPFlagDefinition
 // ITANIUM-SAME:          declaration: ![[BASE_INHERIT_CTOR_DECL:[0-9]+]]
 
-// MSABI: !DISubprogram(name: "~Derived"
+// MSABI:   !DISubprogram(name: "~Derived"
+// DISABLE: !DISubprogram(name: "~Derived"
