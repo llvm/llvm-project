@@ -4051,7 +4051,7 @@ public:
             PVD->getUninstantiatedDefaultArg()
                 ->containsUnexpandedParameterPack();
     }
-    return getSema().BuildLambdaExpr(StartLoc, EndLoc, LSI);
+    return getSema().BuildLambdaExpr(StartLoc, EndLoc);
   }
 
   /// Build an empty C++1z fold-expression with the given operator.
@@ -15716,12 +15716,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     return ExprError();
   }
 
-  // Copy the LSI before ActOnFinishFunctionBody removes it.
-  // FIXME: This is dumb. Store the lambda information somewhere that outlives
-  // the call operator.
-  auto LSICopy = *LSI;
   getSema().ActOnFinishFunctionBody(NewCallOperator, Body.get(),
-                                    /*IsInstantiation*/ true);
+                                    /*IsInstantiation=*/true,
+                                    /*RetainFunctionScopeInfo=*/true);
   SavedContext.pop();
 
   // Recompute the dependency of the lambda so that we can defer the lambda call
@@ -15757,11 +15754,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // *after* the substitution in case we can't decide the dependency
   // so early, e.g. because we want to see if any of the *substituted*
   // parameters are dependent.
-  DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
+  DependencyKind = getDerived().ComputeLambdaDependency(LSI);
   Class->setLambdaDependencyKind(DependencyKind);
 
   return getDerived().RebuildLambdaExpr(E->getBeginLoc(),
-                                        Body.get()->getEndLoc(), &LSICopy);
+                                        Body.get()->getEndLoc(), LSI);
 }
 
 template<typename Derived>
