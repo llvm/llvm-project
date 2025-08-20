@@ -163,6 +163,9 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
 
+bool MayNeedCopy(const ActualArgument *, const characteristics::DummyArgument *,
+    FoldingContext &, bool);
+
 // Returns a pair of Booleans. The first boolean specifies whether given actual
 // argument may need copy-in operation and the second Boolean specifies whether
 // copy-out may be necessary. This function works with implicit interface

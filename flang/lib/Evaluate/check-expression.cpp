@@ -1575,4 +1575,96 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
   return {mayNeedCopyIn, mayNeedCopyOut};
 }
 
+// Copy-in determination for implicit interface
+static bool MayNeedCopyIn(const ActualArgument& actual, FoldingContext& fc) {
+  if (!evaluate::IsVariable(actual)) {
+    // Actual argument expressions that aren’t variables are copy-in, but
+    // not copy-out.
+    return true;
+  }
+  if (actual.IsArray() && !IsSimplyContiguous(actual, fc)) {
+    // Actual arguments that are variables are copy-in when non-contiguous.
+    return true;
+  }
+  return false;
+}
+
+// Copy-out determination for implicit interface
+static bool MayNeedCopyOut(const ActualArgument& actual, FoldingContext& fc) {
+  if (actual.IsArray() && evaluate::IsVariable(actual) &&
+      !IsSimplyContiguous(actual, fc) && !HasVectorSubscript(actual)) {
+    // Actual arguments that are non-contiguous array variables are copy-out
+    // when don't have vector subscripts
+    return true;
+  }
+  return false;
+}
+
+// Copy-in determination for explicit interface
+static bool MayNeedCopyIn(const ActualArgument& actual,
+    const characteristics::DummyDataObject &dummyObj,
+    FoldingContext& fc) {
+  if (dummyObj.intent == common::Intent::Out) {
+    // INTENT(OUT) dummy args never need copy-in
+    return false;
+  }
+  if (dummyObj.attrs.test(characteristics::DummyDataObject::Attr::Value)) {
+    // Pass by value, always copy-in, never copy-out
+    return true;
+  }
+
+  return false;
+}
+
+// Copy-out determination for explicit interface
+static bool MayNeedCopyOut(const ActualArgument& actual,
+    const characteristics::DummyDataObject &dummyObj,
+    FoldingContext& fc) {
+  if (dummyObj.intent == common::Intent::Out) {
+    // INTENT(IN) dummy args never need copy-out
+    return false;
+  }
+  return false;
+}
+
+// TODO: dummy is coarray: dummy.type.corank() > 0
+
+// If forCopyOut is false, returns if a particular actual/dummy argument
+// combination may need a temporary creation with copy-in operation. If
+// forCopyOut is true, returns the same for copy-out operation. For
+// procedures with explicit interface, it's expected that "dummy" is not null.
+// For procedures with implicit interface dummy may be null.
+bool MayNeedCopy(const ActualArgument *actual,
+    const characteristics::DummyArgument *dummy,
+    FoldingContext &fc, bool forCopyOut) {
+  if (!actual) {
+    return false;
+  }
+  if (actual->isAlternateReturn()) {
+    return false;
+  }
+  if (!dummy) {   // Implicit interface
+    if (ExtractCoarrayRef(actual)) {
+      // Coindexed actual args need copy-in and copy-out
+      return true;
+    }
+    if (forCopyOut) {
+      return MayNeedCopyOut(*actual, fc);
+    } else {
+      return MayNeedCopyIn(*actual, fc);
+    }
+  } else {    // Explicit interface
+    const auto *dummyObj{std::get_if<characteristics::DummyDataObject>(&dummy->u)};
+    if (!dummyObj) {
+      // Only DummyDataObject has the information we need
+      return false;
+    }
+    if (forCopyOut) {
+      return MayNeedCopyOut(*actual, *dummyObj, fc);
+    } else {
+      return MayNeedCopyIn(*actual, *dummyObj, fc);
+    }
+  }
+}
+
 } // namespace Fortran::evaluate
