@@ -2675,7 +2675,6 @@ void VPlanTransforms::createInterleaveGroups(
       ReversePtr->insertBefore(InsertPos);
       Addr = ReversePtr;
     }
-
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
                                         InsertPos->getMask(), NeedsMaskForGaps,
                                         InterleaveMD, InsertPos->getDebugLoc());
