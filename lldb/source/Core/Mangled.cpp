@@ -150,6 +150,7 @@ void Mangled::SetValue(ConstString name) {
 
 // BEGIN SWIFT
 #ifdef LLDB_ENABLE_SWIFT
+<<<<<<< HEAD
 std::pair<ConstString, DemangledNameInfo>
 GetSwiftDemangledStr(ConstString m_mangled, const SymbolContext *sc,
                      ConstString &m_demangled,
@@ -168,12 +169,23 @@ GetSwiftDemangledStr(ConstString m_mangled, const SymbolContext *sc,
   }
   auto [demangled, info] = SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
       mangled_name, demangle_mode, sc);
+=======
+static ConstString GetSwiftDemangledStr(ConstString m_mangled,
+                                        const SymbolContext *sc,
+                                        ConstString &m_demangled) {
+  const char *mangled_name = m_mangled.AsCString("");
+  Log *log = GetLog(LLDBLog::Demangle);
+  LLDB_LOGF(log, "demangle swift: %s", mangled_name);
+  auto [demangled, info] = SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
+      mangled_name, SwiftLanguageRuntime::eSimplified, sc);
+>>>>>>> d2c3aeda7c2e ([lldb] add function name syntax highlighting in Swift backtraces)
   info.PrefixRange.second =
       std::min(info.BasenameRange.first, info.ArgumentsRange.first);
   info.SuffixRange.first =
       std::max(info.BasenameRange.second, info.ArgumentsRange.second);
   info.SuffixRange.second = demangled.length();
 
+<<<<<<< HEAD
   // Don't cache the demangled name if the function isn't available yet.
   // Only cache eFullName demangled functions to keep the cache consistent.
   if (!sc || !sc->function ||
@@ -181,6 +193,13 @@ GetSwiftDemangledStr(ConstString m_mangled, const SymbolContext *sc,
     LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)", mangled_name,
               demangled.c_str());
     return std::make_pair(ConstString(demangled), info);
+=======
+  // Don't cache the demangled name the function isn't available yet.
+  if (!sc || !sc->function) {
+    LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)", mangled_name,
+              demangled.c_str());
+    return ConstString(demangled);
+>>>>>>> d2c3aeda7c2e ([lldb] add function name syntax highlighting in Swift backtraces)
   }
   if (demangled.empty()) {
     LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
@@ -190,7 +209,11 @@ GetSwiftDemangledStr(ConstString m_mangled, const SymbolContext *sc,
               demangled.c_str());
     m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
   }
+<<<<<<< HEAD
   return std::make_pair(m_demangled, info);
+=======
+  return m_demangled;
+>>>>>>> d2c3aeda7c2e ([lldb] add function name syntax highlighting in Swift backtraces)
 }
 #endif // LLDB_ENABLE_SWIFT
 // END SWIFT
