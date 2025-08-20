@@ -1068,10 +1068,9 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     unsigned NumCombinedComponents = CI.Width + Paired.Width;
     if (NumCombinedComponents == 3 && CI.EltSize <= 2)
       NumCombinedComponents = 4;
-    unsigned CombinedBufferFormat =
-        getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI);
 
-    if (CombinedBufferFormat == 0)
+    if (getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI) ==
+        0)
       return false;
 
     // Merge only when the two access ranges are strictly back-to-back,
