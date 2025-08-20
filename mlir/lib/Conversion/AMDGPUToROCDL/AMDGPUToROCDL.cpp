@@ -1887,15 +1887,15 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneOp> {
   LogicalResult
   matchAndRewrite(PermlaneOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx950)
+      return op->emitOpError("permlane_swap is only supported on gfx950+");
+
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
     auto kind = op.getKind();
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
-
-    if (chipset < kGfx950)
-      return op->emitOpError("permlane_swap is only supported on gfx950+");
 
     SmallVector<Value> decomposed =
         LLVM::decomposeValue(rewriter, loc, src, i32);
