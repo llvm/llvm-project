@@ -10,10 +10,6 @@ define void @test_distance_positive_independent_via_trip_count(ptr %A) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i8, ptr %gep.A, align 1 ->
-; CHECK-NEXT:            store i32 %ext, ptr %gep.A.400, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

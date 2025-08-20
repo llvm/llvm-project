@@ -293,13 +293,14 @@ public:
     return member_iterator(ECV.getLeader());
   }
 
-  /// Erase the class containing \p V.
+  /// Erase the class containing \p V, i.e. erase all members of the class from
+  /// the set.
   void eraseClass(const ElemTy &V) {
     if (TheMapping.find(V) == TheMapping.end())
       return;
-    auto LeaderI = members(V);
-    for (auto MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
-      const auto &ToErase = *MI;
+    iterator_range<member_iterator> LeaderI = members(V);
+    for (member_iterator MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
+      const ElemTy &ToErase = *MI;
       ++MI;
       TheMapping.erase(ToErase);
     }

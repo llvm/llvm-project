@@ -508,10 +508,9 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
 }
 
 void RuntimePointerChecking::generateChecks(
-    const MemoryDepChecker &DepChecker,
     MemoryDepChecker::DepCandidates &DepCands) {
   assert(Checks.empty() && "Checks is not empty");
-  groupChecks(DepChecker, DepCands);
+  groupChecks(DepCands);
   Checks = generateChecks();
 }
 
@@ -574,7 +573,6 @@ bool RuntimeCheckingPtrGroup::addPointer(unsigned Index, const SCEV *Start,
 }
 
 void RuntimePointerChecking::groupChecks(
-    const MemoryDepChecker &DepChecker,
     MemoryDepChecker::DepCandidates &DepCands) {
   // We build the groups from dependency candidates equivalence classes
   // because:
@@ -822,12 +820,13 @@ public:
   /// (i.e. the pointers have computable bounds). A return value of false means
   /// we couldn't analyze and generate runtime checks for all pointers in the
   /// loop, but if \p AllowPartial is set then we will have checks for those
-  /// pointers we could analyze.
-  bool canCheckPtrAtRT(const MemoryDepChecker &DepChecker,
-                       RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
+  /// pointers we could analyze. \p DepChecker is used to remove unknown
+  /// dependences from DepCands.
+  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
                        Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
-                       Value *&UncomputablePtr, bool AllowPartial );
+                       Value *&UncomputablePtr, bool AllowPartial,
+                       const MemoryDepChecker &DepChecker);
 
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
@@ -843,11 +842,6 @@ public:
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
   const MemAccessInfoList &getDependenciesToCheck() const { return CheckDeps; }
-
-  const DenseMap<Value *, SmallVector<const Value *, 16>> &
-  getUnderlyingObjects() {
-    return UnderlyingObjects;
-  }
 
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
@@ -1283,7 +1277,7 @@ bool AccessAnalysis::createCheckForAccess(
     // The id of the dependence set.
     unsigned DepId;
 
-    if (isDependencyCheckNeeded() && DepCands.contains(Access)) {
+    if (DepCands.contains(Access)) {
       Value *Leader = DepCands.getLeaderValue(Access).getPointer();
       unsigned &LeaderId = DepSetId[Leader];
       if (!LeaderId)
@@ -1303,10 +1297,9 @@ bool AccessAnalysis::createCheckForAccess(
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(
-    const MemoryDepChecker &DepChecker, RuntimePointerChecking &RtCheck,
-    ScalarEvolution *SE, Loop *TheLoop,
+    RuntimePointerChecking &RtCheck, ScalarEvolution *SE, Loop *TheLoop,
     const DenseMap<Value *, const SCEV *> &StridesMap, Value *&UncomputablePtr,
-    bool AllowPartial) {
+    bool AllowPartial, const MemoryDepChecker &DepChecker) {
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRT = true;
@@ -1460,7 +1453,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   }
 
   if (MayNeedRTCheck && (CanDoRT || AllowPartial))
-    RtCheck.generateChecks(DepChecker, DepCands);
+    RtCheck.generateChecks(DepCands);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
@@ -2735,7 +2728,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
   HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
-      getDepChecker(), *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr, AllowPartial);
+      *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr,
+      AllowPartial, getDepChecker());
   if (!HasCompletePtrRtChecking) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
@@ -2762,8 +2756,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
       UncomputablePtr = nullptr;
       HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
-          getDepChecker(), *PtrRtChecking, PSE->getSE(), TheLoop,
-          SymbolicStrides, UncomputablePtr, AllowPartial);
+          *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides,
+          UncomputablePtr, AllowPartial, getDepChecker());
 
       // Check that we found the bounds for the pointer.
       if (!HasCompletePtrRtChecking) {

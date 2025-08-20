@@ -19,9 +19,9 @@ define void @backward_min_distance_8(ptr %A, i64 %N) {
 ; COMMON-NEXT:    loop:
 ; COMMON-NEXT:      Memory dependences are safe with run-time checks
 ; COMMON-NEXT:      Dependences:
-; COMMON-NEXT:       Unknown:
-; COMMON-NEXT:        %l = load i8, ptr %gep, align 4 ->
-; COMMON-NEXT:        store i8 %add, ptr %gep.off.iv, align 4
+; COMMON-NEXT:        Unknown:
+; COMMON-NEXT:            %l = load i8, ptr %gep, align 4 ->
+; COMMON-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
 ; COMMON-EMPTY:
 ; COMMON-NEXT:      Run-time memory checks:
 ; COMMON-NEXT:      Check 0:
@@ -111,6 +111,10 @@ define void @backward_min_distance_120(ptr %A, i64 %N) {
 ; VW128-NEXT:    loop:
 ; VW128-NEXT:      Memory dependences are safe with run-time checks
 ; VW128-NEXT:      Dependences:
+; VW128-NEXT:        Unknown:
+; VW128-NEXT:            %l = load i8, ptr %gep, align 4 ->
+; VW128-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
+; VW128-EMPTY:
 ; VW128-NEXT:      Run-time memory checks:
 ; VW128-NEXT:      Check 0:
 ; VW128-NEXT:        Comparing group GRP0:
@@ -144,6 +148,10 @@ define void @backward_min_distance_120(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:    loop:
 ; MAXLEN-NEXT:      Memory dependences are safe with run-time checks
 ; MAXLEN-NEXT:      Dependences:
+; MAXLEN-NEXT:        Unknown:
+; MAXLEN-NEXT:            %l = load i8, ptr %gep, align 4 ->
+; MAXLEN-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
+; MAXLEN-EMPTY:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
 ; MAXLEN-NEXT:        Comparing group GRP0:
@@ -232,6 +240,10 @@ define void @backward_min_distance_128(ptr %A, i64 %N) {
 ; VW128-NEXT:    loop:
 ; VW128-NEXT:      Memory dependences are safe with run-time checks
 ; VW128-NEXT:      Dependences:
+; VW128-NEXT:        Unknown:
+; VW128-NEXT:            %l = load i8, ptr %gep, align 4 ->
+; VW128-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
+; VW128-EMPTY:
 ; VW128-NEXT:      Run-time memory checks:
 ; VW128-NEXT:      Check 0:
 ; VW128-NEXT:        Comparing group GRP0:
@@ -265,6 +277,10 @@ define void @backward_min_distance_128(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:    loop:
 ; MAXLEN-NEXT:      Memory dependences are safe with run-time checks
 ; MAXLEN-NEXT:      Dependences:
+; MAXLEN-NEXT:        Unknown:
+; MAXLEN-NEXT:            %l = load i8, ptr %gep, align 4 ->
+; MAXLEN-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
+; MAXLEN-EMPTY:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
 ; MAXLEN-NEXT:        Comparing group GRP0:
@@ -379,6 +395,10 @@ define void @backward_min_distance_256(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:    loop:
 ; MAXLEN-NEXT:      Memory dependences are safe with run-time checks
 ; MAXLEN-NEXT:      Dependences:
+; MAXLEN-NEXT:        Unknown:
+; MAXLEN-NEXT:            %l = load i8, ptr %gep, align 4 ->
+; MAXLEN-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
+; MAXLEN-EMPTY:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
 ; MAXLEN-NEXT:        Comparing group GRP0:

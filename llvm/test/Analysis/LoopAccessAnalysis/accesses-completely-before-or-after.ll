@@ -37,6 +37,10 @@ define i32 @may_overlap_true_dep_different_size(ptr %d) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i64 0, ptr %gep.128.iv, align 8 ->
+; CHECK-NEXT:            %l = load i32, ptr %gep.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -111,6 +115,10 @@ define void @may_overlap_stores_with_different_sizes(ptr %dst) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
+; CHECK-NEXT:            store i8 0, ptr %gep.dst.128.iv, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
