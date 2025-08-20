@@ -134,6 +134,14 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
       return getLayoutAttr(loadNd.getTensorDesc());
 
+    // for LoadMatrixOp, the layout is attached to the property of the op
+    if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
+      return dyn_cast_if_present<xegpu::LayoutAttr>(loadOp.getLayoutAttr());
+
+    // for StoreMatrixOp, the layout is attached to the property of the op
+    if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
+      return dyn_cast_if_present<xegpu::LayoutAttr>(storeOp.getLayoutAttr());
+
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
@@ -153,6 +161,13 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
 
 xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
+
+  if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
+    return dyn_cast_if_present<xegpu::LayoutAttr>(loadOp.getLayoutAttr());
+
+  if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
+    return dyn_cast_if_present<xegpu::LayoutAttr>(storeOp.getLayoutAttr());
+
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
     return op->getAttrOfType<xegpu::LayoutAttr>(layoutName);
@@ -180,6 +195,8 @@ xegpu::setLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand,
 void xegpu::setLayoutAttrs(Operation *op,
                            function_ref<LayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
+    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(nestOp))
+      return;
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
       setLayoutAttr(opr, layout);
