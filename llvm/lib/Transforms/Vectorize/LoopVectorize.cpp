@@ -9796,6 +9796,19 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                "Must only have a single non-zero incoming value");
         EPI.VectorTripCount = Inc;
       }
+      // If we didn't find a non-zero vector trip count, all incoming values
+      // must be zero, which also means the vector trip count is zero. Pick the
+      // first zero as vector trip count.
+      // TODO: We should not choose VF * UF so the main vector loop is known to
+      // be dead.
+      if (!EPI.VectorTripCount) {
+        assert(
+            EPResumeVal->getNumIncomingValues() > 0 &&
+            all_of(EPResumeVal->incoming_values(),
+                   [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+            "all incoming values must be 0");
+        EPI.VectorTripCount = EPResumeVal->getOperand(0);
+      }
       VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
       assert(all_of(IV->users(),
                     [](const VPUser *U) {
