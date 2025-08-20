@@ -189,8 +189,11 @@ template <RemarkKind K, DiagnosticSeverity S>
 class OptRemarkBase final : public Remark {
 public:
   explicit OptRemarkBase(Location loc, StringRef categoryName,
-                         StringRef passName)
-      : Remark(K, S, passName.data(), categoryName, loc) {}
+                         StringRef passName, StringRef functionName)
+      : Remark(K, S, passName.data(), categoryName, loc) {
+    if (!functionName.empty())
+      this->functionName = functionName;
+  }
 };
 
 using OptRemarkAnalysis =
@@ -333,9 +336,10 @@ private:
   InFlightRemark makeRemark(Args &&...args);
 
   template <typename RemarkT>
-  InFlightRemark
-  emitIfEnabled(Location loc, StringRef passName, StringRef category,
-                bool (RemarkEngine::*isEnabled)(StringRef) const);
+  InFlightRemark emitIfEnabled(Location loc, StringRef passName,
+                               StringRef category, StringRef functionName,
+                               bool (RemarkEngine::*isEnabled)(StringRef)
+                                   const);
 
 public:
   /// Default constructor is deleted, use the other constructor.
@@ -360,20 +364,24 @@ public:
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemark(Location loc, StringRef passName,
-                                        StringRef category);
+                                        StringRef category,
+                                        StringRef functionName);
   /// Report a missed optimization remark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemarkMiss(Location loc, StringRef passName,
-                                            StringRef category);
+                                            StringRef category,
+                                            StringRef functionName);
   /// Report a failed optimization remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemarkFailure(Location loc, StringRef passName,
-                                               StringRef category);
+                                               StringRef category,
+                                               StringRef functionName);
   /// Report an analysis remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemarkAnalysis(Location loc,
                                                 StringRef passName,
-                                                StringRef category);
+                                                StringRef category,
+                                                StringRef functionName);
 };
 
 template <typename Fn, typename... Args>
@@ -424,31 +432,39 @@ inline detail::LazyTextBuild metric(StringRef key, V &&v) {
 
 /// Report an optimization remark that was passed.
 inline detail::InFlightRemark passed(Location loc, StringRef cat,
-                                     StringRef passName = {}) {
+                                     StringRef passName = {},
+                                     llvm::StringRef functionName = {}) {
   return withEngine(&detail::RemarkEngine::emitOptimizationRemark, loc,
-                    passName, cat);
+                    passName, cat, functionName);
 }
 
 /// Report an optimization remark that was missed.
 inline detail::InFlightRemark missed(Location loc, llvm::StringRef cat,
-                                     llvm::StringRef passName = {}) {
+                                     llvm::StringRef passName = {},
+                                     llvm::StringRef functionName = {}) {
   return withEngine(&detail::RemarkEngine::emitOptimizationRemarkMiss, loc,
-                    passName, cat);
+                    passName, cat, functionName);
 }
 
 /// Report an optimization remark that failed.
 inline detail::InFlightRemark failed(Location loc, llvm::StringRef cat,
-                                     llvm::StringRef passName = {}) {
+                                     llvm::StringRef passName = {},
+                                     llvm::StringRef functionName = {}) {
   return withEngine(&detail::RemarkEngine::emitOptimizationRemarkFailure, loc,
-                    passName, cat);
+                    passName, cat, functionName);
 }
 
 /// Report an optimization analysis remark.
 inline detail::InFlightRemark analysis(Location loc, StringRef cat,
-                                       StringRef passName = {}) {
+                                       StringRef passName = {},
+                                       llvm::StringRef functionName = {}) {
   return withEngine(&detail::RemarkEngine::emitOptimizationRemarkAnalysis, loc,
-                    passName, cat);
+                    passName, cat, functionName);
 }
+
+//===----------------------------------------------------------------------===//
+// Setup
+//===----------------------------------------------------------------------===//
 
 /// Setup remarks for the context. This function will enable the remark engine
 /// and set the streamer to be used for optimization remarks. The remark

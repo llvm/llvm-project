@@ -56,7 +56,7 @@ MLIR provides four built-in remark categories (extendable if needed):
 Optimization/transformation succeeded.
 
 ```c++
-[Passed] Vectorizer:myPass1 {Remark=vectorized loop, tripCount=128}
+[Passed] Category: Vectorizer | Pass:myPass1 |  Function=foo | Remark="vectorized loop", tripCount=128
 ```
 
 #### 2. **Missed**
@@ -64,7 +64,7 @@ Optimization/transformation succeeded.
 Optimization/transformation didn’t apply — ideally with actionable feedback.
 
 ```c++
-[Missed] Unroll: {Reason=tripCount is 4 smaller than the threshold=256, Suggestion=Reduce threshold to 4}
+[Missed] Category: Unroll | Reason="tripCount=4 < threshold=256", Suggestion="increase unroll to 128"
 ```
 
 #### 3. **Failure**
@@ -80,7 +80,7 @@ $ your-compiler -use-max-register=100 mycode.xyz
 ```
 
 ```c++
-[Failed]  {Remark=Limiting to use-max-register=100 failed; it now uses 104 registers for better performance ... }
+[Failed] Category: RegisterAllocator | Remark="Limiting to use-max-register=100 failed; it now uses 104 registers for better performance"
 ```
 
 #### 4. **Analysis**
@@ -88,8 +88,8 @@ $ your-compiler -use-max-register=100 mycode.xyz
 Neutral analysis results.
 
 ```c++
-[Analysis] Register: {Remark=Kernel uses 168 registers}
-[Analysis] Register: {Remark=Kernel uses 10kB local memory}
+[Analysis] Category: Register | Remark="Kernel uses 168 registers"
+[Analysis] Category: Register | Remark="Kernel uses 10kB local memory"
 ```
 
 ______________________________________________________________________

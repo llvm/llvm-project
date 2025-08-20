@@ -44,7 +44,6 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
     return a.key < b.key;
   });
 
-  os << " | ";
   for (size_t i = 0; i < sorted.size(); ++i) {
     const auto &a = sorted[i];
     os << a.key << "=";
@@ -64,8 +63,10 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 
 /// Print the remark to the given output stream.
 /// Example output:
-/// [Missed] LoopOptimizer | Reason="tripCount=4 < threshold=256"
+// clang-format off
+/// [Missed] Category: Loop | Pass:Unroller |  Function=main | Reason="tripCount=4 < threshold=256"
 /// [Failure] LoopOptimizer | Reason="failed due to unsupported pattern"
+// clang-format on
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
@@ -73,12 +74,12 @@ void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   StringRef name = getRemarkName();
 
   os << '[' << type << "] ";
+  os << "Category: " << name << " | ";
   if (!pass.empty())
-    os << pass << ':';
-  os << name;
+    os << "Pass:" << pass << " | ";
 
   if (functionName)
-    os << " func=" << getFunction();
+    os << " Function=" << getFunction() << " | ";
 
   if (printLocation) {
     if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
@@ -175,10 +176,10 @@ InFlightRemark RemarkEngine::makeRemark(Args &&...args) {
 template <typename RemarkT>
 InFlightRemark
 RemarkEngine::emitIfEnabled(Location loc, StringRef passName,
-                            StringRef categoryName,
+                            StringRef categoryName, StringRef functionName,
                             bool (RemarkEngine::*isEnabled)(StringRef) const) {
   return (this->*isEnabled)(categoryName)
-             ? makeRemark<RemarkT>(loc, categoryName, passName)
+             ? makeRemark<RemarkT>(loc, categoryName, passName, functionName)
              : InFlightRemark{};
 }
 
@@ -200,30 +201,37 @@ bool RemarkEngine::isFailedOptRemarkEnabled(StringRef categoryName) const {
 
 InFlightRemark RemarkEngine::emitOptimizationRemark(Location loc,
                                                     StringRef passName,
-                                                    StringRef categoryName) {
-  return emitIfEnabled<OptRemarkPass>(loc, passName, categoryName,
+                                                    StringRef categoryName,
+                                                    StringRef functionName) {
+  return emitIfEnabled<OptRemarkPass>(loc, passName, categoryName, functionName,
                                       &RemarkEngine::isPassedOptRemarkEnabled);
 }
 
 InFlightRemark
 RemarkEngine::emitOptimizationRemarkMiss(Location loc, StringRef passName,
-                                         StringRef categoryName) {
+                                         StringRef categoryName,
+                                         StringRef functionName) {
   return emitIfEnabled<OptRemarkMissed>(
-      loc, passName, categoryName, &RemarkEngine::isMissedOptRemarkEnabled);
+      loc, passName, categoryName, functionName,
+      &RemarkEngine::isMissedOptRemarkEnabled);
 }
 
 InFlightRemark
 RemarkEngine::emitOptimizationRemarkFailure(Location loc, StringRef passName,
-                                            StringRef categoryName) {
+                                            StringRef categoryName,
+                                            StringRef functionName) {
   return emitIfEnabled<OptRemarkFailure>(
-      loc, passName, categoryName, &RemarkEngine::isFailedOptRemarkEnabled);
+      loc, passName, categoryName, functionName,
+      &RemarkEngine::isFailedOptRemarkEnabled);
 }
 
 InFlightRemark
 RemarkEngine::emitOptimizationRemarkAnalysis(Location loc, StringRef passName,
-                                             StringRef categoryName) {
+                                             StringRef categoryName,
+                                             StringRef functionName) {
   return emitIfEnabled<OptRemarkAnalysis>(
-      loc, passName, categoryName, &RemarkEngine::isAnalysisOptRemarkEnabled);
+      loc, passName, categoryName, functionName,
+      &RemarkEngine::isAnalysisOptRemarkEnabled);
 }
 
 //===----------------------------------------------------------------------===//
