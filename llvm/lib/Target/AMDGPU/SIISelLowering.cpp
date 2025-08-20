@@ -5641,31 +5641,43 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       }
       case AMDGPU::S_ADD_U64_PSEUDO:
       case AMDGPU::S_SUB_U64_PSEUDO: {
-        unsigned NewOpc1 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADD_U32
-                                                           : AMDGPU::S_SUB_U32;
-        unsigned NewOpc2 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADDC_U32
-                                                           : AMDGPU::S_SUBB_U32;
-        Register DestLo = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-        Register DestHi = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-        MachineOperand Accumlo = TII->buildExtractSubRegOrImm(
-            MI, MRI, Accumulator->getOperand(0), DstRegClass, AMDGPU::sub0,
-            &AMDGPU::SReg_32RegClass);
-        MachineOperand Accumhi = TII->buildExtractSubRegOrImm(
-            MI, MRI, Accumulator->getOperand(0), DstRegClass, AMDGPU::sub1,
-            &AMDGPU::SReg_32RegClass);
-        BuildMI(*ComputeLoop, I, DL, TII->get(NewOpc1), DestLo)
-            .add(Accumlo)
-            .addReg(LaneValueLo->getOperand(0).getReg());
-        BuildMI(*ComputeLoop, I, DL, TII->get(NewOpc2), DestHi)
-            .add(Accumhi)
-            .addReg(LaneValueHi->getOperand(0).getReg())
-            .setOperandDead(3); // Dead scc
-        NewAccumulator = BuildMI(*ComputeLoop, I, DL,
-                                 TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
-                             .addReg(DestLo)
-                             .addImm(AMDGPU::sub0)
-                             .addReg(DestHi)
-                             .addImm(AMDGPU::sub1);
+        if (ST.hasScalarAddSub64()) {
+          NewAccumulator = BuildMI(*ComputeLoop, I, DL,
+                                   TII->get(Opc == AMDGPU::S_ADD_U64_PSEUDO
+                                                ? AMDGPU::S_ADD_U64
+                                                : AMDGPU::S_SUB_U64),
+                                   DstReg)
+                               .addReg(Accumulator->getOperand(0).getReg())
+                               .addReg(LaneValue->getOperand(0).getReg());
+        } else {
+          unsigned NewOpc1 = Opc == AMDGPU::S_ADD_U64_PSEUDO
+                                 ? AMDGPU::S_ADD_U32
+                                 : AMDGPU::S_SUB_U32;
+          unsigned NewOpc2 = Opc == AMDGPU::S_ADD_U64_PSEUDO
+                                 ? AMDGPU::S_ADDC_U32
+                                 : AMDGPU::S_SUBB_U32;
+          Register DestLo = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          Register DestHi = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          MachineOperand Accumlo = TII->buildExtractSubRegOrImm(
+              MI, MRI, Accumulator->getOperand(0), DstRegClass, AMDGPU::sub0,
+              &AMDGPU::SReg_32RegClass);
+          MachineOperand Accumhi = TII->buildExtractSubRegOrImm(
+              MI, MRI, Accumulator->getOperand(0), DstRegClass, AMDGPU::sub1,
+              &AMDGPU::SReg_32RegClass);
+          BuildMI(*ComputeLoop, I, DL, TII->get(NewOpc1), DestLo)
+              .add(Accumlo)
+              .addReg(LaneValueLo->getOperand(0).getReg());
+          BuildMI(*ComputeLoop, I, DL, TII->get(NewOpc2), DestHi)
+              .add(Accumhi)
+              .addReg(LaneValueHi->getOperand(0).getReg())
+              .setOperandDead(3); // Dead scc
+          NewAccumulator = BuildMI(*ComputeLoop, I, DL,
+                                   TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
+                               .addReg(DestLo)
+                               .addImm(AMDGPU::sub0)
+                               .addReg(DestHi)
+                               .addImm(AMDGPU::sub1);
+        }
         break;
       }
       }
