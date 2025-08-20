@@ -1012,7 +1012,6 @@ feature_test_macros = [
             "name": "__cpp_lib_optional_range_support",
             "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
             "headers": ["optional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_out_ptr",

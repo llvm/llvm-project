@@ -60,6 +60,23 @@ public:
         trailingZerosNum);
   }
 
+  cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
+                                          bool packed = false,
+                                          bool padded = false,
+                                          mlir::Type ty = {}) {
+    llvm::SmallVector<mlir::Type, 4> members;
+    for (auto &f : arrayAttr) {
+      auto ta = mlir::cast<mlir::TypedAttr>(f);
+      members.push_back(ta.getType());
+    }
+
+    if (!ty)
+      ty = getAnonRecordTy(members, packed, padded);
+
+    auto sTy = mlir::cast<cir::RecordType>(ty);
+    return cir::ConstRecordAttr::get(sTy, arrayAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {
@@ -82,6 +99,10 @@ public:
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
+  }
+
+  mlir::Type getPtrToVPtrType() {
+    return getPointerTo(cir::VPtrType::get(getContext()));
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -263,6 +284,9 @@ public:
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     return getConstantInt(loc, getSInt32Ty(), c);
   }
+  cir::ConstantOp getUInt32(uint32_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt32Ty(), c);
+  }
 
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
@@ -349,15 +373,19 @@ public:
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
-    return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false,
-                               align);
+    return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
+                               /*alignment=*/align,
+                               /*mem_order=*/cir::MemOrderAttr{});
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           mlir::IntegerAttr align = {}) {
+                           bool isVolatile = false,
+                           mlir::IntegerAttr align = {},
+                           cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
-    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
+    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
+                                         align, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -415,7 +443,7 @@ public:
   /// for its name so it can be referenced correctly.
   [[nodiscard]] cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
-                        mlir::StringRef name, mlir::Type type,
+                        mlir::StringRef name, mlir::Type type, bool isConstant,
                         cir::GlobalLinkageKind linkage) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
@@ -424,7 +452,7 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,

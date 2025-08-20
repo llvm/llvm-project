@@ -43,6 +43,7 @@ def main(builtin_params={}):
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
+        update_tests=opts.update_tests,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(

@@ -41,6 +41,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Compiler.h"
@@ -719,6 +720,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
                      IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier,
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                      OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
@@ -732,6 +735,9 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasIndirectCall,
                      OutContext, IsLocal));
   }
+
+  // Emit _dvgpr$ symbol when appropriate.
+  emitDVgprSymbol(MF);
 
   if (isVerbose()) {
     MCSectionELF *CommentSection =
@@ -801,6 +807,16 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
           AdjustedAccum, MCConstantExpr::create(4, Ctx), Ctx);
       OutStreamer->emitRawComment(
           " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
+    }
+
+    if (AMDGPU::isGFX1250(STM)) {
+      const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
+      const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
+          CurrentProgramInfo.NamedBarCnt, BarBlkConst, Ctx);
+      const MCExpr *BarBlks =
+          MCBinaryExpr::createDiv(AlignToBlk, BarBlkConst, Ctx);
+      OutStreamer->emitRawComment(" NamedBarCnt: " + getMCExprStr(BarBlks),
+                                  false);
     }
 
     OutStreamer->emitRawComment(
@@ -873,6 +889,49 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return false;
+}
+
+// When appropriate, add a _dvgpr$ symbol, with the value of the function
+// symbol, plus an offset encoding one less than the number of VGPR blocks used
+// by the function in bits 5..3 of the symbol value. A "VGPR block" can be
+// either 16 VGPRs (for a max of 128), or 32 VGPRs (for a max of 256). This is
+// used by a front-end to have functions that are chained rather than called,
+// and a dispatcher that dynamically resizes the VGPR count before dispatching
+// to a function.
+void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  if (MFI.isDynamicVGPREnabled() &&
+      MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain) {
+    MCContext &Ctx = MF.getContext();
+    unsigned BlockSize = MFI.getDynamicVGPRBlockSize();
+    MCValue NumVGPRs;
+    if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
+            NumVGPRs, nullptr) ||
+        !NumVGPRs.isAbsolute()) {
+      llvm_unreachable("unable to resolve NumVGPRs for _dvgpr$ symbol");
+    }
+    // Calculate number of VGPR blocks.
+    // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
+    unsigned NumBlocks =
+        divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
+
+    if (NumBlocks > 8) {
+      OutContext.reportError({},
+                             "too many DVGPR blocks for _dvgpr$ symbol for '" +
+                                 Twine(CurrentFnSym->getName()) + "'");
+      return;
+    }
+    unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+    // Add to function symbol to create _dvgpr$ symbol.
+    const MCExpr *DVgprFuncVal = MCBinaryExpr::createAdd(
+        MCSymbolRefExpr::create(CurrentFnSym, Ctx),
+        MCConstantExpr::create(EncodedNumBlocks, Ctx), Ctx);
+    MCSymbol *DVgprFuncSym =
+        Ctx.getOrCreateSymbol(Twine("_dvgpr$") + CurrentFnSym->getName());
+    OutStreamer->emitAssignment(DVgprFuncSym, DVgprFuncVal);
+    emitVisibility(DVgprFuncSym, MF.getFunction().getVisibility());
+    emitLinkage(&MF.getFunction(), DVgprFuncSym);
+  }
 }
 
 // TODO: Fold this into emitFunctionBodyStart.
@@ -964,6 +1023,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DynamicCallStack =
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
+  ProgInfo.NamedBarCnt = GetSymRefExpr(RIK::RIK_NumNamedBarrier);
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -1063,8 +1123,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     Ctx.diagnose(Diag);
   }
 
-  if (MFI->getLDSSize() >
-      static_cast<unsigned>(STM.getAddressableLocalMemorySize())) {
+  if (MFI->getLDSSize() > STM.getAddressableLocalMemorySize()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
     DiagnosticInfoResourceLimit Diag(
         MF.getFunction(), "local memory", MFI->getLDSSize(),
@@ -1205,6 +1264,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
+
+  if (AMDGPU::isGFX1250(STM))
+    ProgInfo.ComputePGMRSrc3 =
+        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
 
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,

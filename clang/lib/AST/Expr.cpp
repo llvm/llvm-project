@@ -2776,23 +2776,22 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case UserDefinedLiteralClass: {
     // If this is a direct call, get the callee.
     const CallExpr *CE = cast<CallExpr>(this);
-    if (const Decl *FD = CE->getCalleeDecl()) {
-      // If the callee has attribute pure, const, or warn_unused_result, warn
-      // about it. void foo() { strlen("bar"); } should warn.
-      //
-      // Note: If new cases are added here, DiagnoseUnusedExprResult should be
-      // updated to match for QoI.
-      if (CE->hasUnusedResultAttr(Ctx) ||
-          FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>()) {
-        WarnE = this;
-        Loc = CE->getCallee()->getBeginLoc();
-        R1 = CE->getCallee()->getSourceRange();
+    // If the callee has attribute pure, const, or warn_unused_result, warn
+    // about it. void foo() { strlen("bar"); } should warn.
+    // Note: If new cases are added here, DiagnoseUnusedExprResult should be
+    // updated to match for QoI.
+    const Decl *FD = CE->getCalleeDecl();
+    bool PureOrConst =
+        FD && (FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>());
+    if (CE->hasUnusedResultAttr(Ctx) || PureOrConst) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
     return false;
   }
@@ -2805,32 +2804,20 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
 
   case CXXTemporaryObjectExprClass:
   case CXXConstructExprClass: {
-    if (const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl()) {
-      const auto *WarnURAttr = Type->getAttr<WarnUnusedResultAttr>();
-      if (Type->hasAttr<WarnUnusedAttr>() ||
-          (WarnURAttr && WarnURAttr->IsCXX11NoDiscard())) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
-        return true;
-      }
-    }
-
     const auto *CE = cast<CXXConstructExpr>(this);
-    if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
-      const auto *WarnURAttr = Ctor->getAttr<WarnUnusedResultAttr>();
-      if (WarnURAttr && WarnURAttr->IsCXX11NoDiscard()) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
+    const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+    if ((Type && Type->hasAttr<WarnUnusedAttr>()) ||
+        CE->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
+
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
-
     return false;
   }
 

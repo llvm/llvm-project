@@ -303,6 +303,7 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
+  case ABIArgInfo::TargetSpecific:
     llvm_unreachable("Unsupported ABI kind for va_arg");
 
   case ABIArgInfo::Extend: {
