@@ -221,6 +221,11 @@ public:
                                      unsigned Index) const override;
 
   InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
+
+  InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
 

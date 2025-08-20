@@ -16327,32 +16327,36 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
-  case ISD::ABDU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
   case ISD::ABDS:
-    // (trunc (abdu/abds a, b)) → (abdu/abds (trunc a), (trunc b))
-    if (!LegalOperations || N0.hasOneUse()) {
-      EVT SrcVT = N0.getValueType();
+  case ISD::ABDU:
+    // (trunc (avg a, b)) -> (avg (trunc a), (trunc b))
+    // (trunc (abdu/abds a, b)) -> (abdu/abds (trunc a), (trunc b))
+    if (!LegalOperations && N0.hasOneUse() &&
+        TLI.isOperationLegal(N0.getOpcode(), VT)) {
       EVT TruncVT = VT;
       unsigned SrcBits = SrcVT.getScalarSizeInBits();
       unsigned TruncBits = TruncVT.getScalarSizeInBits();
-      unsigned NeededBits = SrcBits - TruncBits;
 
       SDValue A = N0.getOperand(0);
       SDValue B = N0.getOperand(1);
       bool CanFold = false;
 
-      if (N0.getOpcode() == ISD::ABDU) {
-        KnownBits KnownA = DAG.computeKnownBits(A);
-        KnownBits KnownB = DAG.computeKnownBits(B);
-        CanFold = KnownA.countMinLeadingZeros() >= NeededBits &&
-                  KnownB.countMinLeadingZeros() >= NeededBits;
+      if (N0.getOpcode() == ISD::AVGFLOORU || N0.getOpcode() == ISD::AVGCEILU ||
+          N0.getOpcode() == ISD::ABDU) {
+        APInt UpperBits = APInt::getBitsSetFrom(SrcBits, TruncBits);
+        CanFold = DAG.MaskedValueIsZero(B, UpperBits) &&
+                  DAG.MaskedValueIsZero(A, UpperBits);
       } else {
-        unsigned SignBitsA = DAG.ComputeNumSignBits(A);
-        unsigned SignBitsB = DAG.ComputeNumSignBits(B);
-        CanFold = SignBitsA > NeededBits && SignBitsB > NeededBits;
+        unsigned NeededBits = SrcBits - TruncBits;
+        CanFold = DAG.ComputeNumSignBits(B) > NeededBits &&
+                  DAG.ComputeNumSignBits(A) > NeededBits;
       }
 
-      if (CanFold && TLI.isOperationLegal(N0.getOpcode(), VT)) {
+      if (CanFold) {
         SDValue NewA = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, A);
         SDValue NewB = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, B);
         return DAG.getNode(N0.getOpcode(), DL, TruncVT, NewA, NewB);
@@ -26093,8 +26097,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     EVT ConcatSrcVT = V.getOperand(0).getValueType();
     assert(ConcatSrcVT.getVectorElementType() == NVT.getVectorElementType() &&
            "Concat and extract subvector do not change element type");
-    assert((ExtIdx % ExtNumElts) == 0 &&
-           "Extract index is not a multiple of the input vector length.");
 
     unsigned ConcatSrcNumElts = ConcatSrcVT.getVectorMinNumElements();
     unsigned ConcatOpIdx = ExtIdx / ConcatSrcNumElts;

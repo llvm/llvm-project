@@ -68,6 +68,7 @@ if (current_toolchain == host_toolchain) {
     if (current_os != "win") {
       cflags += [ "-ftls-model=initial-exec" ]
     } else {
+      cflags += [ "/MD" ]
       ldflags = [ "/OPT:NOICF" ]
     }
 

@@ -62,6 +62,14 @@ public:
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(InitListExpr *e);
 
+  mlir::Value VisitMemberExpr(MemberExpr *me) {
+    if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(me)) {
+      cgf.emitIgnoredExpr(me->getBase());
+      return emitConstant(constant, me);
+    }
+    return emitLoadOfLValue(me);
+  }
+
   mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
     return emitLoadOfLValue(e);
   }

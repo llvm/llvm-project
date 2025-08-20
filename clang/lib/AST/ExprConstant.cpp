@@ -11815,7 +11815,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     APSInt Mask = SourceMask.getInt();
-    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
     unsigned SourceLen = SourceLHS.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);

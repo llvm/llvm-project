@@ -3115,10 +3115,11 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
+                       VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
-                            {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L, L.getDebugLoc()),
+                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
+                            L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -3196,11 +3197,11 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr, VPValue &EVL,
+                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
-                            {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S,
-                            S.getDebugLoc()) {
+                            {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
+                            S.isReverse(), S, S.getDebugLoc()) {
     setMask(Mask);
   }
 

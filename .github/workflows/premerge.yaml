@@ -69,6 +69,11 @@ jobs:
 
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts
+        # In some cases, Github will fail to upload the artifact. We want to
+        # continue anyways as a failed artifact upload is an infra failure, not
+        # a checks failure.
+        # https://github.com/actions/upload-artifact/issues/569
+        continue-on-error: true
         if: '!cancelled()'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
@@ -114,6 +119,11 @@ jobs:
           # these environment variables.
           bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
       - name: Upload Artifacts
+        # In some cases, Github will fail to upload the artifact. We want to
+        # continue anyways as a failed artifact upload is an infra failure, not
+        # a checks failure.
+        # https://github.com/actions/upload-artifact/issues/569
+        continue-on-error: true
         if: '!cancelled()'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:

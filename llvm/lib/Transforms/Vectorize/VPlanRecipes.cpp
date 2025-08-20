@@ -460,6 +460,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Load:
   case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExplicitVectorLength:
@@ -1073,6 +1075,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::ExtractLastElement: {
+    // Add on the cost of extracting the element.
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
+                                                    VecTy, Ctx.CostKind, 0);
   }
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
@@ -2994,6 +3002,24 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // is scalarized or not. Therefore, we handle GEPs with the memory
     // instruction cost.
     return 0;
+  case Instruction::Call: {
+    if (!isSingleScalar()) {
+      // TODO: Handle remaining call costs here as well.
+      if (VF.isScalable())
+        return InstructionCost::getInvalid();
+      break;
+    }
+
+    auto *CalledFn =
+        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    if (CalledFn->isIntrinsic())
+      break;
+
+    SmallVector<Type *, 4> Tys;
+    for (VPValue *ArgOp : drop_end(operands()))
+      Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
+    return Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
+  }
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::FAdd:
@@ -3493,6 +3519,8 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Interleave group being replicated.");
+  assert((!NeedsMaskForGaps || !State.VF.isScalable()) &&
+         "Masking gaps for scalable vectors is not yet supported.");
   const InterleaveGroup<Instruction> *Group = IG;
   Instruction *Instr = Group->getInsertPos();
 
@@ -3610,8 +3638,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
   assert(((MaskForGaps != nullptr) == NeedsMaskForGaps) &&
          "Mismatch between NeedsMaskForGaps and MaskForGaps");
-  assert((!MaskForGaps || !State.VF.isScalable()) &&
-         "masking gaps for scalable vectors is not yet supported.");
   ArrayRef<VPValue *> StoredValues = getStoredValues();
   // Collect the stored vector from each member.
   SmallVector<Value *, 4> StoredVecs;

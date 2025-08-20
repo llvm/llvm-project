@@ -15837,17 +15837,18 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   if (TypoCorrectedFunctionDefinitions.count(Definition))
     return;
 
-  // If we don't have a visible definition of the function, and it's inline or
-  // a template, skip the new definition.
-  if (SkipBody && !hasVisibleDefinition(Definition) &&
+  bool DefinitionVisible = false;
+  if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        Definition->getNumTemplateParameterLists())) {
     SkipBody->ShouldSkip = true;
     SkipBody->Previous = const_cast<FunctionDecl*>(Definition);
-    if (auto *TD = Definition->getDescribedFunctionTemplate())
-      makeMergedDefinitionVisible(TD);
-    makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition));
+    if (!DefinitionVisible) {
+      if (auto *TD = Definition->getDescribedFunctionTemplate())
+        makeMergedDefinitionVisible(TD);
+      makeMergedDefinitionVisible(const_cast<FunctionDecl *>(Definition));
+    }
     return;
   }
 
@@ -16223,10 +16224,6 @@ Decl *Sema::ActOnSkippedFunctionBody(Decl *Decl) {
   return Decl;
 }
 
-Decl *Sema::ActOnFinishFunctionBody(Decl *D, Stmt *BodyArg) {
-  return ActOnFinishFunctionBody(D, BodyArg, /*IsInstantiation=*/false);
-}
-
 /// RAII object that pops an ExpressionEvaluationContext when exiting a function
 /// body.
 class ExitFunctionBodyRAII {
@@ -16297,8 +16294,8 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
 
-Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
-                                    bool IsInstantiation) {
+Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
+                                    bool RetainFunctionScopeInfo) {
   FunctionScopeInfo *FSI = getCurFunction();
   FunctionDecl *FD = dcl ? dcl->getAsFunction() : nullptr;
 
@@ -16755,7 +16752,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (!IsInstantiation)
     PopDeclContext();
 
-  PopFunctionScopeInfo(ActivePolicy, dcl);
+  if (!RetainFunctionScopeInfo)
+    PopFunctionScopeInfo(ActivePolicy, dcl);
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for
   // deletion in some later function.
@@ -18196,8 +18194,10 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 // However, ensure the decl passes the structural compatibility
                 // check in C11 6.2.7/1 (or 6.1.2.6/1 in C89).
                 NamedDecl *Hidden = nullptr;
-                if (SkipBody && (!hasVisibleDefinition(Def, &Hidden) ||
-                                 getLangOpts().C23)) {
+                bool HiddenDefVisible = false;
+                if (SkipBody &&
+                    (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
+                     getLangOpts().C23)) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
@@ -18213,13 +18213,15 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
                     ProcessDeclAttributeList(S, SkipBody->New, Attrs);
                     return Def;
-                  } else {
-                    SkipBody->ShouldSkip = true;
-                    SkipBody->Previous = Def;
-                    makeMergedDefinitionVisible(Hidden);
-                    // Carry on and handle it like a normal definition. We'll
-                    // skip starting the definition later.
                   }
+
+                  SkipBody->ShouldSkip = true;
+                  SkipBody->Previous = Def;
+                  if (!HiddenDefVisible && Hidden)
+                    makeMergedDefinitionVisible(Hidden);
+                  // Carry on and handle it like a normal definition. We'll
+                  // skip starting the definition later.
+
                 } else if (!IsExplicitSpecializationAfterInstantiation) {
                   // A redeclaration in function prototype scope in C isn't
                   // visible elsewhere, so merely issue a warning.
@@ -20841,4 +20843,14 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
+}
+
+bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
+                                    bool &Visible) {
+  Visible = hasVisibleDefinition(D, Suggested);
+  // The redefinition of D in the **current** TU is allowed if D is invisible or
+  // D is defined in the global module of other module units. We didn't check if
+  // it is in global module as, we'll check the redefinition in named module
+  // later with better diagnostic message.
+  return D->isInAnotherModuleUnit() || !Visible;
 }
