@@ -177,12 +177,16 @@ extractThreeVariablesAndInstructions(
       }
     }
 
-    // Sort variables by instruction order
+    // Sort variables by argNo if both are arguments, otherwise args before
+    // instructions
     llvm::sort(SortedVars, [](Value *A, Value *B) {
-      if (auto *IA = dyn_cast<Instruction>(A))
-        if (auto *IB = dyn_cast<Instruction>(B))
-          return IA->comesBefore(IB);
-      return A < B;
+      if (isa<Argument>(A) != isa<Argument>(B))
+        return isa<Argument>(A);
+
+      if (isa<Argument>(A))
+        return cast<Argument>(A)->getArgNo() < cast<Argument>(B)->getArgNo();
+
+      return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
     });
 
     // Sort instructions within the same BB
