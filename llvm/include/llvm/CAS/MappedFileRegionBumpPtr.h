@@ -37,8 +37,6 @@ namespace llvm::cas {
 /// in the same process since file locks will misbehave. Clients should
 /// coordinate (somehow).
 ///
-/// \note Currently we allocate the whole file without sparseness on Windows.
-///
 /// Provides 8-byte alignment for all allocations.
 class MappedFileRegionBumpPtr {
 public:
@@ -97,13 +95,6 @@ public:
   MappedFileRegionBumpPtr &operator=(const MappedFileRegionBumpPtr &) = delete;
 
 private:
-  // The file size increment to extend the storage size.
-  // The minimum increment is a page, but allocate more to amortize the cost.
-  static constexpr int64_t Increment = 4 * 1024 * 1024; // 4 MB
-
-  // Extend the AllocatedSize to be enough to hold NewEnd.
-  Error extendSpaceImpl(int64_t NewEnd);
-
   void destroyImpl();
   void moveImpl(MappedFileRegionBumpPtr &RHS) {
     std::swap(Region, RHS.Region);

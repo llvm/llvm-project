@@ -20,12 +20,14 @@
 /// and across multiple processes without locking for every read. Our current
 /// implementation strategy is:
 ///
-/// 1. Use \c ftruncate (\c sys::fs::resize_file) to grow the file to its max
-///    size (typically several GB). Many modern filesystems will create a sparse
-///    file, so that the trailing unused pages do not take space on disk.
-/// 2. Call \c mmap (\c sys::fs::mapped_file_region)
+/// 1. Use \c sys::fs::resize_file_sparse to grow the file to its max size
+///    (typically several GB). If the file system doesn't support sparse file,
+///    this may return a fully allocated file.
+/// 2. Call \c sys::fs::mapped_file_region to map the entire file.
 /// 3. [Automatic as part of 2.]
-/// 4. [Automatic as part of 2.]
+/// 4. If supported, use \c fallocate or similiar APIs to ensure the file system
+///    storage for the sparse file so we won't end up with partial file if the
+///    disk is out of space.
 ///
 /// Additionally, we attempt to resize the file to its actual data size when
 /// closing the mapping, if this is the only concurrent instance. This is done
@@ -160,9 +162,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   if (FileSize->Size < Capacity) {
     // We are initializing the file; it may be empty, or may have been shrunk
     // during a previous close.
-    // FIXME: Detect a case where someone opened it with a smaller capacity.
-    // FIXME: On Windows we should use FSCTL_SET_SPARSE and FSCTL_SET_ZERO_DATA
-    // to make this a sparse region, if supported.
+    // TODO: Detect a case where someone opened it with a smaller capacity.
     assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
       return createFileError(Result.Path, EC);
