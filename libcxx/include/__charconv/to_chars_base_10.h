@@ -38,31 +38,102 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append2(char*
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append3(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append2(__itoa::__append1(__first, __value / 100), __value % 100);
+  const uint32_t __shift = 14;
+  const uint32_t __mul_inv10 = 1639;
+  const uint32_t __mask = (uint32_t(1) << __shift) - 1;
+  const uint32_t __n = __mul_inv10 * __value;
+  __append2(__first, __n >> __shift);
+  __append1(__firs + 2, ((__n & __mask) * 5) >> (__shift - 1));
+  return __first + 3;
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append4(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append2(__itoa::__append2(__first, __value / 100), __value % 100);
+  const uint32_t __shift = 19;
+  const uint32_t __mul_inv10 = 5243;
+  const uint32_t __mask = (uint32_t(1) << __shift) - 1;
+  const uint32_t __n = __mul_inv10 * __value;
+  __append2(__first, __n >> __shift);
+  __append2(__first + 2, uint32_t((__n & __mask) * 25) >> (__shift - 2));
+  return __first + 4;
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append5(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append4(__itoa::__append1(__first, __value / 10000), __value % 10000);
+  const uint64_t __inv1000_val = 67109;
+  const uint64_t __shift_val = 26;
+  const uint64_t __mask_val = (uint64_t(1) << __shift_val) - 1;
+  const uint64_t __res = __inv1000_val * __value;
+  __append2(__first, __res >> __shift_val);
+  const uint64_t __second_res = uint64_t(__mask_val & __res) * 25;
+  const uint64_t __second_shift_val = __shift_val - 2;
+  const uint64_t __second_mask_val = (uint64_t(1) << __second_shift_val) - 1;
+  __append2(__first + 2, __second_res >> __second_shift_val);
+  const uint64_t __third_res = (__second_mask_val & (__second_res)) * 5;
+  const uint64_t __third_shift_val = __second_shift_val - 1;
+  __append1(__first + 4, __third_res >> __third_shift_val);
+  return __first + 5;
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append6(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append4(__itoa::__append2(__first, __value / 10000), __value % 10000);
+  const uint64_t __inv10000_val = 1717987;
+  const uint64_t __shift_val = 34;
+  const uint64_t __mask_val = (uint64_t(1) << __shift_val) - 1;
+  const uint64_t __res = __inv10000_val * __value;
+  __append2(__first, __res >> __shift_val);
+  const uint64_t __second_res = (__mask_val & __res) * 25;
+  const uint64_t __second_shift_val = __shift_val - 2;
+  const uint64_t __second_mask_val = (uint64_t(1) << __second_shift_val) - 1;
+  __append2(__first + 2, __second_res >> __second_shift_val);
+  const uint64_t __third_res = (__second_mask_val & (__second_res)) * 25;
+  const uint64_t __third_shift_val = __second_shift_val - 2;
+  __append2(__first + 4, __third_res >> __third_shift_val);
+  return __first + 6;
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append7(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append6(__itoa::__append1(__first, __value / 1000000), __value % 1000000);
+  const uint64_t __inv100000_val = 21990233;
+  const uint64_t __shift_val = 41;
+  const uint64_t __mask_val = (uint64_t(1) << __shift_val) - 1;
+  const uint64_t __res = __inv100000_val * __value;
+  __append2(__first, __res >> __shift_val);
+  const uint64_t __res2 = (__res & __mask_val) * 25;
+  __append2(__first + 2, __res2 >> (__shift_val - 2));
+  const uint64_t __res3 = (__res2 & (__mask_val >> 2)) * 25;
+  __append2(__first + 4, __res3 >> (__shift_val - 4));
+  const uint64_t __res4 = (__res3 & (__mask_val >> 4)) * 5;
+  __append1(__first + 6, __res4 >> (__shift_val - 5));
+  return __first + 7;
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append8(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append6(__itoa::__append2(__first, __value / 1000000), __value % 1000000);
+  const uint64_t __inv1000000_val = 140737489;
+  const uint64_t __shift_val = 47;
+  const uint64_t __mask_val = (uint64_t(1) << __shift_val) - 1;
+  const uint64_t __res = __inv1000000_val * __value;
+  __append2(__first, __res >> __shift_val);
+  const uint64_t __res2 = (__res & __mask_val) * 25;
+  __append2(__first + 2, __res2 >> (__shift_val - 2));
+  const uint64_t __res3 = (__res2 & (__mask_val >> 2)) * 25;
+  __append2(__first + 4, __res3 >> (__shift_val - 4));
+  const uint64_t __res4 = (__res3 & (__mask_val >> 4)) * 25;
+  __append2(__first + 6, __res4 >> (__shift_val - 6));
+  return __first + 8;
 }
 
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append9(char* __first, uint32_t __value) _NOEXCEPT {
-  return __itoa::__append8(__itoa::__append1(__first, __value / 100000000), __value % 100000000);
+  const uint64_t __inv10000000_val = 1801439851;
+  const uint64_t __shift_val = 54;
+  const uint64_t __mask_val = (uint64_t(1) << __shift_val) - 1;
+  const uint64_t __res = __inv10000000_val * __value;
+  __append2(__first, __res >> __shift_val);
+  const uint64_t __res2 = (__res & __mask_val) * 25;
+  __append2(__first + 2, __res2 >> (__shift_val - 2));
+  const uint64_t __res3 = (__res2 & (__mask_val >> 2)) * 25;
+  __append2(__first + 4, __res3 >> (__shift_val - 4));
+  const uint64_t __res4 = (__res3 & (__mask_val >> 4)) * 25;
+  __append2(__first + 6, __res4 >> (__shift_val - 6));
+  const uint64_t __res5 = (__res4 & (__mask_val >> 6)) * 5;
+  __append1(__first + 8, __res5 >> (__shift_val - 7));
+  return __first + 9;
 }
 
 template <class _Tp>
