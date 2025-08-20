@@ -1,5 +1,5 @@
 // REQUIRES: mips-registered-target
-// RUN: %clang_cc1 -triple mips64 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple mips64 -fsyntax-only -verify %s
 
 typedef signed char v4i8 __attribute__ ((vector_size(4)));
 typedef signed char v4q7 __attribute__ ((vector_size(4)));

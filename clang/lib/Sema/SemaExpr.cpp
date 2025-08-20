@@ -9370,12 +9370,9 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
       // vectors, the total size only needs to be the same. This is a bitcast;
       // no bits are changed but the result type is different.
       if (isLaxVectorConversion(RHSType, LHSType)) {
-        // The default for lax vector conversions with Altivec vectors will
-        // change, so if we are converting between vector types where
-        // at least one is an Altivec vector, emit a warning.
-        if (Context.getTargetInfo().getTriple().isPPC() &&
-            anyAltivecTypes(RHSType, LHSType) &&
-            !Context.areCompatibleVectorTypes(RHSType, LHSType))
+        // The default for lax vector conversions will
+        // change, so if we are converting between vector emit a warning.
+        if (!Context.areCompatibleVectorTypes(RHSType, LHSType))
           Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
               << RHSType << LHSType;
         Kind = CK_BitCast;
@@ -9391,12 +9388,8 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
       const VectorType *VecType = RHSType->getAs<VectorType>();
       if (VecType && VecType->getNumElements() == 1 &&
           isLaxVectorConversion(RHSType, LHSType)) {
-        if (Context.getTargetInfo().getTriple().isPPC() &&
-            (VecType->getVectorKind() == VectorKind::AltiVecVector ||
-             VecType->getVectorKind() == VectorKind::AltiVecBool ||
-             VecType->getVectorKind() == VectorKind::AltiVecPixel))
-          Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
-              << RHSType << LHSType;
+        Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
+            << RHSType << LHSType;
         ExprResult *VecExpr = &RHS;
         *VecExpr = ImpCastExprToType(VecExpr->get(), LHSType, CK_BitCast);
         Kind = CK_BitCast;
@@ -10467,8 +10460,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   QualType OtherType = LHSVecType ? RHSType : LHSType;
   ExprResult *OtherExpr = LHSVecType ? &RHS : &LHS;
   if (isLaxVectorConversion(OtherType, VecType)) {
-    if (Context.getTargetInfo().getTriple().isPPC() &&
-        anyAltivecTypes(RHSType, LHSType) &&
+    if (!OtherType->isVectorType() ||
         !Context.areCompatibleVectorTypes(RHSType, LHSType))
       Diag(Loc, diag::warn_deprecated_lax_vec_conv_all) << RHSType << LHSType;
     // If we're allowing lax vector conversions, only the total (data) size

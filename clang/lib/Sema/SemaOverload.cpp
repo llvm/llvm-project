@@ -2206,9 +2206,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
     if (S.Context.areCompatibleVectorTypes(FromType, ToType) ||
         (S.isLaxVectorConversion(FromType, ToType) &&
          !ToType->hasAttr(attr::ArmMveStrictPolymorphism))) {
-      if (S.getASTContext().getTargetInfo().getTriple().isPPC() &&
-          S.isLaxVectorConversion(FromType, ToType) &&
-          S.anyAltivecTypes(FromType, ToType) &&
+      if (S.isLaxVectorConversion(FromType, ToType) &&
+
           !S.Context.areCompatibleVectorTypes(FromType, ToType) &&
           !InOverloadResolution && !CStyle) {
         S.Diag(From->getBeginLoc(), diag::warn_deprecated_lax_vec_conv_all)

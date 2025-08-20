@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv62 -target-cpu hexagonv62 -verify -S -o - -DTEST_HVXV60
-// RUN: %clang_cc1 -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv62 -target-cpu hexagonv62 -verify -S -o - -DTEST_HVXV62
-// RUN: %clang_cc1 -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv62 -target-cpu hexagonv62 -verify -S -o - -DTEST_HVXV65
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv62 -target-cpu hexagonv62 -verify -S -o - -DTEST_HVXV60
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv62 -target-cpu hexagonv62 -verify -S -o - -DTEST_HVXV62
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv62 -target-cpu hexagonv62 -verify -S -o - -DTEST_HVXV65
 
 typedef long Vect1024 __attribute__((__vector_size__(128)))
     __attribute__((aligned(128)));
