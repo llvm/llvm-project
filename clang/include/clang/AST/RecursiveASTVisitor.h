@@ -492,8 +492,6 @@ private:
   bool TraverseTemplateArgumentLocsHelper(const TemplateArgumentLoc *TAL,
                                           unsigned Count);
   bool TraverseArrayTypeLocHelper(ArrayTypeLoc TL);
-  bool TraverseSubstPackTypeHelper(SubstPackType *T);
-  bool TraverseSubstPackTypeLocHelper(SubstPackTypeLoc TL);
   bool TraverseRecordHelper(RecordDecl *D);
   bool TraverseCXXRecordHelper(CXXRecordDecl *D);
   bool TraverseDeclaratorHelper(DeclaratorDecl *D);
@@ -1140,10 +1138,9 @@ DEF_TRAVERSE_TYPE(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {
   TRY_TO(TraverseType(T->getReplacementType()));
 })
-DEF_TRAVERSE_TYPE(SubstTemplateTypeParmPackType,
-                  { TRY_TO(TraverseSubstPackTypeHelper(T)); })
-DEF_TRAVERSE_TYPE(SubstBuiltinTemplatePackType,
-                  { TRY_TO(TraverseSubstPackTypeHelper(T)); })
+DEF_TRAVERSE_TYPE(SubstTemplateTypeParmPackType, {
+  TRY_TO(TraverseTemplateArgument(T->getArgumentPack()));
+})
 
 DEF_TRAVERSE_TYPE(AttributedType,
                   { TRY_TO(TraverseType(T->getModifiedType())); })
@@ -1484,26 +1481,9 @@ DEF_TRAVERSE_TYPELOC(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {
   TRY_TO(TraverseType(TL.getTypePtr()->getReplacementType()));
 })
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseSubstPackTypeLocHelper(
-    SubstPackTypeLoc TL) {
+DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmPackType, {
   TRY_TO(TraverseTemplateArgument(TL.getTypePtr()->getArgumentPack()));
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseSubstPackTypeHelper(
-    SubstPackType *T) {
-  TRY_TO(TraverseTemplateArgument(T->getArgumentPack()));
-  return true;
-}
-
-DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmPackType,
-                     { TRY_TO(TraverseSubstPackTypeLocHelper(TL)); })
-
-DEF_TRAVERSE_TYPELOC(SubstBuiltinTemplatePackType,
-                     { TRY_TO(TraverseSubstPackTypeLocHelper(TL)); })
+})
 
 DEF_TRAVERSE_TYPELOC(ParenType, { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 

@@ -4306,7 +4306,6 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::DependentTemplateSpecialization:
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:
-  case Type::SubstBuiltinTemplatePack:
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
@@ -5849,6 +5848,7 @@ QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
   return QualType(SubstParm, 0);
 }
 
+/// Retrieve a
 QualType
 ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                              unsigned Index, bool Final,
@@ -5885,34 +5885,6 @@ ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
   Types.push_back(SubstParm);
   SubstTemplateTypeParmPackTypes.InsertNode(SubstParm, InsertPos);
   return QualType(SubstParm, 0);
-}
-
-QualType
-ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
-  assert(llvm::all_of(ArgPack.pack_elements(),
-                      [](const auto &P) {
-                        return P.getKind() == TemplateArgument::Type;
-                      }) &&
-         "Pack contains a non-type");
-
-  llvm::FoldingSetNodeID ID;
-  SubstBuiltinTemplatePackType::Profile(ID, ArgPack);
-
-  void *InsertPos = nullptr;
-  if (auto *T =
-          SubstBuiltinTemplatePackTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(T, 0);
-
-  QualType Canon;
-  TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
-  if (!CanonArgPack.structurallyEquals(ArgPack))
-    Canon = getSubstBuiltinTemplatePack(CanonArgPack);
-
-  auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
-      SubstBuiltinTemplatePackType(Canon, ArgPack);
-  Types.push_back(PackType);
-  SubstBuiltinTemplatePackTypes.InsertNode(PackType, InsertPos);
-  return QualType(PackType, 0);
 }
 
 /// Retrieve the template type parameter type for a template
@@ -14072,7 +14044,6 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(BitInt)
     SUGAR_FREE_TYPE(ObjCInterface)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
-    SUGAR_FREE_TYPE(SubstBuiltinTemplatePack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
     SUGAR_FREE_TYPE(HLSLAttributedResource)
     SUGAR_FREE_TYPE(HLSLInlineSpirv)

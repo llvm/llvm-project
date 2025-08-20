@@ -1796,10 +1796,7 @@ public:
   }
 
   BuiltinTemplateKind getBuiltinTemplateKind() const { return BTK; }
-
-  bool isPackProducingBuiltinTemplate() const;
 };
-bool isPackProducingBuiltinTemplateName(TemplateName N);
 
 /// Provides information about an explicit instantiation of a variable or class
 /// template.

@@ -307,9 +307,8 @@ bool TemplateDecl::hasAssociatedConstraints() const {
 bool TemplateDecl::isTypeAlias() const {
   switch (getKind()) {
   case TemplateDecl::TypeAliasTemplate:
-    return true;
   case TemplateDecl::BuiltinTemplate:
-    return !cast<BuiltinTemplateDecl>(this)->isPackProducingBuiltinTemplate();
+    return true;
   default:
     return false;
   };
@@ -1598,16 +1597,6 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
     : TemplateDecl(BuiltinTemplate, DC, SourceLocation(), Name,
                    createBuiltinTemplateParameterList(C, DC, BTK)),
       BTK(BTK) {}
-
-bool BuiltinTemplateDecl::isPackProducingBuiltinTemplate() const {
-  return getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
-}
-
-bool clang::isPackProducingBuiltinTemplateName(TemplateName N) {
-  auto *T = dyn_cast_or_null<BuiltinTemplateDecl>(
-      N.getAsTemplateDecl(/*IgnoreDeduced=*/true));
-  return T && T->isPackProducingBuiltinTemplate();
-}
 
 TemplateParamObjectDecl *TemplateParamObjectDecl::Create(const ASTContext &C,
                                                          QualType T,

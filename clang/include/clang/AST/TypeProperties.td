@@ -820,12 +820,6 @@ let Class = PackExpansionType in {
   }]>;
 }
 
-let Class = SubstPackType in {
-  def : Property<"replacementPack", TemplateArgument> {
-    let Read = [{ node->getArgumentPack() }];
-  }
-}
-
 let Class = SubstTemplateTypeParmPackType in {
   def : Property<"associatedDecl", DeclRef> {
     let Read = [{ node->getAssociatedDecl() }];
@@ -833,17 +827,16 @@ let Class = SubstTemplateTypeParmPackType in {
   def : Property<"Index", UInt32> {
     let Read = [{ node->getIndex() }];
   }
-  def : Property<"Final", Bool> { let Read = [{ node->getFinal() }]; }
+  def : Property<"Final", Bool> {
+    let Read = [{ node->getFinal() }];
+  }
+  def : Property<"replacementPack", TemplateArgument> {
+    let Read = [{ node->getArgumentPack() }];
+  }
 
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmPackType(
                         associatedDecl, Index, Final, replacementPack);
-  }]>;
-}
-
-let Class = SubstBuiltinTemplatePackType in {
-  def : Creator<[{
-    return ctx.getSubstBuiltinTemplatePack(replacementPack);
   }]>;
 }
 

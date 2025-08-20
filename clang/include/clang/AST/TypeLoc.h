@@ -989,22 +989,12 @@ class SubstTemplateTypeParmTypeLoc :
                                      SubstTemplateTypeParmType> {
 };
 
-/// Abstract type representing delayed type pack expansions.
-class SubstPackTypeLoc
-    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, SubstPackTypeLoc,
-                                       SubstPackType> {};
-
-/// Wrapper for substituted template type parameters.
-class SubstTemplateTypeParmPackTypeLoc
-    : public InheritingConcreteTypeLoc<SubstPackTypeLoc,
-                                       SubstTemplateTypeParmPackTypeLoc,
-                                       SubstTemplateTypeParmPackType> {};
-
-/// Wrapper for substituted template type parameters.
-class SubstBuiltinTemplatePackTypeLoc
-    : public InheritingConcreteTypeLoc<SubstPackTypeLoc,
-                                       SubstBuiltinTemplatePackTypeLoc,
-                                       SubstBuiltinTemplatePackType> {};
+  /// Wrapper for substituted template type parameters.
+class SubstTemplateTypeParmPackTypeLoc :
+    public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
+                                     SubstTemplateTypeParmPackTypeLoc,
+                                     SubstTemplateTypeParmPackType> {
+};
 
 struct AttributedLocInfo {
   const Attr *TypeAttr;
