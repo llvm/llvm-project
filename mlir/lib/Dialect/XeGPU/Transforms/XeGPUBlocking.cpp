@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
+#include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
@@ -155,10 +156,10 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
-          xegpu::UpdateOffsetOp>(op))
+          xegpu::UpdateOffsetOp, xegpu::LoadMatrixOp>(op))
     return getTileShape(op->getOpResult(0));
   if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
-          xegpu::LoadGatherOp>(op))
+          xegpu::LoadGatherOp, xegpu::StoreMatrixOp>(op))
     return getTileShape(op->getOpOperand(0));
   if (isa<xegpu::StoreNdOp, xegpu::StoreScatterOp>(op))
     return getTileShape(op->getOpOperand(1));
@@ -202,17 +203,18 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
 bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   // skip the op if any of its operands or results has workgroup level layouts
-  bool hasWgLayoutOperands =
+  bool hasSgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
         xegpu::LayoutAttr layout = xegpu::getLayoutAttr(opr);
         return layout && layout.isWgLayout();
       });
-  bool hasWgLayoutResults =
+  bool hasSgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
         xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
         return layout && layout.isWgLayout();
       });
-  if (hasWgLayoutOperands || hasWgLayoutResults) {
+
+  if (hasSgLayoutOperands || hasSgLayoutResults) {
     LDBG() << "skip unrolling for op with workgroup level layout: " << *op;
     return false;
   }
