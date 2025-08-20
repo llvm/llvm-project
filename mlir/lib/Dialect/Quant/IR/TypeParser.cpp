@@ -10,7 +10,7 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/QuantizationInterface.h"
+#include "mlir/IR/QuantStorageTypeInterface.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -30,10 +30,10 @@ static Type parseStorageType(DialectAsmParser &parser, bool &isSigned) {
     if (!succeeded(*result))
       return nullptr;
 
-    if (auto quantizationInterface =
-            llvm::dyn_cast<QuantizationInterface>(type)) {
-      isSigned = quantizationInterface.isStorageSigned();
-      storageTypeWidth = quantizationInterface.getStorageWidth();
+    if (auto quantStorageTypeInterface =
+            llvm::dyn_cast<QuantStorageTypeInterface>(type)) {
+      isSigned = quantStorageTypeInterface.isStorageSigned();
+      storageTypeWidth = quantStorageTypeInterface.getStorageWidth();
     } else {
       parser.emitError(typeLoc, "illegal quantized storage type alias");
       return nullptr;
@@ -68,12 +68,11 @@ static Type parseStorageType(DialectAsmParser &parser, bool &isSigned) {
 static ParseResult parseStorageRange(DialectAsmParser &parser, Type storageType,
                                      int64_t &storageTypeMin,
                                      int64_t &storageTypeMax) {
-  int64_t defaultMin, defaultMax;
-  if (auto quantizationInterface =
-          llvm::dyn_cast<QuantizationInterface>(storageType)) {
-    defaultMin = quantizationInterface.getDefaultMinimum();
-    defaultMax = quantizationInterface.getDefaultMaximum();
-  }
+  auto quantStorageTypeInterface =
+      llvm::dyn_cast<QuantStorageTypeInterface>(storageType);
+
+  int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum();
+  int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum();
 
   if (failed(parser.parseOptionalLess())) {
     storageTypeMin = defaultMin;
@@ -497,10 +496,10 @@ Type QuantDialect::parseType(DialectAsmParser &parser) const {
 
 static void printStorageType(QuantizedType type, DialectAsmPrinter &out) {
   // storage type
-  if (auto quantizationInterface =
-          llvm::dyn_cast<QuantizationInterface>(type.getStorageType())) {
-    out << quantizationInterface.getStorageType();
-  }
+  auto quantStorageTypeInterface =
+      llvm::dyn_cast<QuantStorageTypeInterface>(type.getStorageType());
+
+  out << quantStorageTypeInterface.getStorageType();
 
   // storageTypeMin and storageTypeMax if not default.
   if (type.hasStorageTypeBounds()) {

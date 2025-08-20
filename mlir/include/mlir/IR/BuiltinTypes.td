@@ -17,7 +17,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
-include "mlir/IR/QuantizationInterface.td"
+include "mlir/IR/QuantStorageTypeInterface.td"
 include "mlir/IR/CommonTypeConstraints.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
@@ -102,7 +102,7 @@ class Builtin_CachedFloatType<string name, string mnemonic,
 //===----------------------------------------------------------------------===//
 
 def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2", 
-                                   ["QuantizationInterface"]> {
+                                   ["QuantStorageTypeInterface"]> {
   let summary = "8-bit floating point with 2 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 5 bits exponent and 2 bits
@@ -120,7 +120,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2",
   }];
 
   let extraClassDeclaration = [{
-    /// QuantizationInterface method implementations
+    /// QuantStorageTypeInterface method implementations
     bool isStorageSigned() const { return true; }
     /// Get the bit width of this 8-bit floating point type.
     unsigned getStorageWidth() const { return 8; }
@@ -160,7 +160,7 @@ def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN", 
-                                   ["QuantizationInterface"]> {
+                                   ["QuantStorageTypeInterface"]> {
   let summary = "8-bit floating point with 3 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
@@ -179,7 +179,7 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN",
   }];
 
   let extraClassDeclaration = [{
-    /// QuantizationInterface method implementations
+    /// QuantStorageTypeInterface method implementations
     bool isStorageSigned() const { return true; }
     /// Get the bit width of this 8-bit floating point type.
     unsigned getStorageWidth() const { return 8; }
@@ -534,7 +534,7 @@ def Builtin_Index : Builtin_Type<"Index", "index",
 //===----------------------------------------------------------------------===//
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer",
-    [VectorElementTypeInterface, QuantizationInterface]> {
+    [VectorElementTypeInterface, QuantStorageTypeInterface]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -592,7 +592,7 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     /// Note: This is aligned with the maximum width of llvm::IntegerType.
     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
 
-    /// QuantizationInterface method implementations
+    /// QuantStorageTypeInterface method implementations
     /// Return true if this is a signed or signless integer type.
     bool isStorageSigned() const { return !isUnsigned(); }
     /// Get the bit width of this integer type.

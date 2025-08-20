@@ -1,4 +1,4 @@
-//===- QuantizationInterface.cpp
+//===- QuantStorageTypeInterface.cpp
 //------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -20,4 +20,4 @@ using namespace mlir::detail;
 /// Tablegen Interface Definitions
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/QuantizationInterface.cpp.inc"
+#include "mlir/IR/QuantStorageTypeInterface.cpp.inc"
