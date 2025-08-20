@@ -379,12 +379,19 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
 ]> {
   let summary = "Provides constant access to a global address";
   let description = [{
-    Get constant address of global `symbol`. It provides a way to access globals
-    from other global and always produces a pointer.
+    Get constant address of global `symbol` and optionally apply offsets to
+    access existing subelements. It provides a way to access globals from other
+    global and always produces a pointer.
 
     The type of the input symbol can be different from `#cir.global_view`
     output type, since a given view of the global might require a static
     cast for initializing other globals.
+
+    A list of indices can be optionally passed and each element subsequently
+    indexes underlying types. For `symbol` types like `!cir.array`
+    and `!cir.record`, it leads to the constant address of sub-elements, while
+    for `!cir.ptr`, an offset is applied. The first index is relative to the
+    original symbol type, not the produced one.
 
     The result type of this attribute may be an integer type. In such a case,
     the pointer to the referenced global is casted to an integer and this
@@ -396,16 +403,49 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
       cir.global external @s = @".str2": !cir.ptr<i8>
       cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
       cir.global external @s_addr = #cir.global_view<@s> : !s64i
+
+      cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]
+                                                   : !cir.array<i8 x 3>>
+      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+    ```
+
+    Note, that unlike LLVM IR's gep instruction, CIR doesn't add the leading
+    zero index when it's known to be constant zero, e.g. for pointers, i.e. we
+    use indexes exactly to access sub elements or for the offset. The leading
+    zero index is added later in the lowering.
+
+    Example:
+    ```
+    struct A {
+      int a;
+    };
+
+    struct B:  virtual A {
+      int b;
+    };
+    ```
+    VTT for B in CIR:
+    ```
+    cir.global linkonce_odr @_ZTT1B = #cir.const_array<[
+              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]>
+                   : !cir.array<!cir.ptr<!u8i> x 1>
+    ```
+    VTT for B in LLVM IR:
+    ```
+    @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds
+              ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
     ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "mlir::FlatSymbolRefAttr":$symbol);
+                        "mlir::FlatSymbolRefAttr":$symbol,
+                        OptionalParameter<"mlir::ArrayAttr">:$indices);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
-                                        "mlir::FlatSymbolRefAttr":$symbol), [{
-      return $_get(type.getContext(), type, symbol);
+                                        "mlir::FlatSymbolRefAttr":$symbol,
+                                        CArg<"mlir::ArrayAttr", "{}">:$indices), [{
+      return $_get(type.getContext(), type, symbol, indices);
     }]>
   ];
 
@@ -413,6 +453,7 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
   let assemblyFormat = [{
     `<`
       $symbol
+      (`,` $indices^)?
     `>`
   }];
 }

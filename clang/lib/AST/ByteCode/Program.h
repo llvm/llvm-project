@@ -152,7 +152,7 @@ public:
   };
 
   /// Returns the current declaration ID.
-  std::optional<unsigned> getCurrentDecl() const {
+  UnsignedOrNone getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
       return std::nullopt;
     return CurrentDeclaration;

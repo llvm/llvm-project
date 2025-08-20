@@ -527,4 +527,34 @@ def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
   let genVerifyDecl = 1;
 }
 
+def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
+  let summary = [{Specifies memory layouts with named attributes.}];
+
+  let description = [{
+    This attribute stores a collection of named attributes that describe
+    memory layout properties such as stride, block, etc.
+  }];
+
+  let parameters = (ins "DictionaryAttr": $attrs);
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    /// Get a specific attribute by name
+    Attribute getAttr(StringRef name) const {
+      return getAttrs().get(name);
+    }
+
+    /// Check if a specific attribute exists
+    bool hasAttr(StringRef name) const {
+      return getAttrs().contains(name);
+    }
+
+    ArrayAttr getStrides() {
+      return getAttrs().getAs<ArrayAttr>("stride");
+    }
+
+  }];
+
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

@@ -1097,4 +1097,152 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasCanonicalizer = 1;
 }
 
+def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+class StaticShared1DMemRefOf<list<Type> allowedTypes> :
+  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
+     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
+     "mlir::MemRefType">;
+
+class SizeInBits<string name> :
+  StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
+          "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
+class AllMemSizesMatch<list<string> names> :
+    AllMatchSameOperatorTrait<names, SizeInBits<"_self">.result,
+                              "size in bits">;
+
+def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
+      AllMemSizesMatch<["source", "mem_desc"]>]>  {
+  let summary = "Create a memory descriptor.";
+  let description = [{
+    Creates a memory descriptor from a shared local memory (SLM) buffer, and xegpu
+    specific memory layout. The resulting memory descriptor has to have the same size
+    as the underlying shared local memory.
+
+    Arguments:
+     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
+    Results:
+     - `mem_desc` : the memory descriptor.
+  }];
+  let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
+  let results = (outs XeGPU_MemDesc:$mem_desc);
+  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+}
+
+def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
+                              AllElementTypesMatch<["mem_desc", "res"]>,
+                              AllRanksMatch<["mem_desc", "res"]>]>  {
+  let arguments = (ins XeGPU_MemDesc:$mem_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<LayoutTrait>:$layout
+  );
+  let results = (outs XeGPU_ValueType:$res);
+  let assemblyFormat = [{
+    $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+    prop-dict attr-dict `` `:` type(operands) `->` type(results)
+  }];
+
+  let description = [{
+    This operation loads a 2D block of data from shared local memory (SLM) as specified
+    by the provided 2D `mem_desc`. Only 2D memory descriptors are supported; use the
+    subview operation to obtain a compatible 2D `mem_desc` from a higher-rank descriptor if needed.
+
+    Arguments:
+     - `mem_desc`: the memory descriptor identifying the SLM region.
+     - `offsets`: the coordinates within the matrix to read from.
+     - `layout`: [optional] An attribute for guiding distributions among
+                 subgroups and/or work-items. It currently can accept either
+                 LayoutAttr or SliceAttr.
+    Results:
+     - `res`: the matrix elements loaded from SLM.
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Type":$res, "TypedValue<MemDescType>": $mem_desc,
+                    "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
+  ];
+  let extraClassDeclaration = [{
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
+                              AllElementTypesMatch<["mem_desc", "data"]>,
+                              AllRanksMatch<["mem_desc", "data"]>]> {
+  let arguments = (ins
+    XeGPU_ValueType:$data,
+    XeGPU_MemDesc:$mem_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<LayoutTrait>:$layout
+  );
+  let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+                          prop-dict attr-dict `` `:` type(operands)}];
+  let description = [{
+    This operation stores a 2D `data` fragment into the shared local memory region
+    specified by a 2D `mem_desc`. Only 2D memory descriptors are supported; use the
+    subview operation to obtain a 2D `mem_desc` from a higher-rank descriptor if needed.
+
+    Arguments:
+     - `mem_desc`: the memory descriptor specifying the SLM region.
+     - `offsets`: the coordinates within the matrix where the data will be written.
+     - `data`: the values to be stored in the matrix.
+     - `layout`: [optional] An attribute for guiding distributions among
+                 subgroups and/or work-items. It currently can accept either
+                 LayoutAttr or SliceAttr.
+  }];
+  let builders = [
+    OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
+  ];
+  let extraClassDeclaration = [{
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
+          [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
+  let description = [{
+    Creates a subview of a memory descriptor. The resulting memory descriptor can have
+    a lower rank than the source; in this case, the result dimensions correspond to the
+    higher-order dimensions of the source memory descriptor.
+
+    Arguments:
+     - `src` : a memory descriptor.
+     - `offsets` : the coordinates within the matrix the subview will be created from.
+
+    Results:
+    - `res` : a memory descriptor with smaller size.
+
+  }];
+  let arguments = (ins XeGPU_MemDesc:$src,
+                       Variadic<Index>:$offsets,
+                       DenseI64ArrayAttr:$const_offsets);
+  let results = (outs XeGPU_MemDesc:$res);
+  let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
+                         attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
+  let builders = [
+    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets)>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Value getViewSource() { return getSrc(); }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

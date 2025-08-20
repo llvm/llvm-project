@@ -26,17 +26,11 @@ public:
   getSpecialCallingConvForCallee(const SDNode *Callee,
                                  const MipsSubtarget &Subtarget);
 
-  /// This function returns true if CallSym is a long double emulation routine.
-  ///
-  /// FIXME: Changing the ABI based on the callee name is unsound. The lib func
-  /// address could be captured.
-  static bool isF128SoftLibCall(const char *CallSym);
-
-  static bool originalTypeIsF128(const Type *Ty, const char *Func);
+  static bool originalTypeIsF128(const Type *Ty);
   static bool originalEVTTypeIsVectorFloat(EVT Ty);
   static bool originalTypeIsVectorFloat(const Type *Ty);
 
-  void PreAnalyzeCallOperand(const Type *ArgTy, const char *Func);
+  void PreAnalyzeCallOperand(const Type *ArgTy);
 
   void PreAnalyzeFormalArgument(const Type *ArgTy, ISD::ArgFlagsTy Flags);
   void PreAnalyzeReturnValue(EVT ArgVT);
@@ -45,7 +39,7 @@ private:
   /// Identify lowered values that originated from f128 arguments and record
   /// this for use by RetCC_MipsN.
   void PreAnalyzeCallResultForF128(const SmallVectorImpl<ISD::InputArg> &Ins,
-                                   const Type *RetTy, const char * Func);
+                                   const Type *RetTy);
 
   /// Identify lowered values that originated from f128 arguments and record
   /// this for use by RetCC_MipsN.
@@ -55,8 +49,7 @@ private:
   /// this.
   void
   PreAnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         std::vector<TargetLowering::ArgListEntry> &FuncArgs,
-                         const char *Func);
+                         std::vector<TargetLowering::ArgListEntry> &FuncArgs);
 
   /// Identify lowered values that originated from f128 arguments and record
   /// this for use by RetCC_MipsN.
@@ -96,21 +89,21 @@ public:
               SpecialCallingConvType SpecialCC = NoSpecialCallingConv)
       : CCState(CC, isVarArg, MF, locs, C), SpecialCallingConv(SpecialCC) {}
 
-  void PreAnalyzeCallOperands(
-      const SmallVectorImpl<ISD::OutputArg> &Outs, CCAssignFn Fn,
-      std::vector<TargetLowering::ArgListEntry> &FuncArgs, const char *Func) {
+  void
+  PreAnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                         CCAssignFn Fn,
+                         std::vector<TargetLowering::ArgListEntry> &FuncArgs) {
     OriginalArgWasF128.clear();
     OriginalArgWasFloat.clear();
     OriginalArgWasFloatVector.clear();
-    PreAnalyzeCallOperands(Outs, FuncArgs, Func);
+    PreAnalyzeCallOperands(Outs, FuncArgs);
   }
 
   void
   AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
                       CCAssignFn Fn,
-                      std::vector<TargetLowering::ArgListEntry> &FuncArgs,
-                      const char *Func) {
-    PreAnalyzeCallOperands(Outs, Fn, FuncArgs, Func);
+                      std::vector<TargetLowering::ArgListEntry> &FuncArgs) {
+    PreAnalyzeCallOperands(Outs, Fn, FuncArgs);
     CCState::AnalyzeCallOperands(Outs, Fn);
   }
 
@@ -137,26 +130,24 @@ public:
     CCState::AnalyzeFormalArguments(Ins, Fn);
   }
 
-  void PreAnalyzeCallResult(const Type *RetTy, const char *Func) {
-    OriginalArgWasF128.push_back(originalTypeIsF128(RetTy, Func));
+  void PreAnalyzeCallResult(const Type *RetTy) {
+    OriginalArgWasF128.push_back(originalTypeIsF128(RetTy));
     OriginalArgWasFloat.push_back(RetTy->isFloatingPointTy());
     OriginalRetWasFloatVector.push_back(originalTypeIsVectorFloat(RetTy));
   }
 
   void PreAnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
-                            CCAssignFn Fn, const Type *RetTy,
-                            const char *Func) {
+                            CCAssignFn Fn, const Type *RetTy) {
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
     OriginalArgWasFloatVector.clear();
-    PreAnalyzeCallResultForF128(Ins, RetTy, Func);
+    PreAnalyzeCallResultForF128(Ins, RetTy);
     PreAnalyzeCallResultForVectorFloat(Ins, RetTy);
   }
 
   void AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
-                         CCAssignFn Fn, const Type *RetTy,
-                         const char *Func) {
-    PreAnalyzeCallResult(Ins, Fn, RetTy, Func);
+                         CCAssignFn Fn, const Type *RetTy) {
+    PreAnalyzeCallResult(Ins, Fn, RetTy);
     CCState::AnalyzeCallResult(Ins, Fn);
   }
 

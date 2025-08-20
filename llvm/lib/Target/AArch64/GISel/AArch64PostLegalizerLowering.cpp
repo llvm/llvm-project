@@ -614,8 +614,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x uge c => x ugt c - 1
     //
     // When c is not zero.
-    if (C == 0)
-      return std::nullopt;
+    assert(C != 0 && "C should not be zero here!");
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
     C -= 1;
     break;
@@ -640,10 +639,8 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x ule c => x ult c + 1
     // x ugt c => s uge c + 1
     //
-    // When c is not the largest possible unsigned integer.
-    if ((Size == 32 && static_cast<uint32_t>(C) == UINT32_MAX) ||
-        (Size == 64 && C == UINT64_MAX))
-      return std::nullopt;
+    assert(C != (Size == 32 ? UINT32_MAX : UINT64_MAX) &&
+           "C should not be -1 here!");
     P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     C += 1;
     break;
@@ -656,14 +653,13 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   if (isLegalArithImmed(C))
     return {{C, P}};
 
-  auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
+  auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
     AArch64_IMM::expandMOVImm(Imm, 32, Insn);
-    return Insn.size() == 1;
+    return Insn.size();
   };
 
-  if (!IsMaterializableInSingleInstruction(OriginalC) &&
-      IsMaterializableInSingleInstruction(C))
+  if (NumberOfInstrToLoadImm(OriginalC) > NumberOfInstrToLoadImm(C))
     return {{C, P}};
 
   return std::nullopt;

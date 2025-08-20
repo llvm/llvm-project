@@ -1456,10 +1456,7 @@ SDValue M68kTargetLowering::getTLSGetAddr(GlobalAddressSDNode *GA,
   PointerType *PtrTy = PointerType::get(*DAG.getContext(), 0);
 
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Arg;
-  Entry.Ty = PtrTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Arg, PtrTy);
   return LowerExternalSymbolCall(DAG, SDLoc(GA), "__tls_get_addr",
                                  std::move(Args));
 }

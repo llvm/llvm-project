@@ -215,7 +215,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
   assert(isa<NamedDecl>(var) && "Needs a named decl");
-  assert(!cir::MissingFeatures::cgfSymbolTable());
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
   auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
   assert(allocaOp && "expected cir::AllocaOp");
@@ -224,6 +224,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  symbolTable.insert(var, allocaOp);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -485,6 +487,9 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
+
   auto result = mlir::LogicalResult::success();
   if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
     emitCompoundStmtWithoutScope(*block);
@@ -531,6 +536,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   FunctionArgList args;
   QualType retTy = buildFunctionArgList(gd, args);
 
+  // Create a scope in the symbol table to hold variable declarations.
+  SymTableScopeTy varScope(symbolTable);
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 

@@ -47,6 +47,33 @@ define i32 @sexti1_i32_2(i32 %a) {
   ret i32 %shr
 }
 
+; Make sure we don't use not+qc.ext
+define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
+; RV32I-LABEL: sexti1_i32_setcc:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 31
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: sexti1_i32_setcc:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    srli a0, a0, 31
+; RV32XQCIBM-NEXT:    addi a0, a0, -1
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 8, 0
+; RV32XQCIBM-NEXT:    ret
+;
+; RV32XQCIBMZBB-LABEL: sexti1_i32_setcc:
+; RV32XQCIBMZBB:       # %bb.0:
+; RV32XQCIBMZBB-NEXT:    srli a0, a0, 31
+; RV32XQCIBMZBB-NEXT:    addi a0, a0, -1
+; RV32XQCIBMZBB-NEXT:    qc.extu a0, a0, 8, 0
+; RV32XQCIBMZBB-NEXT:    ret
+  %icmp = icmp sgt i32 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
+}
+
 
 define i32 @sexti8_i32(i8 %a) nounwind {
 ; RV32I-LABEL: sexti8_i32:

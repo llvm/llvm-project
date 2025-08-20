@@ -36,3 +36,32 @@ srari ra, sp, 100 # CHECK: :[[@LINE]]:15: error: immediate must be an integer in
 psati.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 15]
 psati.w ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
 sati ra, sp, 100 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 63]
+
+sadd t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+aadd t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+saddu t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+aaddu t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+ssub t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+asub t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+ssubu t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+asubu t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+
+mul.h01 t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+macc.h01 t3, t4, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+mulu.h01 t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+maccu.h01 t3, t4, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+
+ssh1sadd t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+
+mul.h00 a4, t4, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+macc.h00 a4, a0, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+mul.h11 a0, a4, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+macc.h11 s6, a4, s4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+mulu.h00 s6, s0, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+maccu.h00 s0, s6, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+mulu.h11 s0, s4, s6 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+maccu.h11 s0, t4, t4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+mulsu.h00 a4, s4, s6 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+maccsu.h00 s4, s4, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+mulsu.h11 s8, s4, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+maccsu.h11 s0, a2, s6 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set

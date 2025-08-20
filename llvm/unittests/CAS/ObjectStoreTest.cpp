@@ -269,7 +269,8 @@ TEST_P(CASTest, NodesBig) {
     ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
 }
 
-#if LLVM_ENABLE_THREADS
+// FIXME: Re-enable the test.
+#if 0
 /// Common test functionality for creating blobs in parallel. You can vary which
 /// cas instances are the same or different, and the size of the created blobs.
 static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,

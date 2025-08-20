@@ -314,6 +314,26 @@ define i32 @sexti1_i32_2(i1 %a) nounwind {
   ret i32 %sext
 }
 
+; Make sure we don't use not+th.ext
+define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
+; RV32I-LABEL: sexti1_i32_setcc:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 31
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32_setcc:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    srli a0, a0, 31
+; RV32XTHEADBB-NEXT:    addi a0, a0, -1
+; RV32XTHEADBB-NEXT:    zext.b a0, a0
+; RV32XTHEADBB-NEXT:    ret
+  %icmp = icmp sgt i32 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
+}
+
 define i32 @sextb_i32(i32 %a) nounwind {
 ; RV32I-LABEL: sextb_i32:
 ; RV32I:       # %bb.0:

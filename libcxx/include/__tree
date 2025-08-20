@@ -1038,9 +1038,22 @@ public:
   __insert_node_at(__end_node_pointer __parent, __node_base_pointer& __child, __node_base_pointer __new_node) _NOEXCEPT;
 
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI iterator find(const _Key& __v);
+  _LIBCPP_HIDE_FROM_ABI iterator find(const _Key& __key) {
+    __end_node_pointer __parent;
+    __node_base_pointer __match = __find_equal(__parent, __key);
+    if (__match == nullptr)
+      return end();
+    return iterator(static_cast<__node_pointer>(__match));
+  }
+
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Key& __v) const;
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Key& __key) const {
+    __end_node_pointer __parent;
+    __node_base_pointer __match = __find_equal(__parent, __key);
+    if (__match == nullptr)
+      return end();
+    return const_iterator(static_cast<__node_pointer>(__match));
+  }
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI size_type __count_unique(const _Key& __k) const;
@@ -2058,25 +2071,6 @@ __tree<_Tp, _Compare, _Allocator>::__erase_multi(const _Key& __k) {
   for (; __p.first != __p.second; ++__r)
     __p.first = erase(__p.first);
   return __r;
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::iterator __tree<_Tp, _Compare, _Allocator>::find(const _Key& __v) {
-  iterator __p = __lower_bound(__v, __root(), __end_node());
-  if (__p != end() && !value_comp()(__v, *__p))
-    return __p;
-  return end();
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::const_iterator
-__tree<_Tp, _Compare, _Allocator>::find(const _Key& __v) const {
-  const_iterator __p = __lower_bound(__v, __root(), __end_node());
-  if (__p != end() && !value_comp()(__v, *__p))
-    return __p;
-  return end();
 }
 
 template <class _Tp, class _Compare, class _Allocator>

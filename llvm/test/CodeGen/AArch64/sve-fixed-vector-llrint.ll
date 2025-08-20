@@ -921,7 +921,7 @@ define <4 x i64> @llrint_v4i64_v4fp128(<4 x fp128> %x) nounwind {
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -993,12 +993,12 @@ define <8 x i64> @llrint_v8i64_v8fp128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    ldr z2, [x8, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
-; CHECK-NEXT:    mov z3.d, z2.d
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    movprfx z3, z2
 ; CHECK-NEXT:    ext z3.b, z3.b, z2.b, #16
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z3
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -1146,20 +1146,20 @@ define <16 x i64> @llrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    ldr z6, [x8, #3, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
-; CHECK-NEXT:    mov z3.d, z2.d
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z6.d
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    movprfx z3, z2
 ; CHECK-NEXT:    ext z3.b, z3.b, z2.b, #16
+; CHECK-NEXT:    movprfx z5, z4
 ; CHECK-NEXT:    ext z5.b, z5.b, z4.b, #16
-; CHECK-NEXT:    ext z7.b, z7.b, z6.b, #16
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2
 ; CHECK-NEXT:    // kill: def $q4 killed $q4 killed $z4
+; CHECK-NEXT:    movprfx z7, z6
+; CHECK-NEXT:    ext z7.b, z7.b, z6.b, #16
+; CHECK-NEXT:    // kill: def $q6 killed $q6 killed $z6
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z3
 ; CHECK-NEXT:    // kill: def $q5 killed $q5 killed $z5
-; CHECK-NEXT:    // kill: def $q6 killed $q6 killed $z6
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 killed $z7
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1

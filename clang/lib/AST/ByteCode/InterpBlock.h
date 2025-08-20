@@ -50,9 +50,9 @@ private:
 
 public:
   /// Creates a new block.
-  Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
-        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false,
-        bool IsWeak = false, bool IsDummy = false)
+  Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
+        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false,
+        bool IsDummy = false)
       : Desc(Desc), DeclID(DeclID), EvalID(EvalID), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
@@ -62,8 +62,7 @@ public:
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
         bool IsExtern = false, bool IsWeak = false, bool IsDummy = false)
-      : Desc(Desc), DeclID((unsigned)-1), EvalID(EvalID), IsStatic(IsStatic),
-        IsDynamic(false) {
+      : Desc(Desc), EvalID(EvalID), IsStatic(IsStatic), IsDynamic(false) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
@@ -87,7 +86,7 @@ public:
   /// Returns the size of the block.
   unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const { return DeclID; }
+  UnsignedOrNone getDeclID() const { return DeclID; }
   /// Returns whether the data of this block has been initialized via
   /// invoking the Ctor func.
   bool isInitialized() const { return IsInitialized; }
@@ -177,7 +176,7 @@ private:
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.
-  std::optional<unsigned> DeclID;
+  UnsignedOrNone DeclID = std::nullopt;
   const unsigned EvalID = ~0u;
   /// Flag indicating if the block has static storage duration.
   bool IsStatic = false;

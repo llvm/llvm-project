@@ -319,13 +319,13 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
     pm.addPass(flangomp::createDoConcurrentConversionPass(
         opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
 
-  // The MapsForPrivatizedSymbols pass needs to run before
-  // MapInfoFinalizationPass because the former creates new
-  // MapInfoOp instances, typically for descriptors.
-  // MapInfoFinalizationPass adds MapInfoOp instances for the descriptors
-  // underlying data which is necessary to access the data on the offload
-  // target device.
+  // The MapsForPrivatizedSymbols and AutomapToTargetDataPass pass need to run
+  // before MapInfoFinalizationPass because they create new MapInfoOp
+  // instances, typically for descriptors. MapInfoFinalizationPass adds
+  // MapInfoOp instances for the descriptors underlying data which is necessary
+  // to access the data on the offload target device.
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
+  pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());

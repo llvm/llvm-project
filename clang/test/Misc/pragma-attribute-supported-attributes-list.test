@@ -31,6 +31,7 @@
 // CHECK-NEXT: CFConsumed (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: CFGuard (SubjectMatchRule_function)
 // CHECK-NEXT: CFICanonicalJumpTable (SubjectMatchRule_function)
+// CHECK-NEXT: CFISalt (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: CFUnknownTransfer (SubjectMatchRule_function)
 // CHECK-NEXT: CPUDispatch (SubjectMatchRule_function)
 // CHECK-NEXT: CPUSpecific (SubjectMatchRule_function)
