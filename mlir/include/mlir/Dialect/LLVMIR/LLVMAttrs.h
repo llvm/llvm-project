@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMATTRS_H_
 #define MLIR_DIALECT_LLVMIR_LLVMATTRS_H_
 
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include <optional>
