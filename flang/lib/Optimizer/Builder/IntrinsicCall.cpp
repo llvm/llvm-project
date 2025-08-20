@@ -1280,10 +1280,8 @@ mlir::Value genComplexPow(fir::FirOpBuilder &builder, mlir::Location loc,
                           const MathOperation &mathOp,
                           mlir::FunctionType mathLibFuncType,
                           llvm::ArrayRef<mlir::Value> args) {
-  bool canUseApprox = mlir::arith::bitEnumContainsAny(
-      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
   bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
-  if (!forceMlirComplex && !canUseApprox && !isAMDGPU)
+  if (!isAMDGPU)
     return genLibCall(builder, loc, mathOp, mathLibFuncType, args);
 
   auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));

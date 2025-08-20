@@ -96,8 +96,7 @@ subroutine pow_c4_i4(x, y, z)
   complex :: x, z
   integer :: y
   z = x ** y
-  ! PRECISE: call @_FortranAcpowi
-  ! FAST: complex.pow %{{.*}}, %{{.*}} : complex<f32>
+  ! CHECK: call @_FortranAcpowi
 end subroutine
 
 ! CHECK-LABEL: pow_c4_i8
@@ -105,8 +104,7 @@ subroutine pow_c4_i8(x, y, z)
   complex :: x, z
   integer(8) :: y
   z = x ** y
-  ! PRECISE: call @_FortranAcpowk
-  ! FAST: complex.pow %{{.*}}, %{{.*}} : complex<f32>
+  ! CHECK: call @_FortranAcpowk
 end subroutine
 
 ! CHECK-LABEL: pow_c8_i4
@@ -114,8 +112,7 @@ subroutine pow_c8_i4(x, y, z)
   complex(8) :: x, z
   integer :: y
   z = x ** y
-  ! PRECISE: call @_FortranAzpowi
-  ! FAST: complex.pow %{{.*}}, %{{.*}} : complex<f64>
+  ! CHECK: call @_FortranAzpowi
 end subroutine
 
 ! CHECK-LABEL: pow_c8_i8
@@ -123,8 +120,7 @@ subroutine pow_c8_i8(x, y, z)
   complex(8) :: x, z
   integer(8) :: y
   z = x ** y
-  ! PRECISE: call @_FortranAzpowk
-  ! FAST: complex.pow %{{.*}}, %{{.*}} : complex<f64>
+  ! CHECK: call @_FortranAzpowk
 end subroutine
 
 ! CHECK-LABEL: pow_c4_c4
@@ -142,3 +138,4 @@ subroutine pow_c8_c8(x, y, z)
   ! FAST: complex.pow %{{.*}}, %{{.*}} : complex<f64>
   ! PRECISE: call @cpow
 end subroutine
+
