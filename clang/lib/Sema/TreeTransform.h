@@ -4051,7 +4051,7 @@ public:
             PVD->getUninstantiatedDefaultArg()
                 ->containsUnexpandedParameterPack();
     }
-    return getSema().BuildLambdaExpr(StartLoc, EndLoc, LSI);
+    return getSema().BuildLambdaExpr(StartLoc, EndLoc);
   }
 
   /// Build an empty C++1z fold-expression with the given operator.
@@ -5417,6 +5417,7 @@ QualType TreeTransform<Derived>::TransformTypeInObjectScope(
   case TypeLoc::Typedef:
   case TypeLoc::TemplateSpecialization:
   case TypeLoc::SubstTemplateTypeParm:
+  case TypeLoc::SubstTemplateTypeParmPack:
   case TypeLoc::PackIndexing:
   case TypeLoc::Enum:
   case TypeLoc::Record:
@@ -12295,18 +12296,36 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
     const OpenACCReductionClause &C) {
   SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());
   SmallVector<Expr *> ValidVars;
+  llvm::SmallVector<OpenACCReductionRecipe> Recipes;
 
-  for (Expr *Var : TransformedVars) {
+  for (const auto [Var, OrigRecipes] :
+       llvm::zip(TransformedVars, C.getRecipes())) {
     ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(
         ParsedClause.getDirectiveKind(), C.getReductionOp(), Var);
-    if (Res.isUsable())
+    if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
+
+      // TODO OpenACC: When the recipe changes, make sure we get these right
+      // too. We probably need something similar for the operation.
+      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int*));
+      VarDecl *InitRecipe = nullptr;
+      if (OrigRecipes.RecipeDecl)
+        InitRecipe = OrigRecipes.RecipeDecl;
+       else
+         InitRecipe =
+             Self.getSema()
+                 .OpenACC()
+                 .CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
+                 .first;
+
+      Recipes.push_back({InitRecipe});
+    }
   }
 
   NewClause = Self.getSema().OpenACC().CheckReductionClause(
       ExistingClauses, ParsedClause.getDirectiveKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      C.getReductionOp(), ValidVars, ParsedClause.getEndLoc());
+      C.getReductionOp(), ValidVars, Recipes, ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -14307,7 +14326,9 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
   // for type deduction, so we need to recompute it.
   //
   // Always recompute the type if we're in the body of a lambda, and
-  // 'this' is dependent on a lambda's explicit object parameter.
+  // 'this' is dependent on a lambda's explicit object parameter; we
+  // also need to always rebuild the expression in this case to clear
+  // the flag.
   QualType T = [&]() {
     auto &S = getSema();
     if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
@@ -14317,7 +14338,8 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
     return S.getCurrentThisType();
   }();
 
-  if (!getDerived().AlwaysRebuild() && T == E->getType()) {
+  if (!getDerived().AlwaysRebuild() && T == E->getType() &&
+      !E->isCapturedByCopyInLambdaWithExplicitObjectParameter()) {
     // Mark it referenced in the new context regardless.
     // FIXME: this is a bit instantiation-specific.
     getSema().MarkThisReferenced(E);
@@ -15694,12 +15716,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     return ExprError();
   }
 
-  // Copy the LSI before ActOnFinishFunctionBody removes it.
-  // FIXME: This is dumb. Store the lambda information somewhere that outlives
-  // the call operator.
-  auto LSICopy = *LSI;
   getSema().ActOnFinishFunctionBody(NewCallOperator, Body.get(),
-                                    /*IsInstantiation*/ true);
+                                    /*IsInstantiation=*/true,
+                                    /*RetainFunctionScopeInfo=*/true);
   SavedContext.pop();
 
   // Recompute the dependency of the lambda so that we can defer the lambda call
@@ -15735,11 +15754,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // *after* the substitution in case we can't decide the dependency
   // so early, e.g. because we want to see if any of the *substituted*
   // parameters are dependent.
-  DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
+  DependencyKind = getDerived().ComputeLambdaDependency(LSI);
   Class->setLambdaDependencyKind(DependencyKind);
 
   return getDerived().RebuildLambdaExpr(E->getBeginLoc(),
-                                        Body.get()->getEndLoc(), &LSICopy);
+                                        Body.get()->getEndLoc(), LSI);
 }
 
 template<typename Derived>

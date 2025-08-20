@@ -227,7 +227,7 @@ CGIOperandList::findSubOperandAlias(StringRef Name) const {
 }
 
 std::pair<unsigned, unsigned>
-CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
+CGIOperandList::parseOperandName(StringRef Op, bool AllowWholeOp) const {
   if (!Op.starts_with("$"))
     PrintFatalError(TheDef->getLoc(),
                     TheDef->getName() + ": Illegal operand name: '" + Op + "'");
@@ -307,7 +307,7 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
                       "Illegal format for @earlyclobber constraint in '" +
                           Rec->getName() + "': '" + CStr + "'");
     Name = Name.substr(wpos);
-    std::pair<unsigned, unsigned> Op = Ops.ParseOperandName(Name, false);
+    std::pair<unsigned, unsigned> Op = Ops.parseOperandName(Name, false);
 
     // Build the string for the operand
     if (!Ops[Op.first].Constraints[Op.second].isNone())
@@ -335,7 +335,7 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
                     "Illegal format for tied-to constraint in '" +
                         Rec->getName() + "': '" + CStr + "'");
   StringRef LHSOpName = CStr.substr(start, wpos - start);
-  std::pair<unsigned, unsigned> LHSOp = Ops.ParseOperandName(LHSOpName, false);
+  std::pair<unsigned, unsigned> LHSOp = Ops.parseOperandName(LHSOpName, false);
 
   wpos = CStr.find_first_not_of(" \t", pos + 1);
   if (wpos == StringRef::npos)
@@ -343,7 +343,7 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
                     "Illegal format for tied-to constraint: '" + CStr + "'");
 
   StringRef RHSOpName = CStr.substr(wpos);
-  std::pair<unsigned, unsigned> RHSOp = Ops.ParseOperandName(RHSOpName, false);
+  std::pair<unsigned, unsigned> RHSOp = Ops.parseOperandName(RHSOpName, false);
 
   // Sort the operands into order, which should put the output one
   // first. But keep the original order, for use in diagnostics.
@@ -414,7 +414,7 @@ void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
       break;
 
     // Figure out which operand this is.
-    std::pair<unsigned, unsigned> Op = ParseOperandName(OpName, false);
+    std::pair<unsigned, unsigned> Op = parseOperandName(OpName, false);
 
     // Mark the operand as not-to-be encoded.
     OperandList[Op.first].DoNotEncode[Op.second] = true;

@@ -8886,6 +8886,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(RC->getLParenLoc());
     writeEnum(RC->getReductionOp());
     writeOpenACCVarList(RC);
+
+    for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
+      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+      AddDeclRef(R.RecipeDecl);
+    }
     return;
   }
   case OpenACCClauseKind::Seq:

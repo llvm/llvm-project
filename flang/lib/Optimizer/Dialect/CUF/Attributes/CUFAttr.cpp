@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFEnumAttr.cpp.inc"
@@ -27,6 +28,21 @@ namespace cuf {
 void CUFDialect::registerAttributes() {
   addAttributes<ClusterDimsAttr, DataAttributeAttr, DataTransferKindAttr,
                 LaunchBoundsAttr, ProcAttributeAttr>();
+}
+
+bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
+  if (!op)
+    return false;
+
+  cuf::DataAttributeAttr dataAttr =
+      op->getAttrOfType<cuf::DataAttributeAttr>(cuf::getDataAttrName());
+  // When the attribute is declared on the operation, it doesn't have a prefix.
+  if (!dataAttr)
+    dataAttr = op->getAttrOfType<cuf::DataAttributeAttr>(cuf::dataAttrName);
+  if (!dataAttr)
+    return false;
+
+  return dataAttr.getValue() == value;
 }
 
 } // namespace cuf
