@@ -403,6 +403,7 @@ TEST(Descriptor, Primitives) {
     ASSERT_FALSE(PF5.isElementPastEnd());
 
     const Pointer &E1 = PF5.atIndex(0);
+    (void)E1;
     ASSERT_TRUE(PF5.isOnePastEnd());
     ASSERT_FALSE(PF5.isElementPastEnd());
   }
