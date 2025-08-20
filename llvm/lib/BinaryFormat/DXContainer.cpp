@@ -149,6 +149,16 @@ ArrayRef<EnumEntry<RootParameterType>> dxbc::getRootParameterTypes() {
   return ArrayRef(RootParameterTypes);
 }
 
+#define DESCRIPTOR_RANGE(Val, Enum) {#Enum, DescriptorRangeType::Enum},
+
+static const EnumEntry<DescriptorRangeType> DescriptorRangeTypes[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeType>> dxbc::getDescriptorRangeTypes() {
+  return ArrayRef(DescriptorRangeTypes);
+}
+
 #define SEMANTIC_KIND(Val, Enum) {#Enum, PSV::SemanticKind::Enum},
 
 static const EnumEntry<PSV::SemanticKind> SemanticKindNames[] = {
