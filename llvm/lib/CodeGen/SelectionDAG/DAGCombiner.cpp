@@ -10001,12 +10001,14 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
-  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant or the subtract has a single use.
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::SUB) {
+  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant or the subtract has
+  // a single use.
+  if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1)) {
     SDValue Y = N0.getOperand(0);
     SDValue X = N0.getOperand(1);
     if (isa<ConstantSDNode>(Y) || N0.hasOneUse()) {
-      SDValue NotY = DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
+      SDValue NotY =
+          DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::ADD, DL, VT, X, NotY);
     }
   }
