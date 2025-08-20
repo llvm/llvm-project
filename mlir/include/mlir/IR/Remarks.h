@@ -56,24 +56,24 @@ using namespace llvm;
 
 /// Options to create a Remark
 struct RemarkOpts {
-  StringRef remarkName;
-  StringRef categoryName;
-  StringRef subCategoryName;
-  StringRef functionName;
+  StringRef remarkName;      // Identifiable name
+  StringRef categoryName;    // Category name (subject to regex filtering)
+  StringRef subCategoryName; // Subcategory name
+  StringRef functionName;    // Function name if available
   RemarkOpts() = delete;
-  // Construct RemarkOpts
+  // Construct RemarkOpts from a remark name.
   static constexpr RemarkOpts name(StringRef n) {
     return RemarkOpts{n, {}, {}, {}};
   }
-  /// Set category
+  /// Return a copy with the category set.
   constexpr RemarkOpts category(StringRef v) const {
     return {remarkName, v, subCategoryName, functionName};
   }
-  /// Set sub category and chain
+  /// Return a copy with the subcategory set.
   constexpr RemarkOpts subCategory(StringRef v) const {
     return {remarkName, categoryName, v, functionName};
   }
-  /// Set function and chain
+  /// Return a copy with the function name set.
   constexpr RemarkOpts function(StringRef v) const {
     return {remarkName, categoryName, subCategoryName, v};
   }
