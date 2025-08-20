@@ -13,6 +13,14 @@
     ret void
   }
 
+  define void @func64() {
+    ret void
+  }
+
+  define void @func64_no_agprs() "amdgpu-agpr-alloc"="0,0" {
+    ret void
+  }
+
 ...
 ---
 name: func
@@ -91,5 +99,109 @@ body:             |
     ; NO-AGPR-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 2, implicit $exec
     %0:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %1:agpr_32 = V_ACCVGPR_WRITE_B32_e64 2, implicit $exec
+
+...
+
+---
+name: func64
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4 }
+body:             |
+  ; HAS-AGPR-LABEL: name: func64
+  ; HAS-AGPR: bb.0:
+  ; HAS-AGPR-NEXT:   successors: %bb.1(0x80000000)
+  ; HAS-AGPR-NEXT:   liveins: $vgpr0_vgpr1
+  ; HAS-AGPR-NEXT: {{  $}}
+  ; HAS-AGPR-NEXT:   [[V_MOV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 $vgpr0_vgpr1, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 54, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B64_e64_1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 1, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B64_e64_2:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 64, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B64_e64_3:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 %stack.0, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 65, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B2:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 279172874240, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B3:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 279172874305, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B4:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329938, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B5:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO -9223372036854775808, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B6:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1042479491, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B7:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4477415320595726336, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B8:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO $vgpr0_vgpr1, implicit $exec
+  ; HAS-AGPR-NEXT:   [[V_MOV_B9:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO %stack.0, implicit $exec
+  ; HAS-AGPR-NEXT: {{  $}}
+  ; HAS-AGPR-NEXT: bb.1:
+  ; HAS-AGPR-NEXT:   [[V_MOV_B64_e64_4:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 3, implicit $exec
+  ;
+  ; NO-AGPR-LABEL: name: func64
+  ; NO-AGPR: bb.0:
+  ; NO-AGPR-NEXT:   successors: %bb.1(0x80000000)
+  ; NO-AGPR-NEXT:   liveins: $vgpr0_vgpr1
+  ; NO-AGPR-NEXT: {{  $}}
+  ; NO-AGPR-NEXT:   [[V_MOV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 $vgpr0_vgpr1, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 54, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B64_e64_1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 1, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B64_e64_2:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 64, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B64_e64_3:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 %stack.0, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 65, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B2:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 279172874240, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B3:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 279172874305, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B4:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329938, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B5:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO -9223372036854775808, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B6:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1042479491, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B7:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4477415320595726336, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B8:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO $vgpr0_vgpr1, implicit $exec
+  ; NO-AGPR-NEXT:   [[V_MOV_B9:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO %stack.0, implicit $exec
+  ; NO-AGPR-NEXT: {{  $}}
+  ; NO-AGPR-NEXT: bb.1:
+  ; NO-AGPR-NEXT:   [[V_MOV_B64_e64_4:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 3, implicit $exec
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %0:vreg_64_align2 = V_MOV_B64_e64 $vgpr0_vgpr1, implicit $exec
+    %1:vreg_64_align2 = V_MOV_B64_PSEUDO 54, implicit $exec
+    %2:vreg_64_align2 = V_MOV_B64_e64 1, implicit $exec
+    %3:vreg_64_align2 = V_MOV_B64_e64 64, implicit $exec
+    %4:vreg_64_align2 = V_MOV_B64_e64 %stack.0, implicit $exec
+    %5:vreg_64_align2 = V_MOV_B64_PSEUDO 65, implicit $exec
+    %6:vreg_64_align2 = V_MOV_B64_PSEUDO 279172874240, implicit $exec
+    %7:vreg_64_align2 = V_MOV_B64_PSEUDO 279172874305, implicit $exec
+    %8:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329938, implicit $exec
+    %9:vreg_64_align2 = V_MOV_B64_PSEUDO 9223372036854775808, implicit $exec
+    %10:vreg_64_align2 = V_MOV_B64_PSEUDO 1042479491, implicit $exec
+    %11:vreg_64_align2 = V_MOV_B64_PSEUDO 4477415320595726336, implicit $exec
+    %12:vreg_64_align2 = V_MOV_B64_PSEUDO $vgpr0_vgpr1, implicit $exec
+    %13:vreg_64_align2 = V_MOV_B64_PSEUDO %stack.0, implicit $exec
+
+  bb.1:
+    %14:vreg_64_align2 = V_MOV_B64_e64 3, implicit $exec
+
+...
+
+---
+name: func64_no_agprs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; HAS-AGPR-LABEL: name: func64_no_agprs
+    ; HAS-AGPR: liveins: $vgpr0
+    ; HAS-AGPR-NEXT: {{  $}}
+    ; HAS-AGPR-NEXT: [[V_MOV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 1, implicit $exec
+    ; HAS-AGPR-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329938, implicit $exec
+    ; HAS-AGPR-NEXT: [[V_MOV_B1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO -9223372036854775808, implicit $exec
+    ; HAS-AGPR-NEXT: [[V_MOV_B2:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1042479491, implicit $exec
+    ; HAS-AGPR-NEXT: [[V_MOV_B3:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4477415320595726336, implicit $exec
+    ;
+    ; NO-AGPR-LABEL: name: func64_no_agprs
+    ; NO-AGPR: liveins: $vgpr0
+    ; NO-AGPR-NEXT: {{  $}}
+    ; NO-AGPR-NEXT: [[V_MOV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 1, implicit $exec
+    ; NO-AGPR-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329938, implicit $exec
+    ; NO-AGPR-NEXT: [[V_MOV_B1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO -9223372036854775808, implicit $exec
+    ; NO-AGPR-NEXT: [[V_MOV_B2:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1042479491, implicit $exec
+    ; NO-AGPR-NEXT: [[V_MOV_B3:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4477415320595726336, implicit $exec
+    %0:vreg_64_align2 = V_MOV_B64_e64 1, implicit $exec
+    %1:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329938, implicit $exec
+    %2:vreg_64_align2 = V_MOV_B64_PSEUDO 9223372036854775808, implicit $exec
+    %3:vreg_64_align2 = V_MOV_B64_PSEUDO 1042479491, implicit $exec
+    %4:vreg_64_align2 = V_MOV_B64_PSEUDO 4477415320595726336, implicit $exec
 
 ...

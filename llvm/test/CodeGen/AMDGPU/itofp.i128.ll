@@ -797,12 +797,11 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GISEL-NEXT:  .LBB2_13: ; %Flow4
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v6
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff00000
-; GISEL-NEXT:    v_mov_b32_e32 v3, 0xfffff
+; GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v6
 ; GISEL-NEXT:    v_lshl_add_u32 v2, v8, 20, v2
-; GISEL-NEXT:    v_and_or_b32 v1, v10, v3, v1
-; GISEL-NEXT:    v_or3_b32 v1, v1, v2, 0
+; GISEL-NEXT:    v_and_b32_e32 v3, 0xfffff, v10
+; GISEL-NEXT:    v_or3_b32 v1, v3, v1, v2
 ; GISEL-NEXT:  .LBB2_14: ; %Flow5
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1081,8 +1080,8 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x3ff00000
 ; GISEL-NEXT:    v_lshl_add_u32 v0, v7, 20, v0
-; GISEL-NEXT:    v_and_b32_e32 v1, 0xfffff, v9
-; GISEL-NEXT:    v_or3_b32 v5, v1, v0, 0
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0xfffff
+; GISEL-NEXT:    v_and_or_b32 v5, v9, v1, v0
 ; GISEL-NEXT:  .LBB3_14: ; %Flow5
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v4

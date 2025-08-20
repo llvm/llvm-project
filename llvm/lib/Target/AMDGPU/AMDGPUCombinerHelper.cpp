@@ -516,3 +516,18 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
 
   return true;
 }
+
+bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
+  auto Res = getIConstantVRegValWithLookThrough(Reg, MRI);
+  if (!Res)
+    return false;
+
+  const uint64_t Val = Res->Value.getZExtValue();
+  unsigned MaskIdx = 0;
+  unsigned MaskLen = 0;
+  if (!isShiftedMask_64(Val, MaskIdx, MaskLen))
+    return false;
+
+  // Check if low 32 bits or high 32 bits are all ones.
+  return MaskLen >= 32 && ((MaskIdx == 0) || (MaskIdx == 64 - MaskLen));
+}

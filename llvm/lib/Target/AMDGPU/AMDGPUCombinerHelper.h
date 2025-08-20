@@ -43,6 +43,8 @@ public:
   bool matchCombineFmulWithSelectToFldexp(
       MachineInstr &MI, MachineInstr &Sel,
       std::function<void(MachineIRBuilder &)> &MatchInfo) const;
+
+  bool matchConstantIs32BitMask(Register Reg) const;
 };
 
 } // namespace llvm

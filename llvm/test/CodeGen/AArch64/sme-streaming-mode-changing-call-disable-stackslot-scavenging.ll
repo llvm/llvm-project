@@ -15,12 +15,11 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 ; CHECK-LABEL: test_no_stackslot_scavenging:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x24, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x24, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
@@ -32,8 +31,8 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x24, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x24, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -48,21 +47,20 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 define void @test_no_stackslot_scavenging_with_fp(float %f, i64 %n) #0 "frame-pointer"="all" {
 ; CHECK-LABEL: test_no_stackslot_scavenging_with_fp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-128]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d15, d14, [sp, #-112]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #64
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x28, x25, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x19, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x25, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x19, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    lsl x9, x0, #3
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov x19, sp
-; CHECK-NEXT:    str s0, [x29, #28] // 4-byte Folded Spill
+; CHECK-NEXT:    str s0, [x19, #12] // 4-byte Folded Spill
 ; CHECK-NEXT:    add x9, x9, #15
 ; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    sub x8, x8, x9
@@ -70,17 +68,17 @@ define void @test_no_stackslot_scavenging_with_fp(float %f, i64 %n) #0 "frame-po
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr s0, [x29, #28] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s0, [x19, #12] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl use_f
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    sub sp, x29, #64
-; CHECK-NEXT:    ldp x24, x19, [sp, #112] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x25, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x25, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #128 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #112 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ptr2 = alloca i64, i64 %n, align 8
   %ptr = alloca <vscale x 16 x i8>

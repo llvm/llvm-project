@@ -53,7 +53,8 @@ parseAsmSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
 /// null terminated.
 Attribute parseAttribute(llvm::StringRef attrStr, MLIRContext *context,
                          Type type = {}, size_t *numRead = nullptr,
-                         bool isKnownNullTerminated = false);
+                         bool isKnownNullTerminated = false,
+                         llvm::StringMap<Attribute> *attributesCache = nullptr);
 
 /// This parses a single MLIR type to an MLIR context if it was valid. If not,
 /// an error diagnostic is emitted to the context.

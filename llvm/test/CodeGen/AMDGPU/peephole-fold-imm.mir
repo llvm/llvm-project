@@ -767,3 +767,42 @@ body:             |
     %1:av_32 = COPY killed %0
     SI_RETURN_TO_EPILOG implicit %1
 ...
+
+---
+name:            fold_av_mov_b64_imm_pseudo_inlineimm_to_vgpr
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_av_mov_b64_imm_pseudo_inlineimm_to_vgpr
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B]]
+    %0:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    %1:vreg_64_align2 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_av_mov_b64_imm_pseudo_inlineimm_to_agpr
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_av_mov_b64_imm_pseudo_inlineimm_to_agpr
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64_align2 = COPY killed [[AV_MOV_]]
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY]]
+    %0:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    %1:areg_64_align2 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_av_mov_b64_imm_pseudo_inlineimm_to_av
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_av_mov_b64_imm_pseudo_inlineimm_to_av
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY killed [[AV_MOV_]]
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY]]
+    %0:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    %1:av_64_align2 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
