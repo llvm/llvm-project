@@ -107,10 +107,16 @@ void EmitOffloadInfo(const RecordKeeper &Records, raw_ostream &OS) {
 
 )";
 
-  auto ErrorCodeEnum = EnumRec{Records.getDef("DeviceInfo")};
-  uint32_t EtorVal = 0;
-  for (const auto &EnumVal : ErrorCodeEnum.getValues()) {
+  auto Enum = EnumRec{Records.getDef("DeviceInfo")};
+  // Bitfields start from 1, other enums from 0
+  uint32_t EtorVal = Enum.isBitField();
+  for (const auto &EnumVal : Enum.getValues()) {
     OS << formatv(TAB_1 "OFFLOAD_DEVINFO({0}, \"{1}\", {2})\n",
-                  EnumVal.getName(), EnumVal.getDesc(), EtorVal++);
+                  EnumVal.getName(), EnumVal.getDesc(), EtorVal);
+    if (Enum.isBitField()) {
+      EtorVal <<= 1u;
+    } else {
+      ++EtorVal;
+    }
   }
 }

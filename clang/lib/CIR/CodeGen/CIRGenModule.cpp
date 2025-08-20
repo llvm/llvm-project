@@ -438,13 +438,27 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
     errorNYI(funcDecl->getSourceRange(), "deferredAnnotations");
 }
 
+void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
+  VarDecl::DefinitionKind dk = vd->isThisDeclarationADefinition();
+  if (dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>())
+    return;
+
+  TemplateSpecializationKind tsk = vd->getTemplateSpecializationKind();
+  // If we have a definition, this might be a deferred decl. If the
+  // instantiation is explicit, make sure we emit it at the end.
+  if (vd->getDefinition() && tsk == TSK_ExplicitInstantiationDefinition)
+    getAddrOfGlobalVar(vd);
+
+  emitTopLevelDecl(vd);
+}
+
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
   return mlir::SymbolTable::lookupSymbolIn(theModule, name);
 }
 
 cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
                                            mlir::Location loc, StringRef name,
-                                           mlir::Type t,
+                                           mlir::Type t, bool isConstant,
                                            mlir::Operation *insertPoint) {
   cir::GlobalOp g;
   CIRGenBuilderTy &builder = cgm.getBuilder();
@@ -465,7 +479,7 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
         builder.setInsertionPointToStart(cgm.getModule().getBody());
     }
 
-    g = builder.create<cir::GlobalOp>(loc, name, t);
+    g = builder.create<cir::GlobalOp>(loc, name, t, isConstant);
     if (!insertPoint)
       cgm.lastGlobalOp = g;
 
@@ -567,7 +581,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
   cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
+      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, false,
                                    /*insertPoint=*/entry.getOperation());
 
   // This is the first use or definition of a mangled name.  If there is a
@@ -1225,8 +1239,8 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(cgm, loc, globalName, c.getType());
+  cir::GlobalOp gv = CIRGenModule::createGlobalOp(
+      cgm, loc, globalName, c.getType(), !cgm.getLangOpts().WritableStrings);
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
@@ -1302,6 +1316,19 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   assert(!cir::MissingFeatures::sanitizers());
 
   return gv;
+}
+
+/// Return a pointer to a constant array for the given string literal.
+cir::GlobalViewAttr
+CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                                 StringRef name) {
+  cir::GlobalOp gv = getGlobalForStringLiteral(s, name);
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(gv.getSymType());
+  assert(arrayTy && "String literal must be array");
+  assert(!cir::MissingFeatures::addressSpace());
+  cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
+
+  return builder.getGlobalViewAttr(ptrTy, gv);
 }
 
 void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,

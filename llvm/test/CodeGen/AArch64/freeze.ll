@@ -429,3 +429,37 @@ define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
   %r = add <8 x i16> %a, %f
   ret <8 x i16> %r
 }
+
+define i32 @freeze_scmp(i32 %a0) nounwind {
+; CHECK-LABEL: freeze_scmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    cmp w8, w0
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-NEXT:    cmp wzr, w8
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    csinv w0, w8, wzr, ge
+; CHECK-NEXT:    ret
+  %x = call i32 @llvm.scmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.scmp.i32(i32 0, i32 %y)
+  ret i32 %z
+}
+
+define i32 @freeze_ucmp(i32 %a0) nounwind {
+; CHECK-LABEL: freeze_ucmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    cmp w8, w0
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    csinv w8, w8, wzr, hs
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
+; CHECK-NEXT:    ret
+  %x = call i32 @llvm.ucmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
+  ret i32 %z
+}

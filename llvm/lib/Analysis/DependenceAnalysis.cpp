@@ -1531,6 +1531,62 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
     return Q;
 }
 
+/// Given an affine expression of the form A*k + B, where k is an arbitrary
+/// integer, infer the possible range of k based on the known range of the
+/// affine expression. If we know A*k + B is non-negative, i.e.,
+///
+///   A*k + B >= 0
+///
+/// we can derive the following inequalities for k when A is positive:
+///
+///   k >= -B / A
+///
+/// Since k is an integer, it means k is greater than or equal to the
+/// ceil(-B / A).
+///
+/// If the upper bound of the affine expression \p UB is passed, the following
+/// inequality can be derived as well:
+///
+///   A*k + B <= UB
+///
+/// which leads to:
+///
+///   k <= (UB - B) / A
+///
+/// Again, as k is an integer, it means k is less than or equal to the
+/// floor((UB - B) / A).
+///
+/// The similar logic applies when A is negative, but the inequalities sign flip
+/// while working with them.
+///
+/// Preconditions: \p A is non-zero, and we know A*k + B is non-negative.
+static std::pair<std::optional<APInt>, std::optional<APInt>>
+inferDomainOfAffine(const APInt &A, const APInt &B,
+                    const std::optional<APInt> &UB) {
+  assert(A != 0 && "A must be non-zero");
+  std::optional<APInt> TL, TU;
+  if (A.sgt(0)) {
+    TL = ceilingOfQuotient(-B, A);
+    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << *TL << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    if (UB) {
+      // TODO?: Overflow check for UB - B
+      TU = floorOfQuotient(*UB - B, A);
+      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << *TU << "\n");
+    }
+  } else {
+    TU = floorOfQuotient(-B, A);
+    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << *TU << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    if (UB) {
+      // TODO?: Overflow check for UB - B
+      TL = ceilingOfQuotient(*UB - B, A);
+      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << *TL << "\n");
+    }
+  }
+  return std::make_pair(TL, TU);
+}
+
 // exactSIVtest -
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 + a2*i],
 // where i is an induction variable, c1 and c2 are loop invariant, and a1
@@ -1590,14 +1646,12 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction normalizes, LM = 0
-  APInt UM(Bits, 1, true);
-  bool UMValid = false;
+  std::optional<APInt> UM;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *CUB =
           collectConstantUpperBound(CurLoop, Delta->getType())) {
     UM = CUB->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    UM = " << UM << "\n");
-    UMValid = true;
+    LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
@@ -1609,44 +1663,33 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
   LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
 
-  SmallVector<APInt, 2> TLVec, TUVec;
   APInt TB = BM.sdiv(G);
-  if (TB.sgt(0)) {
-    TLVec.push_back(ceilingOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    // New bound check - modification to Banerjee's e3 check
-    if (UMValid) {
-      TUVec.push_back(floorOfQuotient(UM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-  } else {
-    TUVec.push_back(floorOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    // New bound check - modification to Banerjee's e3 check
-    if (UMValid) {
-      TLVec.push_back(ceilingOfQuotient(UM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-  }
-
   APInt TA = AM.sdiv(G);
-  if (TA.sgt(0)) {
-    if (UMValid) {
-      TUVec.push_back(floorOfQuotient(UM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-    // New bound check - modification to Banerjee's e3 check
-    TLVec.push_back(ceilingOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-  } else {
-    if (UMValid) {
-      TLVec.push_back(ceilingOfQuotient(UM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-    // New bound check - modification to Banerjee's e3 check
-    TUVec.push_back(floorOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-  }
+
+  // At this point, we have the following equations:
+  //
+  //   TA*i0 - TB*i1 = TC
+  //
+  // Also, we know that the all pairs of (i0, i1) can be expressed as:
+  //
+  //   (TX + k*TB, TY + k*TA)
+  //
+  // where k is an arbitrary integer.
+  auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
+  auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
+
+  auto CreateVec = [](const std::optional<APInt> &V0,
+                      const std::optional<APInt> &V1) {
+    SmallVector<APInt, 2> Vec;
+    if (V0)
+      Vec.push_back(*V0);
+    if (V1)
+      Vec.push_back(*V1);
+    return Vec;
+  };
+
+  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
+  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
 
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
@@ -1967,24 +2010,20 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction seems to normalize, LM = 0
-  APInt SrcUM(Bits, 1, true);
-  bool SrcUMvalid = false;
+  std::optional<APInt> SrcUM;
   // SrcUM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
           collectConstantUpperBound(SrcLoop, Delta->getType())) {
     SrcUM = UpperBound->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << SrcUM << "\n");
-    SrcUMvalid = true;
+    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
   }
 
-  APInt DstUM(Bits, 1, true);
-  bool DstUMvalid = false;
+  std::optional<APInt> DstUM;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
           collectConstantUpperBound(DstLoop, Delta->getType())) {
     DstUM = UpperBound->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    DstUM = " << DstUM << "\n");
-    DstUMvalid = true;
+    LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
@@ -1996,46 +2035,38 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
   LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
 
-  SmallVector<APInt, 2> TLVec, TUVec;
   APInt TB = BM.sdiv(G);
-  if (TB.sgt(0)) {
-    TLVec.push_back(ceilingOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    if (SrcUMvalid) {
-      TUVec.push_back(floorOfQuotient(SrcUM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-  } else {
-    TUVec.push_back(floorOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    if (SrcUMvalid) {
-      TLVec.push_back(ceilingOfQuotient(SrcUM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-  }
-
   APInt TA = AM.sdiv(G);
-  if (TA.sgt(0)) {
-    TLVec.push_back(ceilingOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    if (DstUMvalid) {
-      TUVec.push_back(floorOfQuotient(DstUM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-  } else {
-    TUVec.push_back(floorOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    if (DstUMvalid) {
-      TLVec.push_back(ceilingOfQuotient(DstUM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-  }
 
-  if (TLVec.empty() || TUVec.empty())
-    return false;
+  // At this point, we have the following equations:
+  //
+  //   TA*i - TB*j = TC
+  //
+  // Also, we know that the all pairs of (i, j) can be expressed as:
+  //
+  //   (TX + k*TB, TY + k*TA)
+  //
+  // where k is an arbitrary integer.
+  auto [TL0, TU0] = inferDomainOfAffine(TB, TX, SrcUM);
+  auto [TL1, TU1] = inferDomainOfAffine(TA, TY, DstUM);
 
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
+
+  auto CreateVec = [](const std::optional<APInt> &V0,
+                      const std::optional<APInt> &V1) {
+    SmallVector<APInt, 2> Vec;
+    if (V0)
+      Vec.push_back(*V0);
+    if (V1)
+      Vec.push_back(*V1);
+    return Vec;
+  };
+
+  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
+  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
+  if (TLVec.empty() || TUVec.empty())
+    return false;
 
   TL = APIntOps::smax(TLVec.front(), TLVec.back());
   TU = APIntOps::smin(TUVec.front(), TUVec.back());

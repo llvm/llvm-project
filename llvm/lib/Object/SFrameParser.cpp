@@ -98,17 +98,20 @@ uint64_t SFrameParser<E>::getAbsoluteStartAddress(
   uint64_t Result = SectionAddress + FDE->StartAddress;
 
   if ((getPreamble().Flags.value() & sframe::Flags::FDEFuncStartPCRel) ==
-      sframe::Flags::FDEFuncStartPCRel) {
-    uintptr_t DataPtr = reinterpret_cast<uintptr_t>(Data.data());
-    uintptr_t FDEPtr = reinterpret_cast<uintptr_t>(&*FDE);
-
-    assert(DataPtr <= FDEPtr && FDEPtr < DataPtr + Data.size() &&
-           "Iterator does not belong to this object!");
-
-    Result += FDEPtr - DataPtr;
-  }
+      sframe::Flags::FDEFuncStartPCRel)
+    Result += offsetOf(FDE);
 
   return Result;
+}
+
+template <endianness E>
+uint64_t SFrameParser<E>::offsetOf(typename FDERange::iterator FDE) const {
+  uintptr_t DataPtr = reinterpret_cast<uintptr_t>(Data.data());
+  uintptr_t FDEPtr = reinterpret_cast<uintptr_t>(&*FDE);
+
+  assert(DataPtr <= FDEPtr && FDEPtr < DataPtr + Data.size() &&
+         "Iterator does not belong to this object!");
+  return FDEPtr - DataPtr;
 }
 
 template <typename EndianT>
@@ -173,10 +176,10 @@ iterator_range<typename SFrameParser<E>::fre_iterator>
 SFrameParser<E>::fres(const sframe::FuncDescEntry<E> &FDE, Error &Err) const {
   uint64_t Offset = getFREBase() + FDE.StartFREOff;
   fre_iterator BeforeBegin = make_fallible_itr(
-      FallibleFREIterator(Data, FDE.getFREType(), -1, FDE.NumFREs, Offset),
+      FallibleFREIterator(Data, FDE.Info.getFREType(), -1, FDE.NumFREs, Offset),
       Err);
   fre_iterator End = make_fallible_end(
-      FallibleFREIterator(Data, FDE.getFREType(), FDE.NumFREs, FDE.NumFREs,
+      FallibleFREIterator(Data, FDE.Info.getFREType(), FDE.NumFREs, FDE.NumFREs,
                           /*Offset=*/0));
   return {++BeforeBegin, End};
 }

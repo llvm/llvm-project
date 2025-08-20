@@ -946,7 +946,7 @@ collectPublicBases(CXXRecordDecl *RD,
 static void getUnambiguousPublicSubobjects(
     CXXRecordDecl *RD, llvm::SmallVectorImpl<CXXRecordDecl *> &Objects) {
   llvm::DenseMap<CXXRecordDecl *, unsigned> SubobjectsSeen;
-  llvm::SmallSet<CXXRecordDecl *, 2> VBases;
+  llvm::SmallPtrSet<CXXRecordDecl *, 2> VBases;
   llvm::SetVector<CXXRecordDecl *> PublicSubobjectsSeen;
   SubobjectsSeen[RD] = 1;
   PublicSubobjectsSeen.insert(RD);
@@ -5753,10 +5753,12 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
     return {};
   }
 
+  // Boolean vectors are permitted outside of OpenCL mode.
   if (Context.getTypeSize(ResultElementTy) !=
-      Context.getTypeSize(CondElementTy)) {
-    Diag(QuestionLoc, diag::err_conditional_vector_element_size) << CondType
-                                                                 << ResultType;
+          Context.getTypeSize(CondElementTy) &&
+      (!CondElementTy->isBooleanType() || LangOpts.OpenCL)) {
+    Diag(QuestionLoc, diag::err_conditional_vector_element_size)
+        << CondType << ResultType;
     return {};
   }
 

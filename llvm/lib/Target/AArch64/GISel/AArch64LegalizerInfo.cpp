@@ -797,6 +797,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMinNumElements(0, s16, 4)
       .alwaysLegal();
 
+  getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
       .legalFor(PackedVectorAllTypeList)
@@ -1644,6 +1647,11 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   MachineIRBuilder &MIB = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIB.getMRI();
 
+  auto LowerUnaryOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  };
   auto LowerBinOp = [&MI, &MIB](unsigned Opcode) {
     MIB.buildInstr(Opcode, {MI.getOperand(0)},
                    {MI.getOperand(2), MI.getOperand(3)});
@@ -1838,6 +1846,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerTriOp(AArch64::G_UDOT);
   case Intrinsic::aarch64_neon_sdot:
     return LowerTriOp(AArch64::G_SDOT);
+  case Intrinsic::aarch64_neon_sqxtn:
+    return LowerUnaryOp(AArch64::G_TRUNC_SSAT_S);
+  case Intrinsic::aarch64_neon_sqxtun:
+    return LowerUnaryOp(AArch64::G_TRUNC_SSAT_U);
+  case Intrinsic::aarch64_neon_uqxtn:
+    return LowerUnaryOp(AArch64::G_TRUNC_USAT_U);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

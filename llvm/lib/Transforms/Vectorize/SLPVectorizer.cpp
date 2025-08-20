@@ -4365,7 +4365,10 @@ private:
     } else {
       // Build a map for gathered scalars to the nodes where they are used.
       bool AllConstsOrCasts = true;
-      for (Value *V : VL)
+      for (Value *V : VL) {
+        if (S && S.areInstructionsWithCopyableElements() &&
+            S.isCopyableElement(V))
+          Last->addCopyableElement(V);
         if (!isConstant(V)) {
           auto *I = dyn_cast<CastInst>(V);
           AllConstsOrCasts &= I && I->getType()->isIntegerTy();
@@ -4373,6 +4376,7 @@ private:
               !UserTreeIdx.UserTE->isGather())
             ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
         }
+      }
       if (AllConstsOrCasts)
         CastMaxMinBWSizes =
             std::make_pair(std::numeric_limits<unsigned>::max(), 1);
@@ -5332,6 +5336,7 @@ private:
         ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
         const auto *It = find(Op, I);
         assert(It != Op.end() && "Lane not set");
+        SmallPtrSet<Instruction *, 4> Visited;
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
@@ -5341,6 +5346,10 @@ private:
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+          if (!Visited.insert(In).second) {
+            It = find(make_range(std::next(It), Op.end()), I);
+            continue;
+          }
           ScheduleCopyableDataMapByInstUser
               .try_emplace(std::make_pair(std::make_pair(In, EI.EdgeIdx), I))
               .first->getSecond()
@@ -5689,7 +5698,8 @@ private:
     /// Updates the dependency information of a bundle and of all instructions/
     /// bundles which depend on the original bundle.
     void calculateDependencies(ScheduleBundle &Bundle, bool InsertInReadyList,
-                               BoUpSLP *SLP);
+                               BoUpSLP *SLP,
+                               ArrayRef<ScheduleData *> ControlDeps = {});
 
     /// Sets all instruction in the scheduling region to un-scheduled.
     void resetSchedule();
@@ -10563,6 +10573,12 @@ class InstructionsCompatibilityAnalysis {
   unsigned MainOpcode = 0;
   Instruction *MainOp = nullptr;
 
+  /// Checks if the opcode is supported as the main opcode for copyable
+  /// elements.
+  static bool isSupportedOpcode(const unsigned Opcode) {
+    return Opcode == Instruction::Add || Opcode == Instruction::LShr;
+  }
+
   /// Identifies the best candidate value, which represents main opcode
   /// operation.
   /// Currently the best candidate is the Add instruction with the parent
@@ -10570,28 +10586,28 @@ class InstructionsCompatibilityAnalysis {
   void findAndSetMainInstruction(ArrayRef<Value *> VL, const BoUpSLP &R) {
     BasicBlock *Parent = nullptr;
     // Checks if the instruction has supported opcode.
-    auto IsSupportedOpcode = [&](Instruction *I) {
-      return I && I->getOpcode() == Instruction::Add &&
+    auto IsSupportedInstruction = [&](Instruction *I) {
+      return I && isSupportedOpcode(I->getOpcode()) &&
              (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
     };
     // Exclude operands instructions immediately to improve compile time, it
     // will be unable to schedule anyway.
     SmallDenseSet<Value *, 8> Operands;
+    SmallMapVector<unsigned, SmallVector<Instruction *>, 4> Candidates;
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         continue;
       if (!DT.isReachableFromEntry(I->getParent()))
         continue;
-      if (!MainOp) {
-        MainOp = I;
+      if (Candidates.empty()) {
+        Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Parent = I->getParent();
         Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
       if (Parent == I->getParent()) {
-        if (!IsSupportedOpcode(MainOp) && !Operands.contains(I))
-          MainOp = I;
+        Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
@@ -10603,24 +10619,35 @@ class InstructionsCompatibilityAnalysis {
                  (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
              "Different nodes should have different DFS numbers");
       if (NodeA->getDFSNumIn() < NodeB->getDFSNumIn()) {
-        MainOp = I;
+        Candidates.clear();
+        Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Parent = I->getParent();
         Operands.clear();
         Operands.insert(I->op_begin(), I->op_end());
       }
     }
-    if (!IsSupportedOpcode(MainOp) || Operands.contains(MainOp)) {
-      MainOp = nullptr;
-      return;
+    unsigned BestOpcodeNum = 0;
+    MainOp = nullptr;
+    for (const auto &P : Candidates) {
+      if (P.second.size() < BestOpcodeNum)
+        continue;
+      for (Instruction *I : P.second) {
+        if (IsSupportedInstruction(I) && !Operands.contains(I)) {
+          MainOp = I;
+          BestOpcodeNum = P.second.size();
+          break;
+        }
+      }
     }
-    MainOpcode = MainOp->getOpcode();
+    if (MainOp)
+      MainOpcode = MainOp->getOpcode();
   }
 
   /// Returns the idempotent value for the \p MainOp with the detected \p
   /// MainOpcode. For Add, returns 0. For Or, it should choose between false and
   /// the operand itself, since V or V == V.
   Value *selectBestIdempotentValue() const {
-    assert(MainOpcode == Instruction::Add && "Unsupported opcode");
+    assert(isSupportedOpcode(MainOpcode) && "Unsupported opcode");
     return ConstantExpr::getBinOpIdentity(MainOpcode, MainOp->getType(),
                                           !MainOp->isCommutative());
   }
@@ -10633,13 +10660,8 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    switch (MainOpcode) {
-    case Instruction::Add:
-      return {V, selectBestIdempotentValue()};
-    default:
-      break;
-    }
-    llvm_unreachable("Unsupported opcode");
+    assert(isSupportedOpcode(MainOpcode) && "Unsupported opcode");
+    return {V, selectBestIdempotentValue()};
   }
 
   /// Builds operands for the original instructions.
@@ -10851,6 +10873,21 @@ public:
               R.findBestRootPair(Candidates2);
       }
       if (!Res)
+        return InstructionsState::invalid();
+      constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
+      InstructionCost ScalarCost = TTI.getInstructionCost(S.getMainOp(), Kind);
+      InstructionCost VectorCost;
+      FixedVectorType *VecTy =
+          getWidenedType(S.getMainOp()->getType(), VL.size());
+      switch (MainOpcode) {
+      case Instruction::Add:
+      case Instruction::LShr:
+        VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
+        break;
+      default:
+        llvm_unreachable("Unexpected instruction.");
+      }
+      if (VectorCost > ScalarCost)
         return InstructionsState::invalid();
       return S;
     }
@@ -20727,15 +20764,21 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
 
   auto TryScheduleBundleImpl = [=](bool ReSchedule, ScheduleBundle &Bundle) {
-    // Clear deps or reculate the region, if the memory instruction is a
-    // copyable. It may have memory deps, which must be reaculated.
+    // Clear deps or recalculate the region, if the memory instruction is a
+    // copyable. It may have memory deps, which must be recalculated.
+    SmallVector<ScheduleData *> ControlDependentMembers;
     auto CheckIfNeedToClearDeps = [&](ScheduleBundle &Bundle) {
       SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
       for (ScheduleEntity *SE : Bundle.getBundle()) {
         if (ScheduleCopyableData *SD = dyn_cast<ScheduleCopyableData>(SE)) {
           if (ScheduleData *BundleMember = getScheduleData(SD->getInst());
-              BundleMember && BundleMember->hasValidDependencies())
+              BundleMember && BundleMember->hasValidDependencies()) {
             BundleMember->clearDirectDependencies();
+            if (RegionHasStackSave ||
+                !isGuaranteedToTransferExecutionToSuccessor(
+                    BundleMember->getInst()))
+              ControlDependentMembers.push_back(BundleMember);
+          }
           continue;
         }
         auto *SD = cast<ScheduleData>(SE);
@@ -20748,8 +20791,12 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (auto *Op = dyn_cast<Instruction>(U.get());
               Op && areAllOperandsReplacedByCopyableData(SD->getInst(), Op,
                                                          *SLP, NumOps)) {
-            if (ScheduleData *OpSD = getScheduleData(Op))
+            if (ScheduleData *OpSD = getScheduleData(Op)) {
               OpSD->clearDirectDependencies();
+              if (RegionHasStackSave ||
+                  !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+                ControlDependentMembers.push_back(OpSD);
+            }
           }
         }
       }
@@ -20783,7 +20830,12 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         CheckIfNeedToClearDeps(Bundle);
       LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << Bundle << " in block "
                         << BB->getName() << "\n");
-      calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP);
+      calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP,
+                            ControlDependentMembers);
+    } else if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/!ReSchedule, SLP,
+                            ControlDependentMembers);
     }
 
     if (ReSchedule) {
@@ -20879,6 +20931,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       }
     }
     ScheduledBundlesList.pop_back();
+    SmallVector<ScheduleData *> ControlDependentMembers;
+    SmallPtrSet<Instruction *, 4> Visited;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;
@@ -20896,6 +20950,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
           const auto *It = find(Op, I);
           assert(It != Op.end() && "Lane not set");
+          SmallPtrSet<Instruction *, 4> Visited;
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
@@ -20905,6 +20960,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                    "Couldn't find extract lane");
             auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+            if (!Visited.insert(In).second) {
+              It = find(make_range(std::next(It), Op.end()), I);
+              break;
+            }
             ScheduleCopyableDataMapByInstUser
                 [std::make_pair(std::make_pair(In, EI.EdgeIdx), I)]
                     .pop_back();
@@ -20918,11 +20977,20 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I))
+        if (ScheduleData *OpSD = getScheduleData(I)) {
           OpSD->clearDirectDependencies();
+          if (RegionHasStackSave ||
+              !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+            ControlDependentMembers.push_back(OpSD);
+        }
         continue;
       }
       ScheduledBundles.find(I)->getSecond().pop_back();
+    }
+    if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/false, SLP,
+                            ControlDependentMembers);
     }
     return std::nullopt;
   }
@@ -21048,9 +21116,9 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
   }
 }
 
-void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
-                                                     bool InsertInReadyList,
-                                                     BoUpSLP *SLP) {
+void BoUpSLP::BlockScheduling::calculateDependencies(
+    ScheduleBundle &Bundle, bool InsertInReadyList, BoUpSLP *SLP,
+    ArrayRef<ScheduleData *> ControlDeps) {
   SmallVector<ScheduleEntity *> WorkList;
   auto ProcessNode = [&](ScheduleEntity *SE) {
     if (auto *CD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -21064,6 +21132,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
         ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
         const auto *It = find(Op, CD->getInst());
         assert(It != Op.end() && "Lane not set");
+        SmallPtrSet<Instruction *, 4> Visited;
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
@@ -21085,13 +21154,15 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
                   (InsertInReadyList && UseSD->isReady()))
                 WorkList.push_back(UseSD);
             }
-          } else if (ScheduleData *UseSD = getScheduleData(In)) {
-            CD->incDependencies();
-            if (!UseSD->isScheduled())
-              CD->incrementUnscheduledDeps(1);
-            if (!UseSD->hasValidDependencies() ||
-                (InsertInReadyList && UseSD->isReady()))
-              WorkList.push_back(UseSD);
+          } else if (Visited.insert(In).second) {
+            if (ScheduleData *UseSD = getScheduleData(In)) {
+              CD->incDependencies();
+              if (!UseSD->isScheduled())
+                CD->incrementUnscheduledDeps(1);
+              if (!UseSD->hasValidDependencies() ||
+                  (InsertInReadyList && UseSD->isReady()))
+                WorkList.push_back(UseSD);
+            }
           }
           It = find(make_range(std::next(It), Op.end()), CD->getInst());
         } while (It != Op.end());
@@ -21292,7 +21363,11 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
     }
   };
 
-  WorkList.push_back(Bundle.getBundle().front());
+  assert((Bundle || !ControlDeps.empty()) &&
+         "expected at least one instruction to schedule");
+  if (Bundle)
+    WorkList.push_back(Bundle.getBundle().front());
+  WorkList.append(ControlDeps.begin(), ControlDeps.end());
   SmallPtrSet<ScheduleBundle *, 16> Visited;
   while (!WorkList.empty()) {
     ScheduleEntity *SD = WorkList.pop_back_val();
@@ -21362,7 +21437,7 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
   });
   // Reset schedule data for copyable elements.
   for (auto &P : ScheduleCopyableDataMap) {
-    if (isInSchedulingRegion(*P.second.get())) {
+    if (isInSchedulingRegion(*P.second)) {
       P.second->setScheduled(/*Scheduled=*/false);
       P.second->resetUnscheduledDeps();
     }
@@ -21845,9 +21920,11 @@ bool BoUpSLP::collectValuesToDemote(
       return all_of(E.Scalars, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
+        APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        if (E.isCopyableElement(V))
+          return MaskedValueIsZero(V, ShiftedBits, SimplifyQuery(*DL));
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-        APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
         return AmtKnownBits.getMaxValue().ult(BitWidth) &&
                MaskedValueIsZero(I->getOperand(0), ShiftedBits,
                                  SimplifyQuery(*DL));
@@ -24400,7 +24477,7 @@ public:
       // correct, replace internal uses with undef, and mark for eventual
       // deletion.
 #ifndef NDEBUG
-      SmallSet<Value *, 4> IgnoreSet;
+      SmallPtrSet<Value *, 4> IgnoreSet;
       for (ArrayRef<Value *> RdxOps : ReductionOps)
         IgnoreSet.insert_range(RdxOps);
 #endif
