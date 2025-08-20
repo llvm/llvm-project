@@ -77,15 +77,6 @@ def stdstring_SummaryProvider(valobj, dict):
             return '"' + strval + '"'
 
 
-def get_buffer_data(parent):
-    map_valobj = parent.valobj.GetChildMemberWithName("__map_")
-    map_data = map_valobj.GetChildMemberWithName("__data_")
-    if map_data.IsValid():
-        return map_data
-
-    return map_valobj
-
-
 def get_buffer_end(buffer, begin):
     """
     Returns a pointer to where the next element would be pushed.
@@ -808,7 +799,7 @@ class stddeque_SynthProvider:
                 return
             start = self.valobj.GetChildMemberWithName("__start_").GetValueAsUnsigned(0)
 
-            map_ = get_buffer_data(self)
+            map_ = self.valobj.GetChildMemberWithName("__map_")
             is_size_based = map_.GetChildMemberWithName("__size_").IsValid()
             first = map_.GetChildMemberWithName("__first_")
             map_first = first.GetValueAsUnsigned(0)
