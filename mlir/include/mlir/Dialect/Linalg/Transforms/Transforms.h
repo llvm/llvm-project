@@ -1966,10 +1966,6 @@ void populateFuseTensorPadWithProducerLinalgOpPatterns(
 /// Patterns to simplify depthwise convolutions.
 void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
-/// Patterns to convert from one named op to another. So far only used on
-/// depthwise convolutions, so deprecated. Use the pattern avove.
-void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
-
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors via reassociative reshape ops.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns,

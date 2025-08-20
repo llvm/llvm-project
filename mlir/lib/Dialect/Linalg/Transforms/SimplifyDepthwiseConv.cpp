@@ -21,7 +21,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSIONPASS
 #define GEN_PASS_DEF_SIMPLIFYDEPTHWISECONVPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
@@ -157,32 +156,9 @@ struct SimplifyDepthwiseConvPass
       return signalPassFailure();
   }
 };
-
-// Deprecated, use the one above
-struct LinalgNamedOpConversionPass
-    : public impl::LinalgNamedOpConversionPassBase<
-          LinalgNamedOpConversionPass> {
-  using impl::LinalgNamedOpConversionPassBase<
-      LinalgNamedOpConversionPass>::LinalgNamedOpConversionPassBase;
-
-  void runOnOperation() override {
-    Operation *op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateLinalgNamedOpConversionPatterns(patterns);
-    if (failed(applyPatternsGreedily(op, std::move(patterns))))
-      return signalPassFailure();
-  }
-};
 } // namespace
 
 void mlir::linalg::populateSimplifyDepthwiseConvPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<SimplifyDepthwiseConvOp, SimplifyDepthwiseConvQOp>(
-      patterns.getContext());
-}
-
-// Deprecated, use the one above
-void mlir::linalg::populateLinalgNamedOpConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<SimplifyDepthwiseConvOp, SimplifyDepthwiseConvQOp>(
       patterns.getContext());
