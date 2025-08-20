@@ -56,7 +56,7 @@ MLIR provides four built-in remark categories (extendable if needed):
 Optimization/transformation succeeded.
 
 ```c++
-[Passed] Category: Vectorizer | Pass:myPass1 |  Function=foo | Remark="vectorized loop", tripCount=128
+[Passed] RemarkName | Category:Vectorizer:myPass1 | Function=foo | Remark="vectorized loop", tripCount=128
 ```
 
 #### 2. **Missed**
@@ -64,7 +64,7 @@ Optimization/transformation succeeded.
 Optimization/transformation didn’t apply — ideally with actionable feedback.
 
 ```c++
-[Missed] Category: Unroll | Reason="tripCount=4 < threshold=256", Suggestion="increase unroll to 128"
+[Missed]  | Category:Unroll | Function=foo | Reason="tripCount=4 < threshold=256", Suggestion="increase unroll to 128"
 ```
 
 #### 3. **Failure**
@@ -80,7 +80,7 @@ $ your-compiler -use-max-register=100 mycode.xyz
 ```
 
 ```c++
-[Failed] Category: RegisterAllocator | Remark="Limiting to use-max-register=100 failed; it now uses 104 registers for better performance"
+[Failed] Category:RegisterAllocator | Reason="Limiting to use-max-register=100 failed; it now uses 104 registers for better performance"
 ```
 
 #### 4. **Analysis**
@@ -88,16 +88,28 @@ $ your-compiler -use-max-register=100 mycode.xyz
 Neutral analysis results.
 
 ```c++
-[Analysis] Category: Register | Remark="Kernel uses 168 registers"
-[Analysis] Category: Register | Remark="Kernel uses 10kB local memory"
+[Analysis] Category:Register | Remark="Kernel uses 168 registers"
+[Analysis] Category:Register | Remark="Kernel uses 10kB local memory"
 ```
 
 ______________________________________________________________________
 
 ## Emitting Remarks
 
-The `remark::*` helpers return an **in-flight remark**. You append strings or
-key–value metrics with `<<`.
+The `remark::*` helpers return an **in-flight remark**.
+You append strings or key–value metrics using `<<`.
+
+### Remark Options
+
+When constructing a remark, you typically provide four fields:
+
+* **Remark name** – identifiable name
+* **Category** – high-level classification
+* **Sub-category** – more fine-grained classification
+* **Function name** – the function where the remark originates
+
+
+### Example
 
 ```c++
 #include "mlir/IR/Remarks.h"
@@ -105,23 +117,28 @@ key–value metrics with `<<`.
 LogicalResult MyPass::runOnOperation() {
   Location loc = getOperation()->getLoc();
 
-  // PASS
-  remark::passed(loc, categoryVectorizer, myPassname1)
+  remark::RemarkOpts opts = remark::RemarkOpts::name(MyRemarkName1)
+                                .category(categoryVectorizer)
+                                .function(fName)
+                                .subCategory(myPassname1);
+
+  // PASSED
+  remark::passed(loc, opts)
       << "vectorized loop"
       << remark::metric("tripCount", 128);
 
   // ANALYSIS
-  remark::analysis(loc, categoryRegister, "")
+  remark::analysis(loc, opts)
       << "Kernel uses 168 registers";
 
-  // MISSED (reason + suggestion)
+  // MISSED (with reason + suggestion)
   int tripBad = 4, threshold = 256, target = 128;
-  remark::missed(loc, categoryUnroll)
+  remark::missed(loc, opts)
       << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold)
       << remark::suggest("increase unroll to {0}", target);
 
   // FAILURE
-  remark::failed(loc, categoryUnroll)
+  remark::failed(loc, opts)
       << remark::reason("failed due to unsupported pattern");
 
   return success();
@@ -192,8 +209,8 @@ mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
 
 ```yaml
 --- !Passed
-pass:            MyPass
-name:            vectorizer
+pass:            Category:SubCategory
+name:            MyRemarkName1
 function:        myFunc
 loc:             myfile.mlir:12:3
 args:

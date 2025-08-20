@@ -37,7 +37,7 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
 }
 
 void LLVMRemarkStreamer::streamOptimizationRemark(const Remark &remark) {
-  if (!remarkStreamer->matchesFilter(remark.getPassName()))
+  if (!remarkStreamer->matchesFilter(remark.getCategoryName()))
     return;
 
   // First, convert the diagnostic to a remark.

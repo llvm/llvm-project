@@ -70,16 +70,15 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
-  StringRef pass = getPassName();
-  StringRef name = getRemarkName();
+  StringRef categoryName = getFullCategoryName();
+  StringRef name = remarkName;
 
   os << '[' << type << "] ";
-  os << "Category: " << name << " | ";
-  if (!pass.empty())
-    os << "Pass:" << pass << " | ";
-
-  if (functionName)
-    os << " Function=" << getFunction() << " | ";
+  os << name << " | ";
+  if (!categoryName.empty())
+    os << "Category:" << categoryName << " | ";
+  if (!functionName.empty())
+    os << "Function=" << getFunction() << " | ";
 
   if (printLocation) {
     if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
@@ -139,8 +138,9 @@ llvm::remarks::Remark Remark::generateRemark() const {
 
   llvm::remarks::Remark r; // The result.
   r.RemarkType = getRemarkType();
-  r.PassName = getPassName();
   r.RemarkName = getRemarkName();
+  // MLIR does not use passes; instead, it has categories and sub-categories.
+  r.PassName = getFullCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
   for (const Remark::Arg &arg : getArgs()) {
@@ -175,12 +175,10 @@ InFlightRemark RemarkEngine::makeRemark(Args &&...args) {
 
 template <typename RemarkT>
 InFlightRemark
-RemarkEngine::emitIfEnabled(Location loc, StringRef passName,
-                            StringRef categoryName, StringRef functionName,
+RemarkEngine::emitIfEnabled(Location loc, RemarkOpts opts,
                             bool (RemarkEngine::*isEnabled)(StringRef) const) {
-  return (this->*isEnabled)(categoryName)
-             ? makeRemark<RemarkT>(loc, categoryName, passName, functionName)
-             : InFlightRemark{};
+  return (this->*isEnabled)(opts.categoryName) ? makeRemark<RemarkT>(loc, opts)
+                                               : InFlightRemark{};
 }
 
 bool RemarkEngine::isMissedOptRemarkEnabled(StringRef categoryName) const {
@@ -200,38 +198,27 @@ bool RemarkEngine::isFailedOptRemarkEnabled(StringRef categoryName) const {
 }
 
 InFlightRemark RemarkEngine::emitOptimizationRemark(Location loc,
-                                                    StringRef passName,
-                                                    StringRef categoryName,
-                                                    StringRef functionName) {
-  return emitIfEnabled<OptRemarkPass>(loc, passName, categoryName, functionName,
+                                                    RemarkOpts opts) {
+  return emitIfEnabled<OptRemarkPass>(loc, opts,
                                       &RemarkEngine::isPassedOptRemarkEnabled);
 }
 
-InFlightRemark
-RemarkEngine::emitOptimizationRemarkMiss(Location loc, StringRef passName,
-                                         StringRef categoryName,
-                                         StringRef functionName) {
+InFlightRemark RemarkEngine::emitOptimizationRemarkMiss(Location loc,
+                                                        RemarkOpts opts) {
   return emitIfEnabled<OptRemarkMissed>(
-      loc, passName, categoryName, functionName,
-      &RemarkEngine::isMissedOptRemarkEnabled);
+      loc, opts, &RemarkEngine::isMissedOptRemarkEnabled);
 }
 
-InFlightRemark
-RemarkEngine::emitOptimizationRemarkFailure(Location loc, StringRef passName,
-                                            StringRef categoryName,
-                                            StringRef functionName) {
+InFlightRemark RemarkEngine::emitOptimizationRemarkFailure(Location loc,
+                                                           RemarkOpts opts) {
   return emitIfEnabled<OptRemarkFailure>(
-      loc, passName, categoryName, functionName,
-      &RemarkEngine::isFailedOptRemarkEnabled);
+      loc, opts, &RemarkEngine::isFailedOptRemarkEnabled);
 }
 
-InFlightRemark
-RemarkEngine::emitOptimizationRemarkAnalysis(Location loc, StringRef passName,
-                                             StringRef categoryName,
-                                             StringRef functionName) {
+InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
+                                                            RemarkOpts opts) {
   return emitIfEnabled<OptRemarkAnalysis>(
-      loc, passName, categoryName, functionName,
-      &RemarkEngine::isAnalysisOptRemarkEnabled);
+      loc, opts, &RemarkEngine::isAnalysisOptRemarkEnabled);
 }
 
 //===----------------------------------------------------------------------===//

@@ -59,23 +59,34 @@ TEST(Remark, TestOutputOptimizationRemark) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // PASS: something succeeded
-    remark::passed(loc, categoryVectorizer, myPassname1)
+    remark::passed(loc, remark::RemarkOpts::name("Pass1")
+                            .category(categoryVectorizer)
+                            .subCategory(myPassname1)
+                            .function("bar"))
         << "vectorized loop" << remark::metric("tripCount", 128);
 
     // ANALYSIS: neutral insight
-    remark::analysis(loc, categoryRegister, "") << "Kernel uses 168 registers";
+    remark::analysis(
+        loc, remark::RemarkOpts::name("Analysis1").category(categoryRegister))
+        << "Kernel uses 168 registers";
 
     // MISSED: explain why + suggest a fix
-    remark::missed(loc, categoryUnroll, "MyPass")
+    remark::missed(loc, remark::RemarkOpts::name("Miss1")
+                            .category(categoryUnroll)
+                            .subCategory(myPassname1))
         << remark::reason("not profitable at this size")
         << remark::suggest("increase unroll factor to >=4");
 
     // FAILURE: action attempted but failed
-    remark::failed(loc, categoryInliner, "MyPass")
+    remark::failed(loc, remark::RemarkOpts::name("Failed1")
+                            .category(categoryInliner)
+                            .subCategory(myPassname1))
         << remark::reason("failed due to unsupported pattern");
 
     // FAILURE: Won't show up
-    remark::failed(loc, categoryReroller, "MyPass")
+    remark::failed(loc, remark::RemarkOpts::name("Failed2")
+                            .category(categoryReroller)
+                            .subCategory(myPassname1))
         << remark::reason("failed due to rerolling pattern");
   }
 
@@ -85,29 +96,35 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string content = bufferOrErr.get()->getBuffer().str();
 
   EXPECT_THAT(content, HasSubstr("--- !Passed"));
-  EXPECT_THAT(content, HasSubstr("Pass:            myPass1"));
-  EXPECT_THAT(content, HasSubstr("Name:            Vectorizer"));
+  EXPECT_THAT(content, HasSubstr("Name:            Pass1"));
+  EXPECT_THAT(content, HasSubstr("Pass:            'Vectorizer:myPass1'"));
+  EXPECT_THAT(content, HasSubstr("Function:        bar"));
   EXPECT_THAT(content, HasSubstr("Remark:          vectorized loop"));
   EXPECT_THAT(content, HasSubstr("tripCount:       '128'"));
 
   EXPECT_THAT(content, HasSubstr("--- !Analysis"));
-  EXPECT_THAT(content, HasSubstr("Name:            Register"));
+  EXPECT_THAT(content, HasSubstr("Pass:            Register"));
+  EXPECT_THAT(content, HasSubstr("Name:            Analysis1"));
+  EXPECT_THAT(content, HasSubstr("Function:        '<unknown function>'"));
   EXPECT_THAT(content, HasSubstr("Remark:          Kernel uses 168 registers"));
 
   EXPECT_THAT(content, HasSubstr("--- !Missed"));
-  EXPECT_THAT(content, HasSubstr("Pass:            MyPass"));
-  EXPECT_THAT(content, HasSubstr("Name:            Unroll"));
+  EXPECT_THAT(content, HasSubstr("Pass:            'Unroll:myPass1'"));
+  EXPECT_THAT(content, HasSubstr("Name:            Miss1"));
+  EXPECT_THAT(content, HasSubstr("Function:        '<unknown function>'"));
   EXPECT_THAT(content,
               HasSubstr("Reason:          not profitable at this size"));
   EXPECT_THAT(content,
               HasSubstr("Suggestion:      'increase unroll factor to >=4'"));
 
   EXPECT_THAT(content, HasSubstr("--- !Failure"));
-  EXPECT_THAT(content, HasSubstr("Pass:            MyPass"));
-  EXPECT_THAT(content, HasSubstr("Name:            Unroll"));
+  EXPECT_THAT(content, HasSubstr("Pass:            'Inliner:myPass1'"));
+  EXPECT_THAT(content, HasSubstr("Name:            Failed1"));
+  EXPECT_THAT(content, HasSubstr("Function:        '<unknown function>'"));
   EXPECT_THAT(content,
               HasSubstr("Reason:          failed due to unsupported pattern"));
 
+  EXPECT_THAT(content, Not(HasSubstr("Failed2")));
   EXPECT_THAT(content, Not(HasSubstr("Reroller")));
 
   // Also verify document order to avoid false positives.
@@ -146,7 +163,9 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
-    remark::failed(loc, categoryFailName, myPassname1)
+    remark::failed(loc, remark::RemarkOpts::name("myfail")
+                            .category(categoryFailName)
+                            .subCategory(myPassname1))
         << remark::reason(pass1Msg);
   }
   // No setup, so no output file should be created
@@ -189,11 +208,16 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // PASS: something succeeded
-    remark::passed(loc, categoryVectorizer, myPassname1, fName)
+    remark::passed(loc, remark::RemarkOpts::name("pass1")
+                            .category(categoryVectorizer)
+                            .function(fName)
+                            .subCategory(myPassname1))
         << "vectorized loop" << remark::metric("tripCount", 128);
 
     // ANALYSIS: neutral insight
-    remark::analysis(loc, categoryRegister, "", fName)
+    remark::analysis(loc, remark::RemarkOpts::name("Analysis1")
+                              .category(categoryRegister)
+                              .function(fName))
         << "Kernel uses 168 registers";
 
     // MISSED: explain why + suggest a fix
@@ -201,25 +225,25 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     int tripBad = 4;
     int threshold = 256;
 
-    remark::missed(loc, categoryUnroll)
+    remark::missed(loc, {"", categoryUnroll, "unroller2", ""})
         << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold);
 
-    remark::missed(loc, categoryUnroll)
+    remark::missed(loc, {"", categoryUnroll, "", ""})
         << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold)
         << remark::suggest("increase unroll to {0}", target);
 
     // FAILURE: action attempted but failed
-    remark::failed(loc, categoryUnroll)
+    remark::failed(loc, {"", categoryUnroll, "", ""})
         << remark::reason("failed due to unsupported pattern");
   }
   // clang-format off
   unsigned long expectedSize = 5;
   ASSERT_EQ(seenMsg.size(), expectedSize);
-  EXPECT_EQ(seenMsg[0], "[Passed] Category: Vectorizer | Pass:myPass1 |  Function=foo | Remark=\"vectorized loop\", tripCount=128");
-  EXPECT_EQ(seenMsg[1], "[Analysis] Category: Register |  Function=foo | Remark=\"Kernel uses 168 registers\"");
-  EXPECT_EQ(seenMsg[2], "[Missed] Category: Unroll | Reason=\"tripCount=4 < threshold=256\"");
-  EXPECT_EQ(seenMsg[3], "[Missed] Category: Unroll | Reason=\"tripCount=4 < threshold=256\", Suggestion=\"increase unroll to 128\"");
-  EXPECT_EQ(seenMsg[4], "[Failure] Category: Unroll | Reason=\"failed due to unsupported pattern\"");
+  EXPECT_EQ(seenMsg[0], "[Passed] pass1 | Category:Vectorizer:myPass1 | Function=foo | Remark=\"vectorized loop\", tripCount=128");
+  EXPECT_EQ(seenMsg[1], "[Analysis] Analysis1 | Category:Register | Function=foo | Remark=\"Kernel uses 168 registers\"");
+  EXPECT_EQ(seenMsg[2], "[Missed]  | Category:Unroll:unroller2 | Reason=\"tripCount=4 < threshold=256\"");
+  EXPECT_EQ(seenMsg[3], "[Missed]  | Category:Unroll | Reason=\"tripCount=4 < threshold=256\", Suggestion=\"increase unroll to 128\"");
+  EXPECT_EQ(seenMsg[4], "[Failure]  | Category:Unroll | Reason=\"failed due to unsupported pattern\"");
   // clang-format on
 }
 
@@ -264,12 +288,12 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
-    remark::passed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    remark::passed(loc, {"", categoryLoopunroll, myPassname1, ""}) << pass1Msg;
     // Remark 2: failure, category LoopUnroll
-    remark::failed(loc, categoryLoopunroll, myPassname2)
+    remark::failed(loc, {"", categoryLoopunroll, myPassname2, ""})
         << remark::reason(pass2Msg);
     // Remark 3: pass, category Inline (should not be printed)
-    remark::passed(loc, categoryInline, myPassname1) << pass3Msg;
+    remark::passed(loc, {"", categoryInline, myPassname1, ""}) << pass3Msg;
   }
 
   llvm::errs().flush();
