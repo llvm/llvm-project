@@ -153,24 +153,17 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
   return new AArch64TargetStreamer(S);
 }
 
-bool AArch64TargetStreamer::hasSubsection(StringRef SubSectionName) {
-  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (SubSection.VendorName == SubSectionName)
-      return true;
-  }
-  return false;
-}
-
 void AArch64TargetStreamer::emitAttributesSubsection(
     StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
     AArch64BuildAttributes::SubsectionType ParameterType) {
 
-  // If exists, activate and return.
-  if (hasSubsection(VendorName)) {
-    activateAttributesSubsection(VendorName);
-    return;
+  // If exists, return.
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      activateAttributesSubsection(VendorName);
+      return;
+    }
   }
-
   // else, add the subsection
   MCELFStreamer::AttributeSubSection AttSubSection;
   AttSubSection.VendorName = VendorName;
