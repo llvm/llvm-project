@@ -1485,6 +1485,9 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
+  case Instruction::PtrToAddr:
+    // TODO: Add some of the ptrtoint folds here as well.
+    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
@@ -4008,7 +4011,7 @@ static Constant *ConstantFoldFixedVectorCall(
       MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
     }
     for (unsigned I = 0; I < Result.size(); I++) {
-      int32_t IAdd = MulVector[I * 2] + MulVector[I * 2 + 1];
+      int64_t IAdd = (int64_t)MulVector[I * 2] + (int64_t)MulVector[I * 2 + 1];
       Result[I] = ConstantInt::get(Ty, IAdd);
     }
 

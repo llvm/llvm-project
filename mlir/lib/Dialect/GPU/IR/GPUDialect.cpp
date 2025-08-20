@@ -756,7 +756,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Type asyncTokenType, ValueRange asyncDependencies,
                      TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
-                     Value clusterSizeY, Value clusterSizeZ) {
+                     Value clusterSizeY, Value clusterSizeZ,
+                     FlatSymbolRefAttr module, FlatSymbolRefAttr function) {
   OpBuilder::InsertionGuard g(builder);
 
   // Add a WorkGroup attribution attribute. This attribute is required to
@@ -780,6 +781,12 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands(clusterSizeZ);
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
+
+  // Add optional module and function attributes.
+  if (module)
+    result.addAttribute(getModuleAttrName(result.name), module);
+  if (function)
+    result.addAttribute(getFunctionAttrName(result.name), function);
 
   // Create a kernel body region with kNumConfigRegionAttributes + N memory
   // attributions, where the first kNumConfigRegionAttributes arguments have
@@ -944,6 +951,21 @@ void LaunchOp::print(OpAsmPrinter &p) {
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
       << getDynamicSharedMemorySize();
 
+  // Print optional module attribute.
+  StringRef moduleAttrName = getModuleAttrName();
+  if (auto module = getModule()) {
+    p << ' ' << moduleAttrName << '(';
+    p.printSymbolName(*module);
+    p << ')';
+  }
+  // Print optional function attribute.
+  StringRef functionAttrName = getFunctionAttrName();
+  if (auto function = getFunction()) {
+    p << ' ' << functionAttrName << '(';
+    p.printSymbolName(*function);
+    p << ')';
+  }
+
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
 
@@ -952,7 +974,8 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr(),
-                              getNumWorkgroupAttributionsAttrName()});
+                              getNumWorkgroupAttributionsAttrName(),
+                              moduleAttrName, functionAttrName});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -990,6 +1013,9 @@ parseSizeAssignment(OpAsmParser &parser,
 ///       `clusters` `(` ssa-id-list `)` `in` ssa-reassignment (Optional)
 ///       `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
+///       (`dynamic_shared_memory_size` ssa-use)?
+///       (`module(` symbol-ref-id `)`)?
+///       (`function(` symbol-ref-id `)`)?
 ///       memory-attribution
 ///       region attr-dict?
 /// ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
@@ -1057,6 +1083,27 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
         parser.resolveOperand(dynamicSharedMemorySize,
                               parser.getBuilder().getI32Type(),
                               result.operands))
+      return failure();
+  }
+
+  // Parse optional module attribute.
+  StringRef moduleAttrName = getModuleAttrName(result.name);
+  if (succeeded(parser.parseOptionalKeyword(moduleAttrName))) {
+    FlatSymbolRefAttr moduleSymbol;
+    if (parser.parseLParen() ||
+        parser.parseAttribute(moduleSymbol, Type(), moduleAttrName,
+                              result.attributes) ||
+        parser.parseRParen())
+      return failure();
+  }
+  // Parse optional function attribute.
+  StringRef functionAttrName = getFunctionAttrName(result.name);
+  if (succeeded(parser.parseOptionalKeyword(functionAttrName))) {
+    FlatSymbolRefAttr funcSymbol;
+    if (parser.parseLParen() ||
+        parser.parseAttribute(funcSymbol, Type(), functionAttrName,
+                              result.attributes) ||
+        parser.parseRParen())
       return failure();
   }
 

@@ -1644,16 +1644,12 @@ def int_ucmp : DefaultAttrsIntrinsic<
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
-def int_lifetime_start  : DefaultAttrsIntrinsic<[],
-                                    [llvm_i64_ty, llvm_anyptr_ty],
-                                    [IntrArgMemOnly,
-                                     NoCapture<ArgIndex<1>>,
-                                     ImmArg<ArgIndex<0>>]>;
-def int_lifetime_end    : DefaultAttrsIntrinsic<[],
-                                    [llvm_i64_ty, llvm_anyptr_ty],
-                                    [IntrArgMemOnly,
-                                     NoCapture<ArgIndex<1>>,
-                                     ImmArg<ArgIndex<0>>]>;
+def int_lifetime_start
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+def int_lifetime_end
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 def int_invariant_start : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly,

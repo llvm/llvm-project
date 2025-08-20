@@ -147,8 +147,20 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
   assert((cst >= 0 || mlir::isa<mlir::IndexType>(ty) ||
           mlir::cast<mlir::IntegerType>(ty).getWidth() <= 64) &&
          "must use APint");
-  return mlir::arith::ConstantOp::create(*this, loc, ty,
-                                         getIntegerAttr(ty, cst));
+
+  mlir::Type cstType = ty;
+  if (auto intType = mlir::dyn_cast<mlir::IntegerType>(ty)) {
+    // Signed and unsigned constants must be encoded as signless
+    // arith.constant followed by fir.convert cast.
+    if (intType.isUnsigned())
+      cstType = mlir::IntegerType::get(getContext(), intType.getWidth());
+    else if (intType.isSigned())
+      TODO(loc, "signed integer constant");
+  }
+
+  mlir::Value cstValue = mlir::arith::ConstantOp::create(
+      *this, loc, cstType, getIntegerAttr(cstType, cst));
+  return createConvert(loc, ty, cstValue);
 }
 
 mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
@@ -1947,17 +1959,17 @@ void fir::factory::genDimInfoFromBox(
 
 mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
                                            mlir::Location loc,
-                                           fir::AllocaOp alloc, int64_t size,
+                                           fir::AllocaOp alloc,
                                            const mlir::DataLayout *dl) {
   mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
       alloc.getContext(), getAllocaAddressSpace(dl));
   mlir::Value cast =
       fir::ConvertOp::create(builder, loc, ptrTy, alloc.getResult());
-  mlir::LLVM::LifetimeStartOp::create(builder, loc, size, cast);
+  mlir::LLVM::LifetimeStartOp::create(builder, loc, cast);
   return cast;
 }
 
 void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                                  mlir::Value cast, int64_t size) {
-  mlir::LLVM::LifetimeEndOp::create(builder, loc, size, cast);
+                                  mlir::Value cast) {
+  mlir::LLVM::LifetimeEndOp::create(builder, loc, cast);
 }

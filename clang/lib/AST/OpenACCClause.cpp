@@ -329,10 +329,11 @@ OpenACCPrivateClause::Create(const ASTContext &C, SourceLocation BeginLoc,
 
 OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-    ArrayRef<Expr *> VarList, ArrayRef<VarDecl *> InitRecipes,
+    ArrayRef<Expr *> VarList, ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
     SourceLocation EndLoc) {
-  void *Mem =
-      C.Allocate(OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *, VarDecl *>(
+  void *Mem = C.Allocate(
+      OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *,
+                                                  OpenACCFirstPrivateRecipe>(
           VarList.size(), InitRecipes.size()));
   return new (Mem) OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList,
                                              InitRecipes, EndLoc);
@@ -505,11 +506,13 @@ OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
 OpenACCReductionClause *OpenACCReductionClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
     OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+    ArrayRef<OpenACCReductionRecipe> Recipes,
     SourceLocation EndLoc) {
   void *Mem = C.Allocate(
-      OpenACCReductionClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem)
-      OpenACCReductionClause(BeginLoc, LParenLoc, Operator, VarList, EndLoc);
+      OpenACCReductionClause::totalSizeToAlloc<Expr *, OpenACCReductionRecipe>(
+          VarList.size(), Recipes.size()));
+  return new (Mem) OpenACCReductionClause(BeginLoc, LParenLoc, Operator,
+                                          VarList, Recipes, EndLoc);
 }
 
 OpenACCAutoClause *OpenACCAutoClause::Create(const ASTContext &C,

@@ -779,3 +779,24 @@ namespace DiscardedSubScriptExpr {
     return true;
   }
 }
+
+namespace ZeroSizeArrayRead {
+  constexpr char str[0] = {};
+  constexpr  unsigned checksum(const char *s) {
+    unsigned result = 0;
+    for (const char *p = s; *p != '\0'; ++p) { // both-note {{read of dereferenced one-past-the-end pointer}}
+      result += *p;
+    }
+    return result;
+  }
+  constexpr unsigned C = checksum(str); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{in call to}}
+
+  constexpr const char *p1 = &str[0];
+  constexpr const char *p2 = &str[1]; // both-error {{must be initialized by a constant expression}} \
+                                      // both-note {{cannot refer to element 1 of array of 0 elements in a constant expression}}
+
+  constexpr char s[] = {};
+  static_assert(s[0] == '0', ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of dereferenced one-past-the-end pointer}}
+}
