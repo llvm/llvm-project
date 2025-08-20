@@ -36,6 +36,10 @@ struct GCNRegPressure {
     clear();
   }
 
+  GCNRegPressure(unsigned ArchVGPRThreshold) : ArchVGPRThreshold(ArchVGPRThreshold) {
+    clear();
+  }
+
   bool empty() const {
     return !Value[SGPR] && !Value[VGPR] && !Value[AGPR] && !Value[AVGPR];
   }
@@ -192,6 +196,8 @@ private:
   /// all tuple register kinds).
   unsigned Value[ValueArraySize];
 
+  unsigned ArchVGPRThreshold = std::numeric_limits<unsigned>::max();
+
   static unsigned getRegKind(const TargetRegisterClass *RC,
                              const SIRegisterInfo *STI);
 
@@ -339,7 +345,10 @@ protected:
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(const LiveIntervals &LIS_, const MachineFunction &MF) : LIS(LIS_) {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    unsigned ArchVGPRThreshold = ST.getMaxNumVectorRegs(MF.getFunction()).first;
+  }
 
   void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
              bool After);
