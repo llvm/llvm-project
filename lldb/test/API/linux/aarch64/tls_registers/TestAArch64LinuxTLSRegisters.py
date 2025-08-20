@@ -93,6 +93,8 @@ class AArch64LinuxTLSRegisters(TestBase):
         for register in registers:
             self.expect("p {}_was_set".format(register), substrs=["true"])
 
+        self.expect("reg read tp", substrs=[hex(set_values["tpidr"])])
+
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     def test_tls_no_sme(self):
@@ -100,6 +102,7 @@ class AArch64LinuxTLSRegisters(TestBase):
             self.skipTest("SME must not be present.")
 
         self.check_tls_reg(["tpidr"])
+        
 
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
