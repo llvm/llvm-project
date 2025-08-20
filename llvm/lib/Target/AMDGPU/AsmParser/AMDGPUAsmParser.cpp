@@ -5986,6 +5986,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   SMRange VGPRRange;
   const MCExpr *NextFreeVGPR = ZeroExpr;
   const MCExpr *AccumOffset = MCConstantExpr::create(0, getContext());
+  const MCExpr *NamedBarCnt = ZeroExpr;
   uint64_t SharedVGPRCount = 0;
   uint64_t PreloadLength = 0;
   uint64_t PreloadOffset = 0;
@@ -6208,6 +6209,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
       AccumOffset = ExprVal;
+    } else if (ID == ".amdhsa_named_barrier_count") {
+      if (!isGFX1250())
+        return Error(IDRange.Start, "directive requires gfx1250+", IDRange);
+      NamedBarCnt = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
       if (EvaluatableExpr && !isUInt<1>(Val))
         return OutOfRangeError(ValRange);
@@ -6447,6 +6452,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                                  getContext());
   }
+
+  if (isGFX1250())
+    MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, NamedBarCnt,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                                 getContext());
 
   if (IVersion.Major >= 10 && IVersion.Major < 12) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS
