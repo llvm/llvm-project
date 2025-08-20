@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-c++20-extensions
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
@@ -174,7 +174,6 @@ namespace SubstTemplateTypeParmPackType {
 
   template <class... Ts> void f() {
     []<int ... Is>(A<Is...>) { (Ts::g(Is) && ...); }(A<0>{});
-    // expected-warning@-1 {{explicit template parameter list for lambdas is a C++20 extension}}
   };
 
   struct B { static void g(int); };
