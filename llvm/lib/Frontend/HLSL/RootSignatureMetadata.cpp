@@ -322,7 +322,7 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   if (RangeDescriptorNode->getNumOperands() != 6)
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
-  dxbc::RTS0::v2::DescriptorRange Range;
+  mcdxbc::DescriptorRange Range;
 
   std::optional<StringRef> ElementText =
       extractMdStringValue(RangeDescriptorNode, 0);
@@ -330,17 +330,11 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   if (!ElementText.has_value())
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
-  Range.RangeType =
-      StringSwitch<uint32_t>(*ElementText)
-          .Case("CBV", to_underlying(dxbc::DescriptorRangeType::CBV))
-          .Case("SRV", to_underlying(dxbc::DescriptorRangeType::SRV))
-          .Case("UAV", to_underlying(dxbc::DescriptorRangeType::UAV))
-          .Case("Sampler", to_underlying(dxbc::DescriptorRangeType::Sampler))
-          .Default(~0U);
-
-  if (Range.RangeType == ~0U)
-    return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
-                                              RangeDescriptorNode);
+  Range.RangeType = StringSwitch<dxbc::DescriptorRangeType>(*ElementText)
+                        .Case("CBV", dxbc::DescriptorRangeType::CBV)
+                        .Case("SRV", dxbc::DescriptorRangeType::SRV)
+                        .Case("UAV", dxbc::DescriptorRangeType::UAV)
+                        .Case("Sampler", dxbc::DescriptorRangeType::Sampler);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
@@ -568,12 +562,7 @@ Error MetadataParser::validateRootSignature(
     case dxbc::RootParameterType::DescriptorTable: {
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
-        if (!hlsl::rootsig::verifyRangeType(Range.RangeType))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "RangeType", Range.RangeType));
+      for (const mcdxbc::DescriptorRange &Range : Table) {
 
         if (!hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
           DeferredErrs =

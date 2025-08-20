@@ -1282,11 +1282,34 @@ bool SemaHLSL::handleRootSignatureElements(
         // value
         ReportError(Loc, 1, 0xfffffffe);
       }
+      switch (Clause->Type) {
 
-      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
-              Version, llvm::to_underlying(Clause->Type),
-              llvm::to_underlying(Clause->Flags)))
-        ReportFlagError(Loc);
+      case llvm::dxil::ResourceClass::SRV:
+        if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+                Version, llvm::dxbc::DescriptorRangeType::SRV,
+                llvm::to_underlying(Clause->Flags)))
+          ReportFlagError(Loc);
+        break;
+      case llvm::dxil::ResourceClass::UAV:
+        if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+                Version, llvm::dxbc::DescriptorRangeType::UAV,
+                llvm::to_underlying(Clause->Flags)))
+          ReportFlagError(Loc);
+        break;
+      case llvm::dxil::ResourceClass::CBuffer:
+        if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+                Version, llvm::dxbc::DescriptorRangeType::CBV,
+                llvm::to_underlying(Clause->Flags)))
+          ReportFlagError(Loc);
+        break;
+      case llvm::dxil::ResourceClass::Sampler:
+        if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+                Version, llvm::dxbc::DescriptorRangeType::Sampler,
+                llvm::to_underlying(Clause->Flags)))
+          ReportFlagError(Loc);
+        break;
+        break;
+      }
     }
   }
 
