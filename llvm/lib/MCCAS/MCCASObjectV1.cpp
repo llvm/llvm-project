@@ -1988,6 +1988,21 @@ Error MCDataFragmentMerger::emitMergedFragments() {
         return E;
       break;
     }
+    case MCFragment::FT_LEB: {
+      const MCLEBFragment *LEBF = cast<MCLEBFragment>(Candidate.first);
+      Builder.Asm.writeFragmentPadding(FragmentOS, *LEBF, Candidate.second);
+      FragmentData.append(CandidateContents);
+      break;
+    }
+
+    case MCFragment::FT_CVInlineLines: {
+      const MCCVInlineLineTableFragment *CVF =
+          cast<MCCVInlineLineTableFragment>(Candidate.first);
+      Builder.Asm.writeFragmentPadding(FragmentOS, *CVF, Candidate.second);
+      FragmentData.append(CandidateContents);
+      break;
+    }
+
     default:
       llvm_unreachable("other framgents should not be added");
     }
