@@ -83,6 +83,8 @@ static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
 
+extern cl::opt<bool> IndexedCodeGenDataLazyLoading;
+
 static void exitWithError(Twine Message, StringRef Whence = "",
                           StringRef Hint = "") {
   WithColor::error();
@@ -361,6 +363,9 @@ static void parseArgs(int argc, char **argv) {
   default:
     llvm_unreachable("unrecognized action");
   }
+
+  IndexedCodeGenDataLazyLoading =
+      Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
 }
 
 int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {

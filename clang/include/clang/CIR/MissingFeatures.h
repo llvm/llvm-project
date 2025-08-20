@@ -49,7 +49,6 @@ struct MissingFeatures {
   static bool opLoadEmitScalarRangeCheck() { return false; }
   static bool opLoadBooleanRepresentation() { return false; }
   static bool opLoadStoreTbaa() { return false; }
-  static bool opLoadStoreMemOrder() { return false; }
   static bool opLoadStoreVolatile() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
@@ -163,6 +162,8 @@ struct MissingFeatures {
   static bool atomicInfoGetAtomicPointer() { return false; }
   static bool atomicInfoGetAtomicAddress() { return false; }
   static bool atomicUseLibCall() { return false; }
+  static bool atomicScope() { return false; }
+  static bool atomicSyncScopeID() { return false; }
 
   // Misc
   static bool abiArgInfo() { return false; }
@@ -175,7 +176,12 @@ struct MissingFeatures {
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
+  static bool asmGoto() { return false; }
+  static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmMemoryEffects() { return false; }
+  static bool asmOutputOperands() { return false; }
+  static bool asmUnwindClobber() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
@@ -274,6 +280,7 @@ struct MissingFeatures {
   static bool vtableInitialization() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool msvcBuiltins() { return false; }
+  static bool vaArgABILowering() { return false; }
   static bool vlas() { return false; }
 
   // Missing types

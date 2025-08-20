@@ -16,7 +16,7 @@
 // UNSUPPORTED: ios
 
 // Symbolizer fails to find test functions on current macOS bot version
-// XFAIL: target=arm{{.*}}
+// XFAIL: system-darwin && target=arm{{.*}}
 
 #include <CoreFoundation/CoreFoundation.h>
 

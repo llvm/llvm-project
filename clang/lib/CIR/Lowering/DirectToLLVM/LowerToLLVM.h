@@ -725,6 +725,36 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVAStartOpLowering
+    : public mlir::OpConversionPattern<cir::VAStartOp> {
+public:
+  using mlir::OpConversionPattern<cir::VAStartOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VAStartOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVAEndOpLowering
+    : public mlir::OpConversionPattern<cir::VAEndOp> {
+public:
+  using mlir::OpConversionPattern<cir::VAEndOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VAEndOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVAArgOpLowering
+    : public mlir::OpConversionPattern<cir::VAArgOp> {
+public:
+  using mlir::OpConversionPattern<cir::VAArgOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VAArgOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 

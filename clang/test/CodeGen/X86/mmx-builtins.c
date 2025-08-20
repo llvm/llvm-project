@@ -764,36 +764,42 @@ __m64 test_mm_unpackhi_pi8(__m64 a, __m64 b) {
   // CHECK: shufflevector <8 x i8> {{%.*}}, <8 x i8> {{%.*}}, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   return _mm_unpackhi_pi8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_unpackhi_pi8((__m64)(__v8qi){0, 1, 2, 3, 4, 5, 6, 7}, (__m64)(__v8qi){8, 9, 10, 11, 12, 13, 14, 15}), 4, 12, 5, 13, 6, 14, 7, 15));
 
 __m64 test_mm_unpackhi_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_unpackhi_pi16
   // CHECK: shufflevector <4 x i16> {{%.*}}, <4 x i16> {{%.*}}, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   return _mm_unpackhi_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_unpackhi_pi16((__m64)(__v4hi){0, 1, 2, 3}, (__m64)(__v4hi){ 4, 5, 6, 7}), 2, 6, 3, 7));
 
 __m64 test_mm_unpackhi_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_unpackhi_pi32
   // CHECK: shufflevector <2 x i32> {{%.*}}, <2 x i32> {{%.*}}, <2 x i32> <i32 1, i32 3>
   return _mm_unpackhi_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_unpackhi_pi32((__m64)(__v2si){0, 1}, (__m64)(__v2si){2, 3}), 1, 3));
 
 __m64 test_mm_unpacklo_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_unpacklo_pi8
   // CHECK: shufflevector <8 x i8> {{%.*}}, <8 x i8> {{%.*}}, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   return _mm_unpacklo_pi8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_unpacklo_pi8((__m64)(__v8qi){0, 1, 2, 3, 4, 5, 6, 7}, (__m64)(__v8qi){8, 9, 10, 11, 12, 13, 14, 15}), 0, 8, 1, 9, 2, 10, 3, 11));
 
 __m64 test_mm_unpacklo_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_unpacklo_pi16
   // CHECK: shufflevector <4 x i16> {{%.*}}, <4 x i16> {{%.*}}, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   return _mm_unpacklo_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_unpacklo_pi16((__m64)(__v4hi){0, 1, 2, 3}, (__m64)(__v4hi){ 4, 5, 6, 7}), 0, 4, 1, 5));
 
 __m64 test_mm_unpacklo_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_unpacklo_pi32
   // CHECK: shufflevector <2 x i32> {{%.*}}, <2 x i32> {{%.*}}, <2 x i32> <i32 0, i32 2>
   return _mm_unpacklo_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_unpacklo_pi32((__m64)(__v2si){0, 1}, (__m64)(__v2si){2, 3}), 0, 2));
 
 __m64 test_mm_xor_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_xor_si64
