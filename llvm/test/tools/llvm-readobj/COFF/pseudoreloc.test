@@ -66,16 +66,16 @@ RUN:   -DSYMBOL0=30000000 -DSYMBOL1=B2200000 -DSYMBOL2=00FFFF00
 RUN: llvm-readobj %t.corrupted-iat.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefix=INVALIDSYMBOL --match-full-lines -D#LOCAL1A=%{local1a_386} --implicit-check-not=warning
 
-INVALIDSYMBOL:      Symbol: 0x30
-INVALIDSYMBOL-NEXT: {{.*}}warning: {{.*}}: the reference of the symbol points out of the import table
+INVALIDSYMBOL:      Symbol: 0x[[#%X,ADDR:0x0030]]
+INVALIDSYMBOL-NEXT: {{.*}}warning: {{.*}}: the address referenced by pseudo-relocation is not a valid import entry: 0x[[#%x,ADDR]]
 INVALIDSYMBOL-NEXT: SymbolName: (missing)
 INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A]]
-INVALIDSYMBOL:      Symbol: 0x20B2
-INVALIDSYMBOL-NEXT: {{.*}}warning: {{.*}}: the reference of the symbol doesn't point imported symbol properly
+INVALIDSYMBOL:      Symbol: 0x[[#%X,ADDR:0x20B2]]
+INVALIDSYMBOL-NEXT: {{.*}}warning: {{.*}}: the address referenced by pseudo-relocation is not a valid import entry: 0x[[#%x,ADDR]]
 INVALIDSYMBOL-NEXT: SymbolName: (missing)
 INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+4]]
-INVALIDSYMBOL:      Symbol: 0xFFFF00
-INVALIDSYMBOL-NEXT: {{.*}}warning: {{.*}}: the reference of the symbol points out of the import table
+INVALIDSYMBOL:      Symbol: 0x[[#%X,ADDR:0xFFFF00]]
+INVALIDSYMBOL-NEXT: {{.*}}warning: {{.*}}: the address referenced by pseudo-relocation is not a valid import entry: 0x[[#%x,ADDR]]
 INVALIDSYMBOL-NEXT: SymbolName: (missing)
 INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+8]]
 
