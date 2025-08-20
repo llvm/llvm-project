@@ -823,7 +823,7 @@ public:
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
       OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
-      OmpUniform);
+      OmpUniform, OmpGroupPrivate);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
