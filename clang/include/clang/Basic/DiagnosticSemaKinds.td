@@ -10797,8 +10797,8 @@ def err_continue_not_in_loop : Error<
 def err_break_not_in_loop_or_switch : Error<
   "'break' statement not in loop or switch statement">;
 def err_break_continue_label_not_found
-    : Error<"'%select{continue|break}0' label does not name an enclosing "
-            "%select{loop|loop or 'switch'}0">;
+    : Error<"'%select{break|continue}0' label does not name an enclosing "
+            "%select{loop or 'switch'|loop}0">;
 def err_continue_switch
     : Error<"label of 'continue' refers to a switch statement">;
 def warn_loop_ctrl_binds_to_inner : Warning<

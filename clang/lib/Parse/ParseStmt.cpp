@@ -732,8 +732,8 @@ Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
       SubStmt = ParseStatementOrDeclarationAfterAttributes(
-          Stmts, StmtCtx, nullptr, EmptyCXX11Attrs, TempAttrs,
-          LoopOrSwitchNames);
+          Stmts, StmtCtx, /*TrailingElseLoc=*/nullptr, EmptyCXX11Attrs,
+          TempAttrs, LoopOrSwitchNames);
       if (!TempAttrs.empty() && !SubStmt.isInvalid())
         SubStmt = Actions.ActOnAttributedStmt(TempAttrs, SubStmt.get());
     }
@@ -2337,7 +2337,7 @@ StmtResult Parser::ParseBreakOrContinueStatement(bool IsContinue) {
       // syntax of this feature is finalised.
       Diag(LabelLoc, diag::err_c2y_labeled_break_continue) << IsContinue;
     if (!Target) {
-      Diag(LabelLoc, diag::err_break_continue_label_not_found) << !IsContinue;
+      Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsContinue;
       return StmtError();
     }
   }
