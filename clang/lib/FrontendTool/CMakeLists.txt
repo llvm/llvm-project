@@ -10,6 +10,7 @@ set(link_libs
   clangExtractAPI
   clangFrontend
   clangRewriteFrontend
+  clangHLSLFrontend
   )
 
 set(deps)

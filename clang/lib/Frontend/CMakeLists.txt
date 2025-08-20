@@ -1,4 +1,5 @@
 add_subdirectory(Rewrite)
+add_subdirectory(HLSL)
 
 set(LLVM_LINK_COMPONENTS
   BitReader
