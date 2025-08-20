@@ -213,11 +213,11 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
   // clang-format off
   unsigned long expectedSize = 5;
   ASSERT_EQ(seenMsg.size(), expectedSize);
-  EXPECT_EQ(seenMsg[0], "[Passed] Vectorizer:myPass1 {Remark=vectorized loop, tripCount=128}");
-  EXPECT_EQ(seenMsg[1], "[Analysis] Register: {Remark=Kernel uses 168 registers}");
-  EXPECT_EQ(seenMsg[2], "[Missed] Unroll: {Reason=tripCount=4 < threshold=256}");
-  EXPECT_EQ(seenMsg[3], "[Missed] Unroll: {Reason=tripCount=4 < threshold=256, Suggestion=increase unroll to 128}");
-  EXPECT_EQ(seenMsg[4], "[Failure] Unroll: {Reason=failed due to unsupported pattern}");
+  EXPECT_EQ(seenMsg[0], "[Passed] myPass1:Vectorizer | Remark=\"vectorized loop\", tripCount=128");
+  EXPECT_EQ(seenMsg[1], "[Analysis] Register | Remark=\"Kernel uses 168 registers\"");
+  EXPECT_EQ(seenMsg[2], "[Missed] Unroll | Reason=\"tripCount=4 < threshold=256\"");
+  EXPECT_EQ(seenMsg[3], "[Missed] Unroll | Reason=\"tripCount=4 < threshold=256\", Suggestion=\"increase unroll to 128\"");
+  EXPECT_EQ(seenMsg[4], "[Failure] Unroll | Reason=\"failed due to unsupported pattern\"");
   // clang-format on
 }
 

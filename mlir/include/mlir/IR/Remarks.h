@@ -115,7 +115,7 @@ public:
 
   llvm::remarks::Type getRemarkType() const;
 
-  std::string getRemarkTypeString() const;
+  StringRef getRemarkTypeString() const;
 
 protected:
   /// Keeps the MLIR diagnostic kind, which is used to determine the

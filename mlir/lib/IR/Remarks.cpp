@@ -34,36 +34,58 @@ Remark::Arg::Arg(llvm::StringRef k, Type t) : key(k) {
 void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
 void Remark::insert(Arg a) { args.push_back(std::move(a)); }
 
-// Simple helper to print key=val list.
+// Simple helper to print key=val list (sorted).
 static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
   if (args.empty())
     return;
-  os << " {";
-  for (size_t i = 0; i < args.size(); ++i) {
-    const auto &a = args[i];
-    os << a.key << "=" << a.val;
-    if (i + 1 < args.size())
+
+  llvm::SmallVector<Remark::Arg, 8> sorted(args.begin(), args.end());
+  llvm::sort(sorted, [](const Remark::Arg &a, const Remark::Arg &b) {
+    return a.key < b.key;
+  });
+
+  os << " | ";
+  for (size_t i = 0; i < sorted.size(); ++i) {
+    const auto &a = sorted[i];
+    os << a.key << "=";
+
+    llvm::StringRef val(a.val);
+    bool needsQuote = val.contains(' ') || val.contains(',') ||
+                      val.contains('{') || val.contains('}');
+    if (needsQuote)
+      os << '"' << val << '"';
+    else
+      os << val;
+
+    if (i + 1 < sorted.size())
       os << ", ";
   }
-  os << "}";
 }
 
 /// Print the remark to the given output stream.
 /// Example output:
-/// [Missed] LoopUnroll:UnrolledLoop func=myFunction @file.cpp:42:7
-/// {tripCount=128, reason=too_small}
+/// [Missed] LoopOptimizer | Reason="tripCount=4 < threshold=256"
+/// [Failure] LoopOptimizer | Reason="failed due to unsupported pattern"
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
-  os << '[' << getRemarkTypeString() << "] ";
-  os << getRemarkName() << ':' << getPassName();
-  if (functionName)
-    os << " func=" << getFunction() << " ";
+  // Header: [Type] pass:remarkName
+  StringRef type = getRemarkTypeString();
+  StringRef pass = getPassName();
+  StringRef name = getRemarkName();
 
-  if (printLocation)
+  os << '[' << type << "] ";
+  if (!pass.empty())
+    os << pass << ':';
+  os << name;
+
+  if (functionName)
+    os << " func=" << getFunction();
+
+  if (printLocation) {
     if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
       os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
          << flc.getColumn();
+  }
 
-  // Key/Value args
   printArgs(os, getArgs());
 }
 
@@ -75,7 +97,7 @@ std::string Remark::getMsg() const {
   return s;
 }
 
-std::string Remark::getRemarkTypeString() const {
+llvm::StringRef Remark::getRemarkTypeString() const {
   switch (remarkKind) {
   case RemarkKind::RemarkUnknown:
     return "Unknown";
