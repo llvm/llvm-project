@@ -157,7 +157,10 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 endif()
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
-  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
+  )
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
