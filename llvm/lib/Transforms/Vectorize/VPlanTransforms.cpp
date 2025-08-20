@@ -980,10 +980,11 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
     return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
                           Ops[1],
                           cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
-  case Instruction::InsertElement:
-    return Folder.FoldInsertElement(Ops[0], Ops[1], Ops[2]);
+  // An extract of a live-in is an extract of a broadcast, so return the
+  // broadcasted element.
   case Instruction::ExtractElement:
-    return Folder.FoldExtractElement(Ops[0], Ops[1]);
+    assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
+    return Ops[0];
   }
   return nullptr;
 }
@@ -2137,6 +2138,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo,
                                        VPValue &AllOneMask, VPValue &EVL) {
+  // FIXME: Don't transform recipes to EVL recipes if they're not masked by the
+  // header mask.
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
@@ -2146,14 +2149,35 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return HeaderMask == OrigMask ? nullptr : OrigMask;
   };
 
+  /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
+  auto GetNewAddr = [&CurRecipe, &EVL](VPValue *Addr) -> VPValue * {
+    auto *EndPtr = dyn_cast<VPVectorEndPointerRecipe>(Addr);
+    if (!EndPtr)
+      return Addr;
+    assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF() &&
+           "VPVectorEndPointerRecipe with non-VF VF operand?");
+    assert(
+        all_of(EndPtr->users(),
+               [](VPUser *U) {
+                 return cast<VPWidenMemoryRecipe>(U)->isReverse();
+               }) &&
+        "VPVectorEndPointRecipe not used by reversed widened memory recipe?");
+    VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
+    EVLAddr->insertBefore(&CurRecipe);
+    EVLAddr->setOperand(1, &EVL);
+    return EVLAddr;
+  };
+
   return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
       .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
         VPValue *NewMask = GetNewMask(L->getMask());
-        return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
+        VPValue *NewAddr = GetNewAddr(L->getAddr());
+        return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
       })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
-        return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
+        VPValue *NewAddr = GetNewAddr(S->getAddr());
+        return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
       })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
@@ -2188,7 +2212,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
                         VPWidenIntOrFpInductionRecipe>) &&
          "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceAllUsesWith(&EVL);
+  Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+    return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
+  });
 
   assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
@@ -2615,9 +2641,7 @@ void VPlanTransforms::createInterleaveGroups(
       VPValue *OffsetVPV =
           Plan.getOrAddLiveIn(ConstantInt::get(Plan.getContext(), -Offset));
       VPBuilder B(InsertPos);
-      Addr = NW.isInBounds()
-                 ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
-                 : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+      Addr = B.createNoWrapPtrAdd(InsertPos->getAddr(), OffsetVPV, NW);
     }
     // If the group is reverse, adjust the index to refer to the last vector
     // lane instead of the first. We adjust the index from the first vector
@@ -3282,6 +3306,52 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
       {Plan.getTripCount(), Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 1))},
       DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
   BTC->replaceAllUsesWith(TCMO);
+}
+
+void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(LoopRegion->getEntry()));
+  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
+  // excluding ones in replicate regions. Those are not materialized explicitly
+  // yet. Those vector users are still handled in VPReplicateRegion::execute(),
+  // via shouldPack().
+  // TODO: materialize build vectors for replicating recipes in replicating
+  // regions.
+  // TODO: materialize build vectors for VPInstructions.
+  for (VPBasicBlock *VPBB :
+       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      auto UsesVectorOrInsideReplicateRegion = [RepR, LoopRegion](VPUser *U) {
+        VPRegionBlock *ParentRegion =
+            cast<VPRecipeBase>(U)->getParent()->getParent();
+        return !U->usesScalars(RepR) || ParentRegion != LoopRegion;
+      };
+      if (!RepR || RepR->isSingleScalar() ||
+          none_of(RepR->users(), UsesVectorOrInsideReplicateRegion))
+        continue;
+
+      Type *ScalarTy = TypeInfo.inferScalarType(RepR);
+      unsigned Opcode = ScalarTy->isStructTy()
+                            ? VPInstruction::BuildStructVector
+                            : VPInstruction::BuildVector;
+      auto *BuildVector = new VPInstruction(Opcode, {RepR});
+      BuildVector->insertAfter(RepR);
+
+      RepR->replaceUsesWithIf(
+          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
+                           VPUser &U, unsigned) {
+            return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
+          });
+    }
+  }
 }
 
 void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,

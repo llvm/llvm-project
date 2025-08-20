@@ -274,6 +274,10 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
+  /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
+  /// values into single vectors.
+  static void materializeBuildVectors(VPlan &Plan);
+
   /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
   static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
                                     ElementCount VF);

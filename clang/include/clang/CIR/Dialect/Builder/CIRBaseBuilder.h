@@ -157,6 +157,19 @@ public:
     return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
   }
 
+  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
+                         uint64_t alignment = 0) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    assert(!cir::MissingFeatures::opLoadStoreVolatile());
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+                               alignmentAttr, cir::MemOrderAttr{});
+  }
+
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
+                                uint64_t alignment) {
+    return createLoad(loc, ptr, alignment);
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
@@ -231,18 +244,20 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
-                           mlir::IntegerAttr align = {}) {
-    return create<cir::StoreOp>(loc, val, dst, align);
+                           bool isVolatile = false,
+                           mlir::IntegerAttr align = {},
+                           cir::MemOrderAttr order = {}) {
+    return cir::StoreOp::create(*this, loc, val, dst, align, order);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
                                            mlir::Location loc,
                                            mlir::StringRef name,
-                                           mlir::Type type,
+                                           mlir::Type type, bool isConstant,
                                            cir::GlobalLinkageKind linkage) {
     mlir::OpBuilder::InsertionGuard guard(*this);
     setInsertionPointToStart(mlirModule.getBody());
-    return create<cir::GlobalOp>(loc, name, type, linkage);
+    return cir::GlobalOp::create(*this, loc, name, type, isConstant, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -255,7 +270,8 @@ public:
                                clang::CharUnits alignment) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
-    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignmentAttr);
+    return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
+                               alignmentAttr, /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -504,8 +520,7 @@ public:
   static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          // TODO: Add LabelOp missing feature here
-          return mlir::isa<cir::AllocaOp>(&op);
+          return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);
         });
 
     if (last != block->rend())

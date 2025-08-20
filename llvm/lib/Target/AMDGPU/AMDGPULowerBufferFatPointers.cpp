@@ -2366,8 +2366,12 @@ static bool containsBufferFatPointers(const Function &F,
                                       BufferFatPtrToStructTypeMap *TypeMap) {
   bool HasFatPointers = false;
   for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB)
+    for (const Instruction &I : BB) {
       HasFatPointers |= (I.getType() != TypeMap->remapType(I.getType()));
+      // Catch null pointer constants in loads, stores, etc.
+      for (const Value *V : I.operand_values())
+        HasFatPointers |= (V->getType() != TypeMap->remapType(V->getType()));
+    }
   return HasFatPointers;
 }
 
