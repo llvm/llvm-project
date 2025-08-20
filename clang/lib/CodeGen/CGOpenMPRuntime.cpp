@@ -8566,144 +8566,21 @@ private:
     return true;
   }
 
-  /// Get the type of an element of a ComponentList Expr \p Exp.
-  ///
-  /// For something like the following:
-  /// ```c
-  ///  int *p, **p;
-  /// ```
-  /// The types for the following Exprs would be:
-  ///   Expr     | Type
-  ///   ---------|-----------
-  ///   p        | int *
-  ///   *p       | int
-  ///   p[0]     | int
-  ///   p[0:1]   | int
-  ///   pp       | int **
-  ///   pp[0]    | int *
-  ///   pp[0:1]  | int *
-  static QualType getComponentExprElementType(const Expr *Exp) {
-    assert(!isa<OMPArrayShapingExpr>(Exp) &&
-           "Cannot get element-type from array-shaping expr.");
-
-    // Unless we are handling array-section expressions, including
-    // array-subscripts, derefs, we can rely on getType.
-    if (!isa<ArraySectionExpr>(Exp))
-      return Exp->getType().getNonReferenceType().getCanonicalType();
-
-    // For array-sections, we need to find the type of one element of
-    // the section.
-    const auto *OASE = cast<ArraySectionExpr>(Exp);
-
-    QualType BaseType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
-
-    QualType ElemTy;
-    if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
-      ElemTy = ATy->getElementType();
-    else
-      ElemTy = BaseType->getPointeeType();
-
-    ElemTy = ElemTy.getNonReferenceType().getCanonicalType();
-    return ElemTy;
-  }
-
-  /// Traverse the list of Components to find the first pointer expression,
-  /// which should be the attachable-base-pointer for the current
-  /// component-list.
-  ///
-  /// For example, given the following:
-  /// ```c
-  /// struct S {
-  ///   int a;
-  ///   int b[10];
-  ///   int c[10][10];
-  ///   int *p;
-  ///   int **pp;
-  /// }
-  /// S s, *ps, **pps, *(pas[10]), ***ppps;
-  /// int i;
-  /// ```
-  /// The base-pointers for the following map operands would be:
-  ///   map list-item   | attach base-pointer   | attach base-pointer
-  ///                   | for directives except | target_update (if
-  ///                   | target_update         | different)
-  ///   ----------------|-----------------------|---------------------
-  ///   s               | N/A                   |
-  ///   s.a             | N/A                   |
-  ///   s.p             | N/A                   |
-  ///   ps              | N/A                   |
-  ///   ps->p           | ps                    |
-  ///   ps[1]           | ps                    |
-  ///   *(ps + 1)       | ps                    |
-  ///   (ps + 1)[1]     | ps                    |
-  ///   ps[1:10]        | ps                    |
-  ///   ps->b[10]       | ps                    |
-  ///   ps->p[10]       | ps->p                 |
-  ///   ps->c[1][2]     | ps                    |
-  ///   ps->c[1:2][2]   | (error diagnostic)    | N/A, TODO: ps
-  ///   ps->c[1:1][2]   | ps                    | N/A, TODO: ps
-  ///   pps[1][2]       | pps[1]                |
-  ///   pps[1:1][2]     | pps[1:1]              | N/A, TODO: pps[1:1]
-  ///   pps[1:i][2]     | pps[1:i]              | N/A, TODO: pps[1:i]
-  ///   pps[1:2][2]     | (error diagnostic)    | N/A
-  ///   pps[1]->p       | pps[1]                |
-  ///   pps[1]->p[10]   | pps[1]                |
-  ///   pas[1]          | N/A                   |
-  ///   pas[1][2]       | pas[1]                |
-  ///   ppps[1][2]      | ppps[1]               |
-  ///   ppps[1][2][3]   | ppps[1][2]            |
-  ///   ppps[1][2:1][3] | ppps[1][2:1]          | N/A, TODO: ppps[1][2:1]
-  ///   ppps[1][2:2][3] | (error diagnostic)    | N/A
-  /// Returns a pair of the attach pointer expression and its depth in the
-  /// component list.
-  /// TODO: This may need to be updated to handle ref_ptr/ptee cases for byref
-  /// map operands.
-  /// TODO: Handle cases for target-update, where the list-item is a
-  /// non-contiguous array-section that still has a base-pointer.
+  // A wrapper around OMPClauseMappableExprCommon::findAttachPtrExpr. that
+  // accepts \p CurDir instead of an OpenMPDirectiveKind.
   static std::pair<const Expr *, std::optional<size_t>> findAttachPtrExpr(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
       llvm::PointerUnion<const OMPExecutableDirective *,
                          const OMPDeclareMapperDecl *>
           CurDir) {
 
-    // If we only have a single component, we have a map like "map(p)", which
-    // cannot have a base-pointer.
-    if (Components.size() < 2)
-      return {nullptr, std::nullopt};
+    OpenMPDirectiveKind CurDirectiveID =
+        isa<const OMPDeclareMapperDecl *>(CurDir)
+            ? OMPD_declare_mapper
+            : cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind();
 
-    // Only check for non-contiguous sections on target_update,
-    // since we can assume array-sections are contiguous on maps on other
-    // constructs.
-    if (Components.back().isNonContiguous() &&
-        isa<const OMPExecutableDirective *>(CurDir) &&
-        isa<OMPTargetUpdateDirective>(
-            cast<const OMPExecutableDirective *>(CurDir)))
-      return {nullptr, std::nullopt};
-
-    // To find the attach base-pointer, we start with the second component,
-    // stripping away one component at a time, until we reach a pointer Expr
-    // (that is not a binary operator). The first such pointer should be the
-    // attach base-pointer for the component list.
-    for (size_t I = 1; I < Components.size(); ++I) {
-      const Expr *CurExpr = Components[I].getAssociatedExpression();
-      if (!CurExpr)
-        break;
-
-      // If CurExpr is something like `p + 10`, we need to ignore it, since
-      // we are looking for `p`.
-      if (isa<BinaryOperator>(CurExpr))
-        continue;
-
-      // Keep going until we reach an Expr of pointer type.
-      QualType CurType = getComponentExprElementType(CurExpr);
-      if (!CurType->isPointerType())
-        continue;
-
-      // We have found a pointer Expr. This must be the attach pointer.
-      return {CurExpr, Components.size() - I};
-    }
-
-    return {nullptr, std::nullopt};
+    return OMPClauseMappableExprCommon::findAttachPtrExpr(Components,
+                                                          CurDirectiveID);
   }
 
   /// Group component lists by their AttachPtrExpr and return them sorted by
@@ -8872,34 +8749,31 @@ private:
          &InfoGen](CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
                    OMPClauseMappableExprCommon::MappableExprComponentListRef
                        Components,
-                   bool IsImplicit, bool IsDevAddr) {
+                   bool IsImplicit, bool IsDevAddr,
+                   bool IEIsAttachPtrForDevAddr = false) {
           // We didn't find any match in our map information - generate a zero
           // size array section - if the pointer is a struct member we defer
           // this action until the whole struct has been processed.
-          if (isa<MemberExpr>(IE)) {
-            // Insert the pointer into Info to be processed by
-            // generateInfoForComponentList. Because it is a member pointer
-            // without a pointee, no entry will be generated for it, therefore
-            // we need to generate one after the whole struct has been
-            // processed. Nonetheless, generateInfoForComponentList must be
-            // called to take the pointer into account for the calculation of
-            // the range of the partial struct.
-            InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, {}, {},
-                    /*ReturnDevicePointer=*/false, IsImplicit, nullptr, nullptr,
-                    IsDevAddr);
-            DeferredInfo[nullptr].emplace_back(IE, VD, IsDevAddr);
+          // TODO: Check for any reason to still add a map for member fields.
+          // The following seems to be working fine.
+          llvm::Value *Ptr;
+          if (IsDevAddr && !IEIsAttachPtrForDevAddr) {
+            if (IE->isGLValue())
+              Ptr = CGF.EmitLValue(IE).getPointer(CGF);
+            else
+              Ptr = CGF.EmitScalarExpr(IE);
           } else {
-            llvm::Value *Ptr;
-            if (IsDevAddr) {
-              if (IE->isGLValue())
-                Ptr = CGF.EmitLValue(IE).getPointer(CGF);
-              else
-                Ptr = CGF.EmitScalarExpr(IE);
-            } else {
-              Ptr = CGF.EmitLoadOfScalar(CGF.EmitLValue(IE), IE->getExprLoc());
-            }
-            UseDeviceDataCombinedInfoGen(VD, Ptr, CGF, IsDevAddr);
+            Ptr = CGF.EmitLoadOfScalar(CGF.EmitLValue(IE), IE->getExprLoc());
           }
+          bool TreatDevAddrAsDevPtr = IEIsAttachPtrForDevAddr;
+          // For the purpose of address-translation, treat something like the
+          // following:
+          //   int *p;
+          //   ... use_device_addr(p[1])
+          // equivalent to
+          //   ... use_device_ptr(p)
+          UseDeviceDataCombinedInfoGen(VD, Ptr, CGF, /*IsDevAddr=*/IsDevAddr &&
+                                                         !TreatDevAddrAsDevPtr);
         };
 
     auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF,
@@ -8919,12 +8793,11 @@ private:
           MapInfo *CI = nullptr;
           // We potentially have multiple maps for the same decl. We need to
           // only consider those for which the attach-ptr matches the desired
-          // attach-ptr. If found, return the first such map.
+          // attach-ptr.
           auto *It = llvm::find_if(Data, [&](const MapInfo &MI) {
             if (MI.Components.back().getAssociatedDeclaration() != VD)
               return false;
 
-            // Debug: Print what we're checking against
             const Expr *MapAttachPtr = getAttachPtrExpr(MI.Components);
             bool Match = AttachPtrExprComparator(this).areEqual(
                 MapAttachPtr, DesiredAttachPtrExpr);
@@ -8988,8 +8861,10 @@ private:
         //   map(p[1]) use_device_ptr(p)     // match
         //   map(ps->a) use_device_ptr(ps)   // match
         //   map(p) use_device_ptr(p)        // no match
-        const Expr *UDPFirstExpr = Components.front().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, /*DesiredAttachPtrExpr=*/UDPFirstExpr,
+        const Expr *UDPOperandExpr =
+            Components.front().getAssociatedExpression();
+        if (IsMapInfoExist(CGF, VD, IE,
+                           /*DesiredAttachPtrExpr=*/UDPOperandExpr,
                            /*IsDevAddr=*/false))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
@@ -9011,33 +8886,36 @@ private:
         if (!Processed.insert(VD).second)
           continue;
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
-        const Expr *IE = std::get<1>(L).back().getAssociatedExpression();
-        if (const auto *ASE_IE = dyn_cast_or_null<ArraySubscriptExpr>(
-                IE->IgnoreParenImpCasts())) {
-          const Expr *BaseIE = ASE_IE->getBase()->IgnoreParenImpCasts();
-          if (!isa<DeclRefExpr>(BaseIE)) {
-            llvm::errs() << "error: use_device_addr expects base-pointer to be "
-                            "an identifier (e.g., xpp or xpp[1]); got: ";
-            IE->dump();
-          }
-        }
-        // For use_device_addr, we match an existing map clause if its attach-ptr
-        // is same as the attach-ptr of the use_device_addr clause. e.g.
-        //   map(p) use_device_addr(p)         // match
-        //   map(p[1]) use_device_addr(p[0])   // match
-        //   map(ps->a) use_device_addr(ps->b) // match
-        //   map(p) use_device_addr(p[0])      // no match
-        //   map(pp) use_device_addr(pp[0][0]) // no match
-        // FIXME: getAttachPtrExpr does not work on use_device_addr, since
-        // the component-list only contains one component. We need to move
-        // attach-ptr calculation to the Sema phase.
+        // For use_device_addr, we match an existing map clause if the
+        // use_device_addr operand's attach-ptr matches the map operand's
+        // attach-ptr.
+        // We chould also restrict to only match cases when there is a full
+        // match between the map/use_device_addr clause exprs, but that may be
+        // unnecessary.
+        //
+        // map expr | use_device_addr expr | current   | possible restrictive/
+        //          |                      | behavior  | safer behavior
+        // ---------|----------------------|-----------|-----------------------
+        // p        | p                    | match     | match
+        // p[0]     | p[0]                 | match     | match
+        // p[0:1]   | p[0]                 | match     | no match
+        // p[0:1]   | p[2:1]               | match     | no match
+        // p[1]     | p[0]                 | match     | no match
+        // ps->a    | ps->b                | match     | no match
+        // p        | p[0]                 | no match  | no match
+        // pp       | pp[0][0]             | no match  | no match
         const Expr *UDAAttachPtrExpr = getAttachPtrExpr(Components);
+        const Expr *IE = std::get<1>(L).back().getAssociatedExpression();
+        assert((!UDAAttachPtrExpr || UDAAttachPtrExpr == IE) &&
+               "use_device_addr operand has an attach-ptr, but does not match "
+               "last component's expr.");
         if (IsMapInfoExist(CGF, VD, IE,
                            /*DesiredAttachPtrExpr=*/UDAAttachPtrExpr,
                            /*IsDevAddr=*/true))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
-                   /*IsDevAddr=*/true);
+                   /*IsDevAddr=*/true,
+                   /*IEIsAttachPtrForDevAddr=*/UDAAttachPtrExpr != nullptr);
       }
     }
 
@@ -9825,7 +9703,8 @@ public:
                    ->isPointerType()) || /*&&
                // Check if both component lists share the same attach pointer
                // This allows struct member access through pointers when they
-               // belong to the same struct, including nested cases like ps->qs->x
+               // belong to the same struct, including nested cases like
+               // ps->qs->x
                !(AttachPtr1 &&
                  AttachPtr2 &&
                  AttachPtr1 == AttachPtr2)) ||*/

@@ -60,13 +60,13 @@ int main() {
 // Expected Maps:
 // (1):
 //   &A[0], &A[/*lb=*/0], 1024 * sizeof(A[0]), TO | FROM
-//   &A, &A[/*lb=*/0], sizeof(A), ATTACH
+//   &A,    &A[/*lb=*/0], sizeof(A),           ATTACH
 // (2):
-//   &A[0], &A[0], sizeof(A), RETURN_PARAM
+//   &A[0], &A[0],        0,                   RETURN_PARAM
 // (3):
 //   &B[0], &B[/*lb=*/0], 1024 * sizeof(B[0]), TO | FROM | PARAM
-//   &B, &B[/*lb=*/0], sizeof(B), ATTACH
-//   &A[0], &A[0], sizeof(A[0]), LITERAL | PARAM
+//   &B,    &B[/*lb=*/0], sizeof(B),           ATTACH
+//   &A[0], &A[0],        sizeof(A[0]),        LITERAL | PARAM
 
 //.
 // CHECK1: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 4096, i64 8]

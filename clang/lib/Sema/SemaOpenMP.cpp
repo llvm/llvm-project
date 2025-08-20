@@ -21844,8 +21844,10 @@ static void checkMappableExpressionList(
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown,
     ArrayRef<OpenMPMapModifierKind> Modifiers = {},
     bool IsMapTypeImplicit = false, bool NoDiagnose = false) {
-  // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
-  assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
+  // We only expect mappable expressions in 'to', 'from', 'map', and
+  // 'use_device_addr' clauses.
+  assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from ||
+          CKind == OMPC_use_device_addr) &&
          "Unexpected clause kind with mappable expressions!");
   unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
 
@@ -23537,17 +23539,67 @@ SemaOpenMP::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
     // similar properties of a first private variable.
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
 
-    // Create a mappable component for the list item. List items in this clause
-    // only need a component.
-    MVLI.VarBaseDeclarations.push_back(D);
-    MVLI.VarComponents.emplace_back();
-    Expr *Component = SimpleRefExpr;
-    if (VD && (isa<ArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
-               isa<ArraySubscriptExpr>(RefExpr->IgnoreParenImpCasts())))
-      Component =
-          SemaRef.DefaultFunctionArrayLvalueConversion(SimpleRefExpr).get();
-    MVLI.VarComponents.back().emplace_back(Component, D,
-                                           /*IsNonContiguous=*/false);
+    // Use the map-like approach to fully populate VarComponents
+    OMPClauseMappableExprCommon::MappableExprComponentList CurComponents;
+
+    const Expr *BE = checkMapClauseExpressionBase(
+        SemaRef, RefExpr, CurComponents, OMPC_use_device_addr,
+        DSAStack->getCurrentDirective(),
+        /*NoDiagnose=*/false);
+
+    if (!BE)
+      continue;
+
+    assert(!CurComponents.empty() &&
+           "use_device_addr clause expression with no components!");
+
+    // OpenMP use_device_addr: If a list item is an array section, the array
+    // base must be a base language identifier. We caught the cases where
+    // the array-section has a base-variable in getPrivateItem. e.g.
+    //   struct S {
+    //     int a[10];
+    //   }; S s1;
+    //   ... use_device_addr(s1.a[0])    // not ok, caught already
+    //
+    // But we still neeed to verify that the base-pointer is also a
+    // base-language identifier, and catch cases like:
+    //   int *pa[10]; *p;
+    //   ... use_device_addr(pa[1][2])   // not ok, base-pointer is pa[1]
+    //   ... use_device_addr(p[1])       // ok
+    //   ... use_device_addr(this->p[1]) // ok
+    auto AttachPtrResult = OMPClauseMappableExprCommon::findAttachPtrExpr(
+        CurComponents, DSAStack->getCurrentDirective());
+    const Expr *AttachPtrExpr = AttachPtrResult.first;
+
+    if (AttachPtrExpr) {
+      const Expr *BaseExpr = AttachPtrExpr->IgnoreParenImpCasts();
+      bool IsValidBase = false;
+
+      if (isa<DeclRefExpr>(BaseExpr))
+        IsValidBase = true;
+      else if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr);
+               ME && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+        IsValidBase = true;
+
+      if (!IsValidBase) {
+        SemaRef.Diag(ELoc,
+                     diag::err_omp_expected_base_pointer_var_name_member_expr)
+            << (SemaRef.getCurrentThisType().isNull() ? 0 : 1)
+            << AttachPtrExpr->getSourceRange();
+        continue;
+      }
+    }
+
+    // Get the declaration from the components
+    ValueDecl *CurDeclaration = CurComponents.back().getAssociatedDeclaration();
+    assert(isa<CXXThisExpr>(BE) ||
+           CurDeclaration &&
+               "Unexpected null decl for use_device_addr clause.");
+
+    MVLI.VarBaseDeclarations.push_back(CurDeclaration);
+    MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
+    MVLI.VarComponents.back().append(CurComponents.begin(),
+                                     CurComponents.end());
   }
 
   if (MVLI.ProcessedVarList.empty())

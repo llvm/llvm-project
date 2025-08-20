@@ -5841,6 +5841,88 @@ public:
                               MC.isNonContiguous());
   }
 
+public:
+  /// Get the type of an element of a ComponentList Expr \p Exp.
+  ///
+  /// For something like the following:
+  /// ```c
+  ///  int *p, **p;
+  /// ```
+  /// The types for the following Exprs would be:
+  ///   Expr     | Type
+  ///   ---------|-----------
+  ///   p        | int *
+  ///   *p       | int
+  ///   p[0]     | int
+  ///   p[0:1]   | int
+  ///   pp       | int **
+  ///   pp[0]    | int *
+  ///   pp[0:1]  | int *
+  /// Note: this assumes that if \p Exp is an array-section, it is contiguous.
+  static QualType getComponentExprElementType(const Expr *Exp);
+
+  /// Find the attach pointer expression from a list of mappable expression
+  /// components.
+  ///
+  /// This function traverses the component list to find the first
+  /// expression that has a pointer type, which represents the attach
+  /// base pointer expr for the current component-list.
+  ///
+  /// For example, given the following:
+  ///
+  /// ```c
+  ///   struct S {
+  ///     int a;
+  ///     int b[10];
+  ///     int c[10][10];
+  ///     int *p;
+  ///     int **pp;
+  ///   }
+  ///   S s, *ps, **pps, *(pas[10]), ***ppps;
+  ///   int i;
+  /// ```
+  ///
+  /// The base-pointers for the following map operands would be:
+  ///   map list-item   | attach base-pointer   | attach base-pointer
+  ///                   | for directives except | target_update (if
+  ///                   | target_update         | different)
+  ///   ----------------|-----------------------|---------------------
+  ///   s               | N/A                   |
+  ///   s.a             | N/A                   |
+  ///   s.p             | N/A                   |
+  ///   ps              | N/A                   |
+  ///   ps->p           | ps                    |
+  ///   ps[1]           | ps                    |
+  ///   *(ps + 1)       | ps                    |
+  ///   (ps + 1)[1]     | ps                    |
+  ///   ps[1:10]        | ps                    |
+  ///   ps->b[10]       | ps                    |
+  ///   ps->p[10]       | ps->p                 |
+  ///   ps->c[1][2]     | ps                    |
+  ///   ps->c[1:2][2]   | (error diagnostic)    | N/A, TODO: ps
+  ///   ps->c[1:1][2]   | ps                    | N/A, TODO: ps
+  ///   pps[1][2]       | pps[1]                |
+  ///   pps[1:1][2]     | pps[1:1]              | N/A, TODO: pps[1:1]
+  ///   pps[1:i][2]     | pps[1:i]              | N/A, TODO: pps[1:i]
+  ///   pps[1:2][2]     | (error diagnostic)    | N/A
+  ///   pps[1]->p       | pps[1]                |
+  ///   pps[1]->p[10]   | pps[1]                |
+  ///   pas[1]          | N/A                   |
+  ///   pas[1][2]       | pas[1]                |
+  ///   ppps[1][2]      | ppps[1]               |
+  ///   ppps[1][2][3]   | ppps[1][2]            |
+  ///   ppps[1][2:1][3] | ppps[1][2:1]          | N/A, TODO: ppps[1][2:1]
+  ///   ppps[1][2:2][3] | (error diagnostic)    | N/A
+  /// Returns a pair of the attach pointer expression and its depth in the
+  /// component list.
+  /// TODO: This may need to be updated to handle ref_ptr/ptee cases for byref
+  /// map operands.
+  /// TODO: Handle cases for target-update, where the list-item is a
+  /// non-contiguous array-section that still has a base-pointer.
+  static std::pair<const Expr *, std::optional<size_t>>
+  findAttachPtrExpr(MappableExprComponentListRef Components,
+                    OpenMPDirectiveKind CurDirKind);
+
 protected:
   // Return the total number of elements in a list of component lists.
   static unsigned
