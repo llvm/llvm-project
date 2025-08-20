@@ -1785,6 +1785,93 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// Can be called with an integer or vector as the first and only parameter.
+static bool interp__builtin_elementwise_countzeroes(InterpState &S,
+                                                    CodePtr OpPC,
+                                                    const InterpFrame *Frame,
+                                                    const CallExpr *Call,
+                                                    unsigned BuiltinID) {
+  const bool HasZeroArg = Call->getNumArgs() == 2;
+  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_cttz;
+  assert(Call->getNumArgs() == 1 || HasZeroArg);
+  if (Call->getArg(0)->getType()->isIntegerType()) {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    APSInt Val = popToAPSInt(S.Stk, ArgT);
+    std::optional<APSInt> ZeroVal;
+    if (HasZeroArg) {
+      ZeroVal = Val;
+      Val = popToAPSInt(S.Stk, ArgT);
+    }
+
+    if (Val.isZero()) {
+      if (ZeroVal) {
+        pushInteger(S, *ZeroVal, Call->getType());
+        return true;
+      }
+      // If we haven't been provided the second argument, the result is
+      // undefined
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_countzeroes_zero)
+          << /*IsTrailing=*/IsCTTZ;
+      return false;
+    }
+
+    if (BuiltinID == Builtin::BI__builtin_elementwise_ctlz) {
+      pushInteger(S, Val.countLeadingZeros(), Call->getType());
+    } else {
+      pushInteger(S, Val.countTrailingZeros(), Call->getType());
+    }
+    return true;
+  }
+  // Otherwise, the argument must be a vector.
+  const ASTContext &ASTCtx = S.getASTContext();
+  Pointer ZeroArg;
+  if (HasZeroArg) {
+    assert(Call->getArg(1)->getType()->isVectorType() &&
+           ASTCtx.hasSameUnqualifiedType(Call->getArg(0)->getType(),
+                                         Call->getArg(1)->getType()));
+    ZeroArg = S.Stk.pop<Pointer>();
+    assert(ZeroArg.getFieldDesc()->isPrimitiveArray());
+  }
+  assert(Call->getArg(0)->getType()->isVectorType());
+  const Pointer &Arg = S.Stk.pop<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+
+  // FIXME: Reading from uninitialized vector elements?
+  for (unsigned I = 0; I != NumElems; ++I) {
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      APInt EltVal = Arg.atIndex(I).deref<T>().toAPSInt();
+      if (EltVal.isZero()) {
+        if (HasZeroArg) {
+          Dst.atIndex(I).deref<T>() = ZeroArg.atIndex(I).deref<T>();
+        } else {
+          // If we haven't been provided the second argument, the result is
+          // undefined
+          S.FFDiag(S.Current->getSource(OpPC),
+                   diag::note_constexpr_countzeroes_zero)
+              << /*IsTrailing=*/IsCTTZ;
+          return false;
+        }
+      } else if (IsCTTZ) {
+        Dst.atIndex(I).deref<T>() = T::from(EltVal.countTrailingZeros());
+      } else {
+        Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
+      }
+      Dst.atIndex(I).initialize();
+    });
+  }
+
+  return true;
+}
+
 static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
@@ -2902,6 +2989,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctzg:
     return interp__builtin_ctz(S, OpPC, Frame, Call, BuiltinID);
+
+  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_cttz:
+    return interp__builtin_elementwise_countzeroes(S, OpPC, Frame, Call,
+                                                   BuiltinID);
 
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
