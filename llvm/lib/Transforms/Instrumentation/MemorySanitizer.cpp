@@ -5347,7 +5347,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
 
     // Convert Scalar Double Precision Floating-Point Value
-    //   to Unsigned DoublewordInteger
+    //   to Unsigned Doubleword Integer
     // etc.
     case Intrinsic::x86_avx512_vcvtsd2usi64:
     case Intrinsic::x86_avx512_vcvtsd2usi32:
