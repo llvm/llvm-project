@@ -113,6 +113,18 @@ LLVM_ATTRIBUTE_UNUSED static bool isValidLinkage(GlobalLinkageKind gl) {
          isLinkOnceLinkage(gl);
 }
 
+bool operator<(cir::MemOrder, cir::MemOrder) = delete;
+bool operator>(cir::MemOrder, cir::MemOrder) = delete;
+bool operator<=(cir::MemOrder, cir::MemOrder) = delete;
+bool operator>=(cir::MemOrder, cir::MemOrder) = delete;
+
+// Validate an integral value which isn't known to fit within the enum's range
+// is a valid AtomicOrderingCABI.
+template <typename Int> inline bool isValidCIRAtomicOrderingCABI(Int value) {
+  return static_cast<Int>(cir::MemOrder::Relaxed) <= value &&
+         value <= static_cast<Int>(cir::MemOrder::SequentiallyConsistent);
+}
+
 } // namespace cir
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
