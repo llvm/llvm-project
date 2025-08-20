@@ -252,7 +252,7 @@ private:
   } State;
 
   MachineFunction *MF = nullptr;
-  EdgeBundles *EdgeBundles = nullptr;
+  EdgeBundles *Bundles = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
@@ -316,8 +316,8 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 }
 
 void MachineSMEABI::assignBundleZAStates() {
-  State.BundleStates.resize(EdgeBundles->getNumBundles());
-  for (unsigned I = 0, E = EdgeBundles->getNumBundles(); I != E; ++I) {
+  State.BundleStates.resize(Bundles->getNumBundles());
+  for (unsigned I = 0, E = Bundles->getNumBundles(); I != E; ++I) {
     LLVM_DEBUG(dbgs() << "Assigning ZA state for edge bundle: " << I << '\n');
 
     // Attempt to assign a ZA state for this bundle that minimizes state
@@ -326,7 +326,7 @@ void MachineSMEABI::assignBundleZAStates() {
     // TODO: We should propagate desired incoming/outgoing states through blocks
     // that have the "ANY" state first to make better global decisions.
     int EdgeStateCounts[ZAState::NUM_ZA_STATE] = {0};
-    for (unsigned BlockID : EdgeBundles->getBlocks(I)) {
+    for (unsigned BlockID : Bundles->getBlocks(I)) {
       LLVM_DEBUG(dbgs() << "- bb." << BlockID);
 
       const BlockInfo &Block = State.Blocks[BlockID];
@@ -334,8 +334,8 @@ void MachineSMEABI::assignBundleZAStates() {
         LLVM_DEBUG(dbgs() << " (no state preference)\n");
         continue;
       }
-      bool InEdge = EdgeBundles->getBundle(BlockID, /*Out=*/false) == I;
-      bool OutEdge = EdgeBundles->getBundle(BlockID, /*Out=*/true) == I;
+      bool InEdge = Bundles->getBundle(BlockID, /*Out=*/false) == I;
+      bool OutEdge = Bundles->getBundle(BlockID, /*Out=*/true) == I;
 
       ZAState DesiredIncomingState = Block.Insts.front().NeededState;
       if (InEdge && isLegalEdgeBundleZAState(DesiredIncomingState)) {
@@ -375,8 +375,8 @@ void MachineSMEABI::assignBundleZAStates() {
 void MachineSMEABI::insertStateChanges() {
   for (MachineBasicBlock &MBB : *MF) {
     const BlockInfo &Block = State.Blocks[MBB.getNumber()];
-    ZAState InState = State.BundleStates[EdgeBundles->getBundle(MBB.getNumber(),
-                                                                /*Out=*/false)];
+    ZAState InState = State.BundleStates[Bundles->getBundle(MBB.getNumber(),
+                                                            /*Out=*/false)];
 
     ZAState CurrentState = Block.FixedEntryState;
     if (CurrentState == ZAState::ANY)
@@ -392,8 +392,8 @@ void MachineSMEABI::insertStateChanges() {
     if (MBB.succ_empty())
       continue;
 
-    ZAState OutState = State.BundleStates[EdgeBundles->getBundle(
-        MBB.getNumber(), /*Out=*/true)];
+    ZAState OutState =
+        State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/true)];
     if (CurrentState != OutState)
       emitStateChange(MBB, MBB.getFirstTerminator(), CurrentState, OutState,
                       Block.PhysLiveRegsAtExit);
@@ -674,7 +674,7 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   // Reset pass state.
   State = PassState{};
   this->MF = &MF;
-  EdgeBundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();

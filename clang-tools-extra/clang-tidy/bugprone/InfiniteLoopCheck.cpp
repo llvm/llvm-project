@@ -188,7 +188,7 @@ static bool isKnownToHaveValue(const Expr &Cond, const ASTContext &Ctx,
 /// \return true iff all `CallExprs` visited have callees; false otherwise
 ///         indicating there is an unresolved indirect call.
 static bool populateCallees(const Stmt *StmtNode,
-                            llvm::SmallSet<const Decl *, 16> &Callees) {
+                            llvm::SmallPtrSet<const Decl *, 16> &Callees) {
   if (const auto *Call = dyn_cast<CallExpr>(StmtNode)) {
     const Decl *Callee = Call->getDirectCallee();
 
@@ -212,7 +212,7 @@ static bool populateCallees(const Stmt *StmtNode,
 /// returns true iff `SCC` contains `Func` and its' function set overlaps with
 /// `Callees`
 static bool overlap(ArrayRef<CallGraphNode *> SCC,
-                    const llvm::SmallSet<const Decl *, 16> &Callees,
+                    const llvm::SmallPtrSet<const Decl *, 16> &Callees,
                     const Decl *Func) {
   bool ContainsFunc = false, Overlap = false;
 
@@ -264,7 +264,7 @@ static bool hasRecursionOverStaticLoopCondVariables(const Expr *Cond,
   if (!hasStaticLocalVariable(Cond))
     return false;
 
-  llvm::SmallSet<const Decl *, 16> CalleesInLoop;
+  llvm::SmallPtrSet<const Decl *, 16> CalleesInLoop;
 
   if (!populateCallees(LoopStmt, CalleesInLoop)) {
     // If there are unresolved indirect calls, we assume there could

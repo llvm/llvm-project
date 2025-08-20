@@ -204,7 +204,7 @@ declare <2 x bfloat> @test_callee(<2 x bfloat> %a, <2 x bfloat> %b) #0
 define <2 x bfloat> @test_call(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_call(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_call_param_0];

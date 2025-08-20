@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten %S/Inputs/internal_func.s -o %t.internal_func.o
 # RUN: wasm-ld --no-gc-sections --experimental-pic -pie --unresolved-symbols=import-dynamic -o %t.wasm %t.o %t.internal_func.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
-# RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs,__wasm_apply_global_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
+# RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
 
 .functype external_func () -> ()
 .functype internal_func1 () -> (i32)
@@ -41,9 +41,6 @@ foo:
   drop
 
   global.get __stack_pointer
-  drop
-
-  global.get __wasm_first_page_end@GOT
   end_function
 
 get_data_address:
@@ -148,18 +145,6 @@ _start:
 # DISASSEM-LABEL:  <__wasm_apply_data_relocs>:
 # DISASSEM:        end
 
-# global 6 is __wasm_first_page_end, which is ABSOLUTE and
-# thus should not be relocated.
-#
-# DISASSEM-LABEL:  <__wasm_apply_global_relocs>:
-# DISASSEM:        global.set      4
-# DISASSEM:        global.set      5
-# DISASSEM-NOT:    global.set      6
-# DISASSEM:        global.set      7
-# DISASSEM:        global.set      8
-# DISASSEM:        global.set      9
-# DISASSEM:        end
-
 # Run the same test with extended-const support.  When this is available
 # we don't need __wasm_apply_global_relocs and instead rely on the add
 # instruction in the InitExpr.  We also, therefore, do not need these globals
@@ -188,23 +173,17 @@ _start:
 # EXTENDED-CONST-NEXT:        Type:            I32
 # EXTENDED-CONST-NEXT:        Mutable:         false
 # EXTENDED-CONST-NEXT:        InitExpr:
-# EXTENDED-CONST-NEXT:          Opcode:        I32_CONST
-# EXTENDED-CONST-NEXT:          Value:         65536
-# EXTENDED-CONST-NEXT:      - Index:           7
-# EXTENDED-CONST-NEXT:        Type:            I32
-# EXTENDED-CONST-NEXT:        Mutable:         false
-# EXTENDED-CONST-NEXT:        InitExpr:
 # EXTENDED-CONST-NEXT:          Extended:        true
 # This instruction sequence decodes to:
 # (global.get[0x23] 0x1 i32.const[0x41] 0x0C i32.add[0x6A] end[0x0b])
 # EXTENDED-CONST-NEXT:          Body:            2301410C6A0B
-# EXTENDED-CONST-NEXT:      - Index:           8
+# EXTENDED-CONST-NEXT:      - Index:           7
 # EXTENDED-CONST-NEXT:        Type:            I32
 # EXTENDED-CONST-NEXT:        Mutable:         false
 # EXTENDED-CONST-NEXT:        InitExpr:
 # EXTENDED-CONST-NEXT:          Opcode:        GLOBAL_GET
 # EXTENDED-CONST-NEXT:          Index:         2
-# EXTENDED-CONST-NEXT:      - Index:           9
+# EXTENDED-CONST-NEXT:      - Index:           8
 # EXTENDED-CONST-NEXT:        Type:            I32
 # EXTENDED-CONST-NEXT:        Mutable:         false
 # EXTENDED-CONST-NEXT:        InitExpr:
