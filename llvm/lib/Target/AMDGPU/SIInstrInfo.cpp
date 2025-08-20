@@ -5552,20 +5552,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-#if 0
-  if (Opcode == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
-    const MachineOperand &SrcOp = MI.getOperand(1);
-    uint64_t Imm = static_cast<uint64_t>(SrcOp.getImm());
-
-    if (!AMDGPU::isInlinableLiteral32(Lo_32(Imm), ST.hasInv2PiInlineImm()) ||
-        !AMDGPU::isInlinableLiteral32(Hi_32(Imm), ST.hasInv2PiInlineImm())) {
-      ErrInfo = "AV_MOV_B64_IMM_PSEUDO only accepts a pair of 32-bit inline "
-                "immediates";
-      return false;
-    }
-  }
-#endif
-
   if (Desc.getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS) {
     const MachineOperand &SrcOp = MI.getOperand(1);
     if (!SrcOp.isReg() || SrcOp.getReg().isVirtual()) {
