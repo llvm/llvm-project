@@ -647,7 +647,7 @@ public:
     if (isUnknownSizeArray())
       return false;
 
-    return isPastEnd() || (getSize() == getOffset() && !isZeroSizeArray());
+    return isPastEnd() || (getSize() == getOffset());
   }
 
   /// Checks if the pointer points past the end of the object.
