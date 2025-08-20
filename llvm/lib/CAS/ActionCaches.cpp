@@ -104,18 +104,14 @@ private:
 };
 } // end namespace
 
-static std::string hashToString(ArrayRef<uint8_t> Hash) {
-  SmallString<64> Str;
-  toHex(Hash, /*LowerCase=*/true, Str);
-  return Str.str().str();
-}
-
-static Error createResultCachePoisonedError(StringRef Key,
+static Error createResultCachePoisonedError(ArrayRef<uint8_t> KeyHash,
                                             const CASContext &Context,
                                             CASID Output,
                                             ArrayRef<uint8_t> ExistingOutput) {
   std::string Existing =
       CASID::create(&Context, toStringRef(ExistingOutput)).toString();
+  SmallString<64> Key;
+  toHex(KeyHash, /*LowerCase=*/true, Key);
   return createStringError(std::make_error_code(std::errc::invalid_argument),
                            "cache poisoned for '" + Key + "' (new='" +
                                Output.toString() + "' vs. existing '" +
@@ -140,7 +136,7 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
   if (Expected.getValue() == Observed.getValue())
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
+  return createResultCachePoisonedError(Key, getContext(), Result,
                                         Observed.getValue());
 }
 
@@ -205,7 +201,7 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
     return Error::success();
 
   return createResultCachePoisonedError(
-      hashToString(Key), getContext(), Result,
+      Key, getContext(), Result,
       ArrayRef((const uint8_t *)Observed.data(), Observed.size()));
 }
 
@@ -246,7 +242,7 @@ Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
     return Error::success();
 
   return createResultCachePoisonedError(
-      hashToString(Key), getContext(), Result,
+      Key, getContext(), Result,
       UniDB->getGraphDB().getDigest(*Observed));
 }
 
