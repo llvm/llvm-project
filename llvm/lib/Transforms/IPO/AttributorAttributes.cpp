@@ -5202,7 +5202,8 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
       if (ConstAlign >= AlignAA->getKnownAlign())
         return Align(1);
       return AlignAA->getKnownAlign();
-    } else if (AlignAA) {
+    }
+    if (AlignAA) {
       return AlignAA->getKnownAlign();
     }
     break;
@@ -5232,9 +5233,7 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
         Alignment = AlignAA->getAssumedAlign();
     }
 
-    if (Alignment < QueryingAA.getAssumedAlign())
-      return Alignment;
-    return QueryingAA.getAssumedAlign();
+    return std::min(QueryingAA.getAssumedAlign(), Alignment);
   }
   default:
     break;
