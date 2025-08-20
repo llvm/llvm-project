@@ -5414,7 +5414,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
                              TTI::CastContextHint::None, CostKind, RedOp);
 
     InstructionCost RedCost = TTI.getMulAccReductionCost(
-        IsUnsigned, /*IsNegated=*/false, RdxDesc.getRecurrenceType(), ExtType,
+        IsUnsigned, RdxDesc.getOpcode(), RdxDesc.getRecurrenceType(), ExtType,
         CostKind);
 
     if (RedCost.isValid() &&
@@ -5460,7 +5460,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
 
       InstructionCost RedCost = TTI.getMulAccReductionCost(
-          IsUnsigned, /*IsNegated=*/false, RdxDesc.getRecurrenceType(), ExtType,
+          IsUnsigned, RdxDesc.getOpcode(), RdxDesc.getRecurrenceType(), ExtType,
           CostKind);
       InstructionCost ExtraExtCost = 0;
       if (Op0Ty != LargestOpTy || Op1Ty != LargestOpTy) {
@@ -5480,7 +5480,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
 
       InstructionCost RedCost = TTI.getMulAccReductionCost(
-          true, /*IsNegated=*/false, RdxDesc.getRecurrenceType(), VectorTy,
+          true, RdxDesc.getOpcode(), RdxDesc.getRecurrenceType(), VectorTy,
           CostKind);
 
       if (RedCost.isValid() && RedCost < MulCost + BaseCost)

@@ -1469,7 +1469,7 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
 
     CostBeforeReduction = ExtCost * 2 + MulCost + Ext2Cost;
     CostAfterReduction = TTI.getMulAccReductionCost(
-        IsUnsigned, /*IsNegated=*/false, II.getType(), ExtType, CostKind);
+        IsUnsigned, ReductionOpc, II.getType(), ExtType, CostKind);
     return;
   }
   CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,

@@ -299,7 +299,7 @@ public:
                            VectorType *ValTy, std::optional<FastMathFlags> FMF,
                            TTI::TargetCostKind CostKind) const override;
   InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, bool IsNegated, Type *ResTy,
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
                          VectorType *ValTy,
                          TTI::TargetCostKind CostKind) const override;
 

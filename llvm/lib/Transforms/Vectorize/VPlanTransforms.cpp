@@ -3160,7 +3160,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto IsMulAccValidAndClampRange =
       [&](bool IsZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
           VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt,
-          bool Negated = false) -> bool {
+          unsigned Opcode) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -3168,7 +3168,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
-              IsZExt, Negated, RedTy, SrcVecTy, CostKind);
+              IsZExt, Opcode, RedTy, SrcVecTy, CostKind);
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
           InstructionCost ExtCost = 0;
@@ -3186,15 +3186,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   };
 
   VPValue *VecOp = Red->getVecOp();
-  VPValue *Mul = nullptr;
-  VPValue *Sub = nullptr;
+  VPValue *Mul = VecOp;
   VPValue *A, *B;
-  // Sub reductions will have a sub between the add reduction and vec op.
-  if (match(VecOp,
-            m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Mul))))
-    Sub = VecOp;
-  else
-    Mul = VecOp;
   // Try to match reduce.add(mul(...)).
   if (match(Mul, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
@@ -3210,15 +3203,12 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   MulR, RecipeA, RecipeB, nullptr, Sub)) {
-      if (Sub)
-        return new VPExpressionRecipe(
-            RecipeA, RecipeB, MulR,
-            cast<VPWidenRecipe>(Sub->getDefiningRecipe()), Red);
+                                   MulR, RecipeA, RecipeB, nullptr, Opcode)) {
       return new VPExpressionRecipe(RecipeA, RecipeB, MulR, Red);
     }
     // Match reduce.add(mul).
-    if (IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr, Sub))
+    if (IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr,
+                                   Opcode))
       return new VPExpressionRecipe(MulR, Red);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
@@ -3236,7 +3226,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   Mul, Ext0, Ext1, Ext)) {
+                                   Mul, Ext0, Ext1, Ext, Opcode)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
           Ext0->getDebugLoc());

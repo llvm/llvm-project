@@ -3260,7 +3260,7 @@ public:
   }
 
   InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, bool IsNegated, Type *ResTy,
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
                          VectorType *Ty,
                          TTI::TargetCostKind CostKind) const override {
     // Without any native support, this is equivalent to the cost of
@@ -3268,19 +3268,15 @@ public:
     // vecreduce.add(mul(A, B)). IsNegated determines if the mul is negated.
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
     InstructionCost RedCost = thisT()->getArithmeticReductionCost(
-        Instruction::Add, ExtTy, std::nullopt, CostKind);
+        RedOpcode, ExtTy, std::nullopt, CostKind);
     InstructionCost ExtCost = thisT()->getCastInstrCost(
         IsUnsigned ? Instruction::ZExt : Instruction::SExt, ExtTy, Ty,
         TTI::CastContextHint::None, CostKind);
 
     InstructionCost MulCost =
         thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
-    InstructionCost SubCost =
-        IsNegated
-            ? thisT()->getArithmeticInstrCost(Instruction::Sub, ExtTy, CostKind)
-            : 0;
 
-    return RedCost + SubCost + MulCost + 2 * ExtCost;
+    return RedCost + MulCost + 2 * ExtCost;
   }
 
   InstructionCost getVectorSplitCost() const { return 1; }

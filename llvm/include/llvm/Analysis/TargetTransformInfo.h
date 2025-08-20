@@ -1647,14 +1647,12 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
-  /// getArithmeticReductionCost of an Add reduction with multiply and optional
-  /// extensions. This is the cost of as:
-  /// ResTy vecreduce.add(mul (A, B)).
-  /// ResTy vecreduce.add(mul(ext(Ty A), ext(Ty B)).
-  /// The multiply can optionally be negated, which signifies that it is a sub
-  /// reduction.
+  /// getArithmeticReductionCost of an Add/Sub reduction with multiply and
+  /// optional extensions. This is the cost of as:
+  /// ResTy vecreduce.add/sub(mul (A, B)).
+  /// ResTy vecreduce.add/sub(mul(ext(Ty A), ext(Ty B)).
   LLVM_ABI InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, bool IsNegated, Type *ResTy, VectorType *Ty,
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to

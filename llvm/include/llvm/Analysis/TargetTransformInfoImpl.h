@@ -971,7 +971,7 @@ public:
   }
 
   virtual InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, bool IsNegated, Type *ResTy,
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
                          VectorType *Ty, TTI::TargetCostKind CostKind) const {
     return 1;
   }
