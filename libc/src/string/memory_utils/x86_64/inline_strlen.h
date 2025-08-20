@@ -18,22 +18,22 @@ namespace LIBC_NAMESPACE_DECL {
 namespace string_length_internal {
 // Return a bit-mask with the nth bit set if the nth-byte in block_ptr is zero.
 template <typename Vector, typename Mask>
-LIBC_INLINE static Mask compare_and_mask(const Vector *block_ptr);
+Mask CompareAndMask(const Vector *block_ptr);
 
 template <typename Vector, typename Mask,
-          decltype(compare_and_mask<Vector, Mask>)>
+          decltype(CompareAndMask<Vector, Mask>)>
 size_t string_length_vector(const char *src) {
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
 
   const Vector *block_ptr =
       reinterpret_cast<const Vector *>(src - misalign_bytes);
-  auto cmp = compare_and_mask<Vector, Mask>(block_ptr) >> misalign_bytes;
+  auto cmp = CompareAndMask<Vector, Mask>(block_ptr) >> misalign_bytes;
   if (cmp)
     return cpp::countr_zero(cmp);
 
   while (true) {
     block_ptr++;
-    cmp = compare_and_mask<Vector, Mask>(block_ptr);
+    cmp = CompareAndMask<Vector, Mask>(block_ptr);
     if (cmp)
       return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
                                  reinterpret_cast<uintptr_t>(src) +
@@ -42,8 +42,7 @@ size_t string_length_vector(const char *src) {
 }
 
 template <>
-LIBC_INLINE uint32_t
-compare_and_mask<__m128i, uint32_t>(const __m128i *block_ptr) {
+uint32_t CompareAndMask<__m128i, uint32_t>(const __m128i *block_ptr) {
   __m128i v = _mm_load_si128(block_ptr);
   __m128i z = _mm_setzero_si128();
   __m128i c = _mm_cmpeq_epi8(z, v);
@@ -53,14 +52,13 @@ compare_and_mask<__m128i, uint32_t>(const __m128i *block_ptr) {
 namespace sse2 {
 [[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   return string_length_vector<__m128i, uint32_t,
-                              compare_and_mask<__m128i, uint32_t>>(src);
+                              CompareAndMask<__m128i, uint32_t>>(src);
 }
 } // namespace sse2
 
 #if defined(__AVX2__)
 template <>
-LIBC_INLINE uint32_t
-compare_and_mask<__m256i, uint32_t>(const __m256i *block_ptr) {
+uint32_t CompareAndMask<__m256i, uint32_t>(const __m256i *block_ptr) {
   __m256i v = _mm256_load_si256(block_ptr);
   __m256i z = _mm256_setzero_si256();
   __m256i c = _mm256_cmpeq_epi8(z, v);
@@ -70,15 +68,14 @@ compare_and_mask<__m256i, uint32_t>(const __m256i *block_ptr) {
 namespace avx2 {
 [[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   return string_length_vector<__m256i, uint32_t,
-                              compare_and_mask<__m256i, uint32_t>>(src);
+                              CompareAndMask<__m256i, uint32_t>>(src);
 }
 } // namespace avx2
 #endif
 
 #if defined(__AVX512F__)
 template <>
-LIBC_INLINE __mmask64
-compare_and_mask<__m512i, __mmask64>(const __m512i *block_ptr) {
+__mmask64 CompareAndMask<__m512i, __mmask64>(const __m512i *block_ptr) {
   __m512i v = _mm512_load_si512(block_ptr);
   __m512i z = _mm512_setzero_si512();
   return _mm512_cmp_epu8_mask(z, v, _MM_CMPINT_EQ);
@@ -86,7 +83,7 @@ compare_and_mask<__m512i, __mmask64>(const __m512i *block_ptr) {
 namespace avx512 {
 [[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   return string_length_vector<__m512i, __mmask64,
-                              compare_and_mask<__m512i, __mmask64>>(src);
+                              CompareAndMask<__m512i, __mmask64>>(src);
 }
 } // namespace avx512
 #endif
