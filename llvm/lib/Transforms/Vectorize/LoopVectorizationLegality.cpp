@@ -15,6 +15,7 @@
 //
 
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -1225,14 +1226,17 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (!LAI->canVectorizeMemory()) {
-    if (!hasUncountedExitWithSideEffects())
-      return canVectorizeIndirectUnsafeDependences();
-    reportVectorizationFailure(
-        "Cannot vectorize unsafe dependencies in early exit loop with "
-        "side effects.",
-        "Unable to vectorize memory in an early exit loop with side effects",
-        "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE, TheLoop);
-    return false;
+    if (hasUncountableExitWithSideEffects()) {
+      reportVectorizationFailure(
+          "Cannot vectorize unsafe dependencies in early exit loop with "
+          "side effects.",
+          "Unable to vectorize memory in an early exit loop with side effects",
+          "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE,
+          TheLoop);
+      return false;
+    }
+
+    return canVectorizeIndirectUnsafeDependences();
   }
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
@@ -1806,7 +1810,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                                  "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
       return false;
     }
-  } else if (!canUncountedExitConditionLoadBeMoved(
+  } else if (!canUncountableExitConditionLoadBeMoved(
                  SingleUncountableExitingBlock))
     return false;
 
@@ -1839,16 +1843,15 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
   UncountableExitingBB = SingleUncountableExitingBlock;
-  UncountedExitWithSideEffects = HasSideEffects;
+  UncountableExitWithSideEffects = HasSideEffects;
   return true;
 }
 
-bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
+bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
     BasicBlock *ExitingBlock) {
-  SmallVector<const SCEVPredicate *, 4> Predicates;
-  LoadInst *CriticalUncountedExitConditionLoad = nullptr;
+  LoadInst *CriticalUncountableExitConditionLoad = nullptr;
 
-  // Try to find a load in the critical path for the uncounted exit condition.
+  // Try to find a load in the critical path for the uncountable exit condition.
   // This is currently matching about the simplest form we can, expecting
   // only one in-loop load, the result of which is directly compared against
   // a loop-invariant value.
@@ -1867,7 +1870,7 @@ bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
       const SCEV *PtrScev = PSE.getSE()->getSCEV(Load->getPointerOperand());
       if (PSE.getSE()->isLoopInvariant(PtrScev, TheLoop)) {
         reportVectorizationFailure(
-            "Uncounted exit condition depends on load from invariant address",
+            "Uncountable exit condition depends on load from invariant address",
             "EarlyExitLoadInvariantAddress", ORE, TheLoop);
         return false;
       }
@@ -1877,6 +1880,7 @@ bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
       // with a constant step. In either case, we're not relying on another
       // load within the loop.
       // FIXME: Support gathers after first-faulting load support lands.
+      SmallVector<const SCEVPredicate *, 4> Predicates;
       if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT,
                                             AC, &Predicates)) {
         ICFLoopSafetyInfo SafetyInfo;
@@ -1884,11 +1888,13 @@ bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
         // We need to know that load will be executed before we can hoist a
         // copy out to run just before the first iteration.
         if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop))
-          CriticalUncountedExitConditionLoad = Load;
-        else
+          CriticalUncountableExitConditionLoad = Load;
+        else {
           reportVectorizationFailure(
               "Early exit condition load not guaranteed to execute",
               "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+          return false;
+        }
       } else {
         reportVectorizationFailure(
             "Loop may fault",
@@ -1899,47 +1905,37 @@ bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
     }
   }
 
-  if (!CriticalUncountedExitConditionLoad) {
+  if (!CriticalUncountableExitConditionLoad) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
-  // We're in a bit of an odd spot since we're (potentially) doing the load
-  // out of its normal order in the loop and that may throw off dependency
-  // checking. A forward dependency should be fine, but a backwards dep may not
-  // be even if LAA thinks it is due to performing the load for the vector
-  // iteration i+1 in vector iteration i.
-  // In any case, prohibit vectorization if there are any loop-carried
-  // dependencies on the critical load.
+  // Prohibit any potential aliasing with any instruction in the loop which
+  // might store to memory.
   // FIXME: Relax this constraint where possible.
-  LAI = &LAIs.getInfo(*TheLoop);
-  const MemoryDepChecker &DepChecker = LAI->getDepChecker();
-  const auto *Deps = DepChecker.getDependences();
-  if (!Deps) {
-    // We may have exceeded the allowed number of dependencies to track, and
-    // given up. Just bail out since we can't be sure.
-    reportVectorizationFailure(
-        "Invalid memory dependencies result",
-        "Unable to determine memory dependencies for an early exit loop with "
-        "side effects.",
-        "CantVectorizeInvalidDependencesForEELoopsWithSideEffects", ORE,
-        TheLoop);
-    return false;
-  }
+  AAResults *AA = LAIs.getAAResults();
+  Value *Ptr = CriticalUncountableExitConditionLoad->getPointerOperand();
+  for (auto *BB : TheLoop->blocks()) {
+    for (auto &I : *BB) {
+      if (&I == CriticalUncountableExitConditionLoad)
+        continue;
 
-  if (any_of(*Deps, [&](const MemoryDepChecker::Dependence &Dep) {
-        return (Dep.getDestination(DepChecker) ==
-                    CriticalUncountedExitConditionLoad ||
-                Dep.getSource(DepChecker) ==
-                    CriticalUncountedExitConditionLoad);
-      })) {
-    reportVectorizationFailure(
-        "No dependencies allowed for critical early exit condition load "
-        "in a loop with side effects",
-        "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE, TheLoop);
-    return false;
+      if (I.mayWriteToMemory()) {
+        if (auto *SI = dyn_cast<StoreInst>(&I)) {
+          AliasResult AR = AA->alias(Ptr, SI->getPointerOperand());
+          if (AR == AliasResult::NoAlias)
+            continue;
+        }
+
+        reportVectorizationFailure(
+            "Cannot determine whether critical uncountable exit load address "
+            "does not alias with a memory write",
+            "CantVectorizeAliasWithCriticalUncountableExitLoad", ORE, TheLoop);
+        return false;
+      }
+    }
   }
 
   return true;
@@ -2014,7 +2010,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     } else {
       if (!isVectorizableEarlyExitLoop()) {
         assert(!hasUncountableEarlyExit() &&
-               !hasUncountedExitWithSideEffects() &&
+               !hasUncountableExitWithSideEffects() &&
                "Must be false without vectorizable early-exit loop");
         if (DoExtraAnalysis)
           Result = false;
@@ -2033,8 +2029,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for state-changing EE loops for now.
-  if (UncountedExitWithSideEffects) {
+  // Bail out for state-changing loops with uncountable exits for now.
+  if (UncountableExitWithSideEffects) {
     reportVectorizationFailure(
         "Writes to memory unsupported in early exit loops",
         "Cannot vectorize early exit loop with writes to memory",

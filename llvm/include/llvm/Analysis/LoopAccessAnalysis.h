@@ -973,6 +973,8 @@ public:
 
   LLVM_ABI void clear();
 
+  LLVM_ABI AAResults *getAAResults() { return &AA; }
+
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv);
 };

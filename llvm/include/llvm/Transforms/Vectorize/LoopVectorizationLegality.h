@@ -409,10 +409,10 @@ public:
 
   /// Returns true if this is an early exit loop with state-changing or
   /// potentially-faulting operations and the IR representing the condition
-  /// for the uncounted exit must be determined before any of the state changes
-  /// or potentially faulting operations take place.
-  bool hasUncountedExitWithSideEffects() const {
-    return UncountedExitWithSideEffects;
+  /// for the uncountable exit must be determined before any of the state
+  /// changes or potentially faulting operations take place.
+  bool hasUncountableExitWithSideEffects() const {
+    return UncountableExitWithSideEffects;
   }
 
   /// Return true if there is store-load forwarding dependencies.
@@ -596,7 +596,7 @@ private:
   ///   %cmp.next = icmp eq <4 x i32> %ci.next, zeroinitializer
   ///   %any.of.next = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %cmp.next)
   ///   iv.next compared with shortened vector tripcount...
-  ///   uncounted condition combined with counted condition...
+  ///   uncountable condition combined with counted condition...
   ///   br...
   ///
   /// Doing this means the last few iterations will always be performed by a
@@ -608,10 +608,10 @@ private:
   /// before other memory operations (or any other observable side effects) in
   /// the loop.
   ///
-  /// Currently, c[i] should only have one user (the comparison used for the
-  /// uncounted exit) since we would otherwise need to introduce a PHI node
+  /// Currently, c[i] must have only one user (the comparison used for the
+  /// uncountable exit) since we would otherwise need to introduce a PHI node
   /// for it.
-  bool canUncountedExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
+  bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
@@ -735,9 +735,9 @@ private:
   /// exit.
   BasicBlock *UncountableExitingBB = nullptr;
 
-  /// If true, the loop has at least one uncounted exit and operations within
+  /// If true, the loop has at least one uncountable exit and operations within
   /// the loop may have observable side effects.
-  bool UncountedExitWithSideEffects = false;
+  bool UncountableExitWithSideEffects = false;
 };
 
 } // namespace llvm
