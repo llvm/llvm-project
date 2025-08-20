@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-maximize-bandwidth -debug-only=loop-vectorize,vplan -disable-output -force-vector-interleave=1 -enable-epilogue-vectorization=false -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-REGS-VP
-; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-maximize-bandwidth -debug-only=loop-vectorize -disable-output -force-target-num-vector-regs=1 -force-vector-interleave=1 -enable-epilogue-vectorization=false -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-NOREGS-VP
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-maximize-bandwidth -debug-only=loop-vectorize,vplan -disable-output -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-REGS-VP
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-maximize-bandwidth -debug-only=loop-vectorize -disable-output -force-target-num-vector-regs=1 -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-NOREGS-VP
 define i32 @dotp(ptr %a, ptr %b) {
 ; CHECK-REGS-VP:      LV(REG): VF = vscale x 16
 ; CHECK-REGS-VP-NEXT: LV(REG): Found max usage: 2 item
