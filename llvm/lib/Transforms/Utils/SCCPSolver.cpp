@@ -62,6 +62,21 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   Constant *Const = getConstantOrNull(V);
   if (!Const)
     return false;
+
+  // Don't replace noalias arg or derivatives
+  if (isa<PointerType>(V->getType())) {
+    SmallVector<const Value *, 4> Objects;
+    getUnderlyingObjects(V, Objects, nullptr);
+
+    for (const auto Obj : Objects) {
+      if (const auto *Arg = dyn_cast<Argument>(Obj)) {
+        if (isa<PointerType>(Arg->getType()) &&
+            Arg->hasNoAliasAttr())
+          return false;
+      }
+    }
+  }
+
   // Replacing `musttail` instructions with constant breaks `musttail` invariant
   // unless the call itself can be removed.
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
