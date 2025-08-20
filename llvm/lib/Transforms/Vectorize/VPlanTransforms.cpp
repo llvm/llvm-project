@@ -1118,7 +1118,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           WideCmp->getOpcode() == Instruction::FCmp) {
         WideCmp->setPredicate(
             CmpInst::getInversePredicate(WideCmp->getPredicate()));
-        for (VPUser *U : WideCmp->users()) {
+        for (VPUser *U : to_vector(WideCmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
           // not (icmp eq) -> icmp ne
           if (match(R, m_Not(m_Specific(WideCmp))))
