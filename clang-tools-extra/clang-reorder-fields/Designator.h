@@ -115,15 +115,19 @@ private:
 
 class Designators {
 public:
-  Designators() = default;
+  /// Initialize to the first member of the struct/array. Enters implicit
+  /// initializer lists until a type that matches Init is found.
+  Designators(const Expr *Init, const InitListExpr *ILE,
+              const ASTContext *Context);
+
+  /// Initialize to the designators of the given expression.
   Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
-              const ASTContext &Context);
+              const ASTContext *Context);
 
   /// Moves the designators to the next initializer in the struct/array. If the
   /// type of next initializer doesn't match the expected type then there are
   /// omitted braces and we add new designators to reflect that.
-  bool increment(const InitListExpr *ILE, const Expr *Init,
-                 const ASTContext &Context);
+  bool advanceToNextField(const Expr *Init);
 
   /// Gets a string representation from a list of designators. This string will
   /// be inserted before an initializer expression to make it designated.
@@ -136,6 +140,12 @@ public:
   }
 
 private:
+  /// Enters any implicit initializer lists until a type that matches the given
+  /// expression is found.
+  bool enterImplicitInitLists(const Expr *Init);
+
+  const InitListExpr *ILE;
+  const ASTContext *Context;
   SmallVector<DesignatorIter, 1> DesignatorList;
 };
 

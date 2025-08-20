@@ -60,8 +60,37 @@ bool DesignatorIter::isFinished() {
   return false;
 }
 
+Designators::Designators(const Expr *Init, const InitListExpr *ILE,
+                         const ASTContext *Context)
+    : ILE(ILE), Context(Context) {
+  if (ILE->getType()->isArrayType()) {
+    const ConstantArrayType *CAT =
+        Context->getAsConstantArrayType(ILE->getType());
+    // Only constant size arrays are supported.
+    if (!CAT) {
+      DesignatorList.clear();
+      return;
+    }
+    DesignatorList.push_back(
+        {CAT->getElementType(), 0, CAT->getSize().getZExtValue()});
+  } else {
+    const RecordDecl *DesignatorRD = ILE->getType()->getAsRecordDecl();
+    DesignatorList.push_back({DesignatorRD->field_begin()->getType(),
+                              DesignatorRD->field_begin(), DesignatorRD});
+  }
+
+  // If the designator list is empty at this point, then there must be excess
+  // elements in the initializer list. They are not currently supported.
+  if (DesignatorList.empty())
+    return;
+
+  if (!enterImplicitInitLists(Init))
+    DesignatorList.clear();
+}
+
 Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
-                         const ASTContext &Context) {
+                         const ASTContext *Context)
+    : ILE(ILE), Context(Context) {
   for (const auto &D : DIE->designators()) {
     if (D.isFieldDesignator()) {
       RecordDecl *DesignatorRecord = D.getFieldDecl()->getParent();
@@ -78,7 +107,7 @@ Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
                                        ? ILE->getType()
                                        : DesignatorList.back().getType();
       const ConstantArrayType *CAT =
-          Context.getAsConstantArrayType(CurrentType);
+          Context->getAsConstantArrayType(CurrentType);
       if (!CAT) {
         // Non-constant-sized arrays are not supported.
         DesignatorList.clear();
@@ -87,16 +116,16 @@ Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
       if (D.isArrayDesignator()) {
         DesignatorList.push_back({CAT->getElementType(),
                                   DIE->getArrayIndex(D)
-                                      ->EvaluateKnownConstInt(Context)
+                                      ->EvaluateKnownConstInt(*Context)
                                       .getZExtValue(),
                                   CAT->getSize().getZExtValue()});
       } else if (D.isArrayRangeDesignator()) {
         DesignatorList.push_back({CAT->getElementType(),
                                   DIE->getArrayRangeStart(D)
-                                      ->EvaluateKnownConstInt(Context)
+                                      ->EvaluateKnownConstInt(*Context)
                                       .getZExtValue(),
                                   DIE->getArrayRangeEnd(D)
-                                      ->EvaluateKnownConstInt(Context)
+                                      ->EvaluateKnownConstInt(*Context)
                                       .getZExtValue(),
                                   CAT->getSize().getZExtValue()});
       } else {
@@ -106,36 +135,17 @@ Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
   }
 }
 
-bool Designators::increment(const InitListExpr *ILE, const Expr *Init,
-                            const ASTContext &Context) {
-  if (DesignatorList.empty()) {
-    // First field is not designated. Initialize to the first field or
-    // array index.
-    if (ILE->getType()->isArrayType()) {
-      const ConstantArrayType *CAT =
-          Context.getAsConstantArrayType(ILE->getType());
-      // Only constant size arrays are supported.
-      if (!CAT) {
-        DesignatorList.clear();
-        return false;
-      }
-      DesignatorList.push_back(
-          {CAT->getElementType(), 0, CAT->getSize().getZExtValue()});
-    } else {
-      const RecordDecl *DesignatorRD = ILE->getType()->getAsRecordDecl();
-      DesignatorList.push_back({DesignatorRD->field_begin()->getType(),
-                                DesignatorRD->field_begin(), DesignatorRD});
+bool Designators::advanceToNextField(const Expr *Init) {
+  // Remove all designators that refer to the last field of a struct or final
+  // element of the array.
+  while (!DesignatorList.empty()) {
+    auto &CurrentDesignator = DesignatorList.back();
+    ++CurrentDesignator;
+    if (CurrentDesignator.isFinished()) {
+      DesignatorList.pop_back();
+      continue;
     }
-  } else {
-    while (!DesignatorList.empty()) {
-      auto &CurrentDesignator = DesignatorList.back();
-      ++CurrentDesignator;
-      if (CurrentDesignator.isFinished()) {
-        DesignatorList.pop_back();
-        continue;
-      }
-      break;
-    }
+    break;
   }
 
   // If the designator list is empty at this point, then there must be excess
@@ -143,8 +153,12 @@ bool Designators::increment(const InitListExpr *ILE, const Expr *Init,
   if (DesignatorList.empty())
     return false;
 
-  // Check for missing braces. If the types don't match then there are
-  // missing braces.
+  return enterImplicitInitLists(Init);
+}
+
+bool Designators::enterImplicitInitLists(const Expr *Init) {
+  // Check for missing braces by comparing the type of the last designator and
+  // type of Init.
   while (true) {
     const QualType T = DesignatorList.back().getType();
     // If the types match, there are no missing braces.
@@ -161,8 +175,8 @@ bool Designators::increment(const InitListExpr *ILE, const Expr *Init,
     // If the current type is an array, then get its first element.
     if (T->isArrayType()) {
       DesignatorList.push_back(
-          {Context.getAsArrayType(T)->getElementType(), 0,
-           Context.getAsConstantArrayType(T)->getSize().getZExtValue()});
+          {Context->getAsArrayType(T)->getElementType(), 0,
+           Context->getAsConstantArrayType(T)->getSize().getZExtValue()});
       continue;
     }
 

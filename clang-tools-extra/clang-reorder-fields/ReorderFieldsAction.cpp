@@ -92,10 +92,67 @@ public:
       NewFieldsPositions[NewFieldsOrder[I]] = I;
   }
 
+  /// Compares compatible designators according to the new struct order.
+  /// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0
+  /// if they are equal.
+  int operator()(const DesignatorIter &Lhs, const DesignatorIter &Rhs) const;
+
+  /// Compares compatible designator lists according to the new struct order.
+  /// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0
+  /// if they are equal.
+  int operator()(const Designators &Lhs, const Designators &Rhs) const;
+
   const RecordDecl *Definition;
   ArrayRef<unsigned> NewFieldsOrder;
   SmallVector<unsigned, 4> NewFieldsPositions;
 };
+
+int ReorderedStruct::operator()(const DesignatorIter &Lhs,
+                                const DesignatorIter &Rhs) const {
+  switch (Lhs.getTag()) {
+  case DesignatorIter::STRUCT:
+    assert(Rhs.getTag() == DesignatorIter::STRUCT &&
+           "Incompatible designators");
+    assert(Lhs.getStructDecl() == Rhs.getStructDecl() &&
+           "Incompatible structs");
+    // Use the new layout for reordered struct.
+    if (Definition == Lhs.getStructDecl()) {
+      return NewFieldsPositions[Lhs.getStructIter()->getFieldIndex()] -
+             NewFieldsPositions[Rhs.getStructIter()->getFieldIndex()];
+    }
+    return Lhs.getStructIter()->getFieldIndex() -
+           Rhs.getStructIter()->getFieldIndex();
+  case DesignatorIter::ARRAY:
+  case DesignatorIter::ARRAY_RANGE:
+    // Array designators can be compared to array range designators.
+    assert((Rhs.getTag() == DesignatorIter::ARRAY ||
+            Rhs.getTag() == DesignatorIter::ARRAY_RANGE) &&
+           "Incompatible designators");
+    size_t LhsIdx = Lhs.getTag() == DesignatorIter::ARRAY
+                        ? Lhs.getArrayIndex()
+                        : Lhs.getArrayRangeStart();
+    size_t RhsIdx = Rhs.getTag() == DesignatorIter::ARRAY
+                        ? Rhs.getArrayIndex()
+                        : Rhs.getArrayRangeStart();
+    return LhsIdx - RhsIdx;
+  }
+  llvm_unreachable("Invalid designator tag");
+}
+
+int ReorderedStruct::operator()(const Designators &Lhs,
+                                const Designators &Rhs) const {
+  for (unsigned Idx = 0, Size = std::min(Lhs.size(), Rhs.size()); Idx < Size;
+       ++Idx) {
+    int DesignatorComp = (*this)(Lhs[Idx], Rhs[Idx]);
+    // If the current designators are not equal, return the result
+    if (DesignatorComp != 0)
+      return DesignatorComp;
+    // Otherwise, continue to the next pair.
+  }
+  // If all common designators were equal, compare the sizes of the designator
+  // lists.
+  return Lhs.size() - Rhs.size();
+}
 
 // FIXME: error-handling
 /// Replaces a range of source code by the specified text.
@@ -340,59 +397,6 @@ static bool isImplicitILE(const InitListExpr *ILE, const ASTContext &Context) {
   return false;
 }
 
-/// Compares compatible designators according to the new struct order.
-/// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0 if
-/// they are equal.
-static int cmpDesignators(const DesignatorIter &Lhs, const DesignatorIter &Rhs,
-                          const ReorderedStruct &Struct) {
-  switch (Lhs.getTag()) {
-  case DesignatorIter::STRUCT:
-    assert(Rhs.getTag() == DesignatorIter::STRUCT &&
-           "Incompatible designators");
-    assert(Lhs.getStructDecl() == Rhs.getStructDecl() &&
-           "Incompatible structs");
-    // Use the new layout for reordered struct.
-    if (Struct.Definition == Lhs.getStructDecl()) {
-      return Struct.NewFieldsPositions[Lhs.getStructIter()->getFieldIndex()] -
-             Struct.NewFieldsPositions[Rhs.getStructIter()->getFieldIndex()];
-    }
-    return Lhs.getStructIter()->getFieldIndex() -
-           Rhs.getStructIter()->getFieldIndex();
-  case DesignatorIter::ARRAY:
-  case DesignatorIter::ARRAY_RANGE:
-    // Array designators can be compared to array range designators.
-    assert((Rhs.getTag() == DesignatorIter::ARRAY ||
-            Rhs.getTag() == DesignatorIter::ARRAY_RANGE) &&
-           "Incompatible designators");
-    size_t LhsIdx = Lhs.getTag() == DesignatorIter::ARRAY
-                        ? Lhs.getArrayIndex()
-                        : Lhs.getArrayRangeStart();
-    size_t RhsIdx = Rhs.getTag() == DesignatorIter::ARRAY
-                        ? Rhs.getArrayIndex()
-                        : Rhs.getArrayRangeStart();
-    return LhsIdx - RhsIdx;
-  }
-  llvm_unreachable("Invalid designator tag");
-}
-
-/// Compares compatible designator lists according to the new struct order.
-/// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0 if
-/// they are equal.
-static int cmpDesignatorLists(const Designators &Lhs, const Designators &Rhs,
-                              const ReorderedStruct &Reorders) {
-  for (unsigned Idx = 0, Size = std::min(Lhs.size(), Rhs.size()); Idx < Size;
-       ++Idx) {
-    int DesignatorComp = cmpDesignators(Lhs[Idx], Rhs[Idx], Reorders);
-    // If the current designators are not equal, return the result
-    if (DesignatorComp != 0)
-      return DesignatorComp;
-    // Otherwise, continue to the next pair.
-  }
-  // If all common designators were equal, compare the sizes of the designator
-  // lists.
-  return Lhs.size() - Rhs.size();
-}
-
 /// Finds the semantic form of the first explicit ancestor of the given
 /// initializer list including itself.
 static const InitListExpr *getExplicitILE(const InitListExpr *ILE,
@@ -481,20 +485,32 @@ static bool reorderFieldsInInitListExpr(
     // Handle case when some fields are designated. Some fields can be
     // missing. Insert any missing designators and reorder the expressions
     // according to the new order.
-    Designators CurrentDesignators{};
+    std::optional<Designators> CurrentDesignators;
     // Remember each initializer expression along with its designators. They are
     // sorted later to determine the correct order.
     std::vector<std::pair<Designators, const Expr *>> Rewrites;
     for (const Expr *Init : SyntacticInitListEx->inits()) {
       if (const auto *DIE = dyn_cast_or_null<DesignatedInitExpr>(Init)) {
-        CurrentDesignators = {DIE, SyntacticInitListEx, Context};
+        CurrentDesignators.emplace(DIE, SyntacticInitListEx, &Context);
+        if (CurrentDesignators->size() == 0) {
+          llvm::errs() << "Initializer list with excess elements or "
+                          "non-constant size is not supported\n";
+          return false;
+        }
 
         // Use the child of the DesignatedInitExpr. This way designators are
         // always replaced.
-        Rewrites.push_back({CurrentDesignators, DIE->getInit()});
+        Rewrites.emplace_back(*CurrentDesignators, DIE->getInit());
       } else {
-        // Find the next field.
-        if (!CurrentDesignators.increment(SyntacticInitListEx, Init, Context)) {
+        // If designators are not initialized then initialize to the first
+        // field, otherwise move the next field.
+        if (!CurrentDesignators) {
+          CurrentDesignators.emplace(Init, SyntacticInitListEx, &Context);
+          if (CurrentDesignators->size() == 0) {
+            llvm::errs() << "Unsupported initializer list\n";
+            return false;
+          }
+        } else if (!CurrentDesignators->advanceToNextField(Init)) {
           llvm::errs() << "Unsupported initializer list\n";
           return false;
         }
@@ -502,13 +518,13 @@ static bool reorderFieldsInInitListExpr(
         // Do not rewrite implicit values. They just had to be processed to
         // find the correct designator.
         if (!isa<ImplicitValueInitExpr>(Init))
-          Rewrites.push_back({CurrentDesignators, Init});
+          Rewrites.emplace_back(*CurrentDesignators, Init);
       }
     }
 
     // Sort the designators according to the new order.
-    llvm::sort(Rewrites, [&RS](const auto &Lhs, const auto &Rhs) {
-      return cmpDesignatorLists(Lhs.first, Rhs.first, RS) < 0;
+    llvm::stable_sort(Rewrites, [&RS](const auto &Lhs, const auto &Rhs) {
+      return RS(Lhs.first, Rhs.first) < 0;
     });
 
     for (unsigned i = 0, e = Rewrites.size(); i < e; ++i) {
