@@ -40,7 +40,7 @@
 # MOVIv4s_msl_throughput-NEXT: mode: inverse_throughput
 # MOVIv4s_msl_throughput-NEXT: key: 
 # MOVIv4s_msl_throughput-NEXT:   instructions:
-# MOVIv4s_msl_throughput-NEXT:     MOVIv4s_msl [[REG1:Q[0-9]+|LR]] i_0x1 i_0x110
+# MOVIv4s_msl_throughput-NEXT:     MOVIv4s_msl [[REG1:Q[0-9]+|LR]] i_0x1 i_0x108
 # MOVIv4s_msl_throughput: ...
 
 

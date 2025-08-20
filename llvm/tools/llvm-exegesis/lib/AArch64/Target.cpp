@@ -180,28 +180,14 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
   // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
   case llvm::AArch64::OPERAND_MSL_SHIFT: {
-    unsigned Opcode = Instr.getOpcode();
-    switch (Opcode) {
-    case AArch64::MOVIv2s_msl:
-    case AArch64::MVNIv2s_msl:
-      // Type 7: Pattern 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
-      // Creates 2-element 32-bit vector with 8-bit imm at positions [15:8] &
-      // [47:40] Shift value 264 (0x108) for Type 7 pattern encoding Corresponds
-      // to AArch64_AM::encodeAdvSIMDModImmType7()
+      // There are two valid encodings:
+      //   - Type 7: imm at [15:8], [47:40], shift = 264 (0x108) → msl #8
+      //   - Type 8: imm at [23:16], [55:48], shift = 272 (0x110) → msl #16
+      //     Corresponds AArch64_AM::encodeAdvSIMDModImmType7()
+      // But, v2s_msl and v4s_msl instructions accept either form, 
+      // Thus, Arbitrarily chosing 264 (msl #8) for simplicity.
       AssignedValue = MCOperand::createImm(264);
       return Error::success();
-    case AArch64::MOVIv4s_msl:
-    case AArch64::MVNIv4s_msl:
-      // Type 8: Pattern 0x00 abcdefgh 0xFF 0xFF 0x00 abcdefgh 0xFF 0xFF
-      // Creates 4-element 32-bit vector with 8-bit imm at positions [23:16] &
-      // [55:48] Shift value 272 (0x110) for Type 8 pattern encoding Corresponds
-      // to AArch64_AM::encodeAdvSIMDModImmType8()
-      AssignedValue = MCOperand::createImm(272);
-      return Error::success();
-    default:
-      return make_error<Failure>(
-          Twine("Unsupported MSL shift opcode: ").concat(Twine(Opcode)));
-    }
   }
   case MCOI::OperandType::OPERAND_PCREL:
   case MCOI::OperandType::OPERAND_FIRST_TARGET:
