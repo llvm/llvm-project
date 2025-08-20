@@ -6401,6 +6401,9 @@ protected:
           bool IsInjected, const Type *CanonicalType);
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   TagDecl *getOriginalDecl() const { return decl; }
 
   NestedNameSpecifier getQualifier() const;
@@ -6466,6 +6469,9 @@ class RecordType final : public TagType {
   using TagType::TagType;
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   RecordDecl *getOriginalDecl() const {
     return reinterpret_cast<RecordDecl *>(TagType::getOriginalDecl());
   }
@@ -6483,6 +6489,9 @@ class EnumType final : public TagType {
   using TagType::TagType;
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   EnumDecl *getOriginalDecl() const {
     return reinterpret_cast<EnumDecl *>(TagType::getOriginalDecl());
   }
@@ -6515,6 +6524,9 @@ class InjectedClassNameType final : public TagType {
                         bool IsInjected, const Type *CanonicalType);
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   CXXRecordDecl *getOriginalDecl() const {
     return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
   }

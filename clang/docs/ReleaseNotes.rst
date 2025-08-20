@@ -137,15 +137,21 @@ Non-comprehensive list of changes in this release
 - ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
   now be used in constant expressions.
 
+- A vector of booleans is now a valid condition for the ternary ``?:`` operator.
+  This binds to a simple vector select operation.
+
 - Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
   features has been deprecated, and is restricted to the arm64e target only. The
   correct method to check for these features is to test for the ``__PTRAUTH__``
   macro.
 
-
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+
+Lanai Support
+^^^^^^^^^^^^^^
+- The option ``-mcmodel={small,medium,large}`` is supported again.
 
 Deprecated Compiler Flags
 -------------------------
@@ -168,8 +174,6 @@ Improvements to Clang's diagnostics
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
-- ``-Wstring-concatenation`` now diagnoses every missing comma in an initializer list,
-  rather than stopping after the first. (#GH153745)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
@@ -212,8 +216,8 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
-  (#GH141504)
+- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods
+  (#GH141504) and on types returned from indirect calls (#GH142453).
 - Fixes some late parsed attributes, when applied to function definitions, not being parsed
   in function try blocks, and some situations where parsing of the function body
   is skipped, such as error recovery and code completion. (#GH153551)
@@ -225,6 +229,7 @@ Bug Fixes to C++ Support
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 - Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
+- Fixed a mismatched lambda scope bug when propagating up ``consteval`` within nested lambdas. (#GH145776)
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
@@ -234,6 +239,8 @@ Bug Fixes to C++ Support
   "intializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
+- Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
+  instantiated properly. (#GH154054)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -44195,8 +44195,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
       // Conversions.
       // TODO: Add more CVT opcodes when we have test coverage.
-    case X86ISD::CVTTP2SI:
     case X86ISD::CVTTP2UI: {
+      if (!Subtarget.hasVLX())
+        break;
+      [[fallthrough]];
+    }
+    case X86ISD::CVTTP2SI: {
       if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::f16 &&
           !Subtarget.hasVLX())
         break;
@@ -45151,6 +45155,9 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::CMPP:
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:
+    return false;
+  // SSE signbit extraction.
+  case X86ISD::MOVMSK:
     return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {

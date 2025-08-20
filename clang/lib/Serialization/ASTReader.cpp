@@ -12996,8 +12996,16 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
+
+    for (unsigned I = 0; I < VarList.size(); ++I) {
+      VarDecl *Recipe = readDeclAs<VarDecl>();
+      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+      RecipeList.push_back({Recipe});
+    }
+
     return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
-                                          VarList, EndLoc);
+                                          VarList, RecipeList, EndLoc);
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
