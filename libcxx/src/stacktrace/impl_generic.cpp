@@ -67,7 +67,7 @@ base::current_impl(size_t skip, size_t max_depth) {
 
   // (1) Collect instruction addresses; build vector, populate their `__addr_`'s
   unwind_addrs(*this, skip + 1, max_depth);
-  if (!__entries_.size()) {
+  if (!__entry_iters_().size()) {
     return;
   }
 
@@ -83,16 +83,16 @@ base::current_impl(size_t skip, size_t max_depth) {
 
 void base::find_images() {
   images images;
-  size_t i  = 0;
-  auto* it  = __entries_.begin();
-  auto* end = __entries_.end();
+  size_t i = 0;
+  auto it  = __entry_iters_().begin();
+  auto end = __entry_iters_().end();
   while (it != end) {
     auto& entry = *it++;
     images.find(&i, entry.__addr_);
     if (auto& image = images[i]) {
       entry.__image_ = &image;
       // While we're in this loop, get the executable's path, and tentatively use this for source file.
-      entry.assign_file(std::move(__strings_.emplace_back().assign(image.name_)));
+      entry.assign_file(__strings_.create()).assign(image.name_);
     }
   }
 }

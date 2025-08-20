@@ -128,9 +128,8 @@ int main(int, char**) {
   static_assert(std::forward_iterator<S::const_iterator>);
   static_assert(std::forward_iterator<S::iterator>);
   using CRI = S::const_reverse_iterator;
+  static_assert(std::is_same_v<CRI, decltype(S(A()).rbegin())>);
   static_assert(std::is_same_v<CRI, decltype(S(A()).crbegin())>);
-  using RI = S::reverse_iterator;
-  static_assert(std::is_same_v<RI, decltype(S(A()).rbegin())>);
 
   using IterT = S::iterator;
   using DiffT = S::difference_type;

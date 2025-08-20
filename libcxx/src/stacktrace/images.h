@@ -34,11 +34,11 @@ struct images;
 struct image {
   uintptr_t loaded_at_{};
   uintptr_t slide_{};
-  fixedstr<entry_base::__max_file_len> name_{};
+  char name_[__stacktrace::entry_base::__max_file_len]{0};
   bool is_main_prog_{};
 
   _LIBCPP_HIDE_FROM_ABI bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
-  _LIBCPP_HIDE_FROM_ABI operator bool() const { return !name_.empty(); }
+  _LIBCPP_HIDE_FROM_ABI operator bool() const { return name_[0]; }
 };
 
 /**

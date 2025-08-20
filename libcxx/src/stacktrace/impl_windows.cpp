@@ -195,7 +195,7 @@ base::current_impl(size_t skip, size_t max_depth) {
     if (skip && skip--) { continue; }
     if (!frame.AddrPC.Offset) { break; }
 
-    auto& entry = this->__entries_.emplace_back();
+    auto& entry = this->__entry_append_();
     // Note: can't differentiate between a signal, SEH exception handler, or a normal function call
     entry.__addr_ = frame.AddrPC.Offset - 1; // Back up 1 byte to get into prev insn range
 
@@ -212,9 +212,7 @@ base::current_impl(size_t skip, size_t max_depth) {
   // Symbols longer than this will be truncated.
   static constexpr size_t kMaxSymName = 256;
 
-  auto* it = __entries_.begin();
-  auto* end = __entries_.end();
-  while (it != end) {
+  for (auto& entry : base_.__entry_iters_()) {    
 #if defined(_M_ARM64) || defined(_M_AMD64)
     auto& entry = *it++;
     char space[sizeof(IMAGEHLP_SYMBOL64) + kMaxSymName + 1];
@@ -225,11 +223,11 @@ base::current_impl(size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE64 line;
     if ((*dbghelp.SymGetSymFromAddr64)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.assign_desc(std::move(base_.__strings_.emplace_back().assign(sym->Name)));
+      entry.assign_desc(__strings_.create()).assign(sym->Name);
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
     if ((*dbghelp.SymGetLineFromAddr64)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.assign_file(std::move(base_.__strings_.emplace_back().assign(line.FileName)));
+      entry.assign_file(__strings_.create()).assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
 #else
@@ -241,11 +239,11 @@ base::current_impl(size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE line;
     if ((*dbghelp.SymGetSymFromAddr)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.assign_desc(std::move(base_.__strings_.emplace_back().assign(sym->Name)));
+      entry.assign_desc(__strings_.create()).assign(sym->Name);
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
     if ((*dbghelp.SymGetLineFromAddr)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.assign_file(std::move(base_.__strings_.emplace_back().assign(line.FileName)));
+      entry.assign_file(__strings_.create()).assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
 #endif

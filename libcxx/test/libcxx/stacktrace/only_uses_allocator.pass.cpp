@@ -78,22 +78,22 @@ struct test_alloc : std::allocator<T> {
 
   T* allocate(size_t n) {
     ++custom_alloc;
+    std::cerr << "allocator: allocate(" << n << ")\n";
     auto* ret = base::allocate(n);
-    std::cerr << "allocator: allocate(" << n << ") -> " << ret << '\n';
     return ret;
   }
 
   std::allocation_result<T*, size_t> allocate_at_least(size_t n) {
     ++custom_alloc;
+    std::cerr << "allocator: atleast(" << n << ")\n";
     auto ret = base::allocate_at_least(n);
-    std::cerr << "allocator: atleast(" << n << ") -> " << ret.count << " @ " << ret.ptr << '\n';
     return ret;
   }
 
   void deallocate(T* p, size_t n) {
     ++custom_dealloc;
+    std::cerr << "allocator: deallocate(" << (void*)p << ", " << n << ")\n";
     base::deallocate(p, n);
-    std::cerr << "allocator: deallocate(" << p << ", " << n << ")\n";
   }
 };
 
@@ -117,7 +117,7 @@ int main(int, char**) {
     // Exit this scope to destroy stacktrace and allocator
   }
 
-  assert(custom_alloc == new_count);      // All "new" calls should have been through allocator
+  assert(custom_alloc == new_count);      // All objects should have come from allocator,
   assert(custom_alloc == custom_dealloc); // and all allocations should be deallocated
 
   return 0;

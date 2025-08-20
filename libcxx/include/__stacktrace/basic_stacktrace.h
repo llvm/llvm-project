@@ -37,7 +37,6 @@ _LIBCPP_PUSH_MACROS
 #  include <cstddef>
 #  include <cstdint>
 #  include <string>
-#  include <type_traits>
 #  include <utility>
 
 #  include <__stacktrace/alloc_helpers.h>
@@ -47,16 +46,26 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
+template <typename _Tp, typename _Bp = _Tp>
+struct iters {
+  _Tp* __data_{};
+  size_t __size_{};
+
+  _Bp* data() { return (_Bp*)__data_; }
+  size_t size() const { return __size_; }
+  _Bp* begin() { return data(); }
+  _Bp* end() { return data() + size(); }
+};
+
 struct base {
   constexpr static size_t __default_max_depth  = 64;
   constexpr static size_t __absolute_max_depth = 256;
 
-  vec<entry_base>& __entries_;
-  vec<str>& __strings_;
+  string_table_base& __strings_;
 
-  template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI base(vec<entry_base>& __entries, vec<str>& __strings)
-      : __entries_(__entries), __strings_(__strings) {}
+  using _EntryIters = iters<stacktrace_entry, entry_base>;
+  function<_EntryIters()> __entry_iters_;
+  function<entry_base&()> __entry_append_;
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void current_impl(size_t __skip, size_t __max_depth);
 
@@ -64,7 +73,7 @@ struct base {
   _LIBCPP_HIDE_FROM_ABI void find_symbols();
   _LIBCPP_HIDE_FROM_ABI void find_source_locs();
 
-  _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
+  _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 };
 
@@ -76,8 +85,9 @@ struct base {
 class stacktrace_entry;
 
 template <class _Allocator>
-class basic_stacktrace : __stacktrace::base {
+class basic_stacktrace : private __stacktrace::base {
   friend struct hash<basic_stacktrace<_Allocator>>;
+  friend struct __stacktrace::base;
 
   using _ATraits _LIBCPP_NODEBUG            = allocator_traits<_Allocator>;
   constexpr static bool __kPropOnCopyAssign = _ATraits::propagate_on_container_copy_assignment::value;
@@ -89,25 +99,30 @@ class basic_stacktrace : __stacktrace::base {
   [[no_unique_address]]
   _Allocator __alloc_;
 
-  using _EntryVec = __stacktrace::vec_wrap<stacktrace_entry, _Allocator>;
-  _EntryVec __entry_vec_wrap_;
+  vector<stacktrace_entry, _Allocator> __entries_;
+  function<_EntryIters()> entry_iters_fn() {
+    return [this] -> _EntryIters { return {__entries_.data(), __entries_.size()}; };
+  }
+  function<__stacktrace::entry_base&()> entry_append_fn() {
+    return [this] -> __stacktrace::entry_base& { return (__stacktrace::entry_base&)__entries_.emplace_back(); };
+  }
 
-  __stacktrace::vec_wrap<stacktrace_entry, _Allocator> __str_vec_wrap_;
+  __stacktrace::string_table<_Allocator> __strings_;
 
 public:
   // (19.6.4.1)
   // Overview [stacktrace.basic.overview]
 
   using value_type             = stacktrace_entry;
-  using const_reference        = const value_type&;
+  using const_reference        = value_type const&;
   using reference              = value_type&;
   using difference_type        = ptrdiff_t;
   using size_type              = size_t;
   using allocator_type         = _Allocator;
-  using const_iterator         = _EntryVec::const_iterator;
-  using iterator               = const_iterator;
-  using reverse_iterator       = std::reverse_iterator<basic_stacktrace::iterator>;
-  using const_reverse_iterator = std::reverse_iterator<basic_stacktrace::const_iterator>;
+  using iterator               = decltype(__entries_.begin());
+  using const_iterator         = decltype(__entries_.cbegin());
+  using reverse_iterator       = decltype(__entries_.rbegin());
+  using const_reverse_iterator = decltype(__entries_.crbegin());
 
   // (19.6.4.2)
   // Creation and assignment [stacktrace.basic.cons]
@@ -150,23 +165,25 @@ public:
 
   _LIBCPP_EXPORTED_FROM_ABI constexpr ~basic_stacktrace() = default;
 
+  static_assert(sizeof(__stacktrace::entry_base) == sizeof(stacktrace_entry));
+
   _LIBCPP_EXPORTED_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
-      : base(__entry_vec_wrap_, __str_vec_wrap_),
+      : base(__strings_, entry_iters_fn(), entry_append_fn()),
         __alloc_(__alloc),
-        __entry_vec_wrap_(__alloc_),
-        __str_vec_wrap_(__alloc_) {}
+        __entries_(__alloc_),
+        __strings_(__alloc_) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace const& __other, allocator_type const& __alloc)
-      : base(__entry_vec_wrap_, __str_vec_wrap_),
+      : base(__strings_, entry_iters_fn(), entry_append_fn()),
         __alloc_(__alloc),
-        __entry_vec_wrap_(__other.__entry_vec_wrap_),
-        __str_vec_wrap_(__other.__str_vec_wrap_) {}
+        __entries_(__other.__entries_),
+        __strings_(__other.__strings_) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, allocator_type const& __alloc)
-      : base(__entry_vec_wrap_, __str_vec_wrap_),
+      : base(__strings_, entry_iters_fn(), entry_append_fn()),
         __alloc_(__alloc),
-        __entry_vec_wrap_(std::move(__other.__entries_)),
-        __str_vec_wrap_(std::move(__other.__str_vec_wrap_)) {}
+        __entries_(std::move(__other.__entries_)),
+        __strings_(std::move(__other.__strings_)) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace() noexcept(is_nothrow_default_constructible_v<allocator_type>)
       : basic_stacktrace(allocator_type()) {}
@@ -206,30 +223,24 @@ public:
 
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI allocator_type get_allocator() const noexcept { return __alloc_; }
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator begin() const noexcept { return __entry_vec_wrap_.begin(); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator end() const noexcept { return __entry_vec_wrap_.end(); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator rbegin() const noexcept {
-    return __entry_vec_wrap_.rbegin();
-  }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator rend() const noexcept {
-    return __entry_vec_wrap_.rend();
-  }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator begin() const noexcept { return __entries_.begin(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator end() const noexcept { return __entries_.end(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator rbegin() const noexcept { return __entries_.rbegin(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator rend() const noexcept { return __entries_.rend(); }
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator cbegin() const noexcept { return __entry_vec_wrap_.cbegin(); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator cend() const noexcept { return __entry_vec_wrap_.cend(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator cbegin() const noexcept { return __entries_.cbegin(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator cend() const noexcept { return __entries_.cend(); }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator crbegin() const noexcept {
-    return __entry_vec_wrap_.crbegin();
+    return __entries_.crbegin();
   }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator crend() const noexcept {
-    return __entry_vec_wrap_.crend();
-  }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reverse_iterator crend() const noexcept { return __entries_.crend(); }
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI bool empty() const noexcept { return __entry_vec_wrap_.empty(); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_type size() const noexcept { return __entry_vec_wrap_.size(); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_type max_size() const noexcept { return __entry_vec_wrap_.max_size(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI bool empty() const noexcept { return __entries_.empty(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_type size() const noexcept { return __entries_.size(); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_type max_size() const noexcept { return __entries_.max_size(); }
 
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reference operator[](size_type __i) const { return __entries_[__i]; }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reference at(size_type __i) const { return __entry_vec_wrap_.at(__i); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_reference at(size_type __i) const { return __entries_.at(__i); }
 
   // (19.6.4.4)
   // [stacktrace.basic.cmp], comparisons

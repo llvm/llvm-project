@@ -2011,9 +2011,9 @@ module std [system] {
   }
 
   module stacktrace {
+    module alloc_helpers          { header "__stacktrace/alloc_helpers.h" }
     module basic_stacktrace       { header "__stacktrace/basic_stacktrace.h" }
     module stacktrace_entry       { header "__stacktrace/stacktrace_entry.h" }
-    module string_manager         { header "__stacktrace/alloc_helpers.h" }
 
     header "stacktrace"
     export *

@@ -537,13 +537,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is, _CharT (&__buf)[_Np]) {
 template <class _Traits, size_t _Np>
 inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, unsigned char (&__buf)[_Np]) {
-  return __is >> (char(&)[_Np])__buf;
+  return __is >> (char (&)[_Np])__buf;
 }
 
 template <class _Traits, size_t _Np>
 inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, signed char (&__buf)[_Np]) {
-  return __is >> (char(&)[_Np])__buf;
+  return __is >> (char (&)[_Np])__buf;
 }
 
 #    else
@@ -1260,7 +1260,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+_LIBCPP_EXPORTED_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _Allocator>& __str, _CharT __dlm) {
   ios_base::iostate __state = ios_base::goodbit;
   typename basic_istream<_CharT, _Traits>::sentry __sen(__is, true);
@@ -1332,19 +1332,19 @@ getline(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _All
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+inline _LIBCPP_EXPORTED_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _Allocator>& __str) {
   return std::getline(__is, __str, __is.widen('\n'));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+inline _LIBCPP_EXPORTED_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>&& __is, basic_string<_CharT, _Traits, _Allocator>& __str, _CharT __dlm) {
   return std::getline(__is, __str, __dlm);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+inline _LIBCPP_EXPORTED_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>&& __is, basic_string<_CharT, _Traits, _Allocator>& __str) {
   return std::getline(__is, __str, __is.widen('\n'));
 }

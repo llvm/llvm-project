@@ -32,12 +32,9 @@ bool llvm_symbolizer::build_argv() {
   push_arg("--verbose");
   push_arg("--relativenames");
   push_arg("--functions=short");
-  auto* it  = base_.__entries_.begin();
-  auto* end = base_.__entries_.end();
-  while (it != end) {
-    auto& entry = *(entry_base*)(it++);
-    if (entry.__image_ && !entry.__image_->name_.empty()) {
-      push_arg("FILE:%s %p", entry.__image_->name_.data(), (void*)entry.adjusted_addr());
+  for (auto& entry : base_.__entry_iters_()) {
+    if (entry.__image_ && entry.__image_->name_[0]) {
+      push_arg("FILE:%s %p", entry.__image_->name_, (void*)entry.adjusted_addr());
     } else {
       push_arg("%p", (void*)entry.adjusted_addr());
     }
@@ -45,7 +42,7 @@ bool llvm_symbolizer::build_argv() {
   return true;
 }
 
-void llvm_symbolizer::parse(entry_base** entry_iter, std::string_view view) const {
+void llvm_symbolizer::parse(entry_base** iter, std::string_view view) const {
   /*
   Parsing is most reliable with `--verbose` option (short of having a JSON parser).  Example:
 
@@ -59,26 +56,30 @@ void llvm_symbolizer::parse(entry_base** entry_iter, std::string_view view) cons
   */
 
   if (!view.starts_with("  ")) { // line without leading whitespace starts a new entry
-    ++*entry_iter;               // advance to next entry
-    _LIBCPP_ASSERT(*entry_iter >= base_.__entries_.begin(), "out of range");
-    _LIBCPP_ASSERT(*entry_iter < base_.__entries_.end(), "out of range");
-    auto& entry = **entry_iter;
+    ++*iter;               // advance to next entry
+    auto& entry = **iter;
+    _LIBCPP_ASSERT(&entry >= base_.__entry_iters_().begin(), "out of range");
+    _LIBCPP_ASSERT(&entry < base_.__entry_iters_().end(), "out of range");
+
     if (view != "??") {
-      entry.assign_desc(std::move(base_.__strings_.emplace_back().assign(view)));
+      auto& base = (__stacktrace::entry_base&)entry;
+      base.assign_desc(base_.__strings_.create()).assign(view);
     }
 
   } else if (view.starts_with("  Filename:")) {
-    auto& entry = **entry_iter;
+    auto& entry = **iter;
     auto tmp    = view.substr(view.find_first_of(":") + 2); // skip ": "
     if (tmp != "??") { 
-      entry.assign_file(std::move(base_.__strings_.emplace_back().assign(tmp)));
+      auto& base = (__stacktrace::entry_base&)entry;
+      base.assign_file(base_.__strings_.create()).assign(tmp);
     }
 
   } else if (view.starts_with("  Line:")) {
-    auto& entry = **entry_iter;
+    auto& entry = **iter;
+    auto& base = (__stacktrace::entry_base&)entry;
     auto tmp    = view;
     tmp         = tmp.substr(tmp.find_first_of(":") + 2); // skip ": "
-    if (tmp != "??" && tmp != "0") { entry.__line_ = atoi(tmp.data()); }
+    if (tmp != "??" && tmp != "0") { base.__line_ = atoi(tmp.data()); }
   }
 }
 
@@ -91,14 +92,15 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base& base
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  auto& line = base.__strings_.emplace_back().reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
+  auto line = base.__strings_.create();
+  line.reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
 
-  auto* entry_iter = base.__entries_.begin() - 1;  // "before first" entry
-  while (spawner.stream_.good()) {                 // loop until we get EOF from tool stdout
-    line.getline(spawner.stream_);                 // consume a line from stdout
-    auto view = tool_base::rstrip(line.view());    // remove trailing (but not leading) whitespace
+  auto iter = base.__entry_iters_().begin() - 1;  // "before first" entry
+  while (spawner.stream_.good()) {                // loop until we get EOF from tool stdout
+    line.getline(spawner.stream_);                // consume a line from stdout
+    auto view = tool_base::rstrip(line.view());   // remove trailing (but not leading) whitespace
     if (tool_base::rstrip(view).empty()) { continue; }  // skip if line had nothing, or _only_ whitespace
-    tool.parse(&entry_iter, view);                 // send to parser (who might update entry_iter)
+    tool.parse(&iter, view);                      // send to parser (who might update iter)
   }
 
   return true;

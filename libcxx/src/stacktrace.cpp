@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <__stacktrace/alloc_helpers.h>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
 #include <iomanip>
@@ -25,11 +26,11 @@ ostream& entry_base::write_to(ostream& __os) const {
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
   __os << "0x" << std::hex << std::setfill('0') << std::setw(__k_addr_width) << __addr_;
-  if (__desc_ && __desc_->size()) {
-    __os << ": " << __desc_;
+  if (__desc_.size()) {
+    __os << ": " << __desc_.view();
   }
-  if (__file_ && __file_->size()) {
-    __os << ": " << __file_;
+  if (__file_.size()) {
+    __os << ": " << __file_.view();
   }
   if (__line_) {
     __os << ":" << std::dec << __line_;
@@ -38,17 +39,18 @@ ostream& entry_base::write_to(ostream& __os) const {
 }
 
 ostream& base::write_to(std::ostream& __os) const {
-  auto __count = __entries_.size();
-  if (!__count) {
+  auto iters = __entry_iters_();
+  auto count = iters.size();
+  if (!count) {
     __os << "(empty stacktrace)";
   } else {
-    for (size_t __i = 0; __i < __count; __i++) {
+    for (size_t __i = 0; __i < count; __i++) {
       // Insert newlines between entries (but not before the first or after the last)
       if (__i) {
         __os << '\n';
       }
       __os << "  frame " << std::setw(3) << std::setfill(' ') << std::dec << (__i + 1) << ": "
-           << *(stacktrace_entry const*)(__entries_.begin() + __i);
+           << *(stacktrace_entry const*)(iters.data() + __i);
     }
   }
   return __os;
