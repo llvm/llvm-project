@@ -19,7 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV1Model : SchedMachineModel {
-  let IssueWidth            =  15; // Maximum micro-ops dispatch rate.
+  let IssueWidth            =   8; // Maximum micro-ops dispatch rate.
   let MicroOpBufferSize     = 256; // Micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
