@@ -38,6 +38,16 @@
 ; RUN: llvm-lto2 run --debug-only=lto -o %t3 %t1 %t2 2>&1 | \
 ; RUN: FileCheck --allow-empty %s --check-prefix THIN
 
+; Test invalid unified-lto mode causes an error message return.
+; RUN: not llvm-lto2 run --unified-lto=foo -o %t3 %t1 %t2 2>&1 | \
+; RUN: FileCheck %s --check-prefix INVALIDMODE
+; RUN: not llvm-lto2 run --unified-lto="foo" -o %t3 %t1 %t2 2>&1 | \
+; RUN: FileCheck %s --check-prefix INVALIDMODE
+; RUN: not llvm-lto2 run --unified-lto=1 -o %t3 %t1 %t2 2>&1 | \
+; RUN: FileCheck %s --check-prefix INVALIDMODE
+
+; INVALIDMODE: invalid LTO mode
+
 ; UNIFIEDERR: unified LTO compilation must use compatible bitcode modules
 ; NOUNIFIEDERR-NOT: unified LTO compilation must use compatible bitcode modules
 
@@ -54,3 +64,4 @@
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
+
