@@ -1776,15 +1776,38 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   assert(LatchBB->getUniquePredecessor() == SingleUncountableExitingBlock &&
          "Expected latch predecessor to be the early exiting block");
 
-  // TODO: Handle loops that may fault.
   Predicates.clear();
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
-                                     &Predicates)) {
+  SmallVector<LoadInst *, 4> NonDerefLoads;
+  if (!isReadOnlyLoopWithSafeOrSpeculativeLoads(TheLoop, PSE.getSE(), DT, AC,
+                                                &NonDerefLoads, &Predicates)) {
     reportVectorizationFailure(
         "Loop may fault",
         "Cannot vectorize potentially faulting early exit loop",
         "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
     return false;
+  }
+  // Check non-dereferenceable loads if any.
+  for (LoadInst *LI : NonDerefLoads) {
+    // Only support unit-stride access for now.
+    int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
+    if (Stride != 1) {
+      reportVectorizationFailure("Loop contains strided unbound access",
+                                 "Cannot vectorize early exit loop with "
+                                 "speculative strided load",
+                                 "SpeculativeNonUnitStrideLoadEarlyExitLoop",
+                                 ORE, TheLoop);
+      return false;
+    }
+    if (!TTI->isLegalSpeculativeLoad(LI->getType(), LI->getAlign())) {
+      reportVectorizationFailure("Loop may fault",
+                                 "Cannot vectorize early exit loop with "
+                                 "illegal speculative load",
+                                 "IllegalSpeculativeLoadEarlyExitLoop", ORE,
+                                 TheLoop);
+      return false;
+    }
+    SpeculativeLoads.insert(LI);
+    LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =

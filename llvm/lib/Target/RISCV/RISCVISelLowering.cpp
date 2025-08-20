@@ -24525,6 +24525,18 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
   return true;
 }
 
+bool RISCVTargetLowering::isLegalSpeculativeLoad(EVT DataType,
+                                                 Align Alignment) const {
+  if (!Subtarget.hasVInstructions())
+    return false;
+
+  EVT ScalarType = DataType.getScalarType();
+  if (!isLegalElementTypeForRVV(ScalarType))
+    return false;
+
+  return true;
+}
+
 MachineInstr *
 RISCVTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
                                    MachineBasicBlock::instr_iterator &MBBI,

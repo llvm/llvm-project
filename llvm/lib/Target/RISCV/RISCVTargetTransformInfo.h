@@ -332,6 +332,11 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
+  bool isLegalSpeculativeLoad(Type *DataType, Align Alignment) const override {
+    EVT DataTypeVT = TLI->getValueType(DL, DataType);
+    return TLI->isLegalSpeculativeLoad(DataTypeVT, Alignment);
+  }
+
   bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
                                     Align Alignment,
                                     unsigned AddrSpace) const override {
