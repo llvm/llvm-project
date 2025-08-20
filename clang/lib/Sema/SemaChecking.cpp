@@ -13213,9 +13213,9 @@ bool Sema::CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
       // warning
       QualType UnderlyingType = OBT->getUnderlyingType();
       IntRange SourceRange = IntRange::forTargetOfCanonicalType(
-          Context, UnderlyingType.getTypePtr());
-      IntRange TargetRange =
-          IntRange::forTargetOfCanonicalType(Context, Target.getTypePtr());
+          Context, Context.getCanonicalType(UnderlyingType).getTypePtr());
+      IntRange TargetRange = IntRange::forTargetOfCanonicalType(
+          Context, Context.getCanonicalType(Target).getTypePtr());
 
       if (SourceRange.Width > TargetRange.Width) {
         // Try to evaluate as constant - look through potential OBT cast
