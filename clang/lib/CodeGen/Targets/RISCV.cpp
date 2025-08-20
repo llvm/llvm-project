@@ -862,7 +862,7 @@ llvm::Value *RISCVABIInfo::createCoercedLoad(Address Src, const ABIArgInfo &AI,
   if (auto *ArrayTy = dyn_cast<llvm::ArrayType>(SrcTy))
     SrcTy = ArrayTy->getElementType();
   Src = Src.withElementType(SrcTy);
-  auto *FixedSrcTy = cast<llvm::FixedVectorType>(SrcTy);
+  [[maybe_unused]] auto *FixedSrcTy = cast<llvm::FixedVectorType>(SrcTy);
   assert(ScalableDstTy->getElementType() == FixedSrcTy->getElementType());
   auto *Load = CGF.Builder.CreateLoad(Src);
   auto *VectorVal = llvm::PoisonValue::get(ScalableDstTy);
