@@ -983,24 +983,26 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
             [&](const parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (name->symbol) {
-                  const auto *type{name->symbol->GetType()};
-                  if (type->IsNumeric(TypeCategory::Integer) &&
-                      !reductionIntegerSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for integer type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Real) &&
-                      !reductionRealSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for real type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Complex) &&
-                      !reductionComplexSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for complex type"_err_en_US);
-                  } else if (type->category() ==
-                          Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                      !reductionLogicalSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for logical type"_err_en_US);
+                  if (const auto *type{name->symbol->GetType()}) {
+                    if (type->IsNumeric(TypeCategory::Integer) &&
+                        !reductionIntegerSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for integer type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Real) &&
+                        !reductionRealSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for real type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Complex) &&
+                        !reductionComplexSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for complex type"_err_en_US);
+                    } else if (type->category() ==
+                            Fortran::semantics::DeclTypeSpec::Category::
+                                Logical &&
+                        !reductionLogicalSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for logical type"_err_en_US);
+                    }
                   }
                   // TODO: check composite type.
                 }

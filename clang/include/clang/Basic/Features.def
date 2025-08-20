@@ -166,7 +166,7 @@ FEATURE(ptrauth_elf_got, LangOpts.PointerAuthELFGOT)
 
 FEATURE(ptrauth_objc_isa, LangOpts.PointerAuthObjcIsa)
 FEATURE(ptrauth_objc_interface_sel, LangOpts.PointerAuthObjcInterfaceSel)
-FEATURE(ptrauth_objc_signable_class, true)
+FEATURE(ptrauth_objc_signable_class, LangOpts.PointerAuthIntrinsics)
 FEATURE(ptrauth_objc_method_list_pointer, LangOpts.PointerAuthCalls)
 
 EXTENSION(swiftcc,
