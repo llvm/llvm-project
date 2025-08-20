@@ -3852,6 +3852,10 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   if (I->isLifetimeStartOrEnd())
     return false;
 
+  if (auto *TT = dyn_cast<TargetExtType>(Op->getType());
+      TT && TT->getName() == "dx.RawBuffer")
+    return false;
+
   // Early exit.
   if (!isa<Constant, InlineAsm>(Op))
     return true;
