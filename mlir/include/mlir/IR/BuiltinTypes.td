@@ -132,6 +132,18 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2",
     
     /// Get the storage type as a string.
     std::string getStorageType() const { return "f8E5M2"; }
+
+    /// Check if this 8-bit floating point type uses packed representation.
+    bool isPacked() const { return false; }
+
+    /// Get the logical bit width per value for this 8-bit floating point type.
+    unsigned getLogicalBitWidth() const { return 8; }
+
+    /// Get the number of logical elements that fit in one byte for this 8-bit floating point type.
+    unsigned getElementsPerByte() const { return 1; }
+
+    /// Get the preferred alignment in bytes for this 8-bit floating point type.
+    std::optional<unsigned> getPreferredAlignmentBytes() const { return std::nullopt; }
   }];
 }
 
@@ -191,6 +203,18 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN",
     
     /// Get the storage type as a string.
     std::string getStorageType() const { return "f8E4M3FN"; }
+
+    /// Check if this 8-bit floating point type uses packed representation.
+    bool isPacked() const { return false; }
+
+    /// Get the logical bit width per value for this 8-bit floating point type.
+    unsigned getLogicalBitWidth() const { return 8; }
+
+    /// Get the number of logical elements that fit in one byte for this 8-bit floating point type.
+    unsigned getElementsPerByte() const { return 1; }
+
+    /// Get the preferred alignment in bytes for this 8-bit floating point type.
+    std::optional<unsigned> getPreferredAlignmentBytes() const { return std::nullopt; }
   }];
 }
 
@@ -617,6 +641,18 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     std::string getStorageType() const {
       return (isStorageSigned() ? "i" : "u") + std::to_string(getWidth());
     }
+
+    /// Check if this integer type uses packed representation.
+    bool isPacked() const { return false; }
+
+    /// Get the logical bit width per value for this integer type.
+    unsigned getLogicalBitWidth() const { return getWidth(); }
+
+    /// Get the number of logical elements that fit in one byte for this integer type.
+    unsigned getElementsPerByte() const { return 1; }
+
+    /// Get the preferred alignment in bytes for this integer type.
+    std::optional<unsigned> getPreferredAlignmentBytes() const { return std::nullopt; }
   }];
 }
 
