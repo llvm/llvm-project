@@ -16682,16 +16682,19 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
   llvm_unreachable("Expected a load or store node here");
 }
 
-// Combine VSR(VSRO input, shift), shift) to VSRQ(input, shift)
+// Combine VSR(VSRO (input, vsro_byte_shift), vsr_bit_shift) to VSRQ(input,
+// vsrq_bit_shift) where vsrq_bit_shift = (vsro_byte_shift * 8) + vsr_bit_shift
 //
 // PowerPC Vector Shift Instructions:
 // - vsro (Vector Shift Right by Octet): Shifts vector right by N bytes,
 //   where N is specified in bits 121:124 of the shift vector (4 bits, 0-15
-//   bytes)
+//   bytes shift)
 // - vsr (Vector Shift Right): Shifts vector right by N bits,
-//   where N is specified in bits 125:127 of the shift vector (3 bits, 0-7 bits)
+//   where N is specified in bits 125:127 of the shift vector (3 bits, 0-7 bits
+//   shift)
 // - vsrq (Vector Shift Right Quadword): Shifts vector right by N bits,
-//   where N is specified in bits 57:63 of the shift vector (7 bits, 0-127 bits)
+//   where N is specified in low-order 7 bits of the shift vector (7 bits, 0-127
+//   bits shift)
 //
 // Input DAG pattern: vsr(vsro(input, shift_vector), shift_vector)
 // performs the following shifts:
@@ -16701,11 +16704,11 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
 //   Total shift = (bits[121:124] * 8) + bits[125:127] bits
 //
 // Since bits 121:127 form a 7-bit value representing the total shift amount,
-// and vsrq uses the same 7-bit shift amount (assuming bits 57:63 map to
-// 121:127), we can replace the two-instruction sequence with a single vsrq
-// instruction.
+// and vsrq uses the same 7-bit shift amount, replace the two-instruction
+// sequence with a single vsrq instruction.
 //
-// Optimization: vsr(vsro(input, shift), shift) -> vsrq(input, shift)
+// Input DAG      : vsr(vsro(input, vsro_byte_shift), vsr_bit_shift)
+// Optimized DAG  : vsrq(input, vsrq_bit_shift)
 SDValue PPCTargetLowering::combineVSROVSRToVSRQ(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
 
