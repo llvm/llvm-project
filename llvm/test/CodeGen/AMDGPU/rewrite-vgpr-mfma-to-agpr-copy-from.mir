@@ -172,7 +172,7 @@ body:             |
     SI_RETURN
 ...
 
-# There is a read of the coy-from-agpr in the dst operand of the MFMA.
+# There is a read of the copy from AGPR to VGPR in the dst operand of the MFMA.
 ---
 name:  test_rewrite_mfma_copy_from_agpr_vdst_subreg_use_imm_src2
 tracksRegLiveness: true
