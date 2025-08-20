@@ -733,6 +733,7 @@ public:
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
   NODE(parser, OpenMPAllocatorsConstruct)
+  NODE(parser, OpenMPGroupprivate)
   NODE(parser, OpenMPRequiresConstruct)
   NODE(parser, OpenMPSimpleStandaloneConstruct)
   NODE(parser, OpenMPStandaloneConstruct)

@@ -5832,14 +5832,22 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       // assumed to be vectors, so we need to extract individual elements from
       // there, execute VF scalar calls, and then gather the result into the
       // vector return value.
-      InstructionCost ScalarCallCost =
-          TTI.getCallInstrCost(ScalarFunc, ScalarRetTy, ScalarTys, CostKind);
+      if (VF.isFixed()) {
+        InstructionCost ScalarCallCost =
+            TTI.getCallInstrCost(ScalarFunc, ScalarRetTy, ScalarTys, CostKind);
 
-      // Compute costs of unpacking argument values for the scalar calls and
-      // packing the return values to a vector.
-      InstructionCost ScalarizationCost = getScalarizationOverhead(CI, VF);
+        // Compute costs of unpacking argument values for the scalar calls and
+        // packing the return values to a vector.
+        InstructionCost ScalarizationCost = getScalarizationOverhead(CI, VF);
+        ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
+      } else {
+        // There is no point attempting to calculate the scalar cost for a
+        // scalable VF as we know it will be Invalid.
+        assert(!getScalarizationOverhead(CI, VF).isValid() &&
+               "Unexpected valid cost for scalarizing scalable vectors");
+        ScalarCost = InstructionCost::getInvalid();
+      }
 
-      ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
       // Honor ForcedScalars and UniformAfterVectorization decisions.
       // TODO: For calls, it might still be more profitable to widen. Use
       // VPlan-based cost model to compare different options.
@@ -9795,6 +9803,19 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         assert(!EPI.VectorTripCount &&
                "Must only have a single non-zero incoming value");
         EPI.VectorTripCount = Inc;
+      }
+      // If we didn't find a non-zero vector trip count, all incoming values
+      // must be zero, which also means the vector trip count is zero. Pick the
+      // first zero as vector trip count.
+      // TODO: We should not choose VF * UF so the main vector loop is known to
+      // be dead.
+      if (!EPI.VectorTripCount) {
+        assert(
+            EPResumeVal->getNumIncomingValues() > 0 &&
+            all_of(EPResumeVal->incoming_values(),
+                   [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+            "all incoming values must be 0");
+        EPI.VectorTripCount = EPResumeVal->getOperand(0);
       }
       VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
       assert(all_of(IV->users(),

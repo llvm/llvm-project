@@ -129,10 +129,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start: {
-    emitVAStart(builtinID == Builtin::BI__va_start
-                    ? emitScalarExpr(e->getArg(0))
-                    : emitVAListRef(e->getArg(0)).getPointer(),
-                emitScalarExpr(e->getArg(1)));
+    mlir::Value vaList = builtinID == Builtin::BI__va_start
+                             ? emitScalarExpr(e->getArg(0))
+                             : emitVAListRef(e->getArg(0)).getPointer();
+    mlir::Value count = emitScalarExpr(e->getArg(1));
+    emitVAStart(vaList, count);
     return {};
   }
 
@@ -399,4 +400,16 @@ void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
 
 void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
   cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
+}
+
+// FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. By
+// default this lowers to llvm.va_arg which is incomplete and not ABI-compliant
+// on most targets so cir.va_arg will need some ABI handling in LoweringPrepare
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
+  assert(!cir::MissingFeatures::msabi());
+  assert(!cir::MissingFeatures::vlas());
+  mlir::Location loc = cgm.getLoc(ve->getExprLoc());
+  mlir::Type type = convertType(ve->getType());
+  mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
+  return cir::VAArgOp::create(builder, loc, type, vaList);
 }

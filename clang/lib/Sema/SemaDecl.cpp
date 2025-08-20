@@ -3115,6 +3115,10 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
       continue;
+    } else if (isa<SYCLExternalAttr>(NewAttribute)) {
+      // SYCLExternalAttr may be added after a definition.
+      ++I;
+      continue;
     }
 
     S.Diag(NewAttribute->getLocation(),
@@ -4138,6 +4142,18 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
            diag::err_carries_dependency_missing_on_first_decl) << 0/*Function*/;
       Diag(Old->getFirstDecl()->getLocation(),
            diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
+    }
+
+    // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
+    //   When a function is declared with SYCL_EXTERNAL, that macro must be
+    //   used on the first declaration of that function in the translation unit.
+    //   Redeclarations of the function in the same translation unit may
+    //   optionally use SYCL_EXTERNAL, but this is not required.
+    const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
+    if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
+      Diag(SEA->getLocation(), diag::warn_sycl_external_missing_on_first_decl)
+          << SEA;
+      Diag(Old->getLocation(), diag::note_previous_declaration);
     }
 
     // (C++98 8.3.5p3):
@@ -12325,6 +12341,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   if (NewFD->hasAttr<SYCLKernelEntryPointAttr>())
     SYCL().CheckSYCLEntryPointFunctionDecl(NewFD);
 
+  if (NewFD->hasAttr<SYCLExternalAttr>())
+    SYCL().CheckSYCLExternalFunctionDecl(NewFD);
+
   // Semantic checking for this function declaration (in isolation).
 
   if (getLangOpts().CPlusPlus) {
@@ -12509,6 +12528,13 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   if (getLangOpts().OpenCL) {
     Diag(FD->getLocation(), diag::err_opencl_no_main)
         << FD->hasAttr<DeviceKernelAttr>();
+    FD->setInvalidDecl();
+    return;
+  }
+
+  if (FD->hasAttr<SYCLExternalAttr>()) {
+    Diag(FD->getLocation(), diag::err_sycl_external_invalid_main)
+        << FD->getAttr<SYCLExternalAttr>();
     FD->setInvalidDecl();
     return;
   }
@@ -14735,14 +14761,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       isa<InitListExpr>(var->getInit())) {
     const auto *ILE = cast<InitListExpr>(var->getInit());
     unsigned NumInits = ILE->getNumInits();
-    if (NumInits > 2) {
-      auto concatenatedPartsAt = [&](unsigned Index) -> unsigned {
-        if (const Expr *E = ILE->getInit(Index))
-          if (const auto *S = dyn_cast<StringLiteral>(E->IgnoreImpCasts()))
-            return S->getNumConcatenated();
-        return 0;
-      };
-
+    if (NumInits > 2)
       for (unsigned I = 0; I < NumInits; ++I) {
         const auto *Init = ILE->getInit(I);
         if (!Init)
@@ -14755,23 +14774,24 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
         // Diagnose missing comma in string array initialization.
         // Do not warn when all the elements in the initializer are concatenated
         // together. Do not warn for macros too.
-        if (NumConcat == 2) {
-          if (SL->getBeginLoc().isMacroID())
-            continue;
+        if (NumConcat == 2 && !SL->getBeginLoc().isMacroID()) {
+          bool OnlyOneMissingComma = true;
+          for (unsigned J = I + 1; J < NumInits; ++J) {
+            const auto *Init = ILE->getInit(J);
+            if (!Init)
+              break;
+            const auto *SLJ = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
+            if (!SLJ || SLJ->getNumConcatenated() > 1) {
+              OnlyOneMissingComma = false;
+              break;
+            }
+          }
 
-          unsigned L = I > 0 ? concatenatedPartsAt(I - 1) : 0;
-          unsigned R = I + 1 < NumInits ? concatenatedPartsAt(I + 1) : 0;
-
-          // Skip neighbors with multi-part concatenations.
-          if (R > 1)
-            continue;
-
-          // Diagnose when at least one neighbor is a single literal.
-          if (R == 1 || L == 1) {
+          if (OnlyOneMissingComma) {
             SmallVector<FixItHint, 1> Hints;
-            // Insert a comma between the two tokens of this element.
-            Hints.push_back(FixItHint::CreateInsertion(
-                PP.getLocForEndOfToken(SL->getStrTokenLoc(0)), ", "));
+            for (unsigned i = 0; i < NumConcat - 1; ++i)
+              Hints.push_back(FixItHint::CreateInsertion(
+                  PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
 
             Diag(SL->getStrTokenLoc(1),
                  diag::warn_concatenated_literal_array_init)
@@ -14779,9 +14799,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             Diag(SL->getBeginLoc(),
                  diag::note_concatenated_string_literal_silence);
           }
+          // In any case, stop now.
+          break;
         }
       }
-    }
   }
 
 
@@ -15869,17 +15890,18 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   if (TypoCorrectedFunctionDefinitions.count(Definition))
     return;
 
-  // If we don't have a visible definition of the function, and it's inline or
-  // a template, skip the new definition.
-  if (SkipBody && !hasVisibleDefinition(Definition) &&
+  bool DefinitionVisible = false;
+  if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        Definition->getNumTemplateParameterLists())) {
     SkipBody->ShouldSkip = true;
     SkipBody->Previous = const_cast<FunctionDecl*>(Definition);
-    if (auto *TD = Definition->getDescribedFunctionTemplate())
-      makeMergedDefinitionVisible(TD);
-    makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition));
+    if (!DefinitionVisible) {
+      if (auto *TD = Definition->getDescribedFunctionTemplate())
+        makeMergedDefinitionVisible(TD);
+      makeMergedDefinitionVisible(const_cast<FunctionDecl *>(Definition));
+    }
     return;
   }
 
@@ -16255,10 +16277,6 @@ Decl *Sema::ActOnSkippedFunctionBody(Decl *Decl) {
   return Decl;
 }
 
-Decl *Sema::ActOnFinishFunctionBody(Decl *D, Stmt *BodyArg) {
-  return ActOnFinishFunctionBody(D, BodyArg, /*IsInstantiation=*/false);
-}
-
 /// RAII object that pops an ExpressionEvaluationContext when exiting a function
 /// body.
 class ExitFunctionBodyRAII {
@@ -16329,8 +16347,8 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
 
-Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
-                                    bool IsInstantiation) {
+Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
+                                    bool RetainFunctionScopeInfo) {
   FunctionScopeInfo *FSI = getCurFunction();
   FunctionDecl *FD = dcl ? dcl->getAsFunction() : nullptr;
 
@@ -16384,6 +16402,14 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         return nullptr;
       Body = SR.get();
     }
+  }
+
+  if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLExternalAttr>()) {
+    SYCLExternalAttr *SEAttr = FD->getAttr<SYCLExternalAttr>();
+    if (FD->isDeletedAsWritten())
+      Diag(SEAttr->getLocation(),
+           diag::err_sycl_external_invalid_deleted_function)
+          << SEAttr;
   }
 
   {
@@ -16787,7 +16813,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (!IsInstantiation)
     PopDeclContext();
 
-  PopFunctionScopeInfo(ActivePolicy, dcl);
+  if (!RetainFunctionScopeInfo)
+    PopFunctionScopeInfo(ActivePolicy, dcl);
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for
   // deletion in some later function.
@@ -18228,8 +18255,10 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 // However, ensure the decl passes the structural compatibility
                 // check in C11 6.2.7/1 (or 6.1.2.6/1 in C89).
                 NamedDecl *Hidden = nullptr;
-                if (SkipBody && (!hasVisibleDefinition(Def, &Hidden) ||
-                                 getLangOpts().C23)) {
+                bool HiddenDefVisible = false;
+                if (SkipBody &&
+                    (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
+                     getLangOpts().C23)) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
@@ -18245,13 +18274,15 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
                     ProcessDeclAttributeList(S, SkipBody->New, Attrs);
                     return Def;
-                  } else {
-                    SkipBody->ShouldSkip = true;
-                    SkipBody->Previous = Def;
-                    makeMergedDefinitionVisible(Hidden);
-                    // Carry on and handle it like a normal definition. We'll
-                    // skip starting the definition later.
                   }
+
+                  SkipBody->ShouldSkip = true;
+                  SkipBody->Previous = Def;
+                  if (!HiddenDefVisible && Hidden)
+                    makeMergedDefinitionVisible(Hidden);
+                  // Carry on and handle it like a normal definition. We'll
+                  // skip starting the definition later.
+
                 } else if (!IsExplicitSpecializationAfterInstantiation) {
                   // A redeclaration in function prototype scope in C isn't
                   // visible elsewhere, so merely issue a warning.
@@ -20873,4 +20904,14 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
+}
+
+bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
+                                    bool &Visible) {
+  Visible = hasVisibleDefinition(D, Suggested);
+  // The redefinition of D in the **current** TU is allowed if D is invisible or
+  // D is defined in the global module of other module units. We didn't check if
+  // it is in global module as, we'll check the redefinition in named module
+  // later with better diagnostic message.
+  return D->isInAnotherModuleUnit() || !Visible;
 }

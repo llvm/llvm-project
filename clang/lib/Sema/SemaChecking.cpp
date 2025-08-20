@@ -3080,6 +3080,19 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Magnitude.get()->getType());
     break;
   }
+  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_cttz:
+    // These builtins can be unary or binary. Note for empty calls we call the
+    // unary checker in order to not emit an error that says the function
+    // expects 2 arguments, which would be misleading.
+    if (TheCall->getNumArgs() <= 1) {
+      if (PrepareBuiltinElementwiseMathOneArgCall(
+              TheCall, EltwiseBuiltinArgTyRestriction::IntegerTy))
+        return ExprError();
+    } else if (BuiltinElementwiseMath(
+                   TheCall, EltwiseBuiltinArgTyRestriction::IntegerTy))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
