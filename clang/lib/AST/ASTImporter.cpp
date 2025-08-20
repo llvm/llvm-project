@@ -1857,6 +1857,14 @@ ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(
       *ReplacedOrErr, T->getIndex(), T->getFinal(), *ToArgumentPack);
 }
 
+ExpectedType ASTNodeImporter::VisitSubstBuiltinTemplatePackType(
+    const SubstBuiltinTemplatePackType *T) {
+  Expected<TemplateArgument> ToArgumentPack = import(T->getArgumentPack());
+  if (!ToArgumentPack)
+    return ToArgumentPack.takeError();
+  return Importer.getToContext().getSubstBuiltinTemplatePack(*ToArgumentPack);
+}
+
 ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
                                        const TemplateSpecializationType *T) {
   auto ToTemplateOrErr = import(T->getTemplateName());

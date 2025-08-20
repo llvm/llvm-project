@@ -1810,6 +1810,37 @@ __make_integer_seq
 
 This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
 
+__builtin_dedup_pack
+--------------------
+
+.. code-block:: c++
+
+  template <class... Ts>
+  using __builtin_dedup_pack = ...;
+
+This alias takes a template parameter pack ``Ts`` and produces a new unexpanded pack containing the unique types
+from ``Ts``, with the order of the first occurrence of each type preserved.
+It is useful in template metaprogramming to normalize type lists.
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  template <typename...> struct TypeList;
+
+  // The resulting type is TypeList<int, double, char>
+  template <typename ...ExtraTypes>
+  using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double, ExtraTypes...>...>;
+
+**Limitations**:
+
+* This builtin can only be used inside a template.
+* The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+* This builtin cannot be assigned to a template template parameter.
+
+
 Type Trait Primitives
 =====================
 
