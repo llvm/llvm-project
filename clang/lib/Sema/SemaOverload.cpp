@@ -4404,10 +4404,10 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
     Result = CompareStandardConversionSequences(S, Loc,
                                                 ICS1.Standard, ICS2.Standard);
   else if (ICS1.isUserDefined()) {
-    auto ConvFunc1 = ICS1.UserDefined.ConversionFunction;
+    const FunctionDecl *ConvFunc1 = ICS1.UserDefined.ConversionFunction;
     if (ConvFunc1)
       ConvFunc1 = ConvFunc1->getCanonicalDecl();
-    auto ConvFunc2 = ICS2.UserDefined.ConversionFunction;
+    const FunctionDecl *ConvFunc2 = ICS2.UserDefined.ConversionFunction;
     if (ConvFunc2)
       ConvFunc2 = ConvFunc2->getCanonicalDecl();
     // User-defined conversion sequence U1 is a better conversion
