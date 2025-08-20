@@ -71,7 +71,7 @@ LLVM_ABI void setCurrentDebugTypes(const char **Types, unsigned Count);
 /// is not specified, or is specified as "bitset".
 #define DEBUG_WITH_TYPE(TYPE, ...)                                             \
   do {                                                                         \
-    if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)) {               \
+    if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE, 1)) {            \
       __VA_ARGS__;                                                             \
     }                                                                          \
   } while (false)
