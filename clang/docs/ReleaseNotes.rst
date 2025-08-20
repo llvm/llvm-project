@@ -1003,6 +1003,19 @@ Miscellaneous Clang Crashes Fixed
 OpenACC Specific Changes
 ------------------------
 
+- OpenACC support, enabled via `-fopenacc` has reached a level of completeness
+  to finally be at least notionally usable. Currently, the OpenACC 3.4
+  specification has been completely implemented for Sema and AST creation, so
+  nodes will show up in the AST after having been properly checked. Lowering is
+  currently a work in progress, with compute, loop, and combined constructs
+  partially implemented, plus a handful of data and executable constructs
+  implemented. Lowering will only work in Clang-IR mode (so only with a compiler
+  built with Clang-IR enabled, and with `-fclangir` used on the command line).
+  However, note that the Clang-IR implementation status is also quite partial,
+  so frequent 'not yet implemented' diagnostics should be expected.  Also, the
+  ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
+  code generation is possible for OpenACC.
+
 Target Specific Changes
 -----------------------
 
@@ -1224,18 +1237,6 @@ New features
   the runtime for the Blocks extension on Windows. This flag currently only
   changes the code generation, and even then, only on Windows. This does not
   impact the linker behaviour like the other `-static-*` flags.
-- OpenACC support, enabled via `-fopenacc` has reached a level of completeness
-  to finally be at least notionally usable. Currently, the OpenACC 3.4
-  specification has been completely implemented for Sema and AST creation, so
-  nodes will show up in the AST after having been properly checked. Lowering is
-  currently a work in progress, with compute, loop, and combined constructs
-  partially implemented, plus a handful of data and executable constructs
-  implemented. Lowering will only work in Clang-IR mode (so only with a compiler
-  built with Clang-IR enabled, and with `-fclangir` used on the command line).
-  However, note that the Clang-IR implementation status is also quite partial,
-  so frequent 'not yet implemented' diagnostics should be expected.  Also, the
-  ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
-  code generation is possible for OpenACC.
 - Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
   as an extension in all C++ language modes.
 
