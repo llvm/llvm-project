@@ -175,7 +175,7 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def DistributeLayoutAttrInterface: AttrInterface<"DistributeLayoutAttrInterface"> {
+def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
   let cppNamespace = "::mlir::xegpu";
   let description = [{
     Common trait for all XeGPU layouts.
@@ -203,7 +203,7 @@ def DistributeLayoutAttrInterface: AttrInterface<"DistributeLayoutAttrInterface"
                     "std::optional<SmallVector<int64_t>>",
                     "getSgDataAsInt">,
     InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
-                    "xegpu::DistributeLayoutAttrInterface",
+                    "xegpu::DistributeLayoutAttr",
                     "dropSgLayoutAndData">,
     InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
                       indices based on the effective subgroup layout.}],
@@ -220,7 +220,7 @@ def DistributeLayoutAttrInterface: AttrInterface<"DistributeLayoutAttrInterface"
   ];
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttrInterface]> {
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -407,7 +407,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttrInterf
 }
 
 
-def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttrInterface]> {
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
   let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
 
   let description = [{
@@ -434,7 +434,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttrInterface
   }];
 
   let parameters = (ins
-    "xegpu::DistributeLayoutAttrInterface": $parent,
+    "xegpu::DistributeLayoutAttr": $parent,
     "DenseI64ArrayAttr": $dims
   );
 

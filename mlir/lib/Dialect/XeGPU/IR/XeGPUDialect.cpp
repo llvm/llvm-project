@@ -290,7 +290,7 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
 
-/// Implements DistributeLayoutAttrInterface::getOffsets to generate
+/// Implements DistributeLayoutAttr::getOffsets to generate
 /// instructions for computing multi-dimensional offsets when distributed by
 /// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
@@ -323,8 +323,7 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
 //===----------------------------------------------------------------------===//
 LogicalResult
 SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
-                  xegpu::DistributeLayoutAttrInterface parent,
-                  DenseI64ArrayAttr dims) {
+                  xegpu::DistributeLayoutAttr parent, DenseI64ArrayAttr dims) {
   if (!parent || !dims)
     return emitError() << "expected parent layout and dims attribute";
 
@@ -342,7 +341,7 @@ SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
 }
 
 SliceAttr SliceAttr::flatten() const {
-  xegpu::DistributeLayoutAttrInterface parent = getParent();
+  xegpu::DistributeLayoutAttr parent = getParent();
   SmallVector<DenseI64ArrayAttr> slicedDims({getDims()});
 
   while (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(parent)) {
@@ -377,7 +376,7 @@ SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   return parent.delinearizeSubgroupId(builder, loc, linearId);
 }
 
-/// Implements DistributeLayoutAttrInterface::getOffsets to generate
+/// Implements DistributeLayoutAttr::getOffsets to generate
 /// instructions for computing multi-dimensional offsets when distributed by
 /// SliceAttr.
 FailureOr<SmallVector<SmallVector<Value>>>

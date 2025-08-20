@@ -56,7 +56,7 @@ static bool isSgIdRangeSpecified(Operation *op, int64_t &startOfRange,
 
 static std::pair<SmallVector<int64_t>, int>
 getSgShapeAndCount(ArrayRef<int64_t> shape,
-                   xegpu::DistributeLayoutAttrInterface layout) {
+                   xegpu::DistributeLayoutAttr layout) {
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
   if (layout && layout.isForWorkgroup()) {
@@ -120,7 +120,7 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
     return failure();
 
   // not applicable to ops without workgroup layout attributes
-  xegpu::DistributeLayoutAttrInterface layout = op.getLayoutAttr();
+  xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
   if (!layout || !layout.isForWorkgroup())
     return failure();
 
@@ -217,7 +217,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     xegpu::TensorDescType tdescTy = op.getType();
     ArrayRef<int64_t> wgShape = tdescTy.getShape();
     Type elemTy = tdescTy.getElementType();
-    xegpu::DistributeLayoutAttrInterface layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     auto newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
@@ -806,7 +806,7 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
     VectorType valueTy = op.getRes().getType();
     Type elemTy = valueTy.getElementType();
 
-    xegpu::DistributeLayoutAttrInterface layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResTy = VectorType::get(sgShape, elemTy);
     SmallVector<Value> newOps;
@@ -832,7 +832,7 @@ struct WgToSgStoreMatrixOp : public OpConversionPattern<xegpu::StoreMatrixOp> {
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
-    xegpu::DistributeLayoutAttrInterface layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
     for (auto [v, offsets] : llvm::zip(adaptor.getData(), offsetsList))
       rewriter.create<xegpu::StoreMatrixOp>(op.getLoc(), v, op.getMemDesc(),
                                             offsets,
@@ -944,7 +944,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return xegpu::TensorDescType();
   };
 
-  auto isLegal = [&](xegpu::DistributeLayoutAttrInterface layout) -> bool {
+  auto isLegal = [&](xegpu::DistributeLayoutAttr layout) -> bool {
     return !layout || !layout.isForWorkgroup();
   };
 
