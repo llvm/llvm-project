@@ -4571,7 +4571,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();
-    unsigned WriteThruNumElements =
+    [[maybe_unused]] unsigned WriteThruNumElements =
         cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
     assert(ANumElements == WriteThruNumElements ||
            ANumElements * 2 == WriteThruNumElements);
