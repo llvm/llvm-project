@@ -125,8 +125,13 @@ extractThreeVariablesAndInstructions(
       continue;
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-      if (!BO->isBitwiseLogicOp())
+      if (!BO->isBitwiseLogicOp()) {
+        if (V != Root && !V->hasOneUse()) {
+          Variables.insert(V);
+          continue;
+        }
         return {nullptr, nullptr, nullptr};
+      }
 
       Instructions.push_back(BO);
 
