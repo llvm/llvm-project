@@ -79,8 +79,16 @@ static lldb_private::RegisterInfo g_register_infos_mte[] = {
     DEFINE_EXTENSION_REG(mte_ctrl)};
 
 static lldb_private::RegisterInfo g_register_infos_tls[] = {
-    {"tpidr", nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_TP}, nullptr, nullptr, nullptr},
+    {"tpidr",
+     nullptr,
+     8,
+     0,
+     lldb::eEncodingUint,
+     lldb::eFormatHex,
+     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_TP},
+     nullptr,
+     nullptr,
+     nullptr},
     // Only present when SME is present
     DEFINE_EXTENSION_REG(tpidr2)};
 

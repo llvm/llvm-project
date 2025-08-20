@@ -102,7 +102,6 @@ class AArch64LinuxTLSRegisters(TestBase):
             self.skipTest("SME must not be present.")
 
         self.check_tls_reg(["tpidr"])
-        
 
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
