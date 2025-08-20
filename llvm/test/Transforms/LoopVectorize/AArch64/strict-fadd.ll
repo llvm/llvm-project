@@ -934,7 +934,7 @@ for.end:
 }
 
 ; Test case where the reduction step is a first-order recurrence.
-define double @reduction_increment_by_first_order_recurrence() {
+define double @reduction_increment_by_first_order_recurrence(i32 %n) {
 ; CHECK-ORDERED-LABEL: @reduction_increment_by_first_order_recurrence(
 ; CHECK-ORDERED:  vector.body:
 ; CHECK-ORDERED:    [[RED:%.*]] = phi double [ 0.000000e+00, %vector.ph ], [ [[RED_NEXT:%.*]], %vector.body ]
@@ -970,7 +970,7 @@ loop:
   %red.next = fadd double %for, %red
   %for.next = sitofp i32 %iv to double
   %iv.next = add nsw i32 %iv, 1
-  %ec = icmp eq i32 %iv.next, 1025
+  %ec = icmp eq i32 %iv.next, %n
   br i1 %ec, label %exit, label %loop, !llvm.loop !13
 
 exit:
