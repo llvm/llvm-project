@@ -18,6 +18,53 @@ define void @vec_reduce_add_v16i8(ptr %src, ptr %dst) nounwind {
   ret void
 }
 
+define void @vec_reduce_add_v8i8(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: vec_reduce_add_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.d $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; CHECK-NEXT:    st.b $a0, $a1, 0
+; CHECK-NEXT:    ret
+  %v = load <8 x i8>, ptr %src
+  %res = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %v)
+  store i8 %res, ptr %dst
+  ret void
+}
+
+define void @vec_reduce_add_v4i8(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: vec_reduce_add_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.w $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; CHECK-NEXT:    st.b $a0, $a1, 0
+; CHECK-NEXT:    ret
+  %v = load <4 x i8>, ptr %src
+  %res = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %v)
+  store i8 %res, ptr %dst
+  ret void
+}
+
+define void @vec_reduce_add_v2i8(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: vec_reduce_add_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.h $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
+; CHECK-NEXT:    ret
+  %v = load <2 x i8>, ptr %src
+  %res = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> %v)
+  store i8 %res, ptr %dst
+  ret void
+}
+
 define void @vec_reduce_add_v8i16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_add_v8i16:
 ; CHECK:       # %bb.0:
@@ -34,6 +81,36 @@ define void @vec_reduce_add_v8i16(ptr %src, ptr %dst) nounwind {
   ret void
 }
 
+define void @vec_reduce_add_v4i16(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: vec_reduce_add_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.d $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; CHECK-NEXT:    st.h $a0, $a1, 0
+; CHECK-NEXT:    ret
+  %v = load <4 x i16>, ptr %src
+  %res = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %v)
+  store i16 %res, ptr %dst
+  ret void
+}
+
+define void @vec_reduce_add_v2i16(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: vec_reduce_add_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.w $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
+; CHECK-NEXT:    ret
+  %v = load <2 x i16>, ptr %src
+  %res = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> %v)
+  store i16 %res, ptr %dst
+  ret void
+}
+
 define void @vec_reduce_add_v4i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_add_v4i32:
 ; CHECK:       # %bb.0:
@@ -45,6 +122,20 @@ define void @vec_reduce_add_v4i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-NEXT:    ret
   %v = load <4 x i32>, ptr %src
   %res = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
+  store i32 %res, ptr %dst
+  ret void
+}
+
+define void @vec_reduce_add_v2i32(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: vec_reduce_add_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.d $a0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
+; CHECK-NEXT:    ret
+  %v = load <2 x i32>, ptr %src
+  %res = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %v)
   store i32 %res, ptr %dst
   ret void
 }

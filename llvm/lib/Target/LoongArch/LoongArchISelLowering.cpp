@@ -310,7 +310,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
-      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -341,6 +340,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
          {MVT::v16i8, MVT::v8i8, MVT::v4i8, MVT::v2i8, MVT::v8i16, MVT::v4i16,
           MVT::v2i16, MVT::v4i32, MVT::v2i32, MVT::v2i64}) {
       setOperationAction(ISD::TRUNCATE, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
   }
 
@@ -536,41 +536,36 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   SDLoc DL(Op);
   MVT OpVT = Op.getSimpleValueType();
   SDValue Val = Op.getOperand(0);
-  MVT EleTy = Val.getSimpleValueType().getScalarType();
 
-  SDValue Idx = DAG.getConstant(0, DL, Subtarget.getGRLenVT());
-  unsigned EC = Val.getSimpleValueType().getVectorNumElements();
+  unsigned NumEles = Val.getSimpleValueType().getVectorNumElements();
+  unsigned EleBits = Val.getSimpleValueType().getScalarSizeInBits();
 
-  switch (EleTy.SimpleTy) {
-  default:
-    llvm_unreachable("Unexpected value type!");
-  case MVT::i8:
-    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i8, EC),
-                      Val, Val);
-    EC = EC / 2;
-    LLVM_FALLTHROUGH;
-  case MVT::i16:
-    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i16, EC),
-                      Val, Val);
-    EC = EC / 2;
-    LLVM_FALLTHROUGH;
-  case MVT::i32:
-    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i32, EC),
-                      Val, Val);
-    EC = EC / 2;
-    LLVM_FALLTHROUGH;
-  case MVT::i64:
-    Val = DAG.getNode(LoongArchISD::VHADDW, DL, MVT::getVectorVT(MVT::i64, EC),
-                      Val, Val);
+  unsigned LegalVecSize = 128;
+  bool is256Vector = Subtarget.hasExtLASX() && Val.getValueSizeInBits() == 256;
+
+  while (!isTypeLegal(Val.getSimpleValueType())) {
+    Val = DAG.WidenVector(Val, DL);
   }
 
-  if (Subtarget.hasExtLASX()) {
+  if (is256Vector) {
+    NumEles /= 2;
+    LegalVecSize = 256;
+  }
+
+  for (unsigned i = 1; i < NumEles; i *= 2, EleBits *= 2) {
+    MVT IntTy = MVT::getIntegerVT(EleBits);
+    MVT VecTy = MVT::getVectorVT(IntTy, LegalVecSize / EleBits);
+    Val = DAG.getNode(LoongArchISD::VHADDW, DL, VecTy, Val, Val);
+  }
+
+  if (is256Vector) {
     SDValue Tmp = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, Val,
                               DAG.getConstant(2, DL, MVT::i64));
     Val = DAG.getNode(ISD::ADD, DL, MVT::v4i64, Tmp, Val);
   }
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val, Idx);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val,
+                     DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
 }
 
 SDValue LoongArchTargetLowering::lowerPREFETCH(SDValue Op,
