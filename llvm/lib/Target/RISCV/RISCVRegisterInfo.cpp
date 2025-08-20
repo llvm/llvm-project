@@ -440,6 +440,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     auto [LMulHandled, RegClass, Opcode] =
         getSpillReloadInfo(NumRegs - I, RegEncoding, IsSpill);
     auto [RegNumHandled, _] = RISCVVType::decodeVLMUL(LMulHandled);
+    bool IsLast = I + RegNumHandled == NumRegs;
     if (PreHandledNum) {
       Register Step;
       // Optimize for constant VLEN.
@@ -458,15 +459,14 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
         else {
           Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
-              .addReg(VLENB, getKillRegState(I + RegNumHandled == NumRegs))
+              .addReg(VLENB, getKillRegState(IsLast))
               .addImm(ShiftAmount);
         }
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
           .addReg(Base, getKillRegState(I != 0 || IsBaseKill))
-          .addReg(Step, getKillRegState(Step != VLENB ||
-                                        I + RegNumHandled == NumRegs));
+          .addReg(Step, getKillRegState(Step != VLENB || IsLast));
       Base = NewBase;
     }
 
@@ -474,7 +474,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     MachineInstrBuilder MIB =
         BuildMI(MBB, II, DL, TII->get(Opcode))
             .addReg(ActualReg, getDefRegState(!IsSpill))
-            .addReg(Base, getKillRegState(I + RegNumHandled == NumRegs))
+            .addReg(Base, getKillRegState(IsLast))
             .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
                                                    VRegSize * RegNumHandled));
 
