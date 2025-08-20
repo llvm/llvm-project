@@ -95,7 +95,7 @@ Error COFFWriter::finalizeSymbolContents() {
 }
 
 Error COFFWriter::finalizeSymIdxContents() {
-  // CFGuards shouldn't be present in PE
+  // CFGuards shouldn't be present in PE.
   if (Obj.IsPE)
     return Error::success();
 
@@ -114,9 +114,9 @@ Error COFFWriter::finalizeSymIdxContents() {
     NeedUpdate |= Sym.OriginalRawIndex != Sym.RawIndex;
     SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
 
-    // We collect only definition symbols of the sections to update checksum
-    if (Sym.Sym.NumberOfAuxSymbols == 1 &&
-        Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC && Sym.Sym.Value == 0 &&
+    // We collect only definition symbols of the sections to update checksum.
+    if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC &&
+        Sym.Sym.NumberOfAuxSymbols == 1 && Sym.Sym.Value == 0 &&
         IsSymIdxSection(Sym.Name))
       SecIdMap[Sym.TargetSectionId] =
           reinterpret_cast<coff_aux_section_definition *>(
@@ -143,7 +143,7 @@ Error COFFWriter::finalizeSymIdxContents() {
                                "symbol or the symbol has unexpected format",
                                Sec.Name.str().c_str());
 
-    // Create updated content
+    // Create updated content.
     ArrayRef<support::ulittle32_t> Ids(
         reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
         RawIds.size() / 4);
@@ -159,7 +159,7 @@ Error COFFWriter::finalizeSymIdxContents() {
     }
     ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
                                 RawIds.size());
-    // Update check sum
+    // Update check sum.
     JamCRC JC(/*Init=*/0);
     JC.update(NewRawIds);
     SecDefIt->getSecond()->CheckSum = JC.getCRC();
