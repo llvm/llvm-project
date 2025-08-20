@@ -107,8 +107,8 @@ static cl::opt<bool> KeepFPICache(
         "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache"),
     cl::init(false));
 
-std::vector<TensorSpec>& llvm::getFeatureMap() {
-// clang-format off
+std::vector<TensorSpec> &llvm::getFeatureMap() {
+  // clang-format off
 static std::vector<TensorSpec> FeatureMap{
 #define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
 // InlineCost features - these must come first
@@ -118,8 +118,8 @@ static std::vector<TensorSpec> FeatureMap{
   INLINE_FEATURE_ITERATOR(POPULATE_NAMES)
 #undef POPULATE_NAMES
 };
-// clang-format on
-return FeatureMap;
+  // clang-format on
+  return FeatureMap;
 }
 
 const char *const llvm::DecisionName = "inlining_decision";
@@ -475,7 +475,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(getFeatureMap().size()) = GetDefaultAdvice(CB);
+    *ModelRunner->getTensor<int64_t>(getFeatureMap().size()) =
+        GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
 
