@@ -4767,6 +4767,15 @@ def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
 def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
+defm structor_decl_linkage_names
+    : BoolGOption<"structor-decl-linkage-names",
+                  CodeGenOpts<"DebugStructorDeclLinkageNames">, DefaultTrue,
+                  NegFlag<SetFalse>,
+                  PosFlag<SetTrue, [], [],
+                          "Attach linkage names to C++ constructor/destructor "
+                          "declarations in DWARF."
+                          "Implies -g.">,
+                  BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],

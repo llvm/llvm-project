@@ -1,8 +1,21 @@
 // Tests that we emit unified constructor/destructor linkage names
 // for ABIs that support it.
 
-// RUN: %clang_cc1 -triple aarch64-apple-macosx -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefixes=CHECK,MSABI
+// Check that -gstructor-decl-linkage-names is the default.
+// RUN: %clang_cc1 -triple aarch64-apple-macosx -emit-llvm -debug-info-kind=standalone \
+// RUN:            %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM
+//
+// Check with -gstructor-decl-linkage-names.
+// RUN: %clang_cc1 -triple aarch64-apple-macosx -emit-llvm -debug-info-kind=standalone \
+// RUN:            -gstructor-decl-linkage-names %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM
+//
+// Check with -gno-structor-decl-linkage-names.
+// RUN: %clang_cc1 -triple aarch64-apple-macosx -emit-llvm -debug-info-kind=standalone \
+// RUN:            -gno-structor-decl-linkage-names %s -o - | FileCheck %s --check-prefixes=CHECK,DISABLE
+//
+// Check ABI without structor variants.
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -debug-info-kind=standalone \
+// RUN:            -gstructor-decl-linkage-names %s -o - | FileCheck %s --check-prefixes=CHECK,MSABI
 
 struct Base {
   Base(int x);
@@ -16,11 +29,13 @@ Base::~Base() {}
 
 // CHECK: ![[BASE_CTOR_DECL:[0-9]+]] = !DISubprogram(name: "Base"
 // MSABI-NOT:                                        linkageName:
+// DISABLE-NOT:                                      linkageName:
 // ITANIUM-SAME:                                     linkageName: "_ZN4BaseC4Ei"
 // CHECK-SAME:                                       spFlags: 0
 
 // CHECK: ![[BASE_DTOR_DECL:[0-9]+]] = !DISubprogram(name: "~Base"
 // MSABI-NOT:                                        linkageName:
+// DISABLE-NOT:                                      linkageName:
 // ITANIUM-SAME:                                     linkageName: "_ZN4BaseD4Ev"
 // CHECK-SAME:                                       spFlags: 0
 
@@ -61,6 +76,7 @@ struct Derived : public Base {
 
 // CHECK: [[BASE_INHERIT_CTOR_DECL]] = !DISubprogram(name: "Base"
 // MSABI-NOT:                                        linkageName:
+// DISABLE-NOT:                                      linkageName:
 // ITANIUM-SAME:                                     linkageName: "_ZN7DerivedCI44BaseEi"
 // CHECK-SAME                                        spFlags: 0
 

@@ -2181,8 +2181,11 @@ llvm::StringRef
 CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
   assert(Method);
 
-  bool IsCtorOrDtor =
+  const bool IsCtorOrDtor =
       isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+
+  if (IsCtorOrDtor && !CGM.getCodeGenOpts().DebugStructorDeclLinkageNames)
+    return {};
 
   // In some ABIs (particularly Itanium) a single ctor/dtor
   // corresponds to multiple functions. Attach a "unified"

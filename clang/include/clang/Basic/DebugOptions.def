@@ -125,8 +125,11 @@ DEBUGOPT(DebugNameTable, 2, 0, Compatible)
 /// Whether to use DWARF base address specifiers in .debug_ranges.
 DEBUGOPT(DebugRangesBaseAddress, 1, 0, Compatible)
 
+/// Whether to add linkage names to constructor/destructor declarations.
+DEBUGOPT(DebugStructorDeclLinkageNames, 1, 0, Benign)
+
 /// Whether to embed source in DWARF debug line section.
-DEBUGOPT(EmbedSource, 1, 0, Compatible)
+DEBUGOPT(EmbedSource, 1, 1, Compatible)
 
 #undef DEBUGOPT
 #undef ENUM_DEBUGOPT
