@@ -2281,7 +2281,11 @@ multiclass XXEvalTernarySelectAnd<ValueType Vt> {
 // The patterns implement xxeval vector select operations where:
 // - A is the selector vector
 // - f(B,C) is the "true" case op on vectors B and C (AND, NOR, EQV, NAND)
-// - B is the "false" case op (vector B)
+// - B is the "false" case operand (vector B)
+//
+// Note: Patterns (A? C : B) and (A? not(C) : B) are not considered
+// for XXEVAL instruction (4 Cycle) as XXSEL (3 cycle) instruction performs 
+// better.
 // =============================================================================
 multiclass XXEvalTernarySelectB<ValueType Vt>{
   // Pattern: (A ? AND(B,C) : B) XXEVAL immediate value: 49
@@ -2302,7 +2306,11 @@ multiclass XXEvalTernarySelectB<ValueType Vt>{
 // The patterns implement xxeval vector select operations where:
 // - A is the selector vector
 // - f(B,C) is the "true" case op on vectors B and C (AND, NOR, EQV, NAND)
-// - C is the "false" case op (vector C)
+// - C is the "false" case operand (vector C)
+//
+// Note: Patterns (A? B : C) and (A? not(B) : C) are not considered
+// for XXEVAL instruction (4 Cycle) as XXSEL (3 cycle) instruction performs 
+// better.
 // =============================================================================
 multiclass XXEvalTernarySelectC<ValueType Vt>{
   // Pattern: (A ? AND(B,C) : C) XXEVAL immediate value: 81
