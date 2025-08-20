@@ -89,6 +89,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
 
     // Inflate to the equivalent AV_* class.
     const TargetRegisterClass *NewRC = TRI.getLargestLegalSuperClass(OldRC, MF);
+    if (OldRC == NewRC)
+      return false;
 
     // Accumulate constraints from all uses.
     for (MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
