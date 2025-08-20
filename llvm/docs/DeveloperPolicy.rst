@@ -294,49 +294,11 @@ Quality
 -------
 
 Sending patches, PRs, RFCs, comments, etc to LLVM, is not free -- it takes a lot
-of maintainer time and energy to review those contributions. Our quality bar can
-be summarized with the **golden rule** that a contribution should be worth more
-to the project than the time it takes to review it.
-
-However, this rule is held in balance with our goal to make the LLVM project
-welcoming and open to aspiring compiler engineers who are willing to invest time
-and effort to learn and grow, because growing our contributor base and
-potentially recruiting new maintainers helps sustain the project over the long
-term.
-
-Contributors who repeatedly make low-value contributions according to the
-standards of our maintainers will be asked to increase the quality of their
-contributions or cease contributing. As a community, we encourage maintainers to
-invest effort in reviewing work from new contributors. We label PRs from
-first-time contributors to set maintainer expectations on quality. However, we
-expect to see a growth pattern in the quality of a contributor's work over time.
-Maintainers can use their discretion and push back against burdensome
-contributions and ask contributors to meet their quality bar. In addition to the
-minimum guidelines outlined in thie section, maintainers can set their own
-quality standards using their considerable domain expertise.
-
-The following is a checklist of some of the minimum quality standards that any
-change must satisfy before being reviewed in detail or committed to the main
-development branch:
-
-#. Bug fixes and new features should `include a testcase`_ so we know if the
-   fix/feature ever regresses in the future.
-
-#. The code should compile cleanly on all supported platforms.
-
-#. Code must pass the relevant regression test suites on all supported
-   plaftorms.
-
-#. Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
-
-#. Ensure that links in source code and test files point to publicly available
-   resources and are used primarily to add additional information rather than
-   to supply critical context. The surrounding comments should be sufficient
-   to provide the context behind such links.
-
-Our quality policy goals are captured by this quote from `Working in Public: The
-Making and Maintenance of Open Source Software
-<https://press.stripe.com/working-in-public>`_ by Nadia Eghbal:
+of maintainer time and energy to review those contributions! Our **golden rule**
+is that a contribution should be worth more to the project than the time it
+takes to review it. These ideas are captured by this quote from the book
+`Working in Public <https://press.stripe.com/working-in-public>`_ by Nadia
+Eghbal:
 
   .. pull-quote::
 
@@ -349,6 +311,52 @@ Making and Maintenance of Open Source Software
     contribution, it might be a pull request that’s too complex or unwieldy to
     review, given the potential upside."
     -- Nadia Eghbal
+
+We encourage non-extractive contributions that help sustain the project. We want
+the LLVM project to be welcoming and open to aspiring compiler engineers who are
+willing to invest time and effort to learn and grow, because growing our
+contributor base and recruiting new maintainers helps sustain the project over
+the long term. We therefore label pull requests from new contributors and
+encourage maintainers to spend their time to help new contributors learn.
+
+However, we expect to see a growth pattern in the quality of a contributor's
+work over time. Maintainers are empowered to push back against *extractive*
+contributions and explain why they believe a contribution is overly burdensome
+or not aligned with the project goals.
+
+Contribution size is an imperfect proxy of the burden of review, and the
+potential user base of the feature is another possible proxy for the value of
+the contribution. The best ways to make a change less extractive and more
+valuable are to reduce its size or complexity or to increase its usefulness to
+the community. These factors are impossible to weigh objectively, and our
+project policy leaves this determination up to the maintainers of the project,
+i.e. those who are doing the work of sustaining the project.
+
+While our quality policy is subjective at its core, here are some guidelines
+that can be used to assess the quality of a contribution:
+
+* Bug fixes and new features should `include a testcase`_ so we know if the
+  fix/feature ever regresses in the future.
+
+* Pull requests should build and pass premerge checks. For first-time
+  contributors, this will require an initial cursory review to run the checks.
+
+* Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
+
+* Ensure that links in source code and test files point to publicly available
+  resources and are used primarily to add additional information rather than to
+  supply critical context. The surrounding comments should be sufficient to
+  provide the context behind such links.
+
+* Use relevant test suites and verification tools (e.g. `Alive2
+  <https://github.com/AliveToolkit/alive2>`_) and provide evidence that they
+  pass.
+
+* RFCs and issues should be clear and concise.
+
+* Issues with compact reproducers, especially those which can be replicated on
+  `the godbolt compiler explorer <https://godbolt.org>`_, are considered high
+  quality.
 
 
 .. _commit messages:
@@ -438,8 +446,9 @@ found in the future that the change is responsible for.  For example:
 
 * The code should compile cleanly on all supported platforms.
 
-* The changes should not cause any correctness regressions in the ``llvm-test``
-  suite and must not cause any major performance regressions.
+* The changes should not cause any correctness regressions in the
+  `llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_
+  and must not cause any major performance regressions.
 
 * The change set should not cause performance or correctness regressions for the
   LLVM tools.
@@ -447,8 +456,8 @@ found in the future that the change is responsible for.  For example:
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
 
-* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
-  result from your change.
+* You are expected to address any `GitHub Issues
+  <https://github.com/llvm/llvm-project/issues>`_ that result from your change.
 
 We prefer for this to be handled before submission but understand that it isn't
 possible to test all of this for every submission.  Our build bots and nightly
@@ -1502,7 +1511,7 @@ enable contributors to use the latest and greatest tools available. Our policy
 guided by two major concerns:
 
 1. Ensuring that contributions do not contain copyrighted content.
-2. Ensuring that contributions are not burdensome and exceed our `quality`_ bar.
+2. Ensuring that contributions are not extractive and meet our `quality`_ bar.
 
 Artificial intelligence systems raise many questions around copyright that have
 yet to be answered. Our policy on AI tools is guided by our copyright policy:
@@ -1519,7 +1528,7 @@ volumes of code and text with little effort on the part of the contributor. This
 has increased the asymmetry between the work of producing a contribution, and
 the work of reviewing the contribution. In order to protect the time and
 attentional resources of LLVM project maintainers, the onus is on contributors
-to justify why their contributions are not burdensome and exceed our `quality`_
+to justify why their contributions are not extractive and meet our `quality`_
 bar. Contributors who repeatedly send low-quality contributions to our project
 will be subject to escalating moderation actions and eventually a project ban.
 
