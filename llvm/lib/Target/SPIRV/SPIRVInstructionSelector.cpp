@@ -232,6 +232,9 @@ private:
   bool selectExt(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
                  bool IsSigned) const;
 
+  bool selectStrictFMulAdd(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I) const;
+
   bool selectTrunc(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
@@ -713,6 +716,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FMA:
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
 
+  case TargetOpcode::G_STRICT_FMULADD:
+    return selectStrictFMulAdd(ResVReg, ResType, I);
+
   case TargetOpcode::G_STRICT_FLDEXP:
     return selectExtInst(ResVReg, ResType, I, CL::ldexp);
 
@@ -1060,6 +1066,37 @@ bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
     MIB.addUse(SReg);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectStrictFMulAdd(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  Register MulLHS = I.getOperand(1).getReg();
+  Register MulRHS = I.getOperand(2).getReg();
+  Register AddRHS = I.getOperand(3).getReg();
+  SPIRVType *MulLHSType = GR.getSPIRVTypeForVReg(MulLHS);
+  unsigned MulOpcode, AddOpcode;
+  if (MulLHSType->getOpcode() == SPIRV::OpTypeFloat) {
+    MulOpcode = SPIRV::OpFMulS;
+    AddOpcode = SPIRV::OpFAddS;
+  } else {
+    MulOpcode = SPIRV::OpFMulV;
+    AddOpcode = SPIRV::OpFAddV;
+  }
+  Register MulTemp = MRI->createVirtualRegister(MRI->getRegClass(MulLHS));
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(MulOpcode))
+      .addDef(MulTemp)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(MulLHS)
+      .addUse(MulRHS)
+      .constrainAllUses(TII, TRI, RBI);
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(AddOpcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(MulTemp)
+      .addUse(AddRHS)
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
