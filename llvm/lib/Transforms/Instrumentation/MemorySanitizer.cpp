@@ -4601,13 +4601,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ANumElements * 2 == MaskNumElements) {
       // Ensure that the irrelevant bits of the mask are zero, hence selecting
       // from the zeroed shadow instead of the writethrough's shadow.
-      Mask = IRB.CreateTrunc(Mask, IRB.getIntNTy(ANumElements));
-      Mask = IRB.CreateZExt(Mask, IRB.getIntNTy(MaskNumElements));
+      Mask =
+          IRB.CreateTrunc(Mask, IRB.getIntNTy(ANumElements), "_ms_mask_trunc");
+      Mask =
+          IRB.CreateZExt(Mask, IRB.getIntNTy(MaskNumElements), "_ms_mask_zext");
     }
 
     // Convert i16 mask to <16 x i1>
     Mask = IRB.CreateBitCast(
-        Mask, FixedVectorType::get(IRB.getInt1Ty(), MaskNumElements));
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), MaskNumElements),
+        "_ms_mask_bitcast");
 
     /// For floating-point to integer conversion, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
@@ -4617,10 +4620,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     /// We use the scalar width of the return type instead of A's.
     AShadow = IRB.CreateSExt(
         IRB.CreateICmpNE(AShadow, getCleanShadow(AShadow->getType())),
-        getShadowTy(&I));
+        getShadowTy(&I), "_ms_a_shadow");
 
     Value *WriteThroughShadow = getShadow(WriteThrough);
-    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
+    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow,
+                                     "_ms_writethru_select");
 
     setShadow(&I, Shadow);
     setOriginForNaryOp(I);
