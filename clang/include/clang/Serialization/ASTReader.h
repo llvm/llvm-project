@@ -385,6 +385,9 @@ struct ModuleLocalLookupTable;
 /// The on-disk hash table(s) used for specialization decls.
 struct LazySpecializationInfoLookupTable;
 
+/// The on-disk hash table(s) used for header file infos.
+struct HeaderFileInfoLookupTable;
+
 } // namespace reader
 
 } // namespace serialization
@@ -683,6 +686,9 @@ private:
 
   /// Map from the TU to its lexical contents from each module file.
   std::vector<std::pair<ModuleFile*, LexicalContents>> TULexicalDecls;
+
+  std::unique_ptr<serialization::reader::HeaderFileInfoLookupTable>
+      HeaderFileInfoLookup;
 
   /// Map from a DeclContext to its lookup tables.
   llvm::DenseMap<const DeclContext *,
