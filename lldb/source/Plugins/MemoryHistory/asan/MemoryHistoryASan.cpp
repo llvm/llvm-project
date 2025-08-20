@@ -170,24 +170,11 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
-  // The ASan compiler-rt runtime already massages the return addresses into
-  // call addresses, so we don't want LLDB's unwinder to try to locate the
-  // previous instruction again as this might lead to us reporting a different
-  // line.
-  auto pc_type = HistoryPCType::Calls;
-
-  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+  auto [m, pc_type] = GetPreferredAsanModule(process_sp->GetTarget());
+  if (m) {
     SymbolContextList sc_list;
     sc_list.Append(SymbolContext(std::move(m)));
     options.SetPreferredSymbolContexts(std::move(sc_list));
-  } else if (process_sp->GetTarget()
-                 .GetArchitecture()
-                 .GetTriple()
-                 .isOSDarwin()) {
-    // Darwin, but not ASan compiler-rt implies libsanitizers which collects
-    // return addresses.  It also discards a few non-user frames at the top of
-    // the stack.
-    pc_type = HistoryPCType::ReturnsNoZerothFrame;
   }
 
   ExpressionResults expr_result = UserExpression::Evaluate(
