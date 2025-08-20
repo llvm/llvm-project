@@ -79,17 +79,6 @@ struct ucontext_t {
 };
 #endif
 
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
-    defined(__s390x__)
-#define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
-#elif defined(__aarch64__) || SANITIZER_PPC64V2
-#define PTHREAD_ABI_BASE  "GLIBC_2.17"
-#elif SANITIZER_LOONGARCH64
-#define PTHREAD_ABI_BASE  "GLIBC_2.36"
-#elif SANITIZER_RISCV64
-#  define PTHREAD_ABI_BASE "GLIBC_2.27"
-#endif
-
 extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 DECLARE_REAL(int, pthread_attr_getdetachstate, void *, void *)
@@ -341,11 +330,6 @@ void ScopedInterceptor::DisableIgnoresImpl() {
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
-#else
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
-#endif
 #if SANITIZER_FREEBSD
 #  define TSAN_MAYBE_INTERCEPT_FREEBSD_ALIAS(func) \
     INTERCEPT_FUNCTION(_pthread_##func)
@@ -3041,12 +3025,26 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
 
-  TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_broadcast, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+  // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
+  // may return an outdated symbol (max(2.2,base_version)) if the port was
+  // introduced before 2.3.2 (when the new pthread_cond_t was introduced).
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                      \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+     defined(__s390x__))
+  INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
+  INTERCEPT_FUNCTION(pthread_cond_signal);
+  INTERCEPT_FUNCTION(pthread_cond_broadcast);
+  INTERCEPT_FUNCTION(pthread_cond_wait);
+  INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
 

@@ -42,7 +42,42 @@ int func3() {
 
 int func4() {
   // TODO (&A::foo)(
-  (&A::bar)(
+  (&A::bar)()
 }
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC5 %s
 // CHECK-CC5: OVERLOAD: [#void#](<#A#>, int)
+
+struct C {
+  int member {};
+  int memberFnA(int a);
+  int memberFnA(this C&, float a);
+
+  void foo(this C& self) {
+    // Should not offer any members here, since 
+    // it needs to be referenced through `self`.
+    mem
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):8 -std=c++23 %s | FileCheck --allow-empty %s
+    // CHECK-NOT: COMPLETION: member : [#int#]member
+    // CHECK-NOT: COMPLETION: memberFnA : [#int#]memberFnA(<#int a#>)
+    // CHECK-NOT: COMPLETION: memberFnA : [#int#]memberFnA(<#float a#>)
+  }
+  void bar(this C& self) {
+    // should offer all results
+    self.mem
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC6 %s
+    // CHECK-CC6: COMPLETION: member : [#int#]member
+    // CHECK-CC6: COMPLETION: memberFnA : [#int#]memberFnA(<#int a#>)
+    // CHECK-CC6: COMPLETION: memberFnA : [#int#]memberFnA(<#float a#>)
+  }
+  void baz(this C& self) {
+    [&]() {
+      // Should not offer any results
+      mem
+      // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):10 -std=c++23 %s | FileCheck --allow-empty %s
+      // CHECK-NOT: COMPLETION: member : [#int#]member
+      // CHECK-NOT: COMPLETION: memberFnA : [#int#]memberFnA(<#int a#>)
+      // CHECK-NOT: COMPLETION: memberFnA : [#int#]memberFnA(<#float a#>)
+    }();
+  }
+};
+

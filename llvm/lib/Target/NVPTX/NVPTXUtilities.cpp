@@ -352,6 +352,10 @@ std::optional<unsigned> getMaxNReg(const Function &F) {
   return getFnAttrParsedInt(F, "nvvm.maxnreg");
 }
 
+bool hasBlocksAreClusters(const Function &F) {
+  return F.hasFnAttribute("nvvm.blocksareclusters");
+}
+
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {
   // First check the alignstack metadata
   if (MaybeAlign StackAlign =

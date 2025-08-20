@@ -1907,7 +1907,6 @@
 // CHECK_GNR_M32: #define __BMI2__ 1
 // CHECK_GNR_M32: #define __BMI__ 1
 // CHECK_DMR_M32: #define __CCMP__ 1
-// CHECK_DMR_M32: #define __CF__ 1
 // CHECK_GNR_M32: #define __CLDEMOTE__ 1
 // CHECK_GNR_M32: #define __CLFLUSHOPT__ 1
 // CHECK_GNR_M32: #define __CLWB__ 1
@@ -2017,7 +2016,6 @@
 // CHECK_GNR_M64: #define __BMI2__ 1
 // CHECK_GNR_M64: #define __BMI__ 1
 // CHECK_DMR_M64: #define __CCMP__ 1
-// CHECK_DMR_M64: #define __CF__ 1
 // CHECK_GNR_M64: #define __CLDEMOTE__ 1
 // CHECK_GNR_M64: #define __CLFLUSHOPT__ 1
 // CHECK_GNR_M64: #define __CLWB__ 1
