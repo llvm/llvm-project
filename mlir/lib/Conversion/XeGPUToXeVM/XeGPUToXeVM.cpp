@@ -56,19 +56,6 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   llvm_unreachable("Unknown XeGPU memory space.");
 }
 
-template <typename T>
-std::tuple<bool, int32_t, int32_t> checkAllLinear(SmallVector<T> denseAttr) {
-  assert(!denseAttr.empty());
-  const int32_t intercept{static_cast<int32_t>(denseAttr[0])};
-  if (denseAttr.size() < 2)
-    return {true, 0, intercept};
-  const T slope{denseAttr[1] - denseAttr[0]};
-  for (size_t i = 1; i < denseAttr.size(); ++i)
-    if (denseAttr[i] - denseAttr[i - 1] != slope)
-      return {false, 0, 0};
-  return {true, static_cast<int32_t>(slope), intercept};
-}
-
 VectorType encodeVectorTypeTo(VectorType currentVecType, Type toElemType) {
   auto elemType = currentVecType.getElementType();
   auto currentBitWidth = elemType.getIntOrFloatBitWidth();
