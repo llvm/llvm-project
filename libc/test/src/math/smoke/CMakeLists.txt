@@ -3667,10 +3667,14 @@ add_fp_unittest(
   SRCS
     nextafterbf16_test.cpp
   HDRS
-    NextUpTest.h
+    NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterbf16
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
 )
 
 # FIXME: These tests are currently spurious for the GPU.
@@ -3747,10 +3751,14 @@ add_fp_unittest(
   SRCS
     nexttowardbf16_test.cpp
   HDRS
-    NextUpTest.h
+    NextTowardTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nexttowardbf16
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -3820,7 +3828,7 @@ add_fp_unittest(
   SRCS
     nextdownbf16_test.cpp
   HDRS
-    NextUpTest.h
+    NextDownTest.h
   DEPENDS
     libc.src.math.nextdownbf16
     libc.src.__support.FPUtil.bfloat16
