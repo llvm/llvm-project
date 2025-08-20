@@ -1,18 +1,15 @@
 {
 	"compilerOptions": {
 		"moduleResolution": "node",
-		"module": "commonjs",
+		"module": "esnext",
 		"outDir": "out",
-		"rootDir": "src-ts",
+		"rootDir": ".",
 		"sourceMap": true,
 		"strict": true,
-		"target": "es6"
+		"noEmit": true,
+		"target": "es2017"
 	},
 	"include": [
-		"src-ts"
+		"./"
 	],
-	"exclude": [
-		"node_modules",
-		"src-ts/webview",
-	]
 }
