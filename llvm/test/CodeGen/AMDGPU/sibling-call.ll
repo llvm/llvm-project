@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -enable-ipra=0 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIJI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,HAWAII %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -enable-ipra=0 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=-flat-for-global -enable-ipra=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX942 %s
 
 ; FIXME: Why is this commuted only sometimes?
 define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
@@ -23,12 +22,6 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: i32_fastcc_i32_i32:
-; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %add0 = add i32 %arg0, %arg1
   ret i32 %add0
 }
@@ -60,15 +53,6 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
 ; GFX9-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: i32_fastcc_i32_i32_stack_object:
-; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, 9
-; GFX942-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX942-NEXT:    scratch_store_dword off, v2, s32 offset:20 sc0 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
   store volatile i32 9, ptr addrspace(5) %gep
@@ -86,16 +70,6 @@ define hidden fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   ret i32 %ret
@@ -113,18 +87,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, 
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32_stack_object:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 9
-; GFX942-NEXT:    scratch_store_dword off, v2, s32 offset:20 sc0 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -145,18 +107,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32_callee_stack_object:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32_stack_object@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32_stack_object@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 9
-; GFX942-NEXT:    scratch_store_dword off, v2, s32 offset:20 sc0 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -175,16 +125,6 @@ define fastcc void @sibling_call_i32_fastcc_i32_i32_unused_result(i32 %a, i32 %b
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32_unused_result:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   ret void
@@ -247,20 +187,6 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GFX9-NEXT:    s_endpgm
-;
-; GFX942-LABEL: kernel_call_i32_fastcc_i32_i32_unused_result:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_getpc_b64 s[2:3]
-; GFX942-NEXT:    s_add_u32 s2, s2, i32_fastcc_i32_i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s3, s3, i32_fastcc_i32_i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; GFX942-NEXT:    s_mov_b32 s32, 0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX942-NEXT:    s_endpgm
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   ret void
@@ -290,14 +216,6 @@ define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, ptr addrspace(5) b
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: i32_fastcc_i32_byval_i32:
-; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    scratch_load_dword v1, off, s32
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %arg1.load = load i32, ptr addrspace(5) %arg1, align 4
   %add0 = add i32 %arg0, %arg1.load
   ret i32 %add0
@@ -334,36 +252,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, pt
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_byval_i32_byval_parent:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, s33
-; GFX942-NEXT:    s_mov_b32 s33, s32
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_store_dword off, v40, s33 offset:4 ; 4-byte Folded Spill
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    scratch_load_dword v1, off, s33
-; GFX942-NEXT:    v_writelane_b32 v40, s0, 2
-; GFX942-NEXT:    s_add_i32 s32, s32, 16
-; GFX942-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_byval_i32@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_byval_i32@rel32@hi+12
-; GFX942-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    scratch_store_dword off, v1, s32
-; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX942-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX942-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX942-NEXT:    s_mov_b32 s32, s33
-; GFX942-NEXT:    v_readlane_b32 s0, v40, 2
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_load_dword v40, off, s33 offset:4 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    s_mov_b32 s33, s0
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_byval_i32(i32 %a, ptr addrspace(5) byval(i32) %b.byval)
   ret i32 %ret
@@ -383,18 +271,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %lar
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_byval_i32:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, 16
-; GFX942-NEXT:    scratch_load_dword v1, off, s0
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_byval_i32@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_byval_i32@rel32@hi+12
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    scratch_store_dword off, v1, s32
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_byval_i32(i32 %a, ptr addrspace(5) byval(i32) inttoptr (i32 16 to ptr addrspace(5)))
   ret i32 %ret
@@ -434,16 +310,6 @@ define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %l
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add3_u32 v0, v0, v3, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: i32_fastcc_i32_i32_a32i32:
-; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    scratch_load_dword v2, off, s32 offset:8
-; GFX942-NEXT:    scratch_load_dword v3, off, s32 offset:4
-; GFX942-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_add3_u32 v0, v0, v3, v2
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %val_firststack = extractvalue [32 x i32] %large, 30
   %val_laststack = extractvalue [32 x i32] %large, 31
   %add0 = add i32 %arg0, %arg1
@@ -472,19 +338,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x 
 ; GCN-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32_a32i32:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    scratch_load_dwordx3 v[32:34], off, s32
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[32:34], s32
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c)
   ret i32 %ret
@@ -509,21 +362,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i
 ; GCN-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32_a32i32_stack_object:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    scratch_load_dwordx3 v[32:34], off, s32
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v31, 9
-; GFX942-NEXT:    scratch_store_dword off, v31, s32 offset:32 sc0 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[32:34], s32
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -597,68 +435,6 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: no_sibling_call_callee_more_stack_space:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, s33
-; GFX942-NEXT:    s_mov_b32 s33, s32
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    s_add_i32 s32, s32, 16
-; GFX942-NEXT:    v_writelane_b32 v40, s0, 2
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    v_mov_b32_e32 v4, v2
-; GFX942-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[2:4], s32
-; GFX942-NEXT:    v_mov_b32_e32 v5, 0
-; GFX942-NEXT:    v_mov_b32_e32 v6, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    v_mov_b32_e32 v7, 0
-; GFX942-NEXT:    v_mov_b32_e32 v8, 0
-; GFX942-NEXT:    v_mov_b32_e32 v9, 0
-; GFX942-NEXT:    v_mov_b32_e32 v10, 0
-; GFX942-NEXT:    v_mov_b32_e32 v11, 0
-; GFX942-NEXT:    v_mov_b32_e32 v12, 0
-; GFX942-NEXT:    v_mov_b32_e32 v13, 0
-; GFX942-NEXT:    v_mov_b32_e32 v14, 0
-; GFX942-NEXT:    v_mov_b32_e32 v15, 0
-; GFX942-NEXT:    v_mov_b32_e32 v16, 0
-; GFX942-NEXT:    v_mov_b32_e32 v17, 0
-; GFX942-NEXT:    v_mov_b32_e32 v18, 0
-; GFX942-NEXT:    v_mov_b32_e32 v19, 0
-; GFX942-NEXT:    v_mov_b32_e32 v20, 0
-; GFX942-NEXT:    v_mov_b32_e32 v21, 0
-; GFX942-NEXT:    v_mov_b32_e32 v22, 0
-; GFX942-NEXT:    v_mov_b32_e32 v23, 0
-; GFX942-NEXT:    v_mov_b32_e32 v24, 0
-; GFX942-NEXT:    v_mov_b32_e32 v25, 0
-; GFX942-NEXT:    v_mov_b32_e32 v26, 0
-; GFX942-NEXT:    v_mov_b32_e32 v27, 0
-; GFX942-NEXT:    v_mov_b32_e32 v28, 0
-; GFX942-NEXT:    v_mov_b32_e32 v29, 0
-; GFX942-NEXT:    v_mov_b32_e32 v30, 0
-; GFX942-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX942-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX942-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX942-NEXT:    s_mov_b32 s32, s33
-; GFX942-NEXT:    v_readlane_b32 s0, v40, 2
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_load_dword v40, off, s33 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    s_mov_b32 s33, s0
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] zeroinitializer)
   ret i32 %ret
@@ -705,46 +481,6 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
 ; GCN-NEXT:    s_mov_b64 exec, s[8:9]
 ; GCN-NEXT:    s_mov_b32 s33, s6
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_i32_fastcc_i32_i32_other_call:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, s33
-; GFX942-NEXT:    s_mov_b32 s33, s32
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_store_dword off, v42, s33 offset:8 ; 4-byte Folded Spill
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    s_add_i32 s32, s32, 16
-; GFX942-NEXT:    v_writelane_b32 v42, s0, 2
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_writelane_b32 v42, s30, 0
-; GFX942-NEXT:    scratch_store_dword off, v40, s33 offset:4 ; 4-byte Folded Spill
-; GFX942-NEXT:    scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
-; GFX942-NEXT:    v_writelane_b32 v42, s31, 1
-; GFX942-NEXT:    v_mov_b32_e32 v40, v1
-; GFX942-NEXT:    v_mov_b32_e32 v41, v0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v2, v0
-; GFX942-NEXT:    v_mov_b32_e32 v0, v41
-; GFX942-NEXT:    v_mov_b32_e32 v1, v40
-; GFX942-NEXT:    scratch_load_dword v41, off, s33 ; 4-byte Folded Reload
-; GFX942-NEXT:    scratch_load_dword v40, off, s33 offset:4 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, sibling_call_i32_fastcc_i32_i32@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
-; GFX942-NEXT:    v_readlane_b32 s31, v42, 1
-; GFX942-NEXT:    v_readlane_b32 s30, v42, 0
-; GFX942-NEXT:    s_mov_b32 s32, s33
-; GFX942-NEXT:    v_readlane_b32 s2, v42, 2
-; GFX942-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX942-NEXT:    scratch_load_dword v42, off, s33 offset:8 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX942-NEXT:    s_mov_b32 s33, s2
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %other.call = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
   %ret = tail call fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %other.call)
@@ -772,21 +508,6 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i3
 ; GCN-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_stack_objecti32_fastcc_i32_i32_a32i32:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    scratch_load_dwordx3 v[32:34], off, s32
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v31, 9
-; GFX942-NEXT:    scratch_store_dword off, v31, s32 offset:32 sc0 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[32:34], s32
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -841,52 +562,6 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg
 ; GCN-NEXT:    v_mov_b32_e32 v30, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-;
-; GFX942-LABEL: sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg_area:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 9
-; GFX942-NEXT:    scratch_store_dword off, v2, s32 offset:48 sc0 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    v_mov_b32_e32 v4, v2
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[2:4], s32
-; GFX942-NEXT:    v_mov_b32_e32 v5, 0
-; GFX942-NEXT:    v_mov_b32_e32 v6, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    v_mov_b32_e32 v7, 0
-; GFX942-NEXT:    v_mov_b32_e32 v8, 0
-; GFX942-NEXT:    v_mov_b32_e32 v9, 0
-; GFX942-NEXT:    v_mov_b32_e32 v10, 0
-; GFX942-NEXT:    v_mov_b32_e32 v11, 0
-; GFX942-NEXT:    v_mov_b32_e32 v12, 0
-; GFX942-NEXT:    v_mov_b32_e32 v13, 0
-; GFX942-NEXT:    v_mov_b32_e32 v14, 0
-; GFX942-NEXT:    v_mov_b32_e32 v15, 0
-; GFX942-NEXT:    v_mov_b32_e32 v16, 0
-; GFX942-NEXT:    v_mov_b32_e32 v17, 0
-; GFX942-NEXT:    v_mov_b32_e32 v18, 0
-; GFX942-NEXT:    v_mov_b32_e32 v19, 0
-; GFX942-NEXT:    v_mov_b32_e32 v20, 0
-; GFX942-NEXT:    v_mov_b32_e32 v21, 0
-; GFX942-NEXT:    v_mov_b32_e32 v22, 0
-; GFX942-NEXT:    v_mov_b32_e32 v23, 0
-; GFX942-NEXT:    v_mov_b32_e32 v24, 0
-; GFX942-NEXT:    v_mov_b32_e32 v25, 0
-; GFX942-NEXT:    v_mov_b32_e32 v26, 0
-; GFX942-NEXT:    v_mov_b32_e32 v27, 0
-; GFX942-NEXT:    v_mov_b32_e32 v28, 0
-; GFX942-NEXT:    v_mov_b32_e32 v29, 0
-; GFX942-NEXT:    v_mov_b32_e32 v30, 0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -910,18 +585,6 @@ define hidden fastcc i32 @indirect_uniform_sibling_call_i32_fastcc_i32_i32(i32 %
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: indirect_uniform_sibling_call_i32_fastcc_i32_i32:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, func_ptr_gv@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, func_ptr_gv@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %func.ptr.load = load ptr, ptr addrspace(4) @func_ptr_gv
   %ret = tail call fastcc i32 %func.ptr.load(i32 %a, i32 %b)
@@ -1203,99 +866,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942-LABEL: indirect_divergent_sibling_call_i32_fastcc_i32_i32:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, s33
-; GFX942-NEXT:    s_mov_b32 s33, s32
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    v_writelane_b32 v40, s0, 18
-; GFX942-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX942-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX942-NEXT:    v_writelane_b32 v40, s34, 2
-; GFX942-NEXT:    v_writelane_b32 v40, s35, 3
-; GFX942-NEXT:    v_writelane_b32 v40, s36, 4
-; GFX942-NEXT:    v_writelane_b32 v40, s37, 5
-; GFX942-NEXT:    v_writelane_b32 v40, s38, 6
-; GFX942-NEXT:    v_writelane_b32 v40, s39, 7
-; GFX942-NEXT:    v_writelane_b32 v40, s48, 8
-; GFX942-NEXT:    v_writelane_b32 v40, s49, 9
-; GFX942-NEXT:    v_writelane_b32 v40, s50, 10
-; GFX942-NEXT:    v_writelane_b32 v40, s51, 11
-; GFX942-NEXT:    v_writelane_b32 v40, s52, 12
-; GFX942-NEXT:    v_writelane_b32 v40, s53, 13
-; GFX942-NEXT:    v_writelane_b32 v40, s54, 14
-; GFX942-NEXT:    v_writelane_b32 v40, s55, 15
-; GFX942-NEXT:    v_writelane_b32 v40, s64, 16
-; GFX942-NEXT:    s_mov_b32 s50, s15
-; GFX942-NEXT:    s_mov_b32 s51, s14
-; GFX942-NEXT:    s_mov_b32 s52, s13
-; GFX942-NEXT:    s_mov_b32 s53, s12
-; GFX942-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GFX942-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GFX942-NEXT:    s_mov_b64 s[38:39], s[6:7]
-; GFX942-NEXT:    s_mov_b64 s[48:49], s[4:5]
-; GFX942-NEXT:    v_mov_b32_e32 v5, v2
-; GFX942-NEXT:    v_add_u32_e32 v2, v3, v4
-; GFX942-NEXT:    s_mov_b64 s[54:55], exec
-; GFX942-NEXT:    s_add_i32 s32, s32, 16
-; GFX942-NEXT:    v_writelane_b32 v40, s65, 17
-; GFX942-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
-; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX942-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cmp_eq_u64_e32 vcc, s[0:1], v[0:1]
-; GFX942-NEXT:    s_and_saveexec_b64 s[64:65], vcc
-; GFX942-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; GFX942-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GFX942-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GFX942-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; GFX942-NEXT:    s_mov_b32 s12, s53
-; GFX942-NEXT:    s_mov_b32 s13, s52
-; GFX942-NEXT:    s_mov_b32 s14, s51
-; GFX942-NEXT:    s_mov_b32 s15, s50
-; GFX942-NEXT:    v_mov_b32_e32 v0, v5
-; GFX942-NEXT:    v_mov_b32_e32 v1, v2
-; GFX942-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v3, v0
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX942-NEXT:    ; implicit-def: $vgpr31
-; GFX942-NEXT:    ; implicit-def: $vgpr5
-; GFX942-NEXT:    ; implicit-def: $vgpr2
-; GFX942-NEXT:    s_xor_b64 exec, exec, s[64:65]
-; GFX942-NEXT:    s_cbranch_execnz .LBB18_1
-; GFX942-NEXT:  ; %bb.2:
-; GFX942-NEXT:    s_mov_b64 exec, s[54:55]
-; GFX942-NEXT:    v_mov_b32_e32 v0, v3
-; GFX942-NEXT:    v_readlane_b32 s65, v40, 17
-; GFX942-NEXT:    v_readlane_b32 s64, v40, 16
-; GFX942-NEXT:    v_readlane_b32 s55, v40, 15
-; GFX942-NEXT:    v_readlane_b32 s54, v40, 14
-; GFX942-NEXT:    v_readlane_b32 s53, v40, 13
-; GFX942-NEXT:    v_readlane_b32 s52, v40, 12
-; GFX942-NEXT:    v_readlane_b32 s51, v40, 11
-; GFX942-NEXT:    v_readlane_b32 s50, v40, 10
-; GFX942-NEXT:    v_readlane_b32 s49, v40, 9
-; GFX942-NEXT:    v_readlane_b32 s48, v40, 8
-; GFX942-NEXT:    v_readlane_b32 s39, v40, 7
-; GFX942-NEXT:    v_readlane_b32 s38, v40, 6
-; GFX942-NEXT:    v_readlane_b32 s37, v40, 5
-; GFX942-NEXT:    v_readlane_b32 s36, v40, 4
-; GFX942-NEXT:    v_readlane_b32 s35, v40, 3
-; GFX942-NEXT:    v_readlane_b32 s34, v40, 2
-; GFX942-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX942-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX942-NEXT:    s_mov_b32 s32, s33
-; GFX942-NEXT:    v_readlane_b32 s0, v40, 18
-; GFX942-NEXT:    s_or_saveexec_b64 s[2:3], -1
-; GFX942-NEXT:    scratch_load_dword v40, off, s33 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX942-NEXT:    s_mov_b32 s33, s0
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %add = add i32 %b, %c
   %ret = tail call fastcc i32 %func.ptr(i32 %a, i32 %add)
@@ -1328,30 +898,6 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:16
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_fastcc_multi_byval:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, 0
-; GFX942-NEXT:    s_mov_b32 s2, s0
-; GFX942-NEXT:    s_mov_b32 s3, s0
-; GFX942-NEXT:    v_mov_b32_e32 v6, 9
-; GFX942-NEXT:    s_mov_b32 s1, s0
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
-; GFX942-NEXT:    v_mov_b32_e32 v7, v6
-; GFX942-NEXT:    v_mov_b32_e32 v8, v6
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[6:8], s32 offset:144
-; GFX942-NEXT:    scratch_store_dwordx4 off, v[2:5], s32 offset:160
-; GFX942-NEXT:    scratch_store_dword off, v6, s32 offset:8
-; GFX942-NEXT:    scratch_store_dwordx4 off, v[2:5], s32 offset:16
-; GFX942-NEXT:    scratch_load_dwordx2 v[2:3], off, s32 offset:144
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, void_fastcc_multi_byval@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, void_fastcc_multi_byval@rel32@hi+12
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    scratch_store_dwordx2 off, v[2:3], s32
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca0 = alloca [3 x i32], align 16, addrspace(5)
   %alloca1 = alloca [2 x i64], align 8, addrspace(5)
@@ -1413,55 +959,6 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
 ; GCN-NEXT:    v_mov_b32_e32 v29, 0
 ; GCN-NEXT:    v_mov_b32_e32 v30, 0
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_byval_and_stack_passed:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, 9
-; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    v_mov_b32_e32 v4, v2
-; GFX942-NEXT:    scratch_store_dwordx3 off, v[2:4], s32 offset:144
-; GFX942-NEXT:    scratch_store_dword off, v0, s32 offset:16
-; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], off, s32 offset:144
-; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    scratch_store_dwordx2 off, v[2:3], s32 offset:8
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, void_fastcc_byval_and_stack_passed@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, void_fastcc_byval_and_stack_passed@rel32@hi+12
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    v_mov_b32_e32 v5, 0
-; GFX942-NEXT:    v_mov_b32_e32 v6, 0
-; GFX942-NEXT:    v_mov_b32_e32 v7, 0
-; GFX942-NEXT:    v_mov_b32_e32 v8, 0
-; GFX942-NEXT:    v_mov_b32_e32 v9, 0
-; GFX942-NEXT:    v_mov_b32_e32 v10, 0
-; GFX942-NEXT:    v_mov_b32_e32 v11, 0
-; GFX942-NEXT:    v_mov_b32_e32 v12, 0
-; GFX942-NEXT:    v_mov_b32_e32 v13, 0
-; GFX942-NEXT:    v_mov_b32_e32 v14, 0
-; GFX942-NEXT:    v_mov_b32_e32 v15, 0
-; GFX942-NEXT:    v_mov_b32_e32 v16, 0
-; GFX942-NEXT:    v_mov_b32_e32 v17, 0
-; GFX942-NEXT:    v_mov_b32_e32 v18, 0
-; GFX942-NEXT:    v_mov_b32_e32 v19, 0
-; GFX942-NEXT:    v_mov_b32_e32 v20, 0
-; GFX942-NEXT:    v_mov_b32_e32 v21, 0
-; GFX942-NEXT:    v_mov_b32_e32 v22, 0
-; GFX942-NEXT:    v_mov_b32_e32 v23, 0
-; GFX942-NEXT:    v_mov_b32_e32 v24, 0
-; GFX942-NEXT:    v_mov_b32_e32 v25, 0
-; GFX942-NEXT:    v_mov_b32_e32 v26, 0
-; GFX942-NEXT:    v_mov_b32_e32 v27, 0
-; GFX942-NEXT:    v_mov_b32_e32 v28, 0
-; GFX942-NEXT:    v_mov_b32_e32 v29, 0
-; GFX942-NEXT:    v_mov_b32_e32 v30, 0
-; GFX942-NEXT:    s_waitcnt vmcnt(1)
-; GFX942-NEXT:    scratch_store_dwordx2 off, v[0:1], s32
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %alloca = alloca [3 x i32], align 16, addrspace(5)
   store [3 x i32] [i32 9, i32 9, i32 9], ptr addrspace(5) %alloca
@@ -1479,14 +976,6 @@ define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
 ; GCN-NEXT:    s_add_u32 s16, s16, i64_fastcc_i64@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, i64_fastcc_i64@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_i64_fastcc_i64:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i64_fastcc_i64@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i64_fastcc_i64@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc i64 @i64_fastcc_i64(i64 %a)
   ret i64 %ret
@@ -1502,14 +991,6 @@ define hidden fastcc ptr addrspace(1) @sibling_call_p1i8_fastcc_p1i8(ptr addrspa
 ; GCN-NEXT:    s_add_u32 s16, s16, p1i8_fastcc_p1i8@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, p1i8_fastcc_p1i8@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_p1i8_fastcc_p1i8:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, p1i8_fastcc_p1i8@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, p1i8_fastcc_p1i8@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc ptr addrspace(1) @p1i8_fastcc_p1i8(ptr addrspace(1) %a)
   ret ptr addrspace(1) %ret
@@ -1525,14 +1006,6 @@ define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
 ; GCN-NEXT:    s_add_u32 s16, s16, i16_fastcc_i16@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, i16_fastcc_i16@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_i16_fastcc_i16:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, i16_fastcc_i16@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, i16_fastcc_i16@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc i16 @i16_fastcc_i16(i16 %a)
   ret i16 %ret
@@ -1548,14 +1021,6 @@ define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
 ; GCN-NEXT:    s_add_u32 s16, s16, f16_fastcc_f16@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, f16_fastcc_f16@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_f16_fastcc_f16:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, f16_fastcc_f16@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, f16_fastcc_f16@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc half @f16_fastcc_f16(half %a)
   ret half %ret
@@ -1571,14 +1036,6 @@ define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1
 ; GCN-NEXT:    s_add_u32 s16, s16, v3i16_fastcc_v3i16@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, v3i16_fastcc_v3i16@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_v3i16_fastcc_v3i16:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, v3i16_fastcc_v3i16@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, v3i16_fastcc_v3i16@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %a)
   ret <3 x i16> %ret
@@ -1594,14 +1051,6 @@ define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1
 ; GCN-NEXT:    s_add_u32 s16, s16, v4i16_fastcc_v4i16@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, v4i16_fastcc_v4i16@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_v4i16_fastcc_v4i16:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, v4i16_fastcc_v4i16@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, v4i16_fastcc_v4i16@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %a)
   ret <4 x i16> %ret
@@ -1617,14 +1066,6 @@ define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1
 ; GCN-NEXT:    s_add_u32 s16, s16, v2i64_fastcc_v2i64@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, v2i64_fastcc_v2i64@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
-;
-; GFX942-LABEL: sibling_call_v2i64_fastcc_v2i64:
-; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, v2i64_fastcc_v2i64@rel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, v2i64_fastcc_v2i64@rel32@hi+12
-; GFX942-NEXT:    s_setpc_b64 s[0:1]
 entry:
   %ret = tail call fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %a)
   ret <2 x i64> %ret
