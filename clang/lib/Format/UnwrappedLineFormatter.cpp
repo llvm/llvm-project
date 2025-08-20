@@ -456,6 +456,19 @@ private:
       }
     }
 
+    auto ShouldMergeShortRecords = [this, &I, &NextLine, PreviousLine,
+                                    TheLine]() {
+      if (Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_All)
+        return true;
+      if (Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_Empty &&
+          NextLine.First->is(tok::r_brace)) {
+        return true;
+      }
+      return false;
+    };
+
+    bool MergeShortRecord = ShouldMergeShortRecords();
+
     // Don't merge an empty template class or struct if SplitEmptyRecords
     // is defined.
     if (PreviousLine && Style.BraceWrapping.SplitEmptyRecord &&
@@ -498,7 +511,8 @@ private:
         // elsewhere.
         ShouldMerge = !Style.BraceWrapping.AfterClass ||
                       (NextLine.First->is(tok::r_brace) &&
-                       !Style.BraceWrapping.SplitEmptyRecord);
+                       !Style.BraceWrapping.SplitEmptyRecord) ||
+                      MergeShortRecord;
       } else if (TheLine->InPPDirective ||
                  !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct)) {
@@ -873,9 +887,11 @@ private:
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
                  !startsExternCBlock(Line)) {
-        // We don't merge short records.
-        if (isRecordLBrace(*Line.Last))
+        // Merge short records only when requested.
+        if (isRecordLBrace(*Line.Last) &&
+            Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_Never) {
           return 0;
+        }
 
         // Check that we still have three lines and they fit into the limit.
         if (I + 2 == E || I[2]->Type == LT_Invalid)
