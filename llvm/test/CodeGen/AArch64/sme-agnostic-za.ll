@@ -152,18 +152,14 @@ define i64 @streaming_agnostic_caller_nonstreaming_private_za_callee(i64 %v) nou
 ;
 ; CHECK-NEWLOWERING-LABEL: streaming_agnostic_caller_nonstreaming_private_za_callee:
 ; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    stp d15, d14, [sp, #-112]! // 16-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x9, x0
+; CHECK-NEWLOWERING-NEXT:    mov x8, x0
 ; CHECK-NEWLOWERING-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    bl __arm_get_current_vg
-; CHECK-NEWLOWERING-NEXT:    str x0, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x0, x9
 ; CHECK-NEWLOWERING-NEXT:    add x29, sp, #64
-; CHECK-NEWLOWERING-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
+; CHECK-NEWLOWERING-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state_size
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x20, sp
@@ -181,12 +177,12 @@ define i64 @streaming_agnostic_caller_nonstreaming_private_za_callee(i64 %v) nou
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    sub sp, x29, #64
-; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    ldp d15, d14, [sp], #112 // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
   %res = call i64 @private_za_decl(i64 %v)
   %res2 = call i64 @private_za_decl(i64 %res)
@@ -251,18 +247,14 @@ define i64 @streaming_compatible_agnostic_caller_nonstreaming_private_za_callee(
 ;
 ; CHECK-NEWLOWERING-LABEL: streaming_compatible_agnostic_caller_nonstreaming_private_za_callee:
 ; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    stp d15, d14, [sp, #-112]! // 16-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x9, x0
+; CHECK-NEWLOWERING-NEXT:    mov x8, x0
 ; CHECK-NEWLOWERING-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    bl __arm_get_current_vg
-; CHECK-NEWLOWERING-NEXT:    str x0, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x0, x9
 ; CHECK-NEWLOWERING-NEXT:    add x29, sp, #64
-; CHECK-NEWLOWERING-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
+; CHECK-NEWLOWERING-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state_size
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x19, sp
@@ -294,12 +286,12 @@ define i64 @streaming_compatible_agnostic_caller_nonstreaming_private_za_callee(
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    sub sp, x29, #64
-; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    ldp d15, d14, [sp], #112 // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
   %res = call i64 @private_za_decl(i64 %v)
   %res2 = call i64 @private_za_decl(i64 %res)
