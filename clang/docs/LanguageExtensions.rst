@@ -942,6 +942,24 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          for the comparison.
 ======================================= ====================================================================== ==================================
 
+*Masked Builtins*
+
+Each builtin accesses memory according to a provided boolean mask. These are
+provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
+argument is always boolean mask vector.
+
+Example:
+
+.. code-block:: c++
+
+    using v8b = bool [[clang::ext_vector_type(8)]];
+    using v8i = int [[clang::ext_vector_type(8)]];
+
+    v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
+
+    void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+
+
 Matrix Types
 ============
 
