@@ -1576,7 +1576,7 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
 }
 
 // Copy-in determination for implicit interface
-static bool MayNeedCopyIn(const ActualArgument& actual, FoldingContext& fc) {
+static bool MayNeedCopyIn(const ActualArgument &actual, FoldingContext &fc) {
   if (!evaluate::IsVariable(actual)) {
     // Actual argument expressions that aren’t variables are copy-in, but
     // not copy-out.
@@ -1590,7 +1590,7 @@ static bool MayNeedCopyIn(const ActualArgument& actual, FoldingContext& fc) {
 }
 
 // Copy-out determination for implicit interface
-static bool MayNeedCopyOut(const ActualArgument& actual, FoldingContext& fc) {
+static bool MayNeedCopyOut(const ActualArgument &actual, FoldingContext &fc) {
   if (actual.IsArray() && evaluate::IsVariable(actual) &&
       !IsSimplyContiguous(actual, fc) && !HasVectorSubscript(actual)) {
     // Actual arguments that are non-contiguous array variables are copy-out
@@ -1601,9 +1601,8 @@ static bool MayNeedCopyOut(const ActualArgument& actual, FoldingContext& fc) {
 }
 
 // Copy-in determination for explicit interface
-static bool MayNeedCopyIn(const ActualArgument& actual,
-    const characteristics::DummyDataObject &dummyObj,
-    FoldingContext& fc) {
+static bool MayNeedCopyIn(const ActualArgument &actual,
+    const characteristics::DummyDataObject &dummyObj, FoldingContext &fc) {
   if (dummyObj.intent == common::Intent::Out) {
     // INTENT(OUT) dummy args never need copy-in
     return false;
@@ -1617,9 +1616,8 @@ static bool MayNeedCopyIn(const ActualArgument& actual,
 }
 
 // Copy-out determination for explicit interface
-static bool MayNeedCopyOut(const ActualArgument& actual,
-    const characteristics::DummyDataObject &dummyObj,
-    FoldingContext& fc) {
+static bool MayNeedCopyOut(const ActualArgument &actual,
+    const characteristics::DummyDataObject &dummyObj, FoldingContext &fc) {
   if (dummyObj.intent == common::Intent::Out) {
     // INTENT(IN) dummy args never need copy-out
     return false;
@@ -1635,15 +1633,15 @@ static bool MayNeedCopyOut(const ActualArgument& actual,
 // procedures with explicit interface, it's expected that "dummy" is not null.
 // For procedures with implicit interface dummy may be null.
 bool MayNeedCopy(const ActualArgument *actual,
-    const characteristics::DummyArgument *dummy,
-    FoldingContext &fc, bool forCopyOut) {
+    const characteristics::DummyArgument *dummy, FoldingContext &fc,
+    bool forCopyOut) {
   if (!actual) {
     return false;
   }
   if (actual->isAlternateReturn()) {
     return false;
   }
-  if (!dummy) {   // Implicit interface
+  if (!dummy) { // Implicit interface
     if (ExtractCoarrayRef(actual)) {
       // Coindexed actual args need copy-in and copy-out
       return true;
@@ -1653,8 +1651,9 @@ bool MayNeedCopy(const ActualArgument *actual,
     } else {
       return MayNeedCopyIn(*actual, fc);
     }
-  } else {    // Explicit interface
-    const auto *dummyObj{std::get_if<characteristics::DummyDataObject>(&dummy->u)};
+  } else { // Explicit interface
+    const auto *dummyObj{
+        std::get_if<characteristics::DummyDataObject>(&dummy->u)};
     if (!dummyObj) {
       // Only DummyDataObject has the information we need
       return false;
