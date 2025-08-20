@@ -2169,6 +2169,58 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
+  case SPIRV::OpArbitraryFloatEQINTEL:
+  case SPIRV::OpArbitraryFloatGEINTEL:
+  case SPIRV::OpArbitraryFloatGTINTEL:
+  case SPIRV::OpArbitraryFloatLEINTEL:
+  case SPIRV::OpArbitraryFloatLTINTEL:
+  case SPIRV::OpArbitraryFloatCbrtINTEL:
+  case SPIRV::OpArbitraryFloatCosINTEL:
+  case SPIRV::OpArbitraryFloatCosPiINTEL:
+  case SPIRV::OpArbitraryFloatExp10INTEL:
+  case SPIRV::OpArbitraryFloatExp2INTEL:
+  case SPIRV::OpArbitraryFloatExpINTEL:
+  case SPIRV::OpArbitraryFloatExpm1INTEL:
+  case SPIRV::OpArbitraryFloatHypotINTEL:
+  case SPIRV::OpArbitraryFloatLog10INTEL:
+  case SPIRV::OpArbitraryFloatLog1pINTEL:
+  case SPIRV::OpArbitraryFloatLog2INTEL:
+  case SPIRV::OpArbitraryFloatLogINTEL:
+  case SPIRV::OpArbitraryFloatRecipINTEL:
+  case SPIRV::OpArbitraryFloatSinCosINTEL:
+  case SPIRV::OpArbitraryFloatSinCosPiINTEL:
+  case SPIRV::OpArbitraryFloatSinINTEL:
+  case SPIRV::OpArbitraryFloatSinPiINTEL:
+  case SPIRV::OpArbitraryFloatSqrtINTEL:
+  case SPIRV::OpArbitraryFloatACosINTEL:
+  case SPIRV::OpArbitraryFloatACosPiINTEL:
+  case SPIRV::OpArbitraryFloatAddINTEL:
+  case SPIRV::OpArbitraryFloatASinINTEL:
+  case SPIRV::OpArbitraryFloatASinPiINTEL:
+  case SPIRV::OpArbitraryFloatATan2INTEL:
+  case SPIRV::OpArbitraryFloatATanINTEL:
+  case SPIRV::OpArbitraryFloatATanPiINTEL:
+  case SPIRV::OpArbitraryFloatCastFromIntINTEL:
+  case SPIRV::OpArbitraryFloatCastINTEL:
+  case SPIRV::OpArbitraryFloatCastToIntINTEL:
+  case SPIRV::OpArbitraryFloatDivINTEL:
+  case SPIRV::OpArbitraryFloatMulINTEL:
+  case SPIRV::OpArbitraryFloatPowINTEL:
+  case SPIRV::OpArbitraryFloatPowNINTEL:
+  case SPIRV::OpArbitraryFloatPowRINTEL:
+  case SPIRV::OpArbitraryFloatRSqrtINTEL:
+  case SPIRV::OpArbitraryFloatSubINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_arbitrary_precision_floating_point))
+      report_fatal_error(
+          "Floating point instructions can't be translated correctly without "
+          "enabled SPV_INTEL_arbitrary_precision_floating_point extension!",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_arbitrary_precision_floating_point);
+    Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionFloatingPointINTEL);
+    break;
+  }
   case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
     if (!ST.canUseExtension(
             SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate))
