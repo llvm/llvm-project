@@ -33,6 +33,5 @@ std::pair<SDValue, SDValue>
 PPCSelectionDAGInfo::EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL,
                                              SDValue Chain, SDValue Src,
                                              const CallInst *CI) const {
-  EVT PtrVT = Src.getValueType();
   return DAG.getStrlen(Chain, DL, Src, CI);
 }
