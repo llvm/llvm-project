@@ -1056,12 +1056,8 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
 
     const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
         llvm::AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
-    if (!Info0)
-      return false;
     const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
         llvm::AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
-    if (!Info1)
-      return false;
 
     if (Info0->BitsPerComp != Info1->BitsPerComp ||
         Info0->NumFormat != Info1->NumFormat)
