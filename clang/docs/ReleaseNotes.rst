@@ -1131,8 +1131,18 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
+PowerPC Support
+^^^^^^^^^^^^^^^
+
+* Add `__dmr1024` type for Dense Math Facility.
+* Add prototype for Dense Math Facility integer calculation builtins.
+
 AIX Support
 ^^^^^^^^^^^
+
+* Fixed `-print-runtime-dir` to fallback to the target subdirectory (rather than OS subdirectory) if the runtime path is not found.
+* Fixed `-print-runtime-dir` to find the correct runtime path if the triple has "unknown" as the environment component.
+* Changed AIX targets to use the per-target runtime directories for compiler runtimes (i.e. `lib/clang/20/lib/aix` became `lib/clang/21/lib/powerpc-ibm-aix` and `clang/21/lib/powerpc64-ibm-aix`).
 
 NetBSD Support
 ^^^^^^^^^^^^^^
