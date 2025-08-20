@@ -329,15 +329,15 @@ private:
 static llvm::ManagedStatic<WindowsEventLog> event_log;
 
 void Host::SystemLog(Severity severity, llvm::StringRef message) {
+  if (message.empty())
+    return;
+
   HANDLE h = event_log->GetHandle();
   if (!h)
     return;
 
   llvm::SmallVector<wchar_t, 1> argsUTF16;
   if (UTF8ToUTF16(message.str(), argsUTF16))
-    return;
-
-  if (argsUTF16.empty())
     return;
 
   WORD event_type;
@@ -353,6 +353,7 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
     event_type = EVENTLOG_INFORMATION_TYPE;
   }
 
-  LPCWSTR messages[] = {argsUTF16.data()};
-  ReportEventW(h, event_type, 0, 0, nullptr, 1, 0, messages, nullptr);
+  LPCWSTR messages[1] = {argsUTF16.data()};
+  ReportEventW(h, event_type, 0, 0, nullptr, sizeof(messages), 0, messages,
+               nullptr);
 }
