@@ -226,9 +226,13 @@ bool SBSymbol::IsDebug() {
 }
 
 const char *SBSymbol::GetTypeAsString(lldb::SymbolType symbol_type) {
+  LLDB_INSTRUMENT_VA(symbol_type);
+
   return Symbol::GetTypeAsString(symbol_type);
 }
 
 lldb::SymbolType SBSymbol::GetTypeFromString(const char *str) {
+  LLDB_INSTRUMENT_VA(str);
+
   return Symbol::GetTypeFromString(str);
 }
