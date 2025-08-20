@@ -16,20 +16,13 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; VF4IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4IC2:       [[VECTOR_BODY]]:
-; VF4IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4IC2-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4IC2-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
-; VF4IC2-NEXT:    [[TMP0:%.*]] = shl nuw nsw <4 x i32> [[VEC_IND]], splat (i32 3)
-; VF4IC2-NEXT:    [[TMP1:%.*]] = shl nuw nsw <4 x i32> [[STEP_ADD]], splat (i32 3)
-; VF4IC2-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
-; VF4IC2-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], [[TMP1]]
+; VF4IC2-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 8, i32 16, i32 24>
+; VF4IC2-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], <i32 32, i32 40, i32 48, i32 56>
 ; VF4IC2-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP2]], zeroinitializer
 ; VF4IC2-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
-; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP4]], [[TMP5]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; VF4IC2-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
-; VF4IC2-NEXT:    br i1 true, label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4IC2-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
 ; VF4IC2:       [[MIDDLE_SPLIT]]:
 ; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; VF4IC2-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
@@ -43,7 +36,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP11]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP10]]
 ; VF4IC2-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
-; VF4IC2-NEXT:    [[TMP16:%.*]] = add i32 [[INDEX]], [[TMP15]]
+; VF4IC2-NEXT:    [[TMP16:%.*]] = add i32 0, [[TMP15]]
 ; VF4IC2-NEXT:    br label %[[RETURN]]
 ; VF4IC2:       [[SCALAR_PH]]:
 ; VF4IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -56,7 +49,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2:       [[LOOP_LATCH]]:
 ; VF4IC2-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; VF4IC2-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 8
-; VF4IC2-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4IC2-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4IC2:       [[RETURN]]:
 ; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[SHR]], %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF4IC2-NEXT:    ret i32 [[RES]]
@@ -70,15 +63,10 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; VF8IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8IC1:       [[VECTOR_BODY]]:
-; VF8IC1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8IC1-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8IC1-NEXT:    [[TMP0:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], splat (i32 3)
-; VF8IC1-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
+; VF8IC1-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56>
 ; VF8IC1-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
-; VF8IC1-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; VF8IC1-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
-; VF8IC1-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
-; VF8IC1-NEXT:    br i1 true, label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF8IC1-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
 ; VF8IC1:       [[MIDDLE_SPLIT]]:
 ; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
 ; VF8IC1-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
@@ -87,7 +75,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP2]], i1 true)
 ; VF8IC1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
-; VF8IC1-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], [[TMP6]]
+; VF8IC1-NEXT:    [[TMP7:%.*]] = add i32 0, [[TMP6]]
 ; VF8IC1-NEXT:    br label %[[RETURN]]
 ; VF8IC1:       [[SCALAR_PH]]:
 ; VF8IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -100,7 +88,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1:       [[LOOP_LATCH]]:
 ; VF8IC1-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; VF8IC1-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 8
-; VF8IC1-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF8IC1-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF8IC1:       [[RETURN]]:
 ; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[SHR]], %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP7]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF8IC1-NEXT:    ret i32 [[RES]]
