@@ -618,6 +618,19 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
+bool AArch64RegisterBankInfo::prefersFPUse(const MachineInstr &MI,
+                                           const MachineRegisterInfo &MRI,
+                                           const TargetRegisterInfo &TRI,
+                                           unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() ==
+           MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+  }
+  return onlyDefinesFP(MI, MRI, TRI, Depth);
+}
+
 bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
   // GMemOperation because we also want to match indexed loads.
   auto *MemOp = cast<GMemOperation>(&MI);
@@ -826,7 +839,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Integer to FP conversions don't necessarily happen between GPR -> FPR
     // regbanks. They can also be done within an FPR register.
     Register SrcReg = MI.getOperand(1).getReg();
-    if (getRegBank(SrcReg, MRI, TRI) == &AArch64::FPRRegBank)
+    if (getRegBank(SrcReg, MRI, TRI) == &AArch64::FPRRegBank &&
+        MRI.getType(SrcReg).getSizeInBits() ==
+            MRI.getType(MI.getOperand(0).getReg()).getSizeInBits())
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
@@ -895,13 +910,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
-                 // onlyDefinesFP().
+                 // prefersFPUse().
 
                  if (isPHIWithFPConstraints(UseMI, MRI, TRI))
                    return true;
 
                  return onlyUsesFP(UseMI, MRI, TRI) ||
-                        onlyDefinesFP(UseMI, MRI, TRI);
+                        prefersFPUse(UseMI, MRI, TRI);
                }))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;

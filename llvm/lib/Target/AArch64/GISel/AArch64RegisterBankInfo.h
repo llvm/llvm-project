@@ -139,6 +139,10 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                      const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 
+  /// \returns true if \p MI can take both fpr and gpr uses, but prefers fp.
+  bool prefersFPUse(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+
   /// \returns true if the load \p MI is likely loading from a floating-point
   /// type.
   bool isLoadFromFPType(const MachineInstr &MI) const;
