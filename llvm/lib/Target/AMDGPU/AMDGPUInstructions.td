@@ -450,7 +450,9 @@ def LoadAddress_constant : AddressSpaceList<[ AddrSpaces.Constant,
 def LoadAddress_global : AddressSpaceList<[ AddrSpaces.Global,
                                             AddrSpaces.Constant,
                                             AddrSpaces.Constant32Bit ]>;
-def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global ]>;
+def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global,
+                                             AddrSpaces.Constant,
+                                             AddrSpaces.Constant32Bit ]>;
 
 def LoadAddress_flat : AddressSpaceList<[ AddrSpaces.Flat,
                                           AddrSpaces.Global,
