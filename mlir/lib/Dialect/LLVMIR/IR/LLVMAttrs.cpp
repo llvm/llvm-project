@@ -411,16 +411,12 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
   if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
     if (stringAttrKey.getValue() == "triple")
-      return getTriple();
+      return getTripleAttr();
     if (stringAttrKey.getValue() == "chip")
-      return getChip();
-    if (stringAttrKey.getValue() == "features" && getFeatures())
-      return getFeatures();
+      return getChipAttr();
+    if (stringAttrKey.getValue() == "features" && getFeaturesAttr())
+      return getFeaturesAttr();
   }
 
   return failure();
 }
-
-StringAttr TargetAttr::getTripleAttr() { return getTriple(); }
-StringAttr TargetAttr::getChipAttr() { return getChip(); }
-StringAttr TargetAttr::getFeaturesAttr() { return getFeatures(); }

@@ -12,10 +12,13 @@
 #include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "mlir-llvm-target-to-data-layout"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 namespace mlir {
 namespace LLVM {
@@ -37,10 +40,7 @@ getTargetMachine(LLVM::TargetAttrInterface attr) {
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target || !error.empty()) {
-    LLVM_DEBUG({
-      llvm::dbgs() << "Looking up target '" << triple << "' failed: " << error
-                   << "\n";
-    });
+    LDBG("Looking up target '" << triple << "' failed: " << error << "\n");
     return failure();
   }
 
@@ -53,10 +53,7 @@ getDataLayout(LLVM::TargetAttrInterface attr) {
   FailureOr<std::unique_ptr<llvm::TargetMachine>> targetMachine =
       getTargetMachine(attr);
   if (failed(targetMachine)) {
-    LLVM_DEBUG({
-      llvm::dbgs()
-          << "Failed to retrieve the target machine for data layout.\n";
-    });
+    LDBG("Failed to retrieve the target machine for data layout.\n");
     return failure();
   }
   return (targetMachine.value())->createDataLayout();
@@ -71,16 +68,23 @@ struct TargetToDataLayoutPass
     Operation *op = getOperation();
 
     if (initializeLLVMTargets) {
-      // Ensure that the targets, that LLVM has been configured to support,
-      // are loaded into the TargetRegistry.
-      llvm::InitializeAllTargets();
-      llvm::InitializeAllTargetMCs();
+      static llvm::once_flag initializeBackendsOnce;
+      llvm::call_once(initializeBackendsOnce, []() {
+        // Ensure that the targets, that LLVM has been configured to support,
+        // are loaded into the TargetRegistry.
+        llvm::InitializeAllTargets();
+        llvm::InitializeAllTargetMCs();
+      });
     }
 
     auto targetAttr = op->getAttrOfType<LLVM::TargetAttrInterface>(
         LLVM::LLVMDialect::getTargetAttrName());
-    if (!targetAttr)
-      return;
+    if (!targetAttr) {
+      op->emitError()
+          << "no TargetAttrInterface-implementing attribute at key \""
+          << LLVM::LLVMDialect::getTargetAttrName() << "\"";
+      return signalPassFailure();
+    }
 
     FailureOr<llvm::DataLayout> dataLayout = getDataLayout(targetAttr);
     if (failed(dataLayout)) {

@@ -1322,18 +1322,14 @@ def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
       * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`.
       * A query for `"features"` returns the `StringAttr`, if provided.
   }];
-  let parameters = (ins "StringAttr":$triple,
-                        "StringAttr":$chip,
-                        OptionalParameter<"StringAttr", "">:$features);
+  let parameters = (ins "StringAttr":$triple_attr,
+                        "StringAttr":$chip_attr,
+                        OptionalParameter<"StringAttr", "">:$features_attr);
 
-  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
+  let assemblyFormat = [{`<` struct($triple_attr, $chip_attr, $features_attr) `>`}];
 
   let extraClassDeclaration = [{
     FailureOr<Attribute> query(DataLayoutEntryKey key);
-
-    StringAttr getTripleAttr();
-    StringAttr getChipAttr();
-    StringAttr getFeaturesAttr();
   }];
 }
 
