@@ -1349,6 +1349,7 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
+  case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
   case AMDGPU::S_MOV_B64_IMM_PSEUDO:
   case AMDGPU::V_MOV_B64_PSEUDO: {
     const MachineOperand &Src0 = MI.getOperand(1);
@@ -2132,6 +2133,25 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(
         get(IsAGPR ? AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::V_MOV_B32_e32));
     break;
+  }
+  case AMDGPU::AV_MOV_B64_IMM_PSEUDO: {
+    Register Dst = MI.getOperand(0).getReg();
+    if (SIRegisterInfo::isAGPRClass(RI.getPhysRegBaseClass(Dst))) {
+      uint64_t Imm = static_cast<uint64_t>(MI.getOperand(1).getImm());
+
+      Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
+      Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DstLo)
+          .addImm(SignExtend64<32>(Lo_32(Imm)))
+          .addReg(Dst, RegState::Implicit | RegState::Define);
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DstHi)
+          .addImm(SignExtend64<32>(Hi_32(Imm)))
+          .addReg(Dst, RegState::Implicit | RegState::Define);
+      MI.eraseFromParent();
+      break;
+    }
+
+    [[fallthrough]];
   }
   case AMDGPU::V_MOV_B64_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
@@ -3425,6 +3445,11 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_MOV_B32:
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     return true;
+  case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
+    // TODO: We could fold this, but it's a strange case. The immediate value
+    // can't be directly folded into any real use. We would have to spread new
+    // immediate legality checks around and only accept subregister extracts for
+    // profitability.
   default:
     return false;
   }
@@ -4471,6 +4496,8 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
     return false;
+  case AMDGPU::OPERAND_INLINE_C_AV64_PSEUDO:
+    return isLegalAV64PseudoImm(Imm);
   case AMDGPU::OPERAND_INPUT_MODS:
   case MCOI::OPERAND_IMMEDIATE:
     // Always embedded in the instruction for free.
@@ -4534,6 +4561,12 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
     return true;
 
   return ST.hasVOP3Literal();
+}
+
+bool SIInstrInfo::isLegalAV64PseudoImm(uint64_t Imm) const {
+  // 2 32-bit inline constants packed into one.
+  return AMDGPU::isInlinableLiteral32(Lo_32(Imm), ST.hasInv2PiInlineImm()) &&
+         AMDGPU::isInlinableLiteral32(Hi_32(Imm), ST.hasInv2PiInlineImm());
 }
 
 bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
@@ -4896,6 +4929,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_KIMM32:
     case AMDGPU::OPERAND_KIMM64:
+    case AMDGPU::OPERAND_INLINE_C_AV64_PSEUDO:
       // Check if this operand is an immediate.
       // FrameIndex operands will be replaced by immediates, so they are
       // allowed.
