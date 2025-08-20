@@ -114,7 +114,7 @@ int main() {
 // CHECK1-NEXT:    [[DEFAULT_DEV:%.*]] = call i32 @omp_get_default_device()
 // CHECK1-NEXT:    [[TEAM_PROCS:%.*]] = call i32 @ompx_get_team_procs(i32 [[DEFAULT_DEV]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[TEAM_PROCS]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = mul i64 2, [[TMP2]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = mul i64 4, [[TMP2]]
 // CHECK1-NEXT:    [[INITIAL_DEVID:%.*]] = call i32 @omp_get_initial_device()
 // CHECK1-NEXT:    [[D_TEAM_VALS_SZ:%.*]] = mul i64 4, [[TMP3]]
 // CHECK1-NEXT:    [[D_TEAM_VALS1:%.*]] = call ptr @omp_target_alloc(i64 [[D_TEAM_VALS_SZ]], i32 [[DEFAULT_DEV]])
@@ -219,7 +219,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 8, !nonnull [[META7:![0-9]+]], !align [[META8:![0-9]+]]
 // CHECK1-NEXT:    store i32 0, ptr [[SIVAR2]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -333,7 +333,7 @@ int main() {
 // CHECK1-NEXT:    [[DEFAULT_DEV:%.*]] = call i32 @omp_get_default_device()
 // CHECK1-NEXT:    [[TEAM_PROCS:%.*]] = call i32 @ompx_get_team_procs(i32 [[DEFAULT_DEV]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[TEAM_PROCS]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = mul i64 2, [[TMP2]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = mul i64 4, [[TMP2]]
 // CHECK1-NEXT:    [[INITIAL_DEVID:%.*]] = call i32 @omp_get_initial_device()
 // CHECK1-NEXT:    [[D_TEAM_VALS_SZ:%.*]] = mul i64 4, [[TMP3]]
 // CHECK1-NEXT:    [[D_TEAM_VALS1:%.*]] = call ptr @omp_target_alloc(i64 [[D_TEAM_VALS_SZ]], i32 [[DEFAULT_DEV]])
@@ -437,7 +437,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[T_VAR]], ptr [[T_VAR_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T_VAR_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T_VAR_ADDR]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK1-NEXT:    store i32 0, ptr [[T_VAR2]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -549,7 +549,7 @@ int main() {
 // CHECK3-NEXT:    [[DEFAULT_DEV:%.*]] = call i32 @omp_get_default_device()
 // CHECK3-NEXT:    [[TEAM_PROCS:%.*]] = call i32 @ompx_get_team_procs(i32 [[DEFAULT_DEV]])
 // CHECK3-NEXT:    [[TMP2:%.*]] = zext i32 [[TEAM_PROCS]] to i64
-// CHECK3-NEXT:    [[TMP3:%.*]] = mul i64 2, [[TMP2]]
+// CHECK3-NEXT:    [[TMP3:%.*]] = mul i64 4, [[TMP2]]
 // CHECK3-NEXT:    [[INITIAL_DEVID:%.*]] = call i32 @omp_get_initial_device()
 // CHECK3-NEXT:    [[D_TEAM_VALS_SZ:%.*]] = mul i64 4, [[TMP3]]
 // CHECK3-NEXT:    [[D_TEAM_VALS1:%.*]] = call ptr @omp_target_alloc(i64 [[D_TEAM_VALS_SZ]], i32 [[DEFAULT_DEV]])
@@ -654,7 +654,7 @@ int main() {
 // CHECK3-NEXT:    store ptr [[SIVAR]], ptr [[SIVAR_ADDR]], align 4
 // CHECK3-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK3-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 4
+// CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 4, !nonnull [[META8:![0-9]+]], !align [[META9:![0-9]+]]
 // CHECK3-NEXT:    store i32 0, ptr [[SIVAR2]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK3-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -768,7 +768,7 @@ int main() {
 // CHECK3-NEXT:    [[DEFAULT_DEV:%.*]] = call i32 @omp_get_default_device()
 // CHECK3-NEXT:    [[TEAM_PROCS:%.*]] = call i32 @ompx_get_team_procs(i32 [[DEFAULT_DEV]])
 // CHECK3-NEXT:    [[TMP2:%.*]] = zext i32 [[TEAM_PROCS]] to i64
-// CHECK3-NEXT:    [[TMP3:%.*]] = mul i64 2, [[TMP2]]
+// CHECK3-NEXT:    [[TMP3:%.*]] = mul i64 4, [[TMP2]]
 // CHECK3-NEXT:    [[INITIAL_DEVID:%.*]] = call i32 @omp_get_initial_device()
 // CHECK3-NEXT:    [[D_TEAM_VALS_SZ:%.*]] = mul i64 4, [[TMP3]]
 // CHECK3-NEXT:    [[D_TEAM_VALS1:%.*]] = call ptr @omp_target_alloc(i64 [[D_TEAM_VALS_SZ]], i32 [[DEFAULT_DEV]])
@@ -872,7 +872,7 @@ int main() {
 // CHECK3-NEXT:    store ptr [[T_VAR]], ptr [[T_VAR_ADDR]], align 4
 // CHECK3-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK3-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T_VAR_ADDR]], align 4
+// CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T_VAR_ADDR]], align 4, !nonnull [[META8]], !align [[META9]]
 // CHECK3-NEXT:    store i32 0, ptr [[T_VAR2]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK3-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -1001,7 +1001,7 @@ int main() {
 // CHECK9-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // CHECK9-NEXT:    store i32 0, ptr [[SIVAR1]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
