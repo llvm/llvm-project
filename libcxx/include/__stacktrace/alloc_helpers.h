@@ -11,7 +11,6 @@
 #define _LIBCPP_STACKTRACE_STRING_MANAGER_H
 
 #include <__config>
-#include <ranges>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,9 +28,11 @@ _LIBCPP_PUSH_MACROS
 #  include <__fwd/ostream.h>
 #  include <__new/allocate.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_base_of.h>
 #  include <__vector/vector.h>
 #  include <cstddef>
 #  include <cstring>
+#  include <iostream>
 #  include <memory>
 #  include <string>
 #  include <string_view>
@@ -40,111 +41,108 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
-struct str {
-  virtual ~str()                               = default;
-  virtual str& reserve(size_t)                 = 0;
-  virtual str& append(string_view)             = 0;
-  virtual str& assign(string_view)             = 0;
-  virtual str& clear()                         = 0;
-  using overwrite_fn                           = function<size_t(char*, size_t)>;
-  virtual str& overwrite(size_t, overwrite_fn) = 0;
-  virtual str& getline(istream&)               = 0;
-  virtual string_view view() const             = 0;
+struct str;
+
+using overwrite_fn _LIBCPP_NODEBUG = function<size_t(char*, size_t)>;
+
+struct string_table_base {
+  string_table_base()                                    = default;
+  string_table_base(const string_table_base&)            = default;
+  string_table_base(string_table_base&&)                 = default;
+  string_table_base& operator=(const string_table_base&) = default;
+  string_table_base& operator=(string_table_base&&)      = default;
+
+  virtual ~string_table_base()                        = default;
+  virtual str create()                                = 0;
+  virtual string_view view(void*)                     = 0;
+  virtual void reserve(void*, size_t)                 = 0;
+  virtual void assign(void*, string_view)             = 0;
+  virtual void overwrite(void*, size_t, overwrite_fn) = 0;
+  virtual void getline(void* __index, istream& __is)  = 0;
+  virtual void destroy(void*)                         = 0;
+};
+
+struct str final {
+  string_table_base* __table_{};
+  void* __str_ptr_{};
+
+  ~str() {
+    if (__table_ && __str_ptr_) {
+      __table_->destroy(__str_ptr_);
+    }
+  }
+
+  str()                      = default;
+  str(const str&)            = default;
+  str(str&&)                 = default;
+  str& operator=(const str&) = default;
+  str& operator=(str&&)      = default;
+  str(string_table_base* __table, void* __str_ptr) : __table_(__table), __str_ptr_(__str_ptr) {}
+
+  string_view view() const { return __str_ptr_ ? __table_->view(__str_ptr_) : string_view{}; }
+  operator string_view() const { return view(); }
 
   size_t size() const { return view().size(); }
-  char* data() { return const_cast<char*>(view().data()); }
-  char const* data() const { return view().data(); }
-
-  friend ostream& operator<<(ostream& __os, str const& __s) { return __os << __s.view(); }
-};
-
-struct literal_str final : str {
-  char const* cstr_{};
-  constexpr string_view view() const override { return {cstr_}; }
-  str& reserve(size_t) override { return *this; }
-  str& append(string_view) override { return *this; }
-  str& assign(std::string_view) override { return *this; }
-  str& clear() override { return *this; }
-  str& overwrite(size_t __sz, std::function<size_t(char*, size_t)> __fn) override { return *this; }
-  str& getline(istream&) override { return *this; }
-
-  constexpr static literal_str const* empty() {
-    constexpr static literal_str __ret;
-    return &__ret;
-  }
-};
-
-template < class _Alloc,
-           class _ATraits = std::allocator_traits<_Alloc>,
-           class _CAlloc  = _ATraits::template rebind_alloc<char>,
-           class _BStr    = std::basic_string<char, std::char_traits<char>, _CAlloc>>
-struct str_wrap final : _BStr, str {
-  using _BStr::_BStr;
-
-  std::string_view view() const override { return {*this}; }
-
-  str& assign(std::string_view __view) override {
-    _BStr::assign(__view);
-    return *this;
-  }
-  str& append(std::string_view __view) override {
-    _BStr::append(__view);
-    return *this;
-  }
-  str& clear() override {
-    _BStr::clear();
-    return *this;
-  }
-  str& reserve(size_t __sz) override {
-    _BStr::reserve(__sz);
-    return *this;
-  }
-  str& overwrite(size_t __sz, std::function<size_t(char*, size_t)> __fn) override {
-    _BStr::resize_and_overwrite(__sz, __fn);
-    return *this;
-  }
-};
-
-template <typename _Tp>
-struct vec : ranges::view_interface<vec<_Tp>> {
-  virtual ~vec()              = default;
-  virtual _Tp& emplace_back() = 0;
-  virtual _Tp* data()         = 0;
-  virtual size_t size() const = 0;
-  virtual bool empty() const  = 0;
-
-  _Tp const* data() const { return const_cast<vec<_Tp>*>(this)->data(); }
-  _Tp* begin() { return data(); }
-  _Tp const* end() const { return data() + size(); }
-};
-
-template < class _Tp,
-           class _Alloc,
-           class _ATraits = std::allocator_traits<_Alloc>,
-           class _TpAlloc = _ATraits::template rebind_alloc<_Tp>,
-           class _Vec     = std::vector<_Tp, _TpAlloc>>
-struct vec_wrap final : _Vec, vec<_Tp> {
-  virtual ~vec_wrap() = default;
-  _Tp* data() override { return _Vec::data(); }
-  size_t size() const override { return _Vec::size(); }
-  bool empty() const override { return _Vec::empty(); }
-  _Tp& emplace_back() override { return _Vec::emplace_back(); }
-};
-
-template <size_t _Bytes>
-struct fixedstr {
-  char data_[_Bytes];
-  size_t size_{0};
-
-  size_t size() const { return size_; }
   bool empty() const { return !size(); }
-  char* data() { return data_; }
-  char const* data() const { return data_; }
-  operator string_view() const { return {data(), size()}; }
+  char* data() { return const_cast<char*>(view().data()); }
+  char const* data() const { return const_cast<char*>(view().data()); }
 
-  void assign(string_view __view) {
-    strncpy(data_, __view.data(), sizeof(data_));
-    size_ = strlen(data_);
+  string_table_base& table() {
+    _LIBCPP_ASSERT_NON_NULL(__table_, "no table associated with string");
+    return *__table_;
+  }
+
+  void reserve(size_t __sz) { table().reserve(__str_ptr_, __sz); }
+  void assign(string_view __sv) { table().assign(__str_ptr_, __sv); }
+  void overwrite(size_t __sz, overwrite_fn __cb) { table().overwrite(__str_ptr_, __sz, __cb); }
+  void getline(istream& __is) { table().getline(__str_ptr_, __is); }
+};
+
+template <class _A,
+          class _AT = allocator_traits<_A>,
+          class _CA = typename _AT::template rebind_alloc<char>,
+          class _S  = basic_string<char, char_traits<char>, _CA>,
+          class _SA = typename _AT::template rebind_alloc<_S>>
+struct string_table : string_table_base {
+  constexpr static void* kEmptyIndex = 0;
+
+  ~string_table() override                     = default;
+  string_table(const string_table&)            = default;
+  string_table(string_table&&)                 = default;
+  string_table& operator=(const string_table&) = default;
+  string_table& operator=(string_table&&)      = default;
+
+  [[no_unique_address]] _CA __char_alloc_;
+  [[no_unique_address]] _SA __str_alloc_;
+
+  explicit string_table(_A& __alloc) : __char_alloc_(_CA(__alloc)) {}
+
+  str create() override {
+    auto* __s = __str_alloc_.allocate(1);
+    new (__s) _S(__char_alloc_);
+    return str(this, __s);
+  }
+
+  void destroy(void* __p) override {
+    auto* __s = (_S*)__p;
+    __s->~_S();
+    __str_alloc_.deallocate(__s, 1);
+  }
+
+  _S& at(void* __index) {
+    _LIBCPP_ASSERT_NON_NULL(__index, "null basic_string ptr");
+    return *(_S*)__index;
+  }
+
+  string_view view(void* __index) override { return at(__index); }
+
+  void reserve(void* __index, size_t __sz) override { at(__index).reserve(__sz); }
+  void assign(void* __index, string_view __sv) override { at(__index).assign(__sv); }
+  void overwrite(void* __index, size_t __sz, overwrite_fn __cb) override {
+    at(__index).resize_and_overwrite(__sz, __cb);
+  }
+  void getline(void* __index, istream& __is) override {
+    __is.getline(const_cast<char*>(at(__index).data()), at(__index).capacity(), '\n');
   }
 };
 

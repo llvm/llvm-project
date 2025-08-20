@@ -10,7 +10,6 @@
 #define _LIBCPP_STACKTRACE_TOOLS_TOOL_H
 
 #include <__config>
-#include <memory>
 
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
@@ -22,6 +21,7 @@
 #  include <csignal>
 #  include <cstddef>
 #  include <cstdlib>
+#  include <memory>
 #  include <spawn.h>
 #  include <sys/fcntl.h>
 #  include <sys/types.h>
@@ -37,8 +37,7 @@ struct tool_base {
   constexpr static size_t k_max_argv_ = base::__absolute_max_depth + 10;
   base& base_;
   char const* tool_prog_;
-  // str* argvs_[k_max_argv_]{};        // holds ptrs to our generated arg strings (strings are owned by
-  // basic_stacktrace)
+  str argvs_[k_max_argv_]{};         // holds, owns generated arg strings
   char* argv_[k_max_argv_]{nullptr}; // char arrays from the strings in `argvs_`
   size_t argc_{0};                   // number of args.  Note: argv_[argc_] is nullptr
 
@@ -46,30 +45,33 @@ struct tool_base {
     argv_[0] = nullptr;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void push_arg(std::string_view sv) {
-    _LIBCPP_ASSERT(argc_ < k_max_argv_ - 1, "too many args");
-    auto& arg      = base_.__strings_.emplace_back().assign(sv);
-    argv_[argc_]   = arg.data();
+  _LIBCPP_HIDE_FROM_ABI void push_arg(str&& arg) {
+    _LIBCPP_ASSERT(arg.size(), "empty str not allowed in args");
+    argvs_[argc_]  = std::move(arg);
+    argv_[argc_]   = const_cast<char*>(argvs_[argc_].data());
     argv_[++argc_] = nullptr; // ensure there's always trailing null after last arg
   }
 
-  _LIBCPP_HIDE_FROM_ABI void push_arg(str const& arg) { push_arg(arg.view()); }
+  _LIBCPP_HIDE_FROM_ABI void push_arg(std::string_view sv) {
+    _LIBCPP_ASSERT(argc_ < k_max_argv_ - 1, "too many args");
+    auto arg = base_.__strings_.create();
+    arg.assign(sv);
+    push_arg(std::move(arg));
+  }
 
   template <typename... _Args>
   _LIBCPP_HIDE_FROM_ABI void push_arg(char const* format, _Args&&... args) {
-#  ifdef __clang__
-#    pragma clang diagnostic push
-#    pragma clang diagnostic ignored "-Wformat-security"
-#    pragma clang diagnostic ignored "-Wformat-nonliteral"
-#  endif
-    auto sz   = snprintf(nullptr, 0, format, args...);
-    auto& arg = base_.__strings_.emplace_back().overwrite(sz, [&](char* buf, size_t) -> size_t {
-      return snprintf(buf, sz, format, args...);
-    });
-    push_arg(arg);
-#  ifdef __clang__
-#    pragma clang diagnostic pop
-#  endif
+    _LIBCPP_DIAGNOSTIC_PUSH
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-security")
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-security")
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
+    auto sz           = snprintf(nullptr, 0, format, args...);
+    auto arg          = base_.__strings_.create();
+    auto overwrite_cb = [&](char* buf, size_t) -> size_t { return snprintf(buf, sz + 1, format, args...); };
+    arg.overwrite(sz + 1, overwrite_cb);
+    push_arg(std::move(arg));
+    _LIBCPP_DIAGNOSTIC_PUSH
   }
 
   // Helper functions for dealing with string views.
@@ -213,7 +215,10 @@ struct file_actions {
 /** While in-scope, this enables SIGCHLD default handling (allowing `waitpid` to work).
 Restores the old signal action on destruction.
 
-XXX Thread safety issue almost certainly exists here
+XXX This code depends on SIGCHLD being received after the tool completes, but this has two issues:
+(1) the enabling and restoring of old behavior affects the entire process, which is not ideal, and
+(2) a race possibly can exist, where thread A saves the signal action and later restores it, but
+another thread may have changed the handler between those two points in time.
 */
 struct sigchld_enable {
   struct sigaction old_;
@@ -363,7 +368,7 @@ struct llvm_symbolizer : tool_base {
 
   _LIBCPP_HIDE_FROM_ABI llvm_symbolizer(base& base) : tool_base{base, __executable_name<llvm_symbolizer>::get()} {}
   _LIBCPP_HIDE_FROM_ABI bool build_argv();
-  _LIBCPP_HIDE_FROM_ABI void parse(entry_base** entry_iter, std::string_view view) const;
+  _LIBCPP_HIDE_FROM_ABI void parse(entry_base** iter, std::string_view view) const;
 };
 
 struct addr2line : tool_base {

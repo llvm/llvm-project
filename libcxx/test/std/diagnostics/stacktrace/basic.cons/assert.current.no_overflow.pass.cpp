@@ -8,7 +8,6 @@
 
 // REQUIRES: std-at-least-c++23, has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -g
 
 /*
   Hardened requirements for the `current` call with given `skip` and `max_depth` amounts:

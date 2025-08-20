@@ -28,16 +28,13 @@ bool atos::build_argv() {
   push_arg(tool_prog_);
   push_arg("-p");
   push_arg("%d", getpid());
-  auto* it  = base_.__entries_.begin();
-  auto* end = base_.__entries_.end();
-  while (it != end) {
-    auto& entry = *(entry_base*)(it++);
+  for (auto& entry : base_.__entry_iters_()) {
     push_arg("%p", (void*)entry.__addr_);
   }
   return true;
 }
 
-void atos::parse(entry_base& entry, std::string_view view) const {
+void atos::parse(__stacktrace::entry_base& entry, std::string_view view) const {
   // With debug info we should get everything we need in one line:
   // main (in testprog) (/Users/steve/code/notes/testprog.cc:208)
 
@@ -45,7 +42,8 @@ void atos::parse(entry_base& entry, std::string_view view) const {
   // advance i to:   ^
   size_t i = 0;
   while (i < view.size() && !isspace(view[i])) { ++i; }
-  entry.assign_desc(std::move(base_.__strings_.emplace_back().assign(view.substr(0, i))));
+  auto& base = (__stacktrace::entry_base&)entry;
+  base.assign_desc(base_.__strings_.create()).assign(view.substr(0, i));
 
   view = lstrip(ldrop(view, i));
 
@@ -57,9 +55,9 @@ void atos::parse(entry_base& entry, std::string_view view) const {
   view = drop_suffix(view, ")");  // simple.o0.nosplit.pass.cpp:19
   pos = view.find_last_of(":");   //                           ^here
   if (pos == std::string_view::npos) { return; }
-  entry.assign_file(std::move(base_.__strings_.emplace_back().assign(view.substr(0, pos))));
+  base.assign_file(base_.__strings_.create()).assign(view.substr(0, pos));
   auto lineno = view.substr(pos + 1);
-  entry.__line_ = lineno.empty() ? 0 : stoi(string(lineno));
+  base.__line_ = lineno.empty() ? 0 : stoi(string(lineno));
 }
 
 template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<atos>;
@@ -71,15 +69,16 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<atos>(base& base) {
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  auto& line = base.__strings_.emplace_back().reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
+  auto line = base.__strings_.create();
+  line.reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
 
-  auto* entry_iter = base.__entries_.begin();    // position at first entry
-  while (spawner.stream_.good()) {               // loop until we get EOF from tool stdout
-    line.getline(spawner.stream_);               // consume a line from stdout
-    auto view = tool_base::strip(line.view());   // remove trailing and leading whitespace
-    if (view.empty()) { continue; }              // skip blank lines
+  auto entry_iter = base.__entry_iters_().begin();  // position at first entry
+  while (spawner.stream_.good()) {                  // loop until we get EOF from tool stdout
+    line.getline(spawner.stream_);                  // consume a line from stdout
+    auto view = tool_base::strip(line.view());      // remove trailing and leading whitespace
+    if (view.empty()) { continue; }                 // skip blank lines
     tool.parse(*entry_iter, view);
-    ++entry_iter;                                // one line per entry
+    ++entry_iter;                                   // one line per entry
   }
 
   return true;

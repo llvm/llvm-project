@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// ADDITIONAL_COMPILE_FLAGS: -g
 
 /*
   (19.6.4.3) Observers [stacktrace.basic.obs]
@@ -16,7 +15,6 @@
 */
 
 #include <cassert>
-#include <memory>
 #include <stacktrace>
 #include <vector>
 
@@ -28,7 +26,7 @@ _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
   std::stacktrace st;
   static_assert(noexcept(st.max_size()));
-  assert(st.max_size() == (std::vector<std::stacktrace_entry, std::allocator<std::stacktrace_entry>>().max_size()));
+  assert(st.max_size() == (std::vector<std::stacktrace_entry>().max_size()));
 
   return 0;
 }

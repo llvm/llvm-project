@@ -33,7 +33,7 @@ images::images() {
     image.slide_        = uintptr_t(_dyld_get_image_vmaddr_slide(i));
     image.loaded_at_    = uintptr_t(_dyld_get_image_header(i));
     image.is_main_prog_ = (i == 0);
-    image.name_.assign(_dyld_get_image_name(i));
+    strncpy(image.name_, _dyld_get_image_name(i), sizeof(image.name_));
   }
   std::sort(images_.begin(), images_.begin() + count_);
 }
@@ -65,13 +65,13 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
   image.loaded_at_ = info->dlpi_addr;
   // This also happens to be the "slide" amount since ELF has zero-relative offsets
   image.slide_ = info->dlpi_addr;
-  image.name_.assign(info->dlpi_name);
+  strncpy(image.name_, info->dlpi_name, sizeof(image.name_));
   // `dl_iterate_phdr` gives us the main program image first
   image.is_main_prog_ = is_first;
   if (image.name_.empty() && is_first) {
     char buf[entry_base::__max_file_len];
     if (readlink("/proc/self/exe", buf, sizeof(buf)) != -1) { // Ignores errno if error
-      image.name_.assign(buf);
+      strncpy(image.name_, buf, sizeof(image.name_));
     }
   }
   // If we're at the limit, return nonzero to stop iterating
