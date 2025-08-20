@@ -378,13 +378,13 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
   else if (R->isSubClassOf("IntrInaccessibleReadMemOnly")) {
-    llvm::IRMemLocation Loc = R->getLocationTypeAsInt("Loc");
+    llvm::IRMemLocation Loc = getLocationTypeAsInt(R, "Loc");
     if (ME.onlyAccessTargetMemoryLocation())
       ME = ME.getWithModRef(Loc, ModRefInfo::Ref);
     else
       ME &= MemoryEffects::inaccessibleReadMemOnly(Loc);
   } else if (R->isSubClassOf("IntrInaccessibleWriteMemOnly")) {
-    llvm::IRMemLocation Loc = R->getLocationTypeAsInt("Loc");
+    llvm::IRMemLocation Loc = getLocationTypeAsInt(R, "Loc");
     if (ME.onlyAccessTargetMemoryLocation())
       ME = ME.getWithModRef(Loc, ModRefInfo::Mod);
     else
@@ -462,6 +462,23 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else {
     llvm_unreachable("Unknown property!");
   }
+}
+
+llvm::IRMemLocation
+CodeGenIntrinsic::getLocationTypeAsInt(const Record *R,
+                                       StringRef FieldName) const {
+  const Record *LocRec = R->getValueAsDef(FieldName);
+  StringRef Name = LocRec->getName();
+  if (Name == "AArch64_FPMR")
+    return static_cast<IRMemLocation>(
+        llvm::InaccessibleTargetMemLocation::AARCH64_FPMR);
+  else if (Name == "AArch64_ZA")
+    return static_cast<IRMemLocation>(
+        llvm::InaccessibleTargetMemLocation::AARCH64_ZA);
+  else if (Name == "InaccessibleMem")
+    return llvm::IRMemLocation::InaccessibleMem;
+  else
+    PrintFatalError(R->getLoc(), "unknown IRMemLocation: " + Name);
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {

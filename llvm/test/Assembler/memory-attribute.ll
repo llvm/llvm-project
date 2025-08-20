@@ -103,3 +103,8 @@ declare void @fn_inaccessiblemem_read_aarch64_fpmr()
 ; CHECK: @fn_inaccessiblemem_read_aarch64_fpmr_write_aarch64_za()
 declare void @fn_inaccessiblemem_read_aarch64_fpmr_write_aarch64_za()
     memory(aarch64_fpmr: read, aarch64_za: write)
+
+; CHECK: Function Attrs: memory(aarch64_fpmr: read, aarch64_za: write)
+; CHECK: @fn_inaccessiblemem_read_aarch64_fpmr_write_aarch64_za()
+declare void @fn_inaccessiblemem_read_argmem__write_inacessiblemem()
+    memory(argmem: read, inacessiblemem: write)
