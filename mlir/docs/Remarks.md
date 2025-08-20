@@ -132,12 +132,43 @@ ______________________________________________________________________
 
 ### Metrics and Shortcuts
 
-- **`remark::metric(key, value)`** – Adds a structured key–value metric.
-- **`remark::reason(fmt, ...)`** – Shortcut for `metric("Reason", ...)`.
-- **`remark::suggest(fmt, ...)`** – Shortcut for `metric("Suggestion", ...)`.
+Helper functions accept
+[LLVM format](https://llvm.org/docs/ProgrammersManual.html#formatting-strings-the-formatv-function)
+style strings. This format builds lazily, so remarks are zero-cost when
+disabled.
 
-If you pass a plain string (e.g. `<< "vectorized loop"`), it’s equivalent to
-`metric("Remark", "vectorized loop")`.
+#### Adding Remarks
+
+- **`remark::add(fmt, ...)`** – Shortcut for `metric("Remark", ...)`.
+
+#### Adding Reasons
+
+- **`remark::reason(fmt, ...)`** – Shortcut for `metric("Reason", ...)`. Used to
+  explain why a remark was missed or failed.
+
+#### Adding Suggestions
+
+- **`remark::suggest(fmt, ...)`** – Shortcut for `metric("Suggestion", ...)`.
+  Used to provide actionable feedback.
+
+#### Adding Custom Metrics
+
+- **`remark::metric(key, value)`** – Adds a structured key–value metric.
+
+Example: tracking `TripCount`. When exported to YAML, it appears under `args`
+for machine readability:
+
+```cpp
+remark::metric("TripCount", value)
+```
+
+#### String Metrics
+
+Passing a plain string (e.g. `<< "vectorized loop"`) is equivalent to:
+
+```cpp
+metric("Remark", "vectorized loop")
+```
 
 ______________________________________________________________________
 
