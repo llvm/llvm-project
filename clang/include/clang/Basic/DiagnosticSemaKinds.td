@@ -6074,6 +6074,13 @@ def warn_cxx23_pack_indexing : Warning<
 def err_pack_outside_template : Error<
   "pack declaration outside of template">;
 
+def err_builtin_pack_outside_template
+    : Error<"%0 cannot be used outside of template">;
+
+def err_unsupported_builtin_template_pack_expansion
+    : Error<"expansions of %0 are not supported here. Only expansions in "
+            "template arguments and class bases are supported">;
+
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
 def err_fold_expression_empty : Error<
@@ -10994,10 +11001,15 @@ def err_block_on_vm : Error<
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
+def err_vec_masked_load_store_ptr : Error<
+ "%ordinal0 argument must be a %1">;
+def err_vec_masked_load_store_size : Error<
+ "all arguments to %0 must have the same number of elements (was %1 and %2)">;
+
 def err_vec_builtin_non_vector : Error<
  "%select{first two|all}1 arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
-  "%select{first two|all}1 arguments to %0 must have the same type">;
+  "%select{first two|all|last two}1 arguments to %0 must have the same type">;
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
@@ -12859,7 +12871,7 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }1"
   // Second component: integer-like types
   "%select{|integer|signed integer|unsigned integer|'int'|"
-  "pointer to a valid matrix element}2"
+  "pointer to a valid matrix element|boolean}2"
   // A space after a non-empty second component
   "%plural{0:|: }2"
   // An 'or' if non-empty second and third components are combined
@@ -12951,6 +12963,17 @@ def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
 
+// SYCL external attribute diagnostics
+def err_sycl_external_invalid_linkage : Error<
+  "%0 can only be applied to functions with external linkage">;
+def err_sycl_external_invalid_main : Error<
+  "%0 cannot be applied to the 'main' function">;
+def err_sycl_external_invalid_deleted_function : Error<
+  "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_missing_on_first_decl : Warning<
+  "%0 attribute does not appear on the first declaration">,
+  InGroup<NonPortableSYCL>;
+
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a"
@@ -12965,7 +12988,7 @@ def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
   "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
-  InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
+  InGroup<NonPortableSYCL>, DefaultError;
 def warn_sycl_entry_point_redundant_declaration : Warning<
   "redundant %0 attribute">, InGroup<RedundantAttribute>;
 def err_sycl_entry_point_after_definition : Error<
