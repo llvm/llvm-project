@@ -141,6 +141,7 @@ private:
   DenseMap<size_t, Symbol *> SymbolMap;
 
   size_t NextSymbolUniqueId = 0;
+  size_t NextSymbolOriginalIndex = 0;
 
   std::vector<Section> Sections;
   DenseMap<ssize_t, Section *> SectionMap;

@@ -16,11 +16,10 @@ namespace coff {
 using namespace object;
 
 void Object::addSymbols(ArrayRef<Symbol> NewSymbols) {
-  size_t RawIndex = 0;
   for (Symbol S : NewSymbols) {
     S.UniqueId = NextSymbolUniqueId++;
-    S.OriginalRawIndex = RawIndex;
-    RawIndex += 1 + S.Sym.NumberOfAuxSymbols;
+    S.OriginalRawIndex = NextSymbolOriginalIndex;
+    NextSymbolOriginalIndex += 1 + S.Sym.NumberOfAuxSymbols;
     Symbols.emplace_back(S);
   }
   updateSymbols();
