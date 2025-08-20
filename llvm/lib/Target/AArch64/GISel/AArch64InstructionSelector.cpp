@@ -1102,7 +1102,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
-static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
+static unsigned selectIntToFPConvOpc(unsigned GenericOpc, LLT DstTy,
+                                     LLT SrcTy) {
   if (!DstTy.isScalar() || !SrcTy.isScalar())
     return GenericOpc;
 
@@ -1118,10 +1119,6 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
         return AArch64::SCVTFUWSri;
       case TargetOpcode::G_UITOFP:
         return AArch64::UCVTFUWSri;
-      case TargetOpcode::G_FPTOSI:
-        return AArch64::FCVTZSUWSr;
-      case TargetOpcode::G_FPTOUI:
-        return AArch64::FCVTZUUWSr;
       default:
         return GenericOpc;
       }
@@ -1131,10 +1128,6 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
         return AArch64::SCVTFUXSri;
       case TargetOpcode::G_UITOFP:
         return AArch64::UCVTFUXSri;
-      case TargetOpcode::G_FPTOSI:
-        return AArch64::FCVTZSUWDr;
-      case TargetOpcode::G_FPTOUI:
-        return AArch64::FCVTZUUWDr;
       default:
         return GenericOpc;
       }
@@ -1149,10 +1142,6 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
         return AArch64::SCVTFUWDri;
       case TargetOpcode::G_UITOFP:
         return AArch64::UCVTFUWDri;
-      case TargetOpcode::G_FPTOSI:
-        return AArch64::FCVTZSUXSr;
-      case TargetOpcode::G_FPTOUI:
-        return AArch64::FCVTZUUXSr;
       default:
         return GenericOpc;
       }
@@ -1162,10 +1151,6 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
         return AArch64::SCVTFUXDri;
       case TargetOpcode::G_UITOFP:
         return AArch64::UCVTFUXDri;
-      case TargetOpcode::G_FPTOSI:
-        return AArch64::FCVTZSUXDr;
-      case TargetOpcode::G_FPTOUI:
-        return AArch64::FCVTZUUXDr;
       default:
         return GenericOpc;
       }
@@ -3525,12 +3510,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP:
-  case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI: {
+  case TargetOpcode::G_UITOFP: {
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg()),
               SrcTy = MRI.getType(I.getOperand(1).getReg());
-    const unsigned NewOpc = selectFPConvOpc(Opcode, DstTy, SrcTy);
+    const unsigned NewOpc = selectIntToFPConvOpc(Opcode, DstTy, SrcTy);
     if (NewOpc == Opcode)
       return false;
 
