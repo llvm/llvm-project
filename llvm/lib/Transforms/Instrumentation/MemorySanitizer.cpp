@@ -3429,8 +3429,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return ShadowType;
   }
 
-  /// Doubles the length of a vector shadow (filled with zeros) if necessary to
-  /// match the length of the shadow for the instruction.
+  /// Doubles the length of a vector shadow (extending with zeros) if necessary
+  /// to match the length of the shadow for the instruction.
+  /// If scalar types of the vectors are different, it will use the type of the
+  /// input vector.
   /// This is more type-safe than CreateShadowCast().
   Value *maybeExtendVectorShadowWithZeros(Value *Shadow, IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
@@ -3440,10 +3442,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *FullShadow = getCleanShadow(&I);
     assert(cast<FixedVectorType>(Shadow->getType())->getNumElements() <=
            cast<FixedVectorType>(FullShadow->getType())->getNumElements());
-    assert(cast<FixedVectorType>(Shadow->getType())->getScalarType() ==
-           cast<FixedVectorType>(FullShadow->getType())->getScalarType());
 
-    if (Shadow->getType() == FullShadow->getType()) {
+    if (cast<FixedVectorType>(Shadow->getType())->getNumElements() ==
+        cast<FixedVectorType>(FullShadow->getType())->getNumElements()) {
       FullShadow = Shadow;
     } else {
       // TODO: generalize beyond 2x?
@@ -4528,55 +4529,93 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return isFixedFPVectorTy(V->getType());
   }
 
-  // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
-  //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
-  //                           i32 rounding)
+  // e.g., <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+  //                      (<16 x float> a, <16 x i32> writethru, i16 mask,
+  //                       i32 rounding)
+  //
+  // Inconveniently, some similar intrinsics have a different operand order:
+  //       <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
+  //                      (<16 x float> a, i32 rounding, <16 x i16> writethru,
+  //                       i16 mask)
+  //
+  // If the return type has more elements than A, the excess elements are
+  // zeroed (and the corresponding shadow is initialized).
+  //       <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.128
+  //                      (<4 x float> a, i32 rounding, <8 x i16> writethru,
+  //                       i8 mask)
   //
   // dst[i] = mask[i] ? convert(a[i]) : writethru[i]
   // dst_shadow[i] = mask[i] ? all_or_nothing(a_shadow[i]) : writethru_shadow[i]
   //    where all_or_nothing(x) is fully uninitialized if x has any
   //    uninitialized bits
-  void handleAVX512VectorConvertFPToInt(IntrinsicInst &I) {
+  void handleAVX512VectorConvertFPToInt(IntrinsicInst &I, bool LastMask) {
     IRBuilder<> IRB(&I);
 
     assert(I.arg_size() == 4);
     Value *A = I.getOperand(0);
-    Value *WriteThrough = I.getOperand(1);
-    Value *Mask = I.getOperand(2);
-    Value *RoundingMode = I.getOperand(3);
+    Value *WriteThrough;
+    Value *Mask;
+    Value *RoundingMode;
+    if (LastMask) {
+      WriteThrough = I.getOperand(2);
+      Mask = I.getOperand(3);
+      RoundingMode = I.getOperand(1);
+    } else {
+      WriteThrough = I.getOperand(1);
+      Mask = I.getOperand(2);
+      RoundingMode = I.getOperand(3);
+    }
 
     assert(isFixedFPVector(A));
     assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();
-    assert(ANumElements ==
-           cast<FixedVectorType>(WriteThrough->getType())->getNumElements());
+    unsigned WriteThruNumElements =
+        cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
+    assert(ANumElements == WriteThruNumElements ||
+           ANumElements * 2 == WriteThruNumElements);
 
     assert(Mask->getType()->isIntegerTy());
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    unsigned MaskNumElements = Mask->getType()->getScalarSizeInBits();
+    assert(ANumElements == MaskNumElements ||
+           ANumElements * 2 == MaskNumElements);
+
+    assert(WriteThruNumElements == MaskNumElements);
+
     insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
-    // Only four bits of the rounding mode are used, though it's very
+    // Only some bits of the rounding mode are used, though it's very
     // unusual to have uninitialized bits there (more commonly, it's a
     // constant).
     insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
+    Value *AShadow = getShadow(A);
+    AShadow = maybeExtendVectorShadowWithZeros(AShadow, I);
+
+    if (ANumElements * 2 == MaskNumElements) {
+      // Ensure that the irrelevant bits of the mask are zero, hence selecting
+      // from the zeroed shadow instead of the writethrough's shadow.
+      Mask = IRB.CreateTrunc(Mask, IRB.getIntNTy(ANumElements));
+      Mask = IRB.CreateZExt(Mask, IRB.getIntNTy(MaskNumElements));
+    }
+
     // Convert i16 mask to <16 x i1>
     Mask = IRB.CreateBitCast(
-        Mask, FixedVectorType::get(IRB.getInt1Ty(), ANumElements));
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), MaskNumElements));
 
-    Value *AShadow = getShadow(A);
-    /// For scalars:
-    /// Since they are converting from floating-point, the output is:
+    /// For floating-point to integer conversion, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-element basis for vectors.
-    AShadow = IRB.CreateSExt(IRB.CreateICmpNE(AShadow, getCleanShadow(A)),
-                             getShadowTy(A));
+    ///
+    /// We use the scalar width of the return type instead of A's.
+    AShadow = IRB.CreateSExt(
+        IRB.CreateICmpNE(AShadow, getCleanShadow(AShadow->getType())),
+        getShadowTy(&I));
 
     Value *WriteThroughShadow = getShadow(WriteThrough);
     Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
@@ -5920,10 +5959,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                         /*trailingVerbatimArgs=*/1);
       break;
 
+    // Convert Packed Single Precision Floating-Point Values
+    //   to Packed SignedDoubleword Integer Values
+    //
+    // <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+    //                (<16 x float>, <16 x i32>, i16, i32)
     case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
-      handleAVX512VectorConvertFPToInt(I);
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/false);
       break;
     }
+
+    // Convert Single-Precision FP Value to 16-bit FP Value
+    // <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
+    //                (<16 x float>, i32, <16 x i16>, i16)
+    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.128
+    //                (<4 x float>, i32, <8 x i16>, i8)
+    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.256
+    //                (<8 x float>, i32, <8 x i16>, i8)
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_512:
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_256:
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_128:
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/true);
+      break;
 
     // AVX512 PMOV: Packed MOV, with truncation
     // Precisely handled by applying the same intrinsic to the shadow
