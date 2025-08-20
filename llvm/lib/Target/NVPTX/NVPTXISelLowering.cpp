@@ -6553,9 +6553,7 @@ static void computeKnownBitsForVLoad(const SDValue Op, KnownBits &Known) {
 
   assert(Known.getBitWidth() == DestVT.getSizeInBits());
   auto ElementBitWidth = NVPTXDAGToDAGISel::getFromTypeWidthForLoad(LD);
-  KnownBits HighZeros(Known.getBitWidth() - ElementBitWidth);
-  HighZeros.setAllZero();
-  Known.insertBits(HighZeros, ElementBitWidth);
+  Known.Zero.setHighBits(Known.getBitWidth() - ElementBitWidth);
 }
 
 void NVPTXTargetLowering::computeKnownBitsForTargetNode(
