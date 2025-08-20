@@ -1129,12 +1129,12 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortIfStatementsOnASingleLine);
     IO.mapOptional("AllowShortLambdasOnASingleLine",
                    Style.AllowShortLambdasOnASingleLine);
-    IO.mapOptional("AllowShortRecordsOnASingleLine",
-                   Style.AllowShortRecordsOnASingleLine);
     IO.mapOptional("AllowShortLoopsOnASingleLine",
                    Style.AllowShortLoopsOnASingleLine);
     IO.mapOptional("AllowShortNamespacesOnASingleLine",
                    Style.AllowShortNamespacesOnASingleLine);
+    IO.mapOptional("AllowShortRecordsOnASingleLine",
+                   Style.AllowShortRecordsOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
