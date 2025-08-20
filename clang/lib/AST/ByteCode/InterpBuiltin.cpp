@@ -1830,6 +1830,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
     assert(Call->getArg(1)->getType()->isVectorType() &&
            ASTCtx.hasSameUnqualifiedType(Call->getArg(0)->getType(),
                                          Call->getArg(1)->getType()));
+    (void)ASTCtx;
     ZeroArg = S.Stk.pop<Pointer>();
     assert(ZeroArg.getFieldDesc()->isPrimitiveArray());
   }
@@ -2728,6 +2729,8 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
   if (!Arg1Type->isVectorType()) {
     assert(!Arg2Type->isVectorType());
     assert(!Arg3Type->isVectorType());
+    (void)Arg2Type;
+    (void)Arg3Type;
 
     const Floating &Z = S.Stk.pop<Floating>();
     const Floating &Y = S.Stk.pop<Floating>();
@@ -2753,6 +2756,7 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
   assert(NumElems == Arg2Type->castAs<VectorType>()->getNumElements() &&
          NumElems == Arg3Type->castAs<VectorType>()->getNumElements());
   assert(ElemT->isRealFloatingType());
+  (void)ElemT;
 
   const Pointer &VZ = S.Stk.pop<Pointer>();
   const Pointer &VY = S.Stk.pop<Pointer>();

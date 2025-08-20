@@ -4255,6 +4255,44 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_masked_load: {
+    llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Ptr = EmitScalarExpr(E->getArg(1));
+
+    llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
+    CharUnits Align = CGM.getNaturalTypeAlignment(E->getType(), nullptr);
+    llvm::Value *AlignVal =
+        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
+
+    llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
+
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
+
+    llvm::Value *Result =
+        Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    return RValue::get(Result);
+  };
+  case Builtin::BI__builtin_masked_store: {
+    llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
+
+    QualType ValTy = E->getArg(1)->getType();
+    llvm::Type *ValLLTy = CGM.getTypes().ConvertType(ValTy);
+    llvm::Type *PtrTy = Ptr->getType();
+
+    CharUnits Align = CGM.getNaturalTypeAlignment(ValTy, nullptr);
+    llvm::Value *AlignVal =
+        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
+
+    llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
+
+    Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    return RValue::get(nullptr);
+  }
+
   case Builtin::BI__builtin_isinf_sign: {
     // isinf_sign(x) -> fabs(x) == infinity ? (signbit(x) ? -1 : 1) : 0
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);

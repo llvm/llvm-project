@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-complex-to-rocdl-library-calls | FileCheck %s
+// RUN: mlir-opt %s --allow-unregistered-dialect -convert-complex-to-rocdl-library-calls | FileCheck %s
 
 // CHECK-DAG: @__ocml_cabs_f32(complex<f32>) -> f32
 // CHECK-DAG: @__ocml_cabs_f64(complex<f64>) -> f64
@@ -55,6 +55,17 @@ func.func @log_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, comp
   %ld = complex.log %d : complex<f64>
   // CHECK: return %[[LF]], %[[LD]]
   return %lf, %ld : complex<f32>, complex<f64>
+}
+
+//CHECK-LABEL: @pow_caller
+//CHECK:          (%[[Z:.*]]: complex<f32>, %[[W:.*]]: complex<f32>)
+func.func @pow_caller(%z: complex<f32>, %w: complex<f32>) -> complex<f32> {
+  // CHECK: %[[LOG:.*]] = call @__ocml_clog_f32(%[[Z]])
+  // CHECK: %[[MUL:.*]] = complex.mul %[[W]], %[[LOG]]
+  // CHECK: %[[EXP:.*]] = call @__ocml_cexp_f32(%[[MUL]])
+  // CHECK: return %[[EXP]]
+  %r = complex.pow %z, %w : complex<f32>
+  return %r : complex<f32>
 }
 
 //CHECK-LABEL: @sin_caller

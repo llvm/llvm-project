@@ -110,8 +110,6 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
   DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
   DestSourcePair PairedRegs = TII->isCopyInstrImpl(*Paired).value();
-  Register ARegInFirstPair = MoveFromSToA ? FirstPair.Destination->getReg()
-                                          : FirstPair.Source->getReg();
 
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
@@ -130,7 +128,6 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //
   //   mv a0, s2
   //   mv a1, s1    =>  cm.mva01s s2,s1
-  bool StartWithX10 = ARegInFirstPair == RISCV::X10;
   unsigned Opcode;
   if (MoveFromSToA) {
     // We are moving one of the copies earlier so its kill flag may become
@@ -141,12 +138,16 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
         PairedSource.setIsKill(false);
 
     Opcode = getMoveFromSToAOpcode(*ST);
-    Sreg1 = StartWithX10 ? FirstPair.Source : &PairedSource;
-    Sreg2 = StartWithX10 ? &PairedSource : FirstPair.Source;
+    Sreg1 = FirstPair.Source;
+    Sreg2 = &PairedSource;
+    if (FirstPair.Destination->getReg() != RISCV::X10)
+      std::swap(Sreg1, Sreg2);
   } else {
     Opcode = getMoveFromAToSOpcode(*ST);
-    Sreg1 = StartWithX10 ? FirstPair.Destination : PairedRegs.Destination;
-    Sreg2 = StartWithX10 ? PairedRegs.Destination : FirstPair.Destination;
+    Sreg1 = FirstPair.Destination;
+    Sreg2 = PairedRegs.Destination;
+    if (FirstPair.Source->getReg() != RISCV::X10)
+      std::swap(Sreg1, Sreg2);
   }
 
   BuildMI(*I->getParent(), I, DL, TII->get(Opcode)).add(*Sreg1).add(*Sreg2);

@@ -251,6 +251,16 @@ bool Block::mightHaveTerminator() {
   return !empty() && back().mightHaveTrait<OpTrait::IsTerminator>();
 }
 
+iterator_range<Block::iterator> Block::without_terminator_impl() {
+  // Note: When the op is unregistered, we do not know for sure if the last
+  // op is a terminator. In that case, we include it in `without_terminator`,
+  // but that decision is somewhat arbitrary.
+  if (!back().hasTrait<OpTrait::IsTerminator>())
+    return {begin(), end()};
+  auto endIt = --end();
+  return {begin(), endIt};
+}
+
 // Indexed successor access.
 unsigned Block::getNumSuccessors() {
   return empty() ? 0 : back().getNumSuccessors();

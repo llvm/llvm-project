@@ -62,7 +62,7 @@ elseif( CMAKE_HOST_UNIX )
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
-  if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
+  if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" )
     set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
@@ -130,7 +130,7 @@ endif()
 # unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
 # guard here. We should remove the guards all together once AIX cleans up
 # the system headers.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 

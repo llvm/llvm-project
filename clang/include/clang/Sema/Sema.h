@@ -228,7 +228,9 @@ void threadSafetyCleanup(BeforeSet *Cache);
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
-typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *>,
+typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *,
+                                     const TemplateSpecializationType *,
+                                     const SubstBuiltinTemplatePackType *>,
                   SourceLocation>
     UnexpandedParameterPack;
 
@@ -13497,8 +13499,6 @@ public:
     ~ArgPackSubstIndexRAII() { Self.ArgPackSubstIndex = OldSubstIndex; }
   };
 
-  friend class ArgumentPackSubstitutionRAII;
-
   void pushCodeSynthesisContext(CodeSynthesisContext Ctx);
   void popCodeSynthesisContext();
 
@@ -14428,6 +14428,15 @@ public:
   static void collectUnexpandedParameterPacks(
       Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
+  /// Invoked when parsing a template argument.
+  ///
+  /// \param Arg the template argument, which may already be invalid.
+  ///
+  /// If it is followed by ellipsis, this function is called before
+  /// `ActOnPackExpansion`.
+  ParsedTemplateArgument
+  ActOnTemplateTemplateArgument(const ParsedTemplateArgument &Arg);
+
   /// Invoked when parsing a template argument followed by an
   /// ellipsis, which creates a pack expansion.
   ///
@@ -14515,7 +14524,8 @@ public:
   bool CheckParameterPacksForExpansion(
       SourceLocation EllipsisLoc, SourceRange PatternRange,
       ArrayRef<UnexpandedParameterPack> Unexpanded,
-      const MultiLevelTemplateArgumentList &TemplateArgs, bool &ShouldExpand,
+      const MultiLevelTemplateArgumentList &TemplateArgs,
+      bool FailOnPackProducingTemplates, bool &ShouldExpand,
       bool &RetainExpansion, UnsignedOrNone &NumExpansions);
 
   /// Determine the number of arguments in the given pack expansion

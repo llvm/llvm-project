@@ -1459,6 +1459,7 @@ namespace {
     bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
                                  SourceRange PatternRange,
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,
+                                 bool FailOnPackProducingTemplates,
                                  bool &ShouldExpand, bool &RetainExpansion,
                                  UnsignedOrNone &NumExpansions) {
       if (SemaRef.CurrentInstantiationScope &&
@@ -1472,8 +1473,9 @@ namespace {
       }
 
       return getSema().CheckParameterPacksForExpansion(
-          EllipsisLoc, PatternRange, Unexpanded, TemplateArgs, ShouldExpand,
-          RetainExpansion, NumExpansions);
+          EllipsisLoc, PatternRange, Unexpanded, TemplateArgs,
+          FailOnPackProducingTemplates, ShouldExpand, RetainExpansion,
+          NumExpansions);
     }
 
     void ExpandingFunctionParameterPack(ParmVarDecl *Pack) {
@@ -1513,6 +1515,21 @@ namespace {
         std::tie(Depth, Index) = getDepthAndIndex(PartialPack);
         TemplateArgs.setArgument(Depth, Index, Arg);
       }
+    }
+
+    MultiLevelTemplateArgumentList ForgetSubstitution() {
+      MultiLevelTemplateArgumentList New;
+      New.addOuterRetainedLevels(this->TemplateArgs.getNumLevels());
+
+      MultiLevelTemplateArgumentList Old =
+          const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
+          std::move(New);
+      return Old;
+    }
+    void RememberSubstitution(MultiLevelTemplateArgumentList Old) {
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
+          std::move(Old);
     }
 
     TemplateArgument
@@ -1697,6 +1714,26 @@ namespace {
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
     }
 
+    using TreeTransform::TransformTemplateSpecializationType;
+    QualType
+    TransformTemplateSpecializationType(TypeLocBuilder &TLB,
+                                        TemplateSpecializationTypeLoc TL) {
+      auto *T = TL.getTypePtr();
+      if (!getSema().ArgPackSubstIndex || !T->isSugared() ||
+          !isPackProducingBuiltinTemplateName(T->getTemplateName()))
+        return TreeTransform::TransformTemplateSpecializationType(TLB, TL);
+      // Look through sugar to get to the SubstBuiltinTemplatePackType that we
+      // need to substitute into.
+
+      // `TransformType` code below will handle picking the element from a pack
+      // with the index `ArgPackSubstIndex`.
+      // FIXME: add ability to represent sugarred type for N-th element of a
+      // builtin pack and produce the sugar here.
+      QualType R = TransformType(T->desugar());
+      TLB.pushTrivial(getSema().getASTContext(), R, TL.getBeginLoc());
+      return R;
+    }
+
     UnsignedOrNone ComputeSizeOfPackExprWithoutSubstitution(
         ArrayRef<TemplateArgument> PackArgs) {
       // Don't do this when rewriting template parameters for CTAD:
@@ -1746,6 +1783,9 @@ namespace {
     TransformSubstTemplateTypeParmPackType(TypeLocBuilder &TLB,
                                            SubstTemplateTypeParmPackTypeLoc TL,
                                            bool SuppressObjCLifetime);
+    QualType
+    TransformSubstBuiltinTemplatePackType(TypeLocBuilder &TLB,
+                                          SubstBuiltinTemplatePackTypeLoc TL);
 
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
@@ -1983,6 +2023,7 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
   UnsignedOrNone NumExpansions = OrigNumExpansions;
   if (TryExpandParameterPacks(ExpansionTL.getEllipsisLoc(),
                               Pattern.getSourceRange(), Unexpanded,
+                              /*FailOnPackProducingTemplates=*/true,
                               ShouldExpand, RetainExpansion, NumExpansions))
     return true;
 
@@ -2719,6 +2760,17 @@ QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
       getPackIndex(Pack), Arg, TL.getNameLoc());
 }
 
+QualType TemplateInstantiator::TransformSubstBuiltinTemplatePackType(
+    TypeLocBuilder &TLB, SubstBuiltinTemplatePackTypeLoc TL) {
+  if (!getSema().ArgPackSubstIndex)
+    return TreeTransform::TransformSubstBuiltinTemplatePackType(TLB, TL);
+  auto &Sema = getSema();
+  TemplateArgument Result = getPackSubstitutedTemplateArgument(
+      Sema, TL.getTypePtr()->getArgumentPack());
+  TLB.pushTrivial(Sema.getASTContext(), Result.getAsType(), TL.getBeginLoc());
+  return Result.getAsType();
+}
+
 static concepts::Requirement::SubstitutionDiagnostic *
 createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
                 Sema::EntityPrinter Printer) {
@@ -3446,6 +3498,72 @@ bool Sema::SubstDefaultArgument(
   return false;
 }
 
+// See TreeTransform::PreparePackForExpansion for the relevant comment.
+// This function implements the same concept for base specifiers.
+static bool
+PreparePackForExpansion(Sema &S, const CXXBaseSpecifier &Base,
+                        const MultiLevelTemplateArgumentList &TemplateArgs,
+                        TypeSourceInfo *&Out, UnexpandedInfo &Info) {
+  SourceRange BaseSourceRange = Base.getSourceRange();
+  SourceLocation BaseEllipsisLoc = Base.getEllipsisLoc();
+  Info.Ellipsis = Base.getEllipsisLoc();
+  auto ComputeInfo = [&S, &TemplateArgs, BaseSourceRange, BaseEllipsisLoc](
+                         TypeSourceInfo *BaseTypeInfo,
+                         bool IsLateExpansionAttempt, UnexpandedInfo &Info) {
+    // This is a pack expansion. See whether we should expand it now, or
+    // wait until later.
+    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+    S.collectUnexpandedParameterPacks(BaseTypeInfo->getTypeLoc(), Unexpanded);
+    if (IsLateExpansionAttempt) {
+      // Request expansion only when there is an opportunity to expand a pack
+      // that required a substituion first.
+      bool SawPackTypes =
+          llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
+            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+          });
+      if (!SawPackTypes) {
+        Info.Expand = false;
+        return false;
+      }
+    }
+
+    // Determine whether the set of unexpanded parameter packs can and should be
+    // expanded.
+    Info.Expand = false;
+    Info.RetainExpansion = false;
+    Info.NumExpansions = std::nullopt;
+    return S.CheckParameterPacksForExpansion(
+        BaseEllipsisLoc, BaseSourceRange, Unexpanded, TemplateArgs,
+        /*FailOnPackProducingTemplates=*/false, Info.Expand,
+        Info.RetainExpansion, Info.NumExpansions);
+  };
+
+  if (ComputeInfo(Base.getTypeSourceInfo(), false, Info))
+    return true;
+
+  if (Info.Expand) {
+    Out = Base.getTypeSourceInfo();
+    return false;
+  }
+
+  // The resulting base specifier will (still) be a pack expansion.
+  {
+    Sema::ArgPackSubstIndexRAII SubstIndex(S, std::nullopt);
+    Out = S.SubstType(Base.getTypeSourceInfo(), TemplateArgs,
+                      BaseSourceRange.getBegin(), DeclarationName());
+  }
+  if (!Out->getType()->containsUnexpandedParameterPack())
+    return false;
+
+  // Some packs will learn their length after substitution.
+  // We may need to request their expansion.
+  if (ComputeInfo(Out, /*IsLateExpansionAttempt=*/true, Info))
+    return true;
+  if (Info.Expand)
+    Info.ExpandUnderForgetSubstitions = true;
+  return false;
+}
+
 bool
 Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
                           CXXRecordDecl *Pattern,
@@ -3463,47 +3581,37 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
     }
 
     SourceLocation EllipsisLoc;
-    TypeSourceInfo *BaseTypeLoc;
+    TypeSourceInfo *BaseTypeLoc = nullptr;
     if (Base.isPackExpansion()) {
-      // This is a pack expansion. See whether we should expand it now, or
-      // wait until later.
-      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-      collectUnexpandedParameterPacks(Base.getTypeSourceInfo()->getTypeLoc(),
-                                      Unexpanded);
-      bool ShouldExpand = false;
-      bool RetainExpansion = false;
-      UnsignedOrNone NumExpansions = std::nullopt;
-      if (CheckParameterPacksForExpansion(Base.getEllipsisLoc(),
-                                          Base.getSourceRange(),
-                                          Unexpanded,
-                                          TemplateArgs, ShouldExpand,
-                                          RetainExpansion,
-                                          NumExpansions)) {
+      UnexpandedInfo Info;
+      if (PreparePackForExpansion(*this, Base, TemplateArgs, BaseTypeLoc,
+                                  Info)) {
         Invalid = true;
         continue;
       }
 
       // If we should expand this pack expansion now, do so.
-      if (ShouldExpand) {
-        for (unsigned I = 0; I != *NumExpansions; ++I) {
+      MultiLevelTemplateArgumentList EmptyList;
+      const MultiLevelTemplateArgumentList *ArgsForSubst = &TemplateArgs;
+      if (Info.ExpandUnderForgetSubstitions)
+        ArgsForSubst = &EmptyList;
+
+      if (Info.Expand) {
+        for (unsigned I = 0; I != *Info.NumExpansions; ++I) {
           Sema::ArgPackSubstIndexRAII SubstIndex(*this, I);
 
-          TypeSourceInfo *BaseTypeLoc = SubstType(Base.getTypeSourceInfo(),
-                                                  TemplateArgs,
-                                              Base.getSourceRange().getBegin(),
-                                                  DeclarationName());
-          if (!BaseTypeLoc) {
+          TypeSourceInfo *Expanded =
+              SubstType(BaseTypeLoc, *ArgsForSubst,
+                        Base.getSourceRange().getBegin(), DeclarationName());
+          if (!Expanded) {
             Invalid = true;
             continue;
           }
 
-          if (CXXBaseSpecifier *InstantiatedBase
-                = CheckBaseSpecifier(Instantiation,
-                                     Base.getSourceRange(),
-                                     Base.isVirtual(),
-                                     Base.getAccessSpecifierAsWritten(),
-                                     BaseTypeLoc,
-                                     SourceLocation()))
+          if (CXXBaseSpecifier *InstantiatedBase = CheckBaseSpecifier(
+                  Instantiation, Base.getSourceRange(), Base.isVirtual(),
+                  Base.getAccessSpecifierAsWritten(), Expanded,
+                  SourceLocation()))
             InstantiatedBases.push_back(InstantiatedBase);
           else
             Invalid = true;
@@ -3515,10 +3623,9 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
       // The resulting base specifier will (still) be a pack expansion.
       EllipsisLoc = Base.getEllipsisLoc();
       Sema::ArgPackSubstIndexRAII SubstIndex(*this, std::nullopt);
-      BaseTypeLoc = SubstType(Base.getTypeSourceInfo(),
-                              TemplateArgs,
-                              Base.getSourceRange().getBegin(),
-                              DeclarationName());
+      BaseTypeLoc =
+          SubstType(BaseTypeLoc, *ArgsForSubst,
+                    Base.getSourceRange().getBegin(), DeclarationName());
     } else {
       BaseTypeLoc = SubstType(Base.getTypeSourceInfo(),
                               TemplateArgs,

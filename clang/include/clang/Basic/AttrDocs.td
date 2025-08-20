@@ -476,6 +476,47 @@ The SYCL kernel in the previous code sample meets these expectations.
   }];
 }
 
+def SYCLExternalDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "sycl_external";
+  let Content = [{
+The ``sycl_external`` attribute indicates that a function defined in another
+translation unit may be called by a device function defined in the current
+translation unit or, if defined in the current translation unit, the function
+may be called by device functions defined in other translation units.
+The attribute is intended for use in the implementation of the ``SYCL_EXTERNAL``
+macro as specified in section 5.10.1, "SYCL functions and member functions
+linkage", of the SYCL 2020 specification.
+
+The attribute only appertains to functions and only those that meet the
+following requirements:
+
+* Has external linkage
+* Is not explicitly defined as deleted (the function may be an explicitly
+  defaulted function that is defined as deleted)
+
+The attribute shall be present on the first declaration of a function and
+may optionally be present on subsequent declarations.
+
+When compiling for a SYCL device target that does not support the generic
+address space, the function shall not specify a raw pointer or reference type
+as the return type or as a parameter type.
+See section 5.10, "SYCL offline linking", of the SYCL 2020 specification.
+The following examples demonstrate the use of this attribute:
+
+.. code-block:: c++
+
+  [[clang::sycl_external]] void Foo(); // Ok.
+
+  [[clang::sycl_external]] void Bar() { /* ... */ } // Ok.
+
+  [[clang::sycl_external]] extern void Baz(); // Ok.
+
+  [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
+  }];
+}
+
 def SYCLKernelEntryPointDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

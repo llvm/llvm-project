@@ -710,6 +710,9 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   // If the parameter is an alias template, there is nothing to deduce.
   if (const auto *TD = TNP.getAsTemplateDecl(); TD && TD->isTypeAlias())
     return TemplateDeductionResult::Success;
+  // Pack-producing templates can only be matched after substitution.
+  if (isPackProducingBuiltinTemplateName(TNP))
+    return TemplateDeductionResult::Success;
 
   // Check whether the template argument is a dependent template-id.
   if (isa<TemplateSpecializationType>(A.getCanonicalType())) {
@@ -928,7 +931,11 @@ private:
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
         unsigned Depth, Index;
-        std::tie(Depth, Index) = getDepthAndIndex(Unexpanded[I]);
+        if (auto DI = getDepthAndIndex(Unexpanded[I]))
+          std::tie(Depth, Index) = *DI;
+        else
+          continue;
+
         if (Depth == Info.getDeducedDepth())
           AddPack(Index);
       }
@@ -936,7 +943,6 @@ private:
 
     // Look for unexpanded packs in the pattern.
     Collect(Pattern);
-    assert(!Packs.empty() && "Pack expansion without unexpanded packs?");
 
     unsigned NumNamedPacks = Packs.size();
 
@@ -1858,6 +1864,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
+    case Type::SubstBuiltinTemplatePack:
       llvm_unreachable("Type nodes handled above");
 
     case Type::Auto:
@@ -6967,7 +6974,12 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
       = cast<SubstTemplateTypeParmPackType>(T);
     if (Subst->getReplacedParameter()->getDepth() == Depth)
       Used[Subst->getIndex()] = true;
-    MarkUsedTemplateParameters(Ctx, Subst->getArgumentPack(),
+    MarkUsedTemplateParameters(Ctx, Subst->getArgumentPack(), OnlyDeduced,
+                               Depth, Used);
+    break;
+  }
+  case Type::SubstBuiltinTemplatePack: {
+    MarkUsedTemplateParameters(Ctx, cast<SubstPackType>(T)->getArgumentPack(),
                                OnlyDeduced, Depth, Used);
     break;
   }
