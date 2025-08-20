@@ -288,7 +288,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         case dxbc::RootParameterType::Constants32Bit: {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);
-          dxbc::RTS0::v1::RootConstants Constants;
+          mcdxbc::RootConstants Constants;
 
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
@@ -302,7 +302,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
               P.RootSignature->Parameters.getOrInsertDescriptor(L);
 
-          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          mcdxbc::RootDescriptor Descriptor;
           Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)

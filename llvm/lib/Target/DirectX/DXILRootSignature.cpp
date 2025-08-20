@@ -182,7 +182,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       const uint32_t &Loc = Info.Location;
       switch (Info.Type) {
       case dxbc::RootParameterType::Constants32Bit: {
-        const dxbc::RTS0::v1::RootConstants &Constants =
+        const mcdxbc::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
         OS << "  Register Space: " << Constants.RegisterSpace << "\n"
            << "  Shader Register: " << Constants.ShaderRegister << "\n"
@@ -192,7 +192,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case dxbc::RootParameterType::CBV:
       case dxbc::RootParameterType::UAV:
       case dxbc::RootParameterType::SRV: {
-        const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+        const mcdxbc::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
         OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
            << "  Shader Register: " << Descriptor.ShaderRegister << "\n";

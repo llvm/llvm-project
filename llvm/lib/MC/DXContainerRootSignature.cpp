@@ -97,7 +97,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     const auto Info = ParametersContainer.getInfo(I);
     switch (Info.Type) {
     case dxbc::RootParameterType::Constants32Bit: {
-      const dxbc::RTS0::v1::RootConstants &Constants =
+      const mcdxbc::RootConstants &Constants =
           ParametersContainer.getConstant(Info.Location);
       support::endian::write(BOS, Constants.ShaderRegister,
                              llvm::endianness::little);
@@ -110,7 +110,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV: {
-      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+      const mcdxbc::RootDescriptor &Descriptor =
           ParametersContainer.getRootDescriptor(Info.Location);
 
       support::endian::write(BOS, Descriptor.ShaderRegister,
