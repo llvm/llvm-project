@@ -856,6 +856,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC_LLRINT:
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       break;
+    if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(16)) {
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+      break;
+    }
     OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
   case TargetOpcode::G_FCMP: {
