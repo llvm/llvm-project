@@ -567,10 +567,10 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
   return getCachedOrDownloadDebuginfo(ID);
 }
 
-DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
-                                   DebuginfodCollection &Collection)
-    : Log(Log), Collection(Collection) {
-  cantFail(
+llvm::Error DebuginfodServer::init(DebuginfodLog &Log,
+                                   DebuginfodCollection &Collection) {
+
+  llvm::Error Errd =
       Server.get(R"(/buildid/(.*)/debuginfo)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -587,8 +587,11 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
           return;
         }
         streamFile(Request, *PathOrErr);
-      }));
-  cantFail(
+      });
+  if (Errd) {
+    return std::move(Errd);
+  }
+  llvm::Error Erre =
       Server.get(R"(/buildid/(.*)/executable)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -605,7 +608,28 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
           return;
         }
         streamFile(Request, *PathOrErr);
-      }));
+      });
+  if (Erre) {
+    return std::move(Erre);
+  }
+  return llvm::Error::success();
 }
 
+llvm::Expected<DebuginfodServer>
+DebuginfodServer::create(DebuginfodLog &Log, DebuginfodCollection &Collection) {
+  DebuginfodServer exadServer;
+  llvm::Error Err = exadServer.init(Log, Collection);
+  if (Err)
+    return std::move(Err);
+  return std::move(exadServer);
+}
+
+DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
+                                   DebuginfodCollection &Collection) {
+  llvm::Error Err = init(Log, Collection);
+  if (Err) {
+    llvm::report_fatal_error(Twine("Debuginfod Failed to setup ") +
+                             llvm::toString(std::move(Err)));
+  }
+}
 } // namespace llvm
