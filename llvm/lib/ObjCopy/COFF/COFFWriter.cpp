@@ -110,8 +110,8 @@ Error COFFWriter::finalizeSymIdxContents() {
   DenseMap<size_t, size_t> SymIdMap;
   SmallDenseMap<ssize_t, coff_aux_section_definition *, 4> SecIdMap;
   bool NeedUpdate = false;
-  for (auto &Sym : Obj.getMutableSymbols()) {
-    NeedUpdate |= Sym.OriginalRawIndex == Sym.RawIndex;
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    NeedUpdate |= Sym.OriginalRawIndex != Sym.RawIndex;
     SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
 
     // We collect only definition symbols of the sections to update checksum
