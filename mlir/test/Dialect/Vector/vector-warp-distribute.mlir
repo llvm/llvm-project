@@ -852,21 +852,23 @@ func.func @vector_reduction_acc(%laneid: index) -> (f32) {
 
 // -----
 // CHECK-PROP-LABEL: func.func @vector_multi_reduction_col_reduce
-// CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0({{.*}})[32] -> (vector<32x2xf32>, vector<2xf32>) {
-// CHECK-PROP:     %[[SOURCE:.*]] = "some_def"() : () -> vector<32x64xf32>
-// CHECK-PROP:     %[[ACC:.*]] = "some_def"() : () -> vector<64xf32>
-// CHECK-PROP:     gpu.yield %[[SOURCE]], %[[ACC]] : vector<32x64xf32>, vector<64xf32>
-// CHECK-PROP:   }
-// CHECK-PROP:   %[[COL0:.*]] = vector.extract_strided_slice %[[W]]#0 {offsets = [0, 0], sizes = [32, 1], strides = [1, 1]} : vector<32x2xf32> to vector<32x1xf32>
-// CHECK-PROP:   %[[COL0CAST:.*]] = vector.shape_cast %[[COL0]] : vector<32x1xf32> to vector<32xf32>
-// CHECK-PROP:   %[[ACC0:.*]] = vector.extract %[[W]]#1[0] : f32 from vector<2xf32>
-// CHECK-PROP:   %[[REDUCE0:.*]] = vector.reduction <add>, %[[COL0CAST]], %[[ACC0]] : vector<32xf32> into f32
-// CHECK-PROP:   %[[COL1:.*]] = vector.extract_strided_slice %[[W]]#0 {offsets = [0, 1], sizes = [32, 1], strides = [1, 1]} : vector<32x2xf32> to vector<32x1xf32>
-// CHECK-PROP:   %[[COL1CAST:.*]] = vector.shape_cast %[[COL1]] : vector<32x1xf32> to vector<32xf32>
-// CHECK-PROP:   %[[ACC1:.*]] = vector.extract %[[W]]#1[1] : f32 from vector<2xf32>
-// CHECK-PROP:   %[[REDUCE1:.*]] = vector.reduction <add>, %[[COL1CAST]], %[[ACC1]] : vector<32xf32> into f32
-// CHECK-PROP:   %[[R:.*]] = vector.from_elements %[[REDUCE0]], %[[REDUCE1]] : vector<2xf32>
-// CHECK-PROP:   return %[[R]] : vector<2xf32>
+// CHECK-PROP      :   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0({{.*}})[32] -> (vector<32x2xf32>, vector<2xf32>) {
+// CHECK-PROP      :     %[[SOURCE:.*]] = "some_def"() : () -> vector<32x64xf32>
+// CHECK-PROP      :     %[[ACC:.*]] = "some_def"() : () -> vector<64xf32>
+// CHECK-PROP      :     gpu.yield %[[SOURCE]], %[[ACC]] : vector<32x64xf32>, vector<64xf32>
+// CHECK-PROP      :   }
+// CHECK-PROP      :   %[[COL0:.*]] = vector.extract_strided_slice %[[W]]#0
+// CHECK-PROP-SAME :     {offsets = [0, 0], sizes = [32, 1], strides = [1, 1]} : vector<32x2xf32> to vector<32x1xf32>
+// CHECK-PROP      :   %[[COL0CAST:.*]] = vector.shape_cast %[[COL0]] : vector<32x1xf32> to vector<32xf32>
+// CHECK-PROP      :   %[[ACC0:.*]] = vector.extract %[[W]]#1[0] : f32 from vector<2xf32>
+// CHECK-PROP      :   %[[REDUCE0:.*]] = vector.reduction <add>, %[[COL0CAST]], %[[ACC0]] : vector<32xf32> into f32
+// CHECK-PROP      :   %[[COL1:.*]] = vector.extract_strided_slice %[[W]]#0
+// CHECK-PROP-SAME :     {offsets = [0, 1], sizes = [32, 1], strides = [1, 1]} : vector<32x2xf32> to vector<32x1xf32>
+// CHECK-PROP      :   %[[COL1CAST:.*]] = vector.shape_cast %[[COL1]] : vector<32x1xf32> to vector<32xf32>
+// CHECK-PROP      :   %[[ACC1:.*]] = vector.extract %[[W]]#1[1] : f32 from vector<2xf32>
+// CHECK-PROP      :   %[[REDUCE1:.*]] = vector.reduction <add>, %[[COL1CAST]], %[[ACC1]] : vector<32xf32> into f32
+// CHECK-PROP      :   %[[R:.*]] = vector.from_elements %[[REDUCE0]], %[[REDUCE1]] : vector<2xf32>
+// CHECK-PROP      :   return %[[R]] : vector<2xf32>
 func.func @vector_multi_reduction_col_reduce(%laneid: index) -> vector<2xf32> {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>) {
     %0 = "some_def"() : () -> (vector<32x64xf32>)

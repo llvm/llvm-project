@@ -2034,8 +2034,7 @@ private:
 // TODO: Add support for the case where source rows are distributed across
 // lanes. Requires `DistributionMapFn` to express the data distribution.
 struct WarpOpMultiReduction : public WarpDistributionPattern {
-  WarpOpMultiReduction(MLIRContext *context, PatternBenefit benefit = 1)
-      : WarpDistributionPattern(context, benefit) {}
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
