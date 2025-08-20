@@ -921,6 +921,14 @@ private:
   /// checkDstSubscript to avoid duplicate code
   bool checkSubscript(const SCEV *Expr, const Loop *LoopNest,
                       SmallBitVector &Loops, bool IsSrc);
+
+  /// Test whether \p Expr is monotonic or not. Return true if we can prove it
+  /// is monotonic. The term "monotonic" means that all AddRec Exprs in \p Expr
+  /// doesn't wrap in signed sense. When it is monotonic, the minimum and
+  /// maximum values of \p Expr are stored in \p Min and \p Max, respectively.
+  bool isMonotonicSCEV(const SCEV *Expr, const SCEV *&Min, const SCEV *&Max,
+                       ScalarEvolution *SE, const Loop *OutermostLoop,
+                       IntegerType *Ty, const Value *Ptr = nullptr) const;
 }; // class DependenceInfo
 
 /// AnalysisPass to compute dependence information in a function

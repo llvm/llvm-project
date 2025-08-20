@@ -3500,16 +3500,28 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
     for (size_t I = 1; I < Size; ++I) {
-      if (!isKnownNonNegative(SrcSubscripts[I], SrcPtr))
+      const Loop *OutermostLoop =
+          LI->getLoopFor(Src->getParent())->getOutermostLoop();
+      IntegerType *Ty = cast<IntegerType>(Sizes[I - 1]->getType());
+      if (!Ty)
         return false;
 
-      if (!isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]))
+      const SCEV *SrcMin = nullptr, *SrcMax = nullptr;
+      if (!isMonotonicSCEV(SrcSubscripts[I], SrcMin, SrcMax, SE, OutermostLoop,
+                           Ty, SrcPtr))
+        return false;
+      if (!SE->isKnownNonNegative(SrcMin))
+        return false;
+      if (!SE->isKnownPredicate(CmpInst::ICMP_SLT, SrcMax, Sizes[I - 1]))
         return false;
 
-      if (!isKnownNonNegative(DstSubscripts[I], DstPtr))
+      const SCEV *DstMin = nullptr, *DstMax = nullptr;
+      if (!isMonotonicSCEV(DstSubscripts[I], DstMin, DstMax, SE, OutermostLoop,
+                           Ty, DstPtr))
         return false;
-
-      if (!isKnownLessThan(DstSubscripts[I], Sizes[I - 1]))
+      if (!SE->isKnownNonNegative(DstMin))
+        return false;
+      if (!SE->isKnownPredicate(CmpInst::ICMP_SLT, DstMax, Sizes[I - 1]))
         return false;
     }
 
@@ -3546,6 +3558,102 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 
 SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
   return SCEVUnionPredicate(Assumptions, *SE);
+}
+
+bool DependenceInfo::isMonotonicSCEV(const SCEV *Expr, const SCEV *&Min,
+                                     const SCEV *&Max, ScalarEvolution *SE,
+                                     const Loop *OutermostLoop, IntegerType *Ty,
+                                     const Value *Ptr) const {
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec) {
+    if (!SE->isLoopInvariant(Expr, OutermostLoop))
+      return false;
+    const SCEV *Init = Expr ? Expr : SE->getZero(Ty);
+    Min = Init;
+    Max = Init;
+    return true;
+  }
+
+  if (!AddRec->isAffine())
+    return false;
+
+  // TODO: Support cast?
+  auto *AddRecTy = dyn_cast<IntegerType>(AddRec->getType());
+  if (!AddRecTy || AddRecTy->getBitWidth() != Ty->getBitWidth())
+    return false;
+
+  if (!isMonotonicSCEV(AddRec->getStart(), Min, Max, SE, OutermostLoop, Ty))
+    return false;
+
+  const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
+  const Loop *L = AddRec->getLoop();
+
+  // Bail out if the coefficient can be zero.
+  if (!SE->isKnownNonZero(Coeff))
+    return false;
+  if (!SE->isLoopInvariant(Coeff, OutermostLoop))
+    return false;
+
+  bool IsKnownCoeffPositive = SE->isKnownPositive(Coeff);
+  bool IsKnownCoeffNegative = SE->isKnownNegative(Coeff);
+
+  bool IsNoWrap = AddRec->hasNoUnsignedWrap();
+  if (Ptr) {
+    // TODO: This seems incorrect. Maybe we should check the reachability from
+    // the GEP to the target instruction.
+    auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    if (GEP && GEP->hasNoUnsignedSignedWrap())
+      IsNoWrap = true;
+  }
+
+  if (!IsNoWrap) {
+    if (!IsKnownCoeffNegative)
+      // If the coefficient can be positive value, ensure that the AddRec is
+      // monotonically increasing.
+      if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SGE, AddRec,
+                                       AddRec->getStart()))
+        return false;
+
+    if (!IsKnownCoeffPositive)
+      // If the coefficient can be positive value, ensure that the AddRec is
+      // monotonically decreasing.
+      if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SLE, AddRec,
+                                       AddRec->getStart()))
+        return false;
+  }
+
+  const SCEV *BTC = SE->getBackedgeTakenCount(L);
+  if (!BTC || !SE->isLoopInvariant(BTC, OutermostLoop))
+    return false;
+
+  const SCEVAddRecExpr *MinAddRec = dyn_cast<SCEVAddRecExpr>(
+      SE->getAddRecExpr(Min, Coeff, L, AddRec->getNoWrapFlags()));
+  if (!MinAddRec)
+    return false;
+
+  const SCEVAddRecExpr *MaxAddRec = dyn_cast<SCEVAddRecExpr>(
+      SE->getAddRecExpr(Max, Coeff, L, AddRec->getNoWrapFlags()));
+  if (!MaxAddRec)
+    return false;
+
+  // If we know the coefficient is positive, the maximum value of AddRec is
+  // MaxLast. Similarly, if we know the coefficient is negative, the minimum
+  // value of AddRec is MinLast. If we don't know the sign of the coefficient,
+  // use SMin/SMax.
+  const SCEV *MinLast = MinAddRec->evaluateAtIteration(BTC, *SE);
+  const SCEV *MaxLast = MaxAddRec->evaluateAtIteration(BTC, *SE);
+  if (IsKnownCoeffPositive) {
+    Max = MaxLast;
+  } else if (IsKnownCoeffNegative) {
+    Min = MinLast;
+  } else {
+    assert(!IsKnownCoeffPositive && !IsKnownCoeffNegative &&
+           "Unexpected coefficient sign");
+    Min = SE->getSMinExpr(Min, MinLast);
+    Max = SE->getSMaxExpr(Max, MaxLast);
+  }
+
+  return true;
 }
 
 // depends -
