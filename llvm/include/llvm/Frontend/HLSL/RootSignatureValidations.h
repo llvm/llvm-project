@@ -34,12 +34,8 @@ LLVM_ABI bool verifyDescriptorRangeFlag(uint32_t Version,
                                         dxbc::DescriptorRangeType Type,
                                         uint32_t FlagsVal);
 LLVM_ABI bool verifyNumDescriptors(uint32_t NumDescriptors);
-LLVM_ABI bool verifySamplerFilter(uint32_t Value);
-LLVM_ABI bool verifyAddress(uint32_t Address);
 LLVM_ABI bool verifyMipLODBias(float MipLODBias);
 LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
-LLVM_ABI bool verifyComparisonFunc(uint32_t ComparisonFunc);
-LLVM_ABI bool verifyBorderColor(uint32_t BorderColor);
 LLVM_ABI bool verifyLOD(float LOD);
 
 } // namespace rootsig
