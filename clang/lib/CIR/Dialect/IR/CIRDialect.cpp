@@ -1358,11 +1358,14 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           llvm::StringRef sym_name, mlir::Type sym_type,
-                          cir::GlobalLinkageKind linkage) {
+                          bool isConstant, cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+  if (isConstant)
+    odsState.addAttribute(getConstantAttrName(odsState.name),
+                          odsBuilder.getUnitAttr());
 
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
