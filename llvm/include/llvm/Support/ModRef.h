@@ -276,7 +276,12 @@ public:
 
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+    return getWithoutLoc(static_cast<IRMemLocation>(
+                             llvm::InaccessibleTargetMemLocation::AARCH64_FPMR))
+        .getWithoutLoc(static_cast<IRMemLocation>(
+            llvm::InaccessibleTargetMemLocation::AARCH64_ZA))
+        .getWithoutLoc(Location::InaccessibleMem)
+        .doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses errno memory.
