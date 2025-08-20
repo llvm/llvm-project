@@ -43,7 +43,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append3(char*
   const uint32_t __mask = (uint32_t(1) << __shift) - 1;
   const uint32_t __n = __mul_inv10 * __value;
   __append2(__first, __n >> __shift);
-  __append1(__firs + 2, ((__n & __mask) * 5) >> (__shift - 1));
+  __append1(__first + 2, ((__n & __mask) * 5) >> (__shift - 1));
   return __first + 3;
 }
 
