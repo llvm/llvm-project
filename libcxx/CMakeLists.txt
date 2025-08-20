@@ -159,7 +159,7 @@ set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
 # TODO: Figure out how to build GoogleBenchmark on those platforms, and how to build when exceptions or RTTI is disabled
-if (WIN32 OR MINGW OR ANDROID OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"
+if (WIN32 OR MINGW OR ANDROID OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX"
     OR NOT LIBCXX_ENABLE_LOCALIZATION
     OR NOT LIBCXX_ENABLE_THREADS
     OR NOT LIBCXX_ENABLE_FILESYSTEM
