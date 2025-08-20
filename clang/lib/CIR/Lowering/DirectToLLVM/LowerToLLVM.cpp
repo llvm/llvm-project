@@ -1181,9 +1181,8 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
     return mlir::LLVM::AtomicOrdering::acq_rel;
   case cir::MemOrder::SequentiallyConsistent:
     return mlir::LLVM::AtomicOrdering::seq_cst;
-  default:
-    llvm_unreachable("unknown memory order");
   }
+  llvm_unreachable("unknown memory order");
 }
 
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
