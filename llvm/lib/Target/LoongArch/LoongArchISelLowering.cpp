@@ -536,12 +536,12 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   SDLoc DL(Op);
   MVT OpVT = Op.getSimpleValueType();
   SDValue Val = Op.getOperand(0);
-  MVT ValTy = Val.getSimpleValueType().getScalarType();
+  MVT EleTy = Val.getSimpleValueType().getScalarType();
 
   SDValue Idx = DAG.getConstant(0, DL, Subtarget.getGRLenVT());
   unsigned EC = Val.getSimpleValueType().getVectorNumElements();
 
-  switch (ValTy.SimpleTy) {
+  switch (EleTy.SimpleTy) {
   default:
     llvm_unreachable("Unexpected value type!");
   case MVT::i8:
