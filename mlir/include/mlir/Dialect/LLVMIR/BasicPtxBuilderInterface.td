@@ -125,7 +125,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
              1) Adds results 
              2) Adds operands 
              3) Adds attributes
-             Returns true if it does the mapping manually
+             Returns true if the OP is going to do register mapping itself
           }],
          /*retType=*/"bool",
          /*methodName=*/"getAsmValues",
@@ -151,7 +151,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
              asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
              }
            }
-           return false; // No needs manual mapping
+           return false; // No manual mapping needed
          }]
        >
   ];

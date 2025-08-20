@@ -1884,7 +1884,7 @@ bool NVVM::InlinePtxOp::getAsmValues(
     asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Read});
   if (getPredicate())
     asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
-  return false; // Needs manual mapping
+  return false; // No manual mapping needed
 }
 
 //===----------------------------------------------------------------------===//
