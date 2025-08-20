@@ -14,6 +14,8 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
+#include "llvm/IR/DataLayout.h"
+
 using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
@@ -396,4 +398,11 @@ DataLayoutSpecInterface DataLayoutImporter::dataLayoutSpecFromDataLayoutStr() {
   for (const auto &it : keyEntries)
     entries.push_back(it.second);
   return DataLayoutSpecAttr::get(context, entries);
+}
+
+DataLayoutSpecInterface
+mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
+                          MLIRContext *context) {
+  return DataLayoutImporter(context, dataLayout.getStringRepresentation())
+      .getDataLayoutSpec();
 }

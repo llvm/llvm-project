@@ -9,7 +9,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
+#include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
@@ -91,11 +91,7 @@ struct TargetToDataLayoutPass
       return signalPassFailure();
     }
 
-    StringRef dataLayoutStr = dataLayout->getStringRepresentation();
-
-    auto importer =
-        LLVM::detail::DataLayoutImporter(&getContext(), dataLayoutStr);
-    DataLayoutSpecInterface dataLayoutSpec = importer.getDataLayoutSpec();
+    DataLayoutSpecInterface dataLayoutSpec = mlir::translateDataLayout(dataLayout.value(), &getContext());
 
     if (auto existingDlSpec = op->getAttrOfType<DataLayoutSpecInterface>(
             DLTIDialect::kDataLayoutAttrName)) {
