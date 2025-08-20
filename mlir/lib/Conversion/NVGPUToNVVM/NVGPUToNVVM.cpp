@@ -1623,11 +1623,10 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     Value matriDValue = adaptor.getMatrixD();
     auto stype = cast<LLVM::LLVMStructType>(matriDValue.getType());
     for (auto [idx, matrixD] : llvm::enumerate(stype.getBody())) {
-      auto structType = cast<LLVM::LLVMStructType>(matrixD);
       Value innerStructValue =
           LLVM::ExtractValueOp::create(b, matriDValue, idx);
       storeFragmentedMatrix(b, innerStructValue, op.getDstMemref(), offset);
-      offset += structType.getBody().size();
+      offset += kWgmmaSizeM;
     }
     rewriter.eraseOp(op);
     return success();
