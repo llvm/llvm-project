@@ -76,32 +76,6 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
   return std::make_pair(sgShape, count);
 }
 
-/// Generates element-wise addition ops of two arrays with automatic alignment.
-/// When the input arrays have different sizes, the shorter array is
-/// right-aligned with the longer array, and the unmatched leading elements from
-/// the longer array are preserved unchanged. This is commonly used for offset
-/// computation where higher-dimensional offsets need to be added to
-/// lower-dimensional adjustments.
-///
-/// Example:
-///   lhs = [10, 20, 30], rhs = [5, 7]
-///   Result: [10, 25, 37] (20+5, 30+7, with 10 preserved)
-static SmallVector<OpFoldResult>
-genIndexAdds(ConversionPatternRewriter &rewriter, Location loc,
-             ArrayRef<OpFoldResult> lhs, ArrayRef<OpFoldResult> rhs) {
-  // ensure a is longer than b
-  ArrayRef<OpFoldResult> a = lhs.size() >= rhs.size() ? lhs : rhs;
-  ArrayRef<OpFoldResult> b = lhs.size() >= rhs.size() ? rhs : lhs;
-  SmallVector<OpFoldResult> results(a.take_front(a.size() - b.size()));
-  a = a.slice(a.size() - b.size());
-  for (auto [l, r] : llvm::zip(a, b)) {
-    auto lval = getValueOrCreateConstantIndexOp(rewriter, loc, l);
-    auto rval = getValueOrCreateConstantIndexOp(rewriter, loc, r);
-    results.push_back(rewriter.createOrFold<index::AddOp>(loc, lval, rval));
-  }
-  return results;
-}
-
 /// Utility helper for deriving a list of offsets for each sub-TensorDescs
 /// or sub-MemDescs to be accessed by current subgroup (sgId) based on the
 /// associated distribute layout attribute, the shape, subgroup id and the
@@ -150,8 +124,8 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   // or sub-memory descriptor.
   // SmallVector<SmallVector<OpFoldResult>> offsetsList;
   for (const auto &sgOffsets : *maybeDescOffsets) {
-    SmallVector<OpFoldResult> newOffsets =
-        genIndexAdds(rewriter, loc, getAsOpFoldResult(sgOffsets), origOffsets);
+    SmallVector<OpFoldResult> newOffsets = xegpu::addWithRightAligned(
+        rewriter, loc, getAsOpFoldResult(sgOffsets), origOffsets);
     offsetsList.push_back(std::move(newOffsets));
   }
 
