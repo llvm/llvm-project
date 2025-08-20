@@ -895,6 +895,10 @@ private:
   SmallVector<AttrEntry> attributes;
   SmallVector<TypeEntry> types;
 
+  /// The map of cached attributes, used to avoid re-parsing the same
+  /// attribute multiple times.
+  llvm::StringMap<Attribute> attributesCache;
+
   /// A location used for error emission.
   Location fileLoc;
 
@@ -1235,7 +1239,7 @@ LogicalResult AttrTypeReader::parseAsmEntry(T &result, EncodingReader &reader,
         ::parseType(asmStr, context, &numRead, /*isKnownNullTerminated=*/true);
   else
     result = ::parseAttribute(asmStr, context, Type(), &numRead,
-                              /*isKnownNullTerminated=*/true);
+                              /*isKnownNullTerminated=*/true, &attributesCache);
   if (!result)
     return failure();
 
