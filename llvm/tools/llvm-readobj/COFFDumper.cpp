@@ -2003,7 +2003,6 @@ void COFFDumper::printCOFFBaseReloc() {
 
 void COFFDumper::printCOFFPseudoReloc() {
   ListScope D(W, "PseudoReloc");
-  W.flush();
 
   // Pseudo-relocations are only meaningful with PE image files.
   if (!Obj->getDOSHeader())
@@ -2016,7 +2015,7 @@ void COFFDumper::printCOFFPseudoReloc() {
                                      ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
                                      : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
 
-  uint32_t Count = Obj->getNumberOfSymbols();
+  const uint32_t Count = Obj->getNumberOfSymbols();
   // Skip if no symbol was found (maybe stripped).
   if (Count == 0)
     return;
@@ -2122,7 +2121,7 @@ void COFFDumper::printCOFFPseudoReloc() {
     return;
   }
 
-  ArrayRef<uint8_t> RawRelocs =
+  const ArrayRef<uint8_t> RawRelocs =
       Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
   struct alignas(4) PseudoRelocationHeader {
     PseudoRelocationHeader(uint32_t Signature)
@@ -2191,7 +2190,7 @@ void COFFDumper::printCOFFPseudoReloc() {
         return createStringError(
             "the reference of the symbol points out of the import table");
       // Search with linear iteration to care if padding or garbage exist
-      // between ImportDirectoryEntry
+      // between ImportDirectoryEntry.
       for (auto S : Ite->EntryRef.imported_symbols()) {
         if (RVA == EntryRVA) {
           StringRef &NameDst = ImportedSymbols[RVA];

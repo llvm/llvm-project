@@ -99,67 +99,67 @@ RELOCPOS-NEXT:    SectionNumber: {{\[\[SECTION_OF_BEGIN=2\]\]}}
 ; Test that llvm-readobj warns if a symbol belongs to a nonexistent section.
 RUN: yaml2obj  -o %t.nosection.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DSECTION_OF_LOCAL2A=999
 RUN: llvm-readobj %t.nosection.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=WARN-NOSECTION
+RUN:   FileCheck %s --check-prefixes=WARN-NOSECTION --match-full-lines
 
-WARN-NOSECTION: section index out of bounds
+WARN-NOSECTION: {{.*}} warning:{{.*}}: section index out of bounds
 
 ; Test that llvm-readobj shows an empty list if the relocation list has no contents.
 RUN: yaml2obj  -o %t.empty-list.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=20
 RUN: llvm-readobj %t.empty-list.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+RUN:   FileCheck %s --check-prefix=EMPTY --match-full-lines --implicit-check-not=warning
 
 ; Test that llvm-readobj shows an empty list if the relocation list has no header.
 RUN: yaml2obj  -o %t.no-header.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=8
 RUN: llvm-readobj %t.no-header.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+RUN:   FileCheck %s --check-prefix=EMPTY --match-full-lines --implicit-check-not=warning
 
 ; Test that llvm-readobj shows an empty list if the image is stripped.
 RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/imports.exe.coff-i386 2>&1 | \
-RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+RUN:   FileCheck %s --check-prefix=EMPTY --match-full-lines --implicit-check-not=warning
 
 ; Test that llvm-readobj warns if the marker symbol of the relocation list is absent from the symbol table.
 RUN: sed -e 's/__RUNTIME//' %p/Inputs/pseudoreloc.i386.yaml | \
 RUN:   yaml2obj -o %t.nosymbol.exe-i386
 RUN: llvm-readobj  %t.nosymbol.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-MISSINGMARKER
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-MISSINGMARKER --match-full-lines
 
 ; Test that llvm-readobj shows an empty list if a .obj is specified.
 RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/trivial.obj.coff-i386 2>&1 | \
-RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+RUN:   FileCheck %s --check-prefix=EMPTY --match-full-lines --implicit-check-not=warning
 
 ; Test that llvm-readobj warns if the header of the relocation list is broken.
 RUN: yaml2obj  -o %t.broken-header.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DBEGIN=20 -DEND=48
 RUN: llvm-readobj %t.broken-header.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-INVALIDHEADER
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-INVALIDHEADER --match-full-lines
 
 ; Test that llvm-readobj warns if end < start.
 RUN: yaml2obj  -o %t.negative-size.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DBEGIN=20 -DEND=8
 RUN: llvm-readobj %t.negative-size.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-LOWEREND
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-LOWEREND --match-full-lines
 
 ; Test that llvm-readobj warns if the marker symbol points out of the section space.
 RUN: yaml2obj  -o %t.outofrange-both.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DBEGIN=8888 -DEND=9999
 RUN: llvm-readobj %t.outofrange-both.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE --match-full-lines
 
 RUN: yaml2obj  -o %t.outofrange-end.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=9999
 RUN: llvm-readobj %t.outofrange-end.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE --match-full-lines
 
 ; Test that llvm-readobj warns if the marker symbols point different sections.
 RUN: yaml2obj  -o %t.section-differs.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DSECTION_OF_BEGIN=1
 RUN: llvm-readobj %t.section-differs.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-SECTIONDIFFERS
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-SECTIONDIFFERS --match-full-lines
 
 EMPTY:      Format: COFF-i386
 EMPTY-NEXT: Arch: i386
 EMPTY-NEXT: AddressSize: 32bit
 EMPTY-NEXT: PseudoReloc [
-WARN-MISSINGMARKER-NEXT: the marker symbols for runtime pseudo-relocation were not found
-WARN-INVALIDHEADER-NEXT: invalid runtime pseudo-relocation records
-WARN-LOWEREND-NEXT: the begin marker symbol for runtime pseudo-relocation must point to a lower address than where the end marker points
-WARN-OUTOFRANGE-NEXT: the marker symbol of runtime pseudo-relocation points past the end of the section
-WARN-SECTIONDIFFERS-NEXT: the marker symbols for runtime pseudo-relocation must point to the same section
+WARN-MISSINGMARKER-NEXT:  {{.*}}warning: {{.*}}: the marker symbols for runtime pseudo-relocation were not found
+WARN-INVALIDHEADER-NEXT:  {{.*}}warning: {{.*}}: invalid runtime pseudo-relocation records
+WARN-LOWEREND-NEXT:       {{.*}}warning: {{.*}}: the begin marker symbol for runtime pseudo-relocation must point to a lower address than where the end marker points
+WARN-OUTOFRANGE-NEXT:     {{.*}}warning: {{.*}}: the marker symbol of runtime pseudo-relocation points past the end of the section
+WARN-SECTIONDIFFERS-NEXT: {{.*}}warning: {{.*}}: the marker symbols for runtime pseudo-relocation must point to the same section
 EMPTY-NEXT: ]
 
 ;;
