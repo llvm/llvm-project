@@ -91,7 +91,8 @@ struct TargetToDataLayoutPass
       return signalPassFailure();
     }
 
-    DataLayoutSpecInterface dataLayoutSpec = mlir::translateDataLayout(dataLayout.value(), &getContext());
+    DataLayoutSpecInterface dataLayoutSpec =
+        mlir::translateDataLayout(dataLayout.value(), &getContext());
 
     if (auto existingDlSpec = op->getAttrOfType<DataLayoutSpecInterface>(
             DLTIDialect::kDataLayoutAttrName)) {
