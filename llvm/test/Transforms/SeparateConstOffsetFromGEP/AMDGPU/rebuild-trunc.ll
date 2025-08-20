@@ -7,7 +7,7 @@
 define ptr @pr154116_nuw(ptr %p, i128 %i) {
 ; CHECK-LABEL: define ptr @pr154116_nuw(
 ; CHECK-SAME: ptr [[P:%.*]], i128 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i128 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[I]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[TMP2]], i64 80
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
@@ -24,7 +24,7 @@ define ptr @pr154116_nuw(ptr %p, i128 %i) {
 define ptr @pr154116_nsw(ptr %p, i128 %i) {
 ; CHECK-LABEL: define ptr @pr154116_nsw(
 ; CHECK-SAME: ptr [[P:%.*]], i128 [[I:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i128 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[I]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
