@@ -73,7 +73,8 @@ public:
   ArrayRef<StringRef> getUnhandledTokens() const { return unhandledTokens; }
 
 private:
-  /// Translate the LLVM data layout string to an MLIR data layout specification.
+  /// Translate the LLVM data layout string to an MLIR data layout
+  /// specification.
   DataLayoutSpecInterface dataLayoutSpecFromDataLayoutStr();
 
   /// Tries to parse the letter only prefix that identifies the specification

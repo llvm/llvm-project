@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 using namespace mlir;
@@ -273,8 +273,7 @@ DataLayoutImporter::tryToEmplaceLegalIntWidthsEntry(StringRef token) {
   return success();
 }
 
-DataLayoutSpecInterface
-DataLayoutImporter::dataLayoutSpecFromDataLayoutStr() {
+DataLayoutSpecInterface DataLayoutImporter::dataLayoutSpecFromDataLayoutStr() {
   if (!dataLayoutStr.empty())
     dataLayoutStr += "-";
   dataLayoutStr += kDefaultDataLayout;
