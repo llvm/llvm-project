@@ -354,6 +354,6 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
   }
 
   LPCWSTR messages[1] = {argsUTF16.data()};
-  ReportEventW(h, event_type, 0, 0, nullptr, sizeof(messages), 0, messages,
+  ReportEventW(h, event_type, 0, 0, nullptr, std::size(messages), 0, messages,
                nullptr);
 }
