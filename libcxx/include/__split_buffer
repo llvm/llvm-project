@@ -64,7 +64,7 @@ protected:
   using const_iterator                 = const_pointer;
 
 public: // TODO: make private after vector becomes size-based
-  pointer __data_ = nullptr;
+  pointer __data_  = nullptr;
   pointer __begin_ = nullptr;
   pointer __end_   = nullptr;
   _LIBCPP_COMPRESSED_PAIR(pointer, __cap_ = nullptr, allocator_type, __alloc_);
@@ -153,7 +153,7 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
-    __data_ = nullptr;
+    __data_  = nullptr;
     __begin_ = nullptr;
     __end_   = nullptr;
     __cap_   = nullptr;
@@ -162,7 +162,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __copy_without_alloc(__split_buffer_pointer_layout const& __other)
       _NOEXCEPT_(is_nothrow_copy_assignable<pointer>::value) {
-    __data_ = __other.__data_;
+    __data_  = __other.__data_;
     __begin_ = __other.__begin_;
     __cap_   = __other.__cap_;
     __end_   = __other.__end_;
@@ -186,7 +186,7 @@ protected:
   using const_iterator                 = const_pointer;
 
 public: // TODO: make private after vector becomes size-based
-  pointer __data_  = nullptr;
+  pointer __data_   = nullptr;
   pointer __begin_  = nullptr;
   size_type __size_ = 0;
   size_type __cap_  = 0;
@@ -281,7 +281,7 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
-    __data_ = nullptr;
+    __data_  = nullptr;
     __begin_ = nullptr;
     __size_  = 0;
     __cap_   = 0;
@@ -290,7 +290,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __copy_without_alloc(__split_buffer_size_layout const& __other)
       _NOEXCEPT_(is_nothrow_copy_assignable<pointer>::value) {
-    __data_ = __other.__data_;
+    __data_  = __other.__data_;
     __begin_ = __other.__begin_;
     __cap_   = __other.__cap_;
     __size_  = __other.__size_;
