@@ -657,6 +657,16 @@ The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
 target.
 
+A boolean vector can be used in a ternary `?:` operator to select vector
+elements of a different type.
+
+.. code-block:: c++
+
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  typedef bool bool4 __attribute__((ext_vector_type(4)));
+
+  int4 blend(bool4 cond, int4 a, int4 b) { return cond ? a : b; }
+
 
 Vector Literals
 ---------------
