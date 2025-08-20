@@ -713,6 +713,7 @@ public:
   NODE(parser, OmpEndDirective)
   NODE(parser, OpenMPAtomicConstruct)
   NODE(parser, OpenMPBlockConstruct)
+  NODE_ENUM(OpenMPBlockConstruct, Flags)
   NODE(parser, OpenMPCancelConstruct)
   NODE(parser, OpenMPCancellationPointConstruct)
   NODE(parser, OpenMPConstruct)
