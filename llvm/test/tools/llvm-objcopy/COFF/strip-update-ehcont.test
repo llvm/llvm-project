@@ -1,8 +1,12 @@
+# .gehcont$y section consists of .symidx directives. The test checks that
+# indices in the section are updated after stripping as the symbol table could
+# be changed during stripping.
+
 # RUN: yaml2obj %s -o %t.in.o
 
-# RUN: llvm-readobj -r -s  -x '.gehcont$y' %t.in.o | FileCheck %s --check-prefix=ORIG
+# RUN: llvm-readobj -r -s -x '.gehcont$y' %t.in.o | FileCheck %s --check-prefix=ORIG
 # RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
-# RUN: llvm-readobj -r -s  -x '.gehcont$y' %t.out.o | FileCheck %s --check-prefix=STRIP
+# RUN: llvm-readobj -r -s -x '.gehcont$y' %t.out.o | FileCheck %s --check-prefix=STRIP
 
 # ORIG:      Symbols [
 # ORIG:          Name: .text
@@ -19,7 +23,7 @@
 # ORIG:      Hex dump of section '.gehcont$y':
 # ORIG-NEXT: 0x00000000 12000000 12000000 12000000          ............
 
-# .debug$S is going to be stripped and $ehgcr_0_1 index is decreased by 2
+# .debug$S is going to be stripped and index of $ehgcr_0_1 is decreased by 2
 
 # STRIP:      Symbols [
 # STRIP:          Name: .text
