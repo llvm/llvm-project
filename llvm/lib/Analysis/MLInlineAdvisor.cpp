@@ -27,6 +27,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -77,10 +78,10 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   std::unique_ptr<MLModelRunner> AOTRunner;
   if (InteractiveChannelBaseName.empty())
     AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName,
+        M.getContext(), getFeatureMap(), DecisionName,
         EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
   else {
-    auto Features = FeatureMap;
+    auto Features = getFeatureMap();
     if (InteractiveIncludeDefault)
       Features.push_back(DefaultDecisionSpec);
     AOTRunner = std::make_unique<InteractiveModelRunner>(
@@ -106,8 +107,9 @@ static cl::opt<bool> KeepFPICache(
         "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache"),
     cl::init(false));
 
+std::vector<TensorSpec>& llvm::getFeatureMap() {
 // clang-format off
-std::vector<TensorSpec> llvm::FeatureMap{
+static std::vector<TensorSpec> FeatureMap{
 #define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
 // InlineCost features - these must come first
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
@@ -117,6 +119,8 @@ std::vector<TensorSpec> llvm::FeatureMap{
 #undef POPULATE_NAMES
 };
 // clang-format on
+return FeatureMap;
+}
 
 const char *const llvm::DecisionName = "inlining_decision";
 const TensorSpec llvm::InlineDecisionSpec =
@@ -126,7 +130,7 @@ const TensorSpec llvm::DefaultDecisionSpec =
     TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1});
 const char *const llvm::RewardName = "delta_size";
 
-CallBase *getInlinableCS(Instruction &I) {
+static CallBase *getInlinableCS(Instruction &I) {
   if (auto *CS = dyn_cast<CallBase>(&I))
     if (Function *Callee = CS->getCalledFunction()) {
       if (!Callee->isDeclaration()) {
@@ -195,9 +199,9 @@ MLInlineAdvisor::MLInlineAdvisor(
     }
     // Add the IR2Vec features to the feature map
     auto IR2VecDim = IR2VecVocabResult->getDimension();
-    FeatureMap.push_back(
+    getFeatureMap().push_back(
         TensorSpec::createSpec<float>("callee_embedding", {IR2VecDim}));
-    FeatureMap.push_back(
+    getFeatureMap().push_back(
         TensorSpec::createSpec<float>("caller_embedding", {IR2VecDim}));
   }
 }
@@ -471,7 +475,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(FeatureMap.size()) = GetDefaultAdvice(CB);
+    *ModelRunner->getTensor<int64_t>(getFeatureMap().size()) = GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
 
@@ -549,8 +553,8 @@ void MLInlineAdvice::reportContextForRemark(
     DiagnosticInfoOptimizationBase &OR) {
   using namespace ore;
   OR << NV("Callee", Callee->getName());
-  for (size_t I = 0; I < FeatureMap.size(); ++I)
-    OR << NV(FeatureMap[I].name(),
+  for (size_t I = 0; I < getFeatureMap().size(); ++I)
+    OR << NV(getFeatureMap()[I].name(),
              *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());
 }
