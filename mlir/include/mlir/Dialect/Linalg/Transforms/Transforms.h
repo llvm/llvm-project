@@ -26,7 +26,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/Compiler.h"
 
 namespace mlir {
 namespace bufferization {
