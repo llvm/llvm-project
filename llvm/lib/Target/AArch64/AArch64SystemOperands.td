@@ -2493,3 +2493,211 @@ def : MLBI<"ALLE1",    0b100, 0b0111, 0b0000, 0b100, 0>;
 def : MLBI<"VMALLE1",  0b100, 0b0111, 0b0000, 0b101, 0>;
 def : MLBI<"VPIDE1",   0b100, 0b0111, 0b0000, 0b110, 1>;
 def : MLBI<"VPMGE1",   0b100, 0b0111, 0b0000, 0b111, 1>;
+
+
+// v9.7-A GICv5 (FEAT_GCIE)
+// CPU Interface Registers
+//                                        Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"ICC_APR_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b000>;
+def : RWSysReg<"ICC_APR_EL3",             0b11, 0b110, 0b1100, 0b1000, 0b000>;
+def : RWSysReg<"ICC_CR0_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b001>;
+def : RWSysReg<"ICC_CR0_EL3",             0b11, 0b110, 0b1100, 0b1001, 0b000>;
+def : ROSysReg<"ICC_DOMHPPIR_EL3",        0b11, 0b110, 0b1100, 0b1000, 0b010>;
+def : ROSysReg<"ICC_HAPR_EL1",            0b11, 0b001, 0b1100, 0b0000, 0b011>;
+def : ROSysReg<"ICC_HPPIR_EL1",           0b11, 0b000, 0b1100, 0b1010, 0b011>;
+def : ROSysReg<"ICC_HPPIR_EL3",           0b11, 0b110, 0b1100, 0b1001, 0b001>;
+def : ROSysReg<"ICC_IAFFIDR_EL1",         0b11, 0b000, 0b1100, 0b1010, 0b101>;
+def : RWSysReg<"ICC_ICSR_EL1",            0b11, 0b000, 0b1100, 0b1010, 0b100>;
+def : ROSysReg<"ICC_IDR0_EL1",            0b11, 0b000, 0b1100, 0b1010, 0b010>;
+def : RWSysReg<"ICC_PCR_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b010>;
+def : RWSysReg<"ICC_PCR_EL3",             0b11, 0b110, 0b1100, 0b1000, 0b001>;
+
+// Virtual CPU Interface Registers
+//                                        Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"ICV_APR_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b000>;
+def : RWSysReg<"ICV_CR0_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b001>;
+def : RWSysReg<"ICV_HAPR_EL1",            0b11, 0b001, 0b1100, 0b0000, 0b011>;
+def : RWSysReg<"ICV_HPPIR_EL1",           0b11, 0b000, 0b1100, 0b1010, 0b011>;
+def : RWSysReg<"ICV_PCR_EL1",             0b11, 0b001, 0b1100, 0b0000, 0b010>;
+
+// PPI Registers
+foreach n=0-1 in {
+  defvar nb = !cast<bit>(n);
+//                                               Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"ICC_PPI_CACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b00,nb}>;
+  def : RWSysReg<"ICC_PPI_CPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b10,nb}>;
+  def : RWSysReg<"ICC_PPI_ENABLER"#n#"_EL1",     0b11, 0b000, 0b1100, 0b1010, {0b11,nb}>;
+  def : RWSysReg<"ICC_PPI_SACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b01,nb}>;
+  def : RWSysReg<"ICC_PPI_SPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b11,nb}>;
+  def : ROSysReg<"ICC_PPI_HMR"#n#"_EL1",         0b11, 0b000, 0b1100, 0b1010, {0b00,nb}>;
+}
+
+foreach n=0-3 in {
+  defvar nb = !cast<bits<2>>(n);
+//                                             Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"ICC_PPI_DOMAINR"#n#"_EL3",   0b11, 0b110, 0b1100, 0b1000, {0b1,nb{1-0}}>;
+
+}
+
+foreach n=0-15 in{
+  defvar nb = !cast<bits<4>>(n);
+//                                               Op0   Op1    CRn     CRm            Op2
+  def : RWSysReg<"ICC_PPI_PRIORITYR"#n#"_EL1",   0b11, 0b000, 0b1100, {0b111,nb{3}}, nb{2-0}>;
+}
+
+// Virtual PPI Registers
+foreach n=0-1 in {
+  defvar nb = !cast<bit>(n);
+//                                               Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"ICV_PPI_CACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b00,nb}>;
+  def : RWSysReg<"ICV_PPI_CPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b10,nb}>;
+  def : RWSysReg<"ICV_PPI_ENABLER"#n#"_EL1",     0b11, 0b000, 0b1100, 0b1010, {0b11,nb}>;
+  def : RWSysReg<"ICV_PPI_SACTIVER"#n#"_EL1",    0b11, 0b000, 0b1100, 0b1101, {0b01,nb}>;
+  def : RWSysReg<"ICV_PPI_SPENDR"#n#"_EL1",      0b11, 0b000, 0b1100, 0b1101, {0b11,nb}>;
+  def : RWSysReg<"ICV_PPI_HMR"#n#"_EL1",         0b11, 0b000, 0b1100, 0b1010, {0b00,nb}>;
+}
+
+foreach n=0-15 in {
+  defvar nb = !cast<bits<4>>(n);
+//                                               Op0   Op1    CRn     CRm            Op2
+  def : RWSysReg<"ICV_PPI_PRIORITYR"#n#"_EL1",   0b11, 0b000, 0b1100, {0b111,nb{3}}, nb{2-0}>;
+}
+
+// Hypervisor Control Registers
+//                                    Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"ICH_APR_EL2",         0b11, 0b100, 0b1100, 0b1000, 0b100>;
+def : RWSysReg<"ICH_CONTEXTR_EL2",    0b11, 0b100, 0b1100, 0b1011, 0b110>;
+def : RWSysReg<"ICH_HFGITR_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b111>;
+def : RWSysReg<"ICH_HFGRTR_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b100>;
+def : RWSysReg<"ICH_HFGWTR_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b110>;
+def : ROSysReg<"ICH_HPPIR_EL2",       0b11, 0b100, 0b1100, 0b1000, 0b101>;
+def : RWSysReg<"ICH_VCTLR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b100>;
+
+foreach n=0-1 in {
+  defvar nb = !cast<bit>(n);
+//                                           Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"ICH_PPI_ACTIVER"#n#"_EL2",   0b11, 0b100, 0b1100, 0b1010, {0b11,nb}>;
+def : RWSysReg<"ICH_PPI_DVIR"#n#"_EL2",      0b11, 0b100, 0b1100, 0b1010, {0b00,nb}>;
+def : RWSysReg<"ICH_PPI_ENABLER"#n#"_EL2",   0b11, 0b100, 0b1100, 0b1010, {0b01,nb}>;
+def : RWSysReg<"ICH_PPI_PENDR"#n#"_EL2",     0b11, 0b100, 0b1100, 0b1010, {0b10,nb}>;
+}
+
+foreach n=0-15 in {
+  defvar nb = !cast<bits<4>>(n);
+//                                               Op0   Op1    CRn     CRm            Op2
+  def : RWSysReg<"ICH_PPI_PRIORITYR"#n#"_EL2",   0b11, 0b100, 0b1100, {0b111,nb{3}}, nb{2-0}>;
+}
+
+//===----------------------------------------------------------------------===//
+// GICv5 instruction options.
+//===----------------------------------------------------------------------===//
+
+// GIC
+class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
+  string Name = name;
+  bits<14> Encoding;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit NeedsReg = needsreg;
+  string RequiresStr = [{ {AArch64::FeatureGCIE} }];
+}
+
+// GSB
+class GSB<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
+  string Name = name;
+  bits<14> Encoding;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  string RequiresStr = [{ {AArch64::FeatureGCIE} }];
+}
+
+// GICR
+class GICR<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
+  string Name = name;
+  bits<14> Encoding;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit NeedsReg = needsreg;
+  string RequiresStr = [{ {AArch64::FeatureGCIE} }];
+}
+
+def GICTable : GenericTable {
+  let FilterClass = "GIC";
+  let CppTypeName = "GIC";
+  let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupGICByEncoding";
+}
+
+def GSBTable : GenericTable {
+  let FilterClass = "GSB";
+  let CppTypeName = "GSB";
+  let Fields = ["Name", "Encoding", "RequiresStr"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupGSBByEncoding";
+}
+
+def GICRTable : GenericTable {
+  let FilterClass = "GICR";
+  let CppTypeName = "GICR";
+  let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupGICRByEncoding";
+}
+
+def lookupGICByName : SearchIndex {
+  let Table = GICTable;
+  let Key = ["Name"];
+}
+
+def lookupGSBByName : SearchIndex {
+  let Table = GSBTable;
+  let Key = ["Name"];
+}
+
+def lookupGICRByName : SearchIndex {
+  let Table = GICRTable;
+  let Key = ["Name"];
+}
+
+//                    Op1    CRn     CRm     Op2
+def : GSB<"sys",      0b000, 0b1100, 0b0000, 0b000>;
+def : GSB<"ack",      0b000, 0b1100, 0b0000, 0b001>;
+
+//                    Op1    CRn     CRm     Op2    needsReg
+def : GIC<"cdaff",    0b000, 0b1100, 0b0001, 0b011, 1>;
+def : GIC<"cddi",     0b000, 0b1100, 0b0010, 0b000, 1>;
+def : GIC<"cddis",    0b000, 0b1100, 0b0001, 0b000, 1>;
+def : GIC<"cden",     0b000, 0b1100, 0b0001, 0b001, 1>;
+def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111, 1>;
+def : GIC<"cdhm",     0b000, 0b1100, 0b0010, 0b001, 1>;
+def : GIC<"cdpend",   0b000, 0b1100, 0b0001, 0b100, 1>;
+def : GIC<"cdpri",    0b000, 0b1100, 0b0001, 0b010, 1>;
+def : GIC<"cdrcfg",   0b000, 0b1100, 0b0001, 0b101, 1>;
+def : GICR<"cdia",    0b000, 0b1100, 0b0011, 0b000, 1>;
+def : GICR<"cdnmia",  0b000, 0b1100, 0b0011, 0b001, 1>;
+def : GIC<"vdaff",    0b100, 0b1100, 0b0001, 0b011, 1>;
+def : GIC<"vddi",     0b100, 0b1100, 0b0010, 0b000, 1>;
+def : GIC<"vddis",    0b100, 0b1100, 0b0001, 0b000, 1>;
+def : GIC<"vden",     0b100, 0b1100, 0b0001, 0b001, 1>;
+def : GIC<"vdhm",     0b100, 0b1100, 0b0010, 0b001, 1>;
+def : GIC<"vdpend",   0b100, 0b1100, 0b0001, 0b100, 1>;
+def : GIC<"vdpri",    0b100, 0b1100, 0b0001, 0b010, 1>;
+def : GIC<"vdrcfg",   0b100, 0b1100, 0b0001, 0b101, 1>;
+def : GIC<"ldaff",    0b110, 0b1100, 0b0001, 0b011, 1>;
+def : GIC<"lddi",     0b110, 0b1100, 0b0010, 0b000, 1>;
+def : GIC<"lddis",    0b110, 0b1100, 0b0001, 0b000, 1>;
+def : GIC<"lden",     0b110, 0b1100, 0b0001, 0b001, 1>;
+def : GIC<"ldhm",     0b110, 0b1100, 0b0010, 0b001, 1>;
+def : GIC<"ldpend",   0b110, 0b1100, 0b0001, 0b100, 1>;
+def : GIC<"ldpri",    0b110, 0b1100, 0b0001, 0b010, 1>;
+def : GIC<"ldrcfg",   0b110, 0b1100, 0b0001, 0b101, 1>;

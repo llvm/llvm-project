@@ -52,6 +52,8 @@ public:
 protected:
   bool printSysAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  bool printSyslAlias(const MCInst *MI, const MCSubtargetInfo &STI,
+                      raw_ostream &O);
   bool printSyspAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                       raw_ostream &O);
   bool printRangePrefetchAlias(const MCInst *MI, const MCSubtargetInfo &STI,

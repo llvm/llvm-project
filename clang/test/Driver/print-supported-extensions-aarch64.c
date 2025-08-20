@@ -32,6 +32,7 @@
 // CHECK-NEXT:     fp8fma              FEAT_FP8FMA                                            Enable Armv9.5-A FP8 multiply-add instructions
 // CHECK-NEXT:     fprcvt              FEAT_FPRCVT                                            Enable Armv9.6-A base convert instructions for SIMD&FP scalar register operands of different input and output sizes
 // CHECK-NEXT:     fp16                FEAT_FP16                                              Enable half-precision floating-point data processing
+// CHECK-NEXT:     gcie                FEAT_GCIE                                              Enable Armv9.7-A GICv5 (Generic Interrupt Controller) CPU Interface Extension
 // CHECK-NEXT:     gcs                 FEAT_GCS                                               Enable Armv9.4-A Guarded Call Stack Extension
 // CHECK-NEXT:     hbc                 FEAT_HBC                                               Enable Armv8.8-A Hinted Conditional Branches Extension
 // CHECK-NEXT:     i8mm                FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension

@@ -159,6 +159,7 @@ private:
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   bool parseSysAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
+  bool parseSyslAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   bool parseSyspAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond,
@@ -3888,6 +3889,7 @@ static const struct Extension {
     {"tlbid", {AArch64::FeatureTLBID}},
     {"mpamv2", {AArch64::FeatureMPAMv2}},
     {"mtetc", {AArch64::FeatureMTETC}},
+    {"gcie", {AArch64::FeatureGCIE}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3960,7 +3962,7 @@ void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands
       AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
 }
 
-/// parseSysAlias - The IC, DC, AT, TLBI, and MLBI instructions
+/// parseSysAlias - The IC, DC, AT, TLBI, MLBI and GIC{R} and GSB instructions
 /// are simple aliases for the SYS instruction. Parse them specially so that
 /// we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
@@ -4035,6 +4037,28 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     }
     ExpectRegister = MLBI->NeedsReg;
     createSysAlias(MLBI->Encoding, Operands, S);
+  } else if (Mnemonic == "gic") {
+    const AArch64GIC::GIC *GIC = AArch64GIC::lookupGICByName(Op);
+    if (!GIC)
+      return TokError("invalid operand for GIC instruction");
+    else if (!GIC->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("GIC " + std::string(GIC->Name) + " requires: ");
+      setRequiredFeatureString(GIC->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = GIC->NeedsReg;
+    createSysAlias(GIC->Encoding, Operands, S);
+  } else if (Mnemonic == "gsb") {
+    const AArch64GSB::GSB *GSB = AArch64GSB::lookupGSBByName(Op);
+    if (!GSB)
+      return TokError("invalid operand for GSB instruction");
+    else if (!GSB->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("GSB " + std::string(GSB->Name) + " requires: ");
+      setRequiredFeatureString(GSB->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = false;
+    createSysAlias(GSB->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
 
@@ -4078,6 +4102,55 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       return TokError("specified " + Mnemonic + " op requires a register");
     else if (!ExpectRegister && HasRegister)
       return TokError("specified " + Mnemonic + " op does not use a register");
+  }
+
+  if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
+    return true;
+
+  return false;
+}
+
+/// parseSyslAlias - The GICR instructions are simple aliases for
+/// the SYSL instruction. Parse them specially so that we create a
+/// SYS MCInst.
+bool AArch64AsmParser::parseSyslAlias(StringRef Name, SMLoc NameLoc,
+                                      OperandVector &Operands) {
+
+  Mnemonic = Name;
+  Operands.push_back(
+      AArch64Operand::CreateToken("sysl", NameLoc, getContext()));
+
+  // Now expect two operands (identifier + register)
+  SMLoc startLoc = getLoc();
+  const AsmToken &regTok = getTok();
+  StringRef reg = regTok.getString();
+  unsigned RegNum = matchRegisterNameAlias(reg.lower(), RegKind::Scalar);
+  if (!RegNum)
+    return TokError("expected register operand");
+
+  Operands.push_back(AArch64Operand::CreateReg(
+      RegNum, RegKind::Scalar, startLoc, getLoc(), getContext(), EqualsReg));
+
+  Lex(); // Eat token
+  if (parseToken(AsmToken::Comma))
+    return true;
+
+  // Check for identifier
+  const AsmToken &operandTok = getTok();
+  StringRef Op = operandTok.getString();
+  SMLoc S2 = operandTok.getLoc();
+  Lex(); // Eat token
+
+  if (Mnemonic == "gicr") {
+    const AArch64GICR::GICR *GICR = AArch64GICR::lookupGICRByName(Op);
+    if (!GICR)
+      return Error(S2, "invalid operand for GICR instruction");
+    else if (!GICR->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("GICR " + std::string(GICR->Name) + " requires: ");
+      setRequiredFeatureString(GICR->getRequiredFeatures(), Str);
+      return Error(S2, Str);
+    }
+    createSysAlias(GICR->Encoding, Operands, S2);
   }
 
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
@@ -5353,12 +5426,16 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI, MLBI and Prediction invalidation instructions are aliases
-  // for the SYS instruction.
+  // IC, DC, AT, TLBI, MLBI, GIC{R}, GSB and Prediction invalidation
+  // instructions are aliases for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
       Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
-      Head == "mlbi")
+      Head == "mlbi" || Head == "gic" || Head == "gsb")
     return parseSysAlias(Head, NameLoc, Operands);
+
+  // GICR instructions are aliases for the SYSL instruction.
+  if (Head == "gicr")
+    return parseSyslAlias(Head, NameLoc, Operands);
 
   // TLBIP instructions are aliases for the SYSP instruction.
   if (Head == "tlbip")
