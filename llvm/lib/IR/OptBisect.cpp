@@ -37,10 +37,13 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                    }),
                                    cl::desc("Maximum optimization to perform"));
 
-static cl::list<int> OptDisableIndices(
-    "opt-disable-indices", cl::Hidden, cl::CommaSeparated, cl::Optional,
-    cl::cb<void, int>([](int Index) { getOptBisector().disablePassAtIndex(Index); }),
-    cl::desc("Disable passes at the given indices in the optimization pipeline (comma-separated list)"));
+static cl::list<int>
+    OptDisableIndices("opt-disable-indices", cl::Hidden, cl::CommaSeparated,
+                      cl::Optional, cl::cb<void, int>([](int Index) {
+                        getOptBisector().disablePassAtIndex(Index);
+                      }),
+                      cl::desc("Disable passes at the given indices in the "
+                               "optimization pipeline (comma-separated list)"));
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
