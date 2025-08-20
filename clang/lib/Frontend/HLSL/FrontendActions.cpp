@@ -50,6 +50,7 @@ public:
 
     IdentifierInfo *DeclIdent =
         hlsl::ParseHLSLRootSignature(Actions, Version, *Signature);
+    Actions.HLSL().SetRootSignatureOverride(DeclIdent);
   }
 
   InjectRootSignatureCallback(Sema &Actions, StringRef RootSigName,
