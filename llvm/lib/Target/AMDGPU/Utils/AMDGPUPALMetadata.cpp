@@ -1064,7 +1064,7 @@ VersionTuple AMDGPUPALMetadata::getPALVersion() {
 // Set the field in a given .hardware_stages entry to a maximum value
 void AMDGPUPALMetadata::updateHwStageMaximum(unsigned CC, StringRef field,
                                              unsigned Val) {
-  auto HwStageFieldMapNode = getHwStage(CC);
+  msgpack::MapDocNode HwStageFieldMapNode = getHwStage(CC);
   auto It = HwStageFieldMapNode.find(field);
   if (It == HwStageFieldMapNode.end())
     HwStageFieldMapNode[field] = Val;
