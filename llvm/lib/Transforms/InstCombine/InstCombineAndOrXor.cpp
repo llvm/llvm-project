@@ -201,7 +201,7 @@ extractThreeVariablesAndInstructions(
 
     return {SortedVars[0], SortedVars[1], SortedVars[2]};
 
-  return {nullptr, nullptr, nullptr};
+    return {nullptr, nullptr, nullptr};
 }
 
 /// Evaluate a boolean expression with bit-vector inputs for all 8 combinations.
