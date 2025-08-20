@@ -397,7 +397,6 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 // Remark Handlers
 //===----------------------------------------------------------------------===//
 
-/// Returns the remark engine for this context.
 void MLIRContext::setRemarkEngine(
     std::unique_ptr<remark::detail::RemarkEngine> engine) {
   getImpl().remarkEngine = std::move(engine);

@@ -215,7 +215,8 @@ public:
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
 
-  /// Returns the remark engine for this context.
+  /// Returns the remark engine for this context, or nullptr if none has been
+  /// set.
   remark::detail::RemarkEngine *getRemarkEngine();
 
   /// Set the remark engine for this context.

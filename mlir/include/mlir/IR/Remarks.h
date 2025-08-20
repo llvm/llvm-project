@@ -214,7 +214,7 @@ class RemarkEngine;
 // InFlightRemark
 //===----------------------------------------------------------------------===//
 
-/// Lazy text building for zero cost  string formatting.
+/// Lazy text building for zero cost string formatting.
 struct LazyTextBuild {
   llvm::StringRef key;
   std::function<std::string()> thunk;
