@@ -4524,40 +4524,36 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // General case: splat the first operand and sliding other operands down one
   // by one to form a vector. Alternatively, if the last operand is an
-  // extraction from a reduction result, we can use the original vector
+  // extraction from element 0 of a vector, we can use the original vector
   // reduction result as the start value and slide up instead of slide down.
   // Such that we can avoid the splat.
   SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
-  SDValue Reduce;
+  SDValue EVec;
   bool SlideUp = false;
   // Find the first first non-undef from the tail.
   auto ItLastNonUndef = find_if(Operands.rbegin(), Operands.rend(),
                                 [](SDValue V) { return !V.isUndef(); });
   if (ItLastNonUndef != Operands.rend()) {
     using namespace SDPatternMatch;
-    // Check if the last non-undef operand was extracted from a reduction.
-    for (unsigned Opc :
-         {RISCVISD::VECREDUCE_ADD_VL, RISCVISD::VECREDUCE_UMAX_VL,
-          RISCVISD::VECREDUCE_SMAX_VL, RISCVISD::VECREDUCE_UMIN_VL,
-          RISCVISD::VECREDUCE_SMIN_VL, RISCVISD::VECREDUCE_AND_VL,
-          RISCVISD::VECREDUCE_OR_VL, RISCVISD::VECREDUCE_XOR_VL,
-          RISCVISD::VECREDUCE_FADD_VL, RISCVISD::VECREDUCE_SEQ_FADD_VL,
-          RISCVISD::VECREDUCE_FMAX_VL, RISCVISD::VECREDUCE_FMIN_VL}) {
-      SlideUp = sd_match(
-          *ItLastNonUndef,
-          m_ExtractElt(m_AllOf(m_Opc(Opc), m_Value(Reduce)), m_Zero()));
-      if (SlideUp)
-        break;
-    }
+    // Check if the last non-undef operand was an extraction.
+    SlideUp = sd_match(*ItLastNonUndef, m_ExtractElt(m_Value(EVec), m_Zero()));
   }
 
   if (SlideUp) {
-    // Adapt Reduce's type into ContainerVT.
-    if (Reduce.getValueType().getVectorMinNumElements() <
+    MVT EVecContainerVT = EVec.getSimpleValueType();
+    // Make sure the original vector has scalable vector type.
+    if (EVecContainerVT.isFixedLengthVector()) {
+      EVecContainerVT =
+          getContainerForFixedLengthVector(DAG, EVecContainerVT, Subtarget);
+      EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
+    }
+
+    // Adapt EVec's type into ContainerVT.
+    if (EVecContainerVT.getVectorMinNumElements() <
         ContainerVT.getVectorMinNumElements())
-      Reduce = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), Reduce, 0);
+      EVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), EVec, 0);
     else
-      Reduce = DAG.getExtractSubvector(DL, ContainerVT, Reduce, 0);
+      EVec = DAG.getExtractSubvector(DL, ContainerVT, EVec, 0);
 
     // Reverse the elements as we're going to slide up from the last element.
     for (unsigned i = 0U, N = Operands.size(), H = divideCeil(N, 2); i < H; ++i)
@@ -4577,7 +4573,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // prior value of our temporary register.
     if (!Vec) {
       if (SlideUp) {
-        Vec = Reduce;
+        Vec = EVec;
       } else {
         Vec = DAG.getSplatVector(VT, DL, V);
         Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);

@@ -1833,15 +1833,13 @@ define <8 x double> @buildvec_slideup(<4 x double> %v, double %e0, double %e1, d
 ; CHECK-LABEL: buildvec_slideup:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
-; CHECK-NEXT:    vfmv.f.s ft0, v8
-; CHECK-NEXT:    vfmv.v.f v8, fa0
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
-; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
+; CHECK-NEXT:    vfslide1up.vf v10, v8, fa6
+; CHECK-NEXT:    vfslide1up.vf v8, v10, fa5
+; CHECK-NEXT:    vfslide1up.vf v10, v8, fa4
+; CHECK-NEXT:    vfslide1up.vf v8, v10, fa3
+; CHECK-NEXT:    vfslide1up.vf v10, v8, fa2
+; CHECK-NEXT:    vfslide1up.vf v12, v10, fa1
+; CHECK-NEXT:    vfslide1up.vf v8, v12, fa0
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x double> poison, double %e0, i64 0
   %v1 = insertelement <8 x double> %v0, double %e1, i64 1
