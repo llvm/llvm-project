@@ -1722,10 +1722,9 @@ public:
     return Insert(BinOp, Name);
   }
 
-  Value *CreateBinOpNoWrapFlags(Instruction::BinaryOps Opc, Value *LHS,
-                                Value *RHS, bool IsNUW, bool IsNSW,
-                                const Twine &Name = "") {
-    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS))
+  Value *CreateNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                           bool IsNUW, bool IsNSW, const Twine &Name = "") {
+    if (Value *V = Folder.FoldNoWrapBinOp(Opc, LHS, RHS, IsNUW, IsNSW))
       return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (IsNUW)
