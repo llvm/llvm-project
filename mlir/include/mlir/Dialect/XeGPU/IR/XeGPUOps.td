@@ -511,6 +511,8 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     match the dimension of offsets. It may also has a second dimension corresponding to
     the chunk_size if the chunk size is larger than 1.
 
+    This op is not available in SIMT mode.
+
     Example 1: It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
     ```mlir
     %a = memref.alloc() : memref<1024xf32>
@@ -618,6 +620,15 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
         : memref<1024xf32>, vector<4xindex>
     ```
 
+    Example 3 (SIMT mode):
+    SIMT mode only accepts the offsets variant.
+    ```mlir
+      xegpu.prefetch %0[%1] {l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<cached>,
+                             l3_hint = #xegpu.cache_hint<cached>}
+        : memref<256xf32>, vector<1xindex>
+    ```
+
   }];
 
   let arguments = (ins XeGPU_GatherScatterSourceType: $source,
@@ -671,8 +682,18 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
-    In SIMT mode, the result vector represents the data to be loaded by each work-item.
-    Each work-item recieves a `chunk_size` number of elements.
+    In SIMT mode, the result is a 1D vector that represents the data to be loaded by
+    each work-item.
+
+    `source` represents the memory region to be loaded from, which can be either a
+        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
+        In case of tensor_desc, offsets come from the producer create_tdesc op.
+        tensor_desc cannot be used in SIMT mode.
+    `offsets` represents offsets from source. required if `source` in not a TensorDescType.
+        offsets is a vector of `index` type and vector length is either the subgroup size
+        or 1 in SIMT mode.
+    `mask` is a vector of `i1` type, which is used to mask out the memory access.
+        mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
 
   Example 1:
   ```mlir
@@ -692,16 +713,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
             vector<16xi1> -> vector<16x8xf32>
   ```
 
-  Example 3 (SIMT mode):
-  ```mlir
-    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
-                             l2_hint = #xegpu.cache_hint<uncached>,
-                             l3_hint = #xegpu.cache_hint<uncached>}>
-          : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>
-            vector<16xi1> -> vector<8xf32>
-  ```
-
-  Example 4:
+  Example 3:
   A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
   It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc".
   The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc
@@ -714,6 +726,16 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>}
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+  ```
+
+  Example 4 (SIMT mode):
+  SIMT mode only accepts the offsets variant. chunk_size can be inferred from result
+  type. In this example, chunk_size is 8.
+  ```mlir
+    %2 = xegpu.load %1[%2], %0 <{l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<uncached>,
+                             l3_hint = #xegpu.cache_hint<uncached>}>
+          : memref<128xf32>, vector<1xindex>, vector<1xi1> -> vector<8xf32>
   ```
 
   }];
@@ -785,8 +807,19 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
   introduced on purpose, making sure users are aware of this implicit transformation.
 
-  In SIMT mode, the input vector represents the data to be stored by each work-item.
-  Each work-item stores a `chunk_size` number of elements.
+  In SIMT mode, the result is a 1D vector that represents the data to be stored by
+  each work-item.
+
+    `value` represents the data to be stored.
+    `dest` represents the memory region to be stored to, which can be either a
+        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
+        In case of tensor_desc, offsets come from the producer create_tdesc op.
+        tensor_desc cannot be used in SIMT mode.
+    `offsets` represents offsets from dest. required if `source` in not a TensorDescType.
+        offsets is a vector of `index` type and vector length is either the subgroup size
+        or 1 in SIMT mode.
+    `mask` is a vector of `i1` type, which is used to mask out the memory access.
+        mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
 
   Example 1:
   ```mlir
@@ -804,15 +837,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
           : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
   ```
 
-  Example 3 (SIMT mode):
-  ```mlir
-    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
-                             l2_hint = #xegpu.cache_hint<write_back>,
-                             l3_hint = #xegpu.cache_hint<write_through>}>
-          : vector<8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>> vector<16xi1>
-  ```
-
-  Example 4:
+  Example 3:
   A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
   It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc".
   The dest operand could be a raw pointer (uint64_t).
@@ -826,6 +851,16 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>}
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+  ```
+
+  Example 4 (SIMT mode):
+  SIMT mode only accepts the offsets variant. chunk_size can be inferred from value
+  type. In this example, chunk_size is 8.
+  ```mlir
+    xegpu.store %0, %1[%2], %3 <{l1_hint = #xegpu.cache_hint<uncached>,
+                             l2_hint = #xegpu.cache_hint<write_back>,
+                             l3_hint = #xegpu.cache_hint<write_through>}>
+          : vector<8xf32>, memref<256xf32>, vector<1xindex>, vector<1xi1>
   ```
 
   }];
@@ -895,6 +930,8 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
     elements representing the shift in each dimension. `update_offset` is to
     update the offset per work-item, so its offsets contains values representing
     shifts for each work-item.
+
+    This op is not available in SIMT mode.
 
     Example:
     ```mlir
