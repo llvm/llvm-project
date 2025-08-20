@@ -6074,6 +6074,13 @@ def warn_cxx23_pack_indexing : Warning<
 def err_pack_outside_template : Error<
   "pack declaration outside of template">;
 
+def err_builtin_pack_outside_template
+    : Error<"%0 cannot be used outside of template">;
+
+def err_unsupported_builtin_template_pack_expansion
+    : Error<"expansions of %0 are not supported here. Only expansions in "
+            "template arguments and class bases are supported">;
+
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
 def err_fold_expression_empty : Error<
