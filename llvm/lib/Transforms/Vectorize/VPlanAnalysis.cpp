@@ -557,11 +557,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPScalarIVStepsRecipe>(R) ||
             (isa<VPInstruction>(R) &&
-             all_of(cast<VPSingleDefRecipe>(R)->users(),
-                    [&](VPUser *U) {
-                      return cast<VPRecipeBase>(U)->usesScalars(
-                          R->getVPSingleValue());
-                    })) ||
+             vputils::onlyScalarValuesUsed(cast<VPSingleDefRecipe>(R))) ||
             (isa<VPReductionPHIRecipe>(R) &&
              (cast<VPReductionPHIRecipe>(R))->isInLoop())) {
           unsigned ClassID = TTI.getRegisterClassForType(
@@ -614,9 +610,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     for (auto *In : LoopInvariants) {
       // FIXME: The target might use more than one register for the type
       // even in the scalar case.
-      bool IsScalar = all_of(In->users(), [&](VPUser *U) {
-        return cast<VPRecipeBase>(U)->usesScalars(In);
-      });
+      bool IsScalar = vputils::onlyScalarValuesUsed(In);
 
       ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
       unsigned ClassID = TTI.getRegisterClassForType(
