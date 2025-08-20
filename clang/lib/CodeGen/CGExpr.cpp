@@ -108,13 +108,9 @@ CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
 
-RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
-                                             CharUnits Align, const Twine &Name,
-                                             llvm::Value *ArraySize,
-                                             RawAddress *AllocaAddr) {
-  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
-  if (AllocaAddr)
-    *AllocaAddr = Alloca;
+RawAddress CodeGenFunction::MaybeCastAllocaAddressSpace(
+    RawAddress Alloca, LangAS DestLangAS, llvm::Value *ArraySize) {
+
   llvm::Value *V = Alloca.getPointer();
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
@@ -134,7 +130,18 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
         /*IsNonNull=*/true);
   }
 
-  return RawAddress(V, Ty, Align, KnownNonNull);
+  return RawAddress(V, Alloca.getElementType(), Alloca.getAlignment(),
+                    KnownNonNull);
+}
+
+RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
+                                             CharUnits Align, const Twine &Name,
+                                             llvm::Value *ArraySize,
+                                             RawAddress *AllocaAddr) {
+  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
+  if (AllocaAddr)
+    *AllocaAddr = Alloca;
+  return MaybeCastAllocaAddressSpace(Alloca, DestLangAS, ArraySize);
 }
 
 /// CreateTempAlloca - This creates an alloca and inserts it into the entry
@@ -2206,18 +2213,6 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
       }
       if (Addr.getElementType() != SrcTy)
         Addr = Addr.withElementType(SrcTy);
-    }
-  }
-
-  // When storing a pointer, perform address space cast if needed.
-  if (auto *ValueTy = dyn_cast<llvm::PointerType>(Value->getType())) {
-    if (auto *MemTy = dyn_cast<llvm::PointerType>(Addr.getElementType())) {
-      LangAS ValueAS = getLangASFromTargetAS(ValueTy->getAddressSpace());
-      LangAS MemAS = getLangASFromTargetAS(MemTy->getAddressSpace());
-      if (ValueAS != MemAS) {
-        Value =
-            getTargetHooks().performAddrSpaceCast(*this, Value, ValueAS, MemTy);
-      }
     }
   }
 

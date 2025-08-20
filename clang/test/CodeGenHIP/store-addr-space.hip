@@ -19,13 +19,12 @@ struct Foo {
 // AMDGCN-NEXT:    [[DST:%.*]] = alloca [[UNION_ANON:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[RESULT_PTR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_PTR]] to ptr
 // AMDGCN-NEXT:    [[SRC_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_PTR_ADDR]] to ptr
+// AMDGCN-NEXT:    [[AGG_RESULT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
 // AMDGCN-NEXT:    [[DST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DST]] to ptr
 // AMDGCN-NEXT:    store ptr addrspace(5) [[AGG_RESULT]], ptr [[RESULT_PTR_ASCAST]], align 4
 // AMDGCN-NEXT:    store ptr [[SRC_PTR]], ptr [[SRC_PTR_ADDR_ASCAST]], align 8
-// AMDGCN-NEXT:    [[AGG_RESULT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
 // AMDGCN-NEXT:    call void @_ZN3FooC1Ev(ptr noundef nonnull align 8 dereferenceable(8) [[AGG_RESULT_ASCAST]]) #[[ATTR1:[0-9]+]]
-// AMDGCN-NEXT:    [[AGG_RESULT_ASCAST1:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
-// AMDGCN-NEXT:    store ptr [[AGG_RESULT_ASCAST1]], ptr [[DST_ASCAST]], align 8
+// AMDGCN-NEXT:    store ptr [[AGG_RESULT_ASCAST]], ptr [[DST_ASCAST]], align 8
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SRC_PTR_ADDR_ASCAST]], align 8
 // AMDGCN-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO]], ptr [[TMP0]], i32 0, i32 0
 // AMDGCN-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VAL]], align 8
