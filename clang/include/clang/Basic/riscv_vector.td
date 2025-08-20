@@ -721,8 +721,6 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
             NF = nf,
             ManualCodegen = [{
     {
-      SmallVector<llvm::Value*, 6> Operands;
-
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
         (!IsMasked && (PolicyAttrs & RVV_VTA));
@@ -733,24 +731,18 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
       else
         IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops.back()->getType()};
 
-      if (NoPassthru) { // Push poison into passthru
-        Operands.push_back(llvm::PoisonValue::get(ResultType));
-      } else { // Push intrinsics operands into passthru
-        llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        Operands.push_back(PassthruOperand);
-      }
+      if (IsMasked)
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      if (NoPassthru)
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
-      Operands.push_back(Ops[Offset]); // Ptr
       if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 1]); // VL
-      if (IsMasked)
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
 
-      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
       if (ReturnValue.isNull())
         return LoadValue;
       else
@@ -787,26 +779,24 @@ multiclass RVVUnitStridedSegStoreTuple<string op> {
     {
       // Masked
       // Builtin: (mask, ptr, v_tuple, vl)
-      // Intrinsic: (tuple, ptr, mask, vl)
+      // Intrinsic: (tuple, ptr, mask, vl, SegInstSEW)
       // Unmasked
       // Builtin: (ptr, v_tuple, vl)
-      // Intrinsic: (tuple, ptr, vl)
-      unsigned Offset = IsMasked ? 1 : 0;
-
-      SmallVector<llvm::Value*, 5> Operands;
-      Operands.push_back(Ops[Offset + 1]); // tuple
-      Operands.push_back(Ops[Offset]); // Ptr
-      if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 2]); // VL
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+      // Intrinsic: (tuple, ptr, vl, SegInstSEW)
 
       if (IsMasked)
-        IntrinsicTypes = {Operands[0]->getType(), Ops[Offset]->getType(), Ops[0]->getType(), Operands.back()->getType()};
+        std::swap(Ops[0], Ops[2]);
       else
-        IntrinsicTypes = {Operands[0]->getType(), Ops[Offset]->getType(), Operands.back()->getType()};
-      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-      return Builder.CreateCall(F, Operands, "");
+        std::swap(Ops[0], Ops[1]);
+
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+      if (IsMasked)
+        IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(), Ops[3]->getType()};
+      else
+        IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType()};
+
+      break;
    }
       }] in {
         defvar T = "(Tuple:" # nf # ")";
@@ -836,8 +826,6 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
             NF = nf,
             ManualCodegen = [{
     {
-      SmallVector<llvm::Value*, 6> Operands;
-
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
         (!IsMasked && (PolicyAttrs & RVV_VTA));
@@ -848,24 +836,21 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
       else
         IntrinsicTypes = {ResultType, Ops.back()->getType(), Ops[Offset]->getType()};
 
-      if (NoPassthru) { // Push poison into passthru
-        Operands.push_back(llvm::PoisonValue::get(ResultType));
-      } else { // Push intrinsics operands into passthru
-        llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        Operands.push_back(PassthruOperand);
-      }
+      if (IsMasked)
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      if (NoPassthru)
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
-      Operands.push_back(Ops[Offset]); // Ptr
       if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 2]); // vl
-      if (IsMasked)
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+      Value *NewVL = Ops[2];
+      Ops.erase(Ops.begin() + 2);
 
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
 
-      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
       // Get alignment from the new vl operand
       clang::CharUnits Align =
           CGM.getNaturalPointeeTypeAlignment(E->getArg(Offset + 1)->getType());
@@ -874,7 +859,7 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
 
       // Store new_vl
       llvm::Value *V = Builder.CreateExtractValue(LoadValue, 1);
-      Builder.CreateStore(V, Address(Ops[Offset + 1], V->getType(), Align));
+      Builder.CreateStore(V, Address(NewVL, V->getType(), Align));
 
       if (ReturnValue.isNull())
         return ReturnTuple;
@@ -909,8 +894,6 @@ multiclass RVVStridedSegLoadTuple<string op> {
             NF = nf,
             ManualCodegen = [{
     {
-      SmallVector<llvm::Value*, 7> Operands;
-
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
         (!IsMasked && (PolicyAttrs & RVV_VTA));
@@ -921,24 +904,17 @@ multiclass RVVStridedSegLoadTuple<string op> {
       else
         IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops.back()->getType()};
 
-      if (NoPassthru) { // Push poison into passthru
-        Operands.push_back(llvm::PoisonValue::get(ResultType));
-      } else { // Push intrinsics operands into passthru
-        llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        Operands.push_back(PassthruOperand);
-      }
+      if (IsMasked)
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      if (NoPassthru)
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
-      Operands.push_back(Ops[Offset]); // Ptr
-      Operands.push_back(Ops[Offset + 1]); // Stride
       if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 2]); // VL
-      if (IsMasked)
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
 
       if (ReturnValue.isNull())
         return LoadValue;
@@ -977,27 +953,23 @@ multiclass RVVStridedSegStoreTuple<string op> {
     {
       // Masked
       // Builtin: (mask, ptr, stride, v_tuple, vl)
-      // Intrinsic: (tuple, ptr, stride, mask, vl)
+      // Intrinsic: (tuple, ptr, stride, mask, vl, SegInstSEW)
       // Unmasked
       // Builtin: (ptr, stride, v_tuple, vl)
-      // Intrinsic: (tuple, ptr, stride, vl)
-      unsigned Offset = IsMasked ? 1 : 0;
-
-      SmallVector<llvm::Value*, 6> Operands;
-      Operands.push_back(Ops[Offset + 2]); // tuple
-      Operands.push_back(Ops[Offset]); // Ptr
-      Operands.push_back(Ops[Offset + 1]); // Stride
-      if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 3]); // VL
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+      // Intrinsic: (tuple, ptr, stride, vl, SegInstSEW)
 
       if (IsMasked)
-        IntrinsicTypes = {Operands[0]->getType(), Operands[1]->getType(), Operands.back()->getType(), Ops[0]->getType()};
+        std::swap(Ops[0], Ops[3]);
       else
-        IntrinsicTypes = {Operands[0]->getType(), Operands[1]->getType(), Operands.back()->getType()};
-      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-      return Builder.CreateCall(F, Operands, "");
+        std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
+
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+      if (IsMasked)
+        IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[4]->getType(), Ops[3]->getType()};
+      else
+        IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[3]->getType()};
+      break;
     }
             }] in {
         defvar T = "(Tuple:" # nf # ")";
@@ -1022,40 +994,30 @@ multiclass RVVIndexedSegLoadTuple<string op> {
             NF = nf,
             ManualCodegen = [{
     {
-      SmallVector<llvm::Value*, 7> Operands;
-
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
         (!IsMasked && (PolicyAttrs & RVV_VTA));
-      unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
-
-      if (NoPassthru) { // Push poison into passthru
-        Operands.push_back(llvm::PoisonValue::get(ResultType));
-      } else { // Push intrinsics operands into passthru
-        llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        Operands.push_back(PassthruOperand);
-      }
-
-      Operands.push_back(Ops[Offset]); // Ptr
-      Operands.push_back(Ops[Offset + 1]); // Idx
-      if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 2]); // VL
-      if (IsMasked)
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
       if (IsMasked)
-        IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
-                          Ops[Offset + 1]->getType(),
-                          Ops[0]->getType(),
-                          Ops.back()->getType()};
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      if (NoPassthru)
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+      if (IsMasked)
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+      if (IsMasked)
+        IntrinsicTypes = {ResultType, Ops[1]->getType(),
+                          Ops[2]->getType(),
+                          Ops[3]->getType(),
+                          Ops[4]->getType()};
       else
-        IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
-                          Ops[Offset + 1]->getType(),
-                          Ops.back()->getType()};
+        IntrinsicTypes = {ResultType, Ops[1]->getType(),
+                          Ops[2]->getType(),
+                          Ops[3]->getType()};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
 
       if (ReturnValue.isNull())
         return LoadValue;
@@ -1090,30 +1052,25 @@ multiclass RVVIndexedSegStoreTuple<string op> {
     {
       // Masked
       // Builtin: (mask, ptr, index, v_tuple, vl)
-      // Intrinsic: (tuple, ptr, index, mask, vl)
+      // Intrinsic: (tuple, ptr, index, mask, vl, SegInstSEW)
       // Unmasked
       // Builtin: (ptr, index, v_tuple, vl)
-      // Intrinsic: (tuple, ptr, index, vl)
-      unsigned Offset = IsMasked ? 1 : 0;
-
-      SmallVector<llvm::Value*, 6> Operands;
-      Operands.push_back(Ops[Offset + 2]); // tuple
-      Operands.push_back(Ops[Offset]); // Ptr
-      Operands.push_back(Ops[Offset + 1]); // Idx
-      if (IsMasked)
-        Operands.push_back(Ops[0]);
-      Operands.push_back(Ops[Offset + 3]); // VL
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+      // Intrinsic: (tuple, ptr, index, vl, SegInstSEW)
 
       if (IsMasked)
-        IntrinsicTypes = {Operands[0]->getType(), Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
-                          Ops[0]->getType(),
-                          Operands.back()->getType()};
+        std::swap(Ops[0], Ops[3]);
       else
-        IntrinsicTypes = {Operands[0]->getType(), Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
-                          Operands.back()->getType()};
-      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-      return Builder.CreateCall(F, Operands, "");
+        std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
+
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+      if (IsMasked)
+        IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                          Ops[3]->getType(), Ops[4]->getType()};
+      else
+        IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                          Ops[3]->getType()};
+      break;
     }
             }] in {
           defvar T = "(Tuple:" # nf # ")";
