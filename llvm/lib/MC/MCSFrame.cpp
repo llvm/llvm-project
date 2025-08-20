@@ -21,6 +21,24 @@ using namespace sframe;
 
 namespace {
 
+// High-level structure to track info needed to emit a
+// sframe_frame_row_entry_addrX. On disk these have both a fixed portion of type
+// sframe_frame_row_entry_addrX and trailing data of X * S bytes, where X is the
+// datum size, and S is 1, 2, or 3 depending on which of Cfa, SP, and FP are
+// being tracked.
+struct SFrameFRE {
+  // An FRE describes how to find the registers when the PC is at this
+  // Label from function start.
+  const MCSymbol *Label = nullptr;
+  size_t CfaOffset = 0;
+  size_t FPOffset = 0;
+  size_t RAOffset = 0;
+  bool FromFP = false;
+  bool CfaRegSet = false;
+
+  SFrameFRE(const MCSymbol *Start) : Label(Start) {}
+};
+
 // High-level structure to track info needed to emit a sframe_func_desc_entry
 // and its associated FREs.
 struct SFrameFDE {
@@ -28,9 +46,13 @@ struct SFrameFDE {
   const MCDwarfFrameInfo &DFrame;
   // Label where this FDE's FREs start.
   MCSymbol *FREStart;
+  // True when unwind info can't be described with an Sframe FDE.
+  bool Invalid;
+  // Unwinding fres
+  SmallVector<SFrameFRE> FREs;
 
   SFrameFDE(const MCDwarfFrameInfo &DF, MCSymbol *FRES)
-      : DFrame(DF), FREStart(FRES) {}
+      : DFrame(DF), FREStart(FRES), Invalid(false) {}
 
   void emit(MCObjectStreamer &S, const MCSymbol *FRESubSectionStart) {
     MCContext &C = S.getContext();
@@ -54,7 +76,7 @@ struct SFrameFDE {
     S.emitInt32(0);
 
     // sfde_func_start_num_fres
-    S.emitInt32(0);
+    S.emitInt32(FREs.size());
 
     // sfde_func_info word
     FDEInfo<endianness::native> I;
@@ -76,9 +98,126 @@ class SFrameEmitterImpl {
   MCObjectStreamer &Streamer;
   SmallVector<SFrameFDE> FDEs;
   ABI SFrameABI;
+  // Target-specific convenience variables to detect when a CFI instruction
+  // references these registers. Unlike in dwarf frame descriptions, they never
+  // escape into the sframe section itself.
+  unsigned SPReg;
+  unsigned FPReg;
+  unsigned RAReg;
   MCSymbol *FDESubSectionStart;
   MCSymbol *FRESubSectionStart;
   MCSymbol *FRESubSectionEnd;
+
+
+  bool setCfaRegister(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &I) {
+    if (I.getRegister() == SPReg) {
+      FRE.CfaRegSet = true;
+      FRE.FromFP = false;
+      return true;
+    } else if (I.getRegister() == FPReg) {
+      FRE.CfaRegSet = true;
+      FRE.FromFP = true;
+      return true;
+    }
+    Streamer.getContext().reportWarning(
+        I.getLoc(), "Canonical Frame Address not in stack- or frame-pointer. "
+                    "Omitting SFrame unwind info.");
+    FDE.Invalid = true;
+    return false;
+  }
+
+  bool isCfaRegisterSet(SFrameFDE &FDE, SFrameFRE &FRE,
+                        const MCCFIInstruction &I) {
+    if (FRE.CfaRegSet)
+      return true;
+
+    Streamer.getContext().reportWarning(
+        I.getLoc(), "skipping SFrame FDE; .cfi_def_cfa_offset "
+                      "without CFA base register in effect");
+    FDE.Invalid = true;
+    return false;
+  }
+
+  // Add the effects of CFI to the current FDE, creating a new FRE when
+  // necessary.
+  void handleCFI(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &CFI) {
+    // Return on error or uninteresting CFI.
+    switch (CFI.getOperation()) {
+    case MCCFIInstruction::OpDefCfaRegister:
+      if (!setCfaRegister(FDE, FRE, CFI))
+        return;
+      break;
+    case MCCFIInstruction::OpDefCfa:
+    case MCCFIInstruction::OpLLVMDefAspaceCfa:
+      if (!setCfaRegister(FDE, FRE, CFI))
+        return;
+      FRE.CfaOffset = CFI.getOffset();
+      break;
+    case MCCFIInstruction::OpOffset:
+      if (CFI.getRegister() == FPReg)
+        FRE.FPOffset = CFI.getOffset();
+      else if (CFI.getRegister() == RAReg)
+        FRE.RAOffset = CFI.getOffset();
+      else
+        return; // uninteresting register.
+      break;
+    case MCCFIInstruction::OpRelOffset:
+      if (CFI.getRegister() == FPReg)
+        FRE.FPOffset += CFI.getOffset();
+      else if (CFI.getRegister() == RAReg)
+        FRE.RAOffset += CFI.getOffset();
+      else
+        return; // uninteresting register.
+      break;
+    case MCCFIInstruction::OpDefCfaOffset:
+      if (!isCfaRegisterSet(FDE, FRE, CFI))
+        return;
+      FRE.CfaOffset = CFI.getOffset();
+      break;
+    case MCCFIInstruction::OpAdjustCfaOffset:
+      if (!isCfaRegisterSet(FDE, FRE, CFI))
+        return;
+      FRE.CfaOffset += CFI.getOffset();
+      break;
+    case MCCFIInstruction::OpRememberState:
+      if (FDE.FREs.size() == 1) {
+        // Error for gas compatibility: If the initial FRE isn't complete,
+        // then any state is incomplete.  FIXME: Dwarf doesn't error here.
+        // Why should sframe?
+        Streamer.getContext().reportWarning(
+            CFI.getLoc(), "skipping SFrame FDE; .cfi_remember_state without "
+                          "prior SFrame FRE state");
+        FDE.Invalid = true;
+        return;
+      }
+      FDE.SaveState.push_back(FRE);
+      return;
+      break;
+    case MCCFIInstruction::OpRestore:
+      // The first FRE generated has the original state.
+      if (CFI.getRegister() == FPReg)
+        FRE.FPOffset = FDE.FREs.front().FPOffset;
+      else if (CFI.getRegister() == RAReg)
+        FRE.RAOffset = FDE.FREs.front().RAOffset;
+      return; // Any other register is uninteresting.
+    case MCCFIInstruction::OpRestoreState:
+      // The cfi parser will have caught unbalanced directives earlier, so a
+      // mismatch here is an implementation error.
+      assert(!FDE.SaveState.empty() &&
+             "cfi_restore_state without cfi_save_state");
+      FRE = FDE.SaveState.back();
+      FDE.SaveState.pop_back();
+      return;
+    case MCCFIInstruction::OpEscape:
+      // TODO: Implement
+      break;
+    default:
+      // Instructions that don't affect the Cfa, RA, and SP can be safely
+      // ignored.
+      return;
+    }
+  }
+
 
 public:
   SFrameEmitterImpl(MCObjectStreamer &Streamer) : Streamer(Streamer) {
@@ -88,13 +227,91 @@ public:
                .has_value());
     FDEs.reserve(Streamer.getDwarfFrameInfos().size());
     SFrameABI = *Streamer.getContext().getObjectFileInfo()->getSFrameABIArch();
+    switch (SFrameABI) {
+    case ABI::AArch64EndianBig:
+    case ABI::AArch64EndianLittle:
+      SPReg = 31;
+      RAReg = 29;
+      FPReg = 30;
+      break;
+    case ABI::AMD64EndianLittle:
+      SPReg = 7;
+      // RARegister untracked in this abi. Value chosen to match
+      // MCDwarfFrameInfo constructor.
+      RAReg = static_cast<unsigned>(INT_MAX);
+      FPReg = 6;
+      break;
+    }
+
     FDESubSectionStart = Streamer.getContext().createTempSymbol();
     FRESubSectionStart = Streamer.getContext().createTempSymbol();
     FRESubSectionEnd = Streamer.getContext().createTempSymbol();
   }
 
-  void BuildSFDE(const MCDwarfFrameInfo &DF) {
+  bool atSameLocation(const MCSymbol *Left, const MCSymbol *Right) {
+    return Left != nullptr && Right != nullptr &&
+           Left->getFragment() == Right->getFragment() &&
+           Left->getOffset() == Right->getOffset();
+  }
+
+  bool equalIgnoringLocation(const SFrameFRE &Left, const SFrameFRE &Right) {
+    return Left.CfaOffset == Right.CfaOffset &&
+           Left.FPOffset == Right.FPOffset && Left.RAOffset == Right.RAOffset &&
+           Left.FromFP == Right.FromFP && Left.CfaRegSet == Right.CfaRegSet;
+  }
+
+  void buildSFDE(const MCDwarfFrameInfo &DF) {
     FDEs.emplace_back(DF, Streamer.getContext().createTempSymbol());
+    // This would have been set via ".cfi_return_column", but
+    // MCObjectStreamer doesn't emit an MCCFIInstruction for that. It just
+    // sets the DF.RAReg.
+    // FIXME: This also prevents providing a proper location for the error.
+    // LLVM doesn't change the return column itself, so this was
+    // externally-generated assembly.
+    if (DF.RAReg != RAReg) {
+      Streamer.getContext().reportWarning(
+          SMLoc(),
+          "skipping SFrame FDE; non-default RA register " + Twine(DF.RAReg));
+      // Continue with the FDE to find any addtional errors. Discard it at
+      // the end.
+      FDE.Invalid = true;
+    }
+    MCSymbol *BaseLabel = DF.Begin;
+    SFrameFRE BaseFRE(BaseLabel);
+    if (!DF.IsSimple) {
+      for (const auto &CFI :
+           Streamer.getContext().getAsmInfo()->getInitialFrameState())
+        HandleCFI(FDE, BaseFRE, CFI);
+    }
+    FDE.FREs.push_back(BaseFRE);
+
+    for (const auto &CFI : DF.Instructions) {
+      // Instructions from InitialFrameState may not have a label, but if
+      // these instructions don't, then they are in dead code or otherwise
+      // unused.
+      auto *L = CFI.getLabel();
+      if (L && !L->isDefined())
+        continue;
+
+      SFrameFRE FRE = FDE.FREs.back();
+      HandleCFI(FDE, FRE, CFI);
+
+      // If nothing relevant but the location changed, don't add the FRE.
+      if (EqualIgnoringLocation(FRE, FDE.FREs.back()))
+        continue;
+
+      // If the location stayed the same, then update the current
+      // row. Otherwise, add a new one.
+      if (atSameLocation(BaseLabel, L))
+        FDE.FREs.back() = FRE;
+      else {
+        FDE.FREs.push_back(FRE);
+        FDE.FREs.back().Label = L;
+        BaseLabel = L;
+      }
+    }
+    if (FDE.Invalid)
+      FDEs.pop_back();
   }
 
   void emitPreamble() {
@@ -116,7 +333,11 @@ public:
     // shf_num_fdes
     Streamer.emitInt32(FDEs.size());
     // shf_num_fres
-    Streamer.emitInt32(0);
+    uint32_t TotalFREs = 0;
+    for (auto &FDE : FDEs)
+      TotalFREs += FDE.FREs.size();
+    Streamer.emitInt32(TotalFREs);
+
     // shf_fre_len
     Streamer.emitAbsoluteSymbolDiff(FRESubSectionEnd, FRESubSectionStart,
                                     sizeof(int32_t));
