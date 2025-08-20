@@ -967,6 +967,7 @@ bool CopiedFromVarField() {
 
 struct NestedStruct {
   Struct s;
+  const Struct& getS() const { return s; }
 };
 
 bool CopiedFromParmVarNestedField(const NestedStruct &ncrs, const NestedStruct ncs, NestedStruct &nrs, NestedStruct ns) {
@@ -1026,9 +1027,17 @@ bool negativeTemplateTypesCopiedFromVarNestedField(const A &neg_tncrs, A &neg_tn
 void callNegativeAllTemplateTypesCopiedFromVarField() {
   Struct s;
   negativeTemplateTypesCopiedFromVarField<Struct, ExpensiveToCopyType>(s, s);
-
   positiveTemplateTypesCopiedFromVarField(s, s);
 
   NestedStruct ns;
   negativeTemplateTypesCopiedFromVarNestedField<NestedStruct, ExpensiveToCopyType>(ns, ns);
+}
+
+ExpensiveToCopyType CopiedFromMethodCall(const NestedStruct &ns) {
+  const auto m = ns.getS().Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm' of the subobject 'ns.getS().Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m = ns.getS().Member;
+  const auto s = ns.getS();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 's' of type 'const Struct' is copy-constructed from a const reference but is never used; consider removing the statement
+  return m;
 }
