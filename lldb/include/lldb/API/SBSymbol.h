@@ -108,6 +108,12 @@ public:
   /// Returns true if the symbol is a debug symbol.
   bool IsDebug();
 
+  /// Get the string representation of a symbol type.
+  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
+
+  /// Get the symbol type from a string representation.
+  static lldb::SymbolType GetTypeFromString(const char *str);
+
 protected:
   lldb_private::Symbol *get();
 

@@ -224,3 +224,11 @@ bool SBSymbol::IsDebug() {
     return m_opaque_ptr->IsDebug();
   return false;
 }
+
+const char *SBSymbol::GetTypeAsString(lldb::SymbolType symbol_type) {
+  return Symbol::GetTypeAsString(symbol_type);
+}
+
+lldb::SymbolType SBSymbol::GetTypeFromString(const char *str) {
+  return Symbol::GetTypeFromString(str);
+}
