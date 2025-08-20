@@ -69,7 +69,7 @@ define <2 x i8> @test_bitcast_i16_2xi8(i16 %a) {
 define <2 x i8> @test_call_2xi8(<2 x i8> %a) {
 ; O0-LABEL: test_call_2xi8(
 ; O0:       {
-; O0-NEXT:    .reg .b16 %rs<7>;
+; O0-NEXT:    .reg .b16 %rs<5>;
 ; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
@@ -87,7 +87,7 @@ define <2 x i8> @test_call_2xi8(<2 x i8> %a) {
 ;
 ; O3-LABEL: test_call_2xi8(
 ; O3:       {
-; O3-NEXT:    .reg .b16 %rs<7>;
+; O3-NEXT:    .reg .b16 %rs<5>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_call_2xi8_param_0];

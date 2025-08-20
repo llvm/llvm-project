@@ -5503,48 +5503,54 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
     if ((isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D)) &&
         cast<NamedDecl>(D)->getDeclName()) {
       ValueDecl *VD = cast<ValueDecl>(D);
-      if (CheckAnonMemberRedeclaration(SemaRef, S, Owner, VD->getDeclName(),
-                                       VD->getLocation(), AnonRecord->isUnion(),
-                                       SC)) {
-        // C++ [class.union]p2:
-        //   The names of the members of an anonymous union shall be
-        //   distinct from the names of any other entity in the
-        //   scope in which the anonymous union is declared.
+      // C++ [class.union]p2:
+      //   The names of the members of an anonymous union shall be
+      //   distinct from the names of any other entity in the
+      //   scope in which the anonymous union is declared.
+
+      bool FieldInvalid = CheckAnonMemberRedeclaration(
+          SemaRef, S, Owner, VD->getDeclName(), VD->getLocation(),
+          AnonRecord->isUnion(), SC);
+      if (FieldInvalid)
         Invalid = true;
-      } else {
-        // C++ [class.union]p2:
-        //   For the purpose of name lookup, after the anonymous union
-        //   definition, the members of the anonymous union are
-        //   considered to have been defined in the scope in which the
-        //   anonymous union is declared.
-        unsigned OldChainingSize = Chaining.size();
-        if (IndirectFieldDecl *IF = dyn_cast<IndirectFieldDecl>(VD))
-          Chaining.append(IF->chain_begin(), IF->chain_end());
-        else
-          Chaining.push_back(VD);
 
-        assert(Chaining.size() >= 2);
-        NamedDecl **NamedChain =
-          new (SemaRef.Context)NamedDecl*[Chaining.size()];
-        for (unsigned i = 0; i < Chaining.size(); i++)
-          NamedChain[i] = Chaining[i];
+      // Inject the IndirectFieldDecl even if invalid, because later
+      // diagnostics may depend on it being present, see findDefaultInitializer.
 
-        IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
-            SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
-            VD->getType(), {NamedChain, Chaining.size()});
+      // C++ [class.union]p2:
+      //   For the purpose of name lookup, after the anonymous union
+      //   definition, the members of the anonymous union are
+      //   considered to have been defined in the scope in which the
+      //   anonymous union is declared.
+      unsigned OldChainingSize = Chaining.size();
+      if (IndirectFieldDecl *IF = dyn_cast<IndirectFieldDecl>(VD))
+        Chaining.append(IF->chain_begin(), IF->chain_end());
+      else
+        Chaining.push_back(VD);
 
-        for (const auto *Attr : VD->attrs())
-          IndirectField->addAttr(Attr->clone(SemaRef.Context));
+      assert(Chaining.size() >= 2);
+      NamedDecl **NamedChain =
+          new (SemaRef.Context) NamedDecl *[Chaining.size()];
+      for (unsigned i = 0; i < Chaining.size(); i++)
+        NamedChain[i] = Chaining[i];
 
+      IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
+          SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
+          VD->getType(), {NamedChain, Chaining.size()});
+
+      for (const auto *Attr : VD->attrs())
+        IndirectField->addAttr(Attr->clone(SemaRef.Context));
+
+      IndirectField->setAccess(AS);
+      IndirectField->setImplicit();
+      IndirectField->setInvalidDecl(FieldInvalid);
+      SemaRef.PushOnScopeChains(IndirectField, S);
+
+      // That includes picking up the appropriate access specifier.
+      if (AS != AS_none)
         IndirectField->setAccess(AS);
-        IndirectField->setImplicit();
-        SemaRef.PushOnScopeChains(IndirectField, S);
 
-        // That includes picking up the appropriate access specifier.
-        if (AS != AS_none) IndirectField->setAccess(AS);
-
-        Chaining.resize(OldChainingSize);
-      }
+      Chaining.resize(OldChainingSize);
     }
   }
 
@@ -15831,17 +15837,18 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   if (TypoCorrectedFunctionDefinitions.count(Definition))
     return;
 
-  // If we don't have a visible definition of the function, and it's inline or
-  // a template, skip the new definition.
-  if (SkipBody && !hasVisibleDefinition(Definition) &&
+  bool DefinitionVisible = false;
+  if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        Definition->getNumTemplateParameterLists())) {
     SkipBody->ShouldSkip = true;
     SkipBody->Previous = const_cast<FunctionDecl*>(Definition);
-    if (auto *TD = Definition->getDescribedFunctionTemplate())
-      makeMergedDefinitionVisible(TD);
-    makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition));
+    if (!DefinitionVisible) {
+      if (auto *TD = Definition->getDescribedFunctionTemplate())
+        makeMergedDefinitionVisible(TD);
+      makeMergedDefinitionVisible(const_cast<FunctionDecl *>(Definition));
+    }
     return;
   }
 
@@ -18190,8 +18197,10 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 // However, ensure the decl passes the structural compatibility
                 // check in C11 6.2.7/1 (or 6.1.2.6/1 in C89).
                 NamedDecl *Hidden = nullptr;
-                if (SkipBody && (!hasVisibleDefinition(Def, &Hidden) ||
-                                 getLangOpts().C23)) {
+                bool HiddenDefVisible = false;
+                if (SkipBody &&
+                    (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
+                     getLangOpts().C23)) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
@@ -18207,13 +18216,15 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
                     ProcessDeclAttributeList(S, SkipBody->New, Attrs);
                     return Def;
-                  } else {
-                    SkipBody->ShouldSkip = true;
-                    SkipBody->Previous = Def;
-                    makeMergedDefinitionVisible(Hidden);
-                    // Carry on and handle it like a normal definition. We'll
-                    // skip starting the definition later.
                   }
+
+                  SkipBody->ShouldSkip = true;
+                  SkipBody->Previous = Def;
+                  if (!HiddenDefVisible && Hidden)
+                    makeMergedDefinitionVisible(Hidden);
+                  // Carry on and handle it like a normal definition. We'll
+                  // skip starting the definition later.
+
                 } else if (!IsExplicitSpecializationAfterInstantiation) {
                   // A redeclaration in function prototype scope in C isn't
                   // visible elsewhere, so merely issue a warning.
@@ -20264,9 +20275,10 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // different from T:
   // - every enumerator of every member of class T that is an unscoped
   // enumerated type
-  if (getLangOpts().CPlusPlus && !TheEnumDecl->isScoped())
-    DiagnoseClassNameShadow(TheEnumDecl->getDeclContext(),
-                            DeclarationNameInfo(Id, IdLoc));
+  if (getLangOpts().CPlusPlus && !TheEnumDecl->isScoped() &&
+      DiagnoseClassNameShadow(TheEnumDecl->getDeclContext(),
+                              DeclarationNameInfo(Id, IdLoc)))
+    return nullptr;
 
   EnumConstantDecl *New =
     CheckEnumConstant(TheEnumDecl, LastEnumConst, IdLoc, Id, Val);
@@ -20834,4 +20846,14 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
+}
+
+bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
+                                    bool &Visible) {
+  Visible = hasVisibleDefinition(D, Suggested);
+  // The redefinition of D in the **current** TU is allowed if D is invisible or
+  // D is defined in the global module of other module units. We didn't check if
+  // it is in global module as, we'll check the redefinition in named module
+  // later with better diagnostic message.
+  return D->isInAnotherModuleUnit() || !Visible;
 }

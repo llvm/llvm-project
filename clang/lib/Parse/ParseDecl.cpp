@@ -6224,7 +6224,6 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___funcref:
       ParseWebAssemblyFuncrefTypeAttribute(DS.getAttributes());
       continue;
-      goto DoneWithTypeQuals;
 
     case tok::kw___pascal:
       if (AttrReqs & AR_VendorAttributesParsed) {
@@ -7395,7 +7394,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     Diag(Tok, diag::ext_ident_list_in_param);
 
   // Maintain an efficient lookup of params we have seen so far.
-  llvm::SmallSet<const IdentifierInfo*, 16> ParamsSoFar;
+  llvm::SmallPtrSet<const IdentifierInfo *, 16> ParamsSoFar;
 
   do {
     // If this isn't an identifier, report the error and skip until ')'.

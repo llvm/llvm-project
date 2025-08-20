@@ -2576,18 +2576,12 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   }
 
   TargetLowering::ArgListTy Args;
-  auto AddArgListEntry = [&](SDValue Node, Type *Ty) {
-    TargetLowering::ArgListEntry Entry{};
-    Entry.Ty = Ty;
-    Entry.Node = Node;
-    Args.push_back(Entry);
-  };
 
   // Pass the arguments.
   for (const SDValue &Op : Node->op_values()) {
     EVT ArgVT = Op.getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
-    AddArgListEntry(Op, ArgTy);
+    Args.emplace_back(Op, ArgTy);
   }
 
   // Pass the output pointers.
@@ -2599,7 +2593,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     EVT ResVT = Node->getValueType(ResNo);
     SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(ResVT);
     ResultPtrs[ResNo] = ResultPtr;
-    AddArgListEntry(ResultPtr, PointerTy);
+    Args.emplace_back(ResultPtr, PointerTy);
   }
 
   SDLoc DL(Node);
@@ -2608,7 +2602,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   if (VD && VD->isMasked()) {
     EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
     SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
-    AddArgListEntry(Mask, MaskVT.getTypeForEVT(Ctx));
+    Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
   }
 
   Type *RetType = CallRetResNo.has_value()
@@ -5670,8 +5664,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::ABDS:
   case ISD::SMIN:
   case ISD::SMAX:
+  case ISD::SCMP:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::UCMP:
   case ISD::AND:
   case ISD::XOR:
   case ISD::ROTL:
@@ -5754,6 +5750,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FMA:
   case ISD::FMAD:
   case ISD::FP_EXTEND:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -7962,6 +7960,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N2C->getAPIntValue().getBitWidth() ==
                TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for EXTRACT_SUBVECTOR has an invalid size");
+    assert(N2C->getZExtValue() % VT.getVectorMinNumElements() == 0 &&
+           "Extract index is not a multiple of the output vector length");
 
     // Trivial extraction.
     if (VT == N1VT)
@@ -9019,18 +9019,11 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
   if (!LibCallName)
     return {};
 
-  // Emit a library call.
-  auto GetEntry = [](Type *Ty, SDValue &SDV) {
-    TargetLowering::ArgListEntry E;
-    E.Ty = Ty;
-    E.Node = SDV;
-    return E;
-  };
-
   PointerType *PT = PointerType::getUnqual(*getContext());
   TargetLowering::ArgListTy Args = {
-      GetEntry(PT, Mem0), GetEntry(PT, Mem1),
-      GetEntry(getDataLayout().getIntPtrType(*getContext()), Size)};
+      {Mem0, PT},
+      {Mem1, PT},
+      {Size, getDataLayout().getIntPtrType(*getContext())}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
@@ -9101,13 +9094,10 @@ SDValue SelectionDAG::getMemcpy(
 
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = PointerType::getUnqual(*getContext());
-  Entry.Node = Dst; Args.push_back(Entry);
-  Entry.Node = Src; Args.push_back(Entry);
-
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Size; Args.push_back(Entry);
+  Type *PtrTy = PointerType::getUnqual(*getContext());
+  Args.emplace_back(Dst, PtrTy);
+  Args.emplace_back(Src, PtrTy);
+  Args.emplace_back(Size, getDataLayout().getIntPtrType(*getContext()));
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
@@ -9145,17 +9135,10 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
                                       MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
-
-  Entry.Node = Src;
-  Args.push_back(Entry);
-
-  Entry.Ty = SizeTy;
-  Entry.Node = Size;
-  Args.push_back(Entry);
+  Type *ArgTy = getDataLayout().getIntPtrType(*getContext());
+  Args.emplace_back(Dst, ArgTy);
+  Args.emplace_back(Src, ArgTy);
+  Args.emplace_back(Size, SizeTy);
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -9218,13 +9201,10 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
 
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = PointerType::getUnqual(*getContext());
-  Entry.Node = Dst; Args.push_back(Entry);
-  Entry.Node = Src; Args.push_back(Entry);
-
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Size; Args.push_back(Entry);
+  Type *PtrTy = PointerType::getUnqual(*getContext());
+  Args.emplace_back(Dst, PtrTy);
+  Args.emplace_back(Src, PtrTy);
+  Args.emplace_back(Size, getDataLayout().getIntPtrType(*getContext()));
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
 
@@ -9262,17 +9242,10 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
                                        MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
-
-  Entry.Node = Src;
-  Args.push_back(Entry);
-
-  Entry.Ty = SizeTy;
-  Entry.Node = Size;
-  Args.push_back(Entry);
+  Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
+  Args.emplace_back(Dst, IntPtrTy);
+  Args.emplace_back(Src, IntPtrTy);
+  Args.emplace_back(Size, SizeTy);
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -9349,28 +9322,20 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
 
   const char *BzeroName = getTargetLoweringInfo().getLibcallName(RTLIB::BZERO);
 
-  // Helper function to create an Entry from Node and Type.
-  const auto CreateEntry = [](SDValue Node, Type *Ty) {
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = Node;
-    Entry.Ty = Ty;
-    return Entry;
-  };
-
   bool UseBZero = isNullConstant(Src) && BzeroName;
   // If zeroing out and bzero is present, use it.
   if (UseBZero) {
     TargetLowering::ArgListTy Args;
-    Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
-    Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
+    Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
+    Args.emplace_back(Size, DL.getIntPtrType(Ctx));
     CLI.setLibCallee(
         TLI->getLibcallCallingConv(RTLIB::BZERO), Type::getVoidTy(Ctx),
         getExternalSymbol(BzeroName, TLI->getPointerTy(DL)), std::move(Args));
   } else {
     TargetLowering::ArgListTy Args;
-    Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
-    Args.push_back(CreateEntry(Src, Src.getValueType().getTypeForEVT(Ctx)));
-    Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
+    Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
+    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(Size, DL.getIntPtrType(Ctx));
     CLI.setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMSET),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(TLI->getLibcallName(RTLIB::MEMSET),
@@ -9399,18 +9364,9 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
                                       MachinePointerInfo DstPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
-
-  Entry.Ty = Type::getInt8Ty(*getContext());
-  Entry.Node = Value;
-  Args.push_back(Entry);
-
-  Entry.Ty = SizeTy;
-  Entry.Node = Size;
-  Args.push_back(Entry);
+  Args.emplace_back(Dst, getDataLayout().getIntPtrType(*getContext()));
+  Args.emplace_back(Value, Type::getInt8Ty(*getContext()));
+  Args.emplace_back(Size, SizeTy);
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -14065,10 +14021,7 @@ SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
                                             const SDLoc &DLoc) {
   assert(InChain.getValueType() == MVT::Other && "Expected token chain");
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Node = Ptr;
-  Entry.Ty = Ptr.getValueType().getTypeForEVT(*getContext());
-  Args.push_back(Entry);
+  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::Libcall LC = static_cast<RTLIB::Libcall>(LibFunc);
   SDValue Callee = getExternalSymbol(TLI->getLibcallName(LC),
                                      TLI->getPointerTy(getDataLayout()));

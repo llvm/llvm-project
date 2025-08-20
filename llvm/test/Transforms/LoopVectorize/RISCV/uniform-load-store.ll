@@ -280,8 +280,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; SCALABLE-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP17]] to i64
-; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP8]]
-; SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0
+; SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
 ; SCALABLE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = icmp ugt <vscale x 4 x i64> [[VEC_IND]], splat (i64 10)
 ; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP10]], i32 [[TMP17]])
@@ -380,8 +379,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-SCALABLE-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; TF-SCALABLE-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP7]] to i64
-; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = mul i64 1, [[TMP11]]
-; TF-SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
+; TF-SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP11]], i64 0
 ; TF-SCALABLE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; TF-SCALABLE-NEXT:    [[TMP10:%.*]] = icmp ugt <vscale x 4 x i64> [[VEC_IND]], splat (i64 10)
 ; TF-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP10]], i32 [[TMP7]])
@@ -700,8 +698,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; SCALABLE-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-; SCALABLE-NEXT:    [[INDEX:%.*]] = mul i64 1, [[TMP8]]
-; SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+; SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP8]], i64 0
 ; SCALABLE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x ptr> align 8 [[BROADCAST_SPLAT1]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
 ; SCALABLE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP10]]
@@ -784,8 +781,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-SCALABLE-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; TF-SCALABLE-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP9]] to i64
-; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = mul i64 1, [[TMP13]]
-; TF-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP8]], i64 0
+; TF-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP13]], i64 0
 ; TF-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; TF-SCALABLE-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x ptr> align 8 [[BROADCAST_SPLAT]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]])
 ; TF-SCALABLE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
@@ -847,8 +843,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; SCALABLE-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP7]] to i64
-; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP14]]
-; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP9]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP14]], i64 0
 ; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = icmp ugt <vscale x 2 x i64> [[VEC_IND]], splat (i64 10)
 ; SCALABLE-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[BROADCAST_SPLAT1]], <vscale x 2 x ptr> align 8 [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[TMP10]], i32 [[TMP7]])
@@ -946,8 +941,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; TF-SCALABLE-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; TF-SCALABLE-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
-; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = mul i64 1, [[TMP11]]
-; TF-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP8]], i64 0
+; TF-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; TF-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; TF-SCALABLE-NEXT:    [[TMP10:%.*]] = icmp ugt <vscale x 2 x i64> [[VEC_IND]], splat (i64 10)
 ; TF-SCALABLE-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[BROADCAST_SPLAT1]], <vscale x 2 x ptr> align 8 [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[TMP10]], i32 [[TMP9]])

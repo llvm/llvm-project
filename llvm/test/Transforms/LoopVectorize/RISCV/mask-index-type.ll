@@ -25,8 +25,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VLENUNK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; VLENUNK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP7]] to i64
-; VLENUNK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP15]]
-; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0
+; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP15]], i64 0
 ; VLENUNK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; VLENUNK-NEXT:    [[TMP13:%.*]] = icmp ult <vscale x 4 x i64> [[VEC_IND]], splat (i64 512)
 ; VLENUNK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]

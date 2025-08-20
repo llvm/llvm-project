@@ -60,6 +60,23 @@ public:
         trailingZerosNum);
   }
 
+  cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
+                                          bool packed = false,
+                                          bool padded = false,
+                                          mlir::Type ty = {}) {
+    llvm::SmallVector<mlir::Type, 4> members;
+    for (auto &f : arrayAttr) {
+      auto ta = mlir::cast<mlir::TypedAttr>(f);
+      members.push_back(ta.getType());
+    }
+
+    if (!ty)
+      ty = getAnonRecordTy(members, packed, padded);
+
+    auto sTy = mlir::cast<cir::RecordType>(ty);
+    return cir::ConstRecordAttr::get(sTy, arrayAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {
@@ -82,6 +99,10 @@ public:
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
+  }
+
+  mlir::Type getPtrToVPtrType() {
+    return getPointerTo(cir::VPtrType::get(getContext()));
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -262,6 +283,9 @@ public:
   //
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     return getConstantInt(loc, getSInt32Ty(), c);
+  }
+  cir::ConstantOp getUInt32(uint32_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt32Ty(), c);
   }
 
   // Creates constant nullptr for pointer type ty.
