@@ -349,7 +349,7 @@ function(add_libclc_builtin_set)
   endforeach()
 
   set( builtins_comp_lib_tgt builtins.comp.${ARG_ARCH_SUFFIX} )
-  if ( NOT CMAKE_GENERATOR MATCHES "Visual Studio" )
+  if ( CMAKE_GENERATOR MATCHES "Visual Studio" )
     create_compile_targets( compile_tgts
       ARCH_SUFFIX ${ARG_ARCH_SUFFIX}
       FILES ${bytecode_files}
