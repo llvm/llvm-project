@@ -243,6 +243,10 @@ enum OperandType : unsigned {
   // Operand for SDWA instructions
   OPERAND_SDWA_VOPC_DST,
 
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants.
+  OPERAND_INLINE_C_AV64_PSEUDO,
+
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 

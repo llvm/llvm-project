@@ -135,3 +135,48 @@ body: |
     S_ENDPGM 0, implicit %4
 
 ...
+
+---
+name: av_mov_imm_b64
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: av_mov_imm_b64
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef [[AV_MOV_:%[0-9]+]].sub0_sub1:vreg_192 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub2_sub3:vreg_192 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub0_sub1:vreg_192 = V_MUL_F64_e64 0, [[AV_MOV_]].sub0_sub1, 0, [[AV_MOV_]].sub0_sub1, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub2_sub3:vreg_192 = V_MUL_F64_e64 0, [[AV_MOV_]].sub2_sub3, 0, [[AV_MOV_]].sub2_sub3, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[AV_MOV_]]
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    %0:av_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    %1:vreg_64 = COPY %0
+    %2:vreg_64 = COPY %0
+    %3:sreg_64 = COPY $sgpr0_sgpr1
+    $exec = S_MOV_B64_term %3:sreg_64
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    %1:vreg_64 = V_MUL_F64_e64 0, %1:vreg_64, 0, %1:vreg_64, 0, 0, implicit $mode, implicit $exec
+    %2:vreg_64 = V_MUL_F64_e64 0, %2:vreg_64, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
+
+  bb.2:
+    undef %4.sub0_sub1:vreg_192 = COPY %1:vreg_64
+    %4.sub2_sub3:vreg_192 = COPY %2:vreg_64
+    S_ENDPGM 0, implicit %4
+
+...
