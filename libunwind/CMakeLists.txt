@@ -55,6 +55,7 @@ option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requ
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
 option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." ON)
 option(LIBUNWIND_ENABLE_FRAME_APIS "Include libgcc-compatible frame apis." OFF)
+option(LIBUNWIND_ENABLE_REGISTERSET_PROTECTION "Build libunwind with protection on the internal registers." ON)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -280,6 +281,51 @@ else()
   if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     add_compile_flags(-DNDEBUG)
   endif()
+endif()
+
+if (LIBUNWIND_ENABLE_REGISTERSET_PROTECTION AND (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING))
+  # Pointer Authentication Intrinsics are currently only supported with
+  # the FEAT_PAuth, NOP space variant of the instructions are not
+  # supported, enable this feature if libunwind is compiled with branch-protection
+  # or pauth intrinsic are availabile.
+
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/ptrauth_check.cpp" "
+  #if !( defined(__ARM_FEATURE_PAUTH) && \
+         defined(__has_include) && __has_include (<ptrauth.h>) && \
+         defined(__has_feature) &&__has_feature(ptrauth_intrinsics))
+  #  error
+  #endif
+  int main(){}
+  ")
+
+  try_compile(TARGET_SUPPORTS_PTRAUTH
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    "${CMAKE_CURRENT_BINARY_DIR}/ptrauth_check.cpp"
+    COMPILE_DEFINITIONS "${LIBUNWIND_COMPILE_FLAGS}" -fptrauth-intrinsics)
+
+  # Detect if the code is compiled with -mbranch-protection=pac*.
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/pac_check.cpp" "
+  #ifndef __ARM_FEATURE_PAC_DEFAULT
+  #  error
+  #endif
+  int main(){}
+  ")
+
+  try_compile(TARGET_SUPPORTS_BRANCH_PROTECTION_PAC
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    "${CMAKE_CURRENT_BINARY_DIR}/pac_check.cpp"
+    COMPILE_DEFINITIONS "${LIBUNWIND_COMPILE_FLAGS}")
+
+  if (TARGET_SUPPORTS_BRANCH_PROTECTION_PAC)
+    add_compile_flags(-D_LIBUNWIND_AARCH64_PC_PROTECTION)
+  endif()
+
+  if (TARGET_SUPPORTS_PTRAUTH)
+    add_compile_flags(-fptrauth-intrinsics)
+    add_compile_flags(-D_LIBUNWIND_PTRAUTH_AVAILABLE)
+    add_compile_flags(-D_LIBUNWIND_AARCH64_PC_PROTECTION)
+  endif()
+
 endif()
 
 # Cross-unwinding

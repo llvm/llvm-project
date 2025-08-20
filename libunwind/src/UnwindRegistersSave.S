@@ -785,26 +785,44 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    x30,     [x0, #0x0F0]
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
+#if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+#define __VOFFSET 0x118
+  // See the description in Registers_arm64
+  mov    w17, w30                 // lower part of the PC
+  mov    x16, x0                  // sign with the address of the context
+  movk   x16, #0xface, lsl #48    // blinded with a constant
+  hint   0x8                      // pacia1716
+  mov    x16, x17                 // sign the second part with the first part
+  str    x17,     [x0, #0x100]    // store to __pc
+  mov    x17, x30                 // upper part of the PC
+  lsr    x17, x17, 32
+  hint   0x8                      // pacia1716
+  str    x17,     [x0, #0x110]    // store to __pc2
+  mov    x17, xzr                 // let's not leak PC or the discriminator
+  mov    x16, xzr
+#else
+#define __VOFFSET 0x110
   str    x30,     [x0, #0x100]    // store return address as pc
+#endif
   // skip cpsr
 #if defined(__ARM_FP) && __ARM_FP != 0
-  stp    d0, d1,  [x0, #0x110]
-  stp    d2, d3,  [x0, #0x120]
-  stp    d4, d5,  [x0, #0x130]
-  stp    d6, d7,  [x0, #0x140]
-  stp    d8, d9,  [x0, #0x150]
-  stp    d10,d11, [x0, #0x160]
-  stp    d12,d13, [x0, #0x170]
-  stp    d14,d15, [x0, #0x180]
-  stp    d16,d17, [x0, #0x190]
-  stp    d18,d19, [x0, #0x1A0]
-  stp    d20,d21, [x0, #0x1B0]
-  stp    d22,d23, [x0, #0x1C0]
-  stp    d24,d25, [x0, #0x1D0]
-  stp    d26,d27, [x0, #0x1E0]
-  stp    d28,d29, [x0, #0x1F0]
-  str    d30,     [x0, #0x200]
-  str    d31,     [x0, #0x208]
+  stp    d0, d1,  [x0, #(__VOFFSET + 0x0)]
+  stp    d2, d3,  [x0, #(__VOFFSET + 0x10)]
+  stp    d4, d5,  [x0, #(__VOFFSET + 0x20)]
+  stp    d6, d7,  [x0, #(__VOFFSET + 0x30)]
+  stp    d8, d9,  [x0, #(__VOFFSET + 0x40)]
+  stp    d10,d11, [x0, #(__VOFFSET + 0x50)]
+  stp    d12,d13, [x0, #(__VOFFSET + 0x60)]
+  stp    d14,d15, [x0, #(__VOFFSET + 0x70)]
+  stp    d16,d17, [x0, #(__VOFFSET + 0x80)]
+  stp    d18,d19, [x0, #(__VOFFSET + 0x90)]
+  stp    d20,d21, [x0, #(__VOFFSET + 0xA0)]
+  stp    d22,d23, [x0, #(__VOFFSET + 0xB0)]
+  stp    d24,d25, [x0, #(__VOFFSET + 0xC0)]
+  stp    d26,d27, [x0, #(__VOFFSET + 0xD0)]
+  stp    d28,d29, [x0, #(__VOFFSET + 0xE0)]
+  str    d30,     [x0, #(__VOFFSET + 0xF0)]
+  str    d31,     [x0, #(__VOFFSET + 0xF8)]
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
   ret
