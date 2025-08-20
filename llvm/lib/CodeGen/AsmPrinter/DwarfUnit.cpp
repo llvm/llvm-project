@@ -1351,6 +1351,10 @@ DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
       ContextDIE = &getUnitDie();
       // Build the decl now to ensure it precedes the definition.
       getOrCreateSubprogramDIE(SPDecl);
+      // Check whether the DIE for SP has already been created after the call
+      // above.
+      if (DIE *SPDie = getDIE(SP))
+        return SPDie;
     }
   }
 
