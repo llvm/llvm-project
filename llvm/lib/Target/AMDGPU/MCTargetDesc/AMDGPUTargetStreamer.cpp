@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -277,10 +276,10 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
 
 void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
     const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
-    const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
-    const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
-    const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
-    const MCSymbol *HasIndirectCall) {
+    const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
+    const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
+    const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
+    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -291,6 +290,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
   PRINT_RES_INFO(NumVGPR);
   PRINT_RES_INFO(NumAGPR);
   PRINT_RES_INFO(NumExplicitSGPR);
+  PRINT_RES_INFO(NumNamedBarrier);
   PRINT_RES_INFO(PrivateSegmentSize);
   PRINT_RES_INFO(UsesVCC);
   PRINT_RES_INFO(UsesFlatScratch);
@@ -886,7 +886,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
 
-  if (SymbolELF->declareCommon(Size, Alignment, true)) {
+  if (SymbolELF->declareCommon(Size, Alignment)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
                        " redeclared as different type");
   }

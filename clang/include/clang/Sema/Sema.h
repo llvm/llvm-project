@@ -9837,7 +9837,7 @@ public:
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
                                  ModuleIdPath Path, ModuleIdPath Partition,
                                  ModuleImportState &ImportState,
-                                 bool IntroducerIsFirstPPToken);
+                                 bool SeenNoTrivialPPDirective);
 
   /// The parser has processed a global-module-fragment declaration that begins
   /// the definition of the global module fragment of the current module unit.
@@ -15327,6 +15327,16 @@ public:
   bool hasVisibleDefinition(const NamedDecl *D) {
     NamedDecl *Hidden;
     return hasVisibleDefinition(const_cast<NamedDecl *>(D), &Hidden);
+  }
+  /// Determine if \p D has a definition which allows we redefine it in current
+  /// TU. \p Suggested is the definition that should be made visible to expose
+  /// the definition.
+  bool isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
+                                bool &Visible);
+  bool isRedefinitionAllowedFor(const NamedDecl *D, bool &Visible) {
+    NamedDecl *Hidden;
+    return isRedefinitionAllowedFor(const_cast<NamedDecl *>(D), &Hidden,
+                                    Visible);
   }
 
   /// Determine if \p D has a reachable definition. If not, suggest a

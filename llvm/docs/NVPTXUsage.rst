@@ -92,6 +92,12 @@ Function Attributes
     dimension. Specifying a different cluster dimension at launch will result in
     a runtime error or kernel launch failure. Only supported for Hopper+.
 
+``"nvvm.blocksareclusters"``
+    This attribute implies that the grid launch configuration for the corresponding
+    kernel function is specifying the number of clusters instead of the number of thread
+    blocks. This attribute is only allowed for kernel functions and requires
+    ``nvvm.reqntid`` and ``nvvm.cluster_dim`` attributes.
+
 .. _address_spaces:
 
 Address Spaces

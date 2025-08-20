@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include <algorithm>
@@ -190,7 +191,7 @@ void SmallPtrSetImplBase::copyHelper(const SmallPtrSetImplBase &RHS) {
   CurArraySize = RHS.CurArraySize;
 
   // Copy over the contents from the other set
-  std::copy(RHS.CurArray, RHS.EndPointer(), CurArray);
+  llvm::copy(RHS.buckets(), CurArray);
 
   NumEntries = RHS.NumEntries;
   NumTombstones = RHS.NumTombstones;
@@ -214,7 +215,7 @@ void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
     CurArray = SmallStorage;
-    std::copy(RHS.CurArray, RHS.CurArray + RHS.NumEntries, CurArray);
+    llvm::copy(RHS.small_buckets(), CurArray);
   } else {
     CurArray = RHS.CurArray;
     RHS.CurArray = RHSSmallStorage;
@@ -249,47 +250,35 @@ void SmallPtrSetImplBase::swap(const void **SmallStorage,
 
   // FIXME: From here on we assume that both sets have the same small size.
 
-  // If only RHS is small, copy the small elements into LHS and move the pointer
-  // from LHS to RHS.
-  if (!this->isSmall() && RHS.isSmall()) {
-    std::copy(RHS.CurArray, RHS.CurArray + RHS.NumEntries, SmallStorage);
-    std::swap(RHS.CurArraySize, this->CurArraySize);
+  // Both a small, just swap the small elements.
+  if (this->isSmall() && RHS.isSmall()) {
+    unsigned MinEntries = std::min(this->NumEntries, RHS.NumEntries);
+    std::swap_ranges(this->CurArray, this->CurArray + MinEntries, RHS.CurArray);
+    if (this->NumEntries > MinEntries) {
+      std::copy(this->CurArray + MinEntries, this->CurArray + this->NumEntries,
+                RHS.CurArray + MinEntries);
+    } else {
+      std::copy(RHS.CurArray + MinEntries, RHS.CurArray + RHS.NumEntries,
+                this->CurArray + MinEntries);
+    }
+    assert(this->CurArraySize == RHS.CurArraySize);
     std::swap(this->NumEntries, RHS.NumEntries);
     std::swap(this->NumTombstones, RHS.NumTombstones);
-    RHS.CurArray = this->CurArray;
-    RHS.IsSmall = false;
-    this->CurArray = SmallStorage;
-    this->IsSmall = true;
     return;
   }
 
-  // If only LHS is small, copy the small elements into RHS and move the pointer
-  // from RHS to LHS.
-  if (this->isSmall() && !RHS.isSmall()) {
-    std::copy(this->CurArray, this->CurArray + this->NumEntries,
-              RHSSmallStorage);
-    std::swap(RHS.CurArraySize, this->CurArraySize);
-    std::swap(RHS.NumEntries, this->NumEntries);
-    std::swap(RHS.NumTombstones, this->NumTombstones);
-    this->CurArray = RHS.CurArray;
-    this->IsSmall = false;
-    RHS.CurArray = RHSSmallStorage;
-    RHS.IsSmall = true;
-    return;
-  }
-
-  // Both a small, just swap the small elements.
-  assert(this->isSmall() && RHS.isSmall());
-  unsigned MinEntries = std::min(this->NumEntries, RHS.NumEntries);
-  std::swap_ranges(this->CurArray, this->CurArray + MinEntries, RHS.CurArray);
-  if (this->NumEntries > MinEntries) {
-    std::copy(this->CurArray + MinEntries, this->CurArray + this->NumEntries,
-              RHS.CurArray + MinEntries);
-  } else {
-    std::copy(RHS.CurArray + MinEntries, RHS.CurArray + RHS.NumEntries,
-              this->CurArray + MinEntries);
-  }
-  assert(this->CurArraySize == RHS.CurArraySize);
-  std::swap(this->NumEntries, RHS.NumEntries);
-  std::swap(this->NumTombstones, RHS.NumTombstones);
+  // If only one side is small, copy the small elements into the large side and
+  // move the pointer from the large side to the small side.
+  SmallPtrSetImplBase &SmallSide = this->isSmall() ? *this : RHS;
+  SmallPtrSetImplBase &LargeSide = this->isSmall() ? RHS : *this;
+  const void **LargeSideInlineStorage =
+      this->isSmall() ? RHSSmallStorage : SmallStorage;
+  llvm::copy(SmallSide.small_buckets(), LargeSideInlineStorage);
+  std::swap(LargeSide.CurArraySize, SmallSide.CurArraySize);
+  std::swap(LargeSide.NumEntries, SmallSide.NumEntries);
+  std::swap(LargeSide.NumTombstones, SmallSide.NumTombstones);
+  SmallSide.CurArray = LargeSide.CurArray;
+  SmallSide.IsSmall = false;
+  LargeSide.CurArray = LargeSideInlineStorage;
+  LargeSide.IsSmall = true;
 }

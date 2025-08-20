@@ -42,6 +42,6 @@ _CLC_OVERLOAD _CLC_DEF ulong __clc_clz(ulong x) {
   return x ? __builtin_clzl(x) : 64;
 }
 
-#define FUNCTION __clc_clz
+#define __CLC_FUNCTION __clc_clz
 #define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
 #include <clc/integer/gentype.inc>
