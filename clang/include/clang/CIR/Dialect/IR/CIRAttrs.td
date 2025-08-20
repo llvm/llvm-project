@@ -500,28 +500,54 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
 // VTableAttr
 //===----------------------------------------------------------------------===//
 
-def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
+def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
   let summary = "Represents a C++ vtable";
   let description = [{
-    Wraps a #cir.const_record containing vtable data.
+    Wraps a #cir.const_record containing one or more vtable arrays.
 
-    Example:
+    In most cases, the anonymous record type wrapped by this attribute will
+    contain a single array corresponding to the vtable for one class. However,
+    in the case of multiple inheritence, the anonymous structure may contain
+    multiple arrays, each of which is a vtable.
+
+    Example 1 (single vtable):
+    ```mlir
+    cir.global linkonce_odr @_ZTV6Mother =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI6Mother> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>
+      }> : !rec_anon_struct1
     ```
-    cir.global linkonce_odr @_ZTV1B = #cir.vtable<<
-        {#cir.const_array<[#cir.null : !cir.ptr<i8>,
-         #cir.global_view<@_ZTI1B> : !cir.ptr<i8>,
-         #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>,
-         #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>,
-         #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]>
-         : !cir.array<!cir.ptr<i8> x 5>}>>
-      : !cir.record<"", !cir.array<!cir.ptr<i8> x 5>>
+
+    Example 2 (multiple vtables):
+    ```mlir
+    cir.global linkonce_odr @_ZTV5Child =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN5Child9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>,
+        #cir.const_array<[
+          #cir.ptr<-8 : i64> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 3>
+      }> : !rec_anon_struct2
     ```
   }];
 
   // `vtable_data` is a const record with one element, containing an array of
   // vtable information.
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "mlir::ArrayAttr":$vtable_data);
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    "mlir::ArrayAttr":$vtable_data
+  );
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
