@@ -135,8 +135,11 @@ public:
 
   size_t size() const { return DesignatorList.size(); }
 
-  const DesignatorIter &operator[](unsigned Idx) const {
-    return DesignatorList[Idx];
+  SmallVector<DesignatorIter>::const_iterator begin() const {
+    return DesignatorList.begin();
+  }
+  SmallVector<DesignatorIter>::const_iterator end() const {
+    return DesignatorList.end();
   }
 
 private:

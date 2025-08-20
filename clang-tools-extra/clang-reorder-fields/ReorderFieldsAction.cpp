@@ -95,20 +95,20 @@ public:
   /// Compares compatible designators according to the new struct order.
   /// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0
   /// if they are equal.
-  int operator()(const DesignatorIter &Lhs, const DesignatorIter &Rhs) const;
+  bool operator()(const DesignatorIter &Lhs, const DesignatorIter &Rhs) const;
 
   /// Compares compatible designator lists according to the new struct order.
   /// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0
   /// if they are equal.
-  int operator()(const Designators &Lhs, const Designators &Rhs) const;
+  bool operator()(const Designators &Lhs, const Designators &Rhs) const;
 
   const RecordDecl *Definition;
   ArrayRef<unsigned> NewFieldsOrder;
   SmallVector<unsigned, 4> NewFieldsPositions;
 };
 
-int ReorderedStruct::operator()(const DesignatorIter &Lhs,
-                                const DesignatorIter &Rhs) const {
+bool ReorderedStruct::operator()(const DesignatorIter &Lhs,
+                                 const DesignatorIter &Rhs) const {
   switch (Lhs.getTag()) {
   case DesignatorIter::STRUCT:
     assert(Rhs.getTag() == DesignatorIter::STRUCT &&
@@ -117,10 +117,10 @@ int ReorderedStruct::operator()(const DesignatorIter &Lhs,
            "Incompatible structs");
     // Use the new layout for reordered struct.
     if (Definition == Lhs.getStructDecl()) {
-      return NewFieldsPositions[Lhs.getStructIter()->getFieldIndex()] -
+      return NewFieldsPositions[Lhs.getStructIter()->getFieldIndex()] <
              NewFieldsPositions[Rhs.getStructIter()->getFieldIndex()];
     }
-    return Lhs.getStructIter()->getFieldIndex() -
+    return Lhs.getStructIter()->getFieldIndex() <
            Rhs.getStructIter()->getFieldIndex();
   case DesignatorIter::ARRAY:
   case DesignatorIter::ARRAY_RANGE:
@@ -134,24 +134,15 @@ int ReorderedStruct::operator()(const DesignatorIter &Lhs,
     size_t RhsIdx = Rhs.getTag() == DesignatorIter::ARRAY
                         ? Rhs.getArrayIndex()
                         : Rhs.getArrayRangeStart();
-    return LhsIdx - RhsIdx;
+    return LhsIdx < RhsIdx;
   }
   llvm_unreachable("Invalid designator tag");
 }
 
-int ReorderedStruct::operator()(const Designators &Lhs,
-                                const Designators &Rhs) const {
-  for (unsigned Idx = 0, Size = std::min(Lhs.size(), Rhs.size()); Idx < Size;
-       ++Idx) {
-    int DesignatorComp = (*this)(Lhs[Idx], Rhs[Idx]);
-    // If the current designators are not equal, return the result
-    if (DesignatorComp != 0)
-      return DesignatorComp;
-    // Otherwise, continue to the next pair.
-  }
-  // If all common designators were equal, compare the sizes of the designator
-  // lists.
-  return Lhs.size() - Rhs.size();
+bool ReorderedStruct::operator()(const Designators &Lhs,
+                                 const Designators &Rhs) const {
+  return std::lexicographical_compare(Lhs.begin(), Lhs.end(), Rhs.begin(),
+                                      Rhs.end(), *this);
 }
 
 // FIXME: error-handling
@@ -524,7 +515,7 @@ static bool reorderFieldsInInitListExpr(
 
     // Sort the designators according to the new order.
     llvm::stable_sort(Rewrites, [&RS](const auto &Lhs, const auto &Rhs) {
-      return RS(Lhs.first, Rhs.first) < 0;
+      return RS(Lhs.first, Rhs.first);
     });
 
     for (unsigned i = 0, e = Rewrites.size(); i < e; ++i) {
