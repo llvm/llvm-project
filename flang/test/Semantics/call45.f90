@@ -7,6 +7,8 @@ program call45
     call sub(v([1,2,2,3,3,3,4,4,4,4]))
     !PORTABILITY: The array section 'v(21_8:30_8:1_8)' should not be associated with dummy argument 'v=' with VOLATILE attribute, unless the dummy is assumed-shape or assumed-rank [-Wportability]
     call sub(v(21:30))
+    !PORTABILITY: The array section 'v(21_8:40_8:2_8)' should not be associated with dummy argument 'v=' with VOLATILE attribute, unless the dummy is assumed-shape or assumed-rank [-Wportability]
+    call sub(v(21:40:2))
     call sub2(v(21:40:2))
     call sub4(p)
     print *, v
