@@ -274,4 +274,18 @@ void f(int a) {
 }
 }
 
+namespace GH147495 {
+struct S {
+  enum class E { A };
+  using enum E;
+
+  struct S1 {
+    using enum E;
+  };
+
+  struct S2 {
+    using E::A;
+  };
+};
+}
 #endif

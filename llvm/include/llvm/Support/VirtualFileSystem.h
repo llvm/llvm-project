@@ -1069,7 +1069,7 @@ public:
   /// Redirect each of the remapped files from first to second.
   static std::unique_ptr<RedirectingFileSystem>
   create(ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-         bool UseExternalNames, FileSystem &ExternalFS);
+         bool UseExternalNames, IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;

@@ -354,7 +354,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
         !(input.getType().isSignlessInteger(16) ||
           input.getType().isSignlessInteger(32)))
       return nullptr;
-    return builder.create<TestCastOp>(conversionLoc, resultType, input);
+    return TestCastOp::create(builder, conversionLoc, resultType, input);
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
@@ -362,16 +362,16 @@ struct TestInlinerInterface : public DialectInlinerInterface {
                        DictionaryAttr argumentAttrs) const final {
     if (!argumentAttrs.contains("test.handle_argument"))
       return argument;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
-                                             argument);
+    return TestTypeChangerOp::create(builder, call->getLoc(),
+                                     argument.getType(), argument);
   }
 
   Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
                      Value result, DictionaryAttr resultAttrs) const final {
     if (!resultAttrs.contains("test.handle_result"))
       return result;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
-                                             result);
+    return TestTypeChangerOp::create(builder, call->getLoc(), result.getType(),
+                                     result);
   }
 
   void processInlinedCallBlocks(

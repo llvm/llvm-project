@@ -250,7 +250,7 @@ public:
   bool Find(const TypedValueRegion *R) {
     QualType T = R->getValueType();
     if (const RecordType *RT = T->getAsStructureType()) {
-      const RecordDecl *RD = RT->getDecl()->getDefinition();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
       assert(RD && "Referred record has no definition");
       for (const auto *I : RD->fields()) {
         if (I->isUnnamedBitField())

@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprConcepts.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -86,16 +87,22 @@ ConceptReference *
 ConceptReference::Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
                          SourceLocation TemplateKWLoc,
                          DeclarationNameInfo ConceptNameInfo,
-                         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+                         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
                          const ASTTemplateArgumentListInfo *ArgsAsWritten) {
   return new (C) ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo,
                                   FoundDecl, NamedConcept, ArgsAsWritten);
 }
 
+SourceLocation ConceptReference::getBeginLoc() const {
+  // Note that if the qualifier is null the template KW must also be null.
+  if (auto QualifierLoc = getNestedNameSpecifierLoc())
+    return QualifierLoc.getBeginLoc();
+  return getConceptNameInfo().getBeginLoc();
+}
+
 void ConceptReference::print(llvm::raw_ostream &OS,
                              const PrintingPolicy &Policy) const {
-  if (NestedNameSpec)
-    NestedNameSpec.getNestedNameSpecifier()->print(OS, Policy);
+  NestedNameSpec.getNestedNameSpecifier().print(OS, Policy);
   ConceptName.printName(OS, Policy);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
@@ -155,6 +162,10 @@ concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
           Constraint->getTemplateArgsAsWritten()->arguments().drop_front(1));
   TypeConstraintInfo.setInt(Dependent ? true : false);
 }
+
+concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
+    TemplateParameterList *TPL, bool IsDependent)
+    : TypeConstraintInfo(TPL, IsDependent) {}
 
 concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T)
     : Requirement(RK_Type, T->getType()->isInstantiationDependentType(),

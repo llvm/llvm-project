@@ -275,7 +275,8 @@ def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
 defvar SiFiveIntelligenceTuneFeatures = !listconcat(SiFive7TuneFeatures,
                                                     [TuneDLenFactor2,
                                                      TuneOptimizedZeroStrideLoad,
-                                                     TuneOptimizedNF2SegmentLoadStore]);
+                                                     TuneOptimizedNF2SegmentLoadStore,
+                                                     TuneVLDependentLatency]);
 def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
@@ -589,12 +590,17 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                              FeatureStdExtZicboz,
                                              FeatureVendorXVentanaCondOps],
                                              [TuneVentanaVeyron,
+                                              TuneDisableMISchedLoadClustering,
+                                              TuneDisablePostMISchedLoadClustering,
+                                              TuneDisablePostMISchedStoreClustering,
                                               TuneLUIADDIFusion,
                                               TuneAUIPCADDIFusion,
                                               TuneZExtHFusion,
                                               TuneZExtWFusion,
                                               TuneShiftedZExtWFusion,
-                                              TuneLDADDFusion]> {
+                                              TuneADDLoadFusion,
+                                              TuneAUIPCLoadFusion,
+                                              TuneLUILoadFusion]> {
   let MVendorID = 0x61f;
   let MArchID = 0x8000000000010000;
   let MImpID = 0x111;
@@ -667,6 +673,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZvfh,
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b,
+                                        FeatureVendorXSMTVDot,
                                         FeatureUnalignedScalarMem]),
                                        [TuneDLenFactor2,
                                         TuneOptimizedNF2SegmentLoadStore,

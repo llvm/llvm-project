@@ -75,6 +75,18 @@ public:
     return getConstant(loc, cir::IntAttr::get(ty, value));
   }
 
+  mlir::Value getSignedInt(mlir::Location loc, int64_t val, unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/true);
+    return getConstAPInt(loc, type,
+                         llvm::APInt(numBits, val, /*isSigned=*/true));
+  }
+
+  mlir::Value getUnsignedInt(mlir::Location loc, uint64_t val,
+                             unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/false);
+    return getConstAPInt(loc, type, llvm::APInt(numBits, val));
+  }
+
   // Creates constant null value for integral type ty.
   cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     return getConstant(loc, getZeroInitAttr(ty));
@@ -129,6 +141,35 @@ public:
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
 
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy = cir::ComplexType::get(real.getType());
+    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
+  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
+  }
+
+  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
+  }
+
+  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
+                         uint64_t alignment = 0) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    assert(!cir::MissingFeatures::opLoadStoreVolatile());
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+                               alignmentAttr, cir::MemOrderAttr{});
+  }
+
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
+                                uint64_t alignment) {
+    return createLoad(loc, ptr, alignment);
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
@@ -169,6 +210,11 @@ public:
     return create<cir::ContinueOp>(loc);
   }
 
+  mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
+                            mlir::Value operand) {
+    return create<cir::UnaryOp>(loc, kind, operand);
+  }
+
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     return cir::ConstPtrAttr::get(type, getI64IntegerAttr(value));
   }
@@ -177,6 +223,14 @@ public:
                            mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
+  }
+
+  /// Get constant address of a global variable as an MLIR attribute.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp,
+                                        mlir::ArrayAttr indices = {}) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
@@ -190,18 +244,20 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
-                           mlir::IntegerAttr align = {}) {
-    return create<cir::StoreOp>(loc, val, dst, align);
+                           bool isVolatile = false,
+                           mlir::IntegerAttr align = {},
+                           cir::MemOrderAttr order = {}) {
+    return cir::StoreOp::create(*this, loc, val, dst, align, order);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
                                            mlir::Location loc,
                                            mlir::StringRef name,
-                                           mlir::Type type,
+                                           mlir::Type type, bool isConstant,
                                            cir::GlobalLinkageKind linkage) {
     mlir::OpBuilder::InsertionGuard guard(*this);
     setInsertionPointToStart(mlirModule.getBody());
-    return create<cir::GlobalOp>(loc, name, type, linkage);
+    return cir::GlobalOp::create(*this, loc, name, type, isConstant, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -214,7 +270,8 @@ public:
                                clang::CharUnits alignment) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
-    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignmentAttr);
+    return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
+                               alignmentAttr, /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -414,6 +471,10 @@ public:
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
+  }
+
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                           bool isShiftLeft) {
     return create<cir::ShiftOp>(loc, lhs.getType(), lhs, rhs, isShiftLeft);
@@ -459,8 +520,7 @@ public:
   static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          // TODO: Add LabelOp missing feature here
-          return mlir::isa<cir::AllocaOp>(&op);
+          return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);
         });
 
     if (last != block->rend())

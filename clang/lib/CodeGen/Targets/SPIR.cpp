@@ -119,7 +119,7 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
     return DefaultABIInfo::classifyReturnType(RetTy);
 
   if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->hasFlexibleArrayMember())
       return DefaultABIInfo::classifyReturnType(RetTy);
   }
@@ -187,7 +187,7 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
                                    RAA == CGCXXABI::RAA_DirectInMemory);
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->hasFlexibleArrayMember())
       return DefaultABIInfo::classifyArgumentType(Ty);
   }
@@ -322,9 +322,9 @@ static llvm::Type *getSPIRVImageType(llvm::LLVMContext &Ctx, StringRef BaseType,
   // Choose the dimension of the image--this corresponds to the Dim enum in
   // SPIR-V (first integer parameter of OpTypeImage).
   if (OpenCLName.starts_with("image2d"))
-    IntParams[0] = 1; // 1D
+    IntParams[0] = 1;
   else if (OpenCLName.starts_with("image3d"))
-    IntParams[0] = 2; // 2D
+    IntParams[0] = 2;
   else if (OpenCLName == "image1d_buffer")
     IntParams[0] = 5; // Buffer
   else
@@ -432,7 +432,7 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
     case SpirvOperandKind::TypeId: {
       QualType TypeOperand = Operand.getResultType();
       if (auto *RT = TypeOperand->getAs<RecordType>()) {
-        auto *RD = RT->getDecl();
+        auto *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
         assert(RD->isCompleteDefinition() &&
                "Type completion should have been required in Sema");
 

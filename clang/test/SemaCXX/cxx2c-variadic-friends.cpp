@@ -145,7 +145,7 @@ class S {
 template <typename U>
 struct T {
   static_assert(S<U, T>::a == 42);
-  static_assert(S<U, T>::a == 43); // expected-error {{static assertion failed due to requirement 'S<int, template_template::T>::a == 43'}} \
+  static_assert(S<U, T>::a == 43); // expected-error {{static assertion failed due to requirement 'template_template::S<int, template_template::T>::a == 43'}} \
                                    // expected-note {{expression evaluates to '42 == 43'}}
 };
 

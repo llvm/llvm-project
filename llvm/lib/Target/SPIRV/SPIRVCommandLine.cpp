@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVCommandLine.h"
-#include "llvm/ADT/StringRef.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <map>
 
@@ -102,7 +103,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_2d_block_io},
         {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
         {"SPV_KHR_float_controls2",
-         SPIRV::Extension::Extension::SPV_KHR_float_controls2}};
+         SPIRV::Extension::Extension::SPV_KHR_float_controls2},
+        {"SPV_INTEL_tensor_float32_conversion",
+         SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
@@ -168,4 +171,24 @@ StringRef SPIRVExtensionsParser::checkExtensions(
     AllowedExtensions.insert(It->second);
   }
   return StringRef();
+}
+
+std::set<SPIRV::Extension::Extension>
+SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
+  std::set<SPIRV::Extension::Extension> R;
+  SPIRV::Environment::Environment CurrentEnvironment =
+      SPIRV::Environment::Environment::EnvOpenCL;
+  if (TT.getOS() == Triple::Vulkan)
+    CurrentEnvironment = SPIRV::Environment::Environment::EnvVulkan;
+
+  for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap) {
+    EnvironmentList AllowedEnv = getSymbolicOperandAllowedEnvironments(
+        SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
+        ExtensionEnum);
+
+    if (std::count(AllowedEnv.begin(), AllowedEnv.end(), CurrentEnvironment))
+      R.insert(ExtensionEnum);
+  }
+
+  return R;
 }

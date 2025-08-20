@@ -9,7 +9,6 @@
 #include "SparseTensorDescriptor.h"
 #include "CodegenUtils.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
@@ -79,15 +78,16 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 
 Value SparseTensorSpecifier::getInitValue(OpBuilder &builder, Location loc,
                                           SparseTensorType stt) {
-  return builder.create<StorageSpecifierInitOp>(
-      loc, StorageSpecifierType::get(stt.getEncoding()));
+  return StorageSpecifierInitOp::create(
+      builder, loc, StorageSpecifierType::get(stt.getEncoding()));
 }
 
 Value SparseTensorSpecifier::getSpecifierField(OpBuilder &builder, Location loc,
                                                StorageSpecifierKind kind,
                                                std::optional<Level> lvl) {
-  return builder.create<GetStorageSpecifierOp>(
-      loc, specifier, kind, optionalLevelAttr(specifier.getContext(), lvl));
+  return GetStorageSpecifierOp::create(
+      builder, loc, specifier, kind,
+      optionalLevelAttr(specifier.getContext(), lvl));
 }
 
 void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
@@ -96,8 +96,9 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
                                               std::optional<Level> lvl) {
   // TODO: make `v` have type `TypedValue<IndexType>` instead.
   assert(v.getType().isIndex());
-  specifier = builder.create<SetStorageSpecifierOp>(
-      loc, specifier, kind, optionalLevelAttr(specifier.getContext(), lvl), v);
+  specifier = SetStorageSpecifierOp::create(
+      builder, loc, specifier, kind,
+      optionalLevelAttr(specifier.getContext(), lvl), v);
 }
 
 //===----------------------------------------------------------------------===//
@@ -112,9 +113,9 @@ Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
 
   Value stride = constantIndex(builder, loc, rType.getLvlRank() - cooStart);
   Value size = getCrdMemSize(builder, loc, cooStart);
-  size = builder.create<arith::DivUIOp>(loc, size, stride);
-  return builder.create<memref::SubViewOp>(
-      loc, getMemRefField(SparseTensorFieldKind::CrdMemRef, cooStart),
+  size = arith::DivUIOp::create(builder, loc, size, stride);
+  return memref::SubViewOp::create(
+      builder, loc, getMemRefField(SparseTensorFieldKind::CrdMemRef, cooStart),
       /*offset=*/ValueRange{constantIndex(builder, loc, lvl - cooStart)},
       /*size=*/ValueRange{size},
       /*step=*/ValueRange{stride});

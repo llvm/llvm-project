@@ -582,16 +582,11 @@ void Value::replaceUsesWithIf(Value *New,
   }
 }
 
-/// Replace llvm.dbg.* uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
+/// Replace debug record uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
-  SmallVector<DbgVariableIntrinsic *> DbgUsers;
   SmallVector<DbgVariableRecord *> DPUsers;
-  findDbgUsers(DbgUsers, V, &DPUsers);
-  for (auto *DVI : DbgUsers) {
-    if (DVI->getParent() != BB)
-      DVI->replaceVariableLocationOp(V, New);
-  }
+  findDbgUsers(V, DPUsers);
   for (auto *DVR : DPUsers) {
     DbgMarker *Marker = DVR->getMarker();
     if (Marker->getParent() != BB)
