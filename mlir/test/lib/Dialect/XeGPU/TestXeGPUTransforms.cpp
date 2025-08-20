@@ -82,7 +82,7 @@ struct TestXeGPUUnrollingPatterns
 
             if (auto layout = tdescTy.getLayoutAttr()) {
               auto inst_data = layout.getInstData();
-              if (inst_data && layout.isSgLayout())
+              if (inst_data && layout.isForSubgroup())
                 return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
                                             inst_data.asArrayRef().end());
             }
@@ -239,7 +239,7 @@ struct TestXeGPULayoutInterface
 
     ConversionTarget target(*ctx);
     auto isLegal = [&](xegpu::SliceAttr layout) -> bool {
-      return !layout || !layout.isWgLayout();
+      return !layout || !layout.isForWorkgroup();
     };
 
     target.addDynamicallyLegalOp<vector::StepOp>(

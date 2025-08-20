@@ -184,7 +184,7 @@ def DistributeLayoutAttrInterface: AttrInterface<"DistributeLayoutAttrInterface"
   let methods = [
     InterfaceMethod<"Check the availability of workgroup level layouts",
                     "bool",
-                    "isWgLayout">,
+                    "isForWorkgroup">,
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
@@ -337,12 +337,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttrInterf
   ];
 
   let extraClassDeclaration = [{
-    bool isWgLayout() {
+    bool isForWorkgroup() {
       return getSgLayout() != nullptr;
     }
 
-    bool isSgLayout() {
-      return !isWgLayout();
+    bool isForSubgroup() {
+      return !isForWorkgroup();
     }
 
     int64_t getRank() {
@@ -454,16 +454,16 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttrInterface
       return parent.getOrder();
     }
 
-    bool isWgLayout() const {
+    bool isForWorkgroup() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.isWgLayout();
+      return parent.isForWorkgroup();
     }
 
-    bool isSgLayout() const {
+    bool isForSubgroup() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.isSgLayout();
+      return parent.isForSubgroup();
     }
 
     int64_t getNumSubgroups() {

@@ -40,7 +40,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
   // It only works for subgroup level layout, which only has lane_layout
   // and lane_data, and is to distribute a SIMD code into SIMT code.
-  if (!layout || !layout.isSgLayout())
+  if (!layout || !layout.isForSubgroup())
     return failure();
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());

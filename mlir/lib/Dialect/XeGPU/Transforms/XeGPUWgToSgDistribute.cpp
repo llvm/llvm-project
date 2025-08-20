@@ -59,7 +59,7 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
                    xegpu::DistributeLayoutAttrInterface layout) {
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
-  if (layout && layout.isWgLayout()) {
+  if (layout && layout.isForWorkgroup()) {
     SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt().value();
     if (auto maybeSgData = layout.getSgDataAsInt())
       sgShape = *maybeSgData;
@@ -115,7 +115,7 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
 
   // not applicable to ops without workgroup layout attributes
   xegpu::DistributeLayoutAttrInterface layout = op.getLayoutAttr();
-  if (!layout || !layout.isWgLayout())
+  if (!layout || !layout.isForWorkgroup())
     return failure();
 
   Value sgId = rewriter.create<gpu::SubgroupIdOp>(loc, /*upper_bound=*/nullptr);
@@ -249,7 +249,7 @@ struct WgToSgCreateNdOpNoOffset
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
     auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
-    if (!layout || !layout.isWgLayout())
+    if (!layout || !layout.isForWorkgroup())
       return failure();
 
     Type elemTy = tdescTy.getElementType();
@@ -637,7 +637,8 @@ struct WgToSgConvertLayoutOp
     xegpu::LayoutAttr input = op.getInputLayout();
     xegpu::LayoutAttr target = op.getTargetLayout();
 
-    if (!input || !target || !input.isWgLayout() || !target.isWgLayout())
+    if (!input || !target || !input.isForWorkgroup() ||
+        !target.isForWorkgroup())
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
@@ -938,7 +939,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   };
 
   auto isLegal = [&](xegpu::DistributeLayoutAttrInterface layout) -> bool {
-    return !layout || !layout.isWgLayout();
+    return !layout || !layout.isForWorkgroup();
   };
 
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::LoadNdOp,

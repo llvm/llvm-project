@@ -271,7 +271,7 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
                                   Value linearId) {
   // delinearizeSubgroupId is only available for
   // workgroup-level layout attribute
-  if (!isWgLayout())
+  if (!isForWorkgroup())
     return failure();
 
   // TODO: handle order attribute
@@ -296,7 +296,7 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
 FailureOr<SmallVector<SmallVector<Value>>>
 LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                        ArrayRef<int64_t> shape) {
-  if (!isWgLayout())
+  if (!isForWorkgroup())
     return failure();
 
   SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
@@ -384,7 +384,7 @@ FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                       ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
-  if (!isWgLayout())
+  if (!isForWorkgroup())
     return failure();
 
   SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
