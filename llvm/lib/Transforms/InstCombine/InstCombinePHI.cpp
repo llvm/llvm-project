@@ -1632,12 +1632,17 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     return replaceInstUsesWith(PN, &IdenticalPN);
   }
 
-  // If this is an integer PHI and we know that it has an illegal type, see if
+  // For 8/16 bit CPUs prefer 8 bit registers
+  bool preferByteRegister = !DL.isLegalInteger(32);
+
+  // If this is an integer PHI and we know that it has an illegal type,
+  // (or 16 bit on 8/16 bit CPUs), see if
   // it is only used by trunc or trunc(lshr) operations.  If so, we split the
   // PHI into the various pieces being extracted.  This sort of thing is
   // introduced when SROA promotes an aggregate to a single large integer type.
   if (PN.getType()->isIntegerTy() &&
-      !DL.isLegalInteger(PN.getType()->getPrimitiveSizeInBits()))
+      ((!DL.isLegalInteger(PN.getType()->getPrimitiveSizeInBits())) ||
+       (preferByteRegister && PN.getType()->getPrimitiveSizeInBits() == 16)))
     if (Instruction *Res = SliceUpIllegalIntegerPHI(PN))
       return Res;
 

@@ -44,6 +44,12 @@ public:
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
+
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override {
+    // default is 32, so change it to 16
+    return TypeSize::getFixed(16);
+  }
 };
 
 } // end namespace llvm
