@@ -510,12 +510,16 @@ LogicalResult DPPOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// GatherToLDSOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!dstType.areTrailingDimsContiguous(dstType.getRank()))
-    return emitOpError("destination types must be contiguous");
+  if (!dstType.areTrailingDimsContiguous(1))
+    return emitOpError("destination type inner most dim must be contiguous");
 
   auto elemType = srcType.getElementType();
   // Check $src and $dst element types are the same.
@@ -545,6 +549,42 @@ LogicalResult GatherToLDSOp::verify() {
 
   return success();
 }
+
+namespace {
+/// If the source/target of a GatherToLDSOp is a CastOp that only removes static
+/// information or changes layout, the cast can be skipped.
+struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    bool modified = false;
+    auto foldCast = [&](OpOperand &operand) {
+      if (auto castOp = operand.get().getDefiningOp<memref::CastOp>()) {
+        if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+          rewriter.modifyOpInPlace(gatherOp,
+                                   [&] { operand.assign(castOp.getSource()); });
+          modified = true;
+        }
+      }
+    };
+
+    foldCast(gatherOp.getSrcMutable());
+    foldCast(gatherOp.getDstMutable());
+
+    return success(modified);
+  }
+};
+} // namespace
+
+void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeLoadOp
+//===----------------------------------------------------------------------===//
 
 LogicalResult TransposeLoadOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());

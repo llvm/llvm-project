@@ -1192,6 +1192,18 @@ def executeScriptInternal(
                 str(result.timeoutReached),
             )
 
+        if litConfig.update_tests:
+            for test_updater in litConfig.test_updaters:
+                try:
+                    update_output = test_updater(result, test)
+                except Exception as e:
+                    out += f"Exception occurred in test updater: {e}"
+                    continue
+                if update_output:
+                    for line in update_output.splitlines():
+                        out += f"# {line}\n"
+                    break
+
     return out, err, exitCode, timeoutInfo
 
 
@@ -2175,6 +2187,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     assert parsed["DEFINE:"] == script
     assert parsed["REDEFINE:"] == script
     test.xfails += parsed["XFAIL:"] or []
+    if test.exclude_xfail and test.isExpectedToFail():
+        return lit.Test.Result(Test.EXCLUDED, "excluding XFAIL tests")
     test.requires += parsed["REQUIRES:"] or []
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:

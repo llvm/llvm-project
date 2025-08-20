@@ -1941,7 +1941,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  SystemZCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SystemZ);
   FuncInfo->setSizeOfFnParams(CCInfo.getStackSize());
 
@@ -2251,7 +2251,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
+  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
   ArgCCInfo.AnalyzeCallOperands(Outs, CC_SystemZ);
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected
@@ -2460,10 +2460,9 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
 
-  TargetLowering::ArgListEntry Entry;
   for (SDValue Op : Ops) {
-    Entry.Node = Op;
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Op, Op.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = shouldSignExtendTypeInLibCall(Entry.Ty, IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
@@ -9044,7 +9043,7 @@ static unsigned detectEvenOddMultiplyOperand(const SelectionDAG &DAG,
         if (unsigned(ShuffleMask[Elt]) != 2 * Elt)
           CanUseEven = false;
         if (unsigned(ShuffleMask[Elt]) != 2 * Elt + 1)
-          CanUseEven = true;
+          CanUseOdd = false;
       }
       Op = Op.getOperand(0);
       if (CanUseEven)

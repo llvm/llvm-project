@@ -94,7 +94,6 @@ def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode()
 def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def IEEEModeEnabled : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
 def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
-def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 }
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
@@ -451,7 +450,9 @@ def LoadAddress_constant : AddressSpaceList<[ AddrSpaces.Constant,
 def LoadAddress_global : AddressSpaceList<[ AddrSpaces.Global,
                                             AddrSpaces.Constant,
                                             AddrSpaces.Constant32Bit ]>;
-def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global ]>;
+def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global,
+                                             AddrSpaces.Constant,
+                                             AddrSpaces.Constant32Bit ]>;
 
 def LoadAddress_flat : AddressSpaceList<[ AddrSpaces.Flat,
                                           AddrSpaces.Global,

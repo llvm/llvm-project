@@ -443,9 +443,7 @@ void Sema::Initialize() {
   if (getLangOpts().MSVCCompat) {
     if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
-      PushOnScopeChains(
-          Context.buildImplicitRecord("type_info", TagTypeKind::Class),
-          TUScope);
+      PushOnScopeChains(Context.getMSTypeInfoTagDecl(), TUScope);
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
@@ -656,18 +654,19 @@ ASTMutationListener *Sema::getASTMutationListener() const {
   return getASTConsumer().GetASTMutationListener();
 }
 
-void Sema::addExternalSource(ExternalSemaSource *E) {
+void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
   assert(E && "Cannot use with NULL ptr");
 
   if (!ExternalSource) {
-    ExternalSource = E;
+    ExternalSource = std::move(E);
     return;
   }
 
-  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource))
-    Ex->AddSource(E);
+  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource.get()))
+    Ex->AddSource(std::move(E));
   else
-    ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
+    ExternalSource = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+        ExternalSource, std::move(E));
 }
 
 void Sema::PrintStats() const {
@@ -1435,7 +1434,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   //   translation unit contains a file scope declaration of that
   //   identifier, with the composite type as of the end of the
   //   translation unit, with an initializer equal to 0.
-  llvm::SmallSet<VarDecl *, 32> Seen;
+  llvm::SmallPtrSet<VarDecl *, 32> Seen;
   for (TentativeDefinitionsType::iterator
            T = TentativeDefinitions.begin(ExternalSource.get()),
            TEnd = TentativeDefinitions.end();
@@ -1616,6 +1615,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (!PP.isIncrementalProcessingEnabled())
     TUScope = nullptr;
+
+  checkExposure(Context.getTranslationUnitDecl());
 }
 
 
@@ -1882,9 +1883,10 @@ public:
     for (const FieldDecl *FD : RD->fields()) {
       QualType FT = FD->getType();
       if (const auto *RT = FT->getAs<RecordType>())
-        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-          if (ClassDecl->hasDefinition())
-            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+        if (const auto *ClassDecl =
+                dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+          if (const auto *Def = ClassDecl->getDefinition())
+            if (CXXDestructorDecl *MemberDtor = Def->getDestructor())
               asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
     }
 
@@ -1892,9 +1894,10 @@ public:
     for (const auto &Base : RD->bases()) {
       QualType BaseType = Base.getType();
       if (const auto *RT = BaseType->getAs<RecordType>())
-        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-          if (BaseDecl->hasDefinition())
-            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+        if (const auto *BaseDecl =
+                dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+          if (const auto *Def = BaseDecl->getDefinition())
+            if (CXXDestructorDecl *BaseDtor = Def->getDestructor())
               asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
     }
   }
@@ -1907,9 +1910,10 @@ public:
             VD->needsDestruction(S.Context)) {
           QualType VT = VD->getType();
           if (const auto *RT = VT->getAs<RecordType>())
-            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-              if (ClassDecl->hasDefinition())
-                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+            if (const auto *ClassDecl =
+                    dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+              if (const auto *Def = ClassDecl->getDefinition())
+                if (CXXDestructorDecl *Dtor = Def->getDestructor())
                   asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
 
@@ -2249,16 +2253,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD) {
+    if (Ty->isSVESizelessBuiltinType() && FD && !FD->getType().isNull()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
         if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
           Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
         else if (!IsArmStreamingFunction(FD,
-                                         /*IncludeLocallyStreaming=*/true)) {
+                                         /*IncludeLocallyStreaming=*/true))
           Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
-        }
       }
     }
 

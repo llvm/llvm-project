@@ -294,7 +294,7 @@ LLVM instructions are prefixed by the `llvm.` dialect prefix (e.g.
 `llvm.insertvalue`). Such ops operate exclusively on 1-D vectors and aggregates
 following the [LLVM LangRef](https://llvm.org/docs/LangRef.html). MLIR
 operations are prefixed by the `vector.` dialect prefix (e.g.
-`vector.insertelement`). Such ops operate exclusively on MLIR `n-D` `vector`
+`vector.insert`). Such ops operate exclusively on MLIR `n-D` `vector`
 types.
 
 ### Alternatives For Lowering an n-D Vector Type to LLVM

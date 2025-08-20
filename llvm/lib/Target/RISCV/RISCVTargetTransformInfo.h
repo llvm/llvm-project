@@ -114,6 +114,9 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+    return ST->hasVInstructions();
+  }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
@@ -239,6 +242,11 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
+
+  InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -397,6 +405,10 @@ public:
   }
 
   bool enableInterleavedAccessVectorization() const override { return true; }
+
+  bool enableMaskedInterleavedAccessVectorization() const override {
+    return ST->hasVInstructions();
+  }
 
   unsigned getMinTripCountTailFoldingThreshold() const override;
 
