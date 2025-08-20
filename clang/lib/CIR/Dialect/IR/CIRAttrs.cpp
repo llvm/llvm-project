@@ -437,13 +437,13 @@ LogicalResult cir::VTableAttr::verify(
   if (sTy.getMembers().empty() || vtableData.empty())
     return emitError() << "expected record type with one or more subtype";
 
-  for (size_t i = 0; i < sTy.getMembers().size(); ++i) {
-    auto constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(vtableData[i]);
+  if (cir::ConstRecordAttr::verify(emitError, type, vtableData).failed())
+    return failure();
+
+  for (const auto &data : vtableData.getAsRange<mlir::Attribute>()) {
+    const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(data);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
-
-    if (cir::ConstRecordAttr::verify(emitError, type, vtableData).failed())
-      return failure();
 
     LogicalResult eltTypeCheck = success();
     auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());
