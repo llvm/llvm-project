@@ -1536,11 +1536,16 @@ std::pair<bool, bool> MayNeedCopyInOut(const ActualArgument &actual,
   bool dummyIsAssumedSize{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyIsPolymorphic{dummyObj->type.type().IsPolymorphic()};
+  bool dummyIsAssumedType{dummyObj->type.type().IsAssumedType()};
   // Explicit shape and assumed size arrays must be contiguous
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+      // We cannot make assumptions about assumed type dummy args, especially
+      // if they are used as stand-ins for C "void*", thus assume that need
+      // contiguity.
+      //
       // Polymorphic dummy is descriptor based, so should be able to handle
       // discontigunity.
-      (treatDummyScalarAsArray && !dummyIsPolymorphic) ||
+      dummyIsAssumedType || (treatDummyScalarAsArray && !dummyIsPolymorphic) ||
       dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
@@ -1630,11 +1635,16 @@ static bool MayNeedCopyIn(const ActualArgument &actual,
   bool dummyIsAssumedSize{dummyObj.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyIsPolymorphic{dummyObj.type.type().IsPolymorphic()};
+  bool dummyIsAssumedType{dummyObj.type.type().IsAssumedType()};
   // Explicit shape and assumed size arrays must be contiguous
   bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+      // We cannot make assumptions about assumed type dummy args, especially
+      // if they are used as stand-ins for C "void*", thus decide that need
+      // contiguity.
+      //
       // Polymorphic dummy is descriptor based, so should be able to handle
       // discontigunity.
-      (treatDummyScalarAsArray && !dummyIsPolymorphic) ||
+      dummyIsAssumedType || (treatDummyScalarAsArray && !dummyIsPolymorphic) ||
       dummyObj.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     return true;
