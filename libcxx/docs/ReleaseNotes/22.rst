@@ -50,6 +50,7 @@ Improvements and New Features
 - The performance of ``unordered_set::operator=(const unordered_set&)`` has been improved by up to 5x.
 - The performance of ``map::erase`` and ``set::erase`` has been improved by up to 2x
 - The performance of ``find(key)`` in ``map``, ``set``, ``multimap`` and ``multiset`` has been improved by up to 2.3x
+- Some reallocations are now avoided in `std::filesystem::path::lexically_relative`, resulting in a performance improvement of up to 1.7x.
 
 Deprecations and Removals
 -------------------------
