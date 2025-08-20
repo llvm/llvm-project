@@ -252,11 +252,11 @@ public:
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
                                            mlir::Location loc,
                                            mlir::StringRef name,
-                                           mlir::Type type,
+                                           mlir::Type type, bool isConstant,
                                            cir::GlobalLinkageKind linkage) {
     mlir::OpBuilder::InsertionGuard guard(*this);
     setInsertionPointToStart(mlirModule.getBody());
-    return create<cir::GlobalOp>(loc, name, type, linkage);
+    return cir::GlobalOp::create(*this, loc, name, type, isConstant, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
