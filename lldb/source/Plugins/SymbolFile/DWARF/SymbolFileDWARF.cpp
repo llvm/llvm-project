@@ -1018,7 +1018,7 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
       local_module_sp->RegisterXcodeSDK(sdk, sysroot);
   }
 
-  return {sdk, FileSpec{std::move(sysroot)}};
+  return {sdk, FileSpec(sysroot)};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
