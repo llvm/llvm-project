@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers, std-at-least-c++26
+// REQUIRES: std-at-least-c++26
 
 #include <ranges>
 #include <cassert>
