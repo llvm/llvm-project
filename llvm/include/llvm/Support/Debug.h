@@ -42,7 +42,7 @@ class raw_ostream;
 /// An optional level can be provided to control the verbosity of the output.
 /// If the provided level is not 0 and user specified a level below the provided
 /// level, return false.
-bool isCurrentDebugType(const char *Type, int Level = 0);
+LLVM_ABI bool isCurrentDebugType(const char *Type, int Level = 0);
 
 /// setCurrentDebugType - Set the current debug type, as if the -debug-only=X
 /// option were specified.  Note that DebugFlag also needs to be set to true for
@@ -52,13 +52,13 @@ bool isCurrentDebugType(const char *Type, int Level = 0);
 /// user specified a level at least as high as the provided level.
 /// 0 is a special level that acts as an opt-out for this specific debug type
 /// without affecting the other debug output.
-void setCurrentDebugType(const char *Type);
+LLVM_ABI void setCurrentDebugType(const char *Type);
 
 /// setCurrentDebugTypes - Set the current debug type, as if the
 /// -debug-only=X,Y,Z option were specified. Note that DebugFlag
 /// also needs to be set to true for debug output to be produced.
 ///
-void setCurrentDebugTypes(const char **Types, unsigned Count);
+LLVM_ABI void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 /// DEBUG_WITH_TYPE macro - This macro should be used by passes to emit debug
 /// information.  If the '-debug' option is specified on the commandline, and if
