@@ -9114,18 +9114,22 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
   TargetLowering::ArgListTy Args = {GetEntry(PT, Src)};
 
   TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall = false;
-  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-  IsTailCall = CI && CI->isTailCall() &&
-               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
 
-  CLI.setDebugLoc(dl)
-      .setChain(Chain)
-      .setLibCallee(
-          TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
-          getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
-          std::move(Args))
-      .setTailCall(IsTailCall);
+  // TODO: Intentionally not marking this libcall as a tail call.
+  //
+  // Why:
+  // - The only current in-tree user of SelectionDAG::getStrlen is the AIX path,
+  //   where generic tail-calling to libcalls is not safe due to ABI
+  //   constraints around r2 (TOC). We don¡¯t have a reliable way to validate a
+  //   tail call here.
+  //
+  // If another target starts using this and does support tail calls to
+  // libcalls, re-enable `.setTailCall(...)` under a target guard and add a
+  // test.
+  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
+      TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
+      getExternalSymbol(LibCallName, TLI->getProgramPointerTy(getDataLayout())),
+      std::move(Args));
 
   return TLI->LowerCallTo(CLI);
 }
