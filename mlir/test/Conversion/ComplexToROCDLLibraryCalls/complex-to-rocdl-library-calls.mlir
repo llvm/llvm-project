@@ -2,18 +2,12 @@
 
 // CHECK-DAG: @__ocml_cabs_f32(complex<f32>) -> f32
 // CHECK-DAG: @__ocml_cabs_f64(complex<f64>) -> f64
-// CHECK-DAG: @__ocml_carg_f32(complex<f32>) -> f32
-// CHECK-DAG: @__ocml_carg_f64(complex<f64>) -> f64
 // CHECK-DAG: @__ocml_ccos_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_ccos_f64(complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_cexp_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_cexp_f64(complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_clog_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_clog_f64(complex<f64>) -> complex<f64>
-// CHECK-DAG: @__ocml_conj_f32(complex<f32>) -> complex<f32>
-// CHECK-DAG: @__ocml_conj_f64(complex<f64>) -> complex<f64>
-// CHECK-DAG: @__ocml_cpow_f32(complex<f32>, complex<f32>) -> complex<f32>
-// CHECK-DAG: @__ocml_cpow_f64(complex<f64>, complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_csin_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_csin_f64(complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_csqrt_f32(complex<f32>) -> complex<f32>
@@ -31,16 +25,6 @@ func.func @abs_caller(%f: complex<f32>, %d: complex<f64>) -> (f32, f64) {
   %rd = complex.abs %d : complex<f64>
   // CHECK: return %[[RF]], %[[RD]]
   return %rf, %rd : f32, f64
-}
-
-//CHECK-LABEL: @angle_caller
-func.func @angle_caller(%f: complex<f32>, %d: complex<f64>) -> (f32, f64) {
-  // CHECK: %[[AF:.*]] = call @__ocml_carg_f32(%{{.*}})
-  %af = complex.angle %f : complex<f32>
-  // CHECK: %[[AD:.*]] = call @__ocml_carg_f64(%{{.*}})
-  %ad = complex.angle %d : complex<f64>
-  // CHECK: return %[[AF]], %[[AD]]
-  return %af, %ad : f32, f64
 }
 
 //CHECK-LABEL: @cos_caller
@@ -71,26 +55,6 @@ func.func @log_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, comp
   %ld = complex.log %d : complex<f64>
   // CHECK: return %[[LF]], %[[LD]]
   return %lf, %ld : complex<f32>, complex<f64>
-}
-
-//CHECK-LABEL: @conj_caller
-func.func @conj_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, complex<f64>) {
-  // CHECK: %[[CF:.*]] = call @__ocml_conj_f32(%{{.*}})
-  %cf2 = complex.conj %f : complex<f32>
-  // CHECK: %[[CD:.*]] = call @__ocml_conj_f64(%{{.*}})
-  %cd2 = complex.conj %d : complex<f64>
-  // CHECK: return %[[CF]], %[[CD]]
-  return %cf2, %cd2 : complex<f32>, complex<f64>
-}
-
-//CHECK-LABEL: @pow_caller
-func.func @pow_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, complex<f64>) {
-  // CHECK: %[[PF:.*]] = call @__ocml_cpow_f32(%{{.*}}, %{{.*}})
-  %pf = complex.pow %f, %f : complex<f32>
-  // CHECK: %[[PD:.*]] = call @__ocml_cpow_f64(%{{.*}}, %{{.*}})
-  %pd = complex.pow %d, %d : complex<f64>
-  // CHECK: return %[[PF]], %[[PD]]
-  return %pf, %pd : complex<f32>, complex<f64>
 }
 
 //CHECK-LABEL: @sin_caller

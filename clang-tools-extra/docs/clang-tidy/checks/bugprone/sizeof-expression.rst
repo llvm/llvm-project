@@ -266,8 +266,9 @@ This check corresponds to the CERT C Coding Standard rule
 `ARR39-C. Do not add or subtract a scaled integer to a pointer
 <http://wiki.sei.cmu.edu/confluence/display/c/ARR39-C.+Do+not+add+or+subtract+a+scaled+integer+to+a+pointer>`_.
 
+
 Limitations
-"""""""""""
+-----------
 
 Cases where the pointee type has a size of `1` byte (such as, and most
 importantly, ``char``) are excluded.

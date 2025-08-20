@@ -143,7 +143,7 @@ def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->isSVEAvailable()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE), "sve">;
-def HasSVEB16B16     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVEB16B16()">,
+def HasSVEB16B16     : Predicate<"Subtarget->hasSVEB16B16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEB16B16), "sve-b16b16">;
 def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
@@ -248,6 +248,10 @@ def HasSVE_or_SME
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
+def HasNonStreamingSVE_or_SME2
+    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available()">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2),
+                "sve or sme2">;
 def HasNonStreamingSVE_or_SME2p1
     : Predicate<"Subtarget->isSVEAvailable() ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p1())">,
@@ -448,8 +452,13 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisVT<1, FlagsVT>,
                                              SDTCisVT<4, FlagsVT>]>;
 
+// Value type used for condition codes.
+// Should be kept in sync with its C++ counterpart.
+defvar CondCodeVT = i32;
+
 def SDT_AArch64Brcond  : SDTypeProfile<0, 3,
-                                     [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>,
+                                     [SDTCisVT<0, OtherVT>,
+                                      SDTCisVT<1, CondCodeVT>,
                                       SDTCisVT<2, FlagsVT>]>;
 def SDT_AArch64cbz : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>;
 def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
@@ -458,22 +467,22 @@ def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
 def SDT_AArch64CSel  : SDTypeProfile<1, 4,
                                    [SDTCisSameAs<0, 1>,
                                     SDTCisSameAs<0, 2>,
-                                    SDTCisInt<3>,
+                                    SDTCisVT<3, CondCodeVT>,
                                     SDTCisVT<4, FlagsVT>]>;
 def SDT_AArch64CCMP : SDTypeProfile<1, 5,
                                     [SDTCisVT<0, FlagsVT>,
                                      SDTCisInt<1>,
                                      SDTCisSameAs<1, 2>,
                                      SDTCisInt<3>,
-                                     SDTCisInt<4>,
-                                     SDTCisVT<5, i32>]>;
+                                     SDTCisVT<4, CondCodeVT>,
+                                     SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
                                      [SDTCisVT<0, FlagsVT>,
                                       SDTCisFP<1>,
                                       SDTCisSameAs<1, 2>,
                                       SDTCisInt<3>,
-                                      SDTCisInt<4>,
-                                      SDTCisVT<5, i32>]>;
+                                      SDTCisVT<4, CondCodeVT>,
+                                      SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, FlagsVT>,
                                             SDTCisFP<1>,
                                             SDTCisSameAs<2, 1>]>;
@@ -546,7 +555,8 @@ def SDT_AArch64TBL : SDTypeProfile<1, 2, [
 ]>;
 
 def SDT_AArch64cb : SDTypeProfile<0, 4,
-                                  [SDTCisVT<0, i32>, SDTCisInt<1>, SDTCisInt<2>,
+                                  [SDTCisVT<0, CondCodeVT>,
+                                   SDTCisInt<1>, SDTCisInt<2>,
                                    SDTCisVT<3, OtherVT>]>;
 
 // non-extending masked load fragment.
@@ -5701,27 +5711,6 @@ let Predicates = [HasFullFP16] in {
 // Advanced SIMD two vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl", abdu>;
-// Match UABDL in log2-shuffle patterns.
-def : Pat<(abs (v8i16 (sub (zext (v8i8 V64:$opA)),
-                           (zext (v8i8 V64:$opB))))),
-          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
-                           (zext (extract_high_v16i8 (v16i8 V128:$opB)))))),
-          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
-def : Pat<(abs (v4i32 (sub (zext (v4i16 V64:$opA)),
-                           (zext (v4i16 V64:$opB))))),
-          (UABDLv4i16_v4i32 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v4i32 (sub (zext (extract_high_v8i16 (v8i16 V128:$opA))),
-                           (zext (extract_high_v8i16 (v8i16 V128:$opB)))))),
-          (UABDLv8i16_v4i32 V128:$opA, V128:$opB)>;
-def : Pat<(abs (v2i64 (sub (zext (v2i32 V64:$opA)),
-                           (zext (v2i32 V64:$opB))))),
-          (UABDLv2i32_v2i64 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v2i64 (sub (zext (extract_high_v4i32 (v4i32 V128:$opA))),
-                           (zext (extract_high_v4i32 (v4i32 V128:$opB)))))),
-          (UABDLv4i32_v2i64 V128:$opA, V128:$opB)>;
-
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", abs>;
 defm CLS    : SIMDTwoVectorBHS<0, 0b00100, "cls", int_aarch64_neon_cls>;
 defm CLZ    : SIMDTwoVectorBHS<1, 0b00100, "clz", ctlz>;
@@ -6049,6 +6038,7 @@ defm MLA      : SIMDThreeSameVectorBHSTied<0, 0b10010, "mla", null_frag>;
 defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
+let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
@@ -6796,40 +6786,47 @@ def : Pat <(f64 (uint_to_fp (i32
 // Advanced SIMD three different-sized vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm ADDHN  : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>;
-defm SUBHN  : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
-defm RADDHN : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
-defm RSUBHN : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
-defm PMULL  : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
-defm SABAL  : SIMDLongThreeVectorTiedBHSabal<0,0b0101,"sabal", abds>;
-defm SABDL   : SIMDLongThreeVectorBHSabdl<0, 0b0111, "sabdl", abds>;
+defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>;
+defm SUBHN   : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
+defm RADDHN  : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
+defm RSUBHN  : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
+let isCommutable = 1 in
+defm PMULL   : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
+defm SABAL   : SIMDLongThreeVectorTiedBHS<0,0b0101,"sabal",
+                 TriOpFrag<(add node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
+defm SABDL   : SIMDLongThreeVectorBHS<0, 0b0111, "sabdl",
+                 BinOpFrag<(zext (abds node:$LHS, node:$RHS))>>;
 defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
-            BinOpFrag<(add (sext node:$LHS), (sext node:$RHS))>>;
+                BinOpFrag<(add (sext node:$LHS), (sext node:$RHS))>>;
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
-    TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
 defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal", saddsat>;
 defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl", ssubsat>;
-defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull",
-                                     int_aarch64_neon_sqdmull>;
+defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull", int_aarch64_neon_sqdmull>;
+let isCommutable = 0 in
 defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
                  BinOpFrag<(sub (sext node:$LHS), (sext node:$RHS))>>;
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
-defm UABAL   : SIMDLongThreeVectorTiedBHSabal<1, 0b0101, "uabal", abdu>;
+defm UABAL   : SIMDLongThreeVectorTiedBHS<1, 0b0101, "uabal",
+                 TriOpFrag<(add node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
+defm UABDL   : SIMDLongThreeVectorBHS<1, 0b0111, "uabdl",
+                 BinOpFrag<(zext (abdu node:$LHS, node:$RHS))>>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
                  BinOpFrag<(add (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
-    TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
+let isCommutable = 0 in
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",

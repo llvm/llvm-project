@@ -12,7 +12,7 @@
 #include <clc/atomic/clc_atomic_compare_exchange.h>
 #include <clc/opencl/atomic/atomic_compare_exchange_strong.h>
 
-#define FUNCTION atomic_compare_exchange_strong
+#define __CLC_FUNCTION atomic_compare_exchange_strong
 #define __CLC_COMPARE_EXCHANGE
 
 #define __CLC_BODY <atomic_def.inc>

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -23,7 +24,6 @@
 #include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -380,6 +380,19 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   unsigned EHSectionType = T.getArch() == Triple::x86_64
                                ? ELF::SHT_X86_64_UNWIND
                                : ELF::SHT_PROGBITS;
+  switch (T.getArch()) {
+  case Triple::x86_64:
+    SFrameABIArch = sframe::ABI::AMD64EndianLittle;
+    break;
+  case Triple::aarch64:
+    SFrameABIArch = sframe::ABI::AArch64EndianLittle;
+    break;
+  case Triple::aarch64_be:
+    SFrameABIArch = sframe::ABI::AArch64EndianBig;
+    break;
+  default:
+    break;
+  }
 
   // Solaris requires different flags for .eh_frame to seemingly every other
   // platform.
@@ -536,6 +549,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 
   EHFrameSection =
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
+
+  SFrameSection =
+      Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
 
   CallGraphSection = Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, 0);
 
@@ -1064,6 +1080,7 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   CompactUnwindDwarfEHFrameOnly = 0;
 
   EHFrameSection = nullptr;             // Created on demand.
+  SFrameSection = nullptr;              // Created on demand.
   CompactUnwindSection = nullptr;       // Used only by selected targets.
   DwarfAccelNamesSection = nullptr;     // Used only by selected targets.
   DwarfAccelObjCSection = nullptr;      // Used only by selected targets.
@@ -1135,9 +1152,10 @@ MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".callgraph", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1154,9 +1172,10 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".stack_sizes", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1174,9 +1193,10 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1192,10 +1212,10 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName,
-                            /*IsComdat=*/true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1211,9 +1231,10 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(PseudoProbeSection->getName(), ELF::SHT_PROGBITS,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      PseudoProbeSection->getName(), ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1261,7 +1282,7 @@ MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
     GroupName = Group->getName();
     Flags |= ELF::SHF_GROUP;
   }
-  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
-                            ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
+  return Ctx->getELFSection(
+      Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec->getBeginSymbol()));
 }

@@ -290,6 +290,7 @@ static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
 static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
 
 typedef void (*CUstreamCallback)(CUstream, CUresult, void *);
+typedef size_t (*CUoccupancyB2DSize)(int);
 
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
@@ -372,5 +373,7 @@ CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
 CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        const CUmemAllocationProp *prop,
                                        CUmemAllocationGranularity_flags option);
+CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
+                                          CUoccupancyB2DSize, size_t, int);
 
 #endif

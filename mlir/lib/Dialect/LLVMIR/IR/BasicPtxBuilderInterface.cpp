@@ -107,11 +107,32 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   ss << getModifier() << getRegisterType(v) << ",";
 }
 
+/// Check if the operation needs to pack and unpack results.
+static bool needsPackUnpack(BasicPtxBuilderInterface interfaceOp) {
+  return interfaceOp->getNumResults() > 1;
+}
+
+/// Pack the result types of the interface operation.
+/// If the operation has multiple results, it packs them into a struct
+/// type. Otherwise, it returns the original result types.
+static SmallVector<Type> packResultTypes(MLIRContext *ctx,
+                                         BasicPtxBuilderInterface interfaceOp) {
+  TypeRange results = interfaceOp->getResultTypes();
+
+  if (!needsPackUnpack(interfaceOp))
+    return llvm::to_vector<1>(results);
+
+  SmallVector<mlir::Type> elems(results.begin(), results.end());
+  auto sTy = LLVM::LLVMStructType::getLiteral(ctx, elems, /*isPacked=*/false);
+  return {sTy};
+}
+
 LLVM::InlineAsmOp PtxBuilder::build() {
+  MLIRContext *ctx = interfaceOp->getContext();
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(interfaceOp->getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
 
-  auto resultTypes = interfaceOp->getResultTypes();
+  SmallVector<Type> resultTypes = packResultTypes(ctx, interfaceOp);
 
   // Remove the last comma from the constraints string.
   if (!registerConstraints.empty() &&
@@ -136,7 +157,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
       rewriter, interfaceOp->getLoc(),
       /*result types=*/resultTypes,
       /*operands=*/ptxOperands,
-      /*asm_string=*/llvm::StringRef(ptxInstruction),
+      /*asm_string=*/ptxInstruction,
       /*constraints=*/registerConstraints.data(),
       /*has_side_effects=*/interfaceOp.hasSideEffect(),
       /*is_align_stack=*/false, LLVM::TailCallKind::None,
@@ -147,9 +168,34 @@ LLVM::InlineAsmOp PtxBuilder::build() {
 void PtxBuilder::buildAndReplaceOp() {
   LLVM::InlineAsmOp inlineAsmOp = build();
   LLVM_DEBUG(DBGS() << "\n Generated PTX \n\t" << inlineAsmOp << "\n");
-  if (inlineAsmOp->getNumResults() == interfaceOp->getNumResults()) {
-    rewriter.replaceOp(interfaceOp, inlineAsmOp);
-  } else {
+
+  // Case 1: no result
+  if (inlineAsmOp->getNumResults() == 0) {
     rewriter.eraseOp(interfaceOp);
+    return;
   }
+
+  // Case 2: single result, forward it directly
+  if (!needsPackUnpack(interfaceOp)) {
+    rewriter.replaceOp(interfaceOp, inlineAsmOp->getResults());
+    return;
+  }
+
+  // Case 3: multiple results were packed; unpack the struct.
+  assert(mlir::LLVM::LLVMStructType::classof(
+             inlineAsmOp.getResultTypes().front()) &&
+         "Expected result type to be LLVMStructType when unpacking multiple "
+         "results");
+  auto structTy = llvm::cast<mlir::LLVM::LLVMStructType>(
+      inlineAsmOp.getResultTypes().front());
+
+  SmallVector<mlir::Value> unpacked;
+  Value structVal = inlineAsmOp.getResult(0);
+  for (auto [idx, elemTy] : llvm::enumerate(structTy.getBody())) {
+    Value unpackedValue = LLVM::ExtractValueOp::create(
+        rewriter, interfaceOp->getLoc(), structVal, idx);
+    unpacked.push_back(unpackedValue);
+  }
+
+  rewriter.replaceOp(interfaceOp, unpacked);
 }

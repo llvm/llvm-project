@@ -126,11 +126,11 @@
 // CHECK-V6M-NDL: "-Bstatic" "-m" "armelf" "-EL"
 // CHECK-V6M-NDL-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 
-// RUN: rm -rf %T/baremetal_cxx_sysroot
-// RUN: mkdir -p %T/baremetal_cxx_sysroot/usr/include/c++/v1
+// RUN: rm -rf %t.dir/baremetal_cxx_sysroot
+// RUN: mkdir -p %t.dir/baremetal_cxx_sysroot/usr/include/c++/v1
 // RUN: %clangxx %s -### 2>&1 \
 // RUN:     --target=armv6m-none-eabi \
-// RUN:     --sysroot=%T/baremetal_cxx_sysroot \
+// RUN:     --sysroot=%t.dir/baremetal_cxx_sysroot \
 // RUN:     -stdlib=libc++ \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-LIBCXX-USR %s
 // CHECK-V6M-LIBCXX-USR: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -568,24 +568,24 @@
 
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.
-// RUN: rm -rf %T/baremetal_clang_rt_noarch
-// RUN: mkdir -p %T/baremetal_clang_rt_noarch/lib
-// RUN: touch %T/baremetal_clang_rt_noarch/lib/libclang_rt.builtins.a
+// RUN: rm -rf %t.dir/baremetal_clang_rt_noarch
+// RUN: mkdir -p %t.dir/baremetal_clang_rt_noarch/lib
+// RUN: touch %t.dir/baremetal_clang_rt_noarch/lib/libclang_rt.builtins.a
 // RUN: %clang %s -### 2>&1 \
 // RUN:     --target=armv6m-none-eabi \
-// RUN:     --sysroot=%T/baremetal_clang_rt_noarch \
+// RUN:     --sysroot=%t.dir/baremetal_clang_rt_noarch \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-NOARCH %s
 // CHECK-CLANGRT-NOARCH: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-CLANGRT-NOARCH-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
 // Check that compiler-rt library with the arch filename suffix will be
 // used if present.
-// RUN: rm -rf %T/baremetal_clang_rt_arch
-// RUN: mkdir -p %T/baremetal_clang_rt_arch/lib
-// RUN: touch %T/baremetal_clang_rt_arch/lib/libclang_rt.builtins-armv6m.a
+// RUN: rm -rf %t.dir/baremetal_clang_rt_arch
+// RUN: mkdir -p %t.dir/baremetal_clang_rt_arch/lib
+// RUN: touch %t.dir/baremetal_clang_rt_arch/lib/libclang_rt.builtins-armv6m.a
 // RUN: %clang %s -### 2>&1 \
 // RUN:     --target=armv6m-none-eabi \
-// RUN:     --sysroot=%T/baremetal_clang_rt_arch \
+// RUN:     --sysroot=%t.dir/baremetal_clang_rt_arch \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARCH %s
 // CHECK-CLANGRT-ARCH: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-CLANGRT-ARCH-NOT: "{{[^"]*}}libclang_rt.builtins.a"

@@ -208,6 +208,24 @@ bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
   return isUnsatisfiable(std::move(Constraints));
 }
 
+llvm::DenseSet<Atom> DataflowAnalysisContext::collectDependencies(
+    llvm::DenseSet<Atom> Tokens) const {
+  // Use a worklist algorithm, with `Remaining` holding the worklist and
+  // `Tokens` tracking which atoms have already been added to the worklist.
+  std::vector<Atom> Remaining(Tokens.begin(), Tokens.end());
+  while (!Remaining.empty()) {
+    Atom CurrentToken = Remaining.back();
+    Remaining.pop_back();
+    if (auto DepsIt = FlowConditionDeps.find(CurrentToken);
+        DepsIt != FlowConditionDeps.end())
+      for (Atom A : DepsIt->second)
+        if (Tokens.insert(A).second)
+          Remaining.push_back(A);
+  }
+
+  return Tokens;
+}
+
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     Atom Token, llvm::SetVector<const Formula *> &Constraints) {
   llvm::DenseSet<Atom> AddedTokens;
@@ -224,6 +242,8 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
     auto ConstraintsIt = FlowConditionConstraints.find(Token);
     if (ConstraintsIt == FlowConditionConstraints.end()) {
+      // The flow condition is unconstrained. Just add the atom directly, which
+      // is equivalent to asserting it is true.
       Constraints.insert(&arena().makeAtomRef(Token));
     } else {
       // Bind flow condition token via `iff` to its set of constraints:
@@ -237,6 +257,65 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
       for (Atom A : DepsIt->second)
         Remaining.push_back(A);
   }
+}
+
+static void getReferencedAtoms(const Formula &F,
+                               llvm::DenseSet<dataflow::Atom> &Refs) {
+  switch (F.kind()) {
+  case Formula::AtomRef:
+    Refs.insert(F.getAtom());
+    break;
+  case Formula::Literal:
+    break;
+  case Formula::Not:
+    getReferencedAtoms(*F.operands()[0], Refs);
+    break;
+  case Formula::And:
+  case Formula::Or:
+  case Formula::Implies:
+  case Formula::Equal:
+    ArrayRef<const Formula *> Operands = F.operands();
+    getReferencedAtoms(*Operands[0], Refs);
+    getReferencedAtoms(*Operands[1], Refs);
+    break;
+  }
+}
+
+SimpleLogicalContext DataflowAnalysisContext::exportLogicalContext(
+    llvm::DenseSet<dataflow::Atom> TargetTokens) const {
+  SimpleLogicalContext LC;
+
+  if (Invariant != nullptr) {
+    LC.Invariant = Invariant;
+    getReferencedAtoms(*Invariant, TargetTokens);
+  }
+
+  llvm::DenseSet<dataflow::Atom> Dependencies =
+      collectDependencies(std::move(TargetTokens));
+
+  for (dataflow::Atom Token : Dependencies) {
+    // Only process the token if it is constrained. Unconstrained tokens don't
+    // have dependencies.
+    const Formula *Constraints = FlowConditionConstraints.lookup(Token);
+    if (Constraints == nullptr)
+      continue;
+    LC.TokenDefs[Token] = Constraints;
+
+    if (auto DepsIt = FlowConditionDeps.find(Token);
+        DepsIt != FlowConditionDeps.end())
+      LC.TokenDeps[Token] = DepsIt->second;
+  }
+
+  return LC;
+}
+
+void DataflowAnalysisContext::initLogicalContext(SimpleLogicalContext LC) {
+  Invariant = LC.Invariant;
+  FlowConditionConstraints = std::move(LC.TokenDefs);
+  // TODO: The dependencies in `LC.TokenDeps` can be reconstructed from
+  // `LC.TokenDefs`. Give the caller the option to reconstruct, rather than
+  // providing them directly, to save caller space (memory/disk).
+  FlowConditionDeps = std::move(LC.TokenDeps);
 }
 
 static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
