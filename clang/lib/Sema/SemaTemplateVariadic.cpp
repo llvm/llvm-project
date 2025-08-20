@@ -1071,6 +1071,7 @@ UnsignedOrNone Sema::getNumArgumentsInExpansionFromUnexpanded(
                        .first.dyn_cast<const TemplateSpecializationType *>()) {
       // This is a dependent pack, we are not ready to expand it yet.
       assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
+      (void)TST;
       return std::nullopt;
     } else if (auto *PST =
                    Unexpanded[I]
