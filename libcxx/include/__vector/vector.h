@@ -853,13 +853,13 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   auto __new_begin = __v.begin() - size();
   std::__uninitialized_allocator_relocate(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__end_), std::__to_address(__new_begin));
-  __v.__begin_ = __new_begin;
+  __v.__set_valid_range(__new_begin, __v.end());
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
 
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
   std::swap(this->__cap_, __v.__cap_);
-  __v.__set_first(__v.begin());
+  __v.__set_data(__v.begin());
   __annotate_new(size());
 }
 
@@ -884,12 +884,12 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 
   std::__uninitialized_allocator_relocate(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__p), std::__to_address(__new_begin));
-  __v.__begin_ = __new_begin;
+  __v.__set_valid_range(__new_begin, __v.end());
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
   std::swap(this->__cap_, __v.__cap_);
-  __v.__first_ = __v.begin();
+  __v.__set_data(__v.begin());
   __annotate_new(size());
   return __ret;
 }
