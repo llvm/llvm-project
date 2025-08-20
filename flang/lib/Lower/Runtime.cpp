@@ -238,7 +238,7 @@ void Fortran::lower::genSyncImagesStatement(
       std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
   auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
 
-  // SYNC_IMAGES(*) is passed as count == -1 while  SYNC IMAGES([]) hase count
+  // SYNC_IMAGES(*) is passed as count == -1 while  SYNC IMAGES([]) has count
   // == 0. Note further that SYNC IMAGES(*) is not semantically equivalent to
   // SYNC ALL.
   Fortran::lower::StatementContext stmtCtx;
