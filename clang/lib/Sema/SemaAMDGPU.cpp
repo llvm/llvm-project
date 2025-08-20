@@ -112,11 +112,12 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f16_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f16_i32: {
+    StringRef FeatureList(getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     bool HasImageInsts = Builtin::evaluateRequiredTargetFeatures("image-insts", CallerFeatureMap);
-
-    if(!HasImageInsts){
+    if (!Builtin::evaluateRequiredTargetFeatures(
+        FeatureList, CallerFeatureMap) && !HasImageInsts){
       Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-        << FD->getDeclName() << "image-insts";
+        << FD->getDeclName() << FeatureList;
       return false;
     }
 
@@ -155,6 +156,15 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
+    StringRef FeatureList(getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
+    bool HasImageInsts = Builtin::evaluateRequiredTargetFeatures("image-insts", CallerFeatureMap);
+    if (!Builtin::evaluateRequiredTargetFeatures(
+        FeatureList, CallerFeatureMap) && !HasImageInsts){
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+        << FD->getDeclName() << FeatureList;
+      return false;
+    }
+
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
