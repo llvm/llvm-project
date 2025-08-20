@@ -77,10 +77,11 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
 }
 
 /// Generates element-wise addition ops of two arrays with automatic alignment.
-/// When the input arrays have different sizes, the shorter array is right-aligned
-/// with the longer array, and the unmatched leading elements from the longer array
-/// are preserved unchanged. This is commonly used for offset computation where
-/// higher-dimensional offsets need to be added to lower-dimensional adjustments.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
 ///
 /// Example:
 ///   lhs = [10, 20, 30], rhs = [5, 7]
