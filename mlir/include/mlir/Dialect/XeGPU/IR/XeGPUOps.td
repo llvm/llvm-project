@@ -683,7 +683,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
     In SIMT mode, the result is a 1D vector that represents the data to be loaded by
-    each work-item.
+    each work-item. If size is not 1, size should be equal to the chunk size,
 
     `source` represents the memory region to be loaded from, which can be either a
         tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
@@ -694,6 +694,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
         or 1 in SIMT mode.
     `mask` is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
+    `chunk_size` (optional) represents contiguous number of elements to load from per work item.
 
   Example 1:
   ```mlir
@@ -808,7 +809,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   introduced on purpose, making sure users are aware of this implicit transformation.
 
   In SIMT mode, the result is a 1D vector that represents the data to be stored by
-  each work-item.
+  each work-item. If size is not 1, size should be equal to the chunk size.
 
     `value` represents the data to be stored.
     `dest` represents the memory region to be stored to, which can be either a
@@ -820,6 +821,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
         or 1 in SIMT mode.
     `mask` is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
+    `chunk_size` (optional) represents contiguous number of elements to store to per work item.
 
   Example 1:
   ```mlir
