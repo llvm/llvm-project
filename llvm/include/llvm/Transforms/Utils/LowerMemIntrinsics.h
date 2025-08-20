@@ -61,7 +61,8 @@ LLVM_ABI bool expandMemMoveAsLoop(MemMoveInst *MemMove,
                                   const TargetTransformInfo &TTI);
 
 /// Expand \p MemSet as a loop. \p MemSet is not deleted.
-LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet);
+LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet,
+                                 const TargetTransformInfo &TTI);
 
 /// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
 LLVM_ABI void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet);
