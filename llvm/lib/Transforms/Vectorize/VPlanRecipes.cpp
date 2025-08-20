@@ -972,6 +972,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                       Ctx.CostKind);
   }
+  case Instruction::Select: {
+    // TODO: Compute cost for VPInstructions without underlying values once
+    // the legacy cost model has been retired.
+    if (!getUnderlyingValue())
+      return 0;
+    Type *ResTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this))
+      ResTy = toVectorTy(ResTy, VF);
+    return Ctx.TTI.getCmpSelInstrCost(
+        Instruction::Select, ResTy,
+        ResTy->getWithNewType(Type::getInt1Ty(ResTy->getContext())),
+        CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
+  }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticReductionCost(
@@ -2037,8 +2050,6 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
-    // More complex computation, let the legacy cost-model handle this for now.
-    return Ctx.getLegacyCost(cast<Instruction>(getUnderlyingValue()), VF);
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:

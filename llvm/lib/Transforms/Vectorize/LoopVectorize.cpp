@@ -7949,6 +7949,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
+      SafeRHS->setUnderlyingValue(I);
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, Ops);
     }
