@@ -13,7 +13,6 @@
 #include <cassert>
 #include <type_traits>
 #include <vector>
-#include "check_assertion.h"
 
 constexpr int buff[] = {1, 2, 3, 4};
 
