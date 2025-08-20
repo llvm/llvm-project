@@ -1922,6 +1922,15 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
   }
+  // blocksareclusters must be used along with reqntid and cluster_dim
+  if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
+    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasAttr(NVVMDialect::getClusterDimAttrName()))
+      return op->emitError()
+             << "'" << attrName << "' attribute must be used along with "
+             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
+             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+  }
 
   return success();
 }

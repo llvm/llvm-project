@@ -56,6 +56,22 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4
 
 // -----
 
+// expected-error @below {{'"nvvm.blocksareclusters"' attribute must be used along with 'nvvm.reqntid' and 'nvvm.cluster_dim'}}
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
+                                     nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.blocksareclusters"' attribute must be used along with 'nvvm.reqntid' and 'nvvm.cluster_dim'}}
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
+                                     nvvm.reqntid = array<i32: 1, 23, 32>} {
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_fence_proxy_acquire(%addr : !llvm.ptr, %size : i32) {
   // expected-error @below {{'nvvm.fence.proxy.acquire' op uni-directional proxies only support generic for from_proxy attribute}}
   nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %size from_proxy=#nvvm.proxy_kind<tensormap> to_proxy=#nvvm.proxy_kind<generic>
