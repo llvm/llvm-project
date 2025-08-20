@@ -13,9 +13,9 @@
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 
+#include "llvm/Support/DebugLog.h"
+
 #define DEBUG_TYPE "ptx-builder"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
 
 //===----------------------------------------------------------------------===//
 // BasicPtxBuilderInterface
@@ -60,7 +60,7 @@ static char getRegisterType(Value v) {
 }
 
 void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
-  LLVM_DEBUG(DBGS() << v << "\t Modifier : " << &itype << "\n");
+  LDBG() << v << "\t Modifier : " << &itype;
   auto getModifier = [&]() -> const char * {
     if (itype == PTXRegisterMod::ReadWrite) {
       assert(false && "Read-Write modifier is not supported. Try setting the "
@@ -167,7 +167,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
 
 void PtxBuilder::buildAndReplaceOp() {
   LLVM::InlineAsmOp inlineAsmOp = build();
-  LLVM_DEBUG(DBGS() << "\n Generated PTX \n\t" << inlineAsmOp << "\n");
+  LDBG() << "\n Generated PTX \n\t" << inlineAsmOp;
 
   // Case 1: no result
   if (inlineAsmOp->getNumResults() == 0) {
