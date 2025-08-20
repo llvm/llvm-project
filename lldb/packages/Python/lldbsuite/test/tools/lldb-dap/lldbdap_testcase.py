@@ -1,14 +1,15 @@
 import os
 import time
-from typing import Optional
 import uuid
+from typing import Optional
 
 import dap_server
 from dap_server import Source
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbplatformutil
-import lldbgdbserverutils
 import base64
+
+import lldbgdbserverutils
+from lldbsuite.test import lldbplatformutil
 
 
 class DAPTestCaseBase(TestBase):
@@ -451,8 +452,25 @@ class DAPTestCaseBase(TestBase):
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
-                self.dap_server.request_disconnect(terminateDebuggee=True)
-            self.dap_server.terminate()
+                try:
+                    self.dap_server.request_disconnect(terminateDebuggee=True)
+                except (
+                    ValueError,
+                    TimeoutError,
+                    BrokenPipeError,
+                    ConnectionError,
+                    Exception,
+                ) as e:
+                    # DAP server might not be responsive, skip disconnect and terminate directly
+                    print(
+                        f"Warning: disconnect failed ({e}), skipping and terminating directly"
+                    )
+            try:
+                self.dap_server.terminate()
+            except Exception as e:
+                print(
+                    f"Warning: terminate failed ({e}), DAP server may have already died"
+                )
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -462,9 +480,20 @@ class DAPTestCaseBase(TestBase):
         if expectFailure:
             return response
         if not (response and response["success"]):
-            self.assertTrue(
-                response["success"], "attach failed (%s)" % (response["message"])
-            )
+            error_msg = "attach failed"
+            if response:
+                if "message" in response:
+                    error_msg += " (%s)" % response["message"]
+                elif "body" in response and "error" in response["body"]:
+                    if "format" in response["body"]["error"]:
+                        error_msg += " (%s)" % response["body"]["error"]["format"]
+                    else:
+                        error_msg += " (error in body)"
+                else:
+                    error_msg += " (no error details available)"
+            else:
+                error_msg += " (no response)"
+            self.assertTrue(response and response["success"], error_msg)
 
     def launch(
         self,

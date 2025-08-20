@@ -4,11 +4,12 @@ Test lldb-dap attach request
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
 import subprocess
 import threading
 import time
+
+import lldbdap_testcase
+from lldbsuite.test import lldbutil
 
 
 def spawn_and_wait(program, delay):
@@ -227,3 +228,47 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             pattern=terminateCommands[0],
         )
         self.verify_commands("terminateCommands", output, terminateCommands)
+
+    def test_session_id_update(self):
+        program = self.build_and_create_debug_adapter_for_attach()
+        self.process = subprocess.Popen(
+            [program],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        postRunCommands = [
+            "script print('Actual_Session_ID: ' + str(os.getenv('VSCODE_DEBUG_SESSION_ID')))"
+        ]
+        self.attach(
+            pid=self.process.pid,
+            vscode_session_id="test_session_id",
+            postRunCommands=postRunCommands,
+        )
+        output = self.get_console()
+        lines = filter(lambda x: "Actual_Session_ID" in x, output.splitlines())
+        self.assertTrue(
+            any("test_session_id" in l for l in lines),
+            "expect session id in console output",
+        )
+
+    def test_session_id_update_empty(self):
+        program = self.build_and_create_debug_adapter_for_attach()
+
+        self.spawn_thread = threading.Thread(
+            target=spawn_and_wait,
+            args=(program, 0.1),
+        )
+        self.spawn_thread.start()
+
+        postRunCommands = [
+            "script print('Actual_Session_ID: ' + str(os.getenv('VSCODE_DEBUG_SESSION_ID', 'None')))"
+        ]
+        self.attach(program=program, postRunCommands=postRunCommands)
+        output = self.get_console()
+        lines = filter(lambda x: "Actual_Session_ID" in x, output.splitlines())
+        self.assertTrue(
+            any("Actual_Session_ID: None" in l for l in lines),
+            "expect session id in console output",
+        )
