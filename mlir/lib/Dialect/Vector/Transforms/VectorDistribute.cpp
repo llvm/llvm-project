@@ -2033,9 +2033,8 @@ private:
 // complete column(s) of the source vector).
 // TODO: Add support for the case where source rows are distributed across
 // lanes. Requires `DistributionMapFn` to express the data distribution.
-struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
-  VectorMultiDimReductionDistribution(MLIRContext *context,
-                                      PatternBenefit benefit = 1)
+struct WarpOpMultiReduction : public WarpDistributionPattern {
+  WarpOpMultiReduction(MLIRContext *context, PatternBenefit benefit = 1)
       : WarpDistributionPattern(context, benefit) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -2047,18 +2046,46 @@ struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
         cast<vector::MultiDimReductionOp>(yieldOperand->get().getDefiningOp());
     unsigned operandNumber = yieldOperand->getOperandNumber();
     VectorType sourceType = reductionOp.getSourceVectorType();
-    VectorType distributedResultType =
-        cast<VectorType>(warpOp.getResult(operandNumber).getType());
-    Type elementType = distributedResultType.getElementType();
+
     // Only 2D vectors are supported.
     if (sourceType.getRank() != 2)
       return rewriter.notifyMatchFailure(warpOp,
                                          "Only 2D reductions are supported.");
     ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
-    // Only 1 reduction dimension supported.
+    // Only 1 reduction dimension supported. This also ensures that result is
+    // also vector type.
     if (reductionDims.size() != 1)
       return rewriter.notifyMatchFailure(
           warpOp, "Only 1 reduction dimension is supported.");
+    int64_t reductionDim = reductionDims[0];
+    auto resultType = cast<VectorType>(reductionOp.getType());
+    auto distributedResultType =
+        cast<VectorType>(warpOp.getResult(operandNumber).getType());
+    Type elementType = distributedResultType.getElementType();
+
+    // Currently we make the following assumptions.
+    // 1. The source vector is distributed in the column dimension. Each lane
+    // owns complete column(s) of the source vector.
+    // 2. If the reduction dim == 0, its a lane-local col reduction. In this
+    // case each lane owns its portion of the result (i.e. result is also
+    // distributed).
+    // 3. If reduction dim == 1, its a row reduction that require cross lanes
+    // shuffles. In this case result is not distributed and broadcasted instead.
+    // TODO: These assumptions are fairly restrictive. For example, source
+    // vector can have row distributed layout. Improve support for such cases.
+    if (sourceType.getShape()[1] % warpOp.getWarpSize() != 0)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Source vector dimension must be divisible by warp size.");
+    bool isResultDistributed =
+        distributedResultType.getNumElements() < resultType.getNumElements();
+    if (reductionDim == 0 && !isResultDistributed)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "Expecting result vector to be distributed in a col reduction.");
+    if (reductionDim == 1 && isResultDistributed)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "Expecting result vector to be broadcasted in a row reduction.");
 
     // Create a constant vector to store the result of the reduction per lane.
     TypedAttr zeroAttr =
@@ -2066,14 +2093,9 @@ struct VectorMultiDimReductionDistribution : public WarpDistributionPattern {
     Value result = arith::ConstantOp::create(
         rewriter, reductionOp->getLoc(), distributedResultType,
         DenseElementsAttr::get(distributedResultType, zeroAttr));
-
     // Col reduction.
-    if (reductionDims[0] == 0) {
-      // Source vector must be distributable to lanes in the col dimension.
-      if (sourceType.getShape()[1] % warpOp.getWarpSize() != 0)
-        return rewriter.notifyMatchFailure(
-            warpOp, "Source vector dimension must be divisible by warp size.");
-      // Compute source distributed type.
+    if (reductionDim == 0) {
+      // Compute source distributed type assuming each lane owns cols.
       SmallVector<int64_t> shape(sourceType.getShape());
       shape[1] = shape[1] / warpOp.getWarpSize();
       auto sourceDistributedType = VectorType::get(shape, elementType);
@@ -2158,7 +2180,7 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
       .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast, WarpOpExtract,
            WarpOpForwardOperand, WarpOpConstant, WarpOpInsertScalar,
            WarpOpInsert, WarpOpCreateMask, WarpOpExtractStridedSlice,
-           WarpOpInsertStridedSlice, VectorMultiDimReductionDistribution>(
+           WarpOpInsertStridedSlice, WarpOpMultiReduction>(
           patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
