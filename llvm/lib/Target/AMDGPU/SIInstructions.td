@@ -150,13 +150,34 @@ def AV_MOV_B32_IMM_PSEUDO
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
 
-  // Imprecise, technically if AGPR it's VOP3 and VOP1 for AGPR. But
+  // Imprecise, technically if AGPR it's VOP3 and VOP1 for VGPR. But
   // this tricks the rematerialize logic into working for it.
   let VOP3 = 1;
   let isMoveImm = 1;
   let SchedRW = [Write32Bit];
   let Size = 8;
   let FixedSize = true;
+  let UseNamedOperandTable = 1;
+}
+
+// 64-bit materialize immediate which supports AGPR or VGPR. This has
+// an unusual operand restriction which requires the two halves of the
+// immediate to each be 32-bit inline immediate values.
+//
+// FIXME: This unnecessarily has the even aligned vector register
+// requirement applied.
+def AV_MOV_B64_IMM_PSEUDO
+    : VPseudoInstSI<(outs AV_64:$vdst), (ins AV_64_PSEUDO_IMM:$src0)> {
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+
+  // Imprecise, technically if AGPR it's 2 x VOP3 and 2 x VOP1 for
+  // VGPR. But this tricks the rematerialize logic into working for
+  // it.
+  let VOP3 = 1;
+  let isMoveImm = 1;
+  let SchedRW = [Write32Bit, Write32Bit];
+  let Size = 16; // 2 x v_accwrite_write_b32 in the worst case
   let UseNamedOperandTable = 1;
 }
 
