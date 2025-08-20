@@ -245,6 +245,15 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
       return nullptr;
   }
 
+  if constexpr (std::is_same_v<Symbol, Attribute>) {
+    auto &cache = p.getState().symbols.attributesCache;
+    auto cacheIt = cache.find(symbolData);
+    // Skip cached attribute if it has type.
+    if (cacheIt != cache.end() && !p.getToken().is(Token::colon))
+      return cacheIt->second;
+
+    return cache[symbolData] = createSymbol(dialectName, symbolData, loc);
+  }
   return createSymbol(dialectName, symbolData, loc);
 }
 
@@ -337,6 +346,7 @@ Type Parser::parseExtendedType() {
 template <typename T, typename ParserFn>
 static T parseSymbol(StringRef inputStr, MLIRContext *context,
                      size_t *numReadOut, bool isKnownNullTerminated,
+                     llvm::StringMap<Attribute> *attributesCache,
                      ParserFn &&parserFn) {
   // Set the buffer name to the string being parsed, so that it appears in error
   // diagnostics.
@@ -348,6 +358,9 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState aliasState;
+  if (attributesCache)
+    aliasState.attributesCache = *attributesCache;
+
   ParserConfig config(context);
   ParserState state(sourceMgr, config, aliasState, /*asmState=*/nullptr,
                     /*codeCompleteContext=*/nullptr);
@@ -357,6 +370,11 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
   T symbol = parserFn(parser);
   if (!symbol)
     return T();
+
+  if constexpr (std::is_same_v<T, Attribute>) {
+    if (attributesCache)
+      *attributesCache = state.symbols.attributesCache;
+  }
 
   // Provide the number of bytes that were read.
   Token endTok = parser.getToken();
@@ -374,13 +392,15 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
 
 Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context,
                                Type type, size_t *numRead,
-                               bool isKnownNullTerminated) {
+                               bool isKnownNullTerminated,
+                               llvm::StringMap<Attribute> *attributesCache) {
   return parseSymbol<Attribute>(
-      attrStr, context, numRead, isKnownNullTerminated,
+      attrStr, context, numRead, isKnownNullTerminated, attributesCache,
       [type](Parser &parser) { return parser.parseAttribute(type); });
 }
 Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t *numRead,
                      bool isKnownNullTerminated) {
   return parseSymbol<Type>(typeStr, context, numRead, isKnownNullTerminated,
+                           /*attributesCache=*/nullptr,
                            [](Parser &parser) { return parser.parseType(); });
 }
