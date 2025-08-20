@@ -4583,6 +4583,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(WriteThruNumElements == MaskNumElements);
 
+    // Some bits of the mask may be unused, though it's unusual to have partly
+    // uninitialized bits.
     insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
