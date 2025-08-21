@@ -46,7 +46,8 @@ bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("name", S.name) && O.map("path", S.path) &&
          O.map("presentationHint", S.presentationHint) &&
-         O.map("sourceReference", S.sourceReference);
+         O.map("sourceReference", S.sourceReference) &&
+         O.map("adapterData", S.adapterData);
 }
 
 llvm::json::Value toJSON(Source::PresentationHint hint) {
@@ -71,6 +72,8 @@ llvm::json::Value toJSON(const Source &S) {
     result.insert({"sourceReference", *S.sourceReference});
   if (S.presentationHint)
     result.insert({"presentationHint", *S.presentationHint});
+  if (S.adapterData)
+    result.insert({"adapterData", *S.adapterData});
 
   return result;
 }
@@ -332,6 +335,8 @@ static llvm::StringLiteral ToString(AdapterFeature feature) {
     return "supportsWriteMemoryRequest";
   case eAdapterFeatureTerminateDebuggee:
     return "supportTerminateDebuggee";
+  case eAdapterFeatureSupportsModuleSymbolsRequest:
+    return "supportsModuleSymbolsRequest";
   }
   llvm_unreachable("unhandled adapter feature.");
 }
@@ -403,6 +408,8 @@ bool fromJSON(const llvm::json::Value &Params, AdapterFeature &feature,
                 eAdapterFeatureValueFormattingOptions)
           .Case("supportsWriteMemoryRequest", eAdapterFeatureWriteMemoryRequest)
           .Case("supportTerminateDebuggee", eAdapterFeatureTerminateDebuggee)
+          .Case("supportsModuleSymbolsRequest",
+                eAdapterFeatureSupportsModuleSymbolsRequest)
           .Default(std::nullopt);
 
   if (!parsedFeature) {

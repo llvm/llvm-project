@@ -20,6 +20,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_TYPES_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_TYPES_H
 
+#include "Protocol/DAPTypes.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
@@ -241,8 +242,11 @@ enum AdapterFeature : unsigned {
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
   eAdapterFeatureTerminateDebuggee,
+  /// The debug adapter supports the `supportsModuleSymbols` request.
+  /// This request is a custom request of lldb-dap.
+  eAdapterFeatureSupportsModuleSymbolsRequest,
   eAdapterFeatureFirst = eAdapterFeatureANSIStyling,
-  eAdapterFeatureLast = eAdapterFeatureTerminateDebuggee,
+  eAdapterFeatureLast = eAdapterFeatureSupportsModuleSymbolsRequest,
 };
 bool fromJSON(const llvm::json::Value &, AdapterFeature &, llvm::json::Path);
 llvm::json::Value toJSON(const AdapterFeature &);
@@ -336,7 +340,12 @@ struct Source {
   /// skipped on stepping.
   std::optional<PresentationHint> presentationHint;
 
-  // unsupported keys: origin, sources, adapterData, checksums
+  /// Additional data that a debug adapter might want to loop through the
+  /// client. The client should leave the data intact and persist it across
+  /// sessions. The client should not interpret the data.
+  std::optional<SourceLLDBData> adapterData;
+
+  // unsupported keys: origin, sources, checksums
 };
 bool fromJSON(const llvm::json::Value &, Source::PresentationHint &,
               llvm::json::Path);

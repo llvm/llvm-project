@@ -52,6 +52,8 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
                "Test conversion patterns of only the specified dialects">,
     Option<"useDynamic", "dynamic", "bool", "false",
            "Use op conversion attributes to configure the conversion">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
   ];
 }
 
@@ -196,6 +198,10 @@ def ConvertArithToSPIRVPass : Pass<"convert-arith-to-spirv"> {
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by "
            "the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -416,7 +422,11 @@ def ConvertControlFlowToSPIRVPass : Pass<"convert-cf-to-spirv"> {
     Option<"emulateLT32BitScalarTypes", "emulate-lt-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by"
-           " the target">
+           " the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -500,7 +510,11 @@ def ConvertFuncToSPIRVPass : Pass<"convert-func-to-spirv"> {
     Option<"emulateLT32BitScalarTypes", "emulate-lt-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by"
-           " the target">
+           " the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -1167,7 +1181,11 @@ def ConvertTensorToSPIRVPass : Pass<"convert-tensor-to-spirv"> {
     Option<"emulateLT32BitScalarTypes", "emulate-lt-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by"
-           " the target">
+           " the target">,
+    Option<"emulateUnsupportedFloatTypes", "emulate-unsupported-float-types",
+           "bool", /*default=*/"true",
+           "Emulate unsupported float types by representing them with integer "
+           "types of same bit width">
   ];
 }
 
@@ -1512,6 +1530,19 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
   let dependentDialects = [
     "memref::MemRefDialect", "arith::ArithDialect",
     "vector::VectorDialect", "xegpu::XeGPUDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// VectorToAMX
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
+  let summary = "Lower the operations from the vector dialect into the AMX "
+                "dialect";
+  let dependentDialects = [
+    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
   ];
 }
 

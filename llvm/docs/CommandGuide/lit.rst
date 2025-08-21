@@ -356,6 +356,11 @@ The timing data is stored in the `test_exec_root` in a file named
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
 
+.. option:: --exclude-xfail
+
+  ``XFAIL`` tests won't be run, unless they are listed in the ``--xfail-not``
+  (or ``LIT_XFAIL_NOT``) lists.
+
 .. option:: --num-shards M
 
  Divide the set of selected tests into ``M`` equal-sized subsets or
@@ -393,6 +398,11 @@ ADDITIONAL OPTIONS
 
  Show all features used in the test suite (in ``XFAIL``, ``UNSUPPORTED`` and
  ``REQUIRES``) and exit.
+
+.. option:: --update-tests
+
+ Pass failing tests to functions in the ``lit_config.test_updaters`` list to
+ check whether any of them know how to update the test to make it pass.
 
 EXIT STATUS
 -----------

@@ -64,8 +64,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '$x30', callee-saved-restored: true, debug-info-variable: '', 

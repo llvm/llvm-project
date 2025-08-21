@@ -578,6 +578,18 @@ m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
   return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
 }
 
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F,
+                       const CCTy &CC) {
+  return m_Node(ISD::SELECT_CC, L, R, T, F, CC);
+}
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCCLike(const LTy &L, const RTy &R, const TTy &T,
+                           const FTy &F, const CCTy &CC) {
+  return m_AnyOf(m_Select(m_SetCC(L, R, CC), T, F), m_SelectCC(L, R, T, F, CC));
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -1086,9 +1098,9 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
-/// Match any interger constants or splat of an integer constant.
+/// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
-/// Match any interger constants or splat of an integer constant; return the
+/// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
 

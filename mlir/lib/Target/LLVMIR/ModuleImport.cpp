@@ -16,7 +16,6 @@
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
-#include "DataLayoutImporter.h"
 #include "DebugImporter.h"
 #include "LoopAnnotationImporter.h"
 
@@ -25,11 +24,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
@@ -1044,8 +1045,9 @@ LogicalResult ModuleImport::convertIFuncs() {
 
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
-  DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
-  if (!dataLayoutImporter.getDataLayout())
+  DataLayoutImporter dataLayoutImporter(
+      context, llvmModule->getDataLayout().getStringRepresentation());
+  if (!dataLayoutImporter.getDataLayoutSpec())
     return emitError(loc, "cannot translate data layout: ")
            << dataLayoutImporter.getLastToken();
 
@@ -1053,7 +1055,7 @@ LogicalResult ModuleImport::convertDataLayout() {
     emitWarning(loc, "unhandled data layout token: ") << token;
 
   mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayout());
+                      dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 
@@ -1061,6 +1063,18 @@ void ModuleImport::convertTargetTriple() {
   mlirModule->setAttr(
       LLVM::LLVMDialect::getTargetTripleAttrName(),
       builder.getStringAttr(llvmModule->getTargetTriple().str()));
+}
+
+void ModuleImport::convertModuleLevelAsm() {
+  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
+  llvm::SmallVector<mlir::Attribute> asmArrayAttr;
+
+  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
+    if (!line.empty())
+      asmArrayAttr.push_back(builder.getStringAttr(line));
+
+  mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                      builder.getArrayAttr(asmArrayAttr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -3195,5 +3209,6 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
   if (failed(moduleImport.convertIFuncs()))
     return {};
   moduleImport.convertTargetTriple();
+  moduleImport.convertModuleLevelAsm();
   return module;
 }

@@ -2217,8 +2217,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
 
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypePromoteInteger: {
-    // TODO: Handle big endian
-    if (OutVT.isVector() && DAG.getDataLayout().isLittleEndian()) {
+    // TODO: Handle big endian & vector input type.
+    if (OutVT.isVector() && !InVT.isVector() &&
+        DAG.getDataLayout().isLittleEndian()) {
       EVT EltVT = OutVT.getVectorElementType();
       TypeSize EltSize = EltVT.getSizeInBits();
       TypeSize NInSize = NInVT.getSizeInBits();
@@ -5259,20 +5260,18 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
                    MachinePointerInfo());
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (const SDValue &Op : N->op_values()) {
     EVT ArgVT = Op.getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-    Entry.Node = Op;
-    Entry.Ty = ArgTy;
+    TargetLowering::ArgListEntry Entry(Op, ArgTy);
     Entry.IsSExt = true;
     Entry.IsZExt = false;
     Args.push_back(Entry);
   }
 
   // Also pass the address of the overflow check.
-  Entry.Node = Temp;
-  Entry.Ty = PointerType::getUnqual(PtrTy->getContext());
+  TargetLowering::ArgListEntry Entry(
+      Temp, PointerType::getUnqual(PtrTy->getContext()));
   Entry.IsSExt = true;
   Entry.IsZExt = false;
   Args.push_back(Entry);
