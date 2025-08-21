@@ -1575,7 +1575,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 /// \endcode
 ///
 ///
-class RuntimeTrapDiagnosticBuilder : public DiagnosticBuilder {
+class [[nodiscard]] RuntimeTrapDiagnosticBuilder : public DiagnosticBuilder {
 public:
   RuntimeTrapDiagnosticBuilder(DiagnosticsEngine *DiagObj, unsigned DiagID);
   ~RuntimeTrapDiagnosticBuilder();
