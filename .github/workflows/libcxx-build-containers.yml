@@ -40,11 +40,11 @@ jobs:
       env:
         TAG: ${{ github.sha }}
 
-    # - name: Build the Android builder image
-    #   working-directory: libcxx/utils/ci
-    #   run: docker compose build android-buildkite-builder
-    #   env:
-    #     TAG: ${{ github.sha }}
+    - name: Build the Android builder image
+      working-directory: libcxx/utils/ci
+      run: docker compose build android-buildkite-builder
+      env:
+        TAG: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
