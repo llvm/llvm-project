@@ -1840,21 +1840,21 @@ void ScalarExprEmitter::EmitBinOpCheck(
       StaticData.push_back(CGF.EmitCheckTypeDescriptor(Info.Ty));
     } else {
       // Arithmetic overflow (+, -, *).
-      unsigned ArithOverflowKind = 0;
+      int ArithOverflowKind = 0;
       switch (Opcode) {
       case BO_Add: {
-        ArithOverflowKind = 0;
+        ArithOverflowKind = diag::UBSanArithKind::Add;
         Check = SanitizerHandler::AddOverflow;
         break;
       }
       case BO_Sub: {
         Check = SanitizerHandler::SubOverflow;
-        ArithOverflowKind = 1;
+        ArithOverflowKind = diag::UBSanArithKind::Sub;
         break;
       }
       case BO_Mul: {
         Check = SanitizerHandler::MulOverflow;
-        ArithOverflowKind = 2;
+        ArithOverflowKind = diag::UBSanArithKind::Mul;
         break;
       }
       default:

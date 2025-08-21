@@ -20,7 +20,11 @@ let CategoryName = "Undefined Behavior Sanitizer" in {
 
 def trap_ubsan_arith_overflow : Trap<
   "%select{unsigned|signed}0 integer "
-  "%select{addition|subtraction|multiplication}1 overflow in %2">;
+  "%enum_select<UBSanArithKind>{"
+    "%Add{addition}|"
+    "%Sub{subtraction}|"
+    "%Mul{multiplication}"
+  "}1 overflow in %2">;
 
 }
 }
