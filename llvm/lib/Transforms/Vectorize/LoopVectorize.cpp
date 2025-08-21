@@ -7306,6 +7306,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
+  // 0. Generate SCEV-dependent code in the entry, including TripCount, before
+  // making any changes to the CFG.
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs =
+      VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
+  if (!ILV.getTripCount())
+    ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
+  else
+    assert(VectorizingEpilogue && "should only re-use the existing trip "
+                                  "count during epilogue vectorization");
+
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
@@ -7314,30 +7324,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif
-
-  // 0. Generate SCEV-dependent code in the entry, including TripCount, before
-  // making any changes to the CFG.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
-  auto *Entry = cast<VPIRBasicBlock>(BestVPlan.getEntry());
-  State.Builder.SetInsertPoint(Entry->getIRBasicBlock()->getTerminator());
-  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV)
-      continue;
-    ExpSCEV->execute(State);
-    ExpandedSCEVs[ExpSCEV->getSCEV()] = State.get(ExpSCEV, VPLane(0));
-    VPValue *Exp = BestVPlan.getOrAddLiveIn(ExpandedSCEVs[ExpSCEV->getSCEV()]);
-    ExpSCEV->replaceAllUsesWith(Exp);
-    if (BestVPlan.getTripCount() == ExpSCEV)
-      BestVPlan.resetTripCount(Exp);
-    ExpSCEV->eraseFromParent();
-  }
-
-  if (!ILV.getTripCount())
-    ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
-  else
-    assert(VectorizingEpilogue && "should only re-use the existing trip "
-                                  "count during epilogue vectorization");
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
@@ -7776,7 +7762,7 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
          "step must be loop invariant");
 
   VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
     return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
                                              IndDesc, TruncI,
@@ -7798,8 +7784,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
 
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
-    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
-                                                           *PSE.getSE());
+    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
     return new VPWidenPointerInductionRecipe(
         Phi, Operands[0], Step, &Plan.getVFxUF(), *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -8957,7 +8942,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
           [this](PHINode *P) {
             return Legal->getIntOrFpInductionDescriptor(P);
           },
-          *PSE.getSE(), *TLI))
+          *TLI))
     return nullptr;
 
   // Collect mapping of IR header phis to header phi recipes, to be used in
