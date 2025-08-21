@@ -37,6 +37,8 @@ cc_test(
         "IR/*.cpp",
     ]),
     deps = [
+        "//llvm:Core",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//mlir:BytecodeReader",
         "//mlir:CallOpInterfaces",
@@ -44,6 +46,7 @@ cc_test(
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Parser",
+        "//mlir:RemarkStreamer",
         "//mlir:Support",
         "//mlir/test:TestDialect",
         "//third-party/unittest:gmock",

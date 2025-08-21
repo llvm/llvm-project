@@ -102,17 +102,6 @@ TEST(XcodeSDKTest, SDKSupportsModules) {
 }
 #endif
 
-TEST(XcodeSDKTest, SDKSupportsSwift) {
-  EXPECT_TRUE(XcodeSDK("iPhoneSimulator12.0.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("iPhoneSimulator12.0.Internal.sdk").SupportsSwift());
-  EXPECT_FALSE(XcodeSDK("iPhoneSimulator7.2.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("MacOSX10.10.sdk").SupportsSwift());
-  EXPECT_FALSE(XcodeSDK("MacOSX10.9.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("Linux.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("MacOSX.sdk").SupportsSwift());
-  EXPECT_FALSE(XcodeSDK("EverythingElse.sdk").SupportsSwift());
-}
-
 TEST(XcodeSDKTest, GetCanonicalNameAndConstruct) {
   XcodeSDK::Info info;
   info.type = XcodeSDK::Type::MacOSX;

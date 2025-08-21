@@ -5918,21 +5918,11 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
             // TODO: do we need to figure out the cost of an extract to get the
             // first lane? Or do we hope that it will be folded away?
             ScalarEvolution *SE = PSE.getSE();
-            const auto *SAR =
-                dyn_cast<SCEVAddRecExpr>(SE->getSCEV(ScalarParam));
-
-            if (!SAR || SAR->getLoop() != TheLoop) {
+            if (!match(SE->getSCEV(ScalarParam),
+                       m_scev_AffineAddRec(
+                           m_SCEV(), m_scev_SpecificSInt(Param.LinearStepOrPos),
+                           m_SpecificLoop(TheLoop))))
               ParamsOk = false;
-              break;
-            }
-
-            const SCEVConstant *Step =
-                dyn_cast<SCEVConstant>(SAR->getStepRecurrence(*SE));
-
-            if (!Step ||
-                Step->getAPInt().getSExtValue() != Param.LinearStepOrPos)
-              ParamsOk = false;
-
             break;
           }
           case VFParamKind::GlobalPredicate:

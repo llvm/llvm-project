@@ -511,6 +511,18 @@ LogicalResult DPPOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PermlaneSwapOp
+//===----------------------------------------------------------------------===//
+LogicalResult PermlaneSwapOp::verify() {
+  unsigned rowLength = getRowLength();
+
+  if (rowLength != 16 && rowLength != 32)
+    return emitOpError("row_length attribute must either be 16 or 32.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GatherToLDSOp
 //===----------------------------------------------------------------------===//
 

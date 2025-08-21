@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-named-op-conversion -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --simplify-depthwise-conv -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @depthwise_conv
 func.func @depthwise_conv(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<?x?x?x1xf32>, %arg2: tensor<?x?x?x?x1xf32>) -> tensor<?x?x?x?x1xf32> {

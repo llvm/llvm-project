@@ -175,22 +175,36 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def LayoutTrait: AttrInterface<"LayoutTrait"> {
+def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
   let cppNamespace = "::mlir::xegpu";
   let description = [{
     Common trait for all XeGPU layouts.
   }];
 
   let methods = [
+    InterfaceMethod<"Check the availability of workgroup level layouts",
+                    "bool",
+                    "isForWorkgroup">,
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
+    InterfaceMethod<"Get the num of effective subgroups",
+                    "int64_t",
+                    "getNumSubgroups", (ins), [{
+                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getSgLayoutAsInt();
+                        if (sgLayout.has_value())
+                          return computeProduct(*sgLayout);
+                        return 0;
+                    }], [{}]>,
     InterfaceMethod<"Get the SgLayout field of the attribute as integer array",
                     "std::optional<SmallVector<int64_t>>",
                     "getSgLayoutAsInt">,
     InterfaceMethod<"Get the SgData field of the attribute as integer array",
                     "std::optional<SmallVector<int64_t>>",
                     "getSgDataAsInt">,
+    InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
+                    "xegpu::DistributeLayoutAttr",
+                    "dropSgLayoutAndData">,
     InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
                       indices based on the effective subgroup layout.}],
                     "FailureOr<SmallVector<Value>>",
@@ -206,7 +220,7 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
   ];
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -328,12 +342,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
   ];
 
   let extraClassDeclaration = [{
-    bool isWgLayout() {
+    bool isForWorkgroup() {
       return getSgLayout() != nullptr;
     }
 
-    bool isSgLayout() {
-      return !isWgLayout();
+    bool isForSubgroup() {
+      return !isForWorkgroup();
     }
 
     int64_t getRank() {
@@ -393,7 +407,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
 }
 
 
-def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
   let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
 
   let description = [{
@@ -420,7 +434,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
   }];
 
   let parameters = (ins
-    "xegpu::LayoutTrait": $parent,
+    "xegpu::DistributeLayoutAttr": $parent,
     "DenseI64ArrayAttr": $dims
   );
 
@@ -438,16 +452,16 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
       return parent.getOrder();
     }
 
-    bool isWgLayout() const {
+    bool isForWorkgroup() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.isWgLayout();
+      return parent.isForWorkgroup();
     }
 
-    bool isSgLayout() const {
+    bool isForSubgroup() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.isSgLayout();
+      return parent.isForSubgroup();
     }
 
     /// Returns the SgLayout of the attribute, computed by applying
@@ -472,6 +486,20 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
         return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
       }
       return std::nullopt;
+    }
+
+    SliceAttr dropSgLayoutAndData() {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      parent = parent.dropSgLayoutAndData();
+      return SliceAttr::get(getContext(), parent, attr.getDims());
+    }
+
+    SliceAttr dropInstData() {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      parent = parent.dropInstData();
+      return SliceAttr::get(getContext(), parent, attr.getDims());
     }
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr

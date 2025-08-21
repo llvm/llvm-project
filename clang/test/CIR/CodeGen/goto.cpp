@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
@@ -27,6 +29,24 @@ err:
 // CIR:    cir.store [[MINUS]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:    cir.br ^bb1
 
+// LLVM: define dso_local i32 @_Z21shouldNotGenBranchReti
+// LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
+// LLVM:   [[CMP:%.*]] = icmp sgt i32 [[COND]], 5
+// LLVM:   br i1 [[CMP]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
+// LLVM: [[IFTHEN]]:
+// LLVM:   br label %[[ERR:.*]]
+// LLVM: [[IFEND]]:
+// LLVM:   br label %[[BB9:.*]]
+// LLVM: [[BB9]]:
+// LLVM:   store i32 0, ptr %[[RETVAL:.*]], align 4
+// LLVM:   br label %[[BBRET:.*]]
+// LLVM: [[BBRET]]:
+// LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
+// LLVM:   ret i32 [[RET]]
+// LLVM: [[ERR]]:
+// LLVM:   store i32 -1, ptr %[[RETVAL]], align 4
+// LLVM:   br label %10
+
 // OGCG: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // OGCG: if.then:
 // OGCG:   br label %err
@@ -50,6 +70,17 @@ err:
 // CIR:    cir.br ^bb1
 // CIR:  ^bb1:
 // CIR:    cir.label "err"
+
+// LLVM: define dso_local i32 @_Z15shouldGenBranchi
+// LLVM:   br i1 [[CMP:%.*]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
+// LLVM: [[IFTHEN]]:
+// LLVM:   br label %[[ERR:.*]]
+// LLVM: [[IFEND]]:
+// LLVM:   br label %[[BB9:.*]]
+// LLVM: [[BB9]]:
+// LLVM:   br label %[[ERR]]
+// LLVM: [[ERR]]:
+// LLVM:   ret i32 [[RET:%.*]]
 
 // OGCG: define dso_local noundef i32 @_Z15shouldGenBranchi
 // OGCG: if.then:
@@ -78,6 +109,15 @@ end2:
 // CIR:  ^bb[[#BLK3]]:
 // CIR:    cir.label "end2"
 
+// LLVM: define dso_local void @_Z19severalLabelsInARowi
+// LLVM:   br label %[[END1:.*]]
+// LLVM: [[UNRE:.*]]:                                                ; No predecessors!
+// LLVM:   br label %[[END2:.*]]
+// LLVM: [[END1]]:
+// LLVM:   br label %[[END2]]
+// LLVM: [[END2]]:
+// LLVM:   ret
+
 // OGCG: define dso_local void @_Z19severalLabelsInARowi
 // OGCG:   br label %end1
 // OGCG: end1:
@@ -98,6 +138,13 @@ end:
 // CIR:    cir.goto "end"
 // CIR:  ^bb[[#BLK2:]]:
 // CIR:    cir.label "end"
+
+// LLVM: define dso_local void @_Z18severalGotosInARowi
+// LLVM:   br label %[[END:.*]]
+// LLVM: [[UNRE:.*]]:                                                ; No predecessors!
+// LLVM:   br label %[[END]]
+// LLVM: [[END]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z18severalGotosInARowi(i32 noundef %a) #0 {
 // OGCG:   br label %end
@@ -125,6 +172,14 @@ extern "C" void multiple_non_case(int v) {
 // CIR: cir.label
 // CIR: cir.call @action2()
 // CIR: cir.break
+
+// LLVM: define dso_local void @multiple_non_case
+// LLVM: [[SWDEFAULT:.*]]:
+// LLVM:   call void @action1()
+// LLVM:   br label %[[L2:.*]]
+// LLVM: [[L2]]:
+// LLVM:   call void @action2()
+// LLVM:   br label %[[BREAK:.*]]
 
 // OGCG: define dso_local void @multiple_non_case
 // OGCG: sw.default:
@@ -157,6 +212,26 @@ extern "C" void case_follow_label(int v) {
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
 // CIR:   cir.goto "label"
+
+// LLVM: define dso_local void @case_follow_label
+// LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
+// LLVM:    i32 1, label %[[LABEL:.*]]
+// LLVM:    i32 2, label %[[CASE2:.*]]
+// LLVM:  ]
+// LLVM: [[LABEL]]:
+// LLVM:   br label %[[CASE2]]
+// LLVM: [[CASE2]]:
+// LLVM:   call void @action1()
+// LLVM:   br label %[[BREAK:.*]]
+// LLVM: [[BREAK]]:
+// LLVM:   br label %[[END:.*]]
+// LLVM: [[SWDEFAULT]]:
+// LLVM:   call void @action2()
+// LLVM:   br label %[[LABEL]]
+// LLVM: [[END]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @case_follow_label
 // OGCG: sw.bb:
@@ -196,6 +271,26 @@ extern "C" void default_follow_label(int v) {
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
 // CIR:   cir.goto "label"
+
+// LLVM: define dso_local void @default_follow_label
+// LLVM: [[CASE1:.*]]:
+// LLVM:   br label %[[BB8:.*]]
+// LLVM: [[BB8]]:
+// LLVM:   br label %[[CASE2:.*]]
+// LLVM: [[CASE2]]:
+// LLVM:   call void @action1()
+// LLVM:   br label %[[BREAK:.*]]
+// LLVM: [[LABEL:.*]]:
+// LLVM:   br label %[[SWDEFAULT:.*]]
+// LLVM: [[SWDEFAULT]]:
+// LLVM:   call void @action2()
+// LLVM:   br label %[[BB9:.*]]
+// LLVM: [[BB9]]:
+// LLVM:   br label %[[LABEL]]
+// LLVM: [[BREAK]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @default_follow_label
 // OGCG: sw.bb:
