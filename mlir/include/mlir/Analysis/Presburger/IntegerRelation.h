@@ -923,6 +923,11 @@ protected:
   IntMatrix inequalities;
 };
 
+inline raw_ostream &operator<<(raw_ostream &os, const IntegerRelation &rel) {
+  rel.print(os);
+  return os;
+}
+
 /// An IntegerPolyhedron represents the set of points from a PresburgerSpace
 /// that satisfy a list of affine constraints. Affine constraints can be
 /// inequalities or equalities in the form:

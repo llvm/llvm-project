@@ -598,4 +598,19 @@ json::Value toJSON(const WriteMemoryResponseBody &WMR) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.map("moduleName", Args.moduleName) &&
+         O.mapOptional("startIndex", Args.startIndex) &&
+         O.mapOptional("count", Args.count);
+}
+
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
+  json::Object result;
+  result.insert({"symbols", DGMSR.symbols});
+  return result;
+}
+
 } // namespace lldb_dap::protocol

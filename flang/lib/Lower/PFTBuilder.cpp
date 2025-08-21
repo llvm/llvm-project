@@ -1742,11 +1742,11 @@ private:
                                layeredVarList[i].end());
   }
 
-  llvm::SmallSet<const semantics::Symbol *, 32> seen;
+  llvm::SmallPtrSet<const semantics::Symbol *, 32> seen;
   std::vector<Fortran::lower::pft::VariableList> layeredVarList;
-  llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
+  llvm::SmallPtrSet<const semantics::Symbol *, 32> aliasSyms;
   /// Set of scopes that have been analyzed for aliases.
-  llvm::SmallSet<const semantics::Scope *, 4> analyzedScopes;
+  llvm::SmallPtrSet<const semantics::Scope *, 4> analyzedScopes;
   std::vector<Fortran::lower::pft::Variable::AggregateStore> stores;
 };
 } // namespace

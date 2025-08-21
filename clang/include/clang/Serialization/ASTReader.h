@@ -526,6 +526,9 @@ private:
   /// A timer used to track the time spent deserializing.
   std::unique_ptr<llvm::Timer> ReadTimer;
 
+  // A TimeRegion used to start and stop ReadTimer via RAII.
+  std::optional<llvm::TimeRegion> ReadTimeRegion;
+
   /// The location where the module file will be considered as
   /// imported from. For non-module AST types it should be invalid.
   SourceLocation CurrentImportLoc;
