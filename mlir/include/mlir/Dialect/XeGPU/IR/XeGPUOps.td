@@ -70,27 +70,31 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     future). Elements in the subview continuous in each dimension. It encodes the
     following important information for supporting Intel hardware features:
 
-    * source: an object representing (starting address/pointer of) a memory region.
+    Arguments:
+    - `source`: an object representing (starting address/pointer of) a memory region.
        It can be either a memref object, or simply a pointer represented by uint64_t type.
        For the case of dynamic memrefs or pointer, the shape and layout information of the
        memory region should be explicitly passed via `shape` and `strides` parameters.
 
-    * offsets: index values represents offsets from the "source" at the each dimension
+    - `offsets`: index values represents offsets from the "source" at the each dimension
         at which the subview of the target memory will be created. It is encoded via
         "offsets" and "const_offsets", such that it can accept various forms, such as,
         operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]).
 
-    * shape: the shape information of the memory region pointed by the "source". It is
+    - `shape`: the shape information of the memory region pointed by the "source". It is
          typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
         But if "source" is simply a pointer represented as uint64_t type, or a memref
         type without shape information e.g., memref<?x?xf16>, the shape information has
         to be explicitly passed via the "shape" and "const_shape" arguments.
 
-    * strides: the strides of the memory region pointed by the "source". Similar to shape,
+    - `strides`: the strides of the memory region pointed by the "source". Similar to shape,
         it is typically encoded via the MemRefType of the source too. But if "source" is
         simply a pointer represented as uint64_t type, or a memref type without shape
         information e.g., memref<?x?xf16>, the strides information has to be explicitly
         passed via the "strides" and "const_strides" argument.
+
+    Results:
+    - `res`: nd tensor descriptor
 
     Example 1 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
@@ -500,12 +504,16 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     (scattered) subviews, allowing each work-item in a subgroup specifying their own offset.
     It accepts the following parameters:
 
-    * source: a 1D memref or pointer (i64, i32, ui64, ui32) represents the flattened
+    Arguments:
+    - `source`: a 1D memref or pointer (i64, i32, ui64, ui32) represents the flattened
       memory object.
-    * offsets: a vector containing offsets of each access point. Its size
+    - `offsets`: a vector containing offsets of each access point. Its size
       is fixed to the hardware supportted subgroup size, e.g., 16 on PVC,
       implying each element in the vector corresponds to a work-item (SIMT lane)
       in the subgroup.
+
+    Results:
+    - `res`: scattered tensor descriptor
 
     The first dimension of the result TensorDesc corresponds to work-items, so it should
     match the dimension of offsets. It may also has a second dimension corresponding to
@@ -539,8 +547,8 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     ```
   }];
 
-  let arguments = (ins XeGPU_GatherScatterBaseAddrType: $source,
-                       XeGPU_OffsetType: $offsets);
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
+      XeGPU_OffsetType:$offsets);
   let results = (outs XeGPU_TensorDesc:$TensorDesc);
 
   let builders = [
@@ -598,6 +606,16 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     As compared to prefetch_nd, which works on non-scattered TensorDesc,
     it works on scattered TensorDesc instead.
 
+    Arguments:
+    - `source`: represents the memory region to be loaded from, which can be either a
+        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
+        In case of tensor_desc, offsets come from the producer create_tdesc op.
+        tensor_desc cannot be used in SIMT mode.
+    - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
+        offsets is a vector of `index` type and vector length is either the subgroup size
+        or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+
     Example 1:
     ```mlir
       xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
@@ -631,11 +649,11 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType: $source,
-                       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>: $offsets,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
+      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getSourceType() {
@@ -685,16 +703,22 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     In SIMT mode, the result is a 1D vector that represents the data to be loaded by
     each work-item. If size is not 1, size should be equal to the chunk size,
 
-    `source` represents the memory region to be loaded from, which can be either a
+    Arguments:
+    - `source`: represents the memory region to be loaded from, which can be either a
         tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
         In case of tensor_desc, offsets come from the producer create_tdesc op.
         tensor_desc cannot be used in SIMT mode.
-    `offsets` represents offsets from source. required if `source` in not a TensorDescType.
+    - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
         offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 in SIMT mode.
-    `mask` is a vector of `i1` type, which is used to mask out the memory access.
+        or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+    - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
-    `chunk_size` (optional) represents contiguous number of elements to load from per work item.
+    - `chunk_size`: (optional) represents contiguous number of elements to load from per work item.
+    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+
+    Results:
+    - `res`: represents loaded data
+
 
   Example 1:
   ```mlir
@@ -717,7 +741,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   Example 3:
   A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
   It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc".
-  The source operand could be a raw pointer (uint64_t). Please refer to create_tdesc
+  The source operand could be a raw pointer (ui64, ui32, i64, i32). Please refer to create_tdesc
   for the restriction of memref.
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
@@ -741,13 +765,12 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType: $source,
-                       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>: $offsets,
-                       XeGPU_MaskType: $mask,
-                       OptionalAttr<I64Attr>: $chunk_size,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
+      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+      XeGPU_MaskType:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
   let results = (outs XeGPU_ValueType: $value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -801,7 +824,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
 
 def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store data to scattered memory locations.";
-  let description = [{ It (aka. store) stores data to scattered memory locations. The value is
+  let description =
+      [{ It (aka. store) stores data to scattered memory locations. The value is
   typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
   a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
   and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
@@ -811,17 +835,19 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   In SIMT mode, the result is a 1D vector that represents the data to be stored by
   each work-item. If size is not 1, size should be equal to the chunk size.
 
-    `value` represents the data to be stored.
-    `dest` represents the memory region to be stored to, which can be either a
+    Arguments:
+    - `value`: represents the data to be stored.
+    - `dest`: represents the memory region to be stored to, which can be either a
         tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
         In case of tensor_desc, offsets come from the producer create_tdesc op.
         tensor_desc cannot be used in SIMT mode.
-    `offsets` represents offsets from dest. required if `source` in not a TensorDescType.
+    - `offsets`: represents offsets from dest. required if `source` in not a TensorDescType.
         offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 in SIMT mode.
-    `mask` is a vector of `i1` type, which is used to mask out the memory access.
+        or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+    - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
-    `chunk_size` (optional) represents contiguous number of elements to store to per work item.
+    - `chunk_size`: (optional) represents contiguous number of elements to store to per work item.
+    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
 
   Example 1:
   ```mlir
@@ -867,15 +893,13 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
 
   }];
 
-  let arguments = (ins
-    XeGPU_ValueType: $value,
-    XeGPU_GatherScatterSourceType: $dest,
-    Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>: $offsets,
-    XeGPU_MaskType: $mask,
-    OptionalAttr<I64Attr>: $chunk_size,
-    OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-    OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-    OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let arguments = (ins XeGPU_ValueType:$value,
+      XeGPU_GatherScatterSourceType:$dest,
+      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+      XeGPU_MaskType:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getDestType() {
