@@ -60,7 +60,10 @@ readDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
     NewR.NumDescriptors = R.NumDescriptors;
     NewR.BaseShaderRegister = R.BaseShaderRegister;
     NewR.RegisterSpace = R.RegisterSpace;
-    NewR.RangeType = R.RangeType;
+    if (!dxbc::isValidRangeType(R.RangeType))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for descriptor range type");
+    NewR.RangeType = dxbc::DescriptorRangeType(R.RangeType);
     if constexpr (std::is_same_v<T, dxbc::RTS0::v2::DescriptorRange>) {
       // Set all flag fields for v2
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
@@ -94,15 +97,14 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for parameter type");
 
-    RootParameterHeaderYaml Header(PH.ParameterType);
+    RootParameterHeaderYaml Header(dxbc::RootParameterType(PH.ParameterType));
     Header.Offset = PH.ParameterOffset;
-    Header.Type = PH.ParameterType;
 
     if (!dxbc::isValidShaderVisibility(PH.ShaderVisibility))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for shader visibility");
 
-    Header.Visibility = PH.ShaderVisibility;
+    Header.Visibility = dxbc::ShaderVisibility(PH.ShaderVisibility);
 
     llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);
@@ -162,15 +164,40 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   }
 
   for (const auto &S : Data.samplers()) {
+    if (!dxbc::isValidSamplerFilter(S.Filter))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler filter");
+
+    if (!dxbc::isValidAddress(S.AddressU))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler AddressU");
+
+    if (!dxbc::isValidAddress(S.AddressV))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler AddressV");
+
+    if (!dxbc::isValidAddress(S.AddressW))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler AddressW");
+
+    if (!dxbc::isValidComparisonFunc(S.ComparisonFunc))
+      return createStringError(
+          std::errc::invalid_argument,
+          "Invalid value for static sampler ComparisonFunc");
+
+    if (!dxbc::isValidBorderColor(S.BorderColor))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler BorderColor");
+
     StaticSamplerYamlDesc NewS;
-    NewS.Filter = S.Filter;
-    NewS.AddressU = S.AddressU;
-    NewS.AddressV = S.AddressV;
-    NewS.AddressW = S.AddressW;
+    NewS.Filter = dxbc::SamplerFilter(S.Filter);
+    NewS.AddressU = dxbc::TextureAddressMode(S.AddressU);
+    NewS.AddressV = dxbc::TextureAddressMode(S.AddressV);
+    NewS.AddressW = dxbc::TextureAddressMode(S.AddressW);
     NewS.MipLODBias = S.MipLODBias;
     NewS.MaxAnisotropy = S.MaxAnisotropy;
-    NewS.ComparisonFunc = S.ComparisonFunc;
-    NewS.BorderColor = S.BorderColor;
+    NewS.ComparisonFunc = dxbc::ComparisonFunc(S.ComparisonFunc);
+    NewS.BorderColor = dxbc::StaticBorderColor(S.BorderColor);
     NewS.MinLOD = S.MinLOD;
     NewS.MaxLOD = S.MaxLOD;
     NewS.ShaderRegister = S.ShaderRegister;
@@ -425,21 +452,21 @@ void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
   IO.mapRequired("ShaderVisibility", L.Header.Visibility);
 
   switch (L.Header.Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+  case dxbc::RootParameterType::Constants32Bit: {
     DXContainerYAML::RootConstantsYaml &Constants =
         S.Parameters.getOrInsertConstants(L);
     IO.mapRequired("Constants", Constants);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::CBV):
-  case llvm::to_underlying(dxbc::RootParameterType::SRV):
-  case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+  case dxbc::RootParameterType::CBV:
+  case dxbc::RootParameterType::SRV:
+  case dxbc::RootParameterType::UAV: {
     DXContainerYAML::RootDescriptorYaml &Descriptor =
         S.Parameters.getOrInsertDescriptor(L);
     IO.mapRequired("Descriptor", Descriptor);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+  case dxbc::RootParameterType::DescriptorTable: {
     DXContainerYAML::DescriptorTableYaml &Table =
         S.Parameters.getOrInsertTable(L);
     IO.mapRequired("Table", Table);
