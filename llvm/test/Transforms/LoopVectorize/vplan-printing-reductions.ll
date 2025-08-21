@@ -499,20 +499,20 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT:   EMIT vp<%10> = compute-reduction-result ir<%accum>, vp<%8>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<%2>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<%10> from middle.block)
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%10> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%2>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<%10>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:   IR   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT: ir-bb<loop>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:   IR   %accum = phi i32 [ 0, %entry ], [ %add, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
 ; CHECK-NEXT:   IR   %gep.a = getelementptr i8, ptr %a, i64 %iv
 ; CHECK-NEXT:   IR   %load.a = load i8, ptr %gep.a, align 1
 ; CHECK-NEXT:   IR   %ext.a = zext i8 %load.a to i32
@@ -552,18 +552,18 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<%2> = compute-reduction-result ir<%accum>, ir<%add>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>
+; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<%2> from middle.block)
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%2> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %scalar.ph ], [ %iv.next, %for.body ] (extra operand: ir<0> from ir-bb<scalar.ph>)
-; CHECK-NEXT:   IR   %accum = phi i32 [ 0, %scalar.ph ], [ %add, %for.body ] (extra operand: ir<0> from ir-bb<scalar.ph>)
+; CHECK-NEXT: ir-bb<loop>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %scalar.ph ], [ %iv.next, %loop ] (extra operand: ir<0> from ir-bb<scalar.ph>)
+; CHECK-NEXT:   IR   %accum = phi i32 [ 0, %scalar.ph ], [ %add, %loop ] (extra operand: ir<0> from ir-bb<scalar.ph>)
 ; CHECK-NEXT:   IR   %gep.a = getelementptr i8, ptr %a, i64 %iv
 ; CHECK-NEXT:   IR   %load.a = load i8, ptr %gep.a, align 1
 ; CHECK-NEXT:   IR   %ext.a = zext i8 %load.a to i32
@@ -577,11 +577,11 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %for.body, %entry
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %loop ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
   %load.a = load i8, ptr %gep.a, align 1
   %ext.a = zext i8 %load.a to i32
@@ -592,9 +592,9 @@ for.body:                                         ; preds = %for.body, %entry
   %add = sub i32 %accum, %mul
   %iv.next = add i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %for.exit, label %for.body
+  br i1 %exitcond.not, label %exit, label %loop
 
-for.exit:                        ; preds = %for.body
+exit:
   ret i32 %add
 }
 
