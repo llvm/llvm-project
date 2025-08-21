@@ -34,6 +34,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -42,7 +43,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
-    ScalarEvolution &SE, const TargetLibraryInfo &TLI) {
+    const TargetLibraryInfo &TLI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan->getVectorLoopRegion());
@@ -73,7 +74,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         } else {
           VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
-              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep());
           NewRecipe = new VPWidenIntOrFpInductionRecipe(
               Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
         }
@@ -3466,6 +3467,33 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
   VPValue *MulByUF = Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
   VFxUF.replaceAllUsesWith(MulByUF);
+}
+
+DenseMap<const SCEV *, Value *>
+VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
+  const DataLayout &DL = SE.getDataLayout();
+  SCEVExpander Expander(SE, DL, "induction", /*PreserveLCSSA=*/true);
+
+  auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
+  BasicBlock *EntryBB = Entry->getIRBasicBlock();
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
+  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
+    if (isa<VPIRInstruction, VPIRPhi>(&R))
+      continue;
+    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpSCEV)
+      break;
+    const SCEV *Expr = ExpSCEV->getSCEV();
+    Value *Res =
+        Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
+    ExpandedSCEVs[ExpSCEV->getSCEV()] = Res;
+    VPValue *Exp = Plan.getOrAddLiveIn(Res);
+    ExpSCEV->replaceAllUsesWith(Exp);
+    if (Plan.getTripCount() == ExpSCEV)
+      Plan.resetTripCount(Exp);
+    ExpSCEV->eraseFromParent();
+  }
+  return ExpandedSCEVs;
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
