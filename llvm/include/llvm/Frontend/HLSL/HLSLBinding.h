@@ -66,6 +66,8 @@ public:
     llvm::SmallVector<RegisterSpace> Spaces;
     BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
     LLVM_ABI RegisterSpace &getOrInsertSpace(uint32_t Space);
+    LLVM_ABI std::optional<BindingInfo::RegisterSpace *>
+    contains(uint32_t Space);
   };
 
 private:
