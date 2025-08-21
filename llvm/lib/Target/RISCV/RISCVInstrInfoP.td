@@ -140,14 +140,16 @@ class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
   let Inst{22-20} = shamt;
 }
 
-class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType>
+class RVPWideningShift_ri<bits<3> f, string opcodestr, Operand ImmType>
     : RVInst<(outs GPRPairRV32:$rd), (ins GPR:$rs1, ImmType:$shamt), opcodestr,
                   "$rd, $rs1, $shamt"> {
+  bits<5> rs1;
   bits<5> rd;
 
   let Inst{31}    = 0b0;
   let Inst{30-28} = f;
   let Inst{27}    = 0b0;
+  let Inst{19-15} = rs1;
   let Inst{14-12} = 0b010;
   let Inst{11-8}  = rd{4-1};
   let Inst{7}     = 0b0;
@@ -158,24 +160,24 @@ class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType>
   let mayStore = 0;
 }
 
-class RVPPairShiftW_ri<bits<3> f, string opcodestr>
-    : RVPPairShift_ri<f, opcodestr, uimm6> {
+class RVPWideningShiftW_ri<bits<3> f, string opcodestr>
+    : RVPWideningShift_ri<f, opcodestr, uimm6> {
   bits<6> shamt;
 
   let Inst{26} = 0b1;
   let Inst{25-20} = shamt;
 }
 
-class RVPPairShiftH_ri<bits<3> f, string opcodestr>
-    : RVPPairShift_ri<f, opcodestr, uimm5> {
+class RVPWideningShiftH_ri<bits<3> f, string opcodestr>
+    : RVPWideningShift_ri<f, opcodestr, uimm5> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
   let Inst{24-20} = shamt;
 }
 
-class RVPPairShiftB_ri<bits<3> f, string opcodestr>
-    : RVPPairShift_ri<f, opcodestr, uimm4> {
+class RVPWideningShiftB_ri<bits<3> f, string opcodestr>
+    : RVPWideningShift_ri<f, opcodestr, uimm4> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
@@ -933,11 +935,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
 }
 
 let Predicates = [HasStdExtP, IsRV32] in {
-  def PWSLLI_B : RVPPairShiftB_ri<0b000, "pwslli.b">;
-  def PWSLLI_H : RVPPairShiftH_ri<0b000, "pwslli.h">;
-  def WSLLI    : RVPPairShiftW_ri<0b000, "wslli">;
+  def PWSLLI_B : RVPWideningShiftB_ri<0b000, "pwslli.b">;
+  def PWSLLI_H : RVPWideningShiftH_ri<0b000, "pwslli.h">;
+  def WSLLI    : RVPWideningShiftW_ri<0b000, "wslli">;
 
-  def PWSLAI_B : RVPPairShiftB_ri<0b100, "pwslai.b">;
-  def PWSLAI_H : RVPPairShiftH_ri<0b100, "pwslai.h">;
-  def WSLAI    : RVPPairShiftW_ri<0b100, "wslai">;
+  def PWSLAI_B : RVPWideningShiftB_ri<0b100, "pwslai.b">;
+  def PWSLAI_H : RVPWideningShiftH_ri<0b100, "pwslai.h">;
+  def WSLAI    : RVPWideningShiftW_ri<0b100, "wslai">;
 } // Predicates = [HasStdExtP, IsRV32]
