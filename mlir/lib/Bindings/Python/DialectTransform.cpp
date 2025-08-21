@@ -29,7 +29,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformAnyOpTypeGetTypeID);
   anyOpType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirTransformAnyOpTypeGet(ctx));
       },
       "Get an instance of AnyOpType in the given context.", nb::arg("cls"),
@@ -44,7 +44,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformAnyParamTypeGetTypeID);
   anyParamType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirTransformAnyParamTypeGet(ctx));
       },
       "Get an instance of AnyParamType in the given context.", nb::arg("cls"),
@@ -59,7 +59,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformAnyValueTypeGetTypeID);
   anyValueType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirTransformAnyValueTypeGet(ctx));
       },
       "Get an instance of AnyValueType in the given context.", nb::arg("cls"),
@@ -74,7 +74,8 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformOperationTypeGetTypeID);
   operationType.def_classmethod(
       "get",
-      [](nb::object cls, const std::string &operationName, MlirContext ctx) {
+      [](const nb::object &cls, const std::string &operationName,
+         MlirContext ctx) {
         MlirStringRef cOperationName =
             mlirStringRefCreate(operationName.data(), operationName.size());
         return cls(mlirTransformOperationTypeGet(ctx, cOperationName));
@@ -101,7 +102,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformParamTypeGetTypeID);
   paramType.def_classmethod(
       "get",
-      [](nb::object cls, MlirType type, MlirContext ctx) {
+      [](const nb::object &cls, MlirType type, MlirContext ctx) {
         return cls(mlirTransformParamTypeGet(ctx, type));
       },
       "Get an instance of ParamType for the given type in the given context.",
