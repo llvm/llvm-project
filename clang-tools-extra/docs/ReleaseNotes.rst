@@ -1,6 +1,12 @@
 .. If you want to modify sections/contents permanently, you should modify both
    ReleaseNotes.rst and ReleaseNotesTemplate.txt.
 
+.. Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.. See https://llvm.org/LICENSE.txt for license information.
+.. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.. SPDX-FileCopyrightText: Portions Copyright 2025 Siemens and/or its affiliates
+.. May 2025 modified by Siemens and/or its affiliates by Tom James
+
 ====================================================
 Extra Clang Tools |release| |ReleaseNotesTitle|
 ====================================================
@@ -134,6 +140,11 @@ New checks
 
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
+
+- New :doc:`bugprone-method-hiding
+  <clang-tidy/checks/bugprone/method-hiding>` check.
+
+  Finds derived class methods that shadow a (non-virtual) base class method.
 
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`

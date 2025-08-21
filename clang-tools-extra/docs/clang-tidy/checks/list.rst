@@ -1,3 +1,9 @@
+.. Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.. See https://llvm.org/LICENSE.txt for license information.
+.. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.. SPDX-FileCopyrightText: Portions Copyright 2025 Siemens and/or its affiliates
+.. May 2025 modified by Siemens and/or its affiliates by Tom James
+
 .. title:: clang-tidy - Clang-Tidy Checks
 
 Clang-Tidy Checks
@@ -110,6 +116,7 @@ Clang-Tidy Checks
    :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
    :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
    :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
+   :doc:`bugprone-method-hiding <bugprone/method-shadowing>`
    :doc:`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>`,
    :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"

@@ -4,6 +4,9 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+// SPDX-FileCopyrightText: Portions Copyright 2025 Siemens and/or its affiliates
+// May 2025 modified by Siemens and/or its affiliates by Tom James
+//
 //===----------------------------------------------------------------------===//
 
 #include "../ClangTidy.h"
@@ -42,6 +45,7 @@
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
+#include "MethodHidingCheck.h"
 #include "MisleadingSetterOfReferenceCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "MisplacedPointerArithmeticInAllocCheck.h"
@@ -153,6 +157,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<MethodHidingCheck>(
+        "bugprone-method-hiding");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
