@@ -13,6 +13,6 @@
 # CHECK-RELATIVE: PASS: print-relative-path :: test.txt (1 of 2)
 # CHECK-RELATIVE: FAIL: print-relative-path :: test2.txt (2 of 2)
 # CHECK-RELATIVE: Passed Tests (1):
-# CHECK-RELATIVE:  Inputs[/\\]print-relative-path[/\\]test.txt
+# CHECK-RELATIVE:  Inputs{{[/\\]}}print-relative-path{{[/\\]}}test.txt
 # CHECK-RELATIVE: Failed Tests (1):
-# CHECK-RELATIVE:  Inputs[/\\]print-relative-path[/\\]test2.txt
+# CHECK-RELATIVE:  Inputs{{[/\\]}}print-relative-path{{[/\\]}}test2.txt
