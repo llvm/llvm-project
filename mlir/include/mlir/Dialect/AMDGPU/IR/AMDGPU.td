@@ -680,7 +680,7 @@ Arguments<(ins AnyIntegerOrFloatOr1DVector:$src,
 
     Supports arbitrary int/float/vector types, which will be repacked to i32 and
     one or more `rocdl.permlane.*` ops during lowering.
-    The following lane permutations are supported:
+    Supported lane permutations:
     - Swap the data between odd and even rows of 16 lanes (`swap_16`)
     - Swap the data between the first 32 lanes and the last 32 lanes (`swap_32`)
 
