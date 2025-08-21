@@ -669,11 +669,7 @@ def AMDGPU_PermlanePerm : I32EnumAttr<"PermlanePerm",
 def AMDGPU_PermlanePermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_PermlanePerm,
   "permlane_perm">;
 
-def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]>,
-Arguments<(ins AnyIntegerOrFloatOr1DVector:$src, 
-               AMDGPU_PermlanePermAttr:$kind,
-               DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
-               DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
+def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]> {
   let summary = "AMDGPU permlane op";
   let description = [{
     High-level wrapper on `rocdl.permlane.*` variants.
@@ -704,6 +700,10 @@ Arguments<(ins AnyIntegerOrFloatOr1DVector:$src,
 
     Note: Lowering is only supported on gfx950 and up.
   }];
+  let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
+                       AMDGPU_PermlanePermAttr:$kind,
+                       DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
+                       DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
   let assemblyFormat = [{
     $src $kind attr-dict `:` type($result)
