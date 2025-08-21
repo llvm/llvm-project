@@ -138,6 +138,10 @@ endfunction()
 function(create_compile_targets compile_tgts)
   cmake_parse_arguments( ARG "" "ARCH_SUFFIX" "FILES" ${ARGN} )
 
+  if( NOT ARG_ARCH_SUFFIX OR NOT ARG_FILES )
+    message( FATAL_ERROR "Must provide ARCH_SUFFIX, and FILES" )
+  endif()
+
   set( tgts )
   foreach( file IN LISTS ARG_FILES )
     cmake_path( GET file STEM stem )
