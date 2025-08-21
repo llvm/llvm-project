@@ -329,6 +329,15 @@ public:
     XCOFF,
   };
 
+  // This should be a copy from enum class InaccessibleTargetMemLocation
+  // in ModRef.h
+  enum class InaccessibleTargetMemLocation : uint8_t {
+    MEM_TARGET_0 = 3,
+    MEM_TARGET_1 = 4,
+    // Reserve more if/when needed
+    Last
+  };
+
 private:
   std::string Data;
 
@@ -1199,6 +1208,11 @@ public:
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
+
+  StringRef
+  aarch64GetTargetMemLocName(InaccessibleTargetMemLocation Kind) const;
+
+  StringRef getTargetMemLocName(InaccessibleTargetMemLocation Kind) const;
 
   /// @}
   /// @name Mutators
