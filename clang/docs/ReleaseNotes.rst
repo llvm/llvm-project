@@ -229,7 +229,6 @@ Bug Fixes in This Version
   cast chain. (#GH149967).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
-- Clang's ``<stddef.h>`` now properly declares ``nullptr_t`` in C++ mode. (#GH154577).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
