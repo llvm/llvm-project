@@ -471,8 +471,10 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
   }
 
 #define GENERIC_KIND(genenric_kind)                                            \
-  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, genenric_kind,                    \
-   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM}
+  {                                                                            \
+   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, genenric_kind,                    \
+    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM                                   \
+  }
 // Generates register kinds array for registers with only lldb kind
 #define KIND_ALL_INVALID                                                       \
   {                                                                            \
