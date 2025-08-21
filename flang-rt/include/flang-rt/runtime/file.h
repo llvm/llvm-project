@@ -68,7 +68,7 @@ public:
   void WaitAll(IoErrorHandler &);
 
   // INQUIRE(POSITION=)
-  Position InquirePosition() const;
+  Position InquirePosition(FileOffset offset) const;
 
 private:
   struct Pending {
@@ -80,7 +80,7 @@ private:
   void CheckOpen(const Terminator &);
   bool Seek(FileOffset, IoErrorHandler &);
   bool RawSeek(FileOffset);
-  bool RawSeekToEnd();
+  bool SeekToEnd(IoErrorHandler &);
   int PendingResult(const Terminator &, int);
   void SetPosition(FileOffset pos) {
     position_ = pos;

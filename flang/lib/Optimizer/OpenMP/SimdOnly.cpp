@@ -95,16 +95,13 @@ public:
       return mlir::success();
     }
     if (auto mapInfoOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(op)) {
-      mapInfoOp.getResult().replaceAllUsesWith(mapInfoOp.getVarPtr());
-      rewriter.eraseOp(mapInfoOp);
+      rewriter.replaceOp(mapInfoOp, {mapInfoOp.getVarPtr()});
       return mlir::success();
     }
 
     // Might be leftover after parse tree rewriting
     if (auto threadPrivateOp = mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op)) {
-      threadPrivateOp.getTlsAddr().replaceAllUsesWith(
-          threadPrivateOp.getSymAddr());
-      rewriter.eraseOp(threadPrivateOp);
+      rewriter.replaceOp(threadPrivateOp, {threadPrivateOp.getSymAddr()});
       return mlir::success();
     }
 

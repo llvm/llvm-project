@@ -3158,8 +3158,10 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
-    return false;
+  if (!Ptr.isZeroSizeArray()) {
+    if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
+      return false;
+  }
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
