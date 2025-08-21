@@ -743,10 +743,10 @@ void PyMlirContext::clearOperation(MlirOperation op) {
 }
 
 void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
-  typedef struct {
+  using callBackData = struct {
     PyOperation &rootOp;
     bool rootSeen;
-  } callBackData;
+  };
   callBackData data{op.getOperation(), false};
   // Mark all ops below the op that the passmanager will be rooted
   // at (but not op itself - note the preorder) as invalid.
