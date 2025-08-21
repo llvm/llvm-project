@@ -636,10 +636,9 @@ let Predicates = [HasStdExtP] in {
   def PM2ADDASU_H : RVPBinary_rr<0b1101, 0b00, 0b101, "pm2addasu.h">;
   def PM4ADDASU_B : RVPBinary_rr<0b1101, 0b10, 0b101, "pm4addasu.b">;
 } // Predicates = [HasStdExtP]
-
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
-  def MQACC_H01  : RVPBinary_rr<0b1111, 0b00, 0b101, "mqacc.h01">;
-  def MQRACC_H01 : RVPBinary_rr<0b1111, 0b10, 0b101, "mqracc.h01">;
+  def MQACC_H01  : RVPTernary_rrr<0b1111, 0b00, 0b101, "mqacc.h01">;
+  def MQRACC_H01 : RVPTernary_rrr<0b1111, 0b10, 0b101, "mqracc.h01">;
 } // // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PM2ADD_W      : RVPBinary_rr<0b0000, 0b01, 0b101, "pm2add.w">;
@@ -776,8 +775,8 @@ let Predicates = [HasStdExtP] in {
   def PMULHSU_H     : RVPBinary_rr<0b1000, 0b00, 0b111, "pmulhsu.h">;
   def PMULHRSU_H    : RVPBinary_rr<0b1000, 0b10, 0b111, "pmulhrsu.h">;
 
-  def PMHACCSU_H    : RVPBinary_rr<0b1001, 0b00, 0b111, "pmhaccsu.h">;
-  def PMHRACCSU_H   : RVPBinary_rr<0b1001, 0b10, 0b111, "pmhraccsu.h">;
+  def PMHACCSU_H    : RVPTernary_rrr<0b1001, 0b00, 0b111, "pmhaccsu.h">;
+  def PMHRACCSU_H   : RVPTernary_rrr<0b1001, 0b10, 0b111, "pmhraccsu.h">;
 
   def PMULQ_H       : RVPBinary_rr<0b1010, 0b00, 0b111, "pmulq.h">;
   def PMULQR_H      : RVPBinary_rr<0b1010, 0b10, 0b111, "pmulqr.h">;
@@ -835,8 +834,8 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PMULH_W_H0    : RVPBinary_rr<0b0100, 0b01, 0b111, "pmulh.w.h0">;
   def PMULHSU_W_H0  : RVPBinary_rr<0b0100, 0b11, 0b111, "pmulhsu.w.h0">;
 
-  def PMHACC_W_H0   : RVPBinary_rr<0b0101, 0b01, 0b111, "pmhacc.w.h0">;
-  def PMHACCSU_W_H0 : RVPBinary_rr<0b0101, 0b11, 0b111, "pmhaccsu.w.h0">;
+  def PMHACC_W_H0   : RVPTernary_rrr<0b0101, 0b01, 0b111, "pmhacc.w.h0">;
+  def PMHACCSU_W_H0 : RVPTernary_rrr<0b0101, 0b11, 0b111, "pmhaccsu.w.h0">;
 
   def PMULH_W_H1    : RVPBinary_rr<0b0110, 0b01, 0b111, "pmulh.w.h1">;
   def PMULHSU_W_H1  : RVPBinary_rr<0b0110, 0b11, 0b111, "pmulhsu.w.h1">;
