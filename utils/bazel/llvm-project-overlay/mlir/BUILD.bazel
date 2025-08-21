@@ -7896,6 +7896,7 @@ cc_library(
         ":Pass",
         ":Rewrite",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
