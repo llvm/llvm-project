@@ -609,7 +609,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     Example 2:
     A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
     It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc".
-    The source operand could be a raw pointer (uint64_t).
+    The source operand could be a raw pointer (ui64, ui32, i64, i32).
     Please refer to create_tdesc for the restriction of memref.
     ```mlir
       %a = memref.alloc() : memref<1024xf32>
@@ -632,7 +632,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
   }];
 
   let arguments = (ins XeGPU_GatherScatterSourceType: $source,
-                       Optional<XeGPU_OffsetType>: $offsets,
+                       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>: $offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -742,7 +742,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   }];
 
   let arguments = (ins XeGPU_GatherScatterSourceType: $source,
-                       Optional<XeGPU_OffsetType>: $offsets,
+                       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>: $offsets,
                        XeGPU_MaskType: $mask,
                        OptionalAttr<I64Attr>: $chunk_size,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
@@ -870,7 +870,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let arguments = (ins
     XeGPU_ValueType: $value,
     XeGPU_GatherScatterSourceType: $dest,
-    Optional<XeGPU_OffsetType>: $offsets,
+    Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>: $offsets,
     XeGPU_MaskType: $mask,
     OptionalAttr<I64Attr>: $chunk_size,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
