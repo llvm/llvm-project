@@ -968,6 +968,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    {s128, s64}});
 
   // Control-flow
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND)
     .legalFor({s32})
     .clampScalar(0, s32, s32);
