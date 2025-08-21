@@ -2634,14 +2634,14 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
   case AArch64ISD::MVNIshift: {
     Known = KnownBits::makeConstant(
         APInt(Known.getBitWidth(),
-              (~Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
+              ~(Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
               /*isSigned*/ false, /*implicitTrunc*/ true));
     break;
   }
   case AArch64ISD::MVNImsl: {
     Known = KnownBits::makeConstant(
         APInt(Known.getBitWidth(),
-              ~(Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
+              (~Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
               /*isSigned*/ false, /*implicitTrunc*/ true));
     break;
   }
