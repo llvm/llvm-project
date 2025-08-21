@@ -398,6 +398,8 @@ cc_library(
         ":SymbolInterfacesIncGen",
         ":TensorEncodingIncGen",
         ":config",
+        "//llvm:Core",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:config",
     ],
@@ -482,6 +484,24 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
+    ],
+)
+
+cc_library(
+    name = "RemarkStreamer",
+    srcs = glob([
+        "lib/Remark/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Remark/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        "//llvm:BitstreamReader",
+        "//llvm:Core",
+        "//llvm:Remarks",
+        "//llvm:Support",
     ],
 )
 
@@ -3727,6 +3747,7 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
+        ":IndexDialect",
         ":LLVMDialect",
         ":LoopLikeInterface",
         ":SCFTransforms",
