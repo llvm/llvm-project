@@ -741,8 +741,7 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
     VPValue *IVStep = WideIV->getStepValue();
     switch (ID.getInductionOpcode()) {
     case Instruction::Add:
-      return match(VPV, m_c_Binary<Instruction::Add>(m_Specific(WideIV),
-                                                     m_Specific(IVStep)));
+      return match(VPV, m_c_Add(m_Specific(WideIV), m_Specific(IVStep)));
     case Instruction::FAdd:
       return match(VPV, m_c_Binary<Instruction::FAdd>(m_Specific(WideIV),
                                                       m_Specific(IVStep)));
@@ -2231,9 +2230,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
-                  return match(U, m_c_Binary<Instruction::Add>(
-                                      m_Specific(Plan.getCanonicalIV()),
-                                      m_Specific(&Plan.getVFxUF()))) ||
+                  return match(U, m_c_Add(m_Specific(Plan.getCanonicalIV()),
+                                          m_Specific(&Plan.getVFxUF()))) ||
                          isa<VPWidenPointerInductionRecipe>(U);
                 }) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
@@ -2446,45 +2444,37 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
   // There should be only one EVL PHI in the entire plan.
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
-  VPValue *AVLNext = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
-    for (VPRecipeBase &R : VPBB->phis()) {
-      auto *PhiR = dyn_cast<VPSingleDefRecipe>(&R);
-      if (!PhiR)
-        continue;
-      VPValue *Backedge;
-      if (auto *EVL = dyn_cast<VPEVLBasedIVPHIRecipe>(PhiR)) {
+    for (VPRecipeBase &R : VPBB->phis())
+      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
         assert(!EVLPhi && "Found multiple EVL PHIs. Only one expected");
-        EVLPhi = EVL;
-        continue;
+        EVLPhi = PhiR;
       }
-      if (match(PhiR,
-                m_VPInstruction<Instruction::PHI>(
-                    m_Specific(Plan.getTripCount()), m_VPValue(Backedge))) &&
-          match(Backedge,
-                m_VPInstruction<Instruction::Sub>(
-                    m_Specific(PhiR),
-                    m_ZExtOrSelf(
-                        m_VPInstruction<VPInstruction::ExplicitVectorLength>(
-                            m_CombineOr(
-                                m_Specific(PhiR),
-                                // The AVL may be capped to a safe distance.
-                                m_Select(m_VPValue(), m_Specific(PhiR),
-                                         m_VPValue()))))))) {
-        AVLNext = Backedge;
-      }
-    }
 
   // Early return if no EVL PHI is found.
   if (!EVLPhi)
     return;
 
-  assert(AVLNext && "Didn't find AVL backedge?");
-
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
+  VPValue *AVL, *EVL;
+  if (!match(EVLIncrement,
+             m_c_Add(m_ZExtOrSelf(m_VPValue(EVL)), m_Specific(EVLPhi))) ||
+      !match(EVL, m_EVL(m_VPValue(AVL))))
+    llvm_unreachable("Didn't find EVL?");
+
+  // The AVL may be capped to a safe distance.
+  VPValue *SafeAVL;
+  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
+    AVL = SafeAVL;
+
+  VPValue *AVLNext;
+  if (!match(AVL, m_VPInstruction<Instruction::PHI>(
+                      m_Specific(Plan.getTripCount()), m_VPValue(AVLNext))) ||
+      !match(AVLNext, m_Sub(m_Specific(AVL), m_ZExtOrSelf(m_Specific(EVL)))))
+    llvm_unreachable("Didn't find AVL backedge?");
 
   // Convert EVLPhi to concrete recipe.
   auto *ScalarR =
@@ -2496,9 +2486,8 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   // Replace CanonicalIVInc with EVL-PHI increment.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
   VPValue *Backedge = CanonicalIV->getIncomingValue(1);
-  assert(match(Backedge,
-               m_c_Binary<Instruction::Add>(m_Specific(CanonicalIV),
-                                            m_Specific(&Plan.getVFxUF()))) &&
+  assert(match(Backedge, m_c_Add(m_Specific(CanonicalIV),
+                                 m_Specific(&Plan.getVFxUF()))) &&
          "Unexpected canonical iv");
   Backedge->replaceAllUsesWith(EVLIncrement);
 

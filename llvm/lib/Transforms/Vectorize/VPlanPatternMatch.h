@@ -313,6 +313,12 @@ m_Broadcast(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::Broadcast>(Op0);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExplicitVectorLength, Op0_t>
+m_EVL(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExplicitVectorLength>(Op0);
+}
+
 template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
@@ -368,6 +374,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_commutative_match<Instruction::Add, Op0_t, Op1_t>
+m_c_Add(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
