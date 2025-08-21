@@ -189,7 +189,7 @@ project should be discontinued.
 All contributors with commit access to the LLVM Project are **eligible** to be a
 maintainer. However, we are looking for people who can commit to engaging in
 the responsibilities above consistently for at least three months in the previous
-6 months.
+six months.
 
 In the interest of having a wider coverage of maintainers, we encourage any active
 collaborator to volunteer to a maintainer role, especially in areas currently without
