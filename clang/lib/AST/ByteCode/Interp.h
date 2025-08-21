@@ -1640,6 +1640,9 @@ bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.initialize();
@@ -1652,6 +1655,9 @@ bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
@@ -1663,7 +1669,13 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
+  const Pointer &Field = Ptr.atField(F->Offset);
 
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
@@ -1689,7 +1701,13 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
                           const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
+  const Pointer &Field = Ptr.atField(F->Offset);
 
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
