@@ -10,11 +10,6 @@
 // tree-based pattern matches on the VPlan values and recipes, based on
 // LLVM's IR pattern matchers.
 //
-// Currently it provides generic matchers for unary and binary VPInstructions,
-// and specialized matchers like m_Not, m_ActiveLaneMask, m_BranchOnCond,
-// m_BranchOnCount to match specific VPInstructions.
-// TODO: Add missing matchers for additional opcodes and recipes as needed.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H

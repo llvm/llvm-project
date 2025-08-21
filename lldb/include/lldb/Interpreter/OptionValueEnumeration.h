@@ -72,6 +72,7 @@ public:
 
 protected:
   void SetEnumerations(const OptionEnumValues &enumerators);
+  void DumpEnum(Stream &strm, enum_type value);
 
   enum_type m_current_value;
   enum_type m_default_value;

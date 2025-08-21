@@ -33,8 +33,7 @@ bool onlyScalarValuesUsed(const VPValue *Def);
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
 /// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                       ScalarEvolution &SE);
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
