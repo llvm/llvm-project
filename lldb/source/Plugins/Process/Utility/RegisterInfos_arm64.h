@@ -470,6 +470,9 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
         LLDB_INVALID_REGNUM, lldb_kind                                         \
   }
 
+#define GENERIC_KIND(genenric_kind)                                            \
+  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, genenric_kind,                    \
+   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM}
 // Generates register kinds array for registers with only lldb kind
 #define KIND_ALL_INVALID                                                       \
   {                                                                            \
@@ -539,6 +542,13 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #reg, nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                \
         KIND_ALL_INVALID, nullptr, nullptr, nullptr,                           \
+  }
+  
+// Used to define tpidr as a generic tp register
+#define DEFINE_EXTENSION_REG_GENERIC(reg, generic_kind)                        \
+  {                                                                            \
+    #reg, nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                \
+        GENERIC_KIND(generic_kind), nullptr, nullptr, nullptr,                 \
   }
 
 static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
