@@ -57,8 +57,8 @@ enum class ModRefInfo : uint8_t {
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 enum class InaccessibleTargetMemLocation {
-  AARCH64_FPMR = 3,
-  AARCH64_ZA = 4,
+  MEM_TARGET_0 = 3,
+  MEM_TARGET_1 = 4,
 };
 
 /// The locations at which a function might access memory.
@@ -277,9 +277,9 @@ public:
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(static_cast<IRMemLocation>(
-                             llvm::InaccessibleTargetMemLocation::AARCH64_FPMR))
+                             llvm::InaccessibleTargetMemLocation::MEM_TARGET_0))
         .getWithoutLoc(static_cast<IRMemLocation>(
-            llvm::InaccessibleTargetMemLocation::AARCH64_ZA))
+            llvm::InaccessibleTargetMemLocation::MEM_TARGET_1))
         .getWithoutLoc(Location::InaccessibleMem)
         .doesNotAccessMemory();
   }
